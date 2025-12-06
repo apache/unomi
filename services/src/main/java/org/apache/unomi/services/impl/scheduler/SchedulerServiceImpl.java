@@ -26,9 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.osgi.framework.BundleContext;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -265,11 +262,11 @@ public class SchedulerServiceImpl implements SchedulerService {
         if (!basicServicesReady) {
             return false;
         }
-        
+
         if (requirePersistenceProvider && persistenceProvider == null) {
             return false;
         }
-        
+
         return true;
     }
 
@@ -333,14 +330,14 @@ public class SchedulerServiceImpl implements SchedulerService {
                 // Check if operation has exceeded retry limits or timeout
                 if (operation.getRetryCount() >= MAX_RETRY_ATTEMPTS) {
                     errorCount++;
-                    LOGGER.error("Operation {} exceeded maximum retry attempts ({}), dropping operation", 
+                    LOGGER.error("Operation {} exceeded maximum retry attempts ({}), dropping operation",
                         operation.getDescription(), MAX_RETRY_ATTEMPTS);
                     continue;
                 }
 
                 if (operation.isExpired()) {
                     errorCount++;
-                    LOGGER.error("Operation {} exceeded maximum age ({}ms), dropping operation", 
+                    LOGGER.error("Operation {} exceeded maximum age ({}ms), dropping operation",
                         operation.getDescription(), MAX_RETRY_AGE_MS);
                     continue;
                 }
@@ -352,9 +349,9 @@ public class SchedulerServiceImpl implements SchedulerService {
                     operation.incrementRetryCount();
                     pendingOperations.offer(operation);
                     skippedCount++;
-                    LOGGER.debug("Skipping operation {} - persistence provider not available, will retry later (attempt {})", 
+                    LOGGER.debug("Skipping operation {} - persistence provider not available, will retry later (attempt {})",
                         operation.getDescription(), operation.getRetryCount());
-                    
+
                     // Check if all remaining operations require persistence
                     boolean allRemainingRequirePersistence = checkIfAllRemainingOperationsRequirePersistence();
                     if (allRemainingRequirePersistence) {
@@ -599,10 +596,10 @@ public class SchedulerServiceImpl implements SchedulerService {
     public void setPersistenceProvider(SchedulerProvider persistenceProvider) {
         this.persistenceProvider = persistenceProvider;
         LOGGER.info("PersistenceSchedulerProvider bound to SchedulerService");
-        
+
         // Clear any expired operations first
         clearExpiredOperations();
-        
+
         // Process any pending operations that were waiting for the persistence provider
         if (servicesInitialized.get() && !pendingOperations.isEmpty()) {
             LOGGER.info("Processing {} pending operations that were waiting for persistence provider", pendingOperations.size());
@@ -618,13 +615,13 @@ public class SchedulerServiceImpl implements SchedulerService {
         if (pendingOperations.isEmpty()) {
             return true; // No operations left, so technically all remaining require persistence
         }
-        
+
         // Create a temporary list to hold operations while we check them
         List<PendingOperation> tempOperations = new ArrayList<>();
         boolean allRequirePersistence = true;
         int totalOperations = 0;
         int operationsRequiringPersistence = 0;
-        
+
         // Check all operations in the queue
         PendingOperation operation;
         while ((operation = pendingOperations.poll()) != null) {
@@ -636,15 +633,15 @@ public class SchedulerServiceImpl implements SchedulerService {
                 allRequirePersistence = false;
             }
         }
-        
+
         // Put all operations back in the queue
         for (PendingOperation op : tempOperations) {
             pendingOperations.offer(op);
         }
-        
-        LOGGER.debug("Queue analysis: {} total operations, {} require persistence, all require persistence: {}", 
+
+        LOGGER.debug("Queue analysis: {} total operations, {} require persistence, all require persistence: {}",
             totalOperations, operationsRequiringPersistence, allRequirePersistence);
-        
+
         return allRequirePersistence;
     }
 
@@ -659,22 +656,22 @@ public class SchedulerServiceImpl implements SchedulerService {
 
         int originalSize = pendingOperations.size();
         List<PendingOperation> validOperations = new ArrayList<>();
-        
+
         PendingOperation operation;
         while ((operation = pendingOperations.poll()) != null) {
             if (operation.isExpired()) {
-                LOGGER.warn("Clearing expired operation: {} (age: {}ms)", 
+                LOGGER.warn("Clearing expired operation: {} (age: {}ms)",
                     operation.getDescription(), System.currentTimeMillis() - operation.getTimestamp());
             } else {
                 validOperations.add(operation);
             }
         }
-        
+
         // Re-add valid operations
         for (PendingOperation validOperation : validOperations) {
             pendingOperations.offer(validOperation);
         }
-        
+
         int clearedCount = originalSize - validOperations.size();
         if (clearedCount > 0) {
             LOGGER.info("Cleared {} expired operations from pending queue", clearedCount);
@@ -696,7 +693,6 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
-    @PostConstruct
     public void postConstruct() {
         if (bundleContext == null) {
             LOGGER.error("BundleContext is null, cannot initialize service trackers");
@@ -739,7 +735,6 @@ public class SchedulerServiceImpl implements SchedulerService {
         processPendingOperations();
     }
 
-    @PreDestroy
     public void preDestroy() {
         /**
          * Explicit shutdown sequence to handle the Aries Blueprint bug.
@@ -816,6 +811,15 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
 
         LOGGER.info("SchedulerService shutdown completed");
+    }
+
+    /**
+     * Checks if the scheduler is shutting down.
+     * This method is used by TaskExecutionManager to skip task execution during shutdown.
+     * @return true if the scheduler is shutting down, false otherwise
+     */
+    public boolean isShutdownNow() {
+        return shutdownNow;
     }
 
     void checkTasks() {
@@ -974,10 +978,10 @@ public class SchedulerServiceImpl implements SchedulerService {
     private boolean hasRunningTaskOfType(String taskType) {
         // Check non-persistent tasks first (faster - local map lookup)
         boolean hasNonPersistentRunningTask = nonPersistentTasks.values().stream()
-            .anyMatch(task -> taskType.equals(task.getTaskType()) && 
+            .anyMatch(task -> taskType.equals(task.getTaskType()) &&
                             task.getStatus() == ScheduledTask.TaskStatus.RUNNING &&
                             !lockManager.isLockExpired(task));
-        
+
         if (hasNonPersistentRunningTask) {
             return true;
         }

@@ -32,6 +32,7 @@ import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.TestRequestTracer;
+import org.apache.unomi.services.impl.ResolverServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.events.EventServiceImpl;
 import org.apache.unomi.services.impl.rules.RulesServiceImpl;
@@ -160,6 +161,10 @@ public class TestHelper {
         rulesService.setConditionValidationService(conditionValidationService);
         rulesService.setTracerService(tracerService);
         rulesService.setCacheService(multiTypeCacheService);
+        
+        // Create and inject ResolverService
+        ResolverService resolverService = createResolverService(definitionsService);
+        rulesService.setResolverService(resolverService);
 
         // Create and register test action type
         ActionType testActionType = new ActionType();
@@ -589,7 +594,12 @@ public class TestHelper {
         Bundle bundle = mock(Bundle.class);
         when(bundleContext.getBundle()).thenReturn(bundle);
         when(bundle.getBundleContext()).thenReturn(bundleContext);
-        when(bundle.findEntries(eq("META-INF/cxs/rules"), eq("*.json"), eq(true))).thenReturn(null);
+        // Default to no predefined entries for any path to avoid strict stubbing issues in tests
+        when(bundle.findEntries(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyBoolean()
+        )).thenReturn(null);
         when(bundleContext.getBundles()).thenReturn(new Bundle[0]);
         return bundleContext;
     }
@@ -617,7 +627,24 @@ public class TestHelper {
         eventService.setDefinitionsService(definitionsService);
         eventService.setTenantService(tenantService);
         eventService.setTracerService(tracerService);
+        
+        // Create and inject ResolverService
+        ResolverService resolverService = createResolverService(definitionsService);
+        eventService.setResolverService(resolverService);
+        
         return eventService;
+    }
+
+    /**
+     * Creates a ResolverService instance for testing purposes.
+     *
+     * @param definitionsService The definitions service to use
+     * @return A configured ResolverServiceImpl instance
+     */
+    public static ResolverService createResolverService(DefinitionsService definitionsService) {
+        ResolverServiceImpl resolverService = new ResolverServiceImpl();
+        resolverService.setDefinitionsService(definitionsService);
+        return resolverService;
     }
 
     public static void setupSegmentActionTypes(DefinitionsServiceImpl definitionsService) {
@@ -641,7 +668,7 @@ public class TestHelper {
         ConditionType conditionType = new ConditionType();
         conditionType.setItemId("profileUpdatedEventCondition");
         conditionType.setConditionEvaluator("profileUpdatedEventConditionEvaluator");
-        conditionType.setQueryBuilder("eventTypeConditionESQueryBuilder");
+        conditionType.setQueryBuilder("eventTypeConditionQueryBuilder");
 
         Metadata conditionMetadata = new Metadata();
         conditionMetadata.setId("profileUpdatedEventCondition");
@@ -714,7 +741,7 @@ public class TestHelper {
         try {
             FileUtils.deleteDirectory(defaultStorageDir.toFile());
         } catch (IOException e) {
-            LOGGER.warn("Error deleting default storage directory, will retry in 1 second", e);
+            LOGGER.warn("Error deleting default storage directory, will retry in 1 second: {}", e.getMessage());
         }
         try {
                 Thread.sleep(1000);
@@ -761,6 +788,95 @@ public class TestHelper {
         }
 
         return result;
+    }
+
+    /**
+     * Retries a query operation until items are available or timeout is reached.
+     * This is useful for tests that need to wait for refresh delay in in-memory persistence service.
+     * The method will retry the query until the expected number of items are found, or until
+     * any items are found if expectedCount is null.
+     * 
+     * @param querySupplier Supplier that returns the query result (List or PartialList)
+     * @param expectedCount Expected number of items (null to wait for any items > 0)
+     * @param maxWaitMs Maximum time to wait in milliseconds (defaults to 2000ms if <= 0)
+     * @param <T> The type of query result (List or PartialList)
+     * @return The query result when condition is met
+     * @throws RuntimeException if timeout is reached without meeting the condition
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T retryQueryUntilAvailable(Supplier<T> querySupplier, Integer expectedCount, long maxWaitMs) {
+        long maxWait = maxWaitMs > 0 ? maxWaitMs : 2000L;
+        long startTime = System.currentTimeMillis();
+        long retryDelay = Math.min(50L, maxWait / 20); // Adaptive retry delay
+        
+        T result = querySupplier.get();
+        
+        while (System.currentTimeMillis() - startTime < maxWait) {
+            int currentCount = 0;
+            
+            if (result instanceof List) {
+                currentCount = ((List<?>) result).size();
+            } else if (result instanceof org.apache.unomi.api.PartialList) {
+                currentCount = ((org.apache.unomi.api.PartialList<?>) result).getList().size();
+            }
+            
+            // Check if condition is met
+            boolean conditionMet = expectedCount != null 
+                ? currentCount == expectedCount 
+                : currentCount > 0;
+            
+            if (conditionMet) {
+                return result;
+            }
+            
+            // Wait before retrying
+            try {
+                Thread.sleep(retryDelay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            
+            result = querySupplier.get();
+        }
+        
+        // If we get here, timeout was reached
+        int finalCount = 0;
+        if (result instanceof List) {
+            finalCount = ((List<?>) result).size();
+        } else if (result instanceof org.apache.unomi.api.PartialList) {
+            finalCount = ((org.apache.unomi.api.PartialList<?>) result).getList().size();
+        }
+        
+        String message = expectedCount != null
+            ? String.format("Query did not return expected count %d after %d ms (got %d)", expectedCount, maxWait, finalCount)
+            : String.format("Query did not return any items after %d ms", maxWait);
+        throw new RuntimeException(message);
+    }
+
+    /**
+     * Retries a query operation until items are available.
+     * Uses default timeout of 2000ms.
+     * 
+     * @param querySupplier Supplier that returns the query result
+     * @param expectedCount Expected number of items (null to wait for any items > 0)
+     * @param <T> The type of query result
+     * @return The query result when condition is met
+     */
+    public static <T> T retryQueryUntilAvailable(Supplier<T> querySupplier, Integer expectedCount) {
+        return retryQueryUntilAvailable(querySupplier, expectedCount, 2000L);
+    }
+
+    /**
+     * Retries a query operation until any items are available.
+     * Uses default timeout of 2000ms.
+     * 
+     * @param querySupplier Supplier that returns the query result
+     * @param <T> The type of query result
+     * @return The query result when items are found
+     */
+    public static <T> T retryQueryUntilAvailable(Supplier<T> querySupplier) {
+        return retryQueryUntilAvailable(querySupplier, null, 2000L);
     }
 
     /**

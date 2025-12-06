@@ -17,6 +17,8 @@
 
 package org.apache.unomi.healthcheck.provider;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.auth.AuthScope;
@@ -28,12 +30,9 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.healthcheck.HealthCheckConfig;
-import org.apache.unomi.healthcheck.HealthCheckProvider;
 import org.apache.unomi.healthcheck.HealthCheckResponse;
 import org.apache.unomi.healthcheck.util.CachedValue;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
-import org.osgi.service.component.annotations.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,40 +43,21 @@ import java.util.concurrent.TimeUnit;
  * A Health Check that checks the status of the OpenSearch connectivity according to the provided configuration.
  * This connectivity should be LIVE before any try to start Unomi.
  */
-@Component(service = HealthCheckProvider.class, immediate = true)
-public class OpenSearchHealthCheckProvider implements HealthCheckProvider {
+public class OpenSearchHealthCheckProvider implements PersistenceEngineHealthProvider {
 
     public static final String NAME = "opensearch";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenSearchHealthCheckProvider.class.getName());
     private final CachedValue<HealthCheckResponse> cache = new CachedValue<>(10, TimeUnit.SECONDS);
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private HealthCheckConfig config;
 
     private CloseableHttpClient httpClient;
-
-    @Reference(service = PersistenceService.class, cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, bind = "bind", unbind = "unbind")
-    private volatile PersistenceService persistenceService;
-
-    public void bind(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
-
-    public void unbind(PersistenceService persistenceService) {
-        this.persistenceService = null;
-    }
 
     public OpenSearchHealthCheckProvider() {
         LOGGER.info("Building OpenSearch health provider service...");
     }
 
-    @Override
-    public boolean isAvailable() {
-        return persistenceService != null && "opensearch".equals(persistenceService.getName());
-    }
-
-    @Activate
     public void activate() {
         LOGGER.info("Activating OpenSearch health provider service...");
         CredentialsProvider credentialsProvider = null;
@@ -112,6 +92,10 @@ public class OpenSearchHealthCheckProvider implements HealthCheckProvider {
         return cache.getValue();
     }
 
+    @Override public HealthCheckResponse detailed() {
+        return execute();
+    }
+
     private HealthCheckResponse refresh() {
         LOGGER.debug("Refresh");
         HealthCheckResponse.Builder builder = new HealthCheckResponse.Builder();
@@ -133,9 +117,28 @@ public class OpenSearchHealthCheckProvider implements HealthCheckProvider {
                 HttpEntity entity = response.getEntity();
                 if (entity != null) {
                     String content = EntityUtils.toString(entity);
-                    if (content.contains("\"status\":\"green\"") ||
-                        content.contains("\"status\":\"yellow\"") && minimalClusterState.equals("yellow")) {
-                        builder.live();
+                    try {
+                        ObjectMapper mapper = new ObjectMapper();
+                        JsonNode root = mapper.readTree(content);
+                        String status = root.has("status") ? root.get("status").asText() : null;
+                        if ("green".equals(status) || ("yellow".equals(status) && "yellow".equals(minimalClusterState))) {
+                            builder.live();
+                        }
+                        if (root.has("cluster_name")) builder.withData("cluster_name", root.get("cluster_name").asText());
+                        if (root.has("status")) builder.withData("status", root.get("status").asText());
+                        if (root.has("timed_out")) builder.withData("timed_out", root.get("timed_out").asBoolean());
+                        if (root.has("number_of_nodes")) builder.withData("number_of_nodes", root.get("number_of_nodes").asLong());
+                        if (root.has("number_of_data_nodes")) builder.withData("number_of_data_nodes", root.get("number_of_data_nodes").asLong());
+                        if (root.has("active_primary_shards")) builder.withData("active_primary_shards", root.get("active_primary_shards").asLong());
+                        if (root.has("active_shards")) builder.withData("active_shards", root.get("active_shards").asLong());
+                        if (root.has("relocating_shards")) builder.withData("relocating_shards", root.get("relocating_shards").asLong());
+                        if (root.has("initializing_shards")) builder.withData("initializing_shards", root.get("initializing_shards").asLong());
+                        if (root.has("unassigned_shards")) builder.withData("unassigned_shards", root.get("unassigned_shards").asLong());
+                    } catch (Exception parseEx) {
+                        if (content.contains("\"status\":\"green\"") ||
+                                (content.contains("\"status\":\"yellow\"") && "yellow".equals(minimalClusterState))) {
+                            builder.live();
+                        }
                     }
                 }
             }

@@ -17,8 +17,8 @@
 
 package org.apache.unomi.itests;
 
+import org.apache.unomi.itests.migration.Migrate16xToCurrentVersionIT;
 import org.apache.unomi.itests.graphql.*;
-import org.apache.unomi.itests.migration.MigrateFrom16xIT;
 import org.apache.unomi.itests.migration.MigrationIT;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite.SuiteClasses;
@@ -30,8 +30,8 @@ import org.junit.runners.Suite.SuiteClasses;
  */
 @RunWith(ProgressSuite.class)
 @SuiteClasses({
-        MigrateFrom16xIT.class,
-        MigrationIT.class,
+        Migrate16xToCurrentVersionIT.class,
+        MigrationIT.class,  
         BasicIT.class,
         ConditionEvaluatorIT.class,
         ConditionQueryBuilderIT.class,
@@ -66,6 +66,7 @@ import org.junit.runners.Suite.SuiteClasses;
         SendEventActionIT.class,
         ScopeIT.class,
         HealthCheckIT.class,
+        LegacyQueryBuilderMappingIT.class,
         V2CompatibilityModeIT.class
 })
 public class AllITs {

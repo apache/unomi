@@ -18,9 +18,15 @@ This section contains information and steps to migrate between major Unomi versi
 
 include::v2-v3-compatibility.adoc[]
 
-=== From version 2.0 to 3.0
+=== From version 3.0 to 3.1
 
-include::migrate-2.0-to-3.0.adoc[]
+include::migrate-3.0-to-3.1.adoc[]
+
+include::migrate-elasticsearch-to-opensearch.adoc[]
+
+=== From version 2.x to 3.0
+
+include::migrate-2.x-to-3.0.adoc[]
 
 === From version 1.6 to 2.0
 

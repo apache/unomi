@@ -11,18 +11,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+=== Cluster setup
 
-=== Clustering
+Apache Karaf relies on Persistence to register nodes and manage cluster.
 
-Apache Unomi supports clustering for high availability and scalability. This section will be expanded with detailed clustering configuration and setup instructions in a future update.
+You can control most of the important clustering settings through the centralized configuration file at
 
-==== Overview
+    etc/unomi.custom.system.properties
 
-The clustering functionality in Apache Unomi allows you to:
+And notably using the following properties:
 
-1. Scale horizontally by adding more nodes
-2. Provide high availability through redundancy
-3. Balance load across multiple nodes
-4. Share profile data across the cluster
+    org.apache.unomi.cluster.public.address=${env:UNOMI_CLUSTER_PUBLIC_ADDRESS:-http://localhost:8181}
+    org.apache.unomi.cluster.internal.address=${env:UNOMI_CLUSTER_INTERNAL_ADDRESS:-https://localhost:9443}
+    org.apache.unomi.cluster.nodeId=${env:UNOMI_CLUSTER_NODEID:-unomi-node-1}
+    org.apache.unomi.cluster.nodeStatisticsUpdateFrequency=${env:UNOMI_CLUSTER_NODESTATISTICS_UPDATEFREQUENCY:-10000}
 
-For now, please refer to the Apache Unomi website and community resources for current clustering best practices. 
+Note that it is mandatory to set a different `org.apache.unomi.cluster.nodeId` for each node in the cluster.

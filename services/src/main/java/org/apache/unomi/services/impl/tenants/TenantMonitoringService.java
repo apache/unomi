@@ -19,6 +19,7 @@ package org.apache.unomi.services.impl.tenants;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.Tenant;
@@ -115,14 +116,29 @@ public class TenantMonitoringService {
             return;
         }
         
+        // Check if required condition types are available before updating metrics
+        if (definitionsService == null) {
+            logger.debug("DefinitionsService not available, skipping metrics update");
+            return;
+        }
+        
+        ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
+        ConditionType eventPropertyConditionType = definitionsService.getConditionType("eventPropertyCondition");
+        
+        if (profilePropertyConditionType == null || eventPropertyConditionType == null) {
+            logger.debug("Required condition types not available (profilePropertyCondition: {}, eventPropertyCondition: {}), skipping metrics update",
+                    profilePropertyConditionType != null, eventPropertyConditionType != null);
+            return;
+        }
+        
         try {
             List<Tenant> tenants = tenantService.getAllTenants();
             for (Tenant tenant : tenants) {
                 if (shutdownNow) return;
                 
                 TenantMetrics metrics = new TenantMetrics();
-                metrics.setProfileCount(countProfiles(tenant.getItemId()));
-                metrics.setEventCount(countEvents(tenant.getItemId()));
+                metrics.setProfileCount(countProfiles(tenant.getItemId(), profilePropertyConditionType));
+                metrics.setEventCount(countEvents(tenant.getItemId(), eventPropertyConditionType));
                 metrics.setStorageSize(persistenceService.calculateStorageSize(tenant.getItemId()));
                 metrics.setApiCallCount(persistenceService.getApiCallCount(tenant.getItemId()));
 
@@ -133,20 +149,20 @@ public class TenantMonitoringService {
         }
     }
 
-    private long countProfiles(String tenantId) {
+    private long countProfiles(String tenantId, ConditionType conditionType) {
         Condition condition = new Condition();
         condition.setConditionTypeId("profilePropertyCondition");
-        condition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+        condition.setConditionType(conditionType);
         condition.setParameter("propertyName", "tenantId");
         condition.setParameter("comparisonOperator", "equals");
         condition.setParameter("propertyValue", tenantId);
         return persistenceService.queryCount(condition, Profile.ITEM_TYPE);
     }
 
-    private long countEvents(String tenantId) {
+    private long countEvents(String tenantId, ConditionType conditionType) {
         Condition condition = new Condition();
         condition.setConditionTypeId("eventPropertyCondition");
-        condition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+        condition.setConditionType(conditionType);
         condition.setParameter("propertyName", "tenantId");
         condition.setParameter("comparisonOperator", "equals");
         condition.setParameter("propertyValue", tenantId);

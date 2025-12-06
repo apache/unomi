@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.ActionType;
@@ -46,7 +47,7 @@ import java.util.TimeZone;
 public class CustomObjectMapper extends ObjectMapper {
 
     private static final long serialVersionUID = 4578277612897061535L;
-    
+
     private Map<String,Class<? extends Item>> builtinItemTypeClasses = new HashMap<>();
     private PropertyTypedObjectDeserializer propertyTypedObjectDeserializer;
     private ItemDeserializer itemDeserializer;
@@ -58,7 +59,7 @@ public class CustomObjectMapper extends ObjectMapper {
     public CustomObjectMapper(Map<Class, StdDeserializer<?>> deserializers) {
         super();
         super.registerModule(new JaxbAnnotationModule());
-        super.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
+        super.registerModule(new JavaTimeModule());
         configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         setSerializationInclusion(JsonInclude.Include.NON_NULL);
         ISO8601DateFormat dateFormat = new ISO8601DateFormat();

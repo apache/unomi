@@ -46,7 +46,6 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.security.SecurityService;
-import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
@@ -54,6 +53,7 @@ import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
+import org.apache.unomi.itests.tools.LogChecker;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -70,6 +70,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.ConfigurationManager;
 import org.ops4j.pax.exam.CoreOptions;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -136,6 +137,8 @@ public abstract class BaseIT extends KarafTestSupport {
     protected static final String SEARCH_ENGINE_HTTPREQUEST_LOG_LEVEL = "unomi.search.engine.httprequest.log.level";
     protected static final String SEARCH_ENGINE_ELASTICSEARCH = "elasticsearch";
     protected static final String SEARCH_ENGINE_OPENSEARCH = "opensearch";
+    protected static final String RESOLVER_DEBUG_PROPERTY = "it.unomi.resolver.debug";
+    protected static final String ENABLE_LOG_CHECKING_PROPERTY = "it.unomi.log.checking.enabled";
 
     protected final static ObjectMapper objectMapper;
     protected static boolean unomiStarted = false;
@@ -183,6 +186,8 @@ public abstract class BaseIT extends KarafTestSupport {
     protected ConfigurationAdmin configurationAdmin;
 
     protected CloseableHttpClient httpClient;
+    protected LogChecker logChecker;
+    private String currentTestName;
 
     public enum AuthType {
         NONE,           // No authentication
@@ -193,11 +198,30 @@ public abstract class BaseIT extends KarafTestSupport {
         AUTO            // Automatically determine based on endpoint type
     }
 
+    /**
+     * Checks the search engine configuration from system properties.
+     * This method should be called early, before any test setup, to ensure
+     * the correct search engine is detected and any necessary fixes are applied.
+     */
+    protected void checkSearchEngine() {
+        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        System.out.println("Check search engine: " + searchEngine);
+        
+        // Fix elasticsearch-maven-plugin default_template issue before any test setup
+        // The plugin creates a default_template with very high priority that overrides all user templates
+        // This must be done very early, before Unomi starts or any migration runs
+        if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
+            fixDefaultTemplateIfNeeded();
+        }
+    }
+
     @Before
     public void waitForStartup() throws InterruptedException {
         // disable retry
         retry = new KarafTestSupport.Retry(false);
-        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        
+        // Check search engine and apply any necessary fixes (e.g., default_template deletion)
+        checkSearchEngine();
 
         // Start Unomi if not already done
         if (!unomiStarted) {
@@ -272,19 +296,62 @@ public abstract class BaseIT extends KarafTestSupport {
 
         // init httpClient without credentials provider - all auth handled via headers
         httpClient = initHttpClient(null);
+        
+        // Initialize log checker if enabled
+        if (isLogCheckingEnabled()) {
+            logChecker = new LogChecker();
+            LOGGER.info("Log checking enabled using in-memory appender");
+        }
+    }
+    
+    /**
+     * Mark log checkpoint before each test
+     * This method is called automatically by JUnit before each test method
+     */
+    @Before
+    public void markLogCheckpoint() {
+        if (logChecker != null) {
+            logChecker.markCheckpoint();
+            // Get current test name from stack trace
+            StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+            for (StackTraceElement element : stack) {
+                String methodName = element.getMethodName();
+                if (methodName.startsWith("test") || methodName.startsWith("check")) {
+                    currentTestName = element.getClassName() + "." + methodName;
+                    break;
+                }
+            }
+            if (currentTestName == null) {
+                currentTestName = "unknown";
+            }
+            LOGGER.debug("Marked log checkpoint for test: {}", currentTestName);
+        }
     }
 
     private void waitForUnomiManagementService() throws InterruptedException {
+        final int maxRetries = 5;
+        int retryCount = 0;
         UnomiManagementService unomiManagementService = getOsgiService(UnomiManagementService.class, 600000);
-        while (unomiManagementService == null) {
-            LOGGER.info("Waiting for Unomi Management Service to be available...");
+
+        while (unomiManagementService == null && retryCount < maxRetries) {
+            LOGGER.info("Waiting for Unomi Management Service to be available... (attempt {}/{})", retryCount + 1, maxRetries);
             Thread.sleep(1000);
+            retryCount++;
             unomiManagementService = getOsgiService(UnomiManagementService.class, 600000);
+        }
+
+        if (unomiManagementService == null) {
+            String errorMsg = String.format("Unomi Management Service was not available after %d retries.", maxRetries);
+            LOGGER.error(errorMsg);
+            throw new InterruptedException(errorMsg);
         }
     }
 
     @After
     public void shutdown() {
+        // Check logs for unexpected errors/warnings before cleanup
+        checkLogsForUnexpectedIssues();
+        
         if (testTenant != null) {
             try {
                 tenantService.deleteTenant(testTenant.getItemId());
@@ -297,6 +364,76 @@ public abstract class BaseIT extends KarafTestSupport {
         }
         closeHttpClient(httpClient);
         httpClient = null;
+    }
+
+    
+    /**
+     * Check logs for unexpected errors and warnings since the last checkpoint
+     * This is called automatically after each test
+     */
+    protected void checkLogsForUnexpectedIssues() {
+        if (logChecker == null) {
+            return;
+        }
+        
+        try {
+            LogChecker.LogCheckResult result = logChecker.checkLogsSinceLastCheckpoint();
+            
+            if (result.hasUnexpectedIssues()) {
+                String summary = result.getSummary();
+                String testInfo = currentTestName != null ? "Test: " + currentTestName + "\n" : "";
+                
+                // Log to console and logger
+                System.err.println("\n=== UNEXPECTED LOG ISSUES DETECTED ===");
+                System.err.println(testInfo + summary);
+                System.err.println("=======================================\n");
+                
+                LOGGER.warn("Unexpected log issues detected in test {}:\n{}", currentTestName, summary);
+                
+                // Add to JUnit test output by printing to System.out (captured by JUnit)
+                System.out.println("\n=== SERVER-SIDE LOG ISSUES ===");
+                System.out.println(testInfo + summary);
+                System.out.println("===============================\n");
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error checking logs", e);
+        }
+    }
+    
+    /**
+     * Check if log checking is enabled
+     * Can be controlled via system property: it.unomi.log.checking.enabled
+     * Defaults to true
+     */
+    protected boolean isLogCheckingEnabled() {
+        String enabled = System.getProperty(ENABLE_LOG_CHECKING_PROPERTY, "true");
+        return Boolean.parseBoolean(enabled);
+    }
+    
+    /**
+     * Add a pattern to ignore for log checking
+     * Useful for tests that expect certain errors/warnings
+     * @param pattern Regex pattern to match against log messages
+     */
+    protected void addIgnoredLogPattern(String pattern) {
+        if (logChecker != null) {
+            logChecker.addIgnoredPattern(pattern);
+        }
+    }
+    
+    /**
+     * Add multiple patterns to ignore for log checking
+     * @param patterns List of regex patterns
+     */
+    protected void addIgnoredLogPatterns(List<String> patterns) {
+        if (logChecker != null) {
+            logChecker.addIgnoredPatterns(patterns);
+        }
+    }
+
+    protected String karafData() {
+        ConfigurationManager cm = new ConfigurationManager();
+        return cm.getProperty("karaf.data");
     }
 
     protected void removeItems(final Class<? extends Item>... classes) throws InterruptedException {
@@ -334,25 +471,71 @@ public abstract class BaseIT extends KarafTestSupport {
 
     @Configuration
     public Option[] config() {
+        LOGGER.info("==== Configuring container");
         System.out.println("==== Configuring container");
 
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        LOGGER.info("Search Engine: {}", searchEngine);
         System.out.println("Search Engine: " + searchEngine);
 
         // Define features option based on search engine
         Option featuresOption;
         if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
-            featuresOption = features(maven().groupId("org.apache.unomi")
-                    .artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
-                    "unomi-persistence-elasticsearch", "unomi-services",
-                    "unomi-router-karaf-feature", "unomi-groovy-actions",
-                    "unomi-web-applications", "unomi-rest-ui", "unomi-healthcheck", "cdp-graphql-feature");
+            featuresOption = features(
+                    maven().groupId("org.apache.unomi").artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
+                    "unomi-base",
+                    "unomi-startup",
+                    "unomi-elasticsearch-core",
+                    "unomi-persistence-core",
+                    "unomi-services",
+                    "unomi-cxs-privacy-extension-services",
+                    "unomi-plugins-base",
+                    "unomi-plugins-request",
+                    "unomi-plugins-mail",
+                    "unomi-plugins-optimization-test",
+                    "unomi-rest-api",
+                    "unomi-cxs-privacy-extension",
+                    "unomi-elasticsearch-conditions",
+                    "unomi-plugins-advanced-conditions",
+                    "unomi-cxs-lists-extension",
+                    "unomi-cxs-geonames-extension",
+                    "unomi-shell-dev-commands",
+                    "unomi-wab",
+                    "unomi-web-tracker",
+                    "unomi-healthcheck",
+                    "unomi-router-karaf-feature",
+                    "unomi-groovy-actions",
+                    "unomi-rest-ui",
+                    "unomi-startup-complete"
+            );
         } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-            featuresOption = features(maven().groupId("org.apache.unomi")
-                    .artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
-                    "unomi-persistence-opensearch", "unomi-services",
-                    "unomi-router-karaf-feature", "unomi-groovy-actions",
-                    "unomi-web-applications", "unomi-rest-ui", "unomi-healthcheck", "cdp-graphql-feature");
+            featuresOption = features(
+                    maven().groupId("org.apache.unomi").artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
+                    "unomi-base",
+                    "unomi-startup",
+                    "unomi-opensearch-core",
+                    "unomi-persistence-core",
+                    "unomi-services",
+                    "unomi-cxs-privacy-extension-services",
+                    "unomi-plugins-base",
+                    "unomi-plugins-request",
+                    "unomi-plugins-mail",
+                    "unomi-plugins-optimization-test",
+                    "unomi-rest-api",
+                    "unomi-cxs-privacy-extension",
+                    "unomi-opensearch-conditions",
+                    "unomi-plugins-advanced-conditions",
+                    "unomi-cxs-lists-extension",
+                    "unomi-cxs-geonames-extension",
+                    "unomi-shell-dev-commands",
+                    "unomi-wab",
+                    "unomi-web-tracker",
+                    "unomi-healthcheck",
+                    "unomi-router-karaf-feature",
+                    "unomi-groovy-actions",
+                    "unomi-rest-ui",
+                    "unomi-startup-complete"
+            );
         } else {
             throw new IllegalArgumentException("Unknown search engine: " + searchEngine);
         }
@@ -372,6 +555,10 @@ public abstract class BaseIT extends KarafTestSupport {
                 replaceConfigurationFile("data/tmp/testLoginEventCondition.json", new File("src/test/resources/testLoginEventCondition.json")),
                 replaceConfigurationFile("data/tmp/testClickEventCondition.json", new File("src/test/resources/testClickEventCondition.json")),
                 replaceConfigurationFile("data/tmp/testRuleGroovyAction.json", new File("src/test/resources/testRuleGroovyAction.json")),
+                replaceConfigurationFile("data/tmp/conditions/testIdsConditionLegacy.json", new File("src/test/resources/conditions/testIdsConditionLegacy.json")),
+                replaceConfigurationFile("data/tmp/conditions/testIdsConditionNew.json", new File("src/test/resources/conditions/testIdsConditionNew.json")),
+                replaceConfigurationFile("data/tmp/conditions/testBooleanConditionLegacy.json", new File("src/test/resources/conditions/testBooleanConditionLegacy.json")),
+                replaceConfigurationFile("data/tmp/conditions/testPropertyConditionLegacy.json", new File("src/test/resources/conditions/testPropertyConditionLegacy.json")),
                 replaceConfigurationFile("data/tmp/groovy/UpdateAddressAction.groovy", new File("src/test/resources/groovy/UpdateAddressAction.groovy")),
 
                 editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.rootLogger.level", "INFO"),
@@ -382,6 +569,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.cluster.name", "contextElasticSearchITests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:" + getSearchPort()),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.rollover.maxDocs", "300"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.cluster.name", "contextElasticSearchITests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.addresses", "localhost:" + getSearchPort()),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.username", "admin"),
@@ -390,14 +578,8 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslTrustAllCertificates", "true"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.migration.tenant.id", TEST_TENANT_ID),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.dumpRequestTypes", "removeByQuery"),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
-                systemProperty("org.apache.unomi.hazelcast.group.name").value("cellar"),
-                systemProperty("org.apache.unomi.hazelcast.group.password").value("pass"),
-                systemProperty("org.apache.unomi.hazelcast.network.port").value("5701"),
-                systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
-                systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
 
                 featuresOption,  // Add the features option
@@ -413,6 +595,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
         String karafDebug = System.getProperty("it.karaf.debug");
         if (karafDebug != null) {
+            LOGGER.info("Found system Karaf Debug system property, activating configuration: {}", karafDebug);
             System.out.println("Found system Karaf Debug system property, activating configuration: " + karafDebug);
             String port = "5006";
             boolean hold = true;
@@ -450,8 +633,48 @@ public abstract class BaseIT extends KarafTestSupport {
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.level", customLoggingParts[1]));
         }
 
+        // Enable debug logging for Karaf Resolver to diagnose bundle refresh issues (default: disabled)
+        boolean enableResolverDebug = Boolean.parseBoolean(System.getProperty(RESOLVER_DEBUG_PROPERTY, "false"));
+        if (enableResolverDebug) {
+            LOGGER.info("Enabling debug logging for Karaf Resolver and Karaf features service");
+            System.out.println("Enabling debug logging for Karaf Resolver and Karaf features service");
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiResolver.name", "org.osgi.service.resolver"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiResolver.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafFeatures.name", "org.apache.karaf.features"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafFeatures.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafResolver.name", "org.apache.karaf.resolver"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafResolver.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiFramework.name", "org.osgi.framework"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiFramework.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiPackageAdmin.name", "org.osgi.service.packageadmin"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiPackageAdmin.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafDeployer.name", "org.apache.karaf.features.core"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafDeployer.level", "DEBUG"));
+        } else {
+            LOGGER.info("Karaf Resolver debug logging is disabled (set -Dit.unomi.resolver.debug=true to enable)");
+            System.out.println("Karaf Resolver debug logging is disabled (set -Dit.unomi.resolver.debug=true to enable)");
+        }
+
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        LOGGER.info("Search Engine: {}", searchEngine);
         System.out.println("Search Engine: " + searchEngine);
+
+        // Configure in-memory log appender for log checking
+        // The InMemoryLogAppender is part of the log4j-extension fragment bundle,
+        // which is already included as a startup bundle. It attaches to the Pax Logging
+        // Log4j2 bundle early in the startup process, ensuring the appender is discoverable.
+        // We only configure it for integration tests, not for the default package.
+        if (isLogCheckingEnabled()) {
+            LOGGER.info("Configuring in-memory log appender for log checking");
+            // Configure the appender in Log4j2
+            // The appender is already available via the log4j-extension fragment bundle
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", 
+                "log4j2.appender.inMemory.type", "InMemoryLogAppender"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", 
+                "log4j2.appender.inMemory.name", "InMemoryLogAppender"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", 
+                "log4j2.rootLogger.appenderRef.inMemory.ref", "InMemoryLogAppender"));
+        }
 
         return Stream.of(super.config(), karafOptions.toArray(new Option[karafOptions.size()])).flatMap(Stream::of).toArray(Option[]::new);
     }
@@ -681,12 +904,14 @@ public abstract class BaseIT extends KarafTestSupport {
      */
     public void updateConfiguration(String serviceName, String configPid, Map<String, Object> propsToSet)
             throws InterruptedException, IOException {
-        org.osgi.service.cm.Configuration cfg = configurationAdmin.getConfiguration(configPid);
+        // Use getConfiguration(pid, null) to create an unbound configuration
+        // This ensures the configuration is accessible to all bundles, not just the test bundle
+        org.osgi.service.cm.Configuration cfg = configurationAdmin.getConfiguration(configPid, null);
         Dictionary<String, Object> props = cfg.getProperties();
-        
+
         // Handle case where properties haven't been initialized yet
         final Dictionary<String, Object> finalProps = (props != null) ? props : new Hashtable<>();
-        
+
         // Add new properties to the dictionary
         for (Map.Entry<String, Object> propToSet : propsToSet.entrySet()) {
             finalProps.put(propToSet.getKey(), propToSet.getValue());
@@ -695,7 +920,11 @@ public abstract class BaseIT extends KarafTestSupport {
         // If serviceName is null, don't wait for service re-registration
         if (serviceName == null) {
             LOGGER.info("Updating configuration {} without waiting for service restart", configPid);
+            LOGGER.debug("Configuration properties being set: {}", finalProps);
             cfg.update(finalProps);
+            // Verify the update was applied
+            Dictionary<String, Object> updatedProps = cfg.getProperties();
+            LOGGER.debug("Configuration properties after update: {}", updatedProps);
             // Give the configuration change handler time to process
             Thread.sleep(1000);
         } else {
@@ -757,6 +986,7 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
+
     /**
      * Creates a rule and waits until it has been successfully saved in the system.
      *
@@ -796,14 +1026,27 @@ public abstract class BaseIT extends KarafTestSupport {
      * @return The deserialized response object, or null if the request failed
      */
     protected <T> T get(final String url, Class<T> clazz) {
-        try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl(url)))) {
+        CloseableHttpResponse response = null;
+        try {
+            final HttpGet httpGet = new HttpGet(getFullUrl(url));
+            response = executeHttpRequest(httpGet);
             if (response.getStatusLine().getStatusCode() == 200) {
                 return objectMapper.readValue(response.getEntity().getContent(), clazz);
             } else {
                 return null;
             }
         } catch (Exception e) {
-            LOGGER.error("Error executing GET request to " + url, e);
+            LOGGER.error("Error while getting url "+url, e);
+            e.printStackTrace();
+        } finally {
+            if (response != null) {
+                try {
+                    response.close();
+                } catch (IOException e) {
+                    LOGGER.error("Error while getting url "+url, e);
+                    e.printStackTrace();
+                }
+            }
         }
         return null;
     }
@@ -850,14 +1093,27 @@ public abstract class BaseIT extends KarafTestSupport {
      * @return The HTTP response, or null if the request failed
      */
     protected CloseableHttpResponse delete(final String url) {
+        CloseableHttpResponse response = null;
         try {
-            return executeHttpRequest(new HttpDelete(getFullUrl(url)));
+            final HttpDelete httpDelete = new HttpDelete(getFullUrl(url));
+            response = executeHttpRequest(httpDelete);
         } catch (IOException e) {
             LOGGER.error("Error executing DELETE request to " + url, e);
+            e.printStackTrace();
         } catch (Exception e) {
             LOGGER.error("Error executing DELETE request to " + url, e);
+            e.printStackTrace();
+        } finally {
+            if (response != null) {
+                try {
+                    response.close();
+                } catch (IOException e) {
+                    LOGGER.error("Error executing DELETE request to " + url, e);
+                    e.printStackTrace();
+                }
+            }
         }
-        return null;
+        return response;
     }
 
     /**
@@ -1127,5 +1383,126 @@ public abstract class BaseIT extends KarafTestSupport {
         }
 
         return response;
+    }
+
+    /**
+     * Fixes the default_template created by elasticsearch-maven-plugin that overrides all user templates.
+     * The plugin creates a template with index_patterns: ["*"] and very high priority (2147483520),
+     * which in ES 8/9 overrides all other templates since composable templates don't merge.
+     * This method detects and deletes the template if it has a very high priority.
+     * This must be called before Unomi starts since the ES persistence service isn't available yet.
+     */
+    private void fixDefaultTemplateIfNeeded() {
+        String templateName = "default_template";
+        String esBaseUrl = "http://localhost:" + getSearchPort();
+        String templateUrl = esBaseUrl + "/_index_template/" + templateName;
+        
+        CloseableHttpClient tempHttpClient = null;
+        try {
+            // Create a temporary HTTP client for ES requests
+            tempHttpClient = initHttpClient(null);
+            
+            // Check if default_template exists using HEAD request
+            HttpHead headRequest = new HttpHead(templateUrl);
+            CloseableHttpResponse headResponse = null;
+            try {
+                headResponse = tempHttpClient.execute(headRequest);
+                int statusCode = headResponse.getStatusLine().getStatusCode();
+                
+                if (statusCode == 404) {
+                    // Template doesn't exist, nothing to fix
+                    LOGGER.debug("default_template does not exist, no action needed");
+                    return;
+                } else if (statusCode != 200) {
+                    // Unexpected status, log and continue
+                    LOGGER.warn("Unexpected status code {} when checking for default_template, skipping fix", statusCode);
+                    return;
+                }
+            } finally {
+                if (headResponse != null) {
+                    headResponse.close();
+                }
+            }
+            
+            // Template exists, get its details to check priority
+            HttpGet getRequest = new HttpGet(templateUrl);
+            CloseableHttpResponse getResponse = null;
+            try {
+                getResponse = tempHttpClient.execute(getRequest);
+                int statusCode = getResponse.getStatusLine().getStatusCode();
+                
+                if (statusCode == 200) {
+                    String responseBody = IOUtils.toString(getResponse.getEntity().getContent(), "UTF-8");
+                    JsonNode jsonNode = objectMapper.readTree(responseBody);
+                    
+                    // Parse the template response
+                    // ES API returns: {"index_templates": [{"name": "default_template", "index_template": {...}}]}
+                    if (jsonNode.has("index_templates") && jsonNode.get("index_templates").isArray()) {
+                        JsonNode templates = jsonNode.get("index_templates");
+                        for (JsonNode template : templates) {
+                            if (template.has("name") && templateName.equals(template.get("name").asText())) {
+                                JsonNode indexTemplate = template.get("index_template");
+                                if (indexTemplate != null && indexTemplate.has("priority")) {
+                                    Long priority = indexTemplate.get("priority").asLong();
+                                    
+                                    // Check if priority is very high (>= 2147480000, near Integer.MAX_VALUE)
+                                    // This indicates it's the problematic template from elasticsearch-maven-plugin
+                                    if (priority >= 2147480000L) {
+                                        LOGGER.warn("Detected default_template with very high priority ({}). " +
+                                                "This template from elasticsearch-maven-plugin overrides all user templates in ES 8/9. " +
+                                                "Deleting it to allow user templates to work correctly.", priority);
+                                        
+                                        // Delete the template
+                                        HttpDelete deleteRequest = new HttpDelete(templateUrl);
+                                        CloseableHttpResponse deleteResponse = null;
+                                        try {
+                                            deleteResponse = tempHttpClient.execute(deleteRequest);
+                                            int deleteStatusCode = deleteResponse.getStatusLine().getStatusCode();
+                                            
+                                            if (deleteStatusCode == 200) {
+                                                // Parse delete response to check acknowledged
+                                                String deleteResponseBody = IOUtils.toString(deleteResponse.getEntity().getContent(), "UTF-8");
+                                                JsonNode deleteJsonNode = objectMapper.readTree(deleteResponseBody);
+                                                boolean acknowledged = deleteJsonNode.has("acknowledged") && 
+                                                                       deleteJsonNode.get("acknowledged").asBoolean();
+                                                
+                                                if (acknowledged) {
+                                                    LOGGER.info("Successfully deleted default_template. User templates will now work correctly.");
+                                                } else {
+                                                    LOGGER.warn("Failed to delete default_template - not acknowledged. User templates may not work correctly.");
+                                                }
+                                            } else {
+                                                LOGGER.warn("Failed to delete default_template - status code: {}. User templates may not work correctly.", deleteStatusCode);
+                                            }
+                                        } finally {
+                                            if (deleteResponse != null) {
+                                                deleteResponse.close();
+                                            }
+                                        }
+                                    } else {
+                                        LOGGER.debug("default_template exists but has normal priority ({}), no action needed.", priority);
+                                    }
+                                    break; // Found the template, no need to continue
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    LOGGER.warn("Failed to get default_template details - status code: {}, skipping fix", statusCode);
+                }
+            } finally {
+                if (getResponse != null) {
+                    getResponse.close();
+                }
+            }
+        } catch (Exception e) {
+            // Log but don't fail startup - this is a best-effort fix for integration tests
+            LOGGER.warn("Failed to check/fix default_template: {}. This may affect template application in integration tests.", 
+                    e.getMessage(), e);
+        } finally {
+            if (tempHttpClient != null) {
+                closeHttpClient(tempHttpClient);
+            }
+        }
     }
 }

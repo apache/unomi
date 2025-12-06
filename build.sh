@@ -241,6 +241,7 @@ print_section "Apache Unomi Build Script"
 
 # Default values
 SKIP_TESTS=false
+SKIP_UNIT_TESTS=false
 RUN_INTEGRATION_TESTS=false
 DEPLOY=false
 DEBUG=false
@@ -258,6 +259,7 @@ IT_DEBUG=false
 IT_DEBUG_PORT=5006
 IT_DEBUG_SUSPEND=false
 SKIP_MIGRATION_TESTS=false
+RESOLVER_DEBUG=false
 
 # Enhanced usage function with color support
 usage() {
@@ -278,6 +280,7 @@ EOF
         echo -e "${BOLD}Options:${NC}"
         echo -e "  ${CYAN}-h, --help${NC}                 Show this help message"
         echo -e "  ${CYAN}-s, --skip-tests${NC}           Skip all tests"
+        echo -e "  ${CYAN}--skip-unit-tests${NC}          Skip unit tests (integration tests can still run)"
         echo -e "  ${CYAN}-i, --integration-tests${NC}    Run integration tests"
         echo -e "  ${CYAN}-d, --deploy${NC}               Deploy after build"
         echo -e "  ${CYAN}-X, --maven-debug${NC}         Enable Maven debug output"
@@ -296,6 +299,7 @@ EOF
         echo -e "  ${CYAN}--it-debug-port PORT${NC}        Set integration test debug port"
         echo -e "  ${CYAN}--it-debug-suspend${NC}        Suspend integration test until debugger connects"
         echo -e "  ${CYAN}--skip-migration-tests${NC}    Skip migration-related tests"
+        echo -e "  ${CYAN}--resolver-debug${NC}          Enable Karaf Resolver debug logging for integration tests"
     else
         cat << "EOF"
      _    _ _____ _      ____
@@ -311,6 +315,7 @@ EOF
         echo "Options:"
         echo "  -h, --help                 Show this help message"
         echo "  -s, --skip-tests           Skip all tests"
+        echo "  --skip-unit-tests          Skip unit tests (integration tests can still run)"
         echo "  -i, --integration-tests    Run integration tests"
         echo "  -d, --deploy               Deploy after build"
         echo "  -X, --maven-debug         Enable Maven debug output"
@@ -329,6 +334,7 @@ EOF
         echo "  --it-debug-port PORT      Set integration test debug port"
         echo "  --it-debug-suspend        Suspend integration test until debugger connects"
         echo "  --skip-migration-tests    Skip migration-related tests"
+        echo "  --resolver-debug          Enable Karaf Resolver debug logging for integration tests"
     fi
 
     echo
@@ -336,6 +342,9 @@ EOF
     if [ "$HAS_COLORS" -eq 1 ]; then
         echo -e "  ${GRAY}# Build with integration tests using OpenSearch${NC}"
         echo -e "  ${GRAY}$0 --integration-tests --use-opensearch${NC}"
+        echo -e
+        echo -e "  ${GRAY}# Build skipping unit tests but running integration tests${NC}"
+        echo -e "  ${GRAY}$0 --skip-unit-tests --integration-tests${NC}"
         echo -e
         echo -e "  ${GRAY}# Build in debug mode${NC}"
         echo -e "  ${GRAY}$0 --debug --debug-port 5006 --debug-suspend${NC}"
@@ -360,6 +369,9 @@ EOF
     else
         echo "  # Build with integration tests using OpenSearch"
         echo "  $0 --integration-tests --use-opensearch"
+        echo
+        echo "  # Build skipping unit tests but running integration tests"
+        echo "  $0 --skip-unit-tests --integration-tests"
         echo
         echo "  # Build in debug mode"
         echo "  $0 --debug --debug-port 5006 --debug-suspend"
@@ -399,6 +411,9 @@ while [ "$1" != "" ]; do
             ;;
         -s | --skip-tests)
             SKIP_TESTS=true
+            ;;
+        --skip-unit-tests)
+            SKIP_UNIT_TESTS=true
             ;;
         -i | --integration-tests)
             RUN_INTEGRATION_TESTS=true
@@ -456,6 +471,9 @@ while [ "$1" != "" ]; do
             ;;
         --skip-migration-tests)
             SKIP_MIGRATION_TESTS=true
+            ;;
+        --resolver-debug)
+            RESOLVER_DEBUG=true
             ;;
         *)
             echo "Unknown option: $1"
@@ -700,6 +718,23 @@ check_requirements() {
         has_errors=true
     fi
 
+    if [ "$SKIP_TESTS" = true ] && [ "$SKIP_UNIT_TESTS" = true ]; then
+        print_status "error" "Cannot use --skip-tests and --skip-unit-tests together"
+        has_errors=true
+    fi
+
+    # OpenSearch password check
+    if [ "$USE_OPENSEARCH" = true ] || [ "$AUTO_START" = "opensearch" ]; then
+        if [ -z "$UNOMI_OPENSEARCH_PASSWORD" ]; then
+            print_status "error" "UNOMI_OPENSEARCH_PASSWORD is not set for OpenSearch"
+            echo "When using OpenSearch, you must export UNOMI_OPENSEARCH_PASSWORD before running the build/start."
+            echo "Examples:"
+            echo "  export UNOMI_OPENSEARCH_PASSWORD=yourStrongPassword"
+            echo "  UNOMI_OPENSEARCH_PASSWORD=yourStrongPassword $0 --integration-tests --use-opensearch"
+            has_errors=true
+        fi
+    fi
+
     if [ ! -z "$SINGLE_TEST" ] && [ "$RUN_INTEGRATION_TESTS" = false ]; then
         print_status "error" "Single test specified (--single-test) but integration tests are not enabled. Use --integration-tests to run the test."
         has_errors=true
@@ -805,9 +840,73 @@ if [ ! -f ~/.m2/settings.xml ]; then
     fi
 fi
 
+# Function to check for conflicting environment variables before integration tests
+check_integration_test_env_vars() {
+    local detected_vars=()
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    
+    # Check for Elasticsearch environment variables
+    if [ -n "${UNOMI_ELASTICSEARCH_CLUSTERNAME+x}" ] || \
+       [ -n "${UNOMI_ELASTICSEARCH_USERNAME+x}" ] || \
+       [ -n "${UNOMI_ELASTICSEARCH_PASSWORD+x}" ] || \
+       [ -n "${UNOMI_ELASTICSEARCH_SSL_ENABLE+x}" ] || \
+       [ -n "${UNOMI_ELASTICSEARCH_SSL_TRUST_ALL_CERTIFICATES+x}" ]; then
+        detected_vars+=("Elasticsearch")
+    fi
+    
+    # Check for OpenSearch environment variables
+    if [ -n "${UNOMI_OPENSEARCH_CLUSTERNAME+x}" ] || \
+       [ -n "${UNOMI_OPENSEARCH_ADDRESSES+x}" ] || \
+       [ -n "${UNOMI_OPENSEARCH_USERNAME+x}" ] || \
+       [ -n "${UNOMI_OPENSEARCH_PASSWORD+x}" ] || \
+       [ -n "${UNOMI_OPENSEARCH_SSL_ENABLE+x}" ] || \
+       [ -n "${UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES+x}" ]; then
+        detected_vars+=("OpenSearch")
+    fi
+    
+    if [ ${#detected_vars[@]} -gt 0 ]; then
+        print_status "error" "Environment variables for ${detected_vars[*]} are set and will interfere with integration tests"
+        echo ""
+        echo "Integration tests manage their own search engine configuration and should not"
+        echo "be run with these environment variables set."
+        echo ""
+        echo "To clear the environment variables, run one of the following:"
+        echo ""
+        for var_type in "${detected_vars[@]}"; do
+            if [ "$var_type" = "Elasticsearch" ]; then
+                echo "  source ${script_dir}/clear-elasticsearch.sh"
+            elif [ "$var_type" = "OpenSearch" ]; then
+                echo "  source ${script_dir}/clear-opensearch.sh"
+            fi
+        done
+        echo ""
+        echo "Or manually unset the variables:"
+        if [[ " ${detected_vars[@]} " =~ " Elasticsearch " ]]; then
+            echo "  unset UNOMI_ELASTICSEARCH_CLUSTERNAME"
+            echo "  unset UNOMI_ELASTICSEARCH_USERNAME"
+            echo "  unset UNOMI_ELASTICSEARCH_PASSWORD"
+            echo "  unset UNOMI_ELASTICSEARCH_SSL_ENABLE"
+            echo "  unset UNOMI_ELASTICSEARCH_SSL_TRUST_ALL_CERTIFICATES"
+        fi
+        if [[ " ${detected_vars[@]} " =~ " OpenSearch " ]]; then
+            echo "  unset UNOMI_OPENSEARCH_CLUSTERNAME"
+            echo "  unset UNOMI_OPENSEARCH_ADDRESSES"
+            echo "  unset UNOMI_OPENSEARCH_USERNAME"
+            echo "  unset UNOMI_OPENSEARCH_PASSWORD"
+            echo "  unset UNOMI_OPENSEARCH_SSL_ENABLE"
+            echo "  unset UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES"
+        fi
+        echo ""
+        echo "After clearing the variables, you can run the integration tests again."
+        exit 1
+    fi
+}
+
 # Add profile options
 PROFILES=""
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
+    # Check for conflicting environment variables before running integration tests
+    check_integration_test_env_vars
     if [ "$USE_OPENSEARCH" = true ]; then
         MVN_OPTS="$MVN_OPTS -Duse.opensearch=true -P opensearch"
         echo "Running integration tests with OpenSearch"
@@ -840,10 +939,28 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
         MVN_OPTS="$MVN_OPTS -Dit.test.exclude.pattern=**/migration/**/*IT.java"
         echo "Skipping migration tests"
     fi
+
+    # Add Karaf Resolver debug option if specified
+    if [ "$RESOLVER_DEBUG" = true ]; then
+        MVN_OPTS="$MVN_OPTS -Dit.unomi.resolver.debug=true"
+        echo "Enabling Karaf Resolver debug logging for integration tests"
+    fi
+
+    # Add skip unit tests option if specified (integration tests will still run)
+    if [ "$SKIP_UNIT_TESTS" = true ]; then
+        # Activate skip-unit-tests profile to skip unit tests (surefire), not integration tests (failsafe)
+        MVN_OPTS="$MVN_OPTS -P skip-unit-tests"
+        echo "Skipping unit tests (integration tests will still run)"
+    fi
 else
     if [ "$SKIP_TESTS" = true ]; then
         PROFILES="$PROFILES,!integration-tests,!run-tests"
         MVN_OPTS="$MVN_OPTS -DskipTests"
+    elif [ "$SKIP_UNIT_TESTS" = true ]; then
+        # Skip unit tests but allow integration tests to run if --integration-tests is specified
+        # Activate skip-unit-tests profile to skip unit tests (surefire), not integration tests (failsafe)
+        MVN_OPTS="$MVN_OPTS -P skip-unit-tests"
+        echo "Skipping unit tests"
     fi
     
     # Warn if single test was specified but integration tests are not enabled

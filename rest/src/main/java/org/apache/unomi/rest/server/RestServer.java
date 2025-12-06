@@ -26,7 +26,9 @@ import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.openapi.OpenApiCustomizer;
 import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
 import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
+import org.apache.cxf.jaxrs.swagger.ui.SwaggerUiConfig;
 import org.apache.cxf.message.Message;
+import org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter;
 import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.security.SecurityService;
@@ -148,11 +150,11 @@ public class RestServer {
 
         // Create a filter for JAX-RS resources
         Filter filter = bundleContext.createFilter("(osgi.jaxrs.resource=true)");
-        
+
         // Create service tracker with proper generic types and customizer
         jaxRSServiceTracker = new ServiceTracker<>(bundleContext, filter, new JaxRsServiceTrackerCustomizer());
         jaxRSServiceTracker.open();
-        
+
         LOGGER.info("RestServer activated and service tracker opened");
     }
 
@@ -160,28 +162,28 @@ public class RestServer {
     public void deactivate() throws Exception {
         LOGGER.info("RestServer deactivating...");
         isShuttingDown.set(true);
-        
+
         // Cancel any pending refresh timer
         if (refreshTimer != null) {
             refreshTimer.cancel();
             refreshTimer = null;
         }
-        
+
         // Close service tracker
         if (jaxRSServiceTracker != null) {
             jaxRSServiceTracker.close();
             jaxRSServiceTracker = null;
         }
-        
+
         // Destroy server
         if (server != null) {
             server.destroy();
             server = null;
         }
-        
+
         // Clear service beans
         serviceBeans.clear();
-        
+
         LOGGER.info("RestServer deactivated");
     }
 
@@ -190,39 +192,39 @@ public class RestServer {
      * This handles the lifecycle of JAX-RS resource services properly
      */
     private class JaxRsServiceTrackerCustomizer implements ServiceTrackerCustomizer<Object, Object> {
-        
+
         @Override
         public Object addingService(ServiceReference<Object> reference) {
             if (isShuttingDown.get()) {
-                LOGGER.debug("Shutdown in progress, ignoring new service: {}", 
+                LOGGER.debug("Shutdown in progress, ignoring new service: {}",
                     reference.getProperty("objectClass"));
                 return null;
             }
-            
+
             Object serviceBean = null;
             try {
                 // Get the service - this should not be null if the service is properly registered
                 serviceBean = bundleContext.getService(reference);
-                
+
                 if (serviceBean == null) {
-                    LOGGER.warn("Service reference returned null for: {}", 
+                    LOGGER.warn("Service reference returned null for: {}",
                         reference.getProperty("objectClass"));
                     return null;
                 }
-                
+
                 LOGGER.info("Registering JAX-RS service: {}", serviceBean.getClass().getName());
-                
+
                 // Add to service beans list
                 serviceBeans.add(serviceBean);
                 timeOfLastUpdate = System.currentTimeMillis();
-                
+
                 // Refresh server asynchronously to avoid blocking the service tracker
                 scheduleServerRefresh();
-                
+
                 return serviceBean;
-                
+
             } catch (Exception e) {
-                LOGGER.error("Error adding JAX-RS service: {}", 
+                LOGGER.error("Error adding JAX-RS service: {}",
                     reference.getProperty("objectClass"), e);
                 // Unget the service if we couldn't process it
                 if (serviceBean != null) {
@@ -237,7 +239,7 @@ public class RestServer {
             if (isShuttingDown.get()) {
                 return;
             }
-            
+
             LOGGER.info("JAX-RS service modified: {}", service.getClass().getName());
             timeOfLastUpdate = System.currentTimeMillis();
             scheduleServerRefresh();
@@ -248,16 +250,16 @@ public class RestServer {
             if (isShuttingDown.get()) {
                 return;
             }
-            
+
             LOGGER.info("Removing JAX-RS service: {}", service.getClass().getName());
-            
+
             // Remove from service beans list
             serviceBeans.remove(service);
             timeOfLastUpdate = System.currentTimeMillis();
-            
+
             // Unget the service
             bundleContext.ungetService(reference);
-            
+
             // Refresh server asynchronously
             scheduleServerRefresh();
         }
@@ -270,7 +272,7 @@ public class RestServer {
         if (isShuttingDown.get()) {
             return;
         }
-        
+
         long now = System.currentTimeMillis();
         if (now - timeOfLastUpdate < startupDelay) {
             // Debounce rapid changes
@@ -288,7 +290,7 @@ public class RestServer {
             }
             return;
         }
-        
+
         // Refresh immediately if enough time has passed
         refreshServer();
     }
@@ -297,7 +299,7 @@ public class RestServer {
         if (isShuttingDown.get()) {
             return;
         }
-        
+
         long now = System.currentTimeMillis();
         LOGGER.debug("Time since last update: {} ms", now - timeOfLastUpdate);
 
@@ -359,6 +361,8 @@ public class RestServer {
         openApiFeature.setLicenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html");
         openApiFeature.setScan(false);
         openApiFeature.setUseContextBasedConfig(true);
+        SwaggerUiConfig swaggerUiConfig = new SwaggerUiConfig().url("openapi.json").deepLinking(true).queryConfigEnabled(false);
+        openApiFeature.setSwaggerUiConfig(swaggerUiConfig);
         OpenApiCustomizer customizer = new OpenApiCustomizer();
         customizer.setDynamicBasePath(true);
         openApiFeature.setCustomizer(customizer);

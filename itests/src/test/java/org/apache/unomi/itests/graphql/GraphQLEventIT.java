@@ -69,16 +69,64 @@ public class GraphQLEventIT extends BaseGraphQLIT {
         createEvent(eventID, profile);
         createEvent("event-2", profile);
         final Profile profile2 = new Profile("profile-2");
+        persistenceService.save(profile2);
         createEvent("event-3", profile2);
-        refreshPersistence(Event.class);
+        
+        // Wait for events to be properly indexed before querying via GraphQL
+        refreshPersistence(Event.class, Profile.class);
+        // Verify events are queryable via persistence service first
+        keepTrying("Events should be queryable via persistence",
+                () -> {
+                        List<Event> events = persistenceService.query("itemId", eventID, null, Event.class);
+                        return events != null && events.size() == 1;
+                },
+                (found) -> found, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        try (CloseableHttpResponse response = post("graphql/event/find-events.json")) {
-            final ResponseContext context = ResponseContext.parse(response.getEntity());
+        // Wait for events to be indexed and queryable via GraphQL
+        ResponseContext[] contextHolder = new ResponseContext[1];
+        CloseableHttpResponse response = keepTrying("GraphQL query should return events",
+                () -> {
+                    try {
+                        CloseableHttpResponse resp = post("graphql/event/find-events.json");
+                        if (resp != null && resp.getEntity() != null) {
+                            // Buffer entity to allow multiple reads
+                            org.apache.http.entity.BufferedHttpEntity bufferedEntity = 
+                                new org.apache.http.entity.BufferedHttpEntity(resp.getEntity());
+                            resp.setEntity(bufferedEntity);
+                        }
+                        return resp;
+                    } catch (Exception e) {
+                        return null;
+                    }
+                },
+                resp -> {
+                    if (resp == null || resp.getEntity() == null) return false;
+                    try {
+                        final ResponseContext context = ResponseContext.parse(resp.getEntity());
+                        List<Map> edges = context.getValue("data.cdp.findEvents.edges");
+                        if (edges != null && edges.size() == 1) {
+                            contextHolder[0] = context;
+                            return true;
+                        }
+                        return false;
+                    } catch (Exception e) {
+                        return false;
+                    }
+                },
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        
+        try {
+            Assert.assertNotNull("Response context should be available", contextHolder[0]);
+            final ResponseContext context = contextHolder[0];
             Assert.assertNotNull(context.getValue("data.cdp.findEvents"));
             List<Map> edges = context.getValue("data.cdp.findEvents.edges");
             Assert.assertEquals(1, edges.size());
             Assert.assertEquals(profileID, context.getValue("data.cdp.findEvents.edges[0].node.cdp_profileID.id"));
             Assert.assertEquals(eventID, context.getValue("data.cdp.findEvents.edges[0].node.id"));
+        } finally {
+            if (response != null) {
+                response.close();
+            }
         }
     }
 

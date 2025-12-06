@@ -45,6 +45,8 @@ include::security.adoc[]
 
 include::5-min-quickstart.adoc[]
 
+include::getting-started.adoc[]
+
 include::tutorial.adoc[]
 
 == Apache Unomi Recipes and requests

@@ -23,14 +23,12 @@ import org.apache.unomi.api.services.PatchService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 
 /**
  * A JAX-RS endpoint to manage patches.
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(

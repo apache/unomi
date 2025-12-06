@@ -19,8 +19,8 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.tracing.api.RequestTracer;
 
@@ -41,7 +41,7 @@ public class NotConditionEvaluator implements ConditionEvaluator {
         RequestTracer tracer = null;
         if (tracerService != null && tracerService.isTracingEnabled()) {
             tracer = tracerService.getCurrentTracer();
-            tracer.startOperation("not", 
+            tracer.startOperation("not",
                 "Evaluating NOT condition", condition);
         }
 

@@ -1,0 +1,37 @@
+{
+  "metadata": {
+    "id": "sourceEventPropertyCondition",
+    "name": "sourceEventPropertyCondition",
+    "description": "",
+    "systemTags": [
+      "condition",
+      "sourceEventCondition"
+    ],
+    "readOnly": true
+  },
+  "conditionEvaluator": "sourceEventPropertyConditionEvaluator",
+  "queryBuilder": "sourceEventPropertyConditionQueryBuilder",
+
+  "parameters": [
+    {
+      "id": "id",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "path",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "scope",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "type",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}

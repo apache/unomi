@@ -25,7 +25,6 @@ import org.apache.unomi.rest.security.RequiresRole;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -35,7 +34,6 @@ import java.util.List;
  * REST endpoint for managing scheduled tasks in the Apache Unomi system.
  * Provides operations for listing, creating, canceling, and managing tasks.
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,

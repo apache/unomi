@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "id": "testIdsConditionNew",
+    "name": "Test IDs Condition New",
+    "description": "Test condition type using new queryBuilder ID",
+    "systemTags": [
+      "profileTags",
+      "condition"
+    ],
+    "readOnly": false
+  },
+  "queryBuilder": "idsConditionQueryBuilder",
+  "parameters": [
+    {
+      "id": "ids",
+      "type": "string",
+      "multivalued": true
+    },
+    {
+      "id": "match",
+      "type": "boolean",
+      "multivalued": false,
+      "defaultValue": true
+    }
+  ]
+}

@@ -88,6 +88,12 @@ public class ConfigSharingServiceImpl implements ConfigSharingService, Synchrono
         LOGGER.info("Config sharing service for Service is shutdown.");
     }
 
+    private void processBundleStartup(BundleContext bundleContext) {
+        if (bundleContext == null) {
+            return;
+        }
+    }
+
     @Override
     public void bundleChanged(BundleEvent bundleEvent) {
 

@@ -17,12 +17,11 @@
 
 package org.apache.unomi.persistence.elasticsearch.querybuilders.core;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,15 +29,15 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * ES query builder for boolean conditions.
+ * Elasticsearch query builder for boolean conditions.
  */
 public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BooleanConditionESQueryBuilder.class.getName());
 
     @Override
-    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context,
-                                   ConditionESQueryBuilderDispatcher dispatcher) {
+    public Query buildQuery(Condition condition, Map<String, Object> context,
+                            ConditionESQueryBuilderDispatcher dispatcher) {
         boolean isAndOperator = "and".equalsIgnoreCase((String) condition.getParameter("operator"));
         @SuppressWarnings("unchecked")
         List<Condition> conditions = (List<Condition>) condition.getParameter("subConditions");
@@ -49,31 +48,35 @@ public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
             return dispatcher.buildFilter(conditions.get(0), context);
         }
 
-        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
         for (int i = 0; i < conditionCount; i++) {
             if (isAndOperator) {
-                QueryBuilder andFilter = dispatcher.buildFilter(conditions.get(i), context);
+                Query andFilter = dispatcher.buildFilter(conditions.get(i), context);
                 if (andFilter != null) {
-                    if (andFilter.getName().equals("range")) {
+                    if (andFilter.isRange()) {
                         boolQueryBuilder.filter(andFilter);
                     } else {
                         boolQueryBuilder.must(andFilter);
                     }
                 } else {
                     LOGGER.warn("Null filter for boolean AND sub condition. See debug log level for more information");
-                    if (LOGGER.isDebugEnabled()) LOGGER.debug("Null filter for boolean AND sub condition {}", conditions.get(i));
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Null filter for boolean AND sub condition {}", conditions.get(i));
+                    }
                 }
             } else {
-                QueryBuilder orFilter = dispatcher.buildFilter(conditions.get(i), context);
+                Query orFilter = dispatcher.buildFilter(conditions.get(i), context);
                 if (orFilter != null) {
                     boolQueryBuilder.should(orFilter);
                 } else {
                     LOGGER.warn("Null filter for boolean OR sub condition. See debug log level for more information");
-                    if (LOGGER.isDebugEnabled()) LOGGER.debug("Null filter for boolean OR sub condition {}", conditions.get(i));
+                    if (LOGGER.isDebugEnabled()) {
+                        LOGGER.debug("Null filter for boolean OR sub condition {}", conditions.get(i));
+                    }
                 }
             }
         }
 
-        return boolQueryBuilder;
+        return Query.of(q->q.bool(boolQueryBuilder.build()));
     }
 }

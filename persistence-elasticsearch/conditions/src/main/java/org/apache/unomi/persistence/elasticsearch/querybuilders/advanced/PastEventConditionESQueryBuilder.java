@@ -17,6 +17,7 @@
 
 package org.apache.unomi.persistence.elasticsearch.querybuilders.advanced;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
@@ -27,10 +28,10 @@ import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
+import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder;
 import org.apache.unomi.scripting.ScriptExecutor;
-import org.elasticsearch.index.query.QueryBuilder;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
@@ -80,10 +81,12 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     }
 
     @Override
-    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+    public Query buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         boolean eventsOccurred = getStrategyFromOperator((String) condition.getParameter("operator"));
-        int minimumEventCount = !eventsOccurred || condition.getParameter("minimumEventCount") == null ? 1 : (Integer) condition.getParameter("minimumEventCount");
-        int maximumEventCount = !eventsOccurred || condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
+        Integer minimumEventCountObj = PropertyHelper.getInteger(condition.getParameter("minimumEventCount"));
+        int minimumEventCount = !eventsOccurred || minimumEventCountObj == null ? 1 : minimumEventCountObj;
+        Integer maximumEventCountObj = PropertyHelper.getInteger(condition.getParameter("maximumEventCount"));
+        int maximumEventCount = !eventsOccurred || maximumEventCountObj == null ? Integer.MAX_VALUE : maximumEventCountObj;
         String generatedPropertyKey = (String) condition.getParameter("generatedPropertyKey");
 
         if (generatedPropertyKey != null && generatedPropertyKey.equals(segmentService.getGeneratedPropertyKey((Condition) condition.getParameter("eventCondition"), condition))) {
@@ -102,8 +105,10 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     @Override
     public long count(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         boolean eventsOccurred = getStrategyFromOperator((String) condition.getParameter("operator"));
-        int minimumEventCount = !eventsOccurred || condition.getParameter("minimumEventCount") == null ? 1 : (Integer) condition.getParameter("minimumEventCount");
-        int maximumEventCount = !eventsOccurred || condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
+        Integer minimumEventCountObj = PropertyHelper.getInteger(condition.getParameter("minimumEventCount"));
+        int minimumEventCount = !eventsOccurred || minimumEventCountObj == null ? 1 : minimumEventCountObj;
+        Integer maximumEventCountObj = PropertyHelper.getInteger(condition.getParameter("maximumEventCount"));
+        int maximumEventCount = !eventsOccurred || maximumEventCountObj == null ? Integer.MAX_VALUE : maximumEventCountObj;
         String generatedPropertyKey = (String) condition.getParameter("generatedPropertyKey");
 
         if (generatedPropertyKey != null && generatedPropertyKey.equals(segmentService.getGeneratedPropertyKey((Condition) condition.getParameter("eventCondition"), condition))) {
@@ -232,7 +237,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
             l.add(profileCondition);
         }
 
-        Integer numberOfDays = (Integer) condition.getParameter("numberOfDays");
+        Integer numberOfDays = PropertyHelper.getInteger(condition.getParameter("numberOfDays"));
         Object fromDateValue = condition.getParameter("fromDate");
         String fromDate = null;
         if (fromDateValue != null) {

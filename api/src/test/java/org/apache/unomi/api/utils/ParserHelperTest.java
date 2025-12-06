@@ -546,4 +546,181 @@ public class ParserHelperTest {
         assertEquals("First subCondition type should be set", subCondition1Type, resolvedSubConditions.get(0).getConditionType());
         assertEquals("Second subCondition type should be set", subCondition2Type, resolvedSubConditions.get(1).getConditionType());
     }
+
+    @Test
+    public void testResolveBooleanConditionWithParentConditionUsingBooleanCondition() {
+        // Test scenario: booleanCondition A has subCondition B
+        // subCondition B has parentCondition which is booleanCondition C
+        // This should NOT be detected as a circular reference because they are different instances
+        Condition booleanConditionA = new Condition();
+        booleanConditionA.setConditionTypeId("booleanCondition");
+        booleanConditionA.setParameter("operator", "and");
+        
+        Condition subConditionB = new Condition();
+        subConditionB.setConditionTypeId("eventPropertyCondition");
+        Map<String, Object> subConditionBParams = new HashMap<>();
+        subConditionBParams.put("propertyName", "testProperty");
+        subConditionBParams.put("propertyValue", "testValue");
+        subConditionB.setParameterValues(subConditionBParams);
+        booleanConditionA.setParameter("subConditions", Arrays.asList(subConditionB));
+        
+        Condition booleanConditionC = new Condition();
+        booleanConditionC.setConditionTypeId("booleanCondition");
+        booleanConditionC.setParameter("operator", "or");
+        
+        Condition subConditionD = new Condition();
+        subConditionD.setConditionTypeId("profilePropertyCondition");
+        booleanConditionC.setParameter("subConditions", Arrays.asList(subConditionD));
+        
+        ConditionType booleanConditionType = new ConditionType();
+        booleanConditionType.setItemId("booleanCondition");
+        
+        ConditionType eventPropertyConditionType = new ConditionType();
+        eventPropertyConditionType.setItemId("eventPropertyCondition");
+        eventPropertyConditionType.setParentCondition(booleanConditionC);
+        
+        ConditionType profilePropertyConditionType = new ConditionType();
+        profilePropertyConditionType.setItemId("profilePropertyCondition");
+        
+        when(definitionsService.getConditionType("booleanCondition")).thenReturn(booleanConditionType);
+        when(definitionsService.getConditionType("eventPropertyCondition")).thenReturn(eventPropertyConditionType);
+        when(definitionsService.getConditionType("profilePropertyCondition")).thenReturn(profilePropertyConditionType);
+        
+        boolean result = ParserHelper.resolveConditionType(definitionsService, booleanConditionA, "testContext");
+        assertTrue("BooleanCondition with parent condition using booleanCondition should resolve successfully", result);
+        assertEquals("Root booleanCondition type should be set", booleanConditionType, booleanConditionA.getConditionType());
+    }
+
+    @Test
+    public void testSelfReferencingCycle() {
+        // Test self-referencing condition hits depth limit
+        Condition a = new Condition();
+        a.setConditionTypeId("booleanCondition");
+        a.setParameter("subConditions", Arrays.asList(a));
+        
+        ConditionType booleanConditionType = new ConditionType();
+        booleanConditionType.setItemId("booleanCondition");
+        when(definitionsService.getConditionType("booleanCondition")).thenReturn(booleanConditionType);
+        
+        boolean result = ParserHelper.resolveConditionType(definitionsService, a, "testContext");
+        assertFalse("Self-referencing condition should hit depth limit", result);
+    }
+
+    @Test
+    public void testMultipleBranchesWithSameConditionType() {
+        // Test that multiple branches can use the same condition type without false positives
+        Condition root = new Condition();
+        root.setConditionTypeId("booleanCondition");
+        
+        Condition branch1 = new Condition();
+        branch1.setConditionTypeId("booleanCondition");
+        
+        Condition branch2 = new Condition();
+        branch2.setConditionTypeId("booleanCondition");
+        
+        root.setParameter("subConditions", Arrays.asList(branch1, branch2));
+        
+        ConditionType booleanConditionType = new ConditionType();
+        booleanConditionType.setItemId("booleanCondition");
+        when(definitionsService.getConditionType("booleanCondition")).thenReturn(booleanConditionType);
+        
+        boolean result = ParserHelper.resolveConditionType(definitionsService, root, "testContext");
+        assertTrue("Multiple branches using the same condition type should not be a false positive", result);
+    }
+
+    @Test
+    public void testCycleInParentConditionChain() {
+        // Test cycle in parent condition chain: A has parent B, B has parent C, C has parent B
+        Condition root = new Condition();
+        root.setConditionTypeId("conditionA");
+        
+        Condition parentB = new Condition();
+        parentB.setConditionTypeId("conditionB");
+        
+        ConditionType typeA = new ConditionType();
+        typeA.setItemId("conditionA");
+        typeA.setParentCondition(parentB);
+        
+        ConditionType typeB = new ConditionType();
+        typeB.setItemId("conditionB");
+        
+        Condition parentC = new Condition();
+        parentC.setConditionTypeId("conditionC");
+        
+        ConditionType typeC = new ConditionType();
+        typeC.setItemId("conditionC");
+        
+        typeB.setParentCondition(parentC);
+        typeC.setParentCondition(parentB);
+        
+        when(definitionsService.getConditionType("conditionA")).thenReturn(typeA);
+        when(definitionsService.getConditionType("conditionB")).thenReturn(typeB);
+        when(definitionsService.getConditionType("conditionC")).thenReturn(typeC);
+        
+        boolean result = ParserHelper.resolveConditionType(definitionsService, root, "testContext");
+        assertFalse("Cycle in parent condition chain (B->C->B) should be detected", result);
+    }
+
+    @Test
+    public void testNestedBooleanConditionsWithoutCycle() {
+        // Test deeply nested booleanConditions that don't form a cycle
+        Condition root = new Condition();
+        root.setConditionTypeId("booleanCondition");
+        
+        Condition b1 = new Condition();
+        b1.setConditionTypeId("booleanCondition");
+        
+        Condition b2 = new Condition();
+        b2.setConditionTypeId("booleanCondition");
+        
+        Condition b3 = new Condition();
+        b3.setConditionTypeId("booleanCondition");
+        
+        root.setParameter("subConditions", Arrays.asList(b1));
+        b1.setParameter("subConditions", Arrays.asList(b2));
+        b2.setParameter("subConditions", Arrays.asList(b3));
+        
+        ConditionType booleanConditionType = new ConditionType();
+        booleanConditionType.setItemId("booleanCondition");
+        when(definitionsService.getConditionType("booleanCondition")).thenReturn(booleanConditionType);
+        
+        boolean result = ParserHelper.resolveConditionType(definitionsService, root, "testContext");
+        assertTrue("Deeply nested booleanConditions without cycle should succeed", result);
+    }
+
+    @Test
+    public void testUpDownBackUpCycle() {
+        // Test up → down → back up cycle: Root A -> parameter B -> B's parent C -> C's parent B (cycle in parent chain)
+        // This creates a cycle in the parent chain that should be detected
+        Condition rootA = new Condition();
+        rootA.setConditionTypeId("typeA");
+        
+        Condition paramB = new Condition();
+        paramB.setConditionTypeId("typeB");
+        rootA.setParameter("subConditions", Arrays.asList(paramB));
+        
+        Condition parentC = new Condition();
+        parentC.setConditionTypeId("typeC");
+        
+        Condition parentB = new Condition();
+        parentB.setConditionTypeId("typeB");
+        
+        ConditionType typeA = new ConditionType();
+        typeA.setItemId("typeA");
+        
+        ConditionType typeB = new ConditionType();
+        typeB.setItemId("typeB");
+        typeB.setParentCondition(parentC);
+        
+        ConditionType typeC = new ConditionType();
+        typeC.setItemId("typeC");
+        typeC.setParentCondition(parentB);
+        
+        when(definitionsService.getConditionType("typeA")).thenReturn(typeA);
+        when(definitionsService.getConditionType("typeB")).thenReturn(typeB);
+        when(definitionsService.getConditionType("typeC")).thenReturn(typeC);
+        
+        boolean result = ParserHelper.resolveConditionType(definitionsService, rootA, "testContext");
+        assertFalse("Up → down → back up cycle (B->C->B) should be detected", result);
+    }
 }

@@ -27,24 +27,29 @@ import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ValueTypeValidator;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 
 import java.util.*;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class ConditionValidationServiceImplTest {
 
     private ConditionValidationServiceImpl conditionValidationService;
@@ -142,9 +147,9 @@ public class ConditionValidationServiceImplTest {
         return type;
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        
         tracerService = TestHelper.createTracerService();
         tenantService = new TestTenantService();
 
@@ -171,7 +176,7 @@ public class ConditionValidationServiceImplTest {
 
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         // Use the common tearDown method from TestHelper
         TestHelper.tearDown(
@@ -213,17 +218,17 @@ public class ConditionValidationServiceImplTest {
     }
 
     private void assertSingleError(List<ValidationError> errors, String expectedParameterName) {
-        assertEquals(1, errors.size());
-        assertEquals(expectedParameterName, errors.get(0).getParameterName());
+        assertEquals(1, errors.size(), "Validation should produce exactly one error (param=" + expectedParameterName + ")");
+        assertEquals(expectedParameterName, errors.get(0).getParameterName(), "Error should point to expected parameter (param=" + expectedParameterName + ")");
     }
 
     private void assertSingleErrorWithContext(List<ValidationError> errors, String expectedConditionId,
             String expectedParameterName, String expectedConditionTypeName) {
-        assertEquals(1, errors.size());
+        assertEquals(1, errors.size(), "Validation should produce exactly one error (conditionId=" + expectedConditionId + ")");
         ValidationError error = errors.get(0);
-        assertEquals(expectedConditionId, error.getConditionId());
-        assertEquals(expectedParameterName, error.getParameterName());
-        assertEquals(expectedConditionTypeName, error.getConditionTypeName());
+        assertEquals(expectedConditionId, error.getConditionId(), "Error should reference expected condition id");
+        assertEquals(expectedParameterName, error.getParameterName(), "Error should reference expected parameter");
+        assertEquals(expectedConditionTypeName, error.getConditionTypeName(), "Error should reference expected condition type");
     }
 
     private void assertNoErrors(List<ValidationError> errors) {
@@ -234,7 +239,7 @@ public class ConditionValidationServiceImplTest {
                 System.out.println("---");
             }
         }
-        assertTrue(errors.isEmpty());
+        assertTrue(errors.isEmpty(), "Validation should pass without errors for constructed condition");
     }
 
     private Condition createConditionWithValue(ConditionType type, String paramName, Object value) {
@@ -246,16 +251,16 @@ public class ConditionValidationServiceImplTest {
     @Test
     public void testNullCondition() {
         List<ValidationError> errors = conditionValidationService.validate(null);
-        assertEquals(1, errors.size());
-        assertEquals(ValidationErrorType.MISSING_REQUIRED_PARAMETER, errors.get(0).getType());
+        assertEquals(1, errors.size(), "Null condition should yield one error");
+        assertEquals(ValidationErrorType.MISSING_REQUIRED_PARAMETER, errors.get(0).getType(), "Null condition should report missing required parameter");
     }
 
     @Test
     public void testNullConditionType() {
         Condition condition = new Condition();
         List<ValidationError> errors = conditionValidationService.validate(condition);
-        assertEquals(1, errors.size());
-        assertEquals(ValidationErrorType.INVALID_CONDITION_TYPE, errors.get(0).getType());
+        assertEquals(1, errors.size(), "Condition without type should yield one error");
+        assertEquals(ValidationErrorType.INVALID_CONDITION_TYPE, errors.get(0).getType(), "Condition without type should report invalid condition type");
     }
 
     @Test
@@ -276,8 +281,8 @@ public class ConditionValidationServiceImplTest {
         condition.setParameter("intParam", "not a number");
 
         List<ValidationError> errors = conditionValidationService.validate(condition);
-        assertEquals(2, errors.size());
-        assertTrue(errors.stream().allMatch(e -> e.getType() == ValidationErrorType.INVALID_VALUE));
+        assertEquals(2, errors.size(), "Two parameters with wrong types should produce two errors");
+        assertTrue(errors.stream().allMatch(e -> e.getType() == ValidationErrorType.INVALID_VALUE), "All errors should be INVALID_VALUE for type mismatch");
     }
 
     @Test
@@ -644,13 +649,14 @@ public class ConditionValidationServiceImplTest {
         // Validate and check results
         List<ValidationError> errors = conditionValidationService.validate(condition);
 
-        assertFalse("Should have validation errors", errors.isEmpty());
-        assertTrue("Should have at least one error", errors.size() >= 1);
+        assertFalse(errors.isEmpty(), "Should have validation errors");
+        assertTrue(errors.size() >= 1, "Should have at least one error");
         ValidationError error = errors.get(0);
         assertEquals(ValidationErrorType.MISSING_REQUIRED_PARAMETER, error.getType());
-        assertNotNull("Error should have context", error.getContext());
-        assertTrue("Context should contain location information",
-            error.getContext().containsKey("location") || error.getContext().containsKey("parameterType"));
+        assertNotNull(error.getContext(), "Error should have context");
+        assertTrue(
+            error.getContext().containsKey("location") || error.getContext().containsKey("parameterType"),
+            "Context should contain location information");
     }
 
     @Test
@@ -750,7 +756,7 @@ public class ConditionValidationServiceImplTest {
         invalidValues.forEach(condition::setParameter);
         List<ValidationError> errors = conditionValidationService.validate(condition);
         assertEquals(invalidValues.size(), errors.size());
-        assertTrue(errors.stream().allMatch(e -> e.getType() == ValidationErrorType.INVALID_VALUE));
+        assertTrue(errors.stream().allMatch(e -> e.getType() == ValidationErrorType.INVALID_VALUE), "All errors should be INVALID_VALUE for wrong element types (param=tags)");
     }
 
     @Test
@@ -832,11 +838,11 @@ public class ConditionValidationServiceImplTest {
         // Validate and check results
         List<ValidationError> errors = conditionValidationService.validate(condition);
 
-        assertFalse("Should have validation errors", errors.isEmpty());
+        assertFalse(errors.isEmpty(), "Should have validation errors");
         ValidationError error = errors.get(0);
         assertEquals(ValidationErrorType.INVALID_VALUE, error.getType());
-        assertNotNull("Should have context information", error.getContext());
-        assertTrue("Context should contain parameter type", error.getContext().containsKey("parameterType"));
+        assertNotNull(error.getContext(), "Should have context information");
+        assertTrue(error.getContext().containsKey("parameterType"), "Context should contain parameter type");
     }
 
     @Test
@@ -863,11 +869,11 @@ public class ConditionValidationServiceImplTest {
         // Validate and check results
         List<ValidationError> errors = conditionValidationService.validate(parentCondition);
 
-        assertEquals("Should have one validation error", 1, errors.size());
+        assertEquals(1, errors.size(), "Should have one validation error");
         ValidationError error = errors.get(0);
         assertEquals(ValidationErrorType.INVALID_VALUE, error.getType());
-        assertNotNull("Error should have context", error.getContext());
-        assertTrue("Context should contain location info", error.getContext().containsKey("location"));
+        assertNotNull(error.getContext(), "Error should have context");
+        assertTrue(error.getContext().containsKey("location"), "Context should contain location info");
     }
 
     @Test
@@ -986,7 +992,7 @@ public class ConditionValidationServiceImplTest {
             condition.setParameterValues(new LinkedHashMap<>()); // clear the previous parameters
             condition.setParameter(paramName, invalidList);
             List<ValidationError> paramErrors = conditionValidationService.validate(condition);
-            assertEquals("Parameter " + paramName + " should have one error", 1, paramErrors.size());
+            assertEquals(1, paramErrors.size(), "Parameter " + paramName + " should have one error");
             assertEquals(ValidationErrorType.INVALID_VALUE, paramErrors.get(0).getType());
         });
     }

@@ -16,48 +16,55 @@
   ~ limitations under the License.
   -->
 
-<features name="unomi-features" xmlns="http://karaf.apache.org/xmlns/features/v1.3.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.3.0 http://karaf.apache.org/xmlns/features/v1.3.0">
+<features name="unomi-features" xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0 http://karaf.apache.org/xmlns/features/v1.6.0">
 
+    <repository>mvn:org.apache.karaf.features/specs/${karaf.version}/xml/features</repository>
     <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
 
     <feature name="unomi-base" description="Apache Unomi :: Base Feature" version="${project.version}">
+        <requirement>osgi.service;effective:=active;filter:=(objectClass=org.osgi.service.http.HttpService)</requirement>
         <feature prerequisite="true">wrap</feature>
         <feature prerequisite="true">aries-blueprint</feature>
         <feature prerequisite="true">war</feature>
-        <feature>cxf-jaxrs</feature>
+        <feature prerequisite="true">config</feature>
+        <feature prerequisite="true">scr</feature>
+        <feature prerequisite="true">http</feature>
+        <feature prerequisite="true">http-whiteboard</feature>
+        <feature prerequisite="true">log</feature>
+        <feature version="${cxf.version}" dependency="true">cxf-jaxrs</feature>
         <feature>cxf-features-metrics</feature>
         <feature>cxf-rs-security-cors</feature>
         <feature>cxf-rs-description-openapi-v3</feature>
         <feature>eventadmin</feature>
         <feature>feature</feature>
+        <feature>spifly</feature>
         <feature>shell-compat</feature>
-        <configfile finalname="/etc/org.apache.unomi.plugins.request.cfg">mvn:org.apache.unomi/unomi-plugins-request/${project.version}/cfg/requestcfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.plugins.base.cfg">mvn:org.apache.unomi/unomi-plugins-base/${project.version}/cfg/pluginsbasecfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.services.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/servicescfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.thirdparty.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/thirdpartycfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.geonames.cfg">mvn:org.apache.unomi/cxs-geonames-services/${project.version}/cfg/geonamescfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.schema.cfg">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}/cfg/schemacfg</configfile>
-        <bundle>mvn:commons-io/commons-io/${apache.commons.io.version}</bundle>
-        <bundle>mvn:com.fasterxml.jackson.core/jackson-core/${version.jackson.core}</bundle>
-        <bundle>mvn:com.github.fge/btf/1.2</bundle>
-        <bundle>mvn:com.github.fge/msg-simple/1.1</bundle>
-        <bundle>mvn:com.google.guava/guava/16.0.1</bundle>
-        <bundle>mvn:com.github.fge/jackson-coreutils/1.8</bundle>
-        <bundle>mvn:com.github.fge/json-patch/1.9</bundle>
-        <bundle>mvn:org.json/json/${org.json.version}</bundle>
-        <bundle>mvn:com.fasterxml.jackson.core/jackson-databind/${version.jackson.databind}</bundle>
-        <bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-jsr310/${version.jackson.databind}</bundle>
-        <bundle>mvn:com.fasterxml.jackson.core/jackson-annotations/${version.jackson.core}</bundle>
-        <bundle>mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-base/${version.jackson.core}</bundle>
-        <bundle>mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/${version.jackson.jaxb}</bundle>
-        <bundle>mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/${version.jackson.core}</bundle>
-        <bundle>mvn:org.yaml/snakeyaml/1.33</bundle>
-        <bundle>mvn:com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/${version.jackson.core}</bundle>
+        <feature>jackson</feature>
+        <feature>jackson-jaxrs</feature>
+        <bundle>mvn:commons-collections/commons-collections/${commons-collections.version}</bundle>
+        <bundle>mvn:org.apache.commons/commons-lang3/${commons-lang3.version}</bundle>
+        <bundle>mvn:commons-beanutils/commons-beanutils/${commons-beanutils.version}</bundle>
+        <bundle>mvn:commons-io/commons-io/${commons-io.version}</bundle>
+        <bundle>mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
+        <bundle>mvn:org.apache.httpcomponents/httpclient-osgi/${httpclient-osgi.version}</bundle>
+        <bundle>mvn:javax.validation/validation-api/${javax-validation.version}</bundle>
+        <!-- Jackson bundles not included in any karaf feature -->
+        <bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-jsr310/${jackson.version}</bundle>
+        <bundle>mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/${jackson.version}</bundle>
+
+        <bundle>mvn:com.github.java-json-tools/btf/${btf.version}</bundle>
+        <bundle>mvn:com.github.java-json-tools/msg-simple/${msg-simple.version}</bundle>
+        <bundle>mvn:com.github.java-json-tools/jackson-coreutils/${jackson-coreutils.version}</bundle>
+        <bundle>mvn:com.github.java-json-tools/json-patch/${json-patch.version}</bundle>
+        <bundle>mvn:com.google.guava/guava/${guava.version}</bundle>
+        <bundle>mvn:org.json/json/${org-json.version}</bundle>
         <bundle>mvn:joda-time/joda-time/${joda-time.version}</bundle>
-        <bundle>mvn:org.apache.servicemix.specs/org.apache.servicemix.specs.jaxws-api-2.2/2.9.0</bundle>
-        <bundle>mvn:javax.annotation/javax.annotation-api/1.3.2</bundle>
-        <bundle>mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jsr305/${jsr305.bundle.version}</bundle>
-        <bundle>mvn:commons-collections/commons-collections/${apache.commons.collections.version}</bundle>
+        <bundle>mvn:jakarta.annotation/jakarta.annotation-api/${jakarta-annotation-api.version}</bundle>
+        <bundle>mvn:com.google.code.findbugs/jsr305/${jsr305.version}</bundle>
+        <bundle>mvn:org.apache.groovy/groovy/${groovy.version}</bundle>
+        <bundle>mvn:org.apache.groovy/groovy-xml/${groovy.version}</bundle>
+        <bundle>mvn:org.apache.groovy/groovy-json/${groovy.version}</bundle>
+
         <bundle>mvn:org.apache.unomi/unomi-lifecycle-watcher/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-api/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-common/${project.version}</bundle>
@@ -68,85 +75,169 @@
         <bundle>mvn:org.apache.unomi/unomi-persistence-spi/${project.version}</bundle>
      </feature>
 
-     <feature name="unomi-startup" description="Apache Unomi :: Startup Tools" version="${project.version}">
-         <configfile finalname="/etc/org.apache.unomi.migration.cfg">mvn:org.apache.unomi/shell-commands/${project.version}/cfg/migration</configfile>
-         <configfile finalname="/etc/org.apache.unomi.start.cfg">mvn:org.apache.unomi/shell-commands/${project.version}/cfg/start</configfile>
-         <bundle>mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
-         <bundle>mvn:org.apache.httpcomponents/httpclient-osgi/${httpclient-osgi.version}</bundle>
-         <bundle>mvn:org.apache.groovy/groovy/${groovy.version}</bundle>
-         <bundle>mvn:org.apache.groovy/groovy-xml/${groovy.version}</bundle>
-         <bundle>mvn:org.apache.groovy/groovy-json/${groovy.version}</bundle>
-         <bundle>mvn:org.apache.unomi/shell-commands/${project.version}</bundle>
-     </feature>
-
-    <feature name="unomi-persistence-elasticsearch" description="ElasticSearch persistence implementation for Apache Unomi" version="${project.version}">
-        <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.rest.authentication.cfg">mvn:org.apache.unomi/unomi-rest/${project.version}/cfg/restauth</configfile>
-        <bundle start="false">mvn:org.apache.unomi/unomi-services-common/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-conditions/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-services/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-rest/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-geonames-services/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-geonames-rest/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-services/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-rest/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-rest/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-base/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-request/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-mail/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-optimization-test/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-actions/${project.version}</bundle>
+    <feature name="unomi-startup" description="Apache Unomi :: Startup Tools" version="${project.version}">
+        <feature>unomi-base</feature>
+        <configfile finalname="/etc/org.apache.unomi.migration.cfg">mvn:org.apache.unomi/shell-commands/${project.version}/cfg/migration</configfile>
+        <configfile finalname="/etc/org.apache.unomi.start.cfg">mvn:org.apache.unomi/shell-commands/${project.version}/cfg/start</configfile>
+        <bundle>mvn:org.apache.unomi/shell-commands/${project.version}</bundle>
     </feature>
 
-    <feature name="unomi-persistence-opensearch" description="OpenSearch persistence implementation for Apache Unomi" version="${project.version}">
+    <feature name="unomi-elasticsearch-core" description="Apache Unomi :: Persistence :: ElasticSearch :: Core" version="${project.version}">
+        <feature>unomi-startup</feature>
+        <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
+        <!-- org.reactivestreams/reactive-streams must be installed BEFORE Elasticsearch persistence bundles start -->
+        <!-- This prevents bundle refreshes when optional imports (org.reactivestreams;resolution:=optional) are satisfied -->
+        <bundle start="false">mvn:org.reactivestreams/reactive-streams/${reactive-stream.version}</bundle>
+        <!-- com.google.errorprone/error_prone_annotations must be installed BEFORE Elasticsearch persistence bundles start -->
+        <!-- This prevents bundle refreshes when optional imports (com.google.errorprone.annotations.concurrent;resolution:=optional) are satisfied -->
+        <bundle start="false">wrap:mvn:com.google.errorprone/error_prone_annotations/${error_prone_annotations.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-services-common/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}</bundle>
+        <capability>unomi.persistence;provider:=elasticsearch</capability>
+    </feature>
+
+    <feature name="unomi-opensearch-core" description="Apache Unomi :: Persistence :: OpenSearch :: Core" version="${project.version}">
+        <feature>unomi-startup</feature>
         <configfile finalname="/etc/org.apache.unomi.persistence.opensearch.cfg">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}/cfg/opensearchcfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.rest.authentication.cfg">mvn:org.apache.unomi/unomi-rest/${project.version}/cfg/restauth</configfile>
+        <!-- org.reactivestreams/reactive-streams must be installed BEFORE OpenSearch persistence bundles start -->
+        <!-- This prevents bundle refreshes when optional imports (org.reactivestreams;resolution:=optional) are satisfied -->
+        <bundle start="false">mvn:org.reactivestreams/reactive-streams/${reactive-stream.version}</bundle>
+        <!-- com.google.errorprone/error_prone_annotations must be installed BEFORE OpenSearch persistence bundles start -->
+        <!-- This prevents bundle refreshes when optional imports (com.google.errorprone.annotations.concurrent;resolution:=optional) are satisfied -->
+        <bundle start="false">wrap:mvn:com.google.errorprone/error_prone_annotations/${error_prone_annotations.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-services-common/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-conditions/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-services/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-rest/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-geonames-services/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-geonames-rest/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-services/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-rest/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-rest/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-base/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-request/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-mail/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-optimization-test/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-actions/${project.version}</bundle>
+        <capability>unomi.persistence;provider:=opensearch</capability>
+    </feature>
+
+    <feature name="unomi-persistence-core" description="Apache Unomi :: Persistence :: Core" version="${project.version}">
+        <requirement>unomi.persistence</requirement>
+        <feature dependency="true">unomi-elasticsearch-core</feature>
     </feature>
 
     <feature name="unomi-services" description="Apache Unomi :: Services" version="${project.version}">
-        <bundle start="false">mvn:org.apache.unomi/shell-dev-commands/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-shell-commands/${project.version}</bundle>
+        <feature>unomi-persistence-core</feature>
+        <configfile finalname="/etc/org.apache.unomi.services.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/servicescfg</configfile>
+        <configfile finalname="/etc/org.apache.unomi.thirdparty.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/thirdpartycfg</configfile>
+        <configfile finalname="/etc/org.apache.unomi.cluster.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/clustercfg</configfile>
+        <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
     </feature>
 
-    <feature name="unomi-web-applications" description="Apache Unomi :: Web Applications" version="${project.version}">
-        <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>
-        <bundle start="false">mvn:org.apache.unomi/unomi-web-tracker-wab/${project.version}</bundle>
+    <feature name="unomi-cxs-privacy-extension-services" description="Apache Unomi :: Privacy Extension :: Services" version="${project.version}">
+        <feature>unomi-services</feature>
+        <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-services/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-rest-api" description="Apache Unomi :: REST API" version="${project.version}">
+        <feature>unomi-services</feature>
+        <feature>unomi-cxs-privacy-extension-services</feature>
+        <configfile finalname="/etc/org.apache.unomi.schema.cfg">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}/cfg/schemacfg</configfile>
+        <configfile finalname="/etc/org.apache.unomi.rest.authentication.cfg">mvn:org.apache.unomi/unomi-rest/${project.version}/cfg/restauth</configfile>
+        <!-- Legacy servlet forwarders (HTTP Whiteboard) and their configuration -->
+        <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-web-servlets/${project.version}/cfg/unomicfg</configfile>
+        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-rest/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-actions/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-web-servlets/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-cxs-lists-extension" description="Apache Unomi :: Extensions :: Lists" version="${project.version}">
+        <feature>unomi-rest-api</feature>
+        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-services/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-rest/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-actions/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-cxs-geonames-extension" description="Apache Unomi :: Extensions :: Geonames" version="${project.version}">
+        <feature>unomi-rest-api</feature>
+        <configfile finalname="/etc/org.apache.unomi.geonames.cfg">mvn:org.apache.unomi/cxs-geonames-services/${project.version}/cfg/geonamescfg</configfile>
+        <bundle start="false">mvn:org.apache.unomi/cxs-geonames-services/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-geonames-rest/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-cxs-privacy-extension" description="Apache Unomi :: Privacy Extension Services" version="${project.version}">
+        <feature>unomi-cxs-privacy-extension-services</feature>
+        <feature>unomi-rest-api</feature>
+        <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-rest/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-elasticsearch-conditions" description="Apache Unomi :: Persistence :: ElasticSearch :: Conditions" version="${project.version}">
+        <feature>unomi-elasticsearch-core</feature>
+        <feature>unomi-cxs-privacy-extension</feature>
+        <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-conditions/${project.version}</bundle>
+        <capability>unomi.persistence.conditions;provider:=elasticsearch</capability>
+    </feature>
+
+    <feature name="unomi-opensearch-conditions" description="Apache Unomi :: Persistence :: OpenSearch :: Conditions" version="${project.version}">
+        <feature>unomi-opensearch-core</feature>
+        <feature>unomi-cxs-privacy-extension</feature>
+        <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-conditions/${project.version}</bundle>
+        <capability>unomi.persistence.conditions;provider:=opensearch</capability>
+    </feature>
+
+    <feature name="unomi-plugins-base" description="Apache Unomi :: Plugins :: Base" version="${project.version}">
+        <feature>unomi-services</feature>
+        <feature>unomi-cxs-privacy-extension-services</feature>
+        <configfile finalname="/etc/org.apache.unomi.plugins.base.cfg">mvn:org.apache.unomi/unomi-plugins-base/${project.version}/cfg/pluginsbasecfg</configfile>
+        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-base/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-plugins-advanced-conditions" description="Apache Unomi :: Plugins :: Advanced Conditions" version="${project.version}">
+        <feature>unomi-plugins-base</feature>
+        <requirement>unomi.persistence.conditions</requirement>
+        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-advanced-conditions/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-plugins-request" description="Apache Unomi :: Plugins :: Request" version="${project.version}">
+        <feature>unomi-services</feature>
+        <configfile finalname="/etc/org.apache.unomi.plugins.request.cfg">mvn:org.apache.unomi/unomi-plugins-request/${project.version}/cfg/requestcfg</configfile>
+        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-request/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-plugins-mail" description="Apache Unomi :: Plugins :: Mail" version="${project.version}">
+        <feature>unomi-services</feature>
+        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-mail/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-plugins-optimization-test" description="Apache Unomi :: Plugins :: Optimization Test" version="${project.version}">
+        <feature>unomi-services</feature>
+        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-optimization-test/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-shell-dev-commands" description="Apache Unomi :: Shell Dev Commands" version="${project.version}">
+        <feature>unomi-services</feature>
+        <bundle start="false">mvn:org.apache.unomi/shell-dev-commands/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-wab" description="Apache Unomi :: WAB" version="${project.version}">
+        <feature>unomi-services</feature>
         <bundle start="false">mvn:org.apache.unomi/unomi-wab/${project.version}</bundle>
     </feature>
 
-    <feature name="unomi-healthcheck" version="${project.version}">
+    <feature name="unomi-web-tracker" description="Apache Unomi :: Web Tracker" version="${project.version}">
+        <feature>unomi-wab</feature>
+        <bundle start="false">mvn:org.apache.unomi/unomi-web-tracker-wab/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-healthcheck" description="Apache Unomi :: Healthcheck" version="${project.version}">
+        <feature>unomi-web-tracker</feature>
         <configfile finalname="/etc/org.apache.unomi.healthcheck.cfg">mvn:org.apache.unomi/healthcheck/${project.version}/cfg/healthcheck</configfile>
         <bundle start="false">mvn:org.apache.unomi/healthcheck/${project.version}</bundle>
     </feature>
 
-    <feature name="unomi-documentation" description="Documentation of Unomi in HTML" version="${project.version}">
+    <feature name="unomi-documentation" description="Apache Unomi :: HTML Documentation" version="${project.version}">
         <feature>war</feature>
         <bundle>mvn:org.apache.unomi/unomi-manual/${project.version}</bundle>
     </feature>
 
-    <feature name="unomi-rest-ui" description="Enables Swagger UI to browse the REST API" version="${project.version}">
+    <feature name="unomi-rest-ui" description="Apache Unomi :: REST API Swagger UI" version="${project.version}">
         <bundle start="false">mvn:org.webjars/swagger-ui/3.23.8</bundle>
     </feature>
+
+    <feature name="unomi-startup-complete" description="Apache Unomi :: Startup Complete" version="${project.version}">
+        <!-- This is just a marker to indicate the startup is complete, it should be at the end of the start configuration file -->
+         <feature>unomi-web-tracker</feature>
+    </feature>
+
 </features>

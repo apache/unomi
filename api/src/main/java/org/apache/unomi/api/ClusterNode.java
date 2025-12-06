@@ -23,7 +23,7 @@ package org.apache.unomi.api;
 public class ClusterNode extends Item {
 
     private static final long serialVersionUID = 1281422346318230514L;
-    
+
     public static final String ITEM_TYPE = "clusterNode";
 
     private double cpuLoad;
@@ -35,8 +35,8 @@ public class ClusterNode extends Item {
     private boolean data;
     private long startTime;
     private long lastHeartbeat;
-    
-    // Server information 
+
+    // Server information
     private ServerInfo serverInfo;
 
     /**
@@ -172,7 +172,7 @@ public class ClusterNode extends Item {
     public void setData(boolean data) {
         this.data = data;
     }
-    
+
     /**
      * Retrieves the node start time in milliseconds.
      *
@@ -208,7 +208,7 @@ public class ClusterNode extends Item {
     public void setLastHeartbeat(long lastHeartbeat) {
         this.lastHeartbeat = lastHeartbeat;
     }
-    
+
     /**
      * Gets the server information.
      *

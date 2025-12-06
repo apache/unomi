@@ -18,6 +18,10 @@ package org.apache.unomi.services.impl.validation.validators;
 
 import org.apache.unomi.api.services.ValueTypeValidator;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZonedDateTime;
 import java.util.Date;
 
 public class DateValueTypeValidator implements ValueTypeValidator {
@@ -28,11 +32,19 @@ public class DateValueTypeValidator implements ValueTypeValidator {
 
     @Override
     public boolean validate(Object value) {
-        return value == null || value instanceof Date;
+        if (value == null) {
+            return true;
+        }
+        // Accept Date and modern date/time types
+        return value instanceof Date
+                || value instanceof OffsetDateTime
+                || value instanceof ZonedDateTime
+                || value instanceof LocalDateTime
+                || value instanceof Instant;
     }
 
     @Override
     public String getValueTypeDescription() {
-        return "Value must be a date";
+        return "Value must be a date (Date, OffsetDateTime, ZonedDateTime, LocalDateTime, or Instant)";
     }
 }

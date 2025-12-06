@@ -13,7 +13,7 @@
     "readOnly": true
   },
   "conditionEvaluator": "nestedConditionEvaluator",
-  "queryBuilder": "nestedConditionESQueryBuilder",
+  "queryBuilder": "nestedConditionQueryBuilder",
   "parameters": [
     {
       "id": "path",

@@ -25,7 +25,7 @@ import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
@@ -34,20 +34,25 @@ import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
 import java.util.*;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class EventServiceImplTest {
 
     private EventServiceImpl eventService;
@@ -73,9 +78,9 @@ public class EventServiceImplTest {
     private static final String TENANT_2 = "tenant2";
     private static final String SYSTEM_TENANT = "system";
 
-    @Before
+    @BeforeEach
     public void setUp() {
-        MockitoAnnotations.initMocks(this);
+        
         tenantService = new TestTenantService();
 
         // Initialize ConditionValidationService using TestHelper
@@ -115,7 +120,7 @@ public class EventServiceImplTest {
         eventService.bind(eventListenerReference);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         // Use the common tearDown method from TestHelper
         org.apache.unomi.services.TestHelper.tearDown(
@@ -147,8 +152,8 @@ public class EventServiceImplTest {
         int result = eventService.send(event);
 
         // Verify
-        assertEquals(EventService.NO_CHANGE, result);
-        assertNotNull(persistenceService.load(event.getItemId(), Event.class));
+        assertEquals(EventService.NO_CHANGE, result, "Basic event should not change profile/session state (eventType=test)");
+        assertNotNull(persistenceService.load(event.getItemId(), Event.class), "Event should be persisted (eventId=" + event.getItemId() + ")");
         verify(eventListener, times(1)).onEvent(event);
     }
 
@@ -166,7 +171,7 @@ public class EventServiceImplTest {
         int result = eventService.send(event);
 
         // Verify
-        assertEquals(EventService.PROFILE_UPDATED, result & EventService.PROFILE_UPDATED);
+        assertEquals(EventService.PROFILE_UPDATED, result & EventService.PROFILE_UPDATED, "Profile update flag should be set after listener triggers update");
         verify(eventListener, times(11)).onEvent(any(Event.class)); // Original event + profileUpdated event recursive
     }
 
@@ -186,7 +191,7 @@ public class EventServiceImplTest {
 
         // Verify
         verify(postExecutor, times(1)).execute();
-        assertEquals(EventService.NO_CHANGE, result);
+        assertEquals(EventService.NO_CHANGE, result, "Post executor should not alter result flags (eventType=test)");
     }
 
     @Test
@@ -202,7 +207,7 @@ public class EventServiceImplTest {
 
         // Verify that after max recursion is reached, we get NO_CHANGE
         verify(eventListener, times(11)).onEvent(any(Event.class)); // 10 is max recursion depth
-        assertEquals(EventService.PROFILE_UPDATED | EventService.SESSION_UPDATED, result);
+        assertEquals(EventService.PROFILE_UPDATED | EventService.SESSION_UPDATED, result, "Result flags should reflect last recursion state");
     }
 
     @Test
@@ -215,8 +220,8 @@ public class EventServiceImplTest {
         Event result = eventService.getEvent(event.getItemId());
 
         // Verify
-        assertNotNull(result);
-        assertEquals(event.getItemId(), result.getItemId());
+        assertNotNull(result, "Loaded event should exist (eventId=" + event.getItemId() + ")");
+        assertEquals(event.getItemId(), result.getItemId(), "Loaded event id should match requested id");
     }
 
     @Test
@@ -230,7 +235,7 @@ public class EventServiceImplTest {
         eventService.deleteEvent("testEventId");
 
         // Verify
-        assertNull(persistenceService.load("testEventId", Event.class));
+        assertNull(persistenceService.load("testEventId", Event.class), "Deleted event should not be found (eventId=testEventId)");
     }
 
     // ========= Event Property and Type Management Tests =========
@@ -261,9 +266,9 @@ public class EventServiceImplTest {
         List<EventProperty> result = eventService.getEventProperties();
 
         // Verify
-        assertNotNull(result);
-        assertTrue(result.stream().anyMatch(p -> p.getId().equals("properties.testProperty")));
-        assertTrue(result.stream().anyMatch(p -> p.getId().equals("properties.nestedProperty")));
+        assertNotNull(result, "Event properties should be discoverable from mappings");
+        assertTrue(result.stream().anyMatch(p -> p.getId().equals("properties.testProperty")), "Flat property should be present (properties.testProperty)");
+        assertTrue(result.stream().anyMatch(p -> p.getId().equals("properties.nestedProperty")), "Nested property should be present (properties.nestedProperty)");
     }
 
     @Test
@@ -279,8 +284,8 @@ public class EventServiceImplTest {
         List<EventProperty> result = eventService.getEventProperties();
 
         // Verify invalid mapping is handled
-        assertNotNull(result);
-        assertTrue(result.stream().anyMatch(p -> p.getId().equals("properties.invalidProperty")));
+        assertNotNull(result, "Event properties lookup should not fail on invalid mapping");
+        assertTrue(result.stream().anyMatch(p -> p.getId().equals("properties.invalidProperty")), "Invalid property mapping should still list id (properties.invalidProperty)");
     }
 
     @Test
@@ -297,13 +302,16 @@ public class EventServiceImplTest {
         persistenceService.save(event1);
         persistenceService.save(event2);
 
-        // Test
-        Set<String> result = eventService.getEventTypeIds();
+        // Test - retry until events are available for aggregation (handles refresh delay)
+        Set<String> result = TestHelper.retryUntil(
+            () -> eventService.getEventTypeIds(),
+            r -> r != null && r.size() >= 4 && r.containsAll(Arrays.asList("type1", "type2", "type3", "type4"))
+        );
 
         // Verify
-        assertNotNull(result);
-        assertEquals(4, result.size());
-        assertTrue(result.containsAll(Arrays.asList("type1", "type2", "type3", "type4")));
+        assertNotNull(result, "Event type ids should include predefined and persisted types");
+        assertEquals(4, result.size(), "All four event types should be returned (type1,type2,type3,type4)");
+        assertTrue(result.containsAll(Arrays.asList("type1", "type2", "type3", "type4")), "Returned set should contain expected types");
     }
 
     // ========= Event Search and Query Tests =========
@@ -321,13 +329,16 @@ public class EventServiceImplTest {
         condition.setParameter("comparisonOperator", "equals");
         condition.setParameter("propertyValue", "test");
 
-        // Test
-        PartialList<Event> result = eventService.searchEvents(condition, 0, 10);
+        // Test - retry until event is available (handles refresh delay)
+        PartialList<Event> result = TestHelper.retryQueryUntilAvailable(
+            () -> eventService.searchEvents(condition, 0, 10),
+            1
+        );
 
         // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(event.getItemId(), result.get(0).getItemId());
+        assertNotNull(result, "Search should return results for matching condition");
+        assertEquals(1, result.size(), "Exactly one event should match condition");
+        assertEquals(event.getItemId(), result.get(0).getItemId(), "Returned event id should match saved event");
     }
 
     @Test
@@ -338,13 +349,16 @@ public class EventServiceImplTest {
         event.setSessionId("test-session");
         persistenceService.save(event);
 
-        // Test
-        PartialList<Event> result = eventService.searchEvents("test-session", new String[]{"test"}, "", 0, 10, "timeStamp");
+        // Test - retry until event is available (handles refresh delay)
+        PartialList<Event> result = TestHelper.retryQueryUntilAvailable(
+            () -> eventService.searchEvents("test-session", new String[]{"test"}, "", 0, 10, "timeStamp"),
+            1
+        );
 
         // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(event.getItemId(), result.get(0).getItemId());
+        assertNotNull(result, "Search by session should return results (sessionId=test-session)");
+        assertEquals(1, result.size(), "Exactly one event should match session id");
+        assertEquals(event.getItemId(), result.get(0).getItemId(), "Returned event id should match saved event");
     }
 
     @Test
@@ -362,8 +376,8 @@ public class EventServiceImplTest {
         PartialList<Event> result = eventService.search(query);
 
         // Verify
-        assertNotNull(result);
-        assertTrue(result.getList().isEmpty());
+        assertNotNull(result, "Search should return a PartialList even when no text matches");
+        assertTrue(result.getList().isEmpty(), "No events should match full-text 'match'");
     }
 
     @Test
@@ -376,13 +390,16 @@ public class EventServiceImplTest {
         Query query = new Query();
         query.setScrollTimeValidity("1000");
 
-        // Test
-        PartialList<Event> result = eventService.search(query);
+        // Test - retry until event is available (handles refresh delay)
+        PartialList<Event> result = TestHelper.retryQueryUntilAvailable(
+            () -> eventService.search(query),
+            1
+        );
 
         // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(event.getItemId(), result.get(0).getItemId());
+        assertNotNull(result, "Scroll search should initialize a cursor and return results");
+        assertEquals(1, result.size(), "Exactly one event should be returned by scroll search");
+        assertEquals(event.getItemId(), result.get(0).getItemId(), "Returned event id should match saved event");
     }
 
     @Test
@@ -400,13 +417,16 @@ public class EventServiceImplTest {
         condition.setParameter("propertyValue", "test");
         query.setCondition(condition);
 
-        // Test
-        PartialList<Event> result = eventService.search(query);
+        // Test - retry until event is available (handles refresh delay)
+        PartialList<Event> result = TestHelper.retryQueryUntilAvailable(
+            () -> eventService.search(query),
+            1
+        );
 
         // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(event.getItemId(), result.get(0).getItemId());
+        assertNotNull(result, "Combined full-text and condition search should return results");
+        assertEquals(1, result.size(), "Exactly one event should match combined criteria");
+        assertEquals(event.getItemId(), result.get(0).getItemId(), "Returned event id should match saved event");
     }
 
     @Test
@@ -414,19 +434,19 @@ public class EventServiceImplTest {
         // Test with null query
         Query nullQuery = new Query();
         PartialList<Event> result = eventService.search(nullQuery);
-        assertNotNull(result);
+        assertNotNull(result, "Null query should yield an empty PartialList, not null");
 
         // Test with empty condition
         Query emptyConditionQuery = new Query();
         emptyConditionQuery.setCondition(new Condition());
         result = eventService.search(emptyConditionQuery);
-        assertNotNull(result);
+        assertNotNull(result, "Empty condition should yield an empty PartialList, not null");
 
         // Test with invalid scroll identifier
         Query invalidScrollQuery = new Query();
         invalidScrollQuery.setScrollIdentifier("invalid");
         result = eventService.search(invalidScrollQuery);
-        assertNotNull(result);
+        assertNotNull(result, "Invalid scroll id should return an empty PartialList, not null");
     }
 
     // ========= Event Duplicate Detection Tests =========
@@ -444,7 +464,7 @@ public class EventServiceImplTest {
         boolean result = eventService.hasEventAlreadyBeenRaised(event);
 
         // Verify
-        assertTrue(result);
+        assertTrue(result, "Duplicate check should return true for already saved event (eventId=test-event)");
     }
 
     @Test
@@ -457,11 +477,14 @@ public class EventServiceImplTest {
         event.setTarget(target);
         persistenceService.save(event);
 
-        // Test with session parameter
-        boolean result = eventService.hasEventAlreadyBeenRaised(event, true);
+        // Test with session parameter - retry until event is available for query (handles refresh delay)
+        boolean result = TestHelper.retryUntil(
+            () -> eventService.hasEventAlreadyBeenRaised(event, true),
+            r -> r == true
+        );
 
         // Verify
-        assertTrue(result);
+        assertTrue(result, "Duplicate check should respect session scoping when requested");
     }
 
     // ========= Profile Event Management Tests =========
@@ -482,8 +505,8 @@ public class EventServiceImplTest {
         eventService.removeProfileEvents("test-profile");
 
         // Verify
-        assertNull(persistenceService.load(event1.getItemId(), Event.class));
-        assertNull(persistenceService.load(event2.getItemId(), Event.class));
+        assertNull(persistenceService.load(event1.getItemId(), Event.class), "Profile events should be removed (profileId=test-profile)");
+        assertNull(persistenceService.load(event2.getItemId(), Event.class), "Profile events should be removed (profileId=test-profile)");
     }
 
     // ========= Event Service Lifecycle Tests =========
@@ -556,16 +579,16 @@ public class EventServiceImplTest {
 
         // Test with initial restrictions
         // Restricted events should be checked against IP
-        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()), tenantId, allowedSourceIP));
-        assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()), tenantId, allowedSourceIP), "Restricted event should be allowed from authorized IPv4 (tenant=" + tenantId + ")");
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP), "Restricted event should be blocked from unauthorized IPv4 (tenant=" + tenantId + ")");
 
-        assertTrue(eventService.isEventAllowedForTenant(new Event("test2", null, new Profile(), null, null, null, new Date()), tenantId, allowedSourceIP));
-        assertFalse(eventService.isEventAllowedForTenant(new Event("test2", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test2", null, new Profile(), null, null, null, new Date()), tenantId, allowedSourceIP), "Restricted event should be allowed from authorized IPv4 (tenant=" + tenantId + ")");
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test2", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP), "Restricted event should be blocked from unauthorized IPv4 (tenant=" + tenantId + ")");
 
         // Unrestricted events should be allowed regardless of IP
-        assertTrue(eventService.isEventAllowedForTenant(new Event("test3", null, new Profile(), null, null, null, new Date()), tenantId, allowedSourceIP));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test3", null, new Profile(), null, null, null, new Date()), tenantId, allowedSourceIP), "Unrestricted event should be allowed regardless of IP");
 
-        assertTrue(eventService.isEventAllowedForTenant(new Event("test4", null, new Profile(), null, null, null, new Date()), tenantId, allowedSourceIP));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test4", null, new Profile(), null, null, null, new Date()), tenantId, allowedSourceIP), "Restricted event should be allowed from authorized IPv4 (tenant=" + tenantId + ")");
 
         // Update tenant restrictions to only restrict test4
         restrictedTypes = new HashSet<>(Arrays.asList("test4"));
@@ -574,13 +597,13 @@ public class EventServiceImplTest {
 
         // Test with updated restrictions
         // test4 should be IP checked
-        assertTrue(eventService.isEventAllowedForTenant(new Event("test4", null, new Profile(), null, null, null, new Date()), tenantId, allowedSourceIP));
-        assertFalse(eventService.isEventAllowedForTenant(new Event("test4", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test4", null, new Profile(), null, null, null, new Date()), tenantId, allowedSourceIP), "Restricted event should be allowed from authorized IPv4 after update");
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test4", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP), "Restricted event should be blocked from unauthorized IPv4 after update");
 
         // All other events should be allowed, regardless of IP since they are not restricted
-        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP));
-        assertTrue(eventService.isEventAllowedForTenant(new Event("test2", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP));
-        assertTrue(eventService.isEventAllowedForTenant(new Event("test3", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP), "Unrestricted event should be allowed (IPv4, tenant=" + tenantId + ")");
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test2", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP), "Unrestricted event should be allowed (IPv4, tenant=" + tenantId + ")");
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test3", null, new Profile(), null, null, null, new Date()), tenantId, unallowedSourceIP), "Unrestricted event should be allowed (IPv4, tenant=" + tenantId + ")");
     }
 
     @Test
@@ -600,20 +623,20 @@ public class EventServiceImplTest {
         // 1. Event restricted by tenant - should check IP
         Event tenantRestrictedEvent = createTestEvent();
         tenantRestrictedEvent.setEventType("tenantRestricted1");
-        assertTrue(eventService.isEventAllowedForTenant(tenantRestrictedEvent, TENANT_1, "127.0.0.1")); // Allowed IP
-        assertFalse(eventService.isEventAllowedForTenant(tenantRestrictedEvent, TENANT_1, "192.168.1.1")); // Unauthorized IP
+        assertTrue(eventService.isEventAllowedForTenant(tenantRestrictedEvent, TENANT_1, "127.0.0.1"), "Tenant-restricted event should be allowed from authorized IP");
+        assertFalse(eventService.isEventAllowedForTenant(tenantRestrictedEvent, TENANT_1, "192.168.1.1"), "Tenant-restricted event should be blocked from unauthorized IP");
 
         // 2. Event restricted globally - should check IP
         Event globalRestrictedEvent = createTestEvent();
         globalRestrictedEvent.setEventType("globalRestricted1");
-        assertTrue(eventService.isEventAllowedForTenant(globalRestrictedEvent, TENANT_1, "127.0.0.1")); // Allowed IP
-        assertFalse(eventService.isEventAllowedForTenant(globalRestrictedEvent, TENANT_1, "192.168.1.1")); // Unauthorized IP
+        assertTrue(eventService.isEventAllowedForTenant(globalRestrictedEvent, TENANT_1, "127.0.0.1"), "Globally restricted event should be allowed from authorized IP");
+        assertFalse(eventService.isEventAllowedForTenant(globalRestrictedEvent, TENANT_1, "192.168.1.1"), "Globally restricted event should be blocked from unauthorized IP");
 
         // 3. Event not restricted by either - should be accepted without IP check
         Event unrestrictedEvent = createTestEvent();
         unrestrictedEvent.setEventType("unrestricted");
-        assertTrue(eventService.isEventAllowedForTenant(unrestrictedEvent, TENANT_1, "127.0.0.1")); // Any IP should work
-        assertTrue(eventService.isEventAllowedForTenant(unrestrictedEvent, TENANT_1, "192.168.1.1")); // Any IP should work
+        assertTrue(eventService.isEventAllowedForTenant(unrestrictedEvent, TENANT_1, "127.0.0.1"), "Unrestricted event should be allowed regardless of IP");
+        assertTrue(eventService.isEventAllowedForTenant(unrestrictedEvent, TENANT_1, "192.168.1.1"), "Unrestricted event should be allowed regardless of IP");
 
         // 4. Test with another tenant that doesn't have any restrictions
         Tenant tenant2 = new Tenant();
@@ -623,8 +646,8 @@ public class EventServiceImplTest {
         tenantService.saveTenant(tenant2);
 
         // Should still check IP for global-restricted events even if tenant doesn't have local restrictions
-        assertTrue(eventService.isEventAllowedForTenant(globalRestrictedEvent, TENANT_2, "127.0.0.1")); // Allowed IP
-        assertFalse(eventService.isEventAllowedForTenant(globalRestrictedEvent, TENANT_2, "192.168.1.1")); // Unauthorized IP
+        assertTrue(eventService.isEventAllowedForTenant(globalRestrictedEvent, TENANT_2, "127.0.0.1"), "Global restriction applies across tenants (allowed IP)");
+        assertFalse(eventService.isEventAllowedForTenant(globalRestrictedEvent, TENANT_2, "192.168.1.1"), "Global restriction applies across tenants (unauthorized IP)");
     }
 
     @Test
@@ -674,25 +697,25 @@ public class EventServiceImplTest {
 
         // Test IPv6 addresses with square brackets (as returned by HttpServletRequest.getRemoteAddr)
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "[2001:db8::1]"));
+            tenantId, "[2001:db8::1]"), "IPv6 in brackets should be accepted when authorized (tenant=" + tenantId + ")");
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "[2001:db8:1:2:3:4:5:6]"));
+            tenantId, "[2001:db8:1:2:3:4:5:6]"), "IPv6 full form in brackets should be accepted when authorized");
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "[::1]"));
+            tenantId, "[::1]"), "IPv6 localhost in brackets should be accepted");
 
         // Test IPv6 addresses without square brackets
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "2001:db8::1"));
+            tenantId, "2001:db8::1"), "IPv6 without brackets should be accepted when authorized");
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "2001:db8:3:4:5:6:7:8"));
+            tenantId, "2001:db8:3:4:5:6:7:8"), "Full IPv6 should be accepted when authorized");
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "::1"));
+            tenantId, "::1"), "IPv6 localhost should be accepted");
 
         // Test unauthorized IPv6 addresses
         assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "[2001:db9::1]"));  // Different prefix
+            tenantId, "[2001:db9::1]"), "IPv6 with different prefix should be rejected (brackets)");
         assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "2001:db9::1"));    // Different prefix without brackets
+            tenantId, "2001:db9::1"), "IPv6 with different prefix should be rejected");
     }
 
     @Test
@@ -715,25 +738,25 @@ public class EventServiceImplTest {
 
         // Test IPv4 addresses for restricted events
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "127.0.0.1"));
+            tenantId, "127.0.0.1"), "IPv4 localhost should be accepted for restricted event");
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "192.168.1.100"));
+            tenantId, "192.168.1.100"), "IPv4 in allowed CIDR should be accepted for restricted event");
 
         // Test IPv6 addresses with and without brackets for restricted events
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "[::1]"));
+            tenantId, "[::1]"), "IPv6 localhost in brackets should be accepted for restricted event");
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "::1"));
+            tenantId, "::1"), "IPv6 localhost should be accepted for restricted event");
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "[2001:db8::1]"));
+            tenantId, "[2001:db8::1]"), "IPv6 address in allowed CIDR (brackets) should be accepted");
         assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "2001:db8::1"));
+            tenantId, "2001:db8::1"), "IPv6 address in allowed CIDR should be accepted");
 
         // Test unauthorized IPs
         assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "192.168.2.1"));        // Outside IPv4 range
+            tenantId, "192.168.2.1"), "IPv4 outside allowed range should be rejected for restricted event");
         assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, new Date()),
-            tenantId, "[2001:db9::1]"));      // Outside IPv6 range
+            tenantId, "[2001:db9::1]"), "IPv6 outside allowed CIDR should be rejected for restricted event");
     }
 
     // ========= Critical Edge Cases Tests =========
@@ -752,13 +775,13 @@ public class EventServiceImplTest {
         event.setEventType("restricted");
 
         // Verify initial state
-        assertTrue(eventService.isEventAllowedForTenant(event, TENANT_1, "127.0.0.1"));
+        assertTrue(eventService.isEventAllowedForTenant(event, TENANT_1, "127.0.0.1"), "Restricted event should be allowed initially (tenant=" + TENANT_1 + ")");
 
         // Simulate tenant being disabled/deleted
         tenantService.deleteTenant(TENANT_1);
 
         // Verify behavior with missing tenant
-        assertFalse(eventService.isEventAllowedForTenant(event, TENANT_1, "127.0.0.1"));
+        assertFalse(eventService.isEventAllowedForTenant(event, TENANT_1, "127.0.0.1"), "Event should be rejected when tenant is deleted (tenant=" + TENANT_1 + ")");
     }
 
     @Test
@@ -777,10 +800,10 @@ public class EventServiceImplTest {
             int result = eventService.send(event);
 
             // Verify the event is handled gracefully
-            assertEquals(EventService.NO_CHANGE, result);
+            assertEquals(EventService.NO_CHANGE, result, "Malformed properties should not break event processing");
             Event savedEvent = persistenceService.load(event.getItemId(), Event.class);
-            assertNotNull(savedEvent);
-            assertNotNull(savedEvent.getProperties().get("validKey"));
+            assertNotNull(savedEvent, "Event should be persisted despite malformed properties (eventId=" + event.getItemId() + ")");
+            assertNotNull(savedEvent.getProperties().get("validKey"), "Valid property should be preserved in persistence (key=validKey)");
         });
     }
 

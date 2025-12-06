@@ -18,27 +18,15 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
         <version>3.1.0-SNAPSHOT</version>
     </parent>
-
     <artifactId>unomi-graphql</artifactId>
     <name>Apache Unomi :: GraphQL API</name>
     <description>Apache Unomi Context GraphQL API Root Project</description>
     <packaging>pom</packaging>
-
-    <properties>
-        <graphql.java.version>14.0</graphql.java.version>
-        <graphql.java.annotations.version>8.0</graphql.java.annotations.version>
-        <graphql.java.extended.scalars.version>1.0</graphql.java.extended.scalars.version>
-        <reactivex.version>2.2.19</reactivex.version>
-        <antlr.runtime.version>4.7.1</antlr.runtime.version>
-        <java.dataloader.version>2.2.0</java.dataloader.version>
-        <jetty.websocket.version>9.4.38.v20210224</jetty.websocket.version>
-    </properties>
 
     <modules>
         <module>cxs-impl</module>

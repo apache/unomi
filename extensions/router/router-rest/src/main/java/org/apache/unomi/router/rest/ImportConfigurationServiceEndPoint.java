@@ -28,8 +28,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import javax.ws.rs.Consumes;
@@ -49,7 +47,6 @@ import java.security.NoSuchAlgorithmException;
 /**
  * A JAX-RS endpoint to manage {@link ImportConfiguration}s.
  */
-@WebService
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
         allowCredentials = true
@@ -63,7 +60,6 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
     @Reference
     protected ConfigSharingService configSharingService;
 
-    @WebMethod(exclude = true)
     public void setConfigSharingService(ConfigSharingService configSharingService) {
         this.configSharingService = configSharingService;
     }
@@ -72,7 +68,6 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
         LOGGER.info("Initializing import configuration service endpoint...");
     }
 
-    @WebMethod(exclude = true)
     @Reference(target="(configDiscriminator=IMPORT)")
     public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
         configurationService = importConfigurationService;

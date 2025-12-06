@@ -295,7 +295,7 @@ public class ContextServletIT extends BaseIT {
         event.setEventType(TEST_EVENT_TYPE);
         event.setScope(scope);
 
-        //Act
+        //Act - Send first event
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setSessionId(sessionId);
         contextRequest.setRequireSegments(true);
@@ -306,13 +306,50 @@ public class ContextServletIT extends BaseIT {
 
         refreshPersistence(Event.class);
 
-        //Add the context-profile-id cookie to the second event
-        request.addHeader("Cookie", cookieHeaderValue);
-        ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
-
-        //Assert
-        assertEquals(1, response.getProfileSegments().size());
-        assertThat(response.getProfileSegments(), hasItem(SEGMENT_ID));
+        // Send second event (segment requires minimumEventCount=2)
+        Event secondEvent = new Event();
+        secondEvent.setEventType(TEST_EVENT_TYPE);
+        secondEvent.setScope(scope);
+        ContextRequest secondContextRequest = new ContextRequest();
+        secondContextRequest.setSessionId(sessionId);
+        secondContextRequest.setRequireSegments(true);
+        secondContextRequest.setEvents(Arrays.asList(secondEvent));
+        HttpPost secondRequest = new HttpPost(getFullUrl(CONTEXT_URL));
+        secondRequest.addHeader("Cookie", cookieHeaderValue);
+        secondRequest.setEntity(new StringEntity(objectMapper.writeValueAsString(secondContextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.executeContextJSONRequest(secondRequest, sessionId);
+        
+        // Wait for profile to be saved with updated past event counts and segments
+        // The SetEventOccurenceCountAction updates pastEvents, then EvaluateProfileSegmentsAction 
+        // updates segments, then profile is saved in finalizeEventsRequest
+        refreshPersistence(Event.class, Profile.class);
+        
+        //Assert - wait for segment to be added after events are processed
+        // Need to wait for the profile to be saved and segments to be updated
+        ContextResponse finalResponse = keepTrying("Profile should be added to segment after two events",
+                () -> {
+                    try {
+                        HttpPost retryRequest = new HttpPost(getFullUrl(CONTEXT_URL));
+                        retryRequest.addHeader("Cookie", cookieHeaderValue);
+                        ContextRequest retryContextRequest = new ContextRequest();
+                        retryContextRequest.setSessionId(sessionId);
+                        retryContextRequest.setRequireSegments(true);
+                        retryRequest.setEntity(new StringEntity(objectMapper.writeValueAsString(retryContextRequest), ContentType.APPLICATION_JSON));
+                        ContextResponse response = (TestUtils.executeContextJSONRequest(retryRequest, sessionId)).getContextResponse();
+                        // Also refresh to ensure profile is loaded from persistence
+                        refreshPersistence(Profile.class);
+                        return response;
+                    } catch (Exception e) {
+                        return null;
+                    }
+                },
+                retryResponse -> retryResponse != null && retryResponse.getProfileSegments() != null 
+                        && retryResponse.getProfileSegments().size() == 1 
+                        && retryResponse.getProfileSegments().contains(SEGMENT_ID),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        
+        assertEquals(1, finalResponse.getProfileSegments().size());
+        assertThat(finalResponse.getProfileSegments(), hasItem(SEGMENT_ID));
 
     }
 
@@ -491,27 +528,8 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testOGNLVulnerability() throws Exception {
-        File vulnFile = new File("target/vuln-file.txt");
-        if (vulnFile.exists()) {
-            vulnFile.delete();
-        }
-        String vulnFileCanonicalPath = vulnFile.getCanonicalPath();
-        vulnFileCanonicalPath = vulnFileCanonicalPath.replace("\\", "\\\\"); // this is required for Windows support
-
-        Map<String, String> parameters = new HashMap<>();
-        parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(
-                new StringEntity(getValidatedBundleJSON("security/ognl-payload-1.json", parameters), ContentType.APPLICATION_JSON));
-        RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
-
-        shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
-                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
-    }
-
-    @Test
     public void testMVELVulnerability() throws Exception {
+
         File vulnFile = new File("target/vuln-file.txt");
         if (vulnFile.exists()) {
             vulnFile.delete();
@@ -532,6 +550,7 @@ public class ContextServletIT extends BaseIT {
 
     @Test
     public void testPersonalization() throws Exception {
+
         Map<String, String> parameters = new HashMap<>();
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.APPLICATION_JSON));

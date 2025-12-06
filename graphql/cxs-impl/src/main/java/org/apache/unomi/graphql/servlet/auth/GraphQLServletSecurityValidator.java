@@ -183,10 +183,10 @@ public class GraphQLServletSecurityValidator {
             Subject loginSubject = loginContext.getSubject();
             boolean success = loginSubject != null;
             if (success) {
-                req.setAttribute(REMOTE_USER, loginSubject);
+                req.setAttribute(REMOTE_USER, username);
                 // Set the security context for JAAS authentication
                 securityService.setCurrentSubject(loginSubject);
-                
+
                 // Check for tenant ID header
                 String tenantId = req.getHeader(UNOMI_TENANT_ID_HEADER);
                 if (tenantId != null && !tenantId.trim().isEmpty()) {

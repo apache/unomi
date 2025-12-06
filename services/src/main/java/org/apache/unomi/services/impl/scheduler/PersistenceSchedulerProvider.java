@@ -37,14 +37,14 @@ public class PersistenceSchedulerProvider implements SchedulerProvider {
         SchedulerProvider.PROPERTY_CONDITION_TYPE.setItemType(ConditionType.ITEM_TYPE);
         SchedulerProvider.PROPERTY_CONDITION_TYPE.setVersion(1L);
         SchedulerProvider.PROPERTY_CONDITION_TYPE.setConditionEvaluator("propertyConditionEvaluator");
-        SchedulerProvider.PROPERTY_CONDITION_TYPE.setQueryBuilder("propertyConditionESQueryBuilder");
+        SchedulerProvider.PROPERTY_CONDITION_TYPE.setQueryBuilder("propertyConditionQueryBuilder");
     };
 
     static {
         SchedulerProvider.BOOLEAN_CONDITION_TYPE.setItemId("booleanCondition");
         SchedulerProvider.BOOLEAN_CONDITION_TYPE.setItemType(ConditionType.ITEM_TYPE);
         SchedulerProvider.BOOLEAN_CONDITION_TYPE.setVersion(1L);
-        SchedulerProvider.BOOLEAN_CONDITION_TYPE.setQueryBuilder("booleanConditionESQueryBuilder");
+        SchedulerProvider.BOOLEAN_CONDITION_TYPE.setQueryBuilder("booleanConditionQueryBuilder");
         SchedulerProvider.BOOLEAN_CONDITION_TYPE.setConditionEvaluator("booleanConditionEvaluator");
     };
 
@@ -88,23 +88,36 @@ public class PersistenceSchedulerProvider implements SchedulerProvider {
     }
 
     public void preDestroy() {
+        // Check if persistence service is still available before trying to use it
+        if (persistenceService == null) {
+            LOGGER.debug("Persistence service not available during shutdown, skipping lock release");
+            return;
+        }
         try {
             List<ScheduledTask> tasks = findTasksByLockOwner(nodeId);
             for (ScheduledTask task : tasks) {
                 try {
-                    lockManager.releaseLock(task);
+                    if (lockManager != null) {
+                        lockManager.releaseLock(task);
+                    }
                 } catch (Exception e) {
                     LOGGER.debug("Error releasing lock for task {} during shutdown: {}", task.getItemId(), e.getMessage());
                 }
             }
             LOGGER.debug("Task locks released");
         } catch (Exception e) {
-            LOGGER.warn("Error finding locked tasks during shutdown: {}", e.getMessage());
+            // During shutdown, services may be unavailable - this is expected
+            LOGGER.debug("Error finding locked tasks during shutdown (this is expected if services are shutting down): {}", e.getMessage());
         }
     }
 
     @Override
     public List<ScheduledTask> findTasksByLockOwner(String owner) {
+        // Check if persistence service is available before using it
+        if (persistenceService == null) {
+            LOGGER.debug("Persistence service not available, returning empty list for findTasksByLockOwner");
+            return new ArrayList<>();
+        }
         try {
             Condition condition = new Condition(SchedulerProvider.PROPERTY_CONDITION_TYPE);
             condition.setParameter("propertyName", "lockOwner");
@@ -112,7 +125,8 @@ public class PersistenceSchedulerProvider implements SchedulerProvider {
             condition.setParameter("propertyValue", owner);
             return persistenceService.query(condition, null, ScheduledTask.class, 0, -1).getList();
         } catch (Exception e) {
-            LOGGER.error("Error finding tasks by lock owner: {}", e.getMessage());
+            // During shutdown, this is expected - only log at debug level
+            LOGGER.debug("Error finding tasks by lock owner (may occur during shutdown): {}", e.getMessage());
             return new ArrayList<>();
         }
     }

@@ -51,7 +51,7 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
         String name = (String) condition.getParameter("propertyName");
 
         if (comparisonOperator == null || name == null) {
-            throw new IllegalArgumentException("Impossible to build ES filter, condition is not valid, comparisonOperator and propertyName properties should be provided");
+            throw new IllegalArgumentException("Impossible to build OS filter, condition is not valid, comparisonOperator and propertyName properties should be provided");
         }
 
         String expectedValue = ConditionContextHelper.forceFoldToASCII(condition.getParameter("propertyValue"));
@@ -176,13 +176,13 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
 
     private void checkRequiredValuesSize(Collection<?> values, String name, String operator, int expectedSize) {
         if (values == null || values.size() != expectedSize) {
-            throw new IllegalArgumentException("Impossible to build ES filter, missing " + expectedSize + " values for a condition using comparisonOperator: " + operator + ", and propertyName: " + name);
+            throw new IllegalArgumentException("Impossible to build OS filter, missing " + expectedSize + " values for a condition using comparisonOperator: " + operator + ", and propertyName: " + name);
         }
     }
 
     private void checkRequiredValue(Object value, String name, String operator, boolean multiple) {
         if (value == null) {
-            throw new IllegalArgumentException("Impossible to build ES filter, missing value" + (multiple ? "s" : "") + " for condition using comparisonOperator: " + operator + ", and propertyName: " + name);
+            throw new IllegalArgumentException("Impossible to build OS filter, missing value" + (multiple ? "s" : "") + " for condition using comparisonOperator: " + operator + ", and propertyName: " + name);
         }
     }
 

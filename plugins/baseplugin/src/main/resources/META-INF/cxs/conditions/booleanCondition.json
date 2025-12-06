@@ -15,7 +15,7 @@
     "readOnly": true
   },
   "conditionEvaluator": "booleanConditionEvaluator",
-  "queryBuilder": "booleanConditionESQueryBuilder",
+  "queryBuilder": "booleanConditionQueryBuilder",
   "parameters": [
     {
       "id": "operator",

@@ -33,7 +33,8 @@ param(
     [string]$KarafHome,
     [switch]$UseOpenSearch,
     [switch]$NoKaraf,
-    [string]$AutoStart
+    [string]$AutoStart,
+    [switch]$ResolverDebug
 )
 
 # Global variables
@@ -207,6 +208,7 @@ function Show-Usage {
         Write-Host "  $CYAN-UseOpenSearch$NC         Use OpenSearch instead of ElasticSearch"
         Write-Host "  $CYAN-NoKaraf$NC              Build without starting Karaf"
         Write-Host "  $CYAN-AutoStart$NC <engine>    Auto-start with specified engine"
+        Write-Host "  $CYAN-ResolverDebug$NC        Enable Karaf Resolver debug logging for integration tests"
     } else {
         Write-Host "  -Help                    Show this help message"
         Write-Host "  -MavenDebug             Enable Maven debug output"
@@ -223,6 +225,7 @@ function Show-Usage {
         Write-Host "  -UseOpenSearch         Use OpenSearch instead of ElasticSearch"
         Write-Host "  -NoKaraf              Build without starting Karaf"
         Write-Host "  -AutoStart <engine>    Auto-start with specified engine"
+        Write-Host "  -ResolverDebug         Enable Karaf Resolver debug logging for integration tests"
     }
     
     Write-Host ""
@@ -445,6 +448,79 @@ function Test-Requirements {
 # Check requirements before proceeding
 Test-Requirements 
 
+# Validate OpenSearch password requirement
+if ($UseOpenSearch -or ($AutoStart -and $AutoStart -eq 'opensearch')) {
+    if (-not $env:UNOMI_OPENSEARCH_PASSWORD -or [string]::IsNullOrWhiteSpace($env:UNOMI_OPENSEARCH_PASSWORD)) {
+        Write-Status "error" "UNOMI_OPENSEARCH_PASSWORD is not set for OpenSearch"
+        Write-Status "info" "When using OpenSearch, you must set the UNOMI_OPENSEARCH_PASSWORD environment variable before building/starting."
+        Write-Host "Examples:"
+        Write-Host "  setx UNOMI_OPENSEARCH_PASSWORD yourStrongPassword (PowerShell - current user)"
+        Write-Host "  $env:UNOMI_OPENSEARCH_PASSWORD='yourStrongPassword'; .\build.ps1 -IntegrationTests -UseOpenSearch"
+        exit 1
+    }
+}
+
+# Function to check for conflicting environment variables before integration tests
+function Test-IntegrationTestEnvVars {
+    $detectedVars = @()
+    $scriptDir = Split-Path -Parent $MyInvocation.PSCommandPath
+    
+    # Check for Elasticsearch environment variables
+    if ($env:UNOMI_ELASTICSEARCH_CLUSTERNAME -or 
+        $env:UNOMI_ELASTICSEARCH_USERNAME -or 
+        $env:UNOMI_ELASTICSEARCH_PASSWORD -or 
+        $env:UNOMI_ELASTICSEARCH_SSL_ENABLE -or 
+        $env:UNOMI_ELASTICSEARCH_SSL_TRUST_ALL_CERTIFICATES) {
+        $detectedVars += "Elasticsearch"
+    }
+    
+    # Check for OpenSearch environment variables
+    if ($env:UNOMI_OPENSEARCH_CLUSTERNAME -or 
+        $env:UNOMI_OPENSEARCH_ADDRESSES -or 
+        $env:UNOMI_OPENSEARCH_USERNAME -or 
+        $env:UNOMI_OPENSEARCH_PASSWORD -or 
+        $env:UNOMI_OPENSEARCH_SSL_ENABLE -or 
+        $env:UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES) {
+        $detectedVars += "OpenSearch"
+    }
+    
+    if ($detectedVars.Count -gt 0) {
+        Write-Status "error" "Environment variables for $($detectedVars -join ' and ') are set and will interfere with integration tests"
+        Write-Host ""
+        Write-Host "Integration tests manage their own search engine configuration and should not"
+        Write-Host "be run with these environment variables set."
+        Write-Host ""
+        Write-Host "To clear the environment variables, run one of the following:"
+        Write-Host ""
+        if ($detectedVars -contains "Elasticsearch") {
+            Write-Host "  . $scriptDir\clear-elasticsearch.sh"
+        }
+        if ($detectedVars -contains "OpenSearch") {
+            Write-Host "  . $scriptDir\clear-opensearch.sh"
+        }
+        Write-Host ""
+        Write-Host "Or manually unset the variables in PowerShell:"
+        if ($detectedVars -contains "Elasticsearch") {
+            Write-Host "  Remove-Item Env:\UNOMI_ELASTICSEARCH_CLUSTERNAME"
+            Write-Host "  Remove-Item Env:\UNOMI_ELASTICSEARCH_USERNAME"
+            Write-Host "  Remove-Item Env:\UNOMI_ELASTICSEARCH_PASSWORD"
+            Write-Host "  Remove-Item Env:\UNOMI_ELASTICSEARCH_SSL_ENABLE"
+            Write-Host "  Remove-Item Env:\UNOMI_ELASTICSEARCH_SSL_TRUST_ALL_CERTIFICATES"
+        }
+        if ($detectedVars -contains "OpenSearch") {
+            Write-Host "  Remove-Item Env:\UNOMI_OPENSEARCH_CLUSTERNAME"
+            Write-Host "  Remove-Item Env:\UNOMI_OPENSEARCH_ADDRESSES"
+            Write-Host "  Remove-Item Env:\UNOMI_OPENSEARCH_USERNAME"
+            Write-Host "  Remove-Item Env:\UNOMI_OPENSEARCH_PASSWORD"
+            Write-Host "  Remove-Item Env:\UNOMI_OPENSEARCH_SSL_ENABLE"
+            Write-Host "  Remove-Item Env:\UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES"
+        }
+        Write-Host ""
+        Write-Host "After clearing the variables, you can run the integration tests again."
+        exit 1
+    }
+}
+
 function Get-MavenOptions {
     $options = @()
     
@@ -459,7 +535,12 @@ function Get-MavenOptions {
         $options += "-DskipTests"
     }
     if ($IntegrationTests) {
+        # Check for conflicting environment variables before running integration tests
+        Test-IntegrationTestEnvVars
         $options += "-Pintegration-tests"
+    }
+    if ($ResolverDebug) {
+        $options += "-Dit.unomi.resolver.debug=true"
     }
     if ($NoMavenCache) {
         $options += "-Dmaven.buildcache.enabled=false"
@@ -478,6 +559,10 @@ function Invoke-MavenBuild {
     
     $mvnOptions = Get-MavenOptions
     $buildCommand = "mvn clean install $mvnOptions"
+    
+    if ($ResolverDebug) {
+        Write-Status "info" "Karaf Resolver debug logging enabled for integration tests"
+    }
     
     Write-Status "info" "Running: $buildCommand"
     Write-Host ""

@@ -33,7 +33,7 @@ import org.apache.unomi.api.tenants.TenantService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Priority;
+import jakarta.annotation.Priority;
 import javax.security.auth.Subject;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.container.ContainerRequestContext;
@@ -130,7 +130,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                         Subject subject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
                         // Set the authenticated subject in Unomi's security service
                         securityService.setCurrentSubject(subject);
-                        
+
                         // Check for tenant ID header
                         String tenantId = requestContext.getHeaderString(UNOMI_TENANT_ID_HEADER);
                         if (tenantId != null && !tenantId.trim().isEmpty()) {
@@ -170,7 +170,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
                     // Set the security service subject
                     securityService.setCurrentSubject(subject);
-                    
+
                     // Set the execution context for the tenant
                     executionContextManager.setCurrentContext(executionContextManager.createContext(tenant.getItemId()));
                     return;
@@ -196,7 +196,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
                         // Set the security service subject
                         securityService.setCurrentSubject(subject);
-                        
+
                         // Set the execution context for the tenant
                         executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
                         return;
@@ -213,7 +213,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                         Subject subject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
                         // Set the authenticated subject in Unomi's security service
                         securityService.setCurrentSubject(subject);
-                        
+
                         // Check for tenant ID header
                         String tenantId = requestContext.getHeaderString(UNOMI_TENANT_ID_HEADER);
                         if (tenantId != null && !tenantId.trim().isEmpty()) {
@@ -260,14 +260,14 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             if (defaultTenantId != null) {
                 // Create a guest subject for public endpoints
                 Subject subject = securityService.createSubject(defaultTenantId, false);
-                
+
                 // Set CXF security context
                 JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
                     new RolePrefixSecurityContextImpl(subject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
-                
+
                 // Set the security service subject
                 securityService.setCurrentSubject(subject);
-                
+
                 // Set the execution context for the default tenant
                 executionContextManager.setCurrentContext(executionContextManager.createContext(defaultTenantId));
                 return;
@@ -285,7 +285,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                     Subject subject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
                     // Set the authenticated subject in Unomi's security service
                     securityService.setCurrentSubject(subject);
-                    
+
                     // In V2 compatibility mode, use the default tenant for all operations
                     String defaultTenantId = restAuthenticationConfig.getV2CompatibilityDefaultTenantId();
                     if (defaultTenantId != null) {

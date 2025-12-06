@@ -30,7 +30,6 @@ import org.apache.unomi.utils.EventsRequestContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import javax.jws.WebService;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
@@ -41,7 +40,6 @@ import javax.ws.rs.core.SecurityContext;
 import java.util.Date;
 import java.util.List;
 
-@WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
@@ -91,7 +89,7 @@ public class EventsCollectorEndpoint {
         }
 
         // Check if tracing is requested and user has required role
-        if (explain && !(securityContext.isUserInRole(UnomiRoles.ADMINISTRATOR) || 
+        if (explain && !(securityContext.isUserInRole(UnomiRoles.ADMINISTRATOR) ||
                         securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR))) {
             throw new ForbiddenException("Insufficient privileges to access tracing information");
         }

@@ -40,8 +40,12 @@ import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.util.Date;
 import java.util.*;
+
+import static org.junit.Assert.assertNotNull;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
@@ -144,7 +148,26 @@ public class SegmentIT extends BaseIT {
         segmentCondition.setParameter("eventCondition", pastEventEventCondition);
         segment.setCondition(segmentCondition);
         segmentService.setSegmentDefinition(segment);
+        segmentService.removeSegmentDefinition(SEGMENT_ID, false);
+    }
 
+    @Test
+    public void testSegmentWithPropertyValueDateCondition() {
+        Metadata segmentMetadata = new Metadata(SEGMENT_ID);
+        Segment segment = new Segment(segmentMetadata);
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+        segmentCondition.setParameter("minimumEventCount", 2);
+        segmentCondition.setParameter("numberOfDays", 10);
+        Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        pastEventEventCondition.setParameter("propertyName", "timeStamp");
+        pastEventEventCondition.setParameter("comparisonOperator", "equals");
+        // Convert OffsetDateTime to Date for compatibility with date validation
+        pastEventEventCondition.setParameter("propertyValueDate", Date.from(OffsetDateTime.parse("2019-02-26T00:57:37Z").toInstant()));
+        segmentCondition.setParameter("eventCondition", pastEventEventCondition);
+        segment.setCondition(segmentCondition);
+        segmentService.setSegmentDefinition(segment);
+        Segment loadedSegment = segmentService.getSegmentDefinition(SEGMENT_ID);
+        assertNotNull("Segment should be loaded", loadedSegment);
         segmentService.removeSegmentDefinition(SEGMENT_ID, false);
     }
 
@@ -484,12 +507,36 @@ public class SegmentIT extends BaseIT {
                 profile.getScores() == null || !profile.getScores().containsKey("past-event-scoring-test-max"));
 
         // now recalculate the past event conditions
+        // This updates past event counts on profiles, then recalculates segments/scorings
         segmentService.recalculatePastEventConditions();
-        persistenceService.refreshIndex(Profile.class, null);
-        keepTrying("Profile should be engaged in the scoring with a score of 50", () -> profileService.load("test_profile_id"),
-                updatedProfile -> updatedProfile.getScores() != null && updatedProfile.getScores()
-                        .containsKey("past-event-scoring-test-max") && updatedProfile.getScores().get("past-event-scoring-test-max") == 50,
-                1000, 20);
+        // Wait for profile updates to complete - recalculatePastEventConditions updates profiles
+        // and then recalculates scorings, which may take some time
+        refreshPersistence(Profile.class);
+        keepTrying("Profile should be engaged in the scoring with a score of 50", 
+                () -> {
+                    try {
+                        // Reload profile from persistence to get updated scores
+                        refreshPersistence(Profile.class);
+                        Profile loadedProfile = profileService.load("test_profile_id");
+                        if (loadedProfile == null) {
+                            return null;
+                        }
+                        // Force reload to ensure we get the latest from persistence
+                        persistenceService.refresh();
+                        return profileService.load("test_profile_id");
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return null;
+                    }
+                },
+                updatedProfile -> {
+                    if (updatedProfile == null || updatedProfile.getScores() == null) {
+                        return false;
+                    }
+                    Integer score = updatedProfile.getScores().get("past-event-scoring-test-max");
+                    return score != null && score.equals(50);
+                },
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // Persist the 2 event (do not send it into the system so that it will not be processed by the rules)
         defaultZoneId = ZoneId.systemDefault();

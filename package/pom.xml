@@ -18,26 +18,36 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
         <version>3.1.0-SNAPSHOT</version>
     </parent>
-
     <artifactId>unomi</artifactId>
-    <packaging>pom</packaging>
+    <version>3.1.0-SNAPSHOT</version>
     <name>Apache Unomi :: Distribution Package</name>
     <description>Packaged distributions of the Apache Unomi Context Server</description>
+    <packaging>pom</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <properties>
         <appendedResourcesDirectory>${basedir}/../etc/appended-resources</appendedResourcesDirectory>
+        <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ss</maven.build.timestamp.format>
     </properties>
 
     <dependencies>
-
         <!-- Standard Apache Karaf Features -->
-
         <dependency>
             <groupId>org.apache.karaf.features</groupId>
             <artifactId>framework</artifactId>
@@ -70,48 +80,39 @@
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
-
-        <!-- Aditionnal Apache Unomi features -->
-
         <dependency>
-            <groupId>org.apache.cxf.karaf</groupId>
-            <artifactId>apache-cxf</artifactId>
+            <groupId>org.apache.karaf.features</groupId>
+            <artifactId>specs</artifactId>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Additional Apache Unomi features -->
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-kar</artifactId>
-            <version>${project.version}</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
-
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-router-karaf-feature</artifactId>
-            <version>${project.version}</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
-
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-groovy-actions</artifactId>
-            <version>${project.version}</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
-
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cdp-graphql-feature</artifactId>
-            <version>${project.version}</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
@@ -135,147 +136,22 @@
         </resources>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>buildnumber-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>unpack-deploy-by-query-plugin</id>
-                        <phase>generate-resources</phase>
+                        <phase>validate</phase>
                         <goals>
-                            <goal>unpack</goal>
+                            <goal>create</goal>
                         </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>org.elasticsearch.plugin</groupId>
-                                    <artifactId>reindex-client</artifactId>
-                                    <version>${elasticsearch.version}</version>
-                                    <outputDirectory>${project.build.directory}/assembly/elasticsearch/modules/reindex</outputDirectory>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>copy</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>copy</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-wab</artifactId>
-                                    <version>${project.version}</version>
-                                    <classifier>unomicfg</classifier>
-                                    <type>cfg</type>
-                                    <outputDirectory>
-                                        ${project.build.directory}/assembly/etc
-                                    </outputDirectory>
-                                    <destFileName>org.apache.unomi.web.cfg</destFileName>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-persistence-elasticsearch-core</artifactId>
-                                    <version>${project.version}</version>
-                                    <classifier>elasticsearchcfg</classifier>
-                                    <type>cfg</type>
-                                    <outputDirectory>
-                                        ${project.build.directory}/assembly/etc
-                                    </outputDirectory>
-                                    <destFileName>org.apache.unomi.persistence.elasticsearch.cfg</destFileName>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-persistence-opensearch-core</artifactId>
-                                    <version>${project.version}</version>
-                                    <classifier>opensearchcfg</classifier>
-                                    <type>cfg</type>
-                                    <outputDirectory>
-                                        ${project.build.directory}/assembly/etc
-                                    </outputDirectory>
-                                    <destFileName>org.apache.unomi.persistence.opensearch.cfg</destFileName>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-services</artifactId>
-                                    <version>${project.version}</version>
-                                    <classifier>servicescfg</classifier>
-                                    <type>cfg</type>
-                                    <outputDirectory>
-                                        ${project.build.directory}/assembly/etc
-                                    </outputDirectory>
-                                    <destFileName>org.apache.unomi.services.cfg</destFileName>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-plugins-request</artifactId>
-                                    <version>${project.version}</version>
-                                    <classifier>requestcfg</classifier>
-                                    <type>cfg</type>
-                                    <outputDirectory>
-                                        ${project.build.directory}/assembly/etc
-                                    </outputDirectory>
-                                    <destFileName>org.apache.unomi.plugins.request.cfg</destFileName>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-plugins-base</artifactId>
-                                    <version>${project.version}</version>
-                                    <classifier>pluginsbasecfg</classifier>
-                                    <type>cfg</type>
-                                    <outputDirectory>
-                                        ${project.build.directory}/assembly/etc
-                                    </outputDirectory>
-                                    <destFileName>org.apache.unomi.plugins.base.cfg</destFileName>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-groovy-actions-services</artifactId>
-                                    <version>${project.version}</version>
-                                    <classifier>groovyactionscfg</classifier>
-                                    <type>cfg</type>
-                                    <outputDirectory>
-                                        ${project.build.directory}/assembly/etc
-                                    </outputDirectory>
-                                    <destFileName>org.apache.unomi.groovy.actions.cfg</destFileName>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-plugins-mail</artifactId>
-                                    <version>${project.version}</version>
-                                    <classifier>mailcfg</classifier>
-                                    <type>cfg</type>
-                                    <outputDirectory>
-                                        ${project.build.directory}/assembly/etc
-                                    </outputDirectory>
-                                    <destFileName>org.apache.unomi.plugins.mail.cfg</destFileName>
-                                </artifactItem>
-                                <artifactItem>
-                                    <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-router-core</artifactId>
-                                    <version>${project.version}</version>
-                                    <classifier>routercfg</classifier>
-                                    <type>cfg</type>
-                                    <outputDirectory>
-                                        ${project.build.directory}/assembly/etc
-                                    </outputDirectory>
-                                    <destFileName>org.apache.unomi.router.cfg</destFileName>
-                                </artifactItem>
-                                <!-- UNOMI-75 : We install the blueprint core bundle in a different version to fix a problem with offline startup -->
-                                <artifactItem>
-                                    <groupId>org.apache.aries.blueprint</groupId>
-                                    <artifactId>org.apache.aries.blueprint.core</artifactId>
-                                    <version>1.6.2</version>
-                                    <outputDirectory>
-                                        ${project.build.directory}/assembly/system/org/apache/aries/blueprint/org.apache.aries.blueprint.core/1.6.2
-                                    </outputDirectory>
-                                </artifactItem>
-                            </artifactItems>
-                            <!-- other configurations here -->
-                        </configuration>
                     </execution>
                 </executions>
+                <configuration>
+                    <doCheck>false</doCheck>
+                    <doUpdate>false</doUpdate>
+                    <shortRevisionLength>8</shortRevisionLength>
+                    <revisionOnScmFailure>unknown</revisionOnScmFailure>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -286,6 +162,123 @@
                         <goals>
                             <goal>resources</goal>
                         </goals>
+                        <configuration>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/src/main/resources</directory>
+                                    <filtering>true</filtering>
+                                    <includes>
+                                        <include>BUILD</include>
+                                    </includes>
+                                </resource>
+                                <resource>
+                                    <directory>${project.basedir}/src/main/resources</directory>
+                                    <filtering>false</filtering>
+                                    <excludes>
+                                        <exclude>BUILD</exclude>
+                                    </excludes>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-web-servlets</artifactId>
+                                    <classifier>unomicfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
+                                    <destFileName>org.apache.unomi.web.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+                                    <classifier>elasticsearchcfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
+                                    <destFileName>org.apache.unomi.persistence.elasticsearch.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-persistence-opensearch-core</artifactId>
+                                    <classifier>opensearchcfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/etc
+                                    </outputDirectory>
+                                    <destFileName>org.apache.unomi.persistence.opensearch.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-services</artifactId>
+                                    <classifier>clustercfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
+                                    <destFileName>org.apache.unomi.cluster.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-services</artifactId>
+                                    <classifier>servicescfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
+                                    <destFileName>org.apache.unomi.services.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-plugins-request</artifactId>
+                                    <classifier>requestcfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
+                                    <destFileName>org.apache.unomi.plugins.request.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-plugins-base</artifactId>
+                                    <classifier>pluginsbasecfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
+                                    <destFileName>org.apache.unomi.plugins.base.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-groovy-actions-services</artifactId>
+                                    <classifier>groovyactionscfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
+                                    <destFileName>org.apache.unomi.groovy.actions.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-plugins-mail</artifactId>
+                                    <classifier>mailcfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
+                                    <destFileName>org.apache.unomi.plugins.mail.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-router-core</artifactId>
+                                    <classifier>routercfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
+                                    <destFileName>org.apache.unomi.router.cfg</destFileName>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -313,6 +306,13 @@
                             <goal>archive</goal>
                         </goals>
                     </execution>
+                    <execution>
+                        <id>verify-feature</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
                 </executions>
                 <configuration>
                     <startupBundles>
@@ -331,14 +331,15 @@
                         <feature>config</feature>
                         <feature>deployer</feature>
                         <feature>diagnostic</feature>
-                        <feature>feature</feature>
                         <feature>instance</feature>
                         <feature>kar</feature>
                         <feature>log</feature>
                         <feature>package</feature>
                         <feature>service</feature>
                         <feature>system</feature>
+                        <feature>http</feature>
                         <feature>war</feature>
+                        <feature>http-whiteboard</feature>
                         <feature>cxf-jaxrs</feature>
                         <feature>aries-blueprint</feature>
                         <feature>shell-compat</feature>
@@ -358,13 +359,12 @@
                         <feature>unomi-healthcheck</feature>
                         <feature>cdp-graphql-feature</feature>
                     </installedFeatures>
-                    <javase>1.8</javase>
+                    <javase>17</javase>
                 </configuration>
             </plugin>
             <plugin>
                 <groupId>net.nicoulaj.maven.plugins</groupId>
                 <artifactId>checksum-maven-plugin</artifactId>
-                <version>1.7</version>
                 <executions>
                     <execution>
                         <id>package-release-checksum</id>

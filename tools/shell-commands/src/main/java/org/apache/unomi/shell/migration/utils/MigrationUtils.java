@@ -82,7 +82,7 @@ public class MigrationUtils {
             try (InputStream stream = url.openStream()) {
                 fileContent = IOUtils.toString(stream, StandardCharsets.UTF_8);
             }
-            
+
             // Process the content
             StringBuilder result = new StringBuilder();
             StringBuilder currentLine = new StringBuilder();
@@ -90,10 +90,10 @@ public class MigrationUtils {
             boolean inString = false;
             char stringChar = 0;
             boolean lastWasSpace = false;
-            
+
             for (int i = 0; i < fileContent.length(); i++) {
                 char ch = fileContent.charAt(i);
-                
+
                 // Handle string literals - only if we're not in a comment
                 if (!inBlockComment && (ch == '"' || ch == '\'')) {
                     if (!inString) {
@@ -106,18 +106,18 @@ public class MigrationUtils {
                     currentLine.append(ch);
                     continue;
                 }
-                
+
                 // If we're in a string, just append the character
                 if (inString) {
                     currentLine.append(ch);
                     continue;
                 }
-                
+
                 // Handle line endings - replace with space
                 if (ch == '\n' || ch == '\r') {
                     // Check for Windows line endings (\r\n)
                     boolean isWindowsLineEnding = (ch == '\r' && i + 1 < fileContent.length() && fileContent.charAt(i + 1) == '\n');
-                    
+
                     if (inBlockComment) {
                         // Just skip newlines in block comments
                         if (isWindowsLineEnding) {
@@ -140,7 +140,7 @@ public class MigrationUtils {
                     }
                     continue;
                 }
-                
+
                 // Handle block comments
                 if (!inBlockComment && ch == '/' && i + 1 < fileContent.length() && fileContent.charAt(i + 1) == '*') {
                     inBlockComment = true;
@@ -152,7 +152,7 @@ public class MigrationUtils {
                     i++; // Skip the /
                     continue;
                 }
-                
+
                 // Handle inline comments
                 if (!inBlockComment && ch == '/' && i + 1 < fileContent.length() && fileContent.charAt(i + 1) == '/') {
                     // Process the content before the inline comment
@@ -160,7 +160,7 @@ public class MigrationUtils {
                         result.append(currentLine);
                     }
                     currentLine.setLength(0);
-                    
+
                     // Skip to the end of line
                     while (i < fileContent.length() && fileContent.charAt(i) != '\n' && fileContent.charAt(i) != '\r') {
                         i++;
@@ -168,7 +168,7 @@ public class MigrationUtils {
                     i--; // Step back one character so the line ending is processed in the next loop iteration
                     continue;
                 }
-                
+
                 // Only append if we're not in a comment
                 if (!inBlockComment) {
                     // Handle spaces to avoid multiple consecutive spaces
@@ -183,18 +183,18 @@ public class MigrationUtils {
                     }
                 }
             }
-            
+
             // Process any remaining content
             if (currentLine.length() > 0 && !inBlockComment) {
                 result.append(handleInlineComments(currentLine.toString()));
             }
-            
+
             return result.toString().trim();
         } catch (IOException e) {
             throw new RuntimeException("Error reading file " + resource, e);
         }
     }
-    
+
     private static String handleInlineComments(String line) {
         int commentPos = indexOfOutsideString(line, "//");
         if (commentPos != -1) {
@@ -202,14 +202,14 @@ public class MigrationUtils {
         }
         return line;
     }
-    
+
     private static int indexOfOutsideString(String line, String search) {
         boolean inString = false;
         char stringChar = 0;
-        
+
         for (int i = 0; i < line.length() - search.length() + 1; i++) {
             char c = line.charAt(i);
-            
+
             // Handle string literals
             if (c == '"' || c == '\'') {
                 if (!inString) {
@@ -220,7 +220,7 @@ public class MigrationUtils {
                 }
                 continue;
             }
-            
+
             // Only look for comments outside strings
             if (!inString) {
                 boolean found = true;
@@ -235,7 +235,7 @@ public class MigrationUtils {
                 }
             }
         }
-        
+
         return -1;
     }
 
@@ -244,6 +244,23 @@ public class MigrationUtils {
         try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
             return response.getStatusLine().getStatusCode() == HttpStatus.SC_OK;
         }
+    }
+
+    public static void configureAlias(CloseableHttpClient httpClient, String esAddress, String alias, String writeIndex, Set<String> readIndices, String configureAliasBody, MigrationContext context) throws IOException {
+        String readIndicesToAdd = "";
+        if (!readIndices.isEmpty()) {
+            readIndicesToAdd = "," + readIndices.stream().map(index -> "{\"add\": {\"index\": \"" + index + "\", \"alias\": \"" + alias + "\", \"is_write_index\": false}}").collect(Collectors.joining(","));
+        }
+        if (context != null) {
+            context.printMessage("Will set " + writeIndex + " as write index for alias " + alias);
+            context.printMessage("Will set " + readIndices.toString() + " as read indices");
+        } else {
+            LOGGER.info("Will set {} as write index for alias {}", writeIndex, alias);
+            LOGGER.info("Will set {} as read indices", readIndices.toString());
+        }
+        String requestBody = configureAliasBody.replace("#writeIndexName", writeIndex).replace("#aliasName", alias).replace("#readIndicesToAdd", readIndicesToAdd);
+
+        HttpUtils.executePostRequest(httpClient, esAddress + "/_aliases", requestBody, null);
     }
 
     public static Set<String> getIndexesPrefixedBy(CloseableHttpClient httpClient, String esAddress, String prefix) throws IOException {
@@ -500,37 +517,21 @@ public class MigrationUtils {
             final JSONObject status = new JSONObject(
                     HttpUtils.executeGetRequest(httpClient, esAddress + "/_tasks/" + taskId,
                             null));
-            if (status.has("completed") && status.getBoolean("completed")) {
-                if (migrationContext != null) {
-                    migrationContext.printMessage("Task completed: " + taskDescription + " (task ID: " + taskId + ")");
-                } else {
-                    LOGGER.info("Task completed: {} (task ID: {})", taskDescription, taskId);
-                }
-                break;
-            }
             if (status.has("error")) {
                 final JSONObject error = status.getJSONObject("error");
                 throw new IOException("Task error for " + taskDescription + " (task ID: " + taskId + "): " + error.getString("type") + " - " + error.getString("reason"));
             }
-
-            double progress = -1;
-            String progressMessage = "";
-            if (status.has("task")) {
-                JSONObject task = status.getJSONObject("task");
-                if (task.has("status")) {
-                    JSONObject taskStatus = task.getJSONObject("status");
-                    int total = taskStatus.has("total") ? taskStatus.getInt("total") : -1;
-                    int deleted = taskStatus.has("deleted") ? taskStatus.getInt("deleted") : -1;
-                    int updated = taskStatus.has("updated") ? taskStatus.getInt("updated") : -1;
-                    int created = taskStatus.has("created") ? taskStatus.getInt("created") : -1;
-                    int noops = taskStatus.has("noops") ? taskStatus.getInt("noops") : -1;
-                    if (total > 0 && deleted >= 0 && updated >= 0 && created >= 0 && noops >= 0) {
-                        progress = ((double) updated + created + deleted + noops) / total;
-                    }
-                    
-                    progressMessage = formatTaskProgress(progress, total, updated, created, deleted, noops);
+            if (status.has("completed") && status.getBoolean("completed")) {
+                String completionMessage = formatTaskCompletion(status, taskDescription, taskId);
+                if (migrationContext != null) {
+                    migrationContext.printMessage(completionMessage);
+                } else {
+                    LOGGER.info(completionMessage);
                 }
+                break;
             }
+
+            String progressMessage = formatTaskProgress(status);
 
             if (migrationContext != null) {
                 migrationContext.printMessage(String.format("Task %s: %s%s", taskId, taskDescription, progressMessage));
@@ -545,53 +546,366 @@ public class MigrationUtils {
         }
     }
 
+    // Constants for task status JSON field names
+    private static final String JSON_KEY_TASK = "task";
+    private static final String JSON_KEY_STATUS = "status";
+    private static final String JSON_KEY_RUNNING_TIME_IN_NANOS = "running_time_in_nanos";
+    private static final String JSON_KEY_TOTAL = "total";
+    private static final String JSON_KEY_DELETED = "deleted";
+    private static final String JSON_KEY_UPDATED = "updated";
+    private static final String JSON_KEY_CREATED = "created";
+    private static final String JSON_KEY_NOOPS = "noops";
+    private static final String JSON_KEY_BATCHES = "batches";
+    private static final String JSON_KEY_VERSION_CONFLICTS = "version_conflicts";
+    private static final String JSON_KEY_THROTTLED_MILLIS = "throttled_millis";
+    private static final String JSON_KEY_REQUESTS_PER_SECOND = "requests_per_second";
+    
+    // Constants for progress bar formatting
+    private static final double PROGRESS_BAR_WIDTH = 20.0;
+    private static final double PROGRESS_COMPLETE = 1.0;
+    private static final double PROGRESS_UNKNOWN = -1.0;
+    private static final int PROGRESS_PERCENTAGE_MULTIPLIER = 100;
+    private static final int NANOSECONDS_TO_MILLISECONDS = 1_000_000;
+    
+    // Constants for progress bar display
+    private static final String PROGRESS_BAR_COMPLETED = "[====================] 100.0%";
+    private static final String PROGRESS_BAR_UNKNOWN = "[                    ] 0.0%";
+    private static final String PROGRESS_BAR_START = "[";
+    private static final String PROGRESS_BAR_END = "]";
+    private static final String PROGRESS_BAR_FILL = "=";
+    private static final String PROGRESS_BAR_CURSOR = ">";
+    private static final String PROGRESS_BAR_EMPTY = " ";
+    
+    // Constants for operation count symbols
+    private static final String OPERATION_UPDATED = "↑";
+    private static final String OPERATION_CREATED = "+";
+    private static final String OPERATION_DELETED = "-";
+    private static final String OPERATION_NOOPS = "~";
+    
+    // Constants for labels
+    private static final String LABEL_ELAPSED = "elapsed";
+    private static final String LABEL_DURATION = "duration";
+    private static final String LABEL_REQUESTS_PER_SECOND = " req/s";
+    
+    /**
+     * Data class to hold task statistics extracted from Elasticsearch task status.
+     */
+    private static class TaskStatistics {
+        int total = -1;
+        int updated = 0;
+        int created = 0;
+        int deleted = 0;
+        int noops = 0;
+        int batches = 0;
+        int versionConflicts = 0;
+        long runningTimeNanos = -1;
+        long throttledMillis = 0;
+        double requestsPerSecond = -1;
+        
+        /**
+         * Calculates the progress percentage based on completed operations.
+         * @return progress value between 0.0 and 1.0, or -1 if progress cannot be calculated
+         */
+        double calculateProgress() {
+            if (total > 0 && deleted >= 0 && updated >= 0 && created >= 0 && noops >= 0) {
+                return Math.min(PROGRESS_COMPLETE, ((double) updated + created + deleted + noops) / total);
+            }
+            return PROGRESS_UNKNOWN;
+        }
+        
+        /**
+         * Gets the total number of completed operations.
+         * @return sum of updated, created, deleted, and noops
+         */
+        int getCompletedCount() {
+            return updated + created + deleted + noops;
+        }
+    }
+
+    /**
+     * Extracts task statistics from an Elasticsearch task status JSON object.
+     * Uses opt*() methods for null safety as per code quality rules.
+     *
+     * @param status the full task status JSON object (must not be null)
+     * @return TaskStatistics object containing extracted statistics
+     * @throws NullPointerException if status is null
+     */
+    private static TaskStatistics extractTaskStatistics(JSONObject status) {
+        Objects.requireNonNull(status, "status cannot be null");
+        
+        TaskStatistics stats = new TaskStatistics();
+        
+        JSONObject task = status.optJSONObject(JSON_KEY_TASK);
+        if (task != null) {
+            stats.runningTimeNanos = task.optLong(JSON_KEY_RUNNING_TIME_IN_NANOS, -1);
+            
+            JSONObject taskStatus = task.optJSONObject(JSON_KEY_STATUS);
+            if (taskStatus != null) {
+                stats.total = taskStatus.optInt(JSON_KEY_TOTAL, -1);
+                stats.deleted = taskStatus.optInt(JSON_KEY_DELETED, 0);
+                stats.updated = taskStatus.optInt(JSON_KEY_UPDATED, 0);
+                stats.created = taskStatus.optInt(JSON_KEY_CREATED, 0);
+                stats.noops = taskStatus.optInt(JSON_KEY_NOOPS, 0);
+                stats.batches = taskStatus.optInt(JSON_KEY_BATCHES, 0);
+                stats.versionConflicts = taskStatus.optInt(JSON_KEY_VERSION_CONFLICTS, 0);
+                stats.throttledMillis = taskStatus.optLong(JSON_KEY_THROTTLED_MILLIS, 0);
+                
+                double rps = taskStatus.optDouble(JSON_KEY_REQUESTS_PER_SECOND, -1);
+                if (rps >= 0) {
+                    stats.requestsPerSecond = rps;
+                }
+            }
+        }
+        
+        return stats;
+    }
+
+    /**
+     * Appends an operation count to the result if the count is greater than zero.
+     *
+     * @param result the StringBuilder to append to
+     * @param count the operation count
+     * @param symbol the symbol to use for this operation type
+     * @param isFirst whether this is the first operation being appended
+     * @return false if an operation was appended, true if it was skipped
+     */
+    private static boolean appendOperationCount(StringBuilder result, int count, String symbol, boolean isFirst) {
+        if (count > 0) {
+            if (!isFirst) {
+                result.append(" ");
+            }
+            result.append(symbol).append(count);
+            return false;
+        }
+        return isFirst;
+    }
+
+    /**
+     * Formats operation counts in a compact format: (↑updated +created -deleted ~noops)
+     *
+     * @param stats the task statistics (must not be null)
+     * @return formatted operation counts string, or empty string if no operations
+     * @throws NullPointerException if stats is null
+     */
+    private static String formatOperationCounts(TaskStatistics stats) {
+        Objects.requireNonNull(stats, "stats cannot be null");
+        
+        if (stats.updated == 0 && stats.created == 0 && stats.deleted == 0 && stats.noops == 0) {
+            return "";
+        }
+        
+        StringBuilder result = new StringBuilder(" (");
+        boolean first = true;
+        
+        first = appendOperationCount(result, stats.updated, OPERATION_UPDATED, first);
+        first = appendOperationCount(result, stats.created, OPERATION_CREATED, first);
+        first = appendOperationCount(result, stats.deleted, OPERATION_DELETED, first);
+        appendOperationCount(result, stats.noops, OPERATION_NOOPS, first);
+        
+        result.append(")");
+        return result.toString();
+    }
+
+    /**
+     * Formats additional task information (batches, conflicts, throttled time, duration, requests per second).
+     *
+     * @param stats the task statistics (must not be null)
+     * @param includeRequestsPerSecond whether to include requests per second (only for progress, not completion)
+     * @param useElapsedLabel whether to use "elapsed" label (true) or "duration" label (false)
+     * @return formatted additional information string
+     * @throws NullPointerException if stats is null
+     */
+    private static String formatAdditionalInfo(TaskStatistics stats, boolean includeRequestsPerSecond, boolean useElapsedLabel) {
+        Objects.requireNonNull(stats, "stats cannot be null");
+        
+        StringBuilder result = new StringBuilder();
+        
+        if (stats.batches > 0) {
+            result.append(" batches:").append(stats.batches);
+        }
+        if (stats.versionConflicts > 0) {
+            result.append(" conflicts:").append(stats.versionConflicts);
+        }
+        if (stats.throttledMillis > 0) {
+            result.append(" throttled:").append(formatDuration(stats.throttledMillis));
+        }
+        if (includeRequestsPerSecond && stats.requestsPerSecond >= 0) {
+            result.append(" ").append(String.format("%.1f", stats.requestsPerSecond)).append(LABEL_REQUESTS_PER_SECOND);
+        }
+        if (stats.runningTimeNanos > 0) {
+            String label = useElapsedLabel ? LABEL_ELAPSED : LABEL_DURATION;
+            result.append(" ").append(label).append(":").append(formatDuration(stats.runningTimeNanos / NANOSECONDS_TO_MILLISECONDS));
+        }
+        
+        return result.toString();
+    }
+
+    /**
+     * Creates a progress bar string based on the progress percentage.
+     *
+     * @param progress the progress value between 0.0 and 1.0, or -1 for unknown
+     * @param isCompleted whether this is a completed task (always shows 100%)
+     * @return formatted progress bar string
+     */
+    private static String createProgressBar(double progress, boolean isCompleted) {
+        if (isCompleted) {
+            return PROGRESS_BAR_COMPLETED;
+        }
+        
+        if (progress < 0) {
+            return PROGRESS_BAR_UNKNOWN;
+        }
+        
+        int filledLength = (int) (progress * PROGRESS_BAR_WIDTH);
+        int leftOver = (int) (PROGRESS_BAR_WIDTH - filledLength - 1.0);
+        boolean needsCursor = filledLength < PROGRESS_BAR_WIDTH;
+        
+        String progressBar = PROGRESS_BAR_START 
+                + PROGRESS_BAR_FILL.repeat(filledLength)
+                + (needsCursor ? PROGRESS_BAR_CURSOR : "")
+                + PROGRESS_BAR_EMPTY.repeat(leftOver)
+                + PROGRESS_BAR_END;
+        
+        return String.format("%s %.1f%%", progressBar, progress * PROGRESS_PERCENTAGE_MULTIPLIER);
+    }
+
     /**
      * Formats the progress information for a task into a visually appealing string.
+     * Extracts all available information from the task status response.
      *
-     * @param progress the progress value between 0 and 1
-     * @param total the total number of items to process
-     * @param updated number of updated items
-     * @param created number of created items
-     * @param deleted number of deleted items
-     * @param noops number of items that required no changes
+     * @param status the full task status JSON object (must not be null)
      * @return a formatted string containing the progress bar and statistics
+     * @throws NullPointerException if status is null
      */
-    private static String formatTaskProgress(double progress, int total, int updated, int created, int deleted, int noops) {
-        // Validate progress value
-        if (progress < 0) {
-            return " [                    ] 0.0%";
-        }
-        progress = Math.min(1.0, progress); // Ensure progress doesn't exceed 1.0
+    private static String formatTaskProgress(JSONObject status) {
+        Objects.requireNonNull(status, "status cannot be null");
         
-        // Create a compact progress bar
-        int barWidth = 20;
-        int filledLength = (int) (progress * barWidth);
-        String progressBar = "[" + "=".repeat(filledLength) + ">".repeat(filledLength < barWidth ? 1 : 0) + " ".repeat(barWidth - filledLength - 1) + "]";
+        TaskStatistics stats = extractTaskStatistics(status);
+        double progress = stats.calculateProgress();
         
-        // Format statistics in a compact way
-        StringBuilder stats = new StringBuilder();
-        if (total > 0) {
-            stats.append(String.format(" %d/%d", updated + created + deleted + noops, total));
-        }
-        if (updated > 0 || created > 0 || deleted > 0 || noops > 0) {
-            stats.append(" (");
-            if (updated > 0) stats.append("↑").append(updated);
-            if (created > 0) {
-                if (updated > 0) stats.append(" ");
-                stats.append("+").append(created);
-            }
-            if (deleted > 0) {
-                if (created > 0 || updated > 0) stats.append(" ");
-                stats.append("-").append(deleted);
-            }
-            if (noops > 0) {
-                if (deleted > 0 || created > 0 || updated > 0) stats.append(" ");
-                stats.append("~").append(noops);
-            }
-            stats.append(")");
+        String progressBar = createProgressBar(progress, false);
+        
+        StringBuilder result = new StringBuilder(" ").append(progressBar);
+        
+        if (stats.total > 0) {
+            result.append(String.format(" %d/%d", stats.getCompletedCount(), stats.total));
         }
         
-        return String.format(" %s %.1f%%%s", progressBar, progress * 100, stats.toString());
+        String operationCounts = formatOperationCounts(stats);
+        if (!operationCounts.isEmpty()) {
+            result.append(operationCounts);
+        }
+        
+        result.append(formatAdditionalInfo(stats, true, true));
+        
+        return result.toString();
+    }
+
+    /**
+     * Builds a progress bar with statistics for a completed task.
+     *
+     * @param stats the task statistics
+     * @return formatted progress bar string with statistics, or empty string if no task data
+     */
+    private static String buildCompletedProgressBarWithStats(TaskStatistics stats) {
+        String progressBar = createProgressBar(PROGRESS_COMPLETE, true);
+        StringBuilder progressBarWithStats = new StringBuilder(progressBar);
+        
+        if (stats.total >= 0) {
+            progressBarWithStats.append(String.format(" %d/%d", stats.getCompletedCount(), stats.total));
+        }
+        
+        String operationCounts = formatOperationCounts(stats);
+        if (!operationCounts.isEmpty()) {
+            progressBarWithStats.append(operationCounts);
+        }
+        
+        progressBarWithStats.append(formatAdditionalInfo(stats, false, false));
+        return progressBarWithStats.toString();
+    }
+
+    /**
+     * Formats the completion message for a finished task with final statistics.
+     *
+     * @param status the full task status JSON object (must not be null)
+     * @param taskDescription the description of the task (must not be null or empty)
+     * @param taskId the task ID (must not be null or empty)
+     * @return a formatted completion message with progress bar
+     * @throws NullPointerException if status, taskDescription, or taskId is null
+     * @throws IllegalArgumentException if taskDescription or taskId is empty
+     */
+    private static String formatTaskCompletion(JSONObject status, String taskDescription, String taskId) {
+        Objects.requireNonNull(status, "status cannot be null");
+        Objects.requireNonNull(taskDescription, "taskDescription cannot be null");
+        Objects.requireNonNull(taskId, "taskId cannot be null");
+        
+        if (taskDescription.trim().isEmpty()) {
+            throw new IllegalArgumentException("taskDescription cannot be empty");
+        }
+        if (taskId.trim().isEmpty()) {
+            throw new IllegalArgumentException("taskId cannot be empty");
+        }
+        
+        StringBuilder message = new StringBuilder("Task completed: ").append(taskDescription).append(" (task ID: ").append(taskId).append(")");
+        
+        if (status.has(JSON_KEY_TASK)) {
+            TaskStatistics stats = extractTaskStatistics(status);
+            message.append(" ").append(buildCompletedProgressBarWithStats(stats));
+        }
+        
+        return message.toString();
+    }
+
+    /**
+     * Formats a duration in milliseconds into a human-readable string.
+     *
+     * @param millis the duration in milliseconds
+     * @return a formatted duration string (e.g., "1m 23s", "45s", "2h 15m")
+     */
+    private static String formatDuration(long millis) {
+        if (millis < 1000) {
+            return millis + "ms";
+        }
+        
+        long seconds = millis / 1000;
+        if (seconds < 60) {
+            return seconds + "s";
+        }
+        
+        long minutes = seconds / 60;
+        seconds = seconds % 60;
+        if (minutes < 60) {
+            if (seconds > 0) {
+                return minutes + "m " + seconds + "s";
+            }
+            return minutes + "m";
+        }
+        
+        long hours = minutes / 60;
+        minutes = minutes % 60;
+        if (hours < 24) {
+            StringBuilder result = new StringBuilder();
+            result.append(hours).append("h");
+            if (minutes > 0) {
+                result.append(" ").append(minutes).append("m");
+            }
+            if (seconds > 0 && minutes == 0) {
+                result.append(" ").append(seconds).append("s");
+            }
+            return result.toString();
+        }
+        
+        long days = hours / 24;
+        hours = hours % 24;
+        StringBuilder result = new StringBuilder();
+        result.append(days).append("d");
+        if (hours > 0) {
+            result.append(" ").append(hours).append("h");
+        }
+        if (minutes > 0 && hours == 0) {
+            result.append(" ").append(minutes).append("m");
+        }
+        return result.toString();
     }
 
     public static String getElasticMajorVersion(CloseableHttpClient httpClient, String esAddress) throws IOException {
@@ -609,7 +923,7 @@ public class MigrationUtils {
         JSONObject scriptObj = new JSONObject();
         scriptObj.put("source", painlessScript);
         scriptObj.put("lang", "painless");
-        
+
         if (params != null && !params.isEmpty()) {
             JSONObject paramsObj = new JSONObject();
             for (Map.Entry<String, Object> entry : params.entrySet()) {
@@ -617,7 +931,7 @@ public class MigrationUtils {
             }
             scriptObj.put("params", paramsObj);
         }
-        
+
         return ", \"script\": " + scriptObj.toString();
     }
 
@@ -662,17 +976,17 @@ public class MigrationUtils {
      */
     public static Set<String> getAllItemTypes(CloseableHttpClient httpClient, String esAddress, String indexPrefix, String indexName, BundleContext bundleContext) throws IOException {
         String systemItemsIndex = indexPrefix + "-" + indexName;
-        String query = resourceAsString(bundleContext, "requestBody/3.0.0/get_item_types_query.json");
+        String query = resourceAsString(bundleContext, "requestBody/3.1.0/get_item_types_query.json");
 
         String response = HttpUtils.executePostRequest(httpClient, esAddress + "/" + systemItemsIndex + "/_search", query, null);
         JSONObject jsonResponse = new JSONObject(response);
         JSONArray buckets = jsonResponse.getJSONObject("aggregations").getJSONObject("itemTypes").getJSONArray("buckets");
-        
+
         Set<String> itemTypes = new HashSet<>();
         for (int i = 0; i < buckets.length(); i++) {
             itemTypes.add(buckets.getJSONObject(i).getString("key"));
         }
-        
+
         return itemTypes;
     }
 }

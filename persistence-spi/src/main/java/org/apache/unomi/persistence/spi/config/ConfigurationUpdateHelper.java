@@ -19,8 +19,8 @@ package org.apache.unomi.persistence.spi.config;
 import org.slf4j.Logger;
 
 import java.util.Dictionary;
-import java.util.function.Consumer;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Utility class to handle configuration updates in ManagedService implementations.

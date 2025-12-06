@@ -19,6 +19,6 @@
 ################################################################################
 export UNOMI_VERSION=`mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version | grep -Ev '(^\[|Download\w+:)'`
 echo Detected project version=$UNOMI_VERSION
-export KARAF_VERSION=3.0.2
+export KARAF_VERSION=4.4.8
 # Uncomment the following line if you need Apache Unomi to start automatically at the first start
 # export KARAF_OPTS="-Dunomi.autoStart=true"

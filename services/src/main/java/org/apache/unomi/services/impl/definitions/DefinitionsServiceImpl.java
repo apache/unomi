@@ -23,15 +23,16 @@ import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.TenantLifecycleListener;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.utils.ConditionBuilder;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
@@ -44,7 +45,6 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
@@ -54,6 +54,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     private static final Logger LOGGER = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
     private volatile boolean isShutdown = false;
+    private volatile boolean initialRefreshComplete = false;
 
     private long definitionsRefreshInterval = 10000;
 
@@ -91,7 +92,48 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     public void postConstruct() {
         super.postConstruct();
 
+        // After all bundles are loaded and initial data is loaded, ensure all parent conditions are resolved
+        // This is needed because the post-refresh callback only runs if there are changes, but we need
+        // to resolve parent conditions even if items were already in cache from bundle loading
+        contextManager.executeAsSystem(() -> {
+            try {
+                resolveAllParentConditions();
+            } catch (Exception e) {
+                LOGGER.error("Error resolving parent conditions during initialization", e);
+            }
+            return null;
+        });
+
         LOGGER.info("Definitions service initialized.");
+    }
+
+    /**
+     * Resolves all parent conditions for all condition types in the cache.
+     * This ensures parent conditions are resolved regardless of load order.
+     */
+    private void resolveAllParentConditions() {
+        for (String tenantId : getTenants()) {
+            Map<String, ConditionType> cachedTypes = cacheService.getTenantCache(tenantId, ConditionType.class);
+            if (cachedTypes != null) {
+                for (ConditionType conditionType : cachedTypes.values()) {
+                    if (conditionType != null && conditionType.getParentCondition() != null) {
+                        // Only resolve if not already resolved
+                        if (conditionType.getParentCondition().getConditionType() == null) {
+                            boolean resolved = ParserHelper.resolveConditionType(this, conditionType.getParentCondition(),
+                                "condition type " + conditionType.getItemId());
+                            if (resolved) {
+                                // Update the cached item with resolved parent condition
+                                cacheService.put(ConditionType.ITEM_TYPE, conditionType.getItemId(),
+                                    tenantId, conditionType);
+                            } else {
+                                LOGGER.debug("Parent condition for {} not yet available, will be resolved on next refresh",
+                                    conditionType.getItemId());
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public void setDefinitionsRefreshInterval(long definitionsRefreshInterval) {
@@ -114,6 +156,38 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
         // Call the base class implementation which will handle removing items
         super.processBundleStop(bundleContext.getBundle());
+    }
+
+    @Override
+    protected void onBundleStop(Bundle bundle) {
+        if (bundle == null) {
+            return;
+        }
+        final long bundleId = bundle.getBundleId();
+
+        // Remove all plugin types contributed by this bundle (system tenant / inherited)
+        // Execute as system to target predefined items
+        contextManager.executeAsSystem(() -> {
+            try {
+                java.util.List<PluginType> types = getTypesByPlugin().get(bundleId);
+                if (types != null) {
+                    for (PluginType type : types) {
+                        if (type instanceof ConditionType) {
+                            removeConditionType(((ConditionType) type).getItemId());
+                        } else if (type instanceof ActionType) {
+                            removeActionType(((ActionType) type).getItemId());
+                        } else if (type instanceof ValueType) {
+                            removeValueType(((ValueType) type).getId());
+                        } else if (type instanceof PropertyMergeStrategyType) {
+                            removePropertyMergeStrategyType(((PropertyMergeStrategyType) type).getId());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.warn("Error cleaning up plugin types for bundle {} on stop", bundleId, e);
+            }
+            return null;
+        });
     }
 
     @Override
@@ -143,7 +217,19 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public ConditionType getConditionType(String id) {
-        return getItem(id, ConditionType.class);
+        ConditionType conditionType = getItem(id, ConditionType.class);
+        if (conditionType != null && conditionType.getParentCondition() != null 
+                && conditionType.getParentCondition().getConditionType() == null) {
+            // Resolve parent condition on demand if not already resolved
+            boolean resolved = ParserHelper.resolveConditionType(this, conditionType.getParentCondition(),
+                "condition type " + conditionType.getItemId());
+            if (resolved) {
+                // Update the cached item with resolved parent condition
+                String tenantId = contextManager.getCurrentContext().getTenantId();
+                cacheService.put(ConditionType.ITEM_TYPE, conditionType.getItemId(), tenantId, conditionType);
+            }
+        }
+        return conditionType;
     }
 
     @Override
@@ -487,7 +573,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
                     metadata.setId("propertyCondition");
                     propertyConditionType.setMetadata(metadata);
                     propertyConditionType.setConditionEvaluator("propertyConditionEvaluator");
-                    propertyConditionType.setQueryBuilder("propertyConditionESQueryBuilder");
+                    propertyConditionType.setQueryBuilder("propertyConditionQueryBuilder");
 
                     // Create tenant condition
                     Condition tenantCondition = new Condition(propertyConditionType);
@@ -569,24 +655,43 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
             .withBundleItemProcessor(mergeStrategyProcessor)
             .build());
 
-        // Condition Type configuration with bundle processor and post-processor for resolving parent conditions
+        // Condition Type configuration with bundle processor
+        // Resolve parent conditions when loading from bundles, but don't fail if parent isn't available yet
         BiConsumer<BundleContext, ConditionType> conditionTypeProcessor = (bundleContext, type) -> {
             type.setPluginId(bundleContext.getBundle().getBundleId());
             type.setTenantId(SYSTEM_TENANT);
+            
+            // Try to resolve parent condition if present, but don't fail if parent isn't loaded yet
+            // The post-refresh callback will resolve it later once all items are loaded
+            if (type.getParentCondition() != null && type.getParentCondition().getConditionType() == null) {
+                boolean resolved = ParserHelper.resolveConditionType(this, type.getParentCondition(),
+                    "condition type " + type.getItemId());
+                if (!resolved) {
+                    LOGGER.debug("Parent condition for {} not yet available during bundle load, will resolve after refresh",
+                        type.getItemId());
+                }
+            }
+            
             setConditionType(type);
         };
 
-        Consumer<ConditionType> conditionPostProcessor = conditionType -> {
-            if (conditionType != null && conditionType.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, conditionType.getParentCondition(),
-                    "condition type " + conditionType.getItemId());
-            }
-        };
+        // Post-refresh callback: Resolve all parent conditions after all items are loaded
+        // This ensures parent conditions are resolved during refresh cycles
+        // We always resolve parent conditions, even if no changes were detected, to handle
+        // cases where items were loaded from bundles before the refresh
+        BiConsumer<Map<String, Map<String, ConditionType>>, Map<String, Map<String, ConditionType>>> postRefreshCallback =
+            (oldState, newState) -> {
+                resolveAllParentConditions();
+                if (!initialRefreshComplete) {
+                    initialRefreshComplete = true;
+                    LOGGER.debug("Initial condition type refresh completed, all parent conditions resolved");
+                }
+            };
 
         configs.add(createBaseBuilder(ConditionType.class, ConditionType.ITEM_TYPE, "conditions")
             .withIdExtractor(ConditionType::getItemId)
-            .withPostProcessor(conditionPostProcessor)
             .withBundleItemProcessor(conditionTypeProcessor)
+            .withPostRefreshCallback(postRefreshCallback)
             .build());
 
         return configs;
@@ -596,6 +701,15 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     public void refresh() {
         for (CacheableTypeConfig<?> config : getTypeConfigs()) {
             refreshTypeCache(config);
+        }
+        // After refresh, ensure all parent conditions are resolved
+        // This handles cases where the post-refresh callback didn't run due to no changes detected
+        if (!initialRefreshComplete) {
+            contextManager.executeAsSystem(() -> {
+                resolveAllParentConditions();
+                initialRefreshComplete = true;
+                return null;
+            });
         }
     }
 

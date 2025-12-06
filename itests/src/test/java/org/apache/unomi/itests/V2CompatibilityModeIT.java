@@ -86,8 +86,8 @@ public class V2CompatibilityModeIT extends BaseIT {
 
         // Configure V2 compatibility mode to use the BaseIT test tenant as default
         Map<String, Object> v2Config = new HashMap<>();
-        v2Config.put("v2CompatibilityModeEnabled", false); // Start in V3 mode
-        v2Config.put("v2CompatibilityDefaultTenantId", TEST_TENANT_ID); // Use BaseIT tenant
+        v2Config.put("v2.compatibilitymode.enabled", false); // Start in V3 mode
+        v2Config.put("v2.compatibilitymode.defaultTenantId", TEST_TENANT_ID); // Use BaseIT tenant
 
         updateConfiguration(null,
                 "org.apache.unomi.rest.authentication",
@@ -113,9 +113,9 @@ public class V2CompatibilityModeIT extends BaseIT {
         try {
             // Restore original V2 mode setting and default tenant ID
             Map<String, Object> originalConfig = new HashMap<>();
-            originalConfig.put("v2CompatibilityModeEnabled", originalV2Mode);
+            originalConfig.put("v2.compatibilitymode.enabled", originalV2Mode);
             if (originalDefaultTenantId != null) {
-                originalConfig.put("v2CompatibilityDefaultTenantId", originalDefaultTenantId);
+                originalConfig.put("v2.compatibilitymode.defaultTenantId", originalDefaultTenantId);
             }
 
             updateConfiguration(null,
@@ -154,7 +154,7 @@ public class V2CompatibilityModeIT extends BaseIT {
         LOGGER.info("STEP 2: Switching to V2 compatibility mode");
         updateConfiguration(null,
                 "org.apache.unomi.rest.authentication",
-                "v2CompatibilityModeEnabled",
+                "v2.compatibilitymode.enabled",
                 true);
 
         // Wait for configuration to take effect
@@ -170,7 +170,7 @@ public class V2CompatibilityModeIT extends BaseIT {
         LOGGER.info("STEP 4: Switching back to V3 mode");
         updateConfiguration(null,
                 "org.apache.unomi.rest.authentication",
-                "v2CompatibilityModeEnabled",
+                "v2.compatibilitymode.enabled",
                 false);
 
         // Wait for configuration to take effect
@@ -303,7 +303,7 @@ public class V2CompatibilityModeIT extends BaseIT {
         // Switch to V2 compatibility mode
         updateConfiguration(null,
                 "org.apache.unomi.rest.authentication",
-                "v2CompatibilityModeEnabled",
+                "v2.compatibilitymode.enabled",
                 true);
 
         keepTrying("V2 compatibility mode not enabled in the required time",
@@ -344,7 +344,7 @@ public class V2CompatibilityModeIT extends BaseIT {
         // Test non-protected event (view) without authentication - should work
         // Load the view event from JSON file
         String contextRequestJson = resourceAsString("events/viewEvent.json");
-        
+
         // Replace the session ID with the test session ID
         contextRequestJson = contextRequestJson.replace("test-session-id", TEST_SESSION_ID);
         contextRequestJson = contextRequestJson.replace("testScope", TEST_SCOPE);
@@ -366,7 +366,7 @@ public class V2CompatibilityModeIT extends BaseIT {
         // Switch to V2 compatibility mode
         updateConfiguration(null,
                 "org.apache.unomi.rest.authentication",
-                "v2CompatibilityModeEnabled",
+                "v2.compatibilitymode.enabled",
                 true);
 
         keepTrying("V2 compatibility mode not enabled in the required time",
@@ -394,7 +394,7 @@ public class V2CompatibilityModeIT extends BaseIT {
         // Test that configuration changes persist across service updates
         updateConfiguration(null,
                 "org.apache.unomi.rest.authentication",
-                "v2CompatibilityModeEnabled",
+                "v2.compatibilitymode.enabled",
                 true);
 
         keepTrying("V2 compatibility mode not enabled in the required time",

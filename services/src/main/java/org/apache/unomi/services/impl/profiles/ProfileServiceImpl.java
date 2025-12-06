@@ -28,7 +28,6 @@ import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.services.sorts.ControlGroupPersonalizationStrategy;
@@ -50,6 +49,7 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileServiceImpl.class.getName());
 
     private DefinitionsService definitionsService;
+    private ResolverService resolverService;
 
     private SegmentService segmentService;
 
@@ -75,6 +75,10 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void setResolverService(ResolverService resolverService) {
+        this.resolverService = resolverService;
     }
 
     public void setSegmentService(SegmentService segmentService) {
@@ -249,9 +253,11 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
                         }
                         callback.complete();
                     } catch (Throwable t) {
+                        // During shutdown, services may be unavailable - only log if not shutting down
                         LOGGER.error("Error while purging profiles, sessions, or events", t);
                         callback.fail(t.getMessage());
                     }
+                    return null;
                 });
             }
         };
@@ -766,7 +772,7 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
 
     @Override
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
-        ParserHelper.resolveConditionType(definitionsService, condition, "profile " + profile.getItemId() + " matching");
+        resolverService.resolveConditionType(condition, "profile " + profile.getItemId() + " matching");
 
         if (condition.getConditionTypeId().equals("booleanCondition")) {
             List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
@@ -795,7 +801,7 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
         long startTime = System.currentTimeMillis();
         long updatedCount = 0;
 
-        ParserHelper.resolveConditionType(definitionsService, update.getCondition(), "batch update on property " + update.getPropertyName());
+        resolverService.resolveConditionType(update.getCondition(), "batch update on property " + update.getPropertyName());
         PartialList<Profile> profiles = persistenceService.query(update.getCondition(), null, Profile.class, 0,update.getScrollBatchSize(), update.getScrollTimeValidity());
 
         while (profiles != null && !profiles.getList().isEmpty()) {
@@ -956,7 +962,14 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
     public void setPropertyTypeTarget(URL predefinedPropertyTypeURL, PropertyType propertyType) {
         if (StringUtils.isBlank(propertyType.getTarget())) {
             String[] splitPath = predefinedPropertyTypeURL.getPath().split("/");
-            String target = splitPath[4];
+            // Find the directory name immediately following "properties" in the URL path
+            String target = null;
+            for (int i = 0; i < splitPath.length - 1; i++) {
+                if ("properties".equals(splitPath[i]) && i + 1 < splitPath.length) {
+                    target = splitPath[i + 1];
+                    break;
+                }
+            }
             if (StringUtils.isNotBlank(target)) {
                 propertyType.setTarget(target);
             }

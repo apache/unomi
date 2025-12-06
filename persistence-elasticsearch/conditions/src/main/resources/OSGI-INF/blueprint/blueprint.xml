@@ -21,15 +21,6 @@
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
                                http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
-    <cm:property-placeholder persistent-id="org.apache.unomi.plugins.base"
-                             update-strategy="reload" placeholder-prefix="${base.">
-        <cm:default-properties>
-            <cm:property name="useEventToUpdateProfile" value="false"/>
-            <cm:property name="usePropertyConditionOptimizations" value="true"/>
-            <cm:property name="maxProfilesInOneMerge" value="50"/>
-        </cm:default-properties>
-    </cm:property-placeholder>
-
     <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
                              update-strategy="reload" placeholder-prefix="${es.">
         <cm:default-properties>
@@ -48,7 +39,7 @@
     <service
             interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="idsConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="idsConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.advanced.IdsConditionESQueryBuilder">
             <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
@@ -59,7 +50,7 @@
     <service
             interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="geoLocationByPointSessionConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="geoLocationByPointSessionConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.advanced.GeoLocationByPointSessionConditionESQueryBuilder"/>
     </service>
@@ -70,7 +61,7 @@
             <value>org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder</value>
         </interfaces>
         <service-properties>
-            <entry key="queryBuilderId" value="pastEventConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="pastEventConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.advanced.PastEventConditionESQueryBuilder">
             <property name="definitionsService" ref="definitionsService"/>

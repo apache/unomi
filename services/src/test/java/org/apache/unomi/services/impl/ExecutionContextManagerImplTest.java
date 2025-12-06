@@ -21,23 +21,23 @@ import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.SecurityServiceConfiguration;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import javax.security.auth.Subject;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class ExecutionContextManagerImplTest {
 
     @Mock
@@ -45,7 +45,7 @@ public class ExecutionContextManagerImplTest {
 
     private ExecutionContextManagerImpl contextManager;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         contextManager = new ExecutionContextManagerImpl();
         contextManager.setSecurityService(securityService);
@@ -69,9 +69,9 @@ public class ExecutionContextManagerImplTest {
         ExecutionContext context = contextManager.createContext("testTenant");
 
         // Verify roles and permissions
-        assertEquals("Roles should match", roles, context.getRoles());
+        assertEquals(roles, context.getRoles(), "Roles should match");
         Set<String> expectedPermissions = new HashSet<>(Arrays.asList("READ", "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE));
-        assertEquals("Permissions should be aggregated", expectedPermissions, context.getPermissions());
+        assertEquals(expectedPermissions, context.getPermissions(), "Permissions should be aggregated");
 
         // Verify security service interactions
         verify(securityService).getCurrentSubject();
@@ -95,12 +95,12 @@ public class ExecutionContextManagerImplTest {
         // Execute system operation
         String result = contextManager.executeAsSystem(() -> {
             ExecutionContext context = contextManager.getCurrentContext();
-            assertTrue("Should have admin role", context.hasRole(UnomiRoles.ADMINISTRATOR));
-            assertTrue("Should have admin permission", context.hasPermission("ADMIN"));
+            assertTrue(context.hasRole(UnomiRoles.ADMINISTRATOR), "Should have admin role");
+            assertTrue(context.hasPermission("ADMIN"), "Should have admin permission");
             return "success";
         });
 
-        assertEquals("Operation should execute successfully", "success", result);
+        assertEquals("success", result, "Operation should execute successfully");
 
         // Verify security service interactions
         verify(securityService).getSystemSubject();
@@ -123,13 +123,13 @@ public class ExecutionContextManagerImplTest {
         // Execute tenant operation
         String result = contextManager.executeAsTenant("testTenant", () -> {
             ExecutionContext context = contextManager.getCurrentContext();
-            assertEquals("Should have correct tenant", "testTenant", context.getTenantId());
-            assertTrue("Should have user role", context.hasRole(UnomiRoles.USER));
-            assertTrue("Should have read permission", context.hasPermission("READ"));
+            assertEquals("testTenant", context.getTenantId(), "Should have correct tenant");
+            assertTrue(context.hasRole(UnomiRoles.USER), "Should have user role");
+            assertTrue(context.hasPermission("READ"), "Should have read permission");
             return "success";
         });
 
-        assertEquals("Operation should execute successfully", "success", result);
+        assertEquals("success", result, "Operation should execute successfully");
 
         // Verify security service interactions
         verify(securityService).getCurrentSubject();

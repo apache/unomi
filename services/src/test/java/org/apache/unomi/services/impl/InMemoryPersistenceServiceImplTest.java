@@ -16,8 +16,8 @@
  */
 package org.apache.unomi.services.impl;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.unomi.api.*;
+import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.DateRange;
@@ -28,11 +28,12 @@ import org.apache.unomi.persistence.spi.aggregate.DateRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.IpRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.NumericRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.common.security.AuditServiceImpl;
+import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -59,6 +60,7 @@ public class InMemoryPersistenceServiceImplTest {
     private ExecutionContextManagerImpl executionContextManager;
     private KarafSecurityService securityService;
     private AuditServiceImpl auditService;
+    private DefinitionsServiceImpl definitionsService;
 
     // Test helper class
     public static class TestMetadataItem extends MetadataItem {
@@ -75,6 +77,11 @@ public class InMemoryPersistenceServiceImplTest {
 
         @Override
         public String getItemType() {
+            // If itemType was explicitly set (different from default), use that
+            // Otherwise return the default ITEM_TYPE constant
+            if (itemType != null && !itemType.equals(ITEM_TYPE)) {
+                return itemType;
+            }
             return ITEM_TYPE;
         }
 
@@ -133,12 +140,96 @@ public class InMemoryPersistenceServiceImplTest {
         CustomObjectMapper.getCustomInstance().registerBuiltInItemTypeClass(TestMetadataItem.ITEM_TYPE, TestMetadataItem.class);
         CustomObjectMapper.getCustomInstance().registerBuiltInItemTypeClass(SimpleItem.ITEM_TYPE, SimpleItem.class);
         CustomObjectMapper.getCustomInstance().registerBuiltInItemTypeClass(NestedItem.ITEM_TYPE, NestedItem.class);
-        Path defaultStorageDir = Paths.get(InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR).toAbsolutePath().normalize();
-        FileUtils.deleteDirectory(defaultStorageDir.toFile());
+        // Clean up any existing persistence service before deleting directory
+        if (persistenceService != null) {
+            try {
+                persistenceService.purge((java.util.Date)null);
+                if (persistenceService instanceof InMemoryPersistenceServiceImpl) {
+                    ((InMemoryPersistenceServiceImpl) persistenceService).shutdown();
+                }
+            } catch (Exception e) {
+                // Ignore cleanup errors
+            }
+            persistenceService = null;
+        }
+        // Use robust directory deletion with retries
+        TestHelper.cleanDefaultStorageDirectory(10);
         conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
+        // Create service with refresh delay enabled by default to simulate ES/OS behavior
+        // Tests use TestHelper.retryQueryUntilAvailable() to wait for items to become available
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
+        
+        // Set up minimal definitions service and register dummy action types to prevent warnings
+        // when rules with unresolved action types are loaded from persisted files
+        setupDummyActionTypes();
+    }
+    
+    /**
+     * Sets up a minimal definitions service and registers dummy action types to prevent warnings
+     * when rules with unresolved action types are loaded from persisted files.
+     * This ensures that any rules loaded from previous test runs have valid action types.
+     * 
+     * Note: These action types use a no-op executor name. Since this test doesn't set up
+     * an ActionExecutorDispatcher, these action types are only used for rule resolution,
+     * not execution. If they are ever executed in other contexts, the missing executor
+     * will be handled gracefully (returning NO_CHANGE).
+     */
+    private void setupDummyActionTypes() {
+        // Create minimal definitions service
+        definitionsService = new DefinitionsServiceImpl();
+        definitionsService.setPersistenceService(persistenceService);
+        org.osgi.framework.BundleContext bundleContext = TestHelper.createMockBundleContext();
+        definitionsService.setBundleContext(bundleContext);
+        definitionsService.setContextManager(executionContextManager);
+        definitionsService.setTenantService(new org.apache.unomi.services.impl.TestTenantService());
+        definitionsService.setCacheService(new org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl());
+        definitionsService.setConditionValidationService(TestHelper.createConditionValidationService());
+        definitionsService.setTracerService(TestHelper.createTracerService());
+        // Create minimal scheduler service for refresh timers
+        org.apache.unomi.api.services.SchedulerService schedulerService = TestHelper.createSchedulerService(
+            "test-definitions-node", persistenceService, executionContextManager, bundleContext, null, -1, false, false);
+        definitionsService.setSchedulerService(schedulerService);
+        definitionsService.postConstruct();
+        
+        // Register common dummy action types that might be referenced in persisted rules
+        // These action types are only needed for rule resolution (ParserHelper.resolveActionTypes),
+        // not for actual execution. Since this test doesn't set up an ActionExecutorDispatcher,
+        // these action types won't be executed. If they are ever executed in other contexts,
+        // the ActionExecutorDispatcher will handle missing executors gracefully by returning NO_CHANGE.
+        ActionType unknownActionType = TestHelper.createActionType("unknown", "noop");
+        definitionsService.setActionType(unknownActionType);
+        
+        ActionType testActionType = TestHelper.createActionType("test", "noop");
+        definitionsService.setActionType(testActionType);
+    }
+
+    @AfterEach
+    void tearDown() throws IOException {
+        // Properly shutdown persistence service to release file handles
+        if (persistenceService != null) {
+            try {
+                persistenceService.purge((java.util.Date)null);
+                if (persistenceService instanceof InMemoryPersistenceServiceImpl) {
+                    ((InMemoryPersistenceServiceImpl) persistenceService).shutdown();
+                }
+            } catch (Exception e) {
+                // Ignore cleanup errors
+            }
+            persistenceService = null;
+        }
+        // Clean up directory after service is shut down
+        Path defaultStorageDir = Paths.get(InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR).toAbsolutePath().normalize();
+        if (Files.exists(defaultStorageDir)) {
+            try {
+                // Use robust deletion with retries
+                TestHelper.cleanDefaultStorageDirectory(10);
+            } catch (Exception e) {
+                // Log but don't fail test if cleanup fails
+                LOGGER.warn("Failed to clean up storage directory in tearDown: {}", e.getMessage());
+            }
+        }
     }
 
     @Nested
@@ -328,8 +419,11 @@ public class InMemoryPersistenceServiceImplTest {
             item.setMetadata(metadata);
             persistenceService.save(item);
 
-            // when
-            List<TestMetadataItem> results = persistenceService.query("name", "test-name", null, TestMetadataItem.class);
+            // when - retry query until item is available (handles refresh delay)
+            List<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("name", "test-name", null, TestMetadataItem.class),
+                1
+            );
 
             // then
             assertEquals(1, results.size());
@@ -348,8 +442,11 @@ public class InMemoryPersistenceServiceImplTest {
             item.setMetadata(metadata);
             persistenceService.save(item);
 
-            // when
-            List<TestMetadataItem> results = persistenceService.query("properties.nested\\.field", "test-value", null, TestMetadataItem.class);
+            // when - retry query until item is available (handles refresh delay)
+            List<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.nested\\.field", "test-value", null, TestMetadataItem.class),
+                1
+            );
 
             // then
             assertEquals(1, results.size());
@@ -367,8 +464,11 @@ public class InMemoryPersistenceServiceImplTest {
             item.setMetadata(metadata);
             persistenceService.save(item);
 
-            // when
-            List<TestMetadataItem> results = persistenceService.query("metadata.name", "test-metadata-name", null, TestMetadataItem.class);
+            // when - retry query until item is available (handles refresh delay)
+            List<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("metadata.name", "test-metadata-name", null, TestMetadataItem.class),
+                1
+            );
 
             // then
             assertEquals(1, results.size());
@@ -387,8 +487,11 @@ public class InMemoryPersistenceServiceImplTest {
             item.setMetadata(metadata);
             persistenceService.save(item);
 
-            // when
-            List<TestMetadataItem> results = persistenceService.query("tags", "tag1", null, TestMetadataItem.class);
+            // when - retry query until item is available (handles refresh delay)
+            List<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("tags", "tag1", null, TestMetadataItem.class),
+                1
+            );
 
             // then
             assertEquals(1, results.size());
@@ -409,10 +512,20 @@ public class InMemoryPersistenceServiceImplTest {
             item.setMetadata(metadata);
             persistenceService.save(item);
 
-            // when
-            List<TestMetadataItem> results1 = persistenceService.query("nonexistent", "any-value", null, TestMetadataItem.class);
-            List<TestMetadataItem> results2 = persistenceService.query("properties.map.nested.field", "any-value", null, TestMetadataItem.class);
-            List<TestMetadataItem> results3 = persistenceService.query("nonexistent.nested.field", "any-value", null, TestMetadataItem.class);
+            // when - retry queries until item is available (handles refresh delay)
+            // Even though we expect 0 results, we should wait for the item to be available
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("nonexistent", "any-value", null, TestMetadataItem.class),
+                0
+            );
+            List<TestMetadataItem> results2 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.map.nested.field", "any-value", null, TestMetadataItem.class),
+                0
+            );
+            List<TestMetadataItem> results3 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("nonexistent.nested.field", "any-value", null, TestMetadataItem.class),
+                0
+            );
 
             // then
             assertEquals(0, results1.size());
@@ -443,10 +556,19 @@ public class InMemoryPersistenceServiceImplTest {
 
             persistenceService.save(item);
 
-            // Test different notation styles
-            List<TestMetadataItem> results1 = persistenceService.query("properties.direct\\.key\\.with\\.dots", "direct-value", null, TestMetadataItem.class);
-            List<TestMetadataItem> results2 = persistenceService.query("properties.map['nested.field']['key.with.dots']", "test-value", null, TestMetadataItem.class);
-            List<TestMetadataItem> results3 = persistenceService.query("properties.map.nested\\.field.regular\\.key", "another-value", null, TestMetadataItem.class);
+            // Test different notation styles - retry queries until items are available
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.direct\\.key\\.with\\.dots", "direct-value", null, TestMetadataItem.class),
+                1
+            );
+            List<TestMetadataItem> results2 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.map['nested.field']['key.with.dots']", "test-value", null, TestMetadataItem.class),
+                1
+            );
+            List<TestMetadataItem> results3 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.map.nested\\.field.regular\\.key", "another-value", null, TestMetadataItem.class),
+                1
+            );
 
             // Verify all notation styles work
             assertEquals(1, results1.size());
@@ -480,10 +602,19 @@ public class InMemoryPersistenceServiceImplTest {
 
             persistenceService.save(item);
 
-            // Verify all special field types
-            List<TestMetadataItem> results1 = persistenceService.query("properties.active", "true", null, TestMetadataItem.class);
-            List<TestMetadataItem> results2 = persistenceService.query("tags", "tag1", null, TestMetadataItem.class);
-            List<TestMetadataItem> results3 = persistenceService.query("properties.nested.list\\.of\\.items", "item1", null, TestMetadataItem.class);
+            // Verify all special field types - retry queries until items are available
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.active", "true", null, TestMetadataItem.class),
+                1
+            );
+            List<TestMetadataItem> results2 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("tags", "tag1", null, TestMetadataItem.class),
+                1
+            );
+            List<TestMetadataItem> results3 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.nested.list\\.of\\.items", "item1", null, TestMetadataItem.class),
+                1
+            );
 
             assertEquals(1, results1.size());
             assertEquals(1, results2.size());
@@ -609,8 +740,11 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(profile);
             }
 
-            // when - initial query with scroll
-            PartialList<Profile> firstPage = persistenceService.query(null, null, Profile.class, 0, 10, "1000");
+            // when - initial query with scroll (retry until items are available)
+            PartialList<Profile> firstPage = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query(null, null, Profile.class, 0, 10, "1000"),
+                10
+            );
 
             // then - first page
             assertNotNull(firstPage);
@@ -645,8 +779,11 @@ public class InMemoryPersistenceServiceImplTest {
             profile.setItemId("test-profile");
             persistenceService.save(profile);
 
-            // when - initial query with very short scroll validity
-            PartialList<Profile> firstPage = persistenceService.query(null, null, Profile.class, 0, 1, "1");
+            // when - initial query with very short scroll validity (retry until item is available)
+            PartialList<Profile> firstPage = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query(null, null, Profile.class, 0, 1, "1"),
+                1
+            );
 
             // Wait for scroll to expire
             try {
@@ -711,8 +848,11 @@ public class InMemoryPersistenceServiceImplTest {
             condition.setParameter("comparisonOperator", "equals");
             condition.setParameter("propertyValue", "even");
 
-            // when - initial query with scroll
-            PartialList<Profile> firstPage = persistenceService.query(condition, null, Profile.class, 0, 3, "1000");
+            // when - initial query with scroll (retry until items are available)
+            PartialList<Profile> firstPage = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query(condition, null, Profile.class, 0, 3, "1000"),
+                3
+            );
 
             // then - first page
             assertNotNull(firstPage);
@@ -749,8 +889,11 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(profile);
             }
 
-            // when - initial query with scroll and page size equal to total items
-            PartialList<Profile> firstPage = persistenceService.query(null, null, Profile.class, 0, 10, "1000");
+            // when - initial query with scroll and page size equal to total items (retry until items are available)
+            PartialList<Profile> firstPage = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query(null, null, Profile.class, 0, 10, "1000"),
+                10
+            );
 
             // then
             assertNotNull(firstPage);
@@ -770,9 +913,15 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(profile);
             }
 
-            // when - start two scroll queries
-            PartialList<Profile> firstScroll = persistenceService.query(null, null, Profile.class, 0, 4, "1000");
-            PartialList<Profile> secondScroll = persistenceService.query(null, null, Profile.class, 0, 3, "1000");
+            // when - start two scroll queries (retry until items are available)
+            PartialList<Profile> firstScroll = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query(null, null, Profile.class, 0, 4, "1000"),
+                4
+            );
+            PartialList<Profile> secondScroll = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query(null, null, Profile.class, 0, 3, "1000"),
+                3
+            );
 
             // then - both scrolls should work independently
             assertNotNull(firstScroll.getScrollIdentifier());
@@ -803,9 +952,12 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(profile);
             }
 
-            // when
+            // when - retry aggregation until items are available (handles refresh delay)
             TermsAggregate termsAggregate = new TermsAggregate("properties.category");
-            Map<String, Long> results = persistenceService.aggregateWithOptimizedQuery(null, termsAggregate, Profile.ITEM_TYPE);
+            Map<String, Long> results = TestHelper.retryUntil(
+                () -> persistenceService.aggregateWithOptimizedQuery(null, termsAggregate, Profile.ITEM_TYPE),
+                r -> r != null && r.size() == 2 && r.get("A") != null && r.get("A") == 5L
+            );
 
             // then
             assertNotNull(results);
@@ -851,9 +1003,12 @@ public class InMemoryPersistenceServiceImplTest {
             ranges.add(firstWeek);
             ranges.add(secondWeek);
 
-            // when
+            // when - retry aggregation until items are available (handles refresh delay)
             DateRangeAggregate dateRangeAggregate = new DateRangeAggregate("properties.lastVisit", "yyyy-MM-dd", ranges);
-            Map<String, Long> results = persistenceService.aggregateWithOptimizedQuery(null, dateRangeAggregate, Profile.ITEM_TYPE);
+            Map<String, Long> results = TestHelper.retryUntil(
+                () -> persistenceService.aggregateWithOptimizedQuery(null, dateRangeAggregate, Profile.ITEM_TYPE),
+                r -> r != null && r.size() == 2 && r.get("week1") != null && r.get("week1") == 7L
+            );
 
             // then
             assertNotNull(results);
@@ -896,9 +1051,12 @@ public class InMemoryPersistenceServiceImplTest {
             ranges.add(middleAged);
             ranges.add(senior);
 
-            // when
+            // when - retry aggregation until items are available (handles refresh delay)
             NumericRangeAggregate numericRangeAggregate = new NumericRangeAggregate("properties.age", ranges);
-            Map<String, Long> results = persistenceService.aggregateWithOptimizedQuery(null, numericRangeAggregate, Profile.ITEM_TYPE);
+            Map<String, Long> results = TestHelper.retryUntil(
+                () -> persistenceService.aggregateWithOptimizedQuery(null, numericRangeAggregate, Profile.ITEM_TYPE),
+                r -> r != null && r.size() == 3 && r.get("young") != null && r.get("young") == 3L
+            );
 
             // then
             assertNotNull(results);
@@ -950,9 +1108,12 @@ public class InMemoryPersistenceServiceImplTest {
             ranges.add(subnet2);
             ranges.add(otherRange);
 
-            // when
+            // when - retry aggregation until items are available (handles refresh delay)
             IpRangeAggregate ipRangeAggregate = new IpRangeAggregate("properties.ipAddress", ranges);
-            Map<String, Long> results = persistenceService.aggregateWithOptimizedQuery(null, ipRangeAggregate, Profile.ITEM_TYPE);
+            Map<String, Long> results = TestHelper.retryUntil(
+                () -> persistenceService.aggregateWithOptimizedQuery(null, ipRangeAggregate, Profile.ITEM_TYPE),
+                r -> r != null && r.size() == 3 && r.get("subnet1") != null && r.get("subnet1") == 2L
+            );
 
             // then
             assertNotNull(results);
@@ -974,9 +1135,12 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(profile);
             }
 
-            // when
+            // when - retry aggregation until items are available (handles refresh delay)
             TermsAggregate termsAggregate = new TermsAggregate("properties.category");
-            Map<String, Long> results = persistenceService.aggregateWithOptimizedQuery(null, termsAggregate, Profile.ITEM_TYPE, 2);
+            Map<String, Long> results = TestHelper.retryUntil(
+                () -> persistenceService.aggregateWithOptimizedQuery(null, termsAggregate, Profile.ITEM_TYPE, 2),
+                r -> r != null && r.size() == 2
+            );
 
             // then
             assertNotNull(results);
@@ -1005,9 +1169,12 @@ public class InMemoryPersistenceServiceImplTest {
             condition.setParameter("comparisonOperator", "equals");
             condition.setParameter("propertyValue", true);
 
-            // when
+            // when - retry aggregation until items are available (handles refresh delay)
             TermsAggregate termsAggregate = new TermsAggregate("properties.category");
-            Map<String, Long> results = persistenceService.aggregateWithOptimizedQuery(condition, termsAggregate, Profile.ITEM_TYPE);
+            Map<String, Long> results = TestHelper.retryUntil(
+                () -> persistenceService.aggregateWithOptimizedQuery(condition, termsAggregate, Profile.ITEM_TYPE),
+                r -> r != null && r.size() == 2 && r.values().stream().mapToLong(Long::longValue).sum() == 5L
+            );
 
             // then
             assertNotNull(results);
@@ -1030,8 +1197,11 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(profile);
             }
 
-            // when
-            long count = persistenceService.queryCount(null, Profile.ITEM_TYPE);
+            // when - retry query until all items are available (handles refresh delay)
+            long count = TestHelper.retryUntil(
+                () -> persistenceService.queryCount(null, Profile.ITEM_TYPE),
+                c -> c == 10L
+            );
 
             // then
             assertEquals(10, count);
@@ -1056,8 +1226,11 @@ public class InMemoryPersistenceServiceImplTest {
             condition.setParameter("comparisonOperator", "equals");
             condition.setParameter("propertyValue", true);
 
-            // when
-            long count = persistenceService.queryCount(condition, Profile.ITEM_TYPE);
+            // when - retry query until items are available (handles refresh delay)
+            long count = TestHelper.retryUntil(
+                () -> persistenceService.queryCount(condition, Profile.ITEM_TYPE),
+                c -> c == 5L
+            );
 
             // then
             assertEquals(5, count);  // Should count only active profiles
@@ -1136,18 +1309,30 @@ public class InMemoryPersistenceServiceImplTest {
                 return null;
             });
 
-            // When - count items from different tenant contexts
+            // When - count items from different tenant contexts (retry until items are available)
             long tenant1Type1Count = executionContextManager.executeAsTenant("tenant1", () ->
-                persistenceService.getAllItemsCount(itemType1));
+                TestHelper.retryUntil(
+                    () -> persistenceService.getAllItemsCount(itemType1),
+                    c -> c == 5L
+                ));
 
             long tenant1Type2Count = executionContextManager.executeAsTenant("tenant1", () ->
-                persistenceService.getAllItemsCount(itemType2));
+                TestHelper.retryUntil(
+                    () -> persistenceService.getAllItemsCount(itemType2),
+                    c -> c == 3L
+                ));
 
             long tenant2Type1Count = executionContextManager.executeAsTenant("tenant2", () ->
-                persistenceService.getAllItemsCount(itemType1));
+                TestHelper.retryUntil(
+                    () -> persistenceService.getAllItemsCount(itemType1),
+                    c -> c == 7L
+                ));
 
             long tenant2Type2Count = executionContextManager.executeAsTenant("tenant2", () ->
-                persistenceService.getAllItemsCount(itemType2));
+                TestHelper.retryUntil(
+                    () -> persistenceService.getAllItemsCount(itemType2),
+                    c -> c == 4L
+                ));
 
             // Then - counts should reflect tenant isolation
             assertEquals(5, tenant1Type1Count, "Tenant1 should see 5 items of type1");
@@ -1196,8 +1381,11 @@ public class InMemoryPersistenceServiceImplTest {
             item2.setMetadata(metadata2);
             persistenceService.save(item2);
 
-            // when
-            PartialList<TestMetadataItem> results = persistenceService.queryFullText("match", null, TestMetadataItem.class, 0, 10);
+            // when - retry query until items are available (handles refresh delay)
+            PartialList<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryFullText("match", null, TestMetadataItem.class, 0, 10),
+                1
+            );
 
             // then
             assertEquals(1, results.getList().size());
@@ -1227,9 +1415,12 @@ public class InMemoryPersistenceServiceImplTest {
             item2.setMetadata(metadata2);
             persistenceService.save(item2);
 
-            // when
-            PartialList<TestMetadataItem> results = persistenceService.queryFullText(
-                "properties.category", "electronics", "matching", null, TestMetadataItem.class, 0, 10);
+            // when - retry query until items are available (handles refresh delay)
+            PartialList<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryFullText(
+                    "properties.category", "electronics", "matching", null, TestMetadataItem.class, 0, 10),
+                1
+            );
 
             // then
             assertEquals(1, results.getList().size());
@@ -1266,9 +1457,12 @@ public class InMemoryPersistenceServiceImplTest {
             condition.setParameter("comparisonOperator", "equals");
             condition.setParameter("propertyValue", true);
 
-            // when
-            PartialList<TestMetadataItem> results = persistenceService.queryFullText(
-                "test", condition, null, TestMetadataItem.class, 0, 10);
+            // when - retry query until items are available (handles refresh delay)
+            PartialList<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryFullText(
+                    "test", condition, null, TestMetadataItem.class, 0, 10),
+                1
+            );
 
             // then
             assertEquals(1, results.getList().size());
@@ -1289,9 +1483,12 @@ public class InMemoryPersistenceServiceImplTest {
             item.setMetadata(metadata);
             persistenceService.save(item);
 
-            // when
-            PartialList<TestMetadataItem> results = persistenceService.queryFullText(
-                "nested value", null, TestMetadataItem.class, 0, 10);
+            // when - retry query until items are available (handles refresh delay)
+            PartialList<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryFullText(
+                    "nested value", null, TestMetadataItem.class, 0, 10),
+                1
+            );
 
             // then
             assertEquals(1, results.getList().size());
@@ -1312,21 +1509,28 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(item);
             }
 
-            // when
-            PartialList<TestMetadataItem> page1 = persistenceService.queryFullText(
-                "test", null, TestMetadataItem.class, 0, 2);
-            PartialList<TestMetadataItem> page2 = persistenceService.queryFullText(
-                "test", null, TestMetadataItem.class, 2, 2);
-            PartialList<TestMetadataItem> page3 = persistenceService.queryFullText(
-                "test", null, TestMetadataItem.class, 4, 2);
+            // when - retry queries until items are available AND totalSize is correct (handles refresh delay)
+            // Use retryUntil to check both list size and totalSize to avoid flakiness
+            PartialList<TestMetadataItem> page1 = TestHelper.retryUntil(
+                () -> persistenceService.queryFullText("test", null, TestMetadataItem.class, 0, 2),
+                result -> result != null && result.getList().size() == 2 && result.getTotalSize() == 5
+            );
+            PartialList<TestMetadataItem> page2 = TestHelper.retryUntil(
+                () -> persistenceService.queryFullText("test", null, TestMetadataItem.class, 2, 2),
+                result -> result != null && result.getList().size() == 2 && result.getTotalSize() == 5
+            );
+            PartialList<TestMetadataItem> page3 = TestHelper.retryUntil(
+                () -> persistenceService.queryFullText("test", null, TestMetadataItem.class, 4, 2),
+                result -> result != null && result.getList().size() == 1 && result.getTotalSize() == 5
+            );
 
             // then
-            assertEquals(2, page1.getList().size());
-            assertEquals(2, page2.getList().size());
-            assertEquals(1, page3.getList().size());
-            assertEquals(5, page1.getTotalSize());
-            assertEquals(5, page2.getTotalSize());
-            assertEquals(5, page3.getTotalSize());
+            assertEquals(2, page1.getList().size(), "Page 1 should have 2 items");
+            assertEquals(2, page2.getList().size(), "Page 2 should have 2 items");
+            assertEquals(1, page3.getList().size(), "Page 3 should have 1 item");
+            assertEquals(5, page1.getTotalSize(), "Page 1 totalSize should be 5");
+            assertEquals(5, page2.getTotalSize(), "Page 2 totalSize should be 5");
+            assertEquals(5, page3.getTotalSize(), "Page 3 totalSize should be 5");
         }
 
         @Test
@@ -1341,9 +1545,13 @@ public class InMemoryPersistenceServiceImplTest {
             item.setMetadata(metadata);
             persistenceService.save(item);
 
-            // when
-            PartialList<TestMetadataItem> results = persistenceService.queryFullText(
-                "nonexistent", null, TestMetadataItem.class, 0, 10);
+            // when - retry query until item is available (handles refresh delay)
+            // Even though we expect 0 results, we should wait for the item to be available
+            PartialList<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryFullText(
+                    "nonexistent", null, TestMetadataItem.class, 0, 10),
+                0
+            );
 
             // then
             assertTrue(results.getList().isEmpty());
@@ -1362,13 +1570,22 @@ public class InMemoryPersistenceServiceImplTest {
             item.setMetadata(metadata);
             persistenceService.save(item);
 
-            // when
-            PartialList<TestMetadataItem> results1 = persistenceService.queryFullText(
-                "test", null, TestMetadataItem.class, 0, 10);
-            PartialList<TestMetadataItem> results2 = persistenceService.queryFullText(
-                "TEST", null, TestMetadataItem.class, 0, 10);
-            PartialList<TestMetadataItem> results3 = persistenceService.queryFullText(
-                "tEsT", null, TestMetadataItem.class, 0, 10);
+            // when - retry queries until item is available (handles refresh delay)
+            PartialList<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryFullText(
+                    "test", null, TestMetadataItem.class, 0, 10),
+                1
+            );
+            PartialList<TestMetadataItem> results2 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryFullText(
+                    "TEST", null, TestMetadataItem.class, 0, 10),
+                1
+            );
+            PartialList<TestMetadataItem> results3 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryFullText(
+                    "tEsT", null, TestMetadataItem.class, 0, 10),
+                1
+            );
 
             // then
             assertEquals(1, results1.getList().size());
@@ -1388,17 +1605,26 @@ public class InMemoryPersistenceServiceImplTest {
                 item.setBooleanProperty(true);
                 persistenceService.save(item);
 
-                // when - search in string property
-                PartialList<SimpleItem> results1 = persistenceService.queryFullText(
-                    "searchable", null, SimpleItem.class, 0, 10);
+                // when - search in string property (retry until item is available)
+                PartialList<SimpleItem> results1 = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "searchable", null, SimpleItem.class, 0, 10),
+                    1
+                );
 
-                // when - search in numeric property
-                PartialList<SimpleItem> results2 = persistenceService.queryFullText(
-                    "42", null, SimpleItem.class, 0, 10);
+                // when - search in numeric property (retry until item is available)
+                PartialList<SimpleItem> results2 = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "42", null, SimpleItem.class, 0, 10),
+                    1
+                );
 
-                // when - search in boolean property
-                PartialList<SimpleItem> results3 = persistenceService.queryFullText(
-                    "true", null, SimpleItem.class, 0, 10);
+                // when - search in boolean property (retry until item is available)
+                PartialList<SimpleItem> results3 = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "true", null, SimpleItem.class, 0, 10),
+                    1
+                );
 
                 // then
                 assertEquals(1, results1.getList().size());
@@ -1419,13 +1645,19 @@ public class InMemoryPersistenceServiceImplTest {
                 item.setNestedMap(nestedMap);
                 persistenceService.save(item);
 
-                // when - search in first level
-                PartialList<NestedItem> results1 = persistenceService.queryFullText(
-                    "searchable", null, NestedItem.class, 0, 10);
+                // when - search in first level (retry until item is available)
+                PartialList<NestedItem> results1 = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "searchable", null, NestedItem.class, 0, 10),
+                    1
+                );
 
-                // when - search in nested level
-                PartialList<NestedItem> results2 = persistenceService.queryFullText(
-                    "nested searchable", null, NestedItem.class, 0, 10);
+                // when - search in nested level (retry until item is available)
+                PartialList<NestedItem> results2 = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "nested searchable", null, NestedItem.class, 0, 10),
+                    1
+                );
 
                 // then
                 assertEquals(1, results1.getList().size());
@@ -1445,13 +1677,19 @@ public class InMemoryPersistenceServiceImplTest {
                 item.setComplexSet(complexSet);
                 persistenceService.save(item);
 
-                // when - search in string list
-                PartialList<NestedItem> results1 = persistenceService.queryFullText(
-                    "second", null, NestedItem.class, 0, 10);
+                // when - search in string list (retry until item is available)
+                PartialList<NestedItem> results1 = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "second", null, NestedItem.class, 0, 10),
+                    1
+                );
 
-                // when - search in complex set
-                PartialList<NestedItem> results2 = persistenceService.queryFullText(
-                    "searchable value", null, NestedItem.class, 0, 10);
+                // when - search in complex set (retry until item is available)
+                PartialList<NestedItem> results2 = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "searchable value", null, NestedItem.class, 0, 10),
+                    1
+                );
 
                 // then
                 assertEquals(1, results1.getList().size());
@@ -1468,9 +1706,12 @@ public class InMemoryPersistenceServiceImplTest {
                 item.setNestedMap(nestedMap);
                 persistenceService.save(item);
 
-                // when - search in property names
-                PartialList<NestedItem> results = persistenceService.queryFullText(
-                    "searchable_key", null, NestedItem.class, 0, 10);
+                // when - search in property names (retry until item is available)
+                PartialList<NestedItem> results = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "searchable_key", null, NestedItem.class, 0, 10),
+                    1
+                );
 
                 // then
                 assertEquals(1, results.getList().size());
@@ -1488,9 +1729,12 @@ public class InMemoryPersistenceServiceImplTest {
                 item.setStringList(null);
                 persistenceService.save(item);
 
-                // when
-                PartialList<NestedItem> results = persistenceService.queryFullText(
-                    "searchable", null, NestedItem.class, 0, 10);
+                // when - retry until item is available
+                PartialList<NestedItem> results = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "searchable", null, NestedItem.class, 0, 10),
+                    1
+                );
 
                 // then
                 assertEquals(1, results.getList().size());
@@ -1504,9 +1748,12 @@ public class InMemoryPersistenceServiceImplTest {
                 item.setSimpleProperty("Text with special chars: !@#$%^&*()");
                 persistenceService.save(item);
 
-                // when
-                PartialList<SimpleItem> results = persistenceService.queryFullText(
-                    "!@#$%", null, SimpleItem.class, 0, 10);
+                // when - retry until item is available
+                PartialList<SimpleItem> results = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "!@#$%", null, SimpleItem.class, 0, 10),
+                    1
+                );
 
                 // then
                 assertEquals(1, results.getList().size());
@@ -1522,9 +1769,12 @@ public class InMemoryPersistenceServiceImplTest {
                 item.setNestedMap(new HashMap<>());
                 persistenceService.save(item);
 
-                // when
-                PartialList<NestedItem> results = persistenceService.queryFullText(
-                    "nonexistent", null, NestedItem.class, 0, 10);
+                // when - retry query (expects 0 results, but should still wait for refresh)
+                PartialList<NestedItem> results = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "nonexistent", null, NestedItem.class, 0, 10),
+                    0
+                );
 
                 // then
                 assertEquals(0, results.getList().size());
@@ -1545,11 +1795,17 @@ public class InMemoryPersistenceServiceImplTest {
                 item2.setNestedMap(nestedMap);
                 persistenceService.save(item2);
 
-                // when - search across different item types
-                PartialList<SimpleItem> results1 = persistenceService.queryFullText(
-                    "common", null, SimpleItem.class, 0, 10);
-                PartialList<NestedItem> results2 = persistenceService.queryFullText(
-                    "common", null, NestedItem.class, 0, 10);
+                // when - search across different item types (retry until items are available)
+                PartialList<SimpleItem> results1 = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "common", null, SimpleItem.class, 0, 10),
+                    1
+                );
+                PartialList<NestedItem> results2 = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "common", null, NestedItem.class, 0, 10),
+                    1
+                );
 
                 // then
                 assertEquals(1, results1.getList().size());
@@ -1570,9 +1826,12 @@ public class InMemoryPersistenceServiceImplTest {
                 item.setNestedMap(level1);
                 persistenceService.save(item);
 
-                // when
-                PartialList<NestedItem> results = persistenceService.queryFullText(
-                    "searchable", null, NestedItem.class, 0, 10);
+                // when - retry until item is available
+                PartialList<NestedItem> results = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryFullText(
+                        "searchable", null, NestedItem.class, 0, 10),
+                    1
+                );
 
                 // then
                 assertEquals(1, results.getList().size());
@@ -1619,9 +1878,12 @@ public class InMemoryPersistenceServiceImplTest {
 
             String[] metrics = {"card", "sum", "min", "max", "avg"};
 
-            // when
-            Map<String, Double> results = persistenceService.getSingleValuesMetrics(
-                null, metrics, "numericValue", TestMetadataItem.ITEM_TYPE);
+            // when - retry metrics calculation until items are available (handles refresh delay)
+            Map<String, Double> results = TestHelper.retryUntil(
+                () -> persistenceService.getSingleValuesMetrics(
+                    null, metrics, "numericValue", TestMetadataItem.ITEM_TYPE),
+                r -> r != null && r.get("_card") != null && r.get("_card") == 3.0
+            );
 
             // then
             assertEquals(3.0, results.get("_card"), 0.001);
@@ -1655,9 +1917,12 @@ public class InMemoryPersistenceServiceImplTest {
 
             String[] metrics = {"card", "sum", "min", "max", "avg"};
 
-            // when
-            Map<String, Double> results = persistenceService.getSingleValuesMetrics(
-                null, metrics, "numericValue", TestMetadataItem.ITEM_TYPE);
+            // when - retry metrics calculation until items are available (handles refresh delay)
+            Map<String, Double> results = TestHelper.retryUntil(
+                () -> persistenceService.getSingleValuesMetrics(
+                    null, metrics, "numericValue", TestMetadataItem.ITEM_TYPE),
+                r -> r != null && r.get("_card") != null && r.get("_card") == 2.0
+            );
 
             // then
             assertEquals(2.0, results.get("_card"), 0.001); // Only counts non-null values
@@ -1719,9 +1984,12 @@ public class InMemoryPersistenceServiceImplTest {
 
             String[] metrics = {"card", "sum", "min", "max", "avg"};
 
-            // when
-            Map<String, Double> results = persistenceService.getSingleValuesMetrics(
-                condition, metrics, "numericValue", TestMetadataItem.ITEM_TYPE);
+            // when - retry metrics calculation until items are available (handles refresh delay)
+            Map<String, Double> results = TestHelper.retryUntil(
+                () -> persistenceService.getSingleValuesMetrics(
+                    condition, metrics, "numericValue", TestMetadataItem.ITEM_TYPE),
+                r -> r != null && r.get("_card") != null && r.get("_card") == 2.0
+            );
 
             // then
             assertEquals(2.0, results.get("_card"), 0.001);
@@ -1749,9 +2017,12 @@ public class InMemoryPersistenceServiceImplTest {
 
             String[] metrics = {"card", "sum", "min", "max", "avg"};
 
-            // when
-            Map<String, Double> results = persistenceService.getSingleValuesMetrics(
-                null, metrics, "properties.stringValue", TestMetadataItem.ITEM_TYPE);
+            // when - retry metrics calculation until items are available (handles refresh delay)
+            Map<String, Double> results = TestHelper.retryUntil(
+                () -> persistenceService.getSingleValuesMetrics(
+                    null, metrics, "properties.stringValue", TestMetadataItem.ITEM_TYPE),
+                r -> r != null && r.get("_card") != null && r.get("_card") == 2.0
+            );
 
             // then
             assertEquals(2.0, results.get("_card"), 0.001);
@@ -1780,9 +2051,12 @@ public class InMemoryPersistenceServiceImplTest {
 
             String[] metrics = {"min", "max"}; // Only request min and max
 
-            // when
-            Map<String, Double> results = persistenceService.getSingleValuesMetrics(
-                null, metrics, "numericValue", TestMetadataItem.ITEM_TYPE);
+            // when - retry metrics calculation until items are available (handles refresh delay)
+            Map<String, Double> results = TestHelper.retryUntil(
+                () -> persistenceService.getSingleValuesMetrics(
+                    null, metrics, "numericValue", TestMetadataItem.ITEM_TYPE),
+                r -> r != null && r.size() == 2 && r.get("_min") != null
+            );
 
             // then
             assertEquals(2, results.size());
@@ -1804,9 +2078,12 @@ public class InMemoryPersistenceServiceImplTest {
 
             String[] metrics = {"invalid_metric", "card", "another_invalid"};
 
-            // when
-            Map<String, Double> results = persistenceService.getSingleValuesMetrics(
-                null, metrics, "numericValue", TestMetadataItem.ITEM_TYPE);
+            // when - retry metrics calculation until items are available (handles refresh delay)
+            Map<String, Double> results = TestHelper.retryUntil(
+                () -> persistenceService.getSingleValuesMetrics(
+                    null, metrics, "numericValue", TestMetadataItem.ITEM_TYPE),
+                r -> r != null && r.size() == 1 && r.get("_card") != null && r.get("_card") == 1.0
+            );
 
             // then
             assertEquals(1, results.size());
@@ -1835,9 +2112,12 @@ public class InMemoryPersistenceServiceImplTest {
 
             String[] metrics = {"card", "sum", "min", "max", "avg"};
 
-            // when
-            Map<String, Double> results = persistenceService.getSingleValuesMetrics(
-                null, metrics, "properties.nested.value", TestMetadataItem.ITEM_TYPE);
+            // when - retry metrics calculation until items are available (handles refresh delay)
+            Map<String, Double> results = TestHelper.retryUntil(
+                () -> persistenceService.getSingleValuesMetrics(
+                    null, metrics, "properties.nested.value", TestMetadataItem.ITEM_TYPE),
+                r -> r != null && r.get("_card") != null && r.get("_card") == 2.0
+            );
 
             // then
             assertEquals(2.0, results.get("_card"), 0.001);
@@ -1861,8 +2141,11 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(profile);
             }
 
-            // when - query with size = -1
-            PartialList<Profile> result = persistenceService.query(null, null, Profile.class, 0, -1);
+            // when - query with size = -1 (retry until items are available)
+            PartialList<Profile> result = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query(null, null, Profile.class, 0, -1),
+                10
+            );
 
             // then
             assertEquals(10, result.getList().size());
@@ -1882,8 +2165,11 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(profile);
             }
 
-            // when - query with size = -1 and offset = 5
-            PartialList<Profile> result = persistenceService.query(null, null, Profile.class, 5, -1);
+            // when - query with size = -1 and offset = 5 (retry until items are available)
+            PartialList<Profile> result = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query(null, null, Profile.class, 5, -1),
+                5
+            );
 
             // then
             assertEquals(5, result.getList().size());
@@ -1903,8 +2189,11 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(profile);
             }
 
-            // when - initial query with scroll and size = -1
-            PartialList<Profile> result = persistenceService.query(null, null, Profile.class, 0, -1, "1000");
+            // when - initial query with scroll and size = -1 (retry until items are available)
+            PartialList<Profile> result = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query(null, null, Profile.class, 0, -1, "1000"),
+                10
+            );
 
             // then
             assertEquals(10, result.getList().size());
@@ -1924,8 +2213,11 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(profile);
             }
 
-            // when - getAllItems with size = -1
-            PartialList<Profile> result = persistenceService.getAllItems(Profile.class, 0, -1, null);
+            // when - getAllItems with size = -1 (retry until items are available)
+            PartialList<Profile> result = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.getAllItems(Profile.class, 0, -1, null),
+                10
+            );
 
             // then
             assertEquals(10, result.getList().size());
@@ -2239,6 +2531,92 @@ public class InMemoryPersistenceServiceImplTest {
         }
 
         @Test
+        void shouldHandleModernDateTypes() {
+            // given - test that modern Java date/time types are properly converted
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item-modern-dates");
+            // Use UTC consistently to avoid timezone mismatches
+            Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+            cal.set(2024, Calendar.JANUARY, 15, 10, 30, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            Date testDate = cal.getTime();
+            item.setProperty("date", testDate);
+            persistenceService.save(item);
+
+            // Test with OffsetDateTime
+            java.time.OffsetDateTime offsetDateTime = java.time.OffsetDateTime.of(2024, 1, 15, 10, 30, 0, 0, java.time.ZoneOffset.UTC);
+            Condition offsetDateTimeCondition = new Condition();
+            offsetDateTimeCondition.setConditionType(TestConditionEvaluators.getConditionType("propertyCondition"));
+            offsetDateTimeCondition.setParameter("propertyName", "properties.date");
+            offsetDateTimeCondition.setParameter("comparisonOperator", "equals");
+            offsetDateTimeCondition.setParameter("propertyValueDate", offsetDateTime);
+
+            // Test with ZonedDateTime
+            java.time.ZonedDateTime zonedDateTime = java.time.ZonedDateTime.of(2024, 1, 15, 10, 30, 0, 0, java.time.ZoneId.of("UTC"));
+            Condition zonedDateTimeCondition = new Condition();
+            zonedDateTimeCondition.setConditionType(TestConditionEvaluators.getConditionType("propertyCondition"));
+            zonedDateTimeCondition.setParameter("propertyName", "properties.date");
+            zonedDateTimeCondition.setParameter("comparisonOperator", "equals");
+            zonedDateTimeCondition.setParameter("propertyValueDate", zonedDateTime);
+
+            // Test with Instant
+            java.time.Instant instant = testDate.toInstant();
+            Condition instantCondition = new Condition();
+            instantCondition.setConditionType(TestConditionEvaluators.getConditionType("propertyCondition"));
+            instantCondition.setParameter("propertyName", "properties.date");
+            instantCondition.setParameter("comparisonOperator", "equals");
+            instantCondition.setParameter("propertyValueDate", instant);
+
+            // when
+            boolean offsetDateTimeResult = persistenceService.testMatch(offsetDateTimeCondition, item);
+            boolean zonedDateTimeResult = persistenceService.testMatch(zonedDateTimeCondition, item);
+            boolean instantResult = persistenceService.testMatch(instantCondition, item);
+
+            // then - all modern date types should work correctly
+            assertTrue(offsetDateTimeResult, "OffsetDateTime should be properly converted and matched");
+            assertTrue(zonedDateTimeResult, "ZonedDateTime should be properly converted and matched");
+            assertTrue(instantResult, "Instant should be properly converted and matched");
+        }
+
+        @Test
+        void shouldHandleLegacyDateFormats() {
+            // given - test backward compatibility with migrated datasets from older Unomi/Elasticsearch versions
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item-legacy-dates");
+            // Use UTC consistently to avoid timezone mismatches
+            Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+            cal.set(2024, Calendar.JANUARY, 15, 10, 30, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            Date testDate = cal.getTime();
+            item.setProperty("date", testDate);
+            persistenceService.save(item);
+
+            // Test with epoch milliseconds (common in older Elasticsearch versions)
+            long epochMillis = testDate.getTime();
+            Condition epochMillisCondition = new Condition();
+            epochMillisCondition.setConditionType(TestConditionEvaluators.getConditionType("propertyCondition"));
+            epochMillisCondition.setParameter("propertyName", "properties.date");
+            epochMillisCondition.setParameter("comparisonOperator", "equals");
+            epochMillisCondition.setParameter("propertyValueDate", String.valueOf(epochMillis));
+
+            // Test with ISO-8601 string format (case-insensitive - legacy systems might use lowercase)
+            String isoDateLowercase = "2024-01-15t10:30:00z";
+            Condition isoLowercaseCondition = new Condition();
+            isoLowercaseCondition.setConditionType(TestConditionEvaluators.getConditionType("propertyCondition"));
+            isoLowercaseCondition.setParameter("propertyName", "properties.date");
+            isoLowercaseCondition.setParameter("comparisonOperator", "equals");
+            isoLowercaseCondition.setParameter("propertyValueDate", isoDateLowercase);
+
+            // when
+            boolean epochMillisResult = persistenceService.testMatch(epochMillisCondition, item);
+            boolean isoLowercaseResult = persistenceService.testMatch(isoLowercaseCondition, item);
+
+            // then - all legacy formats should work correctly
+            assertTrue(epochMillisResult, "Epoch milliseconds string should be properly parsed and matched");
+            assertTrue(isoLowercaseResult, "Case-insensitive ISO date format should be properly parsed and matched");
+        }
+
+        @Test
         void shouldHandleCollectionOperations() {
             // given
             TestMetadataItem item = new TestMetadataItem();
@@ -2439,7 +2817,7 @@ public class InMemoryPersistenceServiceImplTest {
             Condition condition1 = new Condition();
             ConditionType conditionType = new ConditionType();
             conditionType.setItemId("matchAllCondition");
-            conditionType.setQueryBuilder("matchAllConditionESQueryBuilder");
+            conditionType.setQueryBuilder("matchAllConditionQueryBuilder");
             conditionType.setConditionEvaluator("matchAllConditionEvaluator");
             condition1.setConditionType(conditionType);
 
@@ -2528,7 +2906,7 @@ public class InMemoryPersistenceServiceImplTest {
             Condition condition = new Condition();
             ConditionType conditionType = new ConditionType();
             conditionType.setItemId("matchAllCondition");
-            conditionType.setQueryBuilder("matchAllConditionESQueryBuilder");
+            conditionType.setQueryBuilder("matchAllConditionQueryBuilder");
             conditionType.setConditionEvaluator("matchAllConditionEvaluator");
             condition.setConditionType(conditionType);
 
@@ -2610,9 +2988,12 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(item);
             }
 
-            // when - query with both bounds
-            PartialList<TestMetadataItem> results = persistenceService.rangeQuery(
-                "numericValue", "2", "4", "numericValue:asc", TestMetadataItem.class, 0, -1);
+            // when - query with both bounds (retry until items are available)
+            PartialList<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.rangeQuery(
+                    "numericValue", "2", "4", "numericValue:asc", TestMetadataItem.class, 0, -1),
+                3
+            );
 
             // then
             assertEquals(3, results.getList().size());
@@ -2620,18 +3001,24 @@ public class InMemoryPersistenceServiceImplTest {
             assertEquals(3.0, results.getList().get(1).getNumericValue());
             assertEquals(4.0, results.getList().get(2).getNumericValue());
 
-            // when - query with lower bound only
-            results = persistenceService.rangeQuery(
-                "numericValue", "4", null, "numericValue:asc", TestMetadataItem.class, 0, -1);
+            // when - query with lower bound only (retry until items are available)
+            results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.rangeQuery(
+                    "numericValue", "4", null, "numericValue:asc", TestMetadataItem.class, 0, -1),
+                2
+            );
 
             // then
             assertEquals(2, results.getList().size());
             assertEquals(4.0, results.getList().get(0).getNumericValue());
             assertEquals(5.0, results.getList().get(1).getNumericValue());
 
-            // when - query with upper bound only
-            results = persistenceService.rangeQuery(
-                "numericValue", null, "2", "numericValue:asc", TestMetadataItem.class, 0, -1);
+            // when - query with upper bound only (retry until items are available)
+            results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.rangeQuery(
+                    "numericValue", null, "2", "numericValue:asc", TestMetadataItem.class, 0, -1),
+                2
+            );
 
             // then
             assertEquals(2, results.getList().size());
@@ -2651,9 +3038,12 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(item);
             }
 
-            // when - query with both bounds
-            PartialList<TestMetadataItem> results = persistenceService.rangeQuery(
-                "name", "B", "D", "name:asc", TestMetadataItem.class, 0, -1);
+            // when - query with both bounds (retry until items are available)
+            PartialList<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.rangeQuery(
+                    "name", "B", "D", "name:asc", TestMetadataItem.class, 0, -1),
+                3
+            );
 
             // then
             assertEquals(3, results.getList().size());
@@ -2661,18 +3051,24 @@ public class InMemoryPersistenceServiceImplTest {
             assertEquals("C", results.getList().get(1).getName());
             assertEquals("D", results.getList().get(2).getName());
 
-            // when - query with lower bound only
-            results = persistenceService.rangeQuery(
-                "name", "D", null, "name:asc", TestMetadataItem.class, 0, -1);
+            // when - query with lower bound only (retry until items are available)
+            results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.rangeQuery(
+                    "name", "D", null, "name:asc", TestMetadataItem.class, 0, -1),
+                2
+            );
 
             // then
             assertEquals(2, results.getList().size());
             assertEquals("D", results.getList().get(0).getName());
             assertEquals("E", results.getList().get(1).getName());
 
-            // when - query with upper bound only
-            results = persistenceService.rangeQuery(
-                "name", null, "B", "name:asc", TestMetadataItem.class, 0, -1);
+            // when - query with upper bound only (retry until items are available)
+            results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.rangeQuery(
+                    "name", null, "B", "name:asc", TestMetadataItem.class, 0, -1),
+                2
+            );
 
             // then
             assertEquals(2, results.getList().size());
@@ -2692,27 +3088,36 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(item);
             }
 
-            // when - first page
-            PartialList<TestMetadataItem> page1 = persistenceService.rangeQuery(
-                "numericValue", "1", "5", "numericValue:asc", TestMetadataItem.class, 0, 2);
+            // when - first page (retry until items are available)
+            PartialList<TestMetadataItem> page1 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.rangeQuery(
+                    "numericValue", "1", "5", "numericValue:asc", TestMetadataItem.class, 0, 2),
+                2
+            );
 
             // then
             assertEquals(2, page1.getList().size());
             assertEquals(1.0, page1.getList().get(0).getNumericValue());
             assertEquals(2.0, page1.getList().get(1).getNumericValue());
 
-            // when - second page
-            PartialList<TestMetadataItem> page2 = persistenceService.rangeQuery(
-                "numericValue", "1", "5", "numericValue:asc", TestMetadataItem.class, 2, 2);
+            // when - second page (retry until items are available)
+            PartialList<TestMetadataItem> page2 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.rangeQuery(
+                    "numericValue", "1", "5", "numericValue:asc", TestMetadataItem.class, 2, 2),
+                2
+            );
 
             // then
             assertEquals(2, page2.getList().size());
             assertEquals(3.0, page2.getList().get(0).getNumericValue());
             assertEquals(4.0, page2.getList().get(1).getNumericValue());
 
-            // when - last page
-            PartialList<TestMetadataItem> page3 = persistenceService.rangeQuery(
-                "numericValue", "1", "5", "numericValue:asc", TestMetadataItem.class, 4, 2);
+            // when - last page (retry until items are available)
+            PartialList<TestMetadataItem> page3 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.rangeQuery(
+                    "numericValue", "1", "5", "numericValue:asc", TestMetadataItem.class, 4, 2),
+                1
+            );
 
             // then
             assertEquals(1, page3.getList().size());
@@ -2883,13 +3288,18 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldHandleConcurrentFileOperations() throws InterruptedException {
             int threadCount = 10;
-            CountDownLatch latch = new CountDownLatch(threadCount);
+            CountDownLatch startLatch = new CountDownLatch(1);
+            CountDownLatch completionLatch = new CountDownLatch(threadCount);
             List<Exception> exceptions = Collections.synchronizedList(new ArrayList<>());
 
+            // Start all threads but wait for them to be ready
             for (int i = 0; i < threadCount; i++) {
                 final int index = i;
                 new Thread(() -> {
                     try {
+                        // Wait for all threads to be ready before starting operations
+                        startLatch.await();
+                        
                         TestMetadataItem item = new TestMetadataItem();
                         item.setItemId("concurrent-item-" + index);
                         persistenceService.save(item);
@@ -2898,13 +3308,19 @@ public class InMemoryPersistenceServiceImplTest {
                     } catch (Exception e) {
                         exceptions.add(e);
                     } finally {
-                        latch.countDown();
+                        completionLatch.countDown();
                     }
                 }).start();
             }
 
-            latch.await(5, TimeUnit.SECONDS);
-            assertTrue(exceptions.isEmpty(), "Concurrent operations should not throw exceptions");
+            // Release all threads to start operations concurrently
+            // The startLatch.await() in each thread ensures all threads are ready before proceeding
+            startLatch.countDown();
+            
+            // Wait for all threads to complete with a longer timeout
+            boolean completed = completionLatch.await(10, TimeUnit.SECONDS);
+            assertTrue(completed, "Test timed out - not all threads completed within 10 seconds");
+            assertTrue(exceptions.isEmpty(), "Concurrent operations should not throw exceptions. Found: " + exceptions);
         }
 
     }
@@ -3039,8 +3455,11 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(item);
             }
 
-            // when - ascending order
-            List<TestMetadataItem> ascResults = persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class);
+            // when - ascending order (retry until items are available)
+            List<TestMetadataItem> ascResults = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class),
+                3
+            );
 
             // then
             assertEquals(3, ascResults.size());
@@ -3048,8 +3467,11 @@ public class InMemoryPersistenceServiceImplTest {
             assertEquals("Name2", ascResults.get(1).getName());
             assertEquals("Name3", ascResults.get(2).getName());
 
-            // when - descending order
-            List<TestMetadataItem> descResults = persistenceService.query("properties.simple", "value", "name:desc", TestMetadataItem.class);
+            // when - descending order (retry until items are available)
+            List<TestMetadataItem> descResults = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.simple", "value", "name:desc", TestMetadataItem.class),
+                3
+            );
 
             // then
             assertEquals(3, descResults.size());
@@ -3071,8 +3493,11 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(item);
             }
 
-            // when - ascending order
-            List<TestMetadataItem> ascResults = persistenceService.query("properties.simple", "value", "numericValue:asc", TestMetadataItem.class);
+            // when - ascending order (retry until items are available)
+            List<TestMetadataItem> ascResults = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.simple", "value", "numericValue:asc", TestMetadataItem.class),
+                3
+            );
 
             // then
             assertEquals(3, ascResults.size());
@@ -3080,8 +3505,11 @@ public class InMemoryPersistenceServiceImplTest {
             assertEquals(2.0, ascResults.get(1).getNumericValue());
             assertEquals(3.0, ascResults.get(2).getNumericValue());
 
-            // when - descending order
-            List<TestMetadataItem> descResults = persistenceService.query("properties.simple", "value", "numericValue:desc", TestMetadataItem.class);
+            // when - descending order (retry until items are available)
+            List<TestMetadataItem> descResults = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.simple", "value", "numericValue:desc", TestMetadataItem.class),
+                3
+            );
 
             // then
             assertEquals(3, descResults.size());
@@ -3114,8 +3542,11 @@ public class InMemoryPersistenceServiceImplTest {
             item3.setNumericValue(3.0);
             persistenceService.save(item3);
 
-            // when - ascending order
-            List<TestMetadataItem> ascResults = persistenceService.query("properties.simple", "value", "numericValue:asc", TestMetadataItem.class);
+            // when - ascending order (retry until items are available)
+            List<TestMetadataItem> ascResults = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.simple", "value", "numericValue:asc", TestMetadataItem.class),
+                3
+            );
 
             // then
             assertEquals(3, ascResults.size());
@@ -3123,8 +3554,11 @@ public class InMemoryPersistenceServiceImplTest {
             assertEquals(1.0, ascResults.get(1).getNumericValue());
             assertEquals(3.0, ascResults.get(2).getNumericValue());
 
-            // when - descending order
-            List<TestMetadataItem> descResults = persistenceService.query("properties.simple", "value", "numericValue:desc", TestMetadataItem.class);
+            // when - descending order (retry until items are available)
+            List<TestMetadataItem> descResults = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.simple", "value", "numericValue:desc", TestMetadataItem.class),
+                3
+            );
 
             // then
             assertEquals(3, descResults.size());
@@ -3153,8 +3587,11 @@ public class InMemoryPersistenceServiceImplTest {
             condition.setParameter("comparisonOperator", "equals");
             condition.setParameter("propertyValue", true);
 
-            // when
-            List<TestMetadataItem> results = persistenceService.query(condition, "name:asc", TestMetadataItem.class);
+            // when - retry until items are available
+            List<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query(condition, "name:asc", TestMetadataItem.class),
+                1
+            );
 
             // then
             assertEquals(1, results.size());
@@ -3174,24 +3611,33 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(item);
             }
 
-            // when - first page
-            PartialList<TestMetadataItem> page1 = persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class, 0, 2);
+            // when - first page (retry until items are available)
+            PartialList<TestMetadataItem> page1 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class, 0, 2),
+                2
+            );
 
             // then
             assertEquals(2, page1.getList().size());
             assertEquals("Name1", page1.getList().get(0).getName());
             assertEquals("Name2", page1.getList().get(1).getName());
 
-            // when - second page
-            PartialList<TestMetadataItem> page2 = persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class, 2, 2);
+            // when - second page (retry until items are available)
+            PartialList<TestMetadataItem> page2 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class, 2, 2),
+                2
+            );
 
             // then
             assertEquals(2, page2.getList().size());
             assertEquals("Name3", page2.getList().get(0).getName());
             assertEquals("Name4", page2.getList().get(1).getName());
 
-            // when - last page
-            PartialList<TestMetadataItem> page3 = persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class, 4, 2);
+            // when - last page (retry until items are available)
+            PartialList<TestMetadataItem> page3 = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class, 4, 2),
+                1
+            );
 
             // then
             assertEquals(1, page3.getList().size());
@@ -3619,8 +4065,11 @@ public class InMemoryPersistenceServiceImplTest {
             condition.setParameter("comparisonOperator", "equals");
             condition.setParameter("propertyValue", true);
 
-            // When
-            PartialList<CustomItem> results = persistenceService.queryCustomItem(condition, null, itemType, 1, 3, null);
+            // When - retry query until items are available (handles refresh delay)
+            PartialList<CustomItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryCustomItem(condition, null, itemType, 1, 3, null),
+                3
+            );
 
             // Then
             assertEquals(5, results.getTotalSize(), "Should find 5 items with even index");
@@ -3647,8 +4096,11 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(item);
             }
 
-            // When - Start a scroll query
-            PartialList<CustomItem> firstPage = persistenceService.queryCustomItem(null, "index:asc", itemType, 0, 5, "1m");
+            // When - Start a scroll query (retry until items are available)
+            PartialList<CustomItem> firstPage = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryCustomItem(null, "index:asc", itemType, 0, 5, "1m"),
+                5
+            );
             String scrollId = firstPage.getScrollIdentifier();
 
             assertNotNull(scrollId, "Should have a scroll identifier");
@@ -3713,23 +4165,32 @@ public class InMemoryPersistenceServiceImplTest {
                 return null;
             });
 
-            // When - query from tenant1
+            // When - query from tenant1 (retry until items are available)
             PartialList<CustomItem> tenant1Results = executionContextManager.executeAsTenant("tenant1", () -> {
-                return persistenceService.queryCustomItem(null, null, itemType, 0, 100, null);
+                return TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryCustomItem(null, null, itemType, 0, 100, null),
+                    5
+                );
             });
 
-            // When - query from tenant2
+            // When - query from tenant2 (retry until items are available)
             PartialList<CustomItem> tenant2Results = executionContextManager.executeAsTenant("tenant2", () -> {
-                return persistenceService.queryCustomItem(null, null, itemType, 0, 100, null);
+                return TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryCustomItem(null, null, itemType, 0, 100, null),
+                    7
+                );
             });
 
             // Then
             assertEquals(5, tenant1Results.getTotalSize(), "Tenant1 should only see its 5 items");
             assertEquals(7, tenant2Results.getTotalSize(), "Tenant2 should only see its 7 items");
 
-            // Verify tenant isolation in scroll queries
+            // Verify tenant isolation in scroll queries (retry until items are available)
             PartialList<CustomItem> tenant1ScrollResults = executionContextManager.executeAsTenant("tenant1", () -> {
-                PartialList<CustomItem> firstPage = persistenceService.queryCustomItem(null, "index:asc", itemType, 0, 2, "1m");
+                PartialList<CustomItem> firstPage = TestHelper.retryQueryUntilAvailable(
+                    () -> persistenceService.queryCustomItem(null, "index:asc", itemType, 0, 2, "1m"),
+                    2
+                );
                 String scrollId = firstPage.getScrollIdentifier();
                 return persistenceService.continueCustomItemScrollQuery(itemType, scrollId, "1m");
             });
@@ -3755,9 +4216,12 @@ public class InMemoryPersistenceServiceImplTest {
                 persistenceService.save(item);
             }
 
-            // When - Start a scroll query with very short validity (100ms)
+            // When - Start a scroll query with very short validity (100ms) (retry until items are available)
             Condition matchAllCondition = new Condition(TestConditionEvaluators.getConditionType("matchAllCondition"));
-            PartialList<CustomItem> firstPage = persistenceService.queryCustomItem(matchAllCondition, "index:asc", itemType, 0, 3, "100ms");
+            PartialList<CustomItem> firstPage = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryCustomItem(matchAllCondition, "index:asc", itemType, 0, 3, "100ms"),
+                3
+            );
             String scrollId = firstPage.getScrollIdentifier();
 
             assertNotNull(scrollId, "Should have a scroll identifier");
@@ -3773,8 +4237,11 @@ public class InMemoryPersistenceServiceImplTest {
             assertEquals(0, secondPage.getList().size(), "Should return empty list for expired scroll");
             assertNull(secondPage.getScrollIdentifier(), "Should not have a scroll identifier for expired scroll");
 
-            // When - Start a new scroll query with longer validity
-            PartialList<CustomItem> newFirstPage = persistenceService.queryCustomItem(null, "index:asc", itemType, 0, 3, "10s");
+            // When - Start a new scroll query with longer validity (retry until items are available)
+            PartialList<CustomItem> newFirstPage = TestHelper.retryQueryUntilAvailable(
+                () -> persistenceService.queryCustomItem(null, "index:asc", itemType, 0, 3, "10s"),
+                3
+            );
             String newScrollId = newFirstPage.getScrollIdentifier();
 
             // Then - Continue the scroll immediately should work
@@ -3955,6 +4422,2074 @@ public class InMemoryPersistenceServiceImplTest {
             assertEquals(updateItem.getName(), loaded.getName());
             assertEquals(initialSeqNo + 1, ((Number) loaded.getSystemMetadata("_seq_no")).longValue());
             assertEquals(initialPrimaryTerm, ((Number) loaded.getSystemMetadata("_primary_term")).longValue());
+        }
+    }
+
+    @Nested
+    class RefreshDelaySimulationTests {
+        @Test
+        void shouldNotReturnItemsImmediatelyAfterSaveWhenRefreshDelayEnabled() throws InterruptedException {
+            // given - create persistence service with refresh delay enabled (default)
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save an item
+            Profile profile = new Profile();
+            profile.setItemId("test-profile");
+            profile.setProperty("firstName", "John");
+            serviceWithDelay.save(profile);
+            
+            // then - item should not be immediately available in queries (simulating Elasticsearch behavior)
+            List<Profile> queryResults = serviceWithDelay.query(null, null, Profile.class);
+            assertTrue(queryResults.isEmpty(), "Item should not be immediately available in queries after save");
+            
+            // but load by ID should work immediately (Elasticsearch get by ID works immediately)
+            Profile loaded = serviceWithDelay.load("test-profile", Profile.class);
+            assertNotNull(loaded, "Load by ID should work immediately even with refresh delay");
+            assertEquals("John", loaded.getProperty("firstName"));
+        }
+        
+        @Test
+        void shouldReturnItemsAfterRefreshInterval() throws InterruptedException {
+            // given - create persistence service with short refresh interval for testing
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher, 
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 100L);
+            
+            // when - save an item
+            Profile profile = new Profile();
+            profile.setItemId("test-profile");
+            serviceWithDelay.save(profile);
+            
+            // then - item should not be immediately available
+            List<Profile> queryResults = serviceWithDelay.query(null, null, Profile.class);
+            assertTrue(queryResults.isEmpty(), "Item should not be immediately available");
+            
+            // wait for refresh interval to pass
+            Thread.sleep(150);
+            
+            // now item should be available (retry until available)
+            queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, Profile.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Item should be available after refresh interval");
+            assertEquals("test-profile", queryResults.get(0).getItemId());
+        }
+        
+        @Test
+        void shouldReturnItemsImmediatelyAfterExplicitRefresh() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save an item
+            Profile profile = new Profile();
+            profile.setItemId("test-profile");
+            serviceWithDelay.save(profile);
+            
+            // then - item should not be immediately available
+            List<Profile> queryResults = serviceWithDelay.query(null, null, Profile.class);
+            assertTrue(queryResults.isEmpty(), "Item should not be immediately available");
+            
+            // when - explicitly refresh
+            serviceWithDelay.refresh();
+            
+            // then - item should now be available (retry until available)
+            queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, Profile.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Item should be available after explicit refresh");
+            assertEquals("test-profile", queryResults.get(0).getItemId());
+        }
+        
+        @Test
+        void shouldReturnItemsImmediatelyAfterRefreshIndex() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save an item
+            Profile profile = new Profile();
+            profile.setItemId("test-profile");
+            serviceWithDelay.save(profile);
+            
+            // then - item should not be immediately available
+            List<Profile> queryResults = serviceWithDelay.query(null, null, Profile.class);
+            assertTrue(queryResults.isEmpty(), "Item should not be immediately available");
+            
+            // when - explicitly refresh index
+            serviceWithDelay.refreshIndex(Profile.class, null);
+            
+            // then - item should now be available (retry until available)
+            queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, Profile.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Item should be available after refreshIndex");
+            assertEquals("test-profile", queryResults.get(0).getItemId());
+        }
+        
+        @Test
+        void shouldReturnItemsImmediatelyWhenRefreshDelayDisabled() {
+            // given - create persistence service with refresh delay disabled
+            InMemoryPersistenceServiceImpl serviceWithoutDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher,
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, false, 1000L);
+            
+            // when - save an item
+            Profile profile = new Profile();
+            profile.setItemId("test-profile");
+            serviceWithoutDelay.save(profile);
+            
+            // then - item should be immediately available (no delay simulation)
+            List<Profile> queryResults = serviceWithoutDelay.query(null, null, Profile.class);
+            assertEquals(1, queryResults.size(), "Item should be immediately available when refresh delay is disabled");
+            assertEquals("test-profile", queryResults.get(0).getItemId());
+        }
+        
+        @Test
+        void shouldFilterMultipleItemsByRefreshStatus() throws InterruptedException {
+            // given - create persistence service with short refresh interval
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher,
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 200L);
+            
+            // when - save multiple items
+            Profile profile1 = new Profile();
+            profile1.setItemId("profile1");
+            serviceWithDelay.save(profile1);
+            
+            Thread.sleep(250); // Wait for first item to be refreshed
+            
+            Profile profile2 = new Profile();
+            profile2.setItemId("profile2");
+            serviceWithDelay.save(profile2);
+            
+            // then - only first item should be available (retry until available)
+            List<Profile> queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, Profile.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Only refreshed items should be available");
+            assertEquals("profile1", queryResults.get(0).getItemId());
+            
+            // wait for second item to be refreshed
+            Thread.sleep(250);
+            queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, Profile.class),
+                2
+            );
+            assertEquals(2, queryResults.size(), "Both items should be available after refresh");
+        }
+        
+        @Test
+        void shouldRespectRefreshDelayInQueryCount() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save items
+            Profile profile1 = new Profile();
+            profile1.setItemId("profile1");
+            serviceWithDelay.save(profile1);
+            
+            Profile profile2 = new Profile();
+            profile2.setItemId("profile2");
+            serviceWithDelay.save(profile2);
+            
+            // then - count should be 0 (items not yet refreshed)
+            long count = serviceWithDelay.queryCount(null, Profile.ITEM_TYPE);
+            assertEquals(0, count, "Count should not include unrefreshed items");
+            
+            // when - refresh
+            serviceWithDelay.refresh();
+            
+            // then - count should include all items (retry until available)
+            count = TestHelper.retryUntil(
+                () -> serviceWithDelay.queryCount(null, Profile.ITEM_TYPE),
+                c -> c == 2L
+            );
+            assertEquals(2, count, "Count should include all refreshed items");
+        }
+        
+        @Test
+        void shouldRespectRefreshDelayInGetAllItemsCount() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save items
+            Profile profile1 = new Profile();
+            profile1.setItemId("profile1");
+            serviceWithDelay.save(profile1);
+            
+            Profile profile2 = new Profile();
+            profile2.setItemId("profile2");
+            serviceWithDelay.save(profile2);
+            
+            // then - count should be 0 (items not yet refreshed)
+            long count = serviceWithDelay.getAllItemsCount(Profile.ITEM_TYPE);
+            assertEquals(0, count, "Count should not include unrefreshed items");
+            
+            // when - refresh
+            serviceWithDelay.refresh();
+            
+            // then - count should include all items (retry until available)
+            count = TestHelper.retryUntil(
+                () -> serviceWithDelay.getAllItemsCount(Profile.ITEM_TYPE),
+                c -> c == 2L
+            );
+            assertEquals(2, count, "Count should include all refreshed items");
+        }
+        
+        @Test
+        void shouldShutdownRefreshThread() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - shutdown
+            serviceWithDelay.shutdown();
+            
+            // then - should not throw exception and thread should be stopped
+            // (we can't directly verify thread state, but shutdown should complete without error)
+            assertTrue(true, "Shutdown should complete without error");
+        }
+        
+        @Test
+        void shouldDeleteItemsImmediatelyRegardlessOfRefreshStatus() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save items
+            Profile profile1 = new Profile();
+            profile1.setItemId("profile1");
+            profile1.setProperty("name", "Profile 1");
+            serviceWithDelay.save(profile1);
+            
+            Profile profile2 = new Profile();
+            profile2.setItemId("profile2");
+            profile2.setProperty("name", "Profile 2");
+            serviceWithDelay.save(profile2);
+            
+            // then - items should not be immediately available in queries
+            List<Profile> queryResults = serviceWithDelay.query(null, null, Profile.class);
+            assertTrue(queryResults.isEmpty(), "Items should not be immediately available in queries");
+            
+            // when - delete an item (should work immediately, regardless of refresh status)
+            boolean deleted = serviceWithDelay.remove("profile1", Profile.class);
+            assertTrue(deleted, "Delete should succeed immediately");
+            
+            // then - deleted item should not be loadable
+            Profile loaded = serviceWithDelay.load("profile1", Profile.class);
+            assertNull(loaded, "Deleted item should not be loadable");
+            
+            // and - after refresh, deleted item should still not appear in queries (retry until available)
+            serviceWithDelay.refresh();
+            queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, Profile.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Only non-deleted item should be available");
+            assertEquals("profile2", queryResults.get(0).getItemId());
+        }
+        
+        @Test
+        void shouldDeleteByQueryAllMatchingItemsRegardlessOfRefreshStatus() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save multiple items
+            Profile profile1 = new Profile();
+            profile1.setItemId("profile1");
+            profile1.setProperty("category", "test");
+            serviceWithDelay.save(profile1);
+            
+            Profile profile2 = new Profile();
+            profile2.setItemId("profile2");
+            profile2.setProperty("category", "test");
+            serviceWithDelay.save(profile2);
+            
+            Profile profile3 = new Profile();
+            profile3.setItemId("profile3");
+            profile3.setProperty("category", "other");
+            serviceWithDelay.save(profile3);
+            
+            // then - items should not be immediately available in queries
+            List<Profile> queryResults = serviceWithDelay.query(null, null, Profile.class);
+            assertTrue(queryResults.isEmpty(), "Items should not be immediately available");
+            
+            // when - delete by query (should work on all matching items, not just refreshed ones)
+            Condition condition = new Condition();
+            condition.setConditionType(TestConditionEvaluators.getConditionType("profilePropertyCondition"));
+            condition.setParameter("propertyName", "properties.category");
+            condition.setParameter("comparisonOperator", "equals");
+            condition.setParameter("propertyValue", "test");
+            
+            // Note: removeByQuery should work on all items regardless of refresh status
+            // In Elasticsearch, deleteByQuery works on all matching documents
+            boolean deleted = serviceWithDelay.removeByQuery(condition, Profile.class);
+            assertTrue(deleted, "Delete by query should succeed");
+            
+            // then - deleted items should not be loadable
+            assertNull(serviceWithDelay.load("profile1", Profile.class), "Deleted item should not be loadable");
+            assertNull(serviceWithDelay.load("profile2", Profile.class), "Deleted item should not be loadable");
+            assertNotNull(serviceWithDelay.load("profile3", Profile.class), "Non-matching item should still be loadable");
+            
+            // and - after refresh, deleted items should still not appear (retry until available)
+            serviceWithDelay.refresh();
+            queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, Profile.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Only non-deleted item should be available");
+            assertEquals("profile3", queryResults.get(0).getItemId());
+        }
+        
+        @Test
+        void shouldCleanupPendingRefreshItemsOnDelete() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save and immediately delete an item
+            Profile profile = new Profile();
+            profile.setItemId("profile1");
+            serviceWithDelay.save(profile);
+            serviceWithDelay.remove("profile1", Profile.class);
+            
+            // then - item should be deleted and not in pending refresh list
+            // (this prevents memory leaks and ensures deleted items don't appear after refresh)
+            serviceWithDelay.refresh();
+            List<Profile> queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, Profile.class),
+                0
+            );
+            assertTrue(queryResults.isEmpty(), "Deleted item should not appear even after refresh");
+        }
+        
+        @Test
+        void shouldPurgeItemsWithRefreshDelay() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save items with different creation dates
+            Calendar oldDate = Calendar.getInstance();
+            oldDate.add(Calendar.DAY_OF_YEAR, -10);
+            
+            TestMetadataItem oldItem = new TestMetadataItem();
+            oldItem.setItemId("old-item");
+            oldItem.setCreationDate(oldDate.getTime());
+            serviceWithDelay.save(oldItem);
+            
+            TestMetadataItem newItem = new TestMetadataItem();
+            newItem.setItemId("new-item");
+            newItem.setCreationDate(new Date());
+            serviceWithDelay.save(newItem);
+            
+            // then - items should not be immediately available
+            List<TestMetadataItem> queryResults = serviceWithDelay.query(null, null, TestMetadataItem.class);
+            assertTrue(queryResults.isEmpty(), "Items should not be immediately available");
+            
+            // when - purge items older than 7 days
+            Calendar purgeDate = Calendar.getInstance();
+            purgeDate.add(Calendar.DAY_OF_YEAR, -7);
+            serviceWithDelay.purge(purgeDate.getTime());
+            
+            // then - old item should be deleted (even though not refreshed)
+            assertNull(serviceWithDelay.load("old-item", TestMetadataItem.class), "Old item should be purged");
+            assertNotNull(serviceWithDelay.load("new-item", TestMetadataItem.class), "New item should not be purged");
+            
+            // and - after refresh, only new item should appear (retry until available)
+            serviceWithDelay.refresh();
+            queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Only new item should be available after refresh");
+            assertEquals("new-item", queryResults.get(0).getItemId());
+        }
+        
+        @Test
+        void shouldRemoveIndexWithRefreshDelay() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save items
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            serviceWithDelay.save(item1);
+            
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            serviceWithDelay.save(item2);
+            
+            // then - items should not be immediately available
+            List<TestMetadataItem> queryResults = serviceWithDelay.query(null, null, TestMetadataItem.class);
+            assertTrue(queryResults.isEmpty(), "Items should not be immediately available");
+            
+            // when - remove index
+            boolean removed = serviceWithDelay.removeIndex(TestMetadataItem.ITEM_TYPE);
+            assertTrue(removed, "Index should be removed");
+            
+            // then - all items should be deleted (even though not refreshed)
+            assertNull(serviceWithDelay.load("item1", TestMetadataItem.class), "Item should be deleted");
+            assertNull(serviceWithDelay.load("item2", TestMetadataItem.class), "Item should be deleted");
+            
+            // and - after refresh, no items should appear (retry until available)
+            serviceWithDelay.refresh();
+            queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                0
+            );
+            assertTrue(queryResults.isEmpty(), "No items should be available after index removal");
+        }
+        
+        @Test
+        void shouldRemoveCustomItemWithRefreshDelay() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save custom item
+            CustomItem customItem = new CustomItem();
+            customItem.setItemId("custom1");
+            customItem.setItemType("testCustomType");
+            serviceWithDelay.save(customItem);
+            
+            // then - item should not be immediately available in queries
+            PartialList<CustomItem> queryResults = serviceWithDelay.queryCustomItem(null, null, "testCustomType", 0, 10, null);
+            assertEquals(0, queryResults.getTotalSize(), "Item should not be immediately available");
+            
+            // but - load by ID should work
+            CustomItem loaded = serviceWithDelay.loadCustomItem("custom1", "testCustomType");
+            assertNotNull(loaded, "Load by ID should work immediately");
+            
+            // when - remove custom item
+            boolean removed = serviceWithDelay.removeCustomItem("custom1", "testCustomType");
+            assertTrue(removed, "Custom item should be removed");
+            
+            // then - item should not be loadable
+            assertNull(serviceWithDelay.loadCustomItem("custom1", "testCustomType"), "Deleted item should not be loadable");
+            
+            // and - after refresh, item should still not appear (retry until available)
+            serviceWithDelay.refresh();
+            queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.queryCustomItem(null, null, "testCustomType", 0, 10, null),
+                0
+            );
+            assertEquals(0, queryResults.getTotalSize(), "Deleted item should not appear after refresh");
+        }
+        
+        @Test
+        void shouldHandleUpdateOfAlreadyRefreshedItem() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save and refresh an item
+            Profile profile = new Profile();
+            profile.setItemId("profile1");
+            profile.setProperty("name", "Original");
+            serviceWithDelay.save(profile);
+            serviceWithDelay.refresh();
+            
+            // then - item should be available (retry until available)
+            List<Profile> queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, Profile.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Item should be available after refresh");
+            assertEquals("Original", queryResults.get(0).getProperty("name"));
+            
+            // when - update the item (this adds it back to pendingRefreshItems)
+            profile.setProperty("name", "Updated");
+            serviceWithDelay.save(profile);
+            
+            // then - updated item should not be immediately available in queries
+            // The item was removed from refreshedIndexes when we saved it again,
+            // and added back to pendingRefreshItems, so it needs refresh again
+            queryResults = serviceWithDelay.query(null, null, Profile.class);
+            assertTrue(queryResults.isEmpty(), "Updated item should not be immediately available until refreshed");
+            
+            // when - refresh again
+            serviceWithDelay.refresh();
+            
+            // then - updated item should be available with new value (retry until available)
+            queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, Profile.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Updated item should be available after refresh");
+            assertEquals("Updated", queryResults.get(0).getProperty("name"), "Updated value should be visible");
+        }
+    }
+
+    @Nested
+    class RefreshPolicyTests {
+        @Test
+        void shouldRespectFalseRefreshPolicy() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set FALSE refresh policy for a custom item type
+            serviceWithDelay.setRefreshPolicy("testItem", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            
+            // and - save an item
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testItem");
+            serviceWithDelay.save(item);
+            
+            // then - item should not be immediately available (FALSE = wait for automatic refresh)
+            List<TestMetadataItem> queryResults = serviceWithDelay.query(null, null, TestMetadataItem.class);
+            assertTrue(queryResults.isEmpty(), "Item with FALSE refresh policy should not be immediately available");
+            
+            // but - load by ID should work
+            TestMetadataItem loaded = serviceWithDelay.load("test-item", TestMetadataItem.class);
+            assertNotNull(loaded, "Load by ID should work immediately even with FALSE refresh policy");
+        }
+        
+        @Test
+        void shouldRespectTrueRefreshPolicy() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set TRUE refresh policy for a custom item type
+            serviceWithDelay.setRefreshPolicy("testItem", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            
+            // and - save an item
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testItem");
+            serviceWithDelay.save(item);
+            
+            // then - item should be immediately available (TRUE = immediate refresh) - retry until available
+            List<TestMetadataItem> queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Item with TRUE refresh policy should be immediately available");
+            assertEquals("test-item", queryResults.get(0).getItemId());
+        }
+        
+        @Test
+        void shouldRespectWaitForRefreshPolicy() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set WAIT_FOR refresh policy for a custom item type
+            serviceWithDelay.setRefreshPolicy("testItem", InMemoryPersistenceServiceImpl.RefreshPolicy.WAIT_FOR);
+            
+            // and - save an item
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testItem");
+            serviceWithDelay.save(item);
+            
+            // then - item should be immediately available (WAIT_FOR = wait for refresh, which completes immediately in-memory) - retry until available
+            List<TestMetadataItem> queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Item with WAIT_FOR refresh policy should be immediately available");
+            assertEquals("test-item", queryResults.get(0).getItemId());
+        }
+        
+        @Test
+        void shouldSetRefreshPolicyFromJson() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set refresh policies from JSON (Elasticsearch/OpenSearch format)
+            String json = "{\"event\":\"WAIT_FOR\",\"rule\":\"FALSE\",\"scheduledTask\":\"TRUE\"}";
+            serviceWithDelay.setItemTypeToRefreshPolicy(json);
+            
+            // then - policies should be set correctly
+            TestMetadataItem eventItem = new TestMetadataItem();
+            eventItem.setItemId("event1");
+            eventItem.setItemType("event");
+            serviceWithDelay.save(eventItem);
+            
+            // Event with WAIT_FOR should be immediately available (retry until available)
+            List<TestMetadataItem> eventResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, eventResults.size(), "Event with WAIT_FOR policy should be immediately available");
+            
+            TestMetadataItem ruleItem = new TestMetadataItem();
+            ruleItem.setItemId("rule1");
+            ruleItem.setItemType("rule");
+            serviceWithDelay.save(ruleItem);
+            
+            // Rule with FALSE should not be immediately available (retry to ensure only event is visible)
+            List<TestMetadataItem> ruleResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                1
+            );
+            // Should still only see the event, not the rule
+            assertEquals(1, ruleResults.size(), "Rule with FALSE policy should not be immediately available");
+            assertEquals("event1", ruleResults.get(0).getItemId());
+        }
+        
+        @Test
+        void shouldParseElasticsearchRefreshPolicyValues() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set refresh policies using Elasticsearch string values
+            String json = "{\"item1\":\"NONE\",\"item2\":\"IMMEDIATE\",\"item3\":\"WAIT_UNTIL\"}";
+            serviceWithDelay.setItemTypeToRefreshPolicy(json);
+            
+            // then - policies should be parsed correctly
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setItemType("item1");
+            serviceWithDelay.save(item1);
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                0
+            );
+            assertTrue(results1.isEmpty(), 
+                    "NONE policy should not make item immediately available");
+            
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setItemType("item2");
+            serviceWithDelay.save(item2);
+            // After saving item2, we should see at least 1 item (item2 with IMMEDIATE policy)
+            List<TestMetadataItem> results2 = TestHelper.retryUntil(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                r -> r != null && r.size() >= 1 && r.stream().anyMatch(i -> "item2".equals(i.getItemId()))
+            );
+            assertTrue(results2.size() >= 1, 
+                    "IMMEDIATE policy should make item immediately available");
+            assertTrue(results2.stream().anyMatch(i -> "item2".equals(i.getItemId())),
+                    "Item2 should be in results");
+            
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            item3.setItemType("item3");
+            serviceWithDelay.save(item3);
+            // After saving item3, we should see at least 2 items (item2 and item3 with WAIT_UNTIL policy)
+            List<TestMetadataItem> results3 = TestHelper.retryUntil(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                r -> r != null && r.size() >= 2 && r.stream().anyMatch(i -> "item3".equals(i.getItemId()))
+            );
+            assertTrue(results3.size() >= 2, 
+                    "WAIT_UNTIL policy should make item immediately available");
+            assertTrue(results3.stream().anyMatch(i -> "item3".equals(i.getItemId())),
+                    "Item3 should be in results");
+        }
+        
+        @Test
+        void shouldParseOpenSearchRefreshPolicyValues() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set refresh policies using OpenSearch string values
+            String json = "{\"item1\":\"False\",\"item2\":\"True\",\"item3\":\"WaitFor\"}";
+            serviceWithDelay.setItemTypeToRefreshPolicy(json);
+            
+            // then - policies should be parsed correctly
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setItemType("item1");
+            serviceWithDelay.save(item1);
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                0
+            );
+            assertTrue(results1.isEmpty(), 
+                    "False policy should not make item immediately available");
+            
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setItemType("item2");
+            serviceWithDelay.save(item2);
+            // After saving item2, we should see at least 1 item (item2 with True policy)
+            List<TestMetadataItem> results2 = TestHelper.retryUntil(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                r -> r != null && r.size() >= 1 && r.stream().anyMatch(i -> "item2".equals(i.getItemId()))
+            );
+            assertTrue(results2.size() >= 1, 
+                    "True policy should make item immediately available");
+            assertTrue(results2.stream().anyMatch(i -> "item2".equals(i.getItemId())),
+                    "Item2 should be in results");
+            
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            item3.setItemType("item3");
+            serviceWithDelay.save(item3);
+            // After saving item3, we should see at least 2 items (item2 and item3 with WaitFor policy)
+            List<TestMetadataItem> results3 = TestHelper.retryUntil(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                r -> r != null && r.size() >= 2 && r.stream().anyMatch(i -> "item3".equals(i.getItemId()))
+            );
+            assertTrue(results3.size() >= 2, 
+                    "WaitFor policy should make item immediately available");
+            assertTrue(results3.stream().anyMatch(i -> "item3".equals(i.getItemId())),
+                    "Item3 should be in results");
+        }
+        
+        @Test
+        void shouldDefaultToFalseRefreshPolicy() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save an item without setting a refresh policy
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            serviceWithDelay.save(item);
+            
+            // then - item should not be immediately available (defaults to FALSE) - retry to ensure it's not available
+            List<TestMetadataItem> queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                0
+            );
+            assertTrue(queryResults.isEmpty(), "Item with default refresh policy (FALSE) should not be immediately available");
+        }
+        
+        @Test
+        void shouldHandleMixedRefreshPolicies() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set different refresh policies for different item types
+            serviceWithDelay.setRefreshPolicy("immediateType", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            serviceWithDelay.setRefreshPolicy("waitType", InMemoryPersistenceServiceImpl.RefreshPolicy.WAIT_FOR);
+            // falseType uses default FALSE policy
+            
+            // and - save items with different policies
+            TestMetadataItem immediateItem = new TestMetadataItem();
+            immediateItem.setItemId("immediate1");
+            immediateItem.setItemType("immediateType");
+            serviceWithDelay.save(immediateItem);
+            
+            TestMetadataItem waitItem = new TestMetadataItem();
+            waitItem.setItemId("wait1");
+            waitItem.setItemType("waitType");
+            serviceWithDelay.save(waitItem);
+            
+            TestMetadataItem falseItem = new TestMetadataItem();
+            falseItem.setItemId("false1");
+            falseItem.setItemType("falseType");
+            serviceWithDelay.save(falseItem);
+            
+            // then - only items with TRUE or WAIT_FOR should be immediately available (retry until available)
+            // Use retryQueryUntilAvailable with expected count, then verify specific items
+            List<TestMetadataItem> queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                2
+            );
+            assertEquals(2, queryResults.size(), "Only items with TRUE or WAIT_FOR policies should be immediately available");
+            assertTrue(queryResults.stream().anyMatch(i -> "immediate1".equals(i.getItemId())), 
+                    "Item with TRUE policy should be available");
+            assertTrue(queryResults.stream().anyMatch(i -> "wait1".equals(i.getItemId())), 
+                    "Item with WAIT_FOR policy should be available");
+            assertFalse(queryResults.stream().anyMatch(i -> "false1".equals(i.getItemId())), 
+                    "Item with FALSE policy should not be available");
+        }
+        
+        @Test
+        void shouldReturnCorrectIsConsistentValue() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set different refresh policies
+            serviceWithDelay.setRefreshPolicy("consistentType", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            serviceWithDelay.setRefreshPolicy("inconsistentType", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            
+            // and - create items
+            TestMetadataItem consistentItem = new TestMetadataItem();
+            consistentItem.setItemId("consistent1");
+            consistentItem.setItemType("consistentType");
+            serviceWithDelay.save(consistentItem);
+            
+            TestMetadataItem inconsistentItem = new TestMetadataItem();
+            inconsistentItem.setItemId("inconsistent1");
+            inconsistentItem.setItemType("inconsistentType");
+            serviceWithDelay.save(inconsistentItem);
+            
+            // then - isConsistent should return true for TRUE policy, false for FALSE policy
+            assertTrue(serviceWithDelay.isConsistent(consistentItem), 
+                    "Item with TRUE refresh policy should be consistent (immediately visible)");
+            assertFalse(serviceWithDelay.isConsistent(inconsistentItem), 
+                    "Item with FALSE refresh policy should not be consistent (not immediately visible)");
+        }
+        
+        @Test
+        void shouldHandleRefreshPolicyForCustomItems() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set refresh policy for custom item type
+            serviceWithDelay.setRefreshPolicy("customType", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            
+            // and - save custom item
+            CustomItem customItem = new CustomItem();
+            customItem.setItemId("custom1");
+            customItem.setItemType("customType");
+            customItem.setCustomItemType("customType");
+            serviceWithDelay.save(customItem);
+            
+            // then - custom item should be immediately available
+            PartialList<CustomItem> queryResults = serviceWithDelay.queryCustomItem(null, null, "customType", 0, 10, null);
+            assertEquals(1, queryResults.getTotalSize(), "Custom item with TRUE refresh policy should be immediately available");
+        }
+        
+        @Test
+        void shouldUpdateRefreshPolicyDynamically() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - save item with default FALSE policy
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testType");
+            serviceWithDelay.save(item);
+            
+            // then - item should not be immediately available - retry to ensure it's not available
+            List<TestMetadataItem> queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                0
+            );
+            assertTrue(queryResults.isEmpty(), "Item with FALSE policy should not be immediately available");
+            
+            // when - change refresh policy to TRUE
+            serviceWithDelay.setRefreshPolicy("testType", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            
+            // and - save another item
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("test-item2");
+            item2.setItemType("testType");
+            serviceWithDelay.save(item2);
+            
+            // then - new item should be immediately available, but old item still needs refresh - retry until available
+            // Use retryUntil to check for at least item2, allowing for item1 to potentially be refreshed by background thread
+            queryResults = TestHelper.retryUntil(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                r -> r != null && r.size() >= 1 && r.stream().anyMatch(i -> "test-item2".equals(i.getItemId()))
+            );
+            assertTrue(queryResults.size() >= 1, "New item with TRUE policy should be immediately available");
+            assertTrue(queryResults.stream().anyMatch(i -> "test-item2".equals(i.getItemId())),
+                    "Item2 should be in results");
+        }
+        
+        @Test
+        void shouldRespectRefreshPolicyOnUpdate() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set TRUE refresh policy
+            serviceWithDelay.setRefreshPolicy("testType", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            
+            // and - save and update an item
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testType");
+            item.setName("Original");
+            serviceWithDelay.save(item);
+            
+            // Update the item
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("name", "Updated");
+            serviceWithDelay.update(item, null, TestMetadataItem.class, updates);
+            
+            // then - updated item should be immediately available with new value - retry until available
+            List<TestMetadataItem> queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Updated item with TRUE refresh policy should be immediately available");
+            assertEquals("Updated", queryResults.get(0).getName(), "Updated value should be visible");
+        }
+        
+        @Test
+        void shouldRespectRefreshPolicyOnUpdateWithFalsePolicy() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set FALSE refresh policy
+            serviceWithDelay.setRefreshPolicy("testType", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            
+            // and - save and update an item
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testType");
+            item.setName("Original");
+            serviceWithDelay.save(item);
+            serviceWithDelay.refresh(); // Make initial item available
+            
+            // Update the item
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("name", "Updated");
+            serviceWithDelay.update(item, null, TestMetadataItem.class, updates);
+            
+            // then - updated item should not be immediately available (back in pendingRefreshItems)
+            List<TestMetadataItem> queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                0
+            );
+            assertTrue(queryResults.isEmpty(), "Updated item should not be immediately available until refresh");
+            
+            // when - refresh
+            serviceWithDelay.refresh();
+            
+            // then - updated value should be visible - retry until available
+            queryResults = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, queryResults.size(), "Item should be available after refresh");
+            assertEquals("Updated", queryResults.get(0).getName(), "Updated value should be visible after refresh");
+        }
+        
+        @Test
+        void shouldSupportRequestBasedRefreshPolicyOverride() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set FALSE refresh policy for item type (default behavior)
+            serviceWithDelay.setRefreshPolicy("testType", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            
+            // and - save item with request-based override to TRUE
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testType");
+            item.setSystemMetadata("refresh", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            serviceWithDelay.save(item);
+            
+            // then - item should be immediately available (request override takes precedence)
+            List<TestMetadataItem> queryResults = serviceWithDelay.query(null, null, TestMetadataItem.class);
+            assertEquals(1, queryResults.size(), "Item with request-based TRUE override should be immediately available");
+        }
+        
+        @Test
+        void shouldSupportRequestBasedRefreshPolicyOverrideAsString() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set FALSE refresh policy for item type
+            serviceWithDelay.setRefreshPolicy("testType", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            
+            // and - save item with request-based override as string (Elasticsearch format)
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testType");
+            item.setSystemMetadata("refresh", "IMMEDIATE"); // Elasticsearch format
+            serviceWithDelay.save(item);
+            
+            // then - item should be immediately available
+            List<TestMetadataItem> queryResults = serviceWithDelay.query(null, null, TestMetadataItem.class);
+            assertEquals(1, queryResults.size(), "Item with request-based IMMEDIATE override should be immediately available");
+        }
+        
+        @Test
+        void shouldSupportRequestBasedRefreshPolicyOverrideAsBoolean() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set FALSE refresh policy for item type
+            serviceWithDelay.setRefreshPolicy("testType", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            
+            // and - save item with request-based override as boolean
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testType");
+            item.setSystemMetadata("refresh", true); // Boolean true
+            serviceWithDelay.save(item);
+            
+            // then - item should be immediately available
+            List<TestMetadataItem> queryResults = serviceWithDelay.query(null, null, TestMetadataItem.class);
+            assertEquals(1, queryResults.size(), "Item with request-based boolean true override should be immediately available");
+        }
+        
+        @Test
+        void shouldSupportRequestBasedRefreshPolicyOverrideWaitFor() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set FALSE refresh policy for item type
+            serviceWithDelay.setRefreshPolicy("testType", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            
+            // and - save item with request-based override to WAIT_FOR
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testType");
+            item.setSystemMetadata("refresh", "wait_for"); // OpenSearch/Elasticsearch format
+            serviceWithDelay.save(item);
+            
+            // then - item should be immediately available (WAIT_FOR behaves like TRUE in-memory)
+            List<TestMetadataItem> queryResults = serviceWithDelay.query(null, null, TestMetadataItem.class);
+            assertEquals(1, queryResults.size(), "Item with request-based wait_for override should be immediately available");
+        }
+        
+        @Test
+        void shouldOverridePerItemTypePolicyWithRequestBasedOverride() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set TRUE refresh policy for item type
+            serviceWithDelay.setRefreshPolicy("testType", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            
+            // and - save item with request-based override to FALSE
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testType");
+            item.setSystemMetadata("refresh", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            serviceWithDelay.save(item);
+            
+            // then - item should NOT be immediately available (request override takes precedence)
+            List<TestMetadataItem> queryResults = serviceWithDelay.query(null, null, TestMetadataItem.class);
+            assertTrue(queryResults.isEmpty(), "Item with request-based FALSE override should not be immediately available");
+        }
+        
+        @Test
+        void shouldSupportRequestBasedRefreshPolicyOverrideOnUpdate() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // when - set FALSE refresh policy for item type
+            serviceWithDelay.setRefreshPolicy("testType", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            
+            // and - save and update item with request-based override
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setItemType("testType");
+            item.setName("Original");
+            serviceWithDelay.save(item);
+            serviceWithDelay.refresh(); // Make initial item available
+            
+            // Update with request-based refresh override
+            item.setSystemMetadata("refresh", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("name", "Updated");
+            serviceWithDelay.update(item, null, TestMetadataItem.class, updates);
+            
+            // then - updated item should be immediately available
+            List<TestMetadataItem> queryResults = serviceWithDelay.query(null, null, TestMetadataItem.class);
+            assertEquals(1, queryResults.size(), "Updated item with request-based TRUE override should be immediately available");
+            assertEquals("Updated", queryResults.get(0).getName(), "Updated value should be visible");
+        }
+        
+        @Test
+        void shouldSupportElasticsearchRefreshParameterValues() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // Test Elasticsearch refresh parameter values: true, false, wait_for
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setItemType("testType");
+            item1.setSystemMetadata("refresh", "true");
+            serviceWithDelay.save(item1);
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results1.size(), 
+                    "refresh=true should make item immediately available");
+            
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setItemType("testType");
+            item2.setSystemMetadata("refresh", "false");
+            serviceWithDelay.save(item2);
+            // After saving item2 with false, we should still only see item1 (item2 not immediately available)
+            List<TestMetadataItem> results2 = TestHelper.retryUntil(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                r -> r != null && r.size() >= 1 && r.stream().anyMatch(i -> "item1".equals(i.getItemId())) &&
+                     !r.stream().anyMatch(i -> "item2".equals(i.getItemId()))
+            );
+            assertTrue(results2.size() >= 1, 
+                    "refresh=false should not make item immediately available (only item1 visible)");
+            assertTrue(results2.stream().anyMatch(i -> "item1".equals(i.getItemId())),
+                    "Item1 should still be visible");
+            
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            item3.setItemType("testType");
+            item3.setSystemMetadata("refresh", "wait_for");
+            serviceWithDelay.save(item3);
+            // After saving item3, we should see at least item1 and item3 (item2 still not available)
+            List<TestMetadataItem> results3 = TestHelper.retryUntil(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                r -> r != null && r.size() >= 2 && r.stream().anyMatch(i -> "item3".equals(i.getItemId()))
+            );
+            assertTrue(results3.size() >= 2, 
+                    "refresh=wait_for should make item immediately available");
+            assertTrue(results3.stream().anyMatch(i -> "item3".equals(i.getItemId())),
+                    "Item3 should be visible");
+        }
+        
+        @Test
+        void shouldSupportOpenSearchRefreshParameterValues() {
+            // given - create persistence service with refresh delay enabled
+            InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // Test OpenSearch refresh parameter values: True, False, WaitFor
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setItemType("testType");
+            item1.setSystemMetadata("refresh", "True");
+            serviceWithDelay.save(item1);
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results1.size(), 
+                    "refresh=True should make item immediately available");
+            
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setItemType("testType");
+            item2.setSystemMetadata("refresh", "False");
+            serviceWithDelay.save(item2);
+            // After saving item2 with False, we should still only see item1 (item2 not immediately available)
+            List<TestMetadataItem> results2 = TestHelper.retryUntil(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                r -> r != null && r.size() >= 1 && r.stream().anyMatch(i -> "item1".equals(i.getItemId())) &&
+                     !r.stream().anyMatch(i -> "item2".equals(i.getItemId()))
+            );
+            assertTrue(results2.size() >= 1, 
+                    "refresh=False should not make item immediately available");
+            assertTrue(results2.stream().anyMatch(i -> "item1".equals(i.getItemId())),
+                    "Item1 should still be visible");
+            
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            item3.setItemType("testType");
+            item3.setSystemMetadata("refresh", "WaitFor");
+            serviceWithDelay.save(item3);
+            // After saving item3, we should see at least item1 and item3 (item2 still not available)
+            List<TestMetadataItem> results3 = TestHelper.retryUntil(
+                () -> serviceWithDelay.query(null, null, TestMetadataItem.class),
+                r -> r != null && r.size() >= 2 && r.stream().anyMatch(i -> "item3".equals(i.getItemId()))
+            );
+            assertTrue(results3.size() >= 2, 
+                    "refresh=WaitFor should make item immediately available");
+            assertTrue(results3.stream().anyMatch(i -> "item3".equals(i.getItemId())),
+                    "Item3 should be visible");
+        }
+        
+        @Test
+        void shouldHandleAllRefreshPolicyCombinationsWithDelayEnabled() {
+            // Test all combinations: per-item-type policy × request override × operation type
+            
+            // Combination 1: FALSE policy, no override, save
+            InMemoryPersistenceServiceImpl service1 = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            service1.setRefreshPolicy("type1", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setItemType("type1");
+            service1.save(item1);
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> service1.query(null, null, TestMetadataItem.class),
+                0
+            );
+            assertTrue(results1.isEmpty(), 
+                    "FALSE policy, no override, save: should not be immediately available");
+            
+            // Combination 2: FALSE policy, TRUE override, save
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setItemType("type1");
+            item2.setSystemMetadata("refresh", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            service1.save(item2);
+            // After saving item2 with TRUE override, we should see at least item2 (item1 might be refreshed by now)
+            List<TestMetadataItem> results2 = TestHelper.retryUntil(
+                () -> service1.query(null, null, TestMetadataItem.class),
+                r -> r != null && r.size() >= 1 && r.stream().anyMatch(i -> "item2".equals(i.getItemId()))
+            );
+            assertTrue(results2.size() >= 1, 
+                    "FALSE policy, TRUE override, save: should be immediately available");
+            assertTrue(results2.stream().anyMatch(i -> "item2".equals(i.getItemId())),
+                    "Item2 should be visible");
+            
+            // Combination 3: TRUE policy, no override, save
+            InMemoryPersistenceServiceImpl service2 = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            service2.setRefreshPolicy("type2", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            item3.setItemType("type2");
+            service2.save(item3);
+            List<TestMetadataItem> results3 = TestHelper.retryQueryUntilAvailable(
+                () -> service2.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results3.size(), 
+                    "TRUE policy, no override, save: should be immediately available");
+            
+            // Combination 4: TRUE policy, FALSE override, save
+            TestMetadataItem item4 = new TestMetadataItem();
+            item4.setItemId("item4");
+            item4.setItemType("type2");
+            item4.setSystemMetadata("refresh", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            service2.save(item4);
+            List<TestMetadataItem> results4 = TestHelper.retryQueryUntilAvailable(
+                () -> service2.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results4.size(), 
+                    "TRUE policy, FALSE override, save: override should take precedence (not available)");
+            
+            // Combination 5: WAIT_FOR policy, no override, save
+            InMemoryPersistenceServiceImpl service3 = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            service3.setRefreshPolicy("type3", InMemoryPersistenceServiceImpl.RefreshPolicy.WAIT_FOR);
+            TestMetadataItem item5 = new TestMetadataItem();
+            item5.setItemId("item5");
+            item5.setItemType("type3");
+            service3.save(item5);
+            List<TestMetadataItem> results5 = TestHelper.retryQueryUntilAvailable(
+                () -> service3.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results5.size(), 
+                    "WAIT_FOR policy, no override, save: should be immediately available");
+            
+            // Combination 6: WAIT_FOR policy, FALSE override, save
+            TestMetadataItem item6 = new TestMetadataItem();
+            item6.setItemId("item6");
+            item6.setItemType("type3");
+            item6.setSystemMetadata("refresh", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            service3.save(item6);
+            List<TestMetadataItem> results6 = TestHelper.retryQueryUntilAvailable(
+                () -> service3.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results6.size(), 
+                    "WAIT_FOR policy, FALSE override, save: override should take precedence (not available)");
+        }
+        
+        @Test
+        void shouldHandleAllRefreshPolicyCombinationsOnUpdate() {
+            // Test all combinations for update operations
+            
+            // Combination 1: FALSE policy, no override, update
+            InMemoryPersistenceServiceImpl service1 = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            service1.setRefreshPolicy("type1", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setItemType("type1");
+            item1.setName("Original");
+            service1.save(item1);
+            service1.refresh(); // Make initial item available
+            
+            Map<String, Object> updates1 = new HashMap<>();
+            updates1.put("name", "Updated1");
+            service1.update(item1, null, TestMetadataItem.class, updates1);
+            // After update with FALSE policy, item should not be immediately available
+            // (it's back in pendingRefreshItems with future refresh time)
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> service1.query(null, null, TestMetadataItem.class),
+                0
+            );
+            assertTrue(results1.isEmpty(), 
+                    "FALSE policy, no override, update: should not be immediately available");
+            
+            // Combination 2: FALSE policy, TRUE override, update
+            // First refresh to make item available again
+            service1.refresh();
+            item1.setSystemMetadata("refresh", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            Map<String, Object> updates2 = new HashMap<>();
+            updates2.put("name", "Updated2");
+            service1.update(item1, null, TestMetadataItem.class, updates2);
+            List<TestMetadataItem> results2 = TestHelper.retryQueryUntilAvailable(
+                () -> service1.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals("Updated2", results2.get(0).getName(), 
+                    "FALSE policy, TRUE override, update: should be immediately available");
+            
+            // Combination 3: TRUE policy, no override, update
+            InMemoryPersistenceServiceImpl service2 = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            service2.setRefreshPolicy("type2", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setItemType("type2");
+            item2.setName("Original");
+            service2.save(item2);
+            
+            Map<String, Object> updates3 = new HashMap<>();
+            updates3.put("name", "Updated3");
+            service2.update(item2, null, TestMetadataItem.class, updates3);
+            List<TestMetadataItem> results3 = TestHelper.retryQueryUntilAvailable(
+                () -> service2.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals("Updated3", results3.get(0).getName(), 
+                    "TRUE policy, no override, update: should be immediately available");
+        }
+        
+        @Test
+        void shouldHandleRefreshPolicyWithExplicitRefresh() {
+            // Test that explicit refresh works regardless of policy
+            
+            // FALSE policy + explicit refresh
+            InMemoryPersistenceServiceImpl service1 = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            service1.setRefreshPolicy("type1", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setItemType("type1");
+            service1.save(item1);
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> service1.query(null, null, TestMetadataItem.class),
+                0
+            );
+            assertTrue(results1.isEmpty(), 
+                    "FALSE policy: should not be immediately available");
+            
+            service1.refresh();
+            List<TestMetadataItem> results2 = TestHelper.retryQueryUntilAvailable(
+                () -> service1.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results2.size(), 
+                    "FALSE policy + explicit refresh: should be available after refresh");
+            
+            // TRUE policy + explicit refresh (should still work)
+            InMemoryPersistenceServiceImpl service2 = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            service2.setRefreshPolicy("type2", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setItemType("type2");
+            service2.save(item2);
+            List<TestMetadataItem> results3 = TestHelper.retryQueryUntilAvailable(
+                () -> service2.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results3.size(), 
+                    "TRUE policy: should be immediately available");
+            
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            item3.setItemType("type2");
+            service2.save(item3);
+            service2.refresh(); // Explicit refresh should work
+            List<TestMetadataItem> results4 = TestHelper.retryQueryUntilAvailable(
+                () -> service2.query(null, null, TestMetadataItem.class),
+                2
+            );
+            assertEquals(2, results4.size(), 
+                    "TRUE policy + explicit refresh: should still work");
+        }
+        
+        @Test
+        void shouldHandleRefreshPolicyWithRefreshIndex() {
+            // Test that refreshIndex works regardless of policy
+            
+            // FALSE policy + refreshIndex
+            InMemoryPersistenceServiceImpl service1 = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            service1.setRefreshPolicy("type1", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setItemType("type1");
+            service1.save(item1);
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> service1.query(null, null, TestMetadataItem.class),
+                0
+            );
+            assertTrue(results1.isEmpty(), 
+                    "FALSE policy: should not be immediately available");
+            
+            service1.refreshIndex(TestMetadataItem.class, null);
+            List<TestMetadataItem> results2 = TestHelper.retryQueryUntilAvailable(
+                () -> service1.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results2.size(), 
+                    "FALSE policy + refreshIndex: should be available after refreshIndex");
+        }
+        
+        @Test
+        void shouldHandleRefreshPolicyWithAutomaticRefresh() throws InterruptedException {
+            // Test that automatic refresh works with different policies
+            
+            // FALSE policy + automatic refresh
+            InMemoryPersistenceServiceImpl service1 = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher,
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 100L);
+            service1.setRefreshPolicy("type1", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setItemType("type1");
+            service1.save(item1);
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> service1.query(null, null, TestMetadataItem.class),
+                0
+            );
+            assertTrue(results1.isEmpty(), 
+                    "FALSE policy: should not be immediately available");
+            
+            Thread.sleep(150); // Wait for automatic refresh
+            List<TestMetadataItem> results2 = TestHelper.retryQueryUntilAvailable(
+                () -> service1.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results2.size(), 
+                    "FALSE policy + automatic refresh: should be available after interval");
+        }
+        
+        @Test
+        void shouldHandleRefreshPolicyWhenDelayDisabled() {
+            // Test that refresh policies are ignored when delay simulation is disabled
+            
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher,
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, false, 1000L);
+            
+            // Set FALSE policy, but delay is disabled
+            service.setRefreshPolicy("type1", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("item1");
+            item.setItemType("type1");
+            service.save(item);
+            
+            // Should be immediately available regardless of policy when delay is disabled
+            List<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> service.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results.size(), 
+                    "When delay disabled: should be immediately available regardless of policy");
+        }
+        
+        @Test
+        void shouldHandleRequestOverrideWhenDelayDisabled() {
+            // Test that request overrides are ignored when delay simulation is disabled
+            
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher,
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, false, 1000L);
+            
+            // Set request override, but delay is disabled
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("item1");
+            item.setItemType("type1");
+            item.setSystemMetadata("refresh", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            service.save(item);
+            
+            // Should be immediately available regardless of override when delay is disabled
+            List<TestMetadataItem> results = TestHelper.retryQueryUntilAvailable(
+                () -> service.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results.size(), 
+                    "When delay disabled: should be immediately available regardless of override");
+        }
+        
+        @Test
+        void shouldHandleAllRequestOverrideFormats() {
+            // Test all possible request override formats
+            
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            service.setRefreshPolicy("testType", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            
+            // Format 1: Enum value
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setItemType("testType");
+            item1.setSystemMetadata("refresh", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            service.save(item1);
+            List<TestMetadataItem> results1 = TestHelper.retryQueryUntilAvailable(
+                () -> service.query(null, null, TestMetadataItem.class),
+                1
+            );
+            assertEquals(1, results1.size(), 
+                    "Enum override: should work");
+            
+            // Format 2: String "true"
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setItemType("testType");
+            item2.setSystemMetadata("refresh", "true");
+            service.save(item2);
+            List<TestMetadataItem> results2 = TestHelper.retryQueryUntilAvailable(
+                () -> service.query(null, null, TestMetadataItem.class),
+                2
+            );
+            assertEquals(2, results2.size(), 
+                    "String 'true' override: should work");
+            
+            // Format 3: String "IMMEDIATE"
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            item3.setItemType("testType");
+            item3.setSystemMetadata("refresh", "IMMEDIATE");
+            service.save(item3);
+            List<TestMetadataItem> results3 = TestHelper.retryQueryUntilAvailable(
+                () -> service.query(null, null, TestMetadataItem.class),
+                3
+            );
+            assertEquals(3, results3.size(), 
+                    "String 'IMMEDIATE' override: should work");
+            
+            // Format 4: Boolean true
+            TestMetadataItem item4 = new TestMetadataItem();
+            item4.setItemId("item4");
+            item4.setItemType("testType");
+            item4.setSystemMetadata("refresh", true);
+            service.save(item4);
+            List<TestMetadataItem> results4 = TestHelper.retryQueryUntilAvailable(
+                () -> service.query(null, null, TestMetadataItem.class),
+                4
+            );
+            assertEquals(4, results4.size(), 
+                    "Boolean true override: should work");
+            
+            // Format 5: String "wait_for"
+            TestMetadataItem item5 = new TestMetadataItem();
+            item5.setItemId("item5");
+            item5.setItemType("testType");
+            item5.setSystemMetadata("refresh", "wait_for");
+            service.save(item5);
+            List<TestMetadataItem> results5 = TestHelper.retryQueryUntilAvailable(
+                () -> service.query(null, null, TestMetadataItem.class),
+                5
+            );
+            assertEquals(5, results5.size(), 
+                    "String 'wait_for' override: should work");
+            
+            // Format 6: String "WaitFor"
+            TestMetadataItem item6 = new TestMetadataItem();
+            item6.setItemId("item6");
+            item6.setItemType("testType");
+            item6.setSystemMetadata("refresh", "WaitFor");
+            service.save(item6);
+            List<TestMetadataItem> results6 = TestHelper.retryQueryUntilAvailable(
+                () -> service.query(null, null, TestMetadataItem.class),
+                6
+            );
+            assertEquals(6, results6.size(), 
+                    "String 'WaitFor' override: should work");
+        }
+        
+        @Test
+        void shouldHandleIsConsistentWithAllCombinations() {
+            // Test isConsistent() with all policy combinations
+            
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // FALSE policy, no override
+            service.setRefreshPolicy("type1", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setItemType("type1");
+            assertFalse(service.isConsistent(item1), 
+                    "FALSE policy, no override: should not be consistent");
+            
+            // FALSE policy, TRUE override
+            item1.setSystemMetadata("refresh", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            assertTrue(service.isConsistent(item1), 
+                    "FALSE policy, TRUE override: should be consistent");
+            
+            // TRUE policy, no override
+            service.setRefreshPolicy("type2", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setItemType("type2");
+            assertTrue(service.isConsistent(item2), 
+                    "TRUE policy, no override: should be consistent");
+            
+            // TRUE policy, FALSE override
+            item2.setSystemMetadata("refresh", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
+            assertFalse(service.isConsistent(item2), 
+                    "TRUE policy, FALSE override: should not be consistent");
+            
+            // WAIT_FOR policy, no override
+            service.setRefreshPolicy("type3", InMemoryPersistenceServiceImpl.RefreshPolicy.WAIT_FOR);
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            item3.setItemType("type3");
+            assertTrue(service.isConsistent(item3), 
+                    "WAIT_FOR policy, no override: should be consistent");
+        }
+    }
+    
+    @Nested
+    class DefaultQueryLimitTests {
+        @Test
+        void shouldApplyDefaultLimitWhenSizeIsNegative() {
+            // Create service with default limit of 10
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // Save 20 items
+            for (int i = 0; i < 20; i++) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                service.save(item);
+            }
+            
+            // Query with size = -1 should return default limit (10) - retry until items are available
+            PartialList<TestMetadataItem> result = TestHelper.retryQueryUntilAvailable(
+                () -> service.query(null, null, TestMetadataItem.class, 0, -1),
+                10
+            );
+            assertEquals(10, result.getList().size(), "Query with size=-1 should return default limit of 10");
+            assertEquals(20, result.getTotalSize(), "Total size should be 20");
+        }
+        
+        @Test
+        void shouldApplyDefaultLimitWhenSizeIsNotSpecified() {
+            // Create service with default limit of 10
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // Save 20 items
+            for (int i = 0; i < 20; i++) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                service.save(item);
+            }
+            
+            // Wait for all 20 items to be available before checking totalSize
+            // The totalSize is calculated from items that are currently queryable (refreshed)
+            // So we need to ensure all items are refreshed before verifying totalSize
+            PartialList<TestMetadataItem> result = TestHelper.retryUntil(
+                () -> service.query(null, null, TestMetadataItem.class, 0, -1, null),
+                r -> r != null && r.getTotalSize() == 20 && r.getList().size() == 10
+            );
+            assertEquals(10, result.getList().size(), "Query with size=-1 should return default limit of 10");
+            assertEquals(20, result.getTotalSize(), "Total size should be 20");
+        }
+        
+        @Test
+        void shouldRespectExplicitSizeWhenProvided() {
+            // Create service with default limit of 10
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // Save 20 items
+            for (int i = 0; i < 20; i++) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                service.save(item);
+            }
+            
+            // Query with explicit size should respect it - retry until items are available
+            PartialList<TestMetadataItem> result = TestHelper.retryQueryUntilAvailable(
+                () -> service.query(null, null, TestMetadataItem.class, 0, 5),
+                5
+            );
+            assertEquals(5, result.getList().size(), "Query with explicit size=5 should return 5 items");
+            assertEquals(20, result.getTotalSize(), "Total size should be 20");
+        }
+        
+        @Test
+        void shouldAllowCustomDefaultLimit() {
+            // Create service with custom default limit of 5
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher,
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L, 5);
+            
+            // Save 20 items
+            for (int i = 0; i < 20; i++) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                service.save(item);
+            }
+            
+            // Query with size = -1 should return custom default limit (5) - retry until items are available
+            PartialList<TestMetadataItem> result = TestHelper.retryQueryUntilAvailable(
+                () -> service.query(null, null, TestMetadataItem.class, 0, -1),
+                5
+            );
+            assertEquals(5, result.getList().size(), "Query with size=-1 should return custom default limit of 5");
+            assertEquals(20, result.getTotalSize(), "Total size should be 20");
+        }
+        
+        @Test
+        void shouldApplyDefaultLimitInCreatePartialList() {
+            // Create service with default limit of 10
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // Save 20 items with name property set
+            for (int i = 0; i < 20; i++) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                item.setName("test"); // Set name so the query will match
+                service.save(item);
+            }
+            
+            // Query with field matching and size = -1 - retry until items are available
+            PartialList<TestMetadataItem> result = TestHelper.retryQueryUntilAvailable(
+                () -> service.query("name", "test", null, TestMetadataItem.class, 0, -1),
+                10
+            );
+            assertEquals(10, result.getList().size(), "Query with size=-1 should return default limit of 10");
+        }
+        
+        @Test
+        void shouldApplyDefaultLimitInRangeQuery() {
+            // Create service with default limit of 10
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // Save 20 items with numeric values
+            for (int i = 0; i < 20; i++) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                item.setNumericValue((double) i);
+                service.save(item);
+            }
+            
+            // Wait for all 20 items to be available before checking totalSize
+            // The totalSize is calculated from items that are currently queryable (refreshed)
+            // So we need to ensure all items are refreshed before verifying totalSize
+            PartialList<TestMetadataItem> result = TestHelper.retryUntil(
+                () -> service.rangeQuery("numericValue", "0", "20", null, TestMetadataItem.class, 0, -1),
+                r -> r != null && r.getTotalSize() == 20 && r.getList().size() == 10
+            );
+            assertEquals(10, result.getList().size(), "Range query with size=-1 should return default limit of 10");
+            assertEquals(20, result.getTotalSize(), "Total size should be 20");
+        }
+        
+        @Test
+        void shouldGetAndSetDefaultQueryLimit() {
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            assertEquals(10, service.getDefaultQueryLimit(), "Default limit should be 10");
+            
+            service.setDefaultQueryLimit(15);
+            assertEquals(15, service.getDefaultQueryLimit(), "Default limit should be 15 after setting");
+            
+            // Setting invalid value should default to 10
+            service.setDefaultQueryLimit(0);
+            assertEquals(10, service.getDefaultQueryLimit(), "Invalid limit should default to 10");
+            
+            service.setDefaultQueryLimit(-5);
+            assertEquals(10, service.getDefaultQueryLimit(), "Negative limit should default to 10");
+        }
+    }
+    
+    @Nested
+    class TenantTransformationTests {
+        // Mock transformation listener for testing
+        static class TestTransformationListener implements org.apache.unomi.api.tenants.TenantTransformationListener {
+            private final String transformationType;
+            private final boolean enabled;
+            private final int priority;
+            private boolean transformCalled = false;
+            private boolean reverseTransformCalled = false;
+            
+            TestTransformationListener(String transformationType, boolean enabled, int priority) {
+                this.transformationType = transformationType;
+                this.enabled = enabled;
+                this.priority = priority;
+            }
+            
+            @Override
+            public Item transformItem(Item item, String tenantId) {
+                transformCalled = true;
+                if (item instanceof TestMetadataItem) {
+                    TestMetadataItem testItem = (TestMetadataItem) item;
+                    testItem.setName(testItem.getName() + "_transformed");
+                    testItem.setSystemMetadata("transformed", true);
+                }
+                return item;
+            }
+            
+            @Override
+            public boolean isTransformationEnabled() {
+                return enabled;
+            }
+            
+            @Override
+            public Item reverseTransformItem(Item item, String tenantId) {
+                reverseTransformCalled = true;
+                if (item instanceof TestMetadataItem) {
+                    TestMetadataItem testItem = (TestMetadataItem) item;
+                    String name = testItem.getName();
+                    if (name != null && name.endsWith("_transformed")) {
+                        testItem.setName(name.substring(0, name.length() - "_transformed".length()));
+                        testItem.setSystemMetadata("transformed", false);
+                    }
+                }
+                return item;
+            }
+            
+            @Override
+            public String getTransformationType() {
+                return transformationType;
+            }
+            
+            @Override
+            public int getPriority() {
+                return priority;
+            }
+            
+            boolean wasTransformCalled() {
+                return transformCalled;
+            }
+            
+            boolean wasReverseTransformCalled() {
+                return reverseTransformCalled;
+            }
+            
+            void reset() {
+                transformCalled = false;
+                reverseTransformCalled = false;
+            }
+        }
+        
+        @Test
+        void shouldTransformItemBeforeSave() {
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            TestTransformationListener listener = new TestTransformationListener("test", true, 0);
+            service.addTransformationListener(listener);
+            
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("item1");
+            item.setName("original");
+            
+            service.save(item);
+            
+            assertTrue(listener.wasTransformCalled(), "Transform should be called before save");
+            
+            // Load the item - reverse transformation should undo the transformation
+            TestMetadataItem loaded = service.load("item1", TestMetadataItem.class);
+            assertNotNull(loaded, "Item should be loaded");
+            assertTrue(listener.wasReverseTransformCalled(), "Reverse transform should be called after load");
+            // After reverse transformation, the name should be back to original
+            assertEquals("original", loaded.getName(), "Item should be reverse transformed after load");
+            // But the item should have been transformed when stored (check system metadata)
+            // Note: The transformation is applied before save, so the stored item has "_transformed" suffix
+            // The reverse transformation on load removes it, which is the expected behavior
+        }
+        
+        @Test
+        void shouldReverseTransformItemAfterLoad() {
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            TestTransformationListener listener = new TestTransformationListener("test", true, 0);
+            service.addTransformationListener(listener);
+            
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("item1");
+            item.setName("original");
+            item.setSystemMetadata("transformed", true);
+            
+            // Save transformed item directly (simulating what would be stored)
+            service.save(item);
+            listener.reset();
+            
+            // Load the item and verify reverse transformation is called
+            TestMetadataItem loaded = service.load("item1", TestMetadataItem.class);
+            assertNotNull(loaded, "Item should be loaded");
+            assertTrue(listener.wasReverseTransformCalled(), "Reverse transform should be called after load");
+        }
+        
+        @Test
+        void shouldNotTransformWhenListenerIsDisabled() {
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            TestTransformationListener listener = new TestTransformationListener("test", false, 0);
+            service.addTransformationListener(listener);
+            
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("item1");
+            item.setName("original");
+            
+            service.save(item);
+            
+            assertFalse(listener.wasTransformCalled(), "Transform should not be called when listener is disabled");
+            
+            TestMetadataItem loaded = service.load("item1", TestMetadataItem.class);
+            assertNotNull(loaded, "Item should be loaded");
+            assertEquals("original", loaded.getName(), "Item should not be transformed");
+        }
+        
+        @Test
+        void shouldApplyMultipleTransformationsInPriorityOrder() {
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            TestTransformationListener listener1 = new TestTransformationListener("test1", true, 10);
+            TestTransformationListener listener2 = new TestTransformationListener("test2", true, 5);
+            TestTransformationListener listener3 = new TestTransformationListener("test3", true, 1);
+            
+            service.addTransformationListener(listener1);
+            service.addTransformationListener(listener2);
+            service.addTransformationListener(listener3);
+            
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("item1");
+            item.setName("original");
+            
+            service.save(item);
+            
+            // All listeners should be called
+            assertTrue(listener1.wasTransformCalled(), "Listener 1 should be called");
+            assertTrue(listener2.wasTransformCalled(), "Listener 2 should be called");
+            assertTrue(listener3.wasTransformCalled(), "Listener 3 should be called");
+            
+            // Item should be transformed multiple times before save, then reverse transformed on load
+            TestMetadataItem loaded = service.load("item1", TestMetadataItem.class);
+            assertNotNull(loaded, "Item should be loaded");
+            // Reverse transformation should undo all transformations, so we get back to original
+            assertEquals("original", loaded.getName(), 
+                    "Item should be reverse transformed back to original after load");
+            // All reverse transforms should have been called
+            assertTrue(listener1.wasReverseTransformCalled(), "Reverse transform 1 should be called");
+            assertTrue(listener2.wasReverseTransformCalled(), "Reverse transform 2 should be called");
+            assertTrue(listener3.wasReverseTransformCalled(), "Reverse transform 3 should be called");
+        }
+        
+        @Test
+        void shouldTransformItemBeforeUpdate() {
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            TestTransformationListener listener = new TestTransformationListener("test", true, 0);
+            service.addTransformationListener(listener);
+            
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("item1");
+            item.setName("original");
+            service.save(item);
+            listener.reset();
+            
+            // Update the item
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("name", "updated");
+            service.update(item, null, TestMetadataItem.class, updates);
+            
+            assertTrue(listener.wasTransformCalled(), "Transform should be called before update");
+        }
+        
+        @Test
+        void shouldHandleTransformationErrorsGracefully() {
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            // Create a listener that throws an exception
+            org.apache.unomi.api.tenants.TenantTransformationListener errorListener = 
+                    new org.apache.unomi.api.tenants.TenantTransformationListener() {
+                        @Override
+                        public Item transformItem(Item item, String tenantId) {
+                            throw new RuntimeException("Transformation error");
+                        }
+                        
+                        @Override
+                        public boolean isTransformationEnabled() {
+                            return true;
+                        }
+                        
+                        @Override
+                        public Item reverseTransformItem(Item item, String tenantId) {
+                            throw new RuntimeException("Reverse transformation error");
+                        }
+                        
+                        @Override
+                        public String getTransformationType() {
+                            return "error";
+                        }
+                    };
+            
+            service.addTransformationListener(errorListener);
+            
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("item1");
+            item.setName("original");
+            
+            // Should not throw exception, but log error
+            assertDoesNotThrow(() -> service.save(item), "Should handle transformation errors gracefully");
+            
+            // Item should still be saved
+            TestMetadataItem loaded = service.load("item1", TestMetadataItem.class);
+            assertNotNull(loaded, "Item should still be saved despite transformation error");
+        }
+        
+        @Test
+        void shouldRemoveTransformationListener() {
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            TestTransformationListener listener = new TestTransformationListener("test", true, 0);
+            service.addTransformationListener(listener);
+            
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("item1");
+            item.setName("original");
+            service.save(item);
+            assertTrue(listener.wasTransformCalled(), "Transform should be called");
+            
+            // Remove listener
+            service.removeTransformationListener(listener);
+            listener.reset();
+            
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setName("original2");
+            service.save(item2);
+            
+            assertFalse(listener.wasTransformCalled(), "Transform should not be called after removal");
+        }
+        
+        @Test
+        void shouldTransformCustomItems() {
+            InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
+                    executionContextManager, conditionEvaluatorDispatcher);
+            
+            TestTransformationListener listener = new TestTransformationListener("test", true, 0);
+            service.addTransformationListener(listener);
+            
+            CustomItem customItem = new CustomItem();
+            customItem.setItemId("custom1");
+            customItem.setItemType("customType");
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("name", "original");
+            customItem.setProperties(properties);
+            
+            service.save(customItem);
+            
+            assertTrue(listener.wasTransformCalled(), "Transform should be called for custom items");
         }
     }
 }

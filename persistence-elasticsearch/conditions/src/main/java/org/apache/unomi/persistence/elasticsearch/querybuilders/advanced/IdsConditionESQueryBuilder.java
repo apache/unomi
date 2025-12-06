@@ -16,19 +16,17 @@
  */
 package org.apache.unomi.persistence.elasticsearch.querybuilders.advanced;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.IdsQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 
-import java.util.ArrayList;
 import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class IdsConditionESQueryBuilder implements ConditionESQueryBuilder {
 
@@ -44,13 +42,13 @@ public class IdsConditionESQueryBuilder implements ConditionESQueryBuilder {
     }
 
     @Override
-    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+    public Query buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         Collection<String> ids = (Collection<String>) condition.getParameter("ids");
         Boolean match = (Boolean) condition.getParameter("match");
 
         if (ids.size() > maximumIdsQueryCount) {
             // Avoid building too big ids query - throw exception instead
-            throw new UnsupportedOperationException("Too many profiles");
+            throw new UnsupportedOperationException("Too many profiles, exceeding the maximum number of ids query count: " + maximumIdsQueryCount);
         }
 
         // Get the current tenant ID from the execution context
@@ -62,13 +60,12 @@ public class IdsConditionESQueryBuilder implements ConditionESQueryBuilder {
             prefixedIds.add(tenantId + "_" + id);
         }
 
-        IdsQueryBuilder idsQueryBuilder = QueryBuilders.idsQuery().addIds(prefixedIds.toArray(new String[0]));
+        Query idsQuery = Query.of(q -> q.ids(i -> i.values(prefixedIds.stream().collect(Collectors.toUnmodifiableList()))));
         if (match) {
-            return idsQueryBuilder;
+            return idsQuery;
         } else {
-            BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
-            boolQuery.mustNot(idsQueryBuilder);
-            return boolQuery;
+            return Query.of(q -> q.bool(b -> b.mustNot(idsQuery)));
         }
+
     }
 }

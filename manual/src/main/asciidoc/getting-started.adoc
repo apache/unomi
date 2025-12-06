@@ -19,13 +19,13 @@ in greater details what just happened.
 ==== Prerequisites
 
 This document assumes working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example.
-Additionally, you will require a working Java 11 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 11 or greater.
+Additionally, you will require a working Java 17 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 17 or greater.
 
 ===== JDK compatibility
 
 Starting with Java 9, Oracle made some big changes to the Java platform releases. This is why Apache Unomi is focused on
-supporting the Long Term Supported versions of the JDK, currently version 11. We do not test with intermediate
-versions so they may or may not work properly. Currently the most tested version is version 11.
+supporting the Long Term Supported versions of the JDK, currently version 17. We do not test with intermediate
+versions so they may or may not work properly. Currently the most tested version is version 17.
 
 Also, as there are new licensing restrictions on JDKs provided by Oracle for production usages, Apache Unomi has also
 added support for OpenJDK builds. Other JDK distributions might also work but are not regularly tested so you should use
@@ -36,7 +36,7 @@ them at your own risks.
 Apache Unomi supports two search engine backends:
 
 * *ElasticSearch*: Version 7.17.5 is supported starting with Unomi 2.0.0
-* *OpenSearch*: Version 2.18.0 is supported
+* *OpenSearch*: Version 3.x is supported
 
 It is highly recommended to use the versions specified in the documentation. When in doubt, consult the Apache Unomi community
 for the latest compatibility information.

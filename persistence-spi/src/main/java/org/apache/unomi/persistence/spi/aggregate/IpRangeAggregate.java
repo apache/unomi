@@ -21,18 +21,33 @@ import org.apache.unomi.api.query.IpRange;
 
 import java.util.List;
 
+/**
+ * Aggregation that buckets IP values of a field into the provided IP ranges.
+ */
 public class IpRangeAggregate extends BaseAggregate{
     private List<IpRange> ranges;
 
+    /**
+     * Creates an IP range aggregation.
+     *
+     * @param field  the field to aggregate on
+     * @param ranges the list of IP ranges
+     */
     public IpRangeAggregate(String field, List<IpRange> ranges) {
         super(field);
         this.ranges = ranges;
     }
 
+    /**
+     * Returns the configured IP ranges.
+     */
     public List<IpRange> getRanges() {
         return ranges;
     }
 
+    /**
+     * Sets the IP ranges to use for bucketing.
+     */
     public void setRanges(List<IpRange> ranges) {
         this.ranges = ranges;
     }

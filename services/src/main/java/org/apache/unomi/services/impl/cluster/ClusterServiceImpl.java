@@ -37,8 +37,8 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Implementation of the persistence service interface
@@ -198,14 +198,54 @@ public class ClusterServiceImpl implements ClusterService {
 
         cancelScheduledTasks();
 
-        // Remove node from persistence service
+        // Remove node from persistence service with timeout to avoid blocking during shutdown
         if (persistenceService != null) {
             try {
-                persistenceService.remove(nodeId, ClusterNode.class);
-                LOGGER.info("Node {} removed from cluster", nodeId);
+                // Use a separate thread with timeout to avoid blocking on OSGi Blueprint proxy
+                ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+                    Thread t = new Thread(r, "ClusterService-Shutdown");
+                    t.setDaemon(true);
+                    return t;
+                });
+                
+                AtomicReference<Exception> exceptionRef = new AtomicReference<>();
+                Future<?> future = executor.submit(() -> {
+                    try {
+                        persistenceService.remove(nodeId, ClusterNode.class);
+                        LOGGER.info("Node {} removed from cluster", nodeId);
+                    } catch (Exception e) {
+                        exceptionRef.set(e);
+                    }
+                });
+                
+                try {
+                    // Wait up to 2 seconds for the removal to complete
+                    future.get(2, TimeUnit.SECONDS);
+                } catch (TimeoutException e) {
+                    // Timeout - cancel the operation and continue shutdown
+                    future.cancel(true);
+                    LOGGER.debug("Timeout removing node from cluster during shutdown (this is expected if services are shutting down)");
+                } catch (ExecutionException e) {
+                    // Execution exception - log and continue
+                    Exception cause = exceptionRef.get();
+                    if (cause != null) {
+                        LOGGER.debug("Error removing node from cluster during shutdown (this is expected if services are shutting down): {}", cause.getMessage());
+                    } else {
+                        LOGGER.debug("Error removing node from cluster during shutdown: {}", e.getMessage());
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    future.cancel(true);
+                    LOGGER.debug("Interrupted while removing node from cluster during shutdown");
+                } finally {
+                    executor.shutdownNow();
+                }
             } catch (Exception e) {
-                LOGGER.error("Error removing node from cluster", e);
+                // During shutdown, persistence service may be unavailable - this is expected
+                LOGGER.debug("Error removing node from cluster during shutdown (this is expected if services are shutting down): {}", e.getMessage());
             }
+        } else {
+            LOGGER.debug("Persistence service not available during shutdown, skipping node removal");
         }
 
         // Clear references
@@ -390,7 +430,7 @@ public class ClusterServiceImpl implements ClusterService {
         propertyConditionType.setItemId("propertyCondition");
         propertyConditionType.setItemType(ConditionType.ITEM_TYPE);
         propertyConditionType.setConditionEvaluator("propertyConditionEvaluator");
-        propertyConditionType.setQueryBuilder("propertyConditionESQueryBuilder");
+        propertyConditionType.setQueryBuilder("propertyConditionQueryBuilder");
         staleNodesCondition.setConditionType(propertyConditionType);
         staleNodesCondition.setConditionTypeId("propertyCondition");
         staleNodesCondition.setParameter("propertyName", "lastHeartbeat");

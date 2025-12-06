@@ -24,7 +24,6 @@ import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
-
 import java.util.List;
 import java.util.Map;
 

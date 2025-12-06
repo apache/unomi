@@ -74,8 +74,8 @@ The commands control the lifecycle of the Apache Unomi server and are used to mi
 |Shutsdown the Apache Unomi application
 
 |start
-|n/a
-|Starts the Apache Unomi application. Note that this state will be remembered between Apache Karaf launches, so in general it is only needed after a first installation or after a `migrate` command
+|startFeatures
+|Starts the Apache Unomi application with the specified start features configuration (elasticsearch or opensearch). Note that this state will be remembered between Apache Karaf launches, so in general it is only needed after a first installation or after a `migrate` command
 
 |version
 |n/a

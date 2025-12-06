@@ -354,7 +354,7 @@ public class ProfileServiceIT extends BaseIT {
     }
 
     @Test
-    public void testMonthlyIndicesPurge() throws Exception {
+    public void testOldItemsPurge() throws Exception {
         Date currentDate = new Date();
         LocalDateTime minus10Months = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusMonths(10);
         LocalDateTime minus30Months = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusMonths(30);
@@ -364,7 +364,7 @@ public class ProfileServiceIT extends BaseIT {
         long originalSessionsCount  = persistenceService.getAllItemsCount(Session.ITEM_TYPE);
         long originalEventsCount  = persistenceService.getAllItemsCount(Event.ITEM_TYPE);
 
-        Profile profile = new Profile("dummy-profile-monthly-purge-test");
+        Profile profile = new Profile("dummy-profile-old-items-purge-test");
         persistenceService.save(profile);
 
         // create 10 months old items

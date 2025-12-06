@@ -18,19 +18,52 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
         <version>3.1.0-SNAPSHOT</version>
     </parent>
-
     <artifactId>unomi-persistence-spi</artifactId>
-    <name>Apache Unomi :: Persistence :: SPI (Service Provider Interface)</name>
+    <name>Apache Unomi :: Persistence :: SPI</name>
     <description>Service Provider interface for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <!-- Unomi dependencies -->
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-scripting</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-metrics</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-tracing-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Libraries -->
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>osgi.core</artifactId>
@@ -38,13 +71,7 @@
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
-            <artifactId>osgi.cmpn</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-api</artifactId>
-            <version>${project.version}</version>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -58,77 +85,52 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.module</groupId>
-            <artifactId>jackson-module-jaxb-annotations</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-jaxb-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>commons-collections</groupId>
             <artifactId>commons-collections</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
         </dependency>
 
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-metrics</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-tracing-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-scripting</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-core</artifactId>
-            <version>8.11.3</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-analyzers-common</artifactId>
-            <version>8.11.3</version>
-        </dependency>
-
-        <!-- Unit tests -->
+        <!-- Test dependencies -->
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.11</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>1.7.36</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
-
     <build>
         <plugins>
             <plugin>
@@ -137,78 +139,9 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <_dsannotations>*</_dsannotations>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
-                            android.os;resolution:=optional,
-                            com.conversantmedia.util.concurrent;resolution:=optional,
-                            com.fasterxml.jackson.dataformat.xml;resolution:=optional,
-                            com.fasterxml.jackson.dataformat.xml.annotation;resolution:=optional,
-                            com.fasterxml.jackson.dataformat.xml.util;resolution:=optional,
-                            com.google.appengine.api;resolution:=optional,
-                            com.google.appengine.api.utils;resolution:=optional,
-                            com.google.apphosting.api;resolution:=optional,
-                            com.google.errorprone.annotations.concurrent;resolution:=optional,
-                            com.google.errorprone.annotations;resolution:=optional,
-                            com.google.common.util.concurrent.internal;resolution:=optional,
-                            com.lmax.disruptor;resolution:=optional,
-                            com.lmax.disruptor.dsl;resolution:=optional,
-                            com.sun.management;resolution:=optional,
-                            javax.activation;version="[1.2,2)",
-                            javax.annotation.processing;resolution:=optional,
-                            javax.annotation;resolution:=optional,
-                            javax.annotation.meta;resolution:=optional,
-                            javax.crypto;resolution:=optional,
-                            javax.crypto.spec;resolution:=optional,
-                            javax.jms;resolution:=optional,
-                            javax.lang.model;resolution:=optional,
-                            javax.lang.model.element;resolution:=optional,
-                            javax.lang.model.util;resolution:=optional,
-                            javax.mail;resolution:=optional,
-                            javax.mail.internet;resolution:=optional,
-                            javax.mail.util;resolution:=optional,
-                            javax.management;resolution:=optional,
-                            javax.naming;resolution:=optional,
-                            javax.net;resolution:=optional,
-                            javax.net.ssl;resolution:=optional,
-                            javax.script;resolution:=optional,
-                            javax.sql;resolution:=optional,
-                            javax.tools;resolution:=optional,
-                            javax.xml.parsers;resolution:=optional,
-                            javax.xml.stream;resolution:=optional,
-                            javax.xml.transform;resolution:=optional,
-                            javax.xml.transform.stream;resolution:=optional,
-                            javax.xml.validation;resolution:=optional,
-                            org.apache.commons.compress.compressors;resolution:=optional,
-                            org.apache.commons.compress.utils;resolution:=optional,
-                            org.apache.commons.csv;resolution:=optional,
-                            org.apache.commons.logging;resolution:=optional,
-                            org.apache.kafka.clients.producer;resolution:=optional,
-                            org.apache.logging.log4j;resolution:=optional,
-                            org.apache.logging.log4j.message;resolution:=optional,
-                            org.apache.logging.log4j.spi;resolution:=optional,
-                            org.apache.logging.log4j.status;resolution:=optional,
-                            org.apache.logging.log4j.util;resolution:=optional,
-                            org.apache.lucene.analysis;resolution:=optional,
-                            org.apache.lucene.analysis.tokenattributes;resolution:=optional,
-                            org.apache.lucene.codecs;resolution:=optional,
-                            org.apache.lucene.document;resolution:=optional,
-                            org.apache.lucene.index;resolution:=optional,
-                            org.apache.lucene.search;resolution:=optional,
-                            org.apache.lucene.store;resolution:=optional,
-                            org.apache.lucene.util;resolution:=optional,
-                            org.apache.lucene.util.automaton;resolution:=optional,
-                            org.apache.lucene.util.fst;resolution:=optional,
-                            org.codehaus.stax2;resolution:=optional,
-                            org.fusesource.jansi;resolution:=optional,
-                            org.jctools.queues;resolution:=optional,
-                            org.osgi.framework;resolution:=optional,
-                            org.osgi.framework.wiring;resolution:=optional,
-                            org.w3c.dom;resolution:=optional,
-                            org.xml.sax;resolution:=optional,
-                            org.xml.sax.helpers;resolution:=optional,
-                            org.zeromq;resolution:=optional,
-                            sun.misc;resolution:=optional,
-                            sun.nio.ch;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>
@@ -216,5 +149,4 @@
             </plugin>
         </plugins>
     </build>
-
 </project>

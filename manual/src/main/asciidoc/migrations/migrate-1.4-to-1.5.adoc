@@ -40,10 +40,9 @@ This class should not be use directly, instead you should use OSGI service depen
 
 But if you are interested in the implementation changes:
 
-1. The property `index.name` have been renamed to `index.prefix`.
+. The property `index.name` have been renamed to `index.prefix`.
 Previously used for the single one index name, now every index is prefixed using this property. (`context-` by default)
-
-2. We removed the property `index.names` originally used to create additional indices (used by the geonames DB for exemple).
+. We removed the property `index.names` originally used to create additional indices (used by the geonames DB for exemple).
 This property is not needed anymore because the index is automatically created by the peristence service when the mapping configuration is loaded.
 Example of mapping configuration file: (https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/extensions/geonames/services/src/main/resources/META-INF/cxs/mappings/geonameEntry.json[geoname index mapping])
 

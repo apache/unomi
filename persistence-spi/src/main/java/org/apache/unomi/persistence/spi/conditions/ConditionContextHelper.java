@@ -17,33 +17,68 @@
 
 package org.apache.unomi.persistence.spi.conditions;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.lucene.analysis.charfilter.MappingCharFilterFactory;
-import org.apache.lucene.analysis.util.ClasspathResourceLoader;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.scripting.ScriptExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.io.Reader;
-import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
+
+
+import java.io.IOException;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 public class ConditionContextHelper {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConditionContextHelper.class);
 
-    private static MappingCharFilterFactory mappingCharFilterFactory;
+    private static final Map<Character, String> FOLD_MAPPING = new HashMap<>();
+
     static {
-        Map<String,String> args = new HashMap<>();
-        args.put("mapping", "mapping-FoldToASCII.txt");
-        mappingCharFilterFactory = new MappingCharFilterFactory(args);
         try {
-            mappingCharFilterFactory.inform(new ClasspathResourceLoader(ConditionContextHelper.class.getClassLoader()));
+            loadMappingFile();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Erreur lors du chargement du fichier de mapping", e);
+        }
+    }
+
+    private static void loadMappingFile() throws IOException {
+        try (InputStream is = ConditionContextHelper.class.getClassLoader().getResourceAsStream("mapping-FoldToASCII.txt");
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.trim().isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+
+                if (line.contains("=>")) {
+                    String[] parts = line.split("=>");
+                    if (parts.length == 2) {
+                        String unicodeStr = parts[0].trim();
+                        String asciiStr = parts[1].trim();
+
+                        if (unicodeStr.startsWith("\"\\u") && unicodeStr.endsWith("\"")) {
+                            String hexCode = unicodeStr.substring(3, unicodeStr.length() - 1);
+                            try {
+                                char unicodeChar = (char) Integer.parseInt(hexCode, 16);
+
+                                if (asciiStr.startsWith("\"") && asciiStr.endsWith("\"")) {
+                                    String asciiValue = asciiStr.substring(1, asciiStr.length() - 1);
+                                    FOLD_MAPPING.put(unicodeChar, asciiValue);
+                                }
+                            } catch (NumberFormatException e) {
+                                LOGGER.warn("Format de code Unicode invalide: {}", hexCode);
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -117,15 +152,6 @@ public class ConditionContextHelper {
         return false;
     }
 
-    public static String[] foldToASCII(String[] s) {
-        if (s != null) {
-            for (int i = 0; i < s.length; i++) {
-                s[i] = foldToASCII(s[i]);
-            }
-        }
-        return s;
-    }
-
     public static String forceFoldToASCII(Object object) {
         if (object != null) {
             return foldToASCII(object.toString());
@@ -140,28 +166,45 @@ public class ConditionContextHelper {
         return null;
     }
 
-    public static String foldToASCII(String s) {
+    public static String[] foldToASCII(String[] s) {
         if (s != null) {
-            s = s.toLowerCase();
-            try (StringReader stringReader = new StringReader(s); Reader foldedStringReader = mappingCharFilterFactory.create(stringReader)) {
-                return IOUtils.toString(foldedStringReader);
-            } catch (IOException e) {
-                LOGGER.error("Error folding to ASCII string {}", s, e);
+            for (int i = 0; i < s.length; i++) {
+                s[i] = foldToASCII(s[i]);
             }
         }
-        return null;
+        return s;
+    }
+
+    public static String foldToASCII(String s) {
+        if (s == null) {
+            return null;
+        }
+
+        s = s.toLowerCase();
+        StringBuilder result = new StringBuilder(s.length());
+
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            String mapped = FOLD_MAPPING.get(c);
+
+            if (mapped != null) {
+                result.append(mapped);
+            } else {
+                result.append(c);
+            }
+        }
+
+        return result.toString();
     }
 
     public static <T> Collection<T> foldToASCII(Collection<T> s) {
         if (s != null) {
-            return s.stream()
-                    .map(o -> {
-                        if (o instanceof String) {
-                            return (T) ConditionContextHelper.foldToASCII((String) o);
-                        }
-                        return o;
-                    })
-                    .collect(Collectors.toList());
+            return s.stream().map(o -> {
+                if (o instanceof String) {
+                    return (T) ConditionContextHelper.foldToASCII((String) o);
+                }
+                return o;
+            }).collect(Collectors.toCollection(ArrayList::new));
         }
         return null;
     }

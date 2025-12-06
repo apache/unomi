@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-= Apache Unomi V2/V3 API Differences Guide
+== Apache Unomi V2/V3 API Differences Guide
 
 This document explains the key differences between Apache Unomi 2.x and 3.x versions from an API perspective.
 

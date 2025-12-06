@@ -28,6 +28,7 @@ import org.osgi.framework.SynchronousBundleListener;
 public class TopicServiceImpl implements TopicService, SynchronousBundleListener {
 
     private PersistenceService persistenceService;
+
     private BundleContext bundleContext;
 
     public void setPersistenceService(PersistenceService persistenceService) {

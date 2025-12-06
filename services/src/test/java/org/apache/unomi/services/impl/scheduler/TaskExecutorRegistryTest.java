@@ -19,10 +19,10 @@ package org.apache.unomi.services.impl.scheduler;
 
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for TaskExecutorRegistry
@@ -31,7 +31,7 @@ public class TaskExecutorRegistryTest {
     
     private TaskExecutorRegistry registry;
     
-    @Before
+    @BeforeEach
     public void setUp() {
         registry = new TaskExecutorRegistry();
     }
@@ -130,12 +130,12 @@ public class TaskExecutorRegistryTest {
         }
     }
     
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testRegisterNullExecutor() {
-        registry.registerExecutor(null);
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> registry.registerExecutor(null));
     }
     
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testRegisterExecutorWithNullTaskType() {
         TaskExecutor executor = new TaskExecutor() {
             @Override
@@ -149,10 +149,10 @@ public class TaskExecutorRegistryTest {
             }
         };
         
-        registry.registerExecutor(executor);
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> registry.registerExecutor(executor));
     }
     
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testRegisterExecutorWithEmptyTaskType() {
         TaskExecutor executor = new TaskExecutor() {
             @Override
@@ -166,7 +166,7 @@ public class TaskExecutorRegistryTest {
             }
         };
         
-        registry.registerExecutor(executor);
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class, () -> registry.registerExecutor(executor));
     }
     
     @Test

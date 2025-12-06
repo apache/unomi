@@ -47,6 +47,8 @@ public class ParserHelper {
     private static final String VALUE_NAME_SEPARATOR = "::";
     private static final String PLACEHOLDER_PREFIX = "${";
     private static final String PLACEHOLDER_SUFFIX = "}";
+    
+    private static final int MAX_RECURSION_DEPTH = 1000;
 
     public interface ConditionVisitor {
         void visit(Condition condition);
@@ -68,20 +70,28 @@ public class ParserHelper {
     }
 
     public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition, String contextObjectName) {
-        return resolveConditionType(definitionsService, rootCondition, contextObjectName, new HashSet<>());
+        return resolveConditionType(definitionsService, rootCondition, contextObjectName, 
+                new HashSet<>(), false, 0);
     }
 
     private static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition,
-            String contextObjectName, Set<String> resolutionPath) {
+            String contextObjectName, Set<String> parentChainPath, boolean isGoingUp, int depth) {
         if (rootCondition == null) {
             LOGGER.warn("Couldn't resolve null condition for {}", contextObjectName);
             return false;
         }
 
-        // Check for circular reference
-        if (!resolutionPath.add(rootCondition.getConditionTypeId())) {
-            LOGGER.warn("Detected circular reference for condition type {} in {}", rootCondition.getConditionTypeId(), contextObjectName);
+        if (depth > MAX_RECURSION_DEPTH) {
+            LOGGER.error("Maximum recursion depth ({}) exceeded when resolving condition type {} in {}",
+                    MAX_RECURSION_DEPTH, rootCondition.getConditionTypeId(), contextObjectName);
             return false;
+        }
+
+        if (isGoingUp) {
+            if (!parentChainPath.add(rootCondition.getConditionTypeId())) {
+                LOGGER.warn("Detected circular reference for condition type {} in {}", rootCondition.getConditionTypeId(), contextObjectName);
+                return false;
+            }
         }
 
         try {
@@ -98,24 +108,34 @@ public class ParserHelper {
                 unresolvedConditionTypes.remove(rootCondition.getConditionTypeId());
                 rootCondition.setConditionType(conditionType);
 
-                // Resolve parent condition if it exists
-                if (conditionType.getParentCondition() != null &&
-                    !resolveConditionType(definitionsService, conditionType.getParentCondition(), contextObjectName, resolutionPath)) {
-                    rootCondition.setConditionType(null);
-                    LOGGER.warn("Failed to resolve parent condition for type: {} in {}",
-                        rootCondition.getConditionTypeId(), contextObjectName);
-                    return false;
+                if (conditionType.getParentCondition() != null) {
+                    Set<String> pathForParent = new HashSet<>(parentChainPath);
+                    if (!isGoingUp) {
+                        pathForParent.add(rootCondition.getConditionTypeId());
+                    }
+                    if (!resolveConditionType(definitionsService, conditionType.getParentCondition(), contextObjectName, 
+                            pathForParent, true, depth + 1)) {
+                        rootCondition.setConditionType(null);
+                        LOGGER.warn("Failed to resolve parent condition for type: {} in {}",
+                            rootCondition.getConditionTypeId(), contextObjectName);
+                        return false;
+                    }
                 }
             }
 
-            // Resolve all parameter conditions
             for (Object value : rootCondition.getParameterValues().values()) {
-                if (value instanceof Condition && !resolveConditionType(definitionsService, (Condition) value, contextObjectName, resolutionPath)) {
-                    return false;
+                if (value instanceof Condition) {
+                    if (!resolveConditionType(definitionsService, (Condition) value, contextObjectName, 
+                            parentChainPath, false, depth + 1)) {
+                        return false;
+                    }
                 } else if (value instanceof Collection) {
                     for (Object item : (Collection<?>) value) {
-                        if (item instanceof Condition && !resolveConditionType(definitionsService, (Condition) item, contextObjectName, resolutionPath)) {
-                            return false;
+                        if (item instanceof Condition) {
+                            if (!resolveConditionType(definitionsService, (Condition) item, contextObjectName, 
+                                    parentChainPath, false, depth + 1)) {
+                                return false;
+                            }
                         }
                     }
                 }
@@ -123,7 +143,9 @@ public class ParserHelper {
 
             return true;
         } finally {
-            resolutionPath.remove(rootCondition.getConditionTypeId());
+            if (isGoingUp) {
+                parentChainPath.remove(rootCondition.getConditionTypeId());
+            }
         }
     }
 

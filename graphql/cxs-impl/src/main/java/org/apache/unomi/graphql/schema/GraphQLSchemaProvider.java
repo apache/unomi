@@ -642,7 +642,8 @@ public class GraphQLSchemaProvider {
                             .type(objectType)
                             .build());
                 } else {
-                    LOGGER.error("Object type is null for property type {}", childPropertyType.getTypeId());
+                    // This can happen if a property is a set but has no fields inside such as in the case of properties. This is not an error.
+                    LOGGER.debug("Object type is null for property name={} type={} isSet={}, probably means the set has no child fields (properties, flattenedProperties for example)", childPropertyName, childPropertyType.getTypeId(), isSet);
                 }
             });
         }

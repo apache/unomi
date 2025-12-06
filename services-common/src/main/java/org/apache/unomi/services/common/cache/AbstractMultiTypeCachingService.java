@@ -27,6 +27,7 @@ import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tenants.AuditService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -39,7 +40,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URL;
@@ -62,6 +62,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     protected SchedulerService schedulerService;
     protected MultiTypeCacheService cacheService;
     protected TenantService tenantService;
+    protected AuditService auditService;
 
     /**
      * Map tracking which plugin/bundle contributed which items.
@@ -98,6 +99,10 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
 
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
+    }
+
+    public void setAuditService(AuditService auditService) {
+        this.auditService = auditService;
     }
 
     public void postConstruct() {
@@ -240,7 +245,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         if (Item.class.isAssignableFrom(type)) {
             persistenceService.refreshIndex((Class<? extends Item>) type);
         }
-        
+
         // Get all tenants
         Set<String> tenants = getTenants();
 
@@ -342,7 +347,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
             ConditionType itemPropertyConditionType = new ConditionType();
             itemPropertyConditionType.setItemId("itemPropertyCondition");
             itemPropertyConditionType.setConditionEvaluator("propertyConditionEvaluator");
-            itemPropertyConditionType.setQueryBuilder("propertyConditionESQueryBuilder");
+            itemPropertyConditionType.setQueryBuilder("propertyConditionQueryBuilder");
 
             // Set metadata from JSON
             Metadata metadata = new Metadata();
@@ -751,28 +756,28 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     protected <T extends Item & Serializable> void saveItem(T item, Function<T, String> idExtractor, String itemType) {
         if (item instanceof MetadataItem) {
             MetadataItem metadataItem = (MetadataItem) item;
-            
+
             // If metadata is null, create it with available information from the item
             if (metadataItem.getMetadata() == null) {
-                logger.debug("Creating metadata for metadata item of type {} with itemId {}", 
+                logger.debug("Creating metadata for metadata item of type {} with itemId {}",
                     item.getItemType(), item.getItemId());
-                
+
                 Metadata metadata = new Metadata();
                 metadata.setId(item.getItemId());
                 metadata.setScope(item.getScope());
-                
+
                 // Set a default name based on item type and ID if available
                 if (item.getItemId() != null) {
                     metadata.setName(item.getItemType() + " - " + item.getItemId());
                 } else {
                     metadata.setName(item.getItemType());
                 }
-                
+
                 metadataItem.setMetadata(metadata);
             } else {
                 // If metadata.id is not set but itemId is available, use itemId as fallback
                 if (metadataItem.getMetadata().getId() == null && item.getItemId() != null) {
-                    logger.debug("Setting metadata.id to itemId {} for metadata item of type {}", 
+                    logger.debug("Setting metadata.id to itemId {} for metadata item of type {}",
                         item.getItemId(), item.getItemType());
                     metadataItem.getMetadata().setId(item.getItemId());
                 } else if (metadataItem.getMetadata().getId() == null) {
@@ -783,8 +788,36 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         }
 
         String currentTenant = contextManager.getCurrentContext().getTenantId();
+        String itemId = idExtractor.apply(item);
+
+        // Check if item already exists to determine if this is a create or update
+        // Try to load from persistence first
+        @SuppressWarnings("unchecked")
+        Class<T> itemClass = (Class<T>) item.getClass();
+        T existingItem = persistenceService.load(itemId, itemClass);
+
+        boolean itemExists = false;
+        if (existingItem != null) {
+            // Item exists in persistence, check if it has audit metadata
+            itemExists = existingItem.getCreatedBy() != null && existingItem.getCreationDate() != null;
+        } else {
+            // Item doesn't exist in persistence, check if current item has audit metadata (might be a reload from cache)
+            itemExists = item.getCreatedBy() != null && item.getCreationDate() != null;
+        }
+
+        // Set audit metadata for bundle-deployed items
+        if (auditService != null) {
+            if (itemExists) {
+                // Item exists, this is an update
+                auditService.auditUpdate(item, "system-bundle");
+            } else {
+                // New item, this is a create
+                auditService.auditCreate(item, "system-bundle");
+            }
+        }
+
         persistenceService.save(item);
-        cacheService.put(itemType, idExtractor.apply(item), currentTenant, item);
+        cacheService.put(itemType, itemId, currentTenant, item);
     }
 
     /**

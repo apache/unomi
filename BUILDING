@@ -21,8 +21,7 @@ Building Apache Unomi
 Initial Setup
 -------------
 
-1) Install J2SE 8.0 SDK (or later), which can be downloaded from
-   http://www.oracle.com/technetwork/java/javase/downloads/index.html
+1) Install J2SE 17 SDK (or later), which can be downloaded from http://www.oracle.com/technetwork/java/javase/downloads/index.html
 
 2) Make sure that your JAVA_HOME environment variable is set to the newly installed
    JDK location, and that your PATH includes %JAVA_HOME%\bin (windows) or
@@ -70,6 +69,7 @@ as the Unix shell script with a more Windows-native experience.
    - -Debug                  Run Karaf in debug mode
    - -UseOpenSearch         Use OpenSearch instead of ElasticSearch
    - -KarafHome <path>       Set Karaf home directory
+   - -ResolverDebug          Enable Karaf Resolver debug logging for integration tests
 
    Examples:
    - Build with integration tests:

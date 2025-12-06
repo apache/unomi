@@ -48,22 +48,18 @@ import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
 
-@Component(
-        service = {javax.servlet.http.HttpServlet.class, javax.servlet.Servlet.class},
-        property = {"alias=/graphql"}
-)
+@Component(service = GraphQLServlet.class)
 public class GraphQLServlet extends WebSocketServlet {
-
-    public static final String SCHEMA_URL = "/schema.json";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GraphQLServlet.class);
 
-    private GraphQLSchemaUpdater graphQLSchemaUpdater;
+    public static final String SCHEMA_URL = "/schema.json";
 
+    private GraphQLSchemaUpdater graphQLSchemaUpdater;
     private ServiceManager serviceManager;
 
     private TenantService tenantService;
-    
+
     private ExecutionContextManager executionContextManager;
 
     private SecurityService securityService;
@@ -84,7 +80,7 @@ public class GraphQLServlet extends WebSocketServlet {
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
     }
-    
+
     @Reference
     public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
         this.executionContextManager = executionContextManager;
@@ -95,8 +91,13 @@ public class GraphQLServlet extends WebSocketServlet {
         this.securityService = securityService;
     }
 
+    public GraphQLServlet() {
+        LOGGER.info("GraphQLServlet created");
+    }
+
     @Override
     public void init(ServletConfig config) throws ServletException {
+        LOGGER.debug("GraphQLServlet initialized");
         super.init(config);
         this.validator = new GraphQLServletSecurityValidator(tenantService, securityService, executionContextManager);
     }
@@ -105,6 +106,7 @@ public class GraphQLServlet extends WebSocketServlet {
 
     @Override
     public void configure(WebSocketServletFactory factory) {
+        LOGGER.debug("GraphQLServlet configured");
         this.factory = factory;
         // Wrap the WebSocket creator to handle security context for WebSocket connections
         SubscriptionWebSocketFactory originalCreator = new SubscriptionWebSocketFactory(graphQLSchemaUpdater.getGraphQL(), serviceManager);
@@ -120,6 +122,7 @@ public class GraphQLServlet extends WebSocketServlet {
 
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        LOGGER.debug("GraphQLServlet service called with request: {}", request.getRequestURI());
         if (factory.isUpgradeRequest(request, response)) {
             try {
                 final ServletUpgradeRequest upReq = new ServletUpgradeRequest(request);
@@ -138,6 +141,7 @@ public class GraphQLServlet extends WebSocketServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        LOGGER.debug("GraphQLServlet doGet called with request: {}", req.getRequestURI());
         try {
             String query = req.getParameter("query");
             if (SCHEMA_URL.equals(req.getPathInfo())) {
@@ -165,6 +169,7 @@ public class GraphQLServlet extends WebSocketServlet {
     @Override
     @SuppressWarnings("unchecked")
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        LOGGER.debug("GraphQLServlet doPost called with request: {}", req.getRequestURI());
         try {
             TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
             };
@@ -191,6 +196,7 @@ public class GraphQLServlet extends WebSocketServlet {
 
     @Override
     protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        LOGGER.debug("GraphQLServlet doOptions called with request: {}", req.getRequestURI());
         try {
             setupCORSHeaders(req, resp);
             resp.flushBuffer();
@@ -201,18 +207,19 @@ public class GraphQLServlet extends WebSocketServlet {
 
     private void executeGraphQLRequest(
             HttpServletResponse resp, String query, String operationName, Map<String, Object> variables) throws IOException {
+        LOGGER.debug("Executing GraphQL request with query: {}, operationName: {}, variables: {}", query, operationName, variables);
         if (query == null || query.trim().length() == 0) {
             throw new IllegalArgumentException("Query cannot be empty or null");
         }
 
         // Get the current tenant ID from the execution context
-        String tenantId = executionContextManager.getCurrentContext() != null ? 
+        String tenantId = executionContextManager.getCurrentContext() != null ?
             executionContextManager.getCurrentContext().getTenantId() : null;
 
         LOGGER.debug("Executing GraphQL request for tenant: {}", tenantId);
-        
+
         // Get tenant-specific GraphQL instance or fall back to default
-        final GraphQL graphQL = (tenantId != null) 
+        final GraphQL graphQL = (tenantId != null)
                 ? graphQLSchemaUpdater.getGraphQLForTenant(tenantId)
                 : graphQLSchemaUpdater.getGraphQL();
 

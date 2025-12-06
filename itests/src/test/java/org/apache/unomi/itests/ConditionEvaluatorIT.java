@@ -180,17 +180,17 @@ public class ConditionEvaluatorIT extends BaseIT {
 
     @Test
     public void testMultiValue() {
-        assertTrue(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "in")
+        assertTrue(eval(builder.condition("profileSegmentCondition").parameter("matchType", "in")
                 .parameter("segments", "s10", "s20", "s2").build()));
-        assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "in")
+        assertFalse(eval(builder.condition("profileSegmentCondition").parameter("matchType", "in")
                 .parameter("segments", "s10", "s20", "s30").build()));
-        assertTrue(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "notIn")
+        assertTrue(eval(builder.condition("profileSegmentCondition").parameter("matchType", "notIn")
                 .parameter("segments", "s10", "s20", "s30").build()));
-        assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "notIn")
+        assertFalse(eval(builder.condition("profileSegmentCondition").parameter("matchType", "notIn")
                 .parameter("segments", "s10", "s20", "s2").build()));
-        assertTrue(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "all")
+        assertTrue(eval(builder.condition("profileSegmentCondition").parameter("matchType", "all")
                 .parameter("segments", "s1", "s2").build()));
-        assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "all")
+        assertFalse(eval(builder.condition("profileSegmentCondition").parameter("matchType", "all")
                 .parameter("segments", "s1", "s5").build()));
     }
 

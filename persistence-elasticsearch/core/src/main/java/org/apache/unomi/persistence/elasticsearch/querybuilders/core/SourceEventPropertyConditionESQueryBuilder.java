@@ -17,12 +17,11 @@
 
 package org.apache.unomi.persistence.elasticsearch.querybuilders.core;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,31 +32,29 @@ public class SourceEventPropertyConditionESQueryBuilder implements ConditionESQu
     public SourceEventPropertyConditionESQueryBuilder() {
     }
 
-    private void appendFilderIfPropExist(List<QueryBuilder> queryBuilders, Condition condition, String prop){
+    private void appendFilterIfPropExist(List<Query> queries, Condition condition, String prop) {
         final Object parameter = condition.getParameter(prop);
         if (parameter != null && !"".equals(parameter)) {
-            queryBuilders.add(QueryBuilders.termQuery("source." + prop, (String) parameter));
+            queries.add(Query.of(q -> q.term(t -> t.field("source." + prop).value(v -> v.stringValue((String) parameter)))));
         }
     }
 
-    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        List<QueryBuilder> queryBuilders = new ArrayList<QueryBuilder>();
-        for (String prop : new String[]{"id", "path", "scope", "type"}){
-            appendFilderIfPropExist(queryBuilders, condition, prop);
+    public Query buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+        List<Query> queries = new ArrayList<>();
+        for (String prop : new String[] { "id", "path", "scope", "type" }) {
+            appendFilterIfPropExist(queries, condition, prop);
         }
 
-        if (queryBuilders.size() >= 1) {
-            if (queryBuilders.size() == 1) {
-                return queryBuilders.get(0);
-            } else {
-                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-                for (QueryBuilder queryBuilder : queryBuilders) {
-                    boolQueryBuilder.must(queryBuilder);
-                }
-                return boolQueryBuilder;
-            }
-        } else {
+        if (queries.isEmpty()) {
             return null;
+        } else if (queries.size() == 1) {
+            return queries.get(0);
+        } else {
+            BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+            for (Query queryBuilder : queries) {
+                boolQueryBuilder.must(queryBuilder);
+            }
+            return Query.of(q -> q.bool(boolQueryBuilder.build()));
         }
     }
 }

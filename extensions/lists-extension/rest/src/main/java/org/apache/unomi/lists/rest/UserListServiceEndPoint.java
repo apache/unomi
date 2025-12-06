@@ -28,8 +28,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 
@@ -37,7 +35,6 @@ import javax.ws.rs.core.MediaType;
 /**
  * @author Christophe Laprun
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
@@ -56,7 +53,6 @@ public class UserListServiceEndPoint {
         LOGGER.info("Initializing user list service endpoint...");
     }
 
-    @WebMethod(exclude = true)
     public void setUserListService(UserListService userListService) {
         this.userListService = userListService;
     }

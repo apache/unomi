@@ -15,7 +15,7 @@
     "readOnly": true
   },
   "conditionEvaluator": "matchAllConditionEvaluator",
-  "queryBuilder": "matchAllConditionESQueryBuilder",
+  "queryBuilder": "matchAllConditionQueryBuilder",
 
   "parameters": [
   ]

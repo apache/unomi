@@ -17,6 +17,7 @@ rest/.miredot-offline.json
 /extensions/salesforce-connector/test.properties
 **/*.versionsBackup
 itests/src/main
+dependency_tree.txt
 /.cursor/rules/always-read-existing-code.mdc
 /.cursor/rules/avoid-code-duplication.mdc
 /.cursor/rules/osgi-injection-frameworks.mdc
@@ -24,3 +25,5 @@ itests/src/main
 /extensions/json-schema/services/data/
 # Ignore all data directories used by InMemoryPersistenceServiceImpl and integration tests
 **/data/persistence/
+itests/snapshots_repository/
+.env.local

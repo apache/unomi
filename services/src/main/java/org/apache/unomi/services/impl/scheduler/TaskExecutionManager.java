@@ -173,7 +173,8 @@ public class TaskExecutionManager {
             }
 
             String taskType = task.getTaskType();
-            executingTasksByType.putIfAbsent(taskType, ConcurrentHashMap.newKeySet());
+            // Ensure the executing set exists even under concurrent clears during shutdown
+            Set<String> executingSet = executingTasksByType.computeIfAbsent(taskType, k -> ConcurrentHashMap.newKeySet());
 
             TaskExecutor.TaskStatusCallback statusCallback = createStatusCallback(task);
             Runnable taskWrapper = createTaskWrapper(task, executor, statusCallback);
@@ -181,7 +182,7 @@ public class TaskExecutionManager {
             // Execute task immediately using the scheduler
             ScheduledFuture<?> future = scheduler.schedule(taskWrapper, 0, TimeUnit.MILLISECONDS);
             scheduledTasks.put(task.getItemId(), future);
-            executingTasksByType.get(taskType).add(task.getItemId());
+            executingSet.add(task.getItemId());
         } catch (Exception e) {
             LOGGER.error("Node "+nodeId+", Error executing task: " + task.getItemId(), e);
             handleTaskError(task, e.getMessage(), System.currentTimeMillis());
@@ -257,6 +258,12 @@ public class TaskExecutionManager {
     private Runnable createTaskWrapper(ScheduledTask task, TaskExecutor executor,
                                      TaskExecutor.TaskStatusCallback statusCallback) {
         return () -> {
+            // Check shutdown flag first - if scheduler is shutting down, skip task execution
+            if (schedulerService != null && schedulerService.isShutdownNow()) {
+                LOGGER.debug("Node {} : Skipping task {} execution as scheduler is shutting down", nodeId, task != null ? task.getItemId() : "unknown");
+                return;
+            }
+            
             if (task == null) {
                 LOGGER.error("Node {} : Cannot execute null task", nodeId);
                 return;
@@ -274,8 +281,20 @@ public class TaskExecutionManager {
                 return;
             }
 
+            // Check shutdown again before preparing for execution
+            if (schedulerService != null && schedulerService.isShutdownNow()) {
+                LOGGER.debug("Node {} : Skipping task {} execution as scheduler is shutting down", nodeId, taskId);
+                return;
+            }
+
             // Prepare task for execution (both persistent and in-memory)
             if (!prepareForExecution(task)) {
+                return;
+            }
+            
+            // Final shutdown check before executing
+            if (schedulerService != null && schedulerService.isShutdownNow()) {
+                LOGGER.debug("Node {} : Skipping task {} execution as scheduler is shutting down", nodeId, taskId);
                 return;
             }
 
