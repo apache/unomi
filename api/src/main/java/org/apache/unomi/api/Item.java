@@ -40,7 +40,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public abstract class Item implements Serializable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Item.class.getName());
 
-    private static final long serialVersionUID = 7446061538573517071L;
+    private static final long serialVersionUID = 1217180125083162915L;
 
     private static final Map<Class,String> itemTypeCache = new ConcurrentHashMap<>();
 
