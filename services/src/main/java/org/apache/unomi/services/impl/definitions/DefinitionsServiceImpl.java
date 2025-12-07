@@ -18,21 +18,21 @@
 package org.apache.unomi.services.impl.definitions;
 
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.TenantLifecycleListener;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.utils.ConditionBuilder;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
@@ -104,7 +104,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
             return null;
         });
 
-        LOGGER.info("Definitions service initialized.");
+        LOGGER.debug("Definitions service initialized.");
     }
 
     /**
@@ -218,7 +218,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     @Override
     public ConditionType getConditionType(String id) {
         ConditionType conditionType = getItem(id, ConditionType.class);
-        if (conditionType != null && conditionType.getParentCondition() != null 
+        if (conditionType != null && conditionType.getParentCondition() != null
                 && conditionType.getParentCondition().getConditionType() == null) {
             // Resolve parent condition on demand if not already resolved
             boolean resolved = ParserHelper.resolveConditionType(this, conditionType.getParentCondition(),
@@ -660,7 +660,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
         BiConsumer<BundleContext, ConditionType> conditionTypeProcessor = (bundleContext, type) -> {
             type.setPluginId(bundleContext.getBundle().getBundleId());
             type.setTenantId(SYSTEM_TENANT);
-            
+
             // Try to resolve parent condition if present, but don't fail if parent isn't loaded yet
             // The post-refresh callback will resolve it later once all items are loaded
             if (type.getParentCondition() != null && type.getParentCondition().getConditionType() == null) {
@@ -671,7 +671,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
                         type.getItemId());
                 }
             }
-            
+
             setConditionType(type);
         };
 

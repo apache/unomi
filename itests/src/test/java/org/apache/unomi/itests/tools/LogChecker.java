@@ -309,6 +309,10 @@ public class LogChecker {
         addIgnoredPattern("InvalidRequestExceptionMapper.*events collector cannot be empty");
         addIgnoredPattern("InvalidRequestExceptionMapper.*Unable to deserialize object because");
         addIgnoredPattern("InvalidRequestExceptionMapper.*Incoming POST request blocked because exceeding maximum bytes size");
+        // RequestValidatorInterceptor warnings (expected when testing request size limits)
+        addIgnoredPattern("RequestValidatorInterceptor.*Incoming POST request blocked because exceeding maximum bytes size");
+        addIgnoredPattern("RequestValidatorInterceptor.*has thrown exception, unwinding now");
+        addIgnoredPattern("InvalidRequestException.*Incoming POST request blocked because exceeding maximum bytes size");
         
         // Test-related schema errors (expected in JSONSchemaIT and other tests)
         addIgnoredPattern("Schema not found for event type: dummy");
@@ -317,6 +321,24 @@ public class LogChecker {
         addIgnoredPattern("Error executing system operation:.*ValidationException.*Schema not found");
         addIgnoredPattern("Couldn't find persona");
         addIgnoredPattern("Unable to save schema");
+        addIgnoredPattern("SchemaServiceImpl.*Couldn't find schema");
+        addIgnoredPattern("Failed to load json schema!");
+        addIgnoredPattern("Couldn't find schema.*vendor.test.com");
+        addIgnoredPattern("JsonSchemaException.*Couldn't find schema");
+        addIgnoredPattern("InvocationTargetException.*JsonSchemaException");
+        addIgnoredPattern("IOException.*Couldn't find schema");
+        // Schema validation warnings (expected during schema validation tests)
+        addIgnoredPattern("SchemaServiceImpl.*Schema validation found.*errors while validating");
+        addIgnoredPattern("SchemaServiceImpl.*Validation error.*does not match the regex pattern");
+        addIgnoredPattern("SchemaServiceImpl.*An error occurred during the validation of your event");
+        addIgnoredPattern("SchemaServiceImpl.*Validation error: There are unevaluated properties");
+        addIgnoredPattern("SchemaServiceImpl.*Validation error: Unknown scope value");
+        addIgnoredPattern("SchemaServiceImpl.*Validation error:.*may only have a maximum of.*properties");
+        addIgnoredPattern("SchemaServiceImpl.*Validation error:.*string found, number expected");
+        
+        // Action type resolution warnings (expected in tests with missing action types)
+        addIgnoredPattern("ParserHelper.*Couldn't resolve action type");
+        addIgnoredPattern("ResolverServiceImpl.*Marked rules.*as invalid: Unresolved action type");
         
         // Test-related property copy errors (expected in CopyPropertiesActionIT)
         addIgnoredPattern("Impossible to copy the property");
@@ -333,6 +355,14 @@ public class LogChecker {
         addIgnoredPattern("Error while executing in class loader.*scrollIdentifier=dummyScrollId");
         addIgnoredPattern("Error while executing in class loader.*Error loading itemType");
         addIgnoredPattern("Error while executing in class loader.*Error continuing scrolling query");
+        addIgnoredPattern("Error continuing scrolling query.*scrollIdentifier=dummyScrollId");
+        addIgnoredPattern("Error continuing scrolling query for itemType.*scrollIdentifier=dummyScrollId");
+        addIgnoredPattern("Cannot parse scroll id");
+        addIgnoredPattern("Request failed:.*illegal_argument_exception.*Cannot parse scroll id");
+        
+        // Index and mapping errors (expected during test setup/teardown or when testing mapping scenarios)
+        addIgnoredPattern("Could not find index.*could not register item type");
+        addIgnoredPattern("mapper_parsing_exception.*tried to parse field.*as object, but found a concrete value");
         
         // Condition validation errors (expected in tests with invalid conditions)
         addIgnoredPattern("Failed to validate condition");

@@ -16,11 +16,7 @@
  */
 package org.apache.unomi.services.common.cache;
 
-import org.apache.unomi.api.Item;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.MetadataItem;
-import org.apache.unomi.api.Parameter;
-import org.apache.unomi.api.PluginType;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.SchedulerService;
@@ -127,7 +123,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
 
         initializeTimers();
 
-        logger.info("{} service initialized.", getClass().getSimpleName());
+        logger.debug("{} service initialized.", getClass().getSimpleName());
     }
 
     /**
@@ -204,7 +200,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
                 .schedule();
 
         scheduledRefreshTasks.put(taskName, scheduledTask);
-        logger.info("Scheduled cache refresh for type: {}", config.getType().getSimpleName());
+        logger.debug("Scheduled cache refresh for type: {}", config.getType().getSimpleName());
     }
 
     protected void shutdownTimers() {

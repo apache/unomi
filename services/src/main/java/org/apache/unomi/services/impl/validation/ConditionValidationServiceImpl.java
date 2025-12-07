@@ -41,7 +41,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
         for (ValueTypeValidator validator : builtInValidators) {
             validators.put(validator.getValueTypeId().toLowerCase(), validator);
         }
-        LOGGER.info("Initialized with {} built-in validators", builtInValidators.size());
+        LOGGER.debug("Initialized with {} built-in validators", builtInValidators.size());
     }
 
     public void bindValidator(ValueTypeValidator validator) {

@@ -43,6 +43,8 @@ public class ParserHelper {
 
     private static final Set<String> unresolvedActionTypes = new HashSet<>();
     private static final Set<String> unresolvedConditionTypes = new HashSet<>();
+    // Track rules that have already been warned about null/empty actions to avoid log spam
+    private static final Set<String> warnedRulesWithNullActions = Collections.synchronizedSet(new HashSet<>());
 
     private static final String VALUE_NAME_SEPARATOR = "::";
     private static final String PLACEHOLDER_PREFIX = "${";
@@ -187,15 +189,22 @@ public class ParserHelper {
 
     public static boolean resolveActionTypes(DefinitionsService definitionsService, Rule rule, boolean ignoreErrors) {
         boolean result = true;
+        String ruleId = rule.getItemId();
         if (rule.getActions() == null) {
             if (!ignoreErrors) {
-                LOGGER.warn("Rule {}:{} has null actions", rule.getItemId(), rule.getMetadata().getName());
+                // Only warn once per rule to avoid log spam
+                if (warnedRulesWithNullActions.add(ruleId)) {
+                    LOGGER.warn("Rule {}:{} has null actions", ruleId, rule.getMetadata().getName());
+                }
             }
             return false;
         }
         if (rule.getActions().isEmpty()) {
             if (!ignoreErrors) {
-                LOGGER.warn("Rule {}:{} has empty actions", rule.getItemId(), rule.getMetadata().getName());
+                // Only warn once per rule to avoid log spam
+                if (warnedRulesWithNullActions.add(ruleId)) {
+                    LOGGER.warn("Rule {}:{} has empty actions", ruleId, rule.getMetadata().getName());
+                }
             }
             return false;
         }

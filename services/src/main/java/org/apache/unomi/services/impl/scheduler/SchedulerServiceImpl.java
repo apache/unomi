@@ -22,9 +22,9 @@ import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.ScheduledTask.TaskStatus;
 import org.apache.unomi.api.tasks.TaskExecutor;
+import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.osgi.framework.BundleContext;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
@@ -595,7 +595,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     public void setPersistenceProvider(SchedulerProvider persistenceProvider) {
         this.persistenceProvider = persistenceProvider;
-        LOGGER.info("PersistenceSchedulerProvider bound to SchedulerService");
+        LOGGER.debug("PersistenceSchedulerProvider bound to SchedulerService");
 
         // Clear any expired operations first
         clearExpiredOperations();
