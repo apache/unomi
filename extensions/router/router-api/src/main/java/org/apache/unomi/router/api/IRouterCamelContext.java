@@ -28,4 +28,13 @@ public interface IRouterCamelContext {
     void updateProfileExportReaderRoute(String configId, boolean fireEvent) throws Exception;
 
     void setTracing(boolean tracing);
+
+    /**
+     * Gets the underlying CamelContext instance.
+     * Returns Object to avoid exposing Camel dependency to all users of this API.
+     * Callers can cast to org.apache.camel.CamelContext if they have Camel on the classpath.
+     * 
+     * @return The CamelContext instance, or null if not available
+     */
+    Object getCamelContext();
 }
