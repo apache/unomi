@@ -57,6 +57,7 @@ public class HealthCheckIT extends BaseIT {
     public void testHealthCheck() {
         try {
             List<HealthCheckResponse> response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {});
+            LOGGER.info("configured search engine: {}", searchEngine);
             LOGGER.info("health check response: {}", response);
             Assert.assertNotNull(response);
             Assert.assertEquals(5, response.size());

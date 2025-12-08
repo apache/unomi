@@ -32,8 +32,8 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
- * This class listens to the global Apache Unomi bundle lifecycle, to provide statistics and state of the overall
- * system. It notably displays messages for successfull or unsuccessfull startups as well as startup times.
+ * This class listens to the global Apache Unomi bundle lifecycle to provide statistics and state of the overall
+ * system. It notably displays messages for successful or unsuccessful startups as well as startup times.
  */
 public class BundleWatcherImpl implements SynchronousBundleListener, ServiceListener, BundleWatcher {
 

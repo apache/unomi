@@ -288,6 +288,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
         // Define features option based on search engine
         Option featuresOption;
+        Option distributionOption;
         if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
             featuresOption = features(
                     maven().groupId("org.apache.unomi").artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
@@ -312,7 +313,10 @@ public abstract class BaseIT extends KarafTestSupport {
                     "unomi-router-karaf-feature",
                     "unomi-groovy-actions",
                     "unomi-rest-ui",
-                    "unomi-startup-complete",
+                    "unomi-startup-complete"
+            );
+            distributionOption = features(
+                    maven().groupId("org.apache.unomi").artifactId("unomi-distribution").versionAsInProject().type("xml").classifier("features"),
                     "unomi-distribution-elasticsearch"
             );
         } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
@@ -339,7 +343,10 @@ public abstract class BaseIT extends KarafTestSupport {
                     "unomi-router-karaf-feature",
                     "unomi-groovy-actions",
                     "unomi-rest-ui",
-                    "unomi-startup-complete",
+                    "unomi-startup-complete"
+            );
+            distributionOption = features(
+                    maven().groupId("org.apache.unomi").artifactId("unomi-distribution").versionAsInProject().type("xml").classifier("features"),
                     "unomi-distribution-opensearch"
             );
         } else {
@@ -348,10 +355,6 @@ public abstract class BaseIT extends KarafTestSupport {
 
         Option[] options = new Option[]{
                 replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File("src/test/resources/org.apache.unomi.router.cfg")),
-                replaceConfigurationFile("etc/org.apache.unomi.healthcheck.cfg",
-                        (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)? new File("src/test/resources/org.apache.unomi.healthcheck-elasticsearch.cfg") :
-                                (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)? new File("src/test/resources/org.apache.unomi.healthcheck-opensearch.cfg") :
-                                        new File("src/test/resources/org.apache.unomi.healthcheck.cfg")))),
                 replaceConfigurationFile("data/tmp/1-basic-test.csv", new File("src/test/resources/1-basic-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", new File("src/test/resources/2-surfers-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv", new File("src/test/resources/3-surfers-overwrite-test.csv")),
@@ -390,9 +393,8 @@ public abstract class BaseIT extends KarafTestSupport {
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
 
-
-
                 featuresOption,  // Add the features option
+                distributionOption, // Add the distribution option
 
                 configureConsole().startRemoteShell(),
                 logLevel(LogLevel.INFO),
