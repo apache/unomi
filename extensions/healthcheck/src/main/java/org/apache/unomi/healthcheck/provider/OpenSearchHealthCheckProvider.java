@@ -170,7 +170,7 @@ public class OpenSearchHealthCheckProvider implements HealthCheckProvider {
                 }
             }
         } else {
-            builder.error().withData("error", "Elasticsearch health check provider is not active");
+            builder.error().withData("error", "OpenSearch health check provider is not active");
         }
         return builder.build();
     }
