@@ -348,7 +348,10 @@ public abstract class BaseIT extends KarafTestSupport {
 
         Option[] options = new Option[]{
                 replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File("src/test/resources/org.apache.unomi.router.cfg")),
-
+                replaceConfigurationFile("etc/org.apache.unomi.healthcheck.cfg",
+                        (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)? new File("src/test/resources/org.apache.unomi.healthcheck-elasticsearch.cfg") :
+                                (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)? new File("src/test/resources/org.apache.unomi.healthcheck-opensearch.cfg") :
+                                        new File("src/test/resources/org.apache.unomi.healthcheck.cfg")))),
                 replaceConfigurationFile("data/tmp/1-basic-test.csv", new File("src/test/resources/1-basic-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", new File("src/test/resources/2-surfers-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv", new File("src/test/resources/3-surfers-overwrite-test.csv")),
@@ -386,6 +389,8 @@ public abstract class BaseIT extends KarafTestSupport {
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
+
+
 
                 featuresOption,  // Add the features option
 
