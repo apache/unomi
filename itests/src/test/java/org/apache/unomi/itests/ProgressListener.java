@@ -209,6 +209,13 @@ public class ProgressListener extends RunListener {
 
         // Print the bottom border
         System.out.println(colorize(bottomBorder, CYAN));
+        
+        // Display search engine information once at the start
+        String searchEngine = System.getProperty("unomi.search.engine", "elasticsearch");
+        String searchEngineDisplay = capitalizeSearchEngine(searchEngine);
+        System.out.println();
+        System.out.println(colorize("Using search engine: " + searchEngineDisplay, CYAN));
+        System.out.println();
     }
 
     /**
@@ -219,6 +226,12 @@ public class ProgressListener extends RunListener {
     @Override
     public void testStarted(Description description) {
         startTestTime = System.currentTimeMillis();
+        // Print test start boundary with test name
+        String testName = extractTestName(description);
+        System.out.println(); // Blank line before test
+        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", CYAN));
+        System.out.println(colorize("▶ START: " + testName, GREEN));
+        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", CYAN));
     }
 
     /**
@@ -236,7 +249,15 @@ public class ProgressListener extends RunListener {
             // Remove the smallest time, keeping only the top 5 longest
             slowTests.poll();
         }
+        // Print test end boundary
+        String testName = extractTestName(description);
+        String durationStr = formatTime(testDuration);
+        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", CYAN));
+        System.out.println(colorize("✓ END: " + testName + " (Duration: " + durationStr + ")", GREEN));
+        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", CYAN));
+        System.out.println(); // Blank line before progress bar
         displayProgress();
+        System.out.println(); // Blank line after progress bar
     }
 
     /**
@@ -248,8 +269,13 @@ public class ProgressListener extends RunListener {
     public void testFailure(Failure failure) {
         successfulTests.decrementAndGet(); // Remove the previous success count for this test.
         failedTests.incrementAndGet();
-        System.out.println(colorize("Test failed: " + failure.getDescription(), RED));
+        String testName = extractTestName(failure.getDescription());
+        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", RED));
+        System.out.println(colorize("✗ FAILED: " + testName, RED));
+        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", RED));
+        System.out.println(); // Blank line before progress bar
         displayProgress();
+        System.out.println(); // Blank line after progress bar
     }
 
     /**
@@ -299,6 +325,56 @@ public class ProgressListener extends RunListener {
     }
 
     /**
+     * Capitalizes the search engine name for display.
+     * Converts "opensearch" to "OpenSearch" and "elasticsearch" to "Elasticsearch".
+     *
+     * @param searchEngine the search engine name (lowercase)
+     * @return the capitalized search engine name
+     */
+    private String capitalizeSearchEngine(String searchEngine) {
+        if (searchEngine == null || searchEngine.isEmpty()) {
+            return searchEngine;
+        }
+        // Handle special case for "opensearch" -> "OpenSearch"
+        if ("opensearch".equalsIgnoreCase(searchEngine)) {
+            return "OpenSearch";
+        }
+        // Handle "elasticsearch" -> "Elasticsearch"
+        if ("elasticsearch".equalsIgnoreCase(searchEngine)) {
+            return "Elasticsearch";
+        }
+        // Default: capitalize first letter
+        return searchEngine.substring(0, 1).toUpperCase() + searchEngine.substring(1);
+    }
+
+    /**
+     * Extracts a clean test name from the test description.
+     * Formats it as "ClassName: methodName" for better readability.
+     *
+     * @param description the test description
+     * @return a formatted test name string
+     */
+    private String extractTestName(Description description) {
+        String displayName = description.getDisplayName();
+        // The display name is typically in format "methodName(ClassName)"
+        // Extract class name and method name
+        if (displayName.contains("(") && displayName.contains(")")) {
+            int methodEnd = displayName.indexOf('(');
+            int classStart = methodEnd + 1;
+            int classEnd = displayName.indexOf(')');
+            if (methodEnd > 0 && classEnd > classStart) {
+                String methodName = displayName.substring(0, methodEnd);
+                String className = displayName.substring(classStart, classEnd);
+                // Extract simple class name (last part after dot)
+                int lastDot = className.lastIndexOf('.');
+                String simpleClassName = (lastDot >= 0) ? className.substring(lastDot + 1) : className;
+                return simpleClassName + ": " + methodName;
+            }
+        }
+        return displayName;
+    }
+
+    /**
      * Escapes special characters for CSV compatibility.
      *
      * @param value the string value to escape
@@ -329,9 +405,14 @@ public class ProgressListener extends RunListener {
         String progressBar = generateProgressBar(((double) completed / totalTests) * 100);
         String humanReadableTime = formatTime(estimatedRemainingTime);
 
-        System.out.printf("[%s] %sProgress: %s%.2f%%%s (%d/%d tests). Estimated time remaining: %s%s%s. " +
+        // Add visual separator and make progress bar more prominent
+        String separator = colorize("════════════════════════════════════════════════════════════════════════════════", CYAN);
+        System.out.println(separator);
+        System.out.printf("%s[%s]%s %sProgress: %s%.2f%%%s (%d/%d tests). Estimated time remaining: %s%s%s. " +
                         "Successful: %s%d%s, Failed: %s%d%s%n",
+                ansiSupported ? CYAN : "",
                 progressBar,
+                ansiSupported ? RESET : "",
                 ansiSupported ? BLUE : "",
                 ansiSupported ? GREEN : "",
                 ((double) completed / totalTests) * 100,
@@ -347,6 +428,7 @@ public class ProgressListener extends RunListener {
                 ansiSupported ? RED : "",
                 failedTests.get(),
                 ansiSupported ? RESET : "");
+        System.out.println(separator);
 
         if (completed % Math.max(1, totalTests / 10) == 0 && completed < totalTests) {
             String quote = QUOTES[completed % QUOTES.length];

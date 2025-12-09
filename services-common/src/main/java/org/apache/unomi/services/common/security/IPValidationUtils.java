@@ -35,6 +35,15 @@ public class IPValidationUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(IPValidationUtils.class);
     
     /**
+     * System property to control stack trace logging in error messages.
+     * When set to "true", stack traces are suppressed (useful for unit tests).
+     * Default is "false" (stack traces are included).
+     */
+    private static final String SUPPRESS_STACK_TRACES_PROPERTY = "org.apache.unomi.ipvalidation.suppress.stacktraces";
+    private static final boolean SUPPRESS_STACK_TRACES = Boolean.parseBoolean(
+        System.getProperty(SUPPRESS_STACK_TRACES_PROPERTY, "false"));
+    
+    /**
      * Check if a source IP address is authorized against a set of allowed IP addresses.
      * 
      * @param sourceIP the source IP address to validate
@@ -76,7 +85,14 @@ public class IPValidationUtils {
             }
             return false;
         } catch (Exception e) {
-            LOGGER.error("Invalid source IP address: {}", sourceIP, e);
+            // If stack trace suppression is enabled (typically for unit tests),
+            // log only the error message without stack trace to reduce noise.
+            // Otherwise, log with full stack trace for debugging.
+            if (SUPPRESS_STACK_TRACES) {
+                LOGGER.error("Invalid source IP address: {} - {}", sourceIP, e.getMessage());
+            } else {
+                LOGGER.error("Invalid source IP address: {}", sourceIP, e);
+            }
             return false;
         }
     }

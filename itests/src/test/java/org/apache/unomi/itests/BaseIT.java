@@ -209,8 +209,6 @@ public abstract class BaseIT extends KarafTestSupport {
      */
     protected void checkSearchEngine() {
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
-        System.out.println("Check search engine: " + searchEngine);
-        
         // Fix elasticsearch-maven-plugin default_template issue before any test setup
         // The plugin creates a default_template with very high priority that overrides all user templates
         // This must be done very early, before Unomi starts or any migration runs
@@ -390,12 +388,11 @@ public abstract class BaseIT extends KarafTestSupport {
                 String summary = result.getSummary();
                 String testInfo = currentTestName != null ? "Test: " + currentTestName + "\n" : "";
                 
-                // Log to console and logger
+                // Use System.err/out to avoid creating logs that would be captured by InMemoryLogAppender
+                // This prevents a feedback loop where log checking creates more logs to check
                 System.err.println("\n=== UNEXPECTED LOG ISSUES DETECTED ===");
                 System.err.println(testInfo + summary);
                 System.err.println("=======================================\n");
-                
-                LOGGER.warn("Unexpected log issues detected in test {}:\n{}", currentTestName, summary);
                 
                 // Add to JUnit test output by printing to System.out (captured by JUnit)
                 System.out.println("\n=== SERVER-SIDE LOG ISSUES ===");
@@ -403,7 +400,9 @@ public abstract class BaseIT extends KarafTestSupport {
                 System.out.println("===============================\n");
             }
         } catch (Exception e) {
-            LOGGER.error("Error checking logs", e);
+            // Use System.err to avoid creating logs that would be captured by InMemoryLogAppender
+            System.err.println("LogChecker: Error checking logs: " + e.getMessage());
+            e.printStackTrace(System.err);
         }
     }
     
@@ -639,6 +638,13 @@ public abstract class BaseIT extends KarafTestSupport {
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.name", customLoggingParts[0]));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.level", customLoggingParts[1]));
         }
+
+        // Suppress DEBUG logs from PaxExam framework (reduce noise in test output)
+        // These logs appear during test setup and are not useful for most debugging
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxExam.name", "org.ops4j.pax.exam"));
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxExam.level", "WARN"));
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxStore.name", "org.ops4j.store"));
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxStore.level", "WARN"));
 
         // Enable debug logging for Karaf Resolver to diagnose bundle refresh issues (default: disabled)
         boolean enableResolverDebug = Boolean.parseBoolean(System.getProperty(RESOLVER_DEBUG_PROPERTY, "false"));
