@@ -16,8 +16,13 @@
  */
 package org.apache.unomi.api.conditions;
 
+import org.apache.unomi.api.utils.YamlUtils;
+
 import java.io.Serializable;
+import java.util.Map;
 import java.util.Set;
+
+import static org.apache.unomi.api.utils.YamlUtils.*;
 
 /**
  * Validation metadata for condition parameters
@@ -113,17 +118,26 @@ public class ConditionValidation implements Serializable {
         this.customType = customType;
     }
 
+    /**
+     * Converts this validation to a Map structure for YAML output.
+     *
+     * @return a Map representation of this validation
+     */
+    public Map<String, Object> toYaml() {
+        return YamlUtils.YamlMapBuilder.create()
+            .putIf("required", true, required)
+            .putIf("recommended", true, recommended)
+            .putIfNotNull("allowedValues", setToSortedList(allowedValues))
+            .putIfNotNull("allowedConditionTags", setToSortedList(allowedConditionTags))
+            .putIfNotNull("disallowedConditionTypes", setToSortedList(disallowedConditionTypes))
+            .putIf("exclusive", true, exclusive)
+            .putIfNotNull("exclusiveGroup", exclusiveGroup)
+            .putIfNotNull("customType", customType != null ? customType.getName() : null)
+            .build();
+    }
+
     @Override
     public String toString() {
-        return "ConditionValidation{" +
-                "required=" + required +
-                ", allowedValues=" + allowedValues +
-                ", allowedConditionTags=" + allowedConditionTags +
-                ", disallowedConditionTypes=" + disallowedConditionTypes +
-                ", exclusive=" + exclusive +
-                ", exclusiveGroup='" + exclusiveGroup + '\'' +
-                ", recommended=" + recommended +
-                ", customType=" + customType +
-                '}';
+        return YamlUtils.format(toYaml());
     }
 }

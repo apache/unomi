@@ -21,10 +21,17 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Parameter;
 import org.apache.unomi.api.PluginType;
+import org.apache.unomi.api.utils.YamlUtils;
 
 import javax.xml.bind.annotation.XmlElement;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import static org.apache.unomi.api.utils.YamlUtils.*;
 
 /**
  * ConditionTypes define new conditions that can be applied to items (for example to decide whether a rule needs to be triggered or if a profile is considered as taking part in a
@@ -155,14 +162,39 @@ public class ConditionType extends MetadataItem implements PluginType {
         this.pluginId = pluginId;
     }
 
+    /**
+     * Converts this condition type to a Map structure for YAML output.
+     *
+     * @param visited set of already visited condition types to prevent infinite recursion
+     * @return a Map representation of this condition type
+     */
+    public Map<String, Object> toYaml(Set<ConditionType> visited) {
+        if (visited.contains(this)) {
+            return circularRef();
+        }
+        visited.add(this);
+        try {
+            return YamlMapBuilder.create()
+                .putIfNotNull("id", itemId)
+                .putIfNotNull("conditionEvaluator", conditionEvaluator)
+                .putIfNotNull("queryBuilder", queryBuilder)
+                .putIfNotNull("parentCondition", parentCondition != null ? parentCondition.toYaml(new HashSet<>()) : null)
+                .putIfNotEmpty("parameters", parameters != null ? parameters.stream()
+                    .map(Parameter::toYaml)
+                    .collect(Collectors.toList()) : null)
+                .put("pluginId", pluginId)
+                .putIfNotNull("name", metadata != null ? metadata.getName() : null)
+                .putIfNotNull("description", metadata != null ? metadata.getDescription() : null)
+                .putIfNotNull("scope", metadata != null ? metadata.getScope() : null)
+                .build();
+        } finally {
+            visited.remove(this);
+        }
+    }
+
     @Override
     public String toString() {
-        return "ConditionType{" +
-                "conditionEvaluator='" + conditionEvaluator + '\'' +
-                ", queryBuilder='" + queryBuilder + '\'' +
-                ", parentCondition=" + parentCondition +
-                ", parameters=" + parameters +
-                ", pluginId=" + pluginId +
-                '}';
+        Map<String, Object> map = toYaml(new HashSet<>());
+        return YamlUtils.format(map);
     }
 }

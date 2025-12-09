@@ -17,11 +17,19 @@
 
 package org.apache.unomi.api.conditions;
 
+import org.apache.unomi.api.utils.YamlUtils;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.Collections;
+
+import static org.apache.unomi.api.utils.YamlUtils.circularRef;
 
 /**
  * A set of elements that can be evaluated.
@@ -158,13 +166,42 @@ public class Condition implements Serializable {
         return result;
     }
 
+    /**
+     * Converts this condition to a Map structure for YAML output.
+     *
+     * @param visited set of already visited conditions to prevent infinite recursion
+     * @return a Map representation of this condition
+     */
+    public Map<String, Object> toYaml(Set<Condition> visited) {
+        if (visited.contains(this)) {
+            return circularRef();
+        }
+        visited.add(this);
+        try {
+            YamlMapBuilder builder = YamlMapBuilder.create()
+                .put("type", conditionTypeId != null ? conditionTypeId : "Condition");
+            if (parameterValues != null && !parameterValues.isEmpty()) {
+                parameterValues.forEach((name, value) ->
+                    builder.put(name, toYamlValue(value, visited)));
+            }
+            return builder.build();
+        } finally {
+            visited.remove(this);
+        }
+    }
+
+    private Object toYamlValue(Object value, Set<Condition> visited) {
+        if (value instanceof Condition) {
+            return ((Condition) value).toYaml(visited);
+        }
+        // For non-Condition values, use empty visited set since YamlUtils.toYamlValue
+        // doesn't currently use it for circular reference detection
+        return YamlUtils.toYamlValue(value, Collections.emptySet());
+    }
+
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("Condition{");
-        sb.append("conditionType=").append(conditionType);
-        sb.append(", conditionTypeId='").append(conditionTypeId).append('\'');
-        sb.append(", parameterValues=").append(parameterValues);
-        sb.append('}');
-        return sb.toString();
+        Map<String, Object> map = toYaml(new HashSet<>());
+        return YamlUtils.format(map);
     }
 }
