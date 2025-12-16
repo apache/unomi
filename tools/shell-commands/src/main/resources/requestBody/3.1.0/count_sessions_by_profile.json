@@ -1,0 +1,19 @@
+{
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "itemType": "session"
+          }
+        },
+        {
+          "term": {
+            "profileId.keyword": "#profileId"
+          }
+        }
+      ]
+    }
+  }
+}
+

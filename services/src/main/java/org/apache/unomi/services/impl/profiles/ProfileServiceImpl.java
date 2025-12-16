@@ -29,17 +29,13 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
-import org.apache.unomi.api.utils.ParserHelper;
+import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.sorts.ControlGroupPersonalizationStrategy;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.InvalidSyntaxException;
-import org.osgi.framework.ServiceReference;
-import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,13 +50,15 @@ import static org.apache.unomi.persistence.spi.CustomObjectMapper.getObjectMappe
 
 public class ProfileServiceImpl implements ProfileService, SynchronousBundleListener {
 
+    private static final String DECREMENT_NB_OF_VISITS_SCRIPT = "decNbOfVisits";
+
     /**
      * This class is responsible for storing property types and permits optimized access to them.
      * In order to assure data consistency, thread-safety and performance, this class is immutable and every operation on
      * property types requires creating a new instance (copy-on-write).
      */
     private static class PropertyTypes {
-        private List<PropertyType> allPropertyTypes;
+        private final List<PropertyType> allPropertyTypes;
         private Map<String, PropertyType> propertyTypesById = new HashMap<>();
         private Map<String, List<PropertyType>> propertyTypesByTags = new HashMap<>();
         private Map<String, List<PropertyType>> propertyTypesBySystemTags = new HashMap<>();
@@ -161,6 +159,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileServiceImpl.class.getName());
+    private static final int NB_OF_VISITS_DECREMENT_BATCH_SIZE = 500;
 
     private BundleContext bundleContext;
 
@@ -373,8 +372,105 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     @Override
     public void purgeSessionItems(int existsNumberOfDays) {
         if (existsNumberOfDays > 0) {
+            ConditionType sessionPropertyConditionType = definitionsService.getConditionType("sessionPropertyCondition");
+            if (sessionPropertyConditionType == null) {
+                LOGGER.error("Could not find sessionPropertyCondition type");
+                return;
+            }
+            Condition timeCondition = new Condition(sessionPropertyConditionType);
+            timeCondition.setParameter("propertyName", "timeStamp");
+            timeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+            timeCondition.setParameter("propertyValueDateExpr", "now-" + existsNumberOfDays + "d");
+
+            TermsAggregate profileIdAggregate = new TermsAggregate("profileId");
+            Map<String, Long> impactedProfiles = persistenceService.aggregateWithOptimizedQuery(timeCondition, profileIdAggregate, Session.ITEM_TYPE);
+            // Remove technical aggregation keys like "_filtered" that are not actual profile IDs
+            impactedProfiles.remove("_filtered");
+
             LOGGER.info("Purging: Sessions created since more than {} days", existsNumberOfDays);
             persistenceService.purgeTimeBasedItems(existsNumberOfDays, Session.class);
+
+            LOGGER.info("Syncing profiles: decrementing nbOfVisits for session purge's {} impacted profiles", impactedProfiles.size());
+            this.decrementProfilesNbOfVisits(impactedProfiles);
+        }
+    }
+
+    /**
+     * Decrements the nbOfVisits property for profiles based on a map of ProfileId, nbVisits.
+     * Profiles are grouped by decrement value and processed in batches for optimal performance.
+     *
+     * @param profilesVisits Map of profile IDs to the number of visits to decrement
+     */
+    private void decrementProfilesNbOfVisits(Map<String, Long> profilesVisits) {
+        if (profilesVisits == null || profilesVisits.isEmpty()) {
+            LOGGER.info("No profiles to update for nbOfVisits decrement");
+            return;
+        }
+        LOGGER.info("Decrementing nbOfVisits for {} profiles", profilesVisits.size());
+
+        Map<Long, List<String>> profilesByDecrement = new TreeMap<>();
+        profilesVisits.forEach((profileId, decrement) -> {
+            if (StringUtils.isNotBlank(profileId) && decrement != null && decrement > 0) {
+                profilesByDecrement.computeIfAbsent(decrement, k -> new ArrayList<>()).add(profileId);
+            }
+        });
+
+        int totalUpdated = 0;
+
+        for (Map.Entry<Long, List<String>> entry : profilesByDecrement.entrySet()) {
+            Long decrementValue = entry.getKey();
+            List<String> profileIds = entry.getValue();
+            LOGGER.debug("Processing {} profiles with decrement value {}", profileIds.size(), decrementValue);
+            // Split into batches of NB_OF_VISITS_DECREMENT_BATCH_SIZE to avoid too large requests
+            for (int i = 0; i < profileIds.size(); i += NB_OF_VISITS_DECREMENT_BATCH_SIZE) {
+                int endIndex = Math.min(i + NB_OF_VISITS_DECREMENT_BATCH_SIZE, profileIds.size());
+                List<String> batchProfileIds = profileIds.subList(i, endIndex);
+                if (applyNbOfVisitsDecrementForBatch(batchProfileIds, decrementValue)) {
+                    totalUpdated += batchProfileIds.size();
+                }
+            }
+        }
+        LOGGER.info("Successfully decremented nbOfVisits for {} profiles", totalUpdated);
+    }
+
+    /**
+     * Applies the nbOfVisits decrement for a batch of profiles with the same decrement value.
+     *
+     * @param profileIds List of profile IDs to update
+     * @param decrementValue The value to decrement from nbOfVisits
+     * @return true if the update was successful
+     */
+    private boolean applyNbOfVisitsDecrementForBatch(List<String> profileIds, Long decrementValue) {
+        if (profileIds == null || profileIds.isEmpty() || decrementValue == null || decrementValue <= 0) {
+            return false;
+        }
+
+        try {
+            long startTime = System.currentTimeMillis();
+
+            String[] scripts = new String[1];
+            Map<String, Object>[] scriptParams = new HashMap[1];
+            Condition[] conditions = new Condition[1];
+
+            conditions[0] = new Condition();
+            conditions[0].setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+            conditions[0].setParameter("propertyName", "itemId");
+            conditions[0].setParameter("comparisonOperator", "in");
+            conditions[0].setParameter("propertyValues", new ArrayList<>(profileIds));
+            scriptParams[0] = new HashMap<>();
+            scriptParams[0].put("decrementValue", decrementValue);
+            scripts[0] = DECREMENT_NB_OF_VISITS_SCRIPT;
+
+            boolean updated = persistenceService.updateWithQueryAndStoredScript(Profile.class, scripts, scriptParams, conditions);
+            if (!updated) {
+                LOGGER.error("Failed to decrement nbOfVisits for {} profiles with decrement value {}", profileIds.size(), decrementValue);
+            } else {
+                LOGGER.info("Updated nbOfVisits for {} profiles in {}ms", profileIds.size(), System.currentTimeMillis() - startTime);
+            }
+            return updated;
+        } catch (Exception e) {
+            LOGGER.error("Error while decrementing nbOfVisits for batch of {} profiles", profileIds.size(), e);
+            return false;
         }
     }
 
@@ -752,7 +848,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         profilesToMerge = filteredProfilesToMerge;
 
-        Set<String> allProfileProperties = new LinkedHashSet<>();
+        Set<String> allProfileProperties = new LinkedHashSet();
         for (Profile profile : profilesToMerge) {
             final Set<String> flatNestedPropertiesKeys = PropertyHelper.flatten(profile.getProperties()).keySet();
             allProfileProperties.addAll(flatNestedPropertiesKeys);

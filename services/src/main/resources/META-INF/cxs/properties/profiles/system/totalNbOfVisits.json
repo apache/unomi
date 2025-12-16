@@ -1,7 +1,7 @@
 {
     "metadata": {
-      "id": "nbOfVisits",
-      "name": "Number of visits since oldest session",
+      "id": "totalNbOfVisits",
+      "name": "Total number of visits",
       "systemTags": [
         "properties",
         "profileProperties",
@@ -20,6 +20,6 @@
        {"key":"100_*", "from" : 100 }
     ],
     "mergeStrategy": "addMergeStrategy",
-    "rank": "101.0",
+    "rank": "101.1",
     "protected": true
 }
