@@ -1,0 +1,25 @@
+{
+  "script": {
+    "source": "#painless",
+    "lang": "painless"
+  },
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "itemType": "profile"
+          }
+        }
+      ],
+      "filter": [
+        {
+          "exists": {
+            "field": "properties.nbOfVisits"
+          }
+        }
+      ]
+    }
+  }
+}
+

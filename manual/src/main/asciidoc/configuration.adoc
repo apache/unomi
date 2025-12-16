@@ -322,6 +322,14 @@ From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/mai
         "storeInSession": false
       },
       "type": "setPropertyAction"
+    },
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.totalNbOfVisits",
+        "setPropertyValue": "script::profile.properties.?totalNbOfVisits != null ? (profile.properties.totalNbOfVisits + 1) : 1",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
     }
   ]
 
@@ -344,6 +352,7 @@ Default allowed MVEL expressions (from https://github.com/apache/unomi/blob/unom
   "\\QminimumDuration*1000\\E",
   "\\QmaximumDuration*1000\\E",
   "\\Qprofile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1\\E",
+  "\\Qprofile.properties.?totalNbOfVisits != null ? (profile.properties.totalNbOfVisits + 1) : 1\\E",
   "\\Qsession != null ? session.size + 1 : 0\\E",
   "\\Q'properties.optimizationTest_'+event.target.itemId\\E",
   "\\Qevent.target.properties.variantId\\E",
@@ -972,7 +981,7 @@ You can use your custom configurations with:
 unomi:start elasticsearch-dev
 unomi:start opensearch-dev
 
-# Staging environment  
+# Staging environment
 unomi:start elasticsearch-staging
 unomi:start opensearch-staging
 

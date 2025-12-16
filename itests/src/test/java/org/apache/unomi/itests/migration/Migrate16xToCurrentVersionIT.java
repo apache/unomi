@@ -40,7 +40,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
 
     private int eventCount = 0;
     private int sessionCount = 0;
-    private Set<String[]> initialScopes = new HashSet<>();
+    private final Set<String[]> initialScopes = new HashSet<>();
 
     private static final String SCOPE_NOT_EXIST = "SCOPE_NOT_EXIST";
     private static final List<String> oldSystemItemsIndices = Arrays.asList("context-actiontype", "context-campaign", "context-campaignevent", "context-goal",
@@ -134,6 +134,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         }
         checkMergedProfilesAliases();
         checkProfileInterests();
+        checkProfileTotalNbOfVisits();
         checkScopeHaveBeenCreated();
         checkLoginEventWithScope();
         checkFormEventRestructured();
@@ -224,7 +225,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         for (Event formEvent : events) {
             Assert.assertEquals(0, formEvent.getProperties().size());
             Map<String, Object> fields = (Map<String, Object>) formEvent.getFlattenedProperties().get("fields");
-            Assert.assertTrue(fields.size() > 0);
+            Assert.assertFalse(fields.isEmpty());
 
             if (Objects.equals(formEvent.getItemId(), "7b55b4fd-5ff0-4a85-9dc4-ffde322a1de6")) {
                 // check singled valued
@@ -243,14 +244,14 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         List<String> digitallLoginEvent = Arrays.asList("4054a3e0-35ef-4256-999b-b9c05c1209f1", "f3f71ff8-2d6d-4b6c-8bdc-cb39905cddfe", "ff24ae6f-5a98-421e-aeb0-e86855b462ff");
         for (Event loginEvent : events) {
             if (loginEvent.getItemId().equals("5c4ac1df-f42b-4117-9432-12fdf9ecdf98")) {
-                Assert.assertEquals(loginEvent.getScope(), "systemsite");
-                Assert.assertEquals(loginEvent.getTarget().getScope(), "systemsite");
-                Assert.assertEquals(loginEvent.getSource().getScope(), "systemsite");
+                Assert.assertEquals("systemsite", loginEvent.getScope());
+                Assert.assertEquals("systemsite", loginEvent.getTarget().getScope());
+                Assert.assertEquals("systemsite", loginEvent.getSource().getScope());
             }
             if (digitallLoginEvent.contains(loginEvent.getItemId())) {
-                Assert.assertEquals(loginEvent.getScope(), "digitall");
-                Assert.assertEquals(loginEvent.getTarget().getScope(), "digitall");
-                Assert.assertEquals(loginEvent.getSource().getScope(), "digitall");
+                Assert.assertEquals("digitall", loginEvent.getScope());
+                Assert.assertEquals("digitall", loginEvent.getTarget().getScope());
+                Assert.assertEquals("digitall", loginEvent.getSource().getScope());
             }
         }
     }
@@ -347,6 +348,30 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
     }
 
     /**
+     * Data set contains a profile (id: e67ecc69-a7b3-47f1-b91f-5d6e7b90276e) with a property named totalNbOfVisits set to 3
+     * --> Because that profile has only one session, the nbOfVisits should be set to 1 after migration 3.1.0-00
+     * All other profiles that had an existing nbOfVisits should now have the totalNbOfVisits property set.
+     */
+    private void checkProfileTotalNbOfVisits() {
+        // check that the test_profile totalNbOfVisits have been set for a specific profile
+        Profile profile = persistenceService.load("e67ecc69-a7b3-47f1-b91f-5d6e7b90276e", Profile.class);
+        Assert.assertEquals("test_profile", profile.getProperty("firstName"));
+        Assert.assertNotNull("Profile " + profile.getItemId() + " is missing totalNbOfVisits property", profile.getProperty("totalNbOfVisits"));
+        Assert.assertEquals("Profile " + profile.getItemId() + " has not the expected value for totalNbOfVisits", 3, profile.getProperty("totalNbOfVisits"));
+        Assert.assertNotNull("Profile " + profile.getItemId() + " is missing nbOfVisits property", profile.getProperty("nbOfVisits"));
+        Assert.assertEquals("Profile " + profile.getItemId() + " has not the expected value for nbOfVisits",1, profile.getProperty("nbOfVisits"));
+
+        // check that the totalNbOfVisits property has been set for all profiles
+        List<Profile> allProfiles = persistenceService.getAllItems(Profile.class);
+        Assert.assertFalse("No profiles found in the data set", allProfiles.isEmpty());
+        for (Profile p : allProfiles) {
+            if (p.getProperties().containsKey("nbOfVisits")) {
+                Assert.assertNotNull("Profile " + p.getItemId() + " is missing totalNbOfVisits property", p.getProperty("totalNbOfVisits"));
+            }
+        }
+    }
+
+    /**
      * Data set contains a master profile: 468ca2bf-7d24-41ea-9ef4-5b96f78207e4
      * And two profiles that have been merged with this master profile: c33dec90-ffc9-4484-9e61-e42c323f268f and ac5b6b0f-afce-4c4f-9391-4ff0b891b254
      */
@@ -358,7 +383,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
             // control the created alias
             ProfileAlias alias = persistenceService.load(mergedProfile, ProfileAlias.class);
             Assert.assertNotNull(alias);
-            Assert.assertEquals(alias.getProfileID(), masterProfile);
+            Assert.assertEquals(masterProfile, alias.getProfileID());
 
             // control the merged profile do not exist anymore
             Assert.assertNull(persistenceService.load(mergedProfile, Profile.class));

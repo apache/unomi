@@ -5,6 +5,7 @@
   "\\QminimumDuration*1000\\E",
   "\\QmaximumDuration*1000\\E",
   "\\Qprofile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1\\E",
+  "\\Qprofile.properties.?totalNbOfVisits != null ? (profile.properties.totalNbOfVisits + 1) : 1\\E",
   "\\Qsession != null ? session.size + 1 : 0\\E",
   "\\Q'properties.optimizationTest_'+event.target.itemId\\E",
   "\\Qevent.target.properties.variantId\\E",

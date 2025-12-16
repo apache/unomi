@@ -284,6 +284,7 @@ image::profile.png[]
         "lastName": "Galileo",
         "preferredLanguage": "en",
         "nbOfVisits": 2,
+        "totalNbOfVisits": 5,
         "gender": "male",
         "jobTitle": "Vice President",
         "lastVisit": "2020-01-31T08:41:22Z",
@@ -525,6 +526,7 @@ The visitor’s location is also resolve based on the IP address that was used t
         "properties": {
             "preferredLanguage": "en",
             "nbOfVisits": 2,
+            "totalNbOfVisits": 5,
             "gender": "male",
             "jobTitle": "Vice President",
             "lastVisit": "2020-01-31T08:41:22Z",

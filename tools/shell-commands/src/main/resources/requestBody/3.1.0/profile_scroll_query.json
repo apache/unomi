@@ -1,0 +1,10 @@
+{
+  "size": 100,
+  "query": {
+    "match": {
+      "itemType": "profile"
+    }
+  },
+  "_source": ["itemId"]
+}
+
