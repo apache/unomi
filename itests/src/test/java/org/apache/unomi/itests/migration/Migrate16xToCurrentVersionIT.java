@@ -71,12 +71,12 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
             // Create snapshot repo
             HttpUtils.executePutRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/", resourceAsString("migration/create_snapshots_repository.json"), null);
             // Get snapshot, insure it exists
-            String snapshot = HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_2", null);
-            if (snapshot == null || !snapshot.contains("snapshot_2")) {
+            String snapshot = HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_3", null);
+            if (snapshot == null || !snapshot.contains("snapshot_3")) {
                 throw new RuntimeException("Unable to retrieve 1.6.x snapshot for ES restore");
             }
             // Restore the snapshot
-            HttpUtils.executePostRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_2/_restore?wait_for_completion=true", "{}", null);
+            HttpUtils.executePostRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_3/_restore?wait_for_completion=true", "{}", null);
 
             String snapshotStatus = HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/_snapshot/_status", null);
             System.out.println(snapshotStatus);
@@ -348,16 +348,24 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
     }
 
     /**
-     * Data set contains a profile (id: e67ecc69-a7b3-47f1-b91f-5d6e7b90276e) with a property named totalNbOfVisits set to 3
+     * Data set contains a profile (id: 468ca2bf-7d24-41ea-9ef4-5b96f78207e4) with a property named totalNbOfVisits set to 3
      * --> Because that profile has only one session, the nbOfVisits should be set to 1 after migration 3.1.0-00
      * All other profiles that had an existing nbOfVisits should now have the totalNbOfVisits property set.
      */
     private void checkProfileTotalNbOfVisits() {
-        // check that the test_profile totalNbOfVisits have been set for a specific profile
-        Profile profile = persistenceService.load("e67ecc69-a7b3-47f1-b91f-5d6e7b90276e", Profile.class);
+        // check that totalNbOfVisits have been set for a specific profile
+        Profile profile = persistenceService.load("468ca2bf-7d24-41ea-9ef4-5b96f78207e4", Profile.class);
         Assert.assertEquals("test_profile", profile.getProperty("firstName"));
         Assert.assertNotNull("Profile " + profile.getItemId() + " is missing totalNbOfVisits property", profile.getProperty("totalNbOfVisits"));
         Assert.assertEquals("Profile " + profile.getItemId() + " has not the expected value for totalNbOfVisits", 3, profile.getProperty("totalNbOfVisits"));
+        Assert.assertNotNull("Profile " + profile.getItemId() + " is missing nbOfVisits property", profile.getProperty("nbOfVisits"));
+        Assert.assertEquals("Profile " + profile.getItemId() + " has not the expected value for nbOfVisits",3, profile.getProperty("nbOfVisits"));
+
+        // check that nbOfVisits have been corrected set for a specific profile
+        profile = persistenceService.load("ad6dc96a-964e-4f6a-b3dc-2395b6e8a069", Profile.class);
+        Assert.assertEquals("test_profile", profile.getProperty("firstName"));
+        Assert.assertNotNull("Profile " + profile.getItemId() + " is missing totalNbOfVisits property", profile.getProperty("totalNbOfVisits"));
+        Assert.assertEquals("Profile " + profile.getItemId() + " has not the expected value for totalNbOfVisits", 15, profile.getProperty("totalNbOfVisits"));
         Assert.assertNotNull("Profile " + profile.getItemId() + " is missing nbOfVisits property", profile.getProperty("nbOfVisits"));
         Assert.assertEquals("Profile " + profile.getItemId() + " has not the expected value for nbOfVisits",1, profile.getProperty("nbOfVisits"));
 
