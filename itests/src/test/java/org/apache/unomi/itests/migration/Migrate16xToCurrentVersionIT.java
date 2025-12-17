@@ -355,7 +355,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
     private void checkProfileTotalNbOfVisits() {
         // check that totalNbOfVisits have been set for a specific profile
         Profile profile = persistenceService.load("468ca2bf-7d24-41ea-9ef4-5b96f78207e4", Profile.class);
-        Assert.assertEquals("test_profile", profile.getProperty("firstName"));
+        Assert.assertEquals("Bill", profile.getProperty("firstName"));
         Assert.assertNotNull("Profile " + profile.getItemId() + " is missing totalNbOfVisits property", profile.getProperty("totalNbOfVisits"));
         Assert.assertEquals("Profile " + profile.getItemId() + " has not the expected value for totalNbOfVisits", 3, profile.getProperty("totalNbOfVisits"));
         Assert.assertNotNull("Profile " + profile.getItemId() + " is missing nbOfVisits property", profile.getProperty("nbOfVisits"));
@@ -363,7 +363,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
 
         // check that nbOfVisits have been corrected set for a specific profile
         profile = persistenceService.load("ad6dc96a-964e-4f6a-b3dc-2395b6e8a069", Profile.class);
-        Assert.assertEquals("test_profile", profile.getProperty("firstName"));
+        Assert.assertEquals("Leonard", profile.getProperty("firstName"));
         Assert.assertNotNull("Profile " + profile.getItemId() + " is missing totalNbOfVisits property", profile.getProperty("totalNbOfVisits"));
         Assert.assertEquals("Profile " + profile.getItemId() + " has not the expected value for totalNbOfVisits", 15, profile.getProperty("totalNbOfVisits"));
         Assert.assertNotNull("Profile " + profile.getItemId() + " is missing nbOfVisits property", profile.getProperty("nbOfVisits"));
