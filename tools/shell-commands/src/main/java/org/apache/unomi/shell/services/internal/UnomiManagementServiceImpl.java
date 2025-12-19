@@ -104,8 +104,8 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     private BundleWatcher bundleWatcher;
 
     private Map<String, List<String>> startFeatures = new HashMap<String, List<String>>();
-    private final List<String> installedFeatures = new ArrayList<>();
-    private final List<String> startedFeatures = new ArrayList<>();
+    private final List<String> trackedInstalledFeatures = new ArrayList<>();
+    private final List<String> trackedStartedFeatures = new ArrayList<>();
 
     @Activate
     public void init(ComponentContext componentContext, UnomiManagementServiceConfiguration config) throws Exception {
@@ -202,19 +202,25 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         }
         features.addAll(getAdditionalFeaturesToInstall());
 
-        LOGGER.info("Installing features for start features configuration: {}", selectedStartFeatures);
+        LOGGER.info("Installing features for start feature configuration: {}", selectedStartFeatures);
         for (String featureName : features) {
             try {
                 Feature feature = featuresService.getFeature(featureName);
-                if (feature == null) {
+                if (feature != null) {
+                    List<Feature> karafInstalledFeatures = Arrays.stream(featuresService.listInstalledFeatures()).toList();
+                    if (!trackedInstalledFeatures.contains(featureName)) {
+                        Optional<Feature> karafInstalledFeature = karafInstalledFeatures.stream()
+                                .filter(f -> f.getName().equals(featureName) && f.getVersion().equals(feature.getVersion())).findFirst();
+                        if (karafInstalledFeature.isEmpty()) {
+                            LOGGER.info("Installing feature: {}", featureName);
+                            featuresService.installFeature(featureName, EnumSet.of(FeaturesService.Option.NoAutoStartBundles));
+                        } else {
+                            LOGGER.info("Feature {} is already installed, skipping installation.", featureName);
+                        }
+                        trackedInstalledFeatures.add(featureName);
+                    }
+                } else {
                     LOGGER.error("Feature not found: {}", featureName);
-                    continue;
-                }
-
-                if (!installedFeatures.contains(featureName)) {
-                    LOGGER.info("Installing feature: {}", featureName);
-                    featuresService.installFeature(featureName, EnumSet.of(FeaturesService.Option.NoAutoStartBundles));
-                    installedFeatures.add(featureName);
                 }
             } catch (Exception e) {
                 LOGGER.error("Error installing feature: {}", featureName, e);
@@ -230,11 +236,9 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                         LOGGER.error("Feature not found: {}", featureName);
                         continue;
                     }
-                    if (mustStartFeatures) {
-                        LOGGER.info("Starting feature: {}", featureName);
-                        startFeature(featureName);
-                        startedFeatures.add(featureName); // Keep track of started features
-                    }
+                    LOGGER.info("Starting feature: {}", featureName);
+                    startFeature(featureName);
+                    trackedStartedFeatures.add(featureName); // Keep track of started features
                 } catch (Exception e) {
                     LOGGER.error("Error starting feature: {}", featureName, e);
                 }
@@ -270,11 +274,11 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     }
 
     private void doStopUnomi() throws Exception {
-        if (startedFeatures.isEmpty()) {
+        if (trackedStartedFeatures.isEmpty()) {
             LOGGER.info("No features to stop.");
         } else {
             LOGGER.info("Stopping features in reverse order...");
-            ListIterator<String> iterator = startedFeatures.listIterator(startedFeatures.size());
+            ListIterator<String> iterator = trackedStartedFeatures.listIterator(trackedStartedFeatures.size());
             while (iterator.hasPrevious()) {
                 String featureName = iterator.previous();
                 try {
@@ -285,13 +289,13 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                 }
             }
 
-            startedFeatures.clear(); // Clear the list after stopping all features
+            trackedStartedFeatures.clear(); // Clear the list after stopping all features
         }
-        if (installedFeatures.isEmpty()) {
+        if (trackedInstalledFeatures.isEmpty()) {
             LOGGER.info("No features to uninstall.");
         } else {
             LOGGER.info("Stopping features in reverse order...");
-            ListIterator<String> iterator = installedFeatures.listIterator(installedFeatures.size());
+            ListIterator<String> iterator = trackedInstalledFeatures.listIterator(trackedInstalledFeatures.size());
             while (iterator.hasPrevious()) {
                 String featureName = iterator.previous();
                 try {
@@ -301,7 +305,7 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                     LOGGER.error("Error uninstalling feature: {}", featureName, e);
                 }
             }
-            installedFeatures.clear(); // Clear the list after stopping all features
+            trackedInstalledFeatures.clear(); // Clear the list after stopping all features
         }
     }
 
@@ -309,18 +313,24 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         Feature feature = featuresService.getFeature(featureName);
         Map<String, Map<String, FeatureState>> stateChanges = new HashMap<>();
         Map<String, FeatureState> regionChanges = new HashMap<>();
-        regionChanges.put(feature.getId(), FeatureState.Started);
-        stateChanges.put(FeaturesService.ROOT_REGION, regionChanges);
-        featuresService.updateFeaturesState(stateChanges, EnumSet.of(FeaturesService.Option.Verbose));
+        FeatureState state = featuresService.getState(feature.getId());
+        if (state != FeatureState.Started) {
+            regionChanges.put(feature.getId(), FeatureState.Started);
+            stateChanges.put(FeaturesService.ROOT_REGION, regionChanges);
+            featuresService.updateFeaturesState(stateChanges, EnumSet.of(FeaturesService.Option.Verbose));
+        }
     }
 
     private void stopFeature(String featureName) throws Exception {
         Feature feature = featuresService.getFeature(featureName);
         Map<String, Map<String, FeatureState>> stateChanges = new HashMap<>();
         Map<String, FeatureState> regionChanges = new HashMap<>();
-        regionChanges.put(feature.getId(), FeatureState.Resolved);
-        stateChanges.put(FeaturesService.ROOT_REGION, regionChanges);
-        featuresService.updateFeaturesState(stateChanges, EnumSet.of(FeaturesService.Option.Verbose));
+        FeatureState state = featuresService.getState(feature.getId());
+        if (state == FeatureState.Started) {
+            regionChanges.put(feature.getId(), FeatureState.Resolved);
+            stateChanges.put(FeaturesService.ROOT_REGION, regionChanges);
+            featuresService.updateFeaturesState(stateChanges, EnumSet.of(FeaturesService.Option.Verbose));
+        }
     }
 
     @Deactivate
