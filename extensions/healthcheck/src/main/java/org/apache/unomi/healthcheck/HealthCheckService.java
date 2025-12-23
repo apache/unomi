@@ -130,18 +130,16 @@ public class HealthCheckService {
                 }
             }
         } else if (shouldRefreshCache()) {
-            if (!busy) {
-                synchronized (cacheLock) {
-                    if (!busy) {
-                        busy = true;
-                        executor.submit(() -> {
-                            try {
-                                refreshCacheSync();
-                            } finally {
-                                busy = false;
-                            }
-                        });
-                    }
+            synchronized (cacheLock) {
+                if (!busy) {
+                    busy = true;
+                    executor.submit(() -> {
+                        try {
+                            refreshCacheSync();
+                        } finally {
+                            busy = false;
+                        }
+                    });
                 }
             }
         }
@@ -149,7 +147,7 @@ public class HealthCheckService {
     }
 
     private boolean shouldRefreshCache() {
-        return healthCache.isEmpty() || (System.currentTimeMillis() - cacheTimestamp) > 1000;
+        return !busy && (System.currentTimeMillis() - cacheTimestamp) > 1000;
     }
 
     private void refreshCacheSync() {
