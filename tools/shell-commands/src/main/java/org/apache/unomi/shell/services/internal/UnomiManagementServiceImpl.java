@@ -145,16 +145,6 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         }
     }
 
-    private List<String> getAdditionalFeaturesToInstall() {
-        List<String> featuresToInstall = new ArrayList<>();
-        if (Boolean.parseBoolean(bundleContext.getProperty("org.apache.unomi.graphql.feature.activated"))) {
-            featuresToInstall.add(CDP_GRAPHQL_FEATURE);
-            bundleWatcher.addRequiredBundle("org.apache.unomi.cdp-graphql-api-impl");
-            bundleWatcher.addRequiredBundle("org.apache.unomi.graphql-ui");
-        }
-        return featuresToInstall;
-    }
-
     private UnomiSetup getUnomiSetup() throws IOException {
         Configuration configuration = configurationAdmin.getConfiguration(UNOMI_SETUP_PID, "?");
         return UnomiSetup.fromDictionary(configuration.getProperties());
@@ -220,13 +210,6 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                     LOGGER.info("Installing distribution feature's dependency: {}", dependency.getName());
                     featuresService.installFeature(dependency.getName(), dependency.getVersion(), EnumSet.of(FeaturesService.Option.NoAutoStartBundles));
                     installedDistributionDependencies.add(dependency.getName());
-                }
-            }
-            for (String featureName : getAdditionalFeaturesToInstall()) {
-                if (!installedDistributionDependencies.contains(featureName)) {
-                    LOGGER.info("Installing additional feature: {}", featureName);
-                    featuresService.installFeature(featureName, EnumSet.of(FeaturesService.Option.NoAutoStartBundles));
-                    installedDistributionDependencies.add(featureName);
                 }
             }
         } catch (Exception e) {

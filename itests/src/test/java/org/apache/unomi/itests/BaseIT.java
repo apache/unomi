@@ -313,11 +313,12 @@ public abstract class BaseIT extends KarafTestSupport {
                     "unomi-router-karaf-feature",
                     "unomi-groovy-actions",
                     "unomi-rest-ui",
+                    "cdp-graphql-feature",
                     "unomi-startup-complete"
             );
             distributionOption = features(
                     maven().groupId("org.apache.unomi").artifactId("unomi-distribution").versionAsInProject().type("xml").classifier("features"),
-                    "unomi-distribution-elasticsearch"
+                    "unomi-distribution-elasticsearch-graphql"
             );
         } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
             featuresOption = features(
@@ -343,11 +344,12 @@ public abstract class BaseIT extends KarafTestSupport {
                     "unomi-router-karaf-feature",
                     "unomi-groovy-actions",
                     "unomi-rest-ui",
+                    "cdp-graphql-feature",
                     "unomi-startup-complete"
             );
             distributionOption = features(
                     maven().groupId("org.apache.unomi").artifactId("unomi-distribution").versionAsInProject().type("xml").classifier("features"),
-                    "unomi-distribution-opensearch"
+                    "unomi-distribution-opensearch-graphql"
             );
         } else {
             throw new IllegalArgumentException("Unknown search engine: " + searchEngine);
@@ -377,7 +379,6 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/org.apache.karaf.features.cfg", "serviceRequirements", "disable"),
                 editConfigurationFilePut("etc/system.properties", "my.system.property", System.getProperty("my.system.property")),
                 editConfigurationFilePut("etc/system.properties", SEARCH_ENGINE_PROPERTY, System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH)),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.graphql.feature.activated", "true"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.cluster.name", "contextElasticSearchITests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:" + getSearchPort()),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
