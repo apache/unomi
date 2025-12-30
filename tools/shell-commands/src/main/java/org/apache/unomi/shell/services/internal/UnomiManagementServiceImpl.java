@@ -91,7 +91,6 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     private static final int DEFAULT_TIMEOUT = 300; // 5 minutes timeout
 
     private static final String UNOMI_SETUP_PID = "org.apache.unomi.setup";
-    private static final String CDP_GRAPHQL_FEATURE = "cdp-graphql-feature";
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private MigrationService migrationService;
