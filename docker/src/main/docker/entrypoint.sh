@@ -75,7 +75,7 @@ else
 
     if [ -v UNOMI_ELASTICSEARCH_USERNAME ] && [ -v UNOMI_ELASTICSEARCH_PASSWORD ]; then
         auth_header="Authorization: Basic $(echo -n "${UNOMI_ELASTICSEARCH_USERNAME}:${UNOMI_ELASTICSEARCH_PASSWORD}" | base64)"
-        curl_opts="-H \"${auth_header}\""
+        curl_opts="-k -H \"${auth_header}\""
     fi
     health_endpoint="_cluster/health"
     # Build array of node URLs
