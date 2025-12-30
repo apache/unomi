@@ -75,7 +75,9 @@ public class HealthCheckIT extends BaseIT {
         final int NB_THREADS = 10;
         final int NB_ITERATIONS = 20;
 
-        try (ExecutorService executorService = Executors.newFixedThreadPool(NB_THREADS)) {
+        ExecutorService executorService = null;
+        try {
+            executorService = Executors.newFixedThreadPool(NB_THREADS);
             List<Future<List<HealthCheckResponse>>> futures = new ArrayList<>();
             for (int i = 0; i < NB_ITERATIONS; i++) {
                 for (int j = 0; j < NB_THREADS; j++) {
@@ -97,6 +99,10 @@ public class HealthCheckIT extends BaseIT {
         } catch (Exception e) {
             LOGGER.error("Error while executing concurrent health check", e);
             fail("Error while executing concurrent health check: " + e.getMessage());
+        } finally {
+            if ( executorService != null ) {
+                executorService.shutdownNow();
+                }
         }
     }
 
