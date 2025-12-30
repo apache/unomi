@@ -25,10 +25,12 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.api.utils.ConditionBuilder;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -38,17 +40,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -70,6 +62,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private ConditionBuilder conditionBuilder;
     private BundleContext bundleContext;
+
+    private static final String RELOAD_TYPES_TASK_TYPE = "reload-types";
+    private String reloadTypesTaskId;
+
     public DefinitionsServiceImpl() {
     }
 
@@ -108,14 +104,40 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     private void scheduleTypeReloads() {
-        TimerTask task = new TimerTask() {
+        TaskExecutor reloadTypesTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
-                reloadTypes(false);
+            public String getTaskType() {
+                return RELOAD_TYPES_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    reloadTypes(false);
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while reloading types", e);
+                    callback.fail(e.getMessage());
+                }
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, definitionsRefreshInterval, TimeUnit.MILLISECONDS);
+
+        schedulerService.registerTaskExecutor(reloadTypesTaskExecutor);
+
+        this.resetTypeReloads();
+        this.reloadTypesTaskId = schedulerService.newTask(RELOAD_TYPES_TASK_TYPE)
+                .withPeriod(definitionsRefreshInterval, TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
+
         LOGGER.info("Scheduled task for condition type loading each 10s");
+    }
+
+    private void resetTypeReloads() {
+        if (this.reloadTypesTaskId != null) {
+            schedulerService.cancelTask(this.reloadTypesTaskId);
+            this.reloadTypesTaskId = null;
+        }
     }
 
     public void reloadTypes(boolean refresh) {
@@ -190,6 +212,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     public void preDestroy() {
+        this.resetTypeReloads();
         bundleContext.removeBundleListener(this);
         LOGGER.info("Definitions service shutdown.");
     }

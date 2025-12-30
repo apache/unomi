@@ -24,6 +24,7 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.*;
@@ -31,13 +32,14 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.api.utils.ConditionBuilder;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.impl.AbstractServiceImpl;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
-import org.apache.unomi.api.utils.ParserHelper;
-import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -83,6 +85,11 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private int maximumIdsQueryCount = 5000;
     private boolean pastEventsDisablePartitions = false;
     private int dailyDateExprEvaluationHourUtc = 5;
+
+    private static final String RECALCULATE_PAST_EVENT_CONDITIONS_TASK_TYPE = "recalculate-past-event-conditions";
+    private static final String REFRESH_SEGMENT_AND_SCORING_DEFINITIONS_TASK_TYPE = "refresh-segment-and-scoring-definitions";
+    private String recalculatePastEventConditionsTaskId;
+    private String refreshSegmentAndScoringDefinitionsTaskId;
 
     public SegmentServiceImpl() {
         LOGGER.info("Initializing segment service...");
@@ -155,11 +162,12 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             }
         }
         bundleContext.addBundleListener(this);
-        initializeTimer();
+        this.initializeTimer();
         LOGGER.info("Segment service initialized.");
     }
 
     public void preDestroy() {
+        this.resetTimers();
         bundleContext.removeBundleListener(this);
         LOGGER.info("Segment service shutdown.");
     }
@@ -1196,38 +1204,74 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private void initializeTimer() {
-
-        TimerTask task = new TimerTask() {
+        TaskExecutor recalculatePastEventConditionsTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
+            public String getTaskType() {
+                return RECALCULATE_PAST_EVENT_CONDITIONS_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
                 try {
                     long currentTimeMillis = System.currentTimeMillis();
                     LOGGER.info("running scheduled task to recalculate segments and scoring that contains date relative conditions");
                     recalculatePastEventConditions();
                     LOGGER.info("finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
-                } catch (Throwable t) {
-                    LOGGER.error("Error while updating profiles for segments and scoring that contains date relative conditions", t);
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while updating profiles for segments and scoring that contains date relative conditions", e);
+                    callback.fail(e.getMessage());
                 }
             }
         };
+        TaskExecutor refreshSegmentAndScoringDefinitionsTaskExecutor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return REFRESH_SEGMENT_AND_SCORING_DEFINITIONS_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    allSegments = getAllSegmentDefinitions();
+                    allScoring = getAllScoringDefinitions();
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while loading segments and scoring definitions from persistence back-end", e);
+                    callback.fail(e.getMessage());
+                }
+            }
+        };
+
+        schedulerService.registerTaskExecutor(recalculatePastEventConditionsTaskExecutor);
+        schedulerService.registerTaskExecutor(refreshSegmentAndScoringDefinitionsTaskExecutor);
+
+        this.resetTimers();
+
         long initialDelay = SchedulerServiceImpl.getTimeDiffInSeconds(dailyDateExprEvaluationHourUtc, ZonedDateTime.now(ZoneOffset.UTC));
         long period = TimeUnit.DAYS.toSeconds(taskExecutionPeriod);
         LOGGER.info("daily recalculation job for segments and scoring that contains date relative conditions will run at fixed rate, " +
                 "initialDelay={}, taskExecutionPeriod={} in seconds", initialDelay, period);
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
+        this.recalculatePastEventConditionsTaskId = schedulerService.newTask(RECALCULATE_PAST_EVENT_CONDITIONS_TASK_TYPE)
+                .withInitialDelay(initialDelay, TimeUnit.SECONDS)
+                .withPeriod(period, TimeUnit.SECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
+        this.refreshSegmentAndScoringDefinitionsTaskId = schedulerService.newTask(REFRESH_SEGMENT_AND_SCORING_DEFINITIONS_TASK_TYPE)
+                .withPeriod(segmentRefreshInterval, TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
+    }
 
-        task = new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    allSegments = getAllSegmentDefinitions();
-                    allScoring = getAllScoringDefinitions();
-                } catch (Throwable t) {
-                    LOGGER.error("Error while loading segments and scoring definitions from persistence back-end", t);
-                }
-            }
-        };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.MILLISECONDS);
+    private void resetTimers() {
+        if (this.recalculatePastEventConditionsTaskId != null) {
+            schedulerService.cancelTask(this.recalculatePastEventConditionsTaskId);
+            this.recalculatePastEventConditionsTaskId = null;
+        }
+        if (this.refreshSegmentAndScoringDefinitionsTaskId != null) {
+            schedulerService.cancelTask(this.refreshSegmentAndScoringDefinitionsTaskId);
+            this.refreshSegmentAndScoringDefinitionsTaskId = null;
+        }
     }
 
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {

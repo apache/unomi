@@ -27,7 +27,10 @@ import com.networknt.schema.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Item;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
@@ -41,16 +44,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class SchemaServiceImpl implements SchemaService {
 
     private static final String URI = "https://json-schema.org/draft/2019-09/schema";
-
     private static final Logger LOGGER = LoggerFactory.getLogger(SchemaServiceImpl.class.getName());
     private static final String TARGET_EVENTS = "events";
-
     private static final String GENERIC_ERROR_KEY = "error";
 
     ObjectMapper objectMapper = new ObjectMapper();
@@ -67,18 +70,14 @@ public class SchemaServiceImpl implements SchemaService {
      * Available extensions indexed by key:schema URI to be extended, value: list of schema extension URIs
      */
     private ConcurrentMap<String, Set<String>> extensions = new ConcurrentHashMap<>();
-
     private Integer jsonSchemaRefreshInterval = 1000;
-    private ScheduledFuture<?> scheduledFuture;
-
     private PersistenceService persistenceService;
     private ScopeService scopeService;
-
     private JsonSchemaFactory jsonSchemaFactory;
 
-    // TODO UNOMI-572: when fixing UNOMI-572 please remove the usage of the custom ScheduledExecutorService and re-introduce the Unomi Scheduler Service
-    private ScheduledExecutorService scheduler;
-    //private SchedulerService schedulerService;
+    private SchedulerService schedulerService;
+    private String refreshJSONSchemasTaskId;
+    private static final String REFRESH_SCHEMAS_TASK_TYPE = "refresh-json-schemas";
 
     @Override
     public boolean isValid(String data, String schemaId) {
@@ -375,17 +374,38 @@ public class SchemaServiceImpl implements SchemaService {
     }
 
     private void initTimers() {
-        TimerTask task = new TimerTask() {
+        TaskExecutor refreshSchemasTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
+            public String getTaskType() {
+                return REFRESH_SCHEMAS_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
                 try {
                     refreshJSONSchemas();
+                    callback.complete();
                 } catch (Exception e) {
-                    LOGGER.error("Unexpected error while refreshing JSON Schemas", e);
+                    LOGGER.error("Error while refreshing json scehams", e);
+                    callback.fail(e.getMessage());
                 }
             }
         };
-        scheduledFuture = scheduler.scheduleWithFixedDelay(task, 0, jsonSchemaRefreshInterval, TimeUnit.MILLISECONDS);
+
+        schedulerService.registerTaskExecutor(refreshSchemasTaskExecutor);
+
+        this.resetTimers();
+        this.refreshJSONSchemasTaskId = schedulerService.newTask(REFRESH_SCHEMAS_TASK_TYPE)
+                .withPeriod(jsonSchemaRefreshInterval, TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
+    }
+
+    private void resetTimers() {
+        if (this.refreshJSONSchemasTaskId != null) {
+            schedulerService.cancelTask(this.refreshJSONSchemasTaskId);
+            this.refreshJSONSchemasTaskId = null;
+        }
     }
 
     private void initJsonSchemaFactory() {
@@ -414,17 +434,13 @@ public class SchemaServiceImpl implements SchemaService {
     }
 
     public void init() {
-        scheduler = Executors.newSingleThreadScheduledExecutor();
-        initJsonSchemaFactory();
-        initTimers();
+        this.initJsonSchemaFactory();
+        this.initTimers();
         LOGGER.info("Schema service initialized.");
     }
 
     public void destroy() {
-        scheduledFuture.cancel(true);
-        if (scheduler != null) {
-            scheduler.shutdown();
-        }
+        this.resetTimers();
         LOGGER.info("Schema service shutdown.");
     }
 
