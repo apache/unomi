@@ -23,7 +23,7 @@ public interface ExpressionFilterFactory {
 
     /**
      * Retrieve an expression filter for the specified filterCollection identifier.
-     * @param filterCollection a filter collection identifier, typically something like "mvel", "ognl"
+     * @param filterCollection a filter collection identifier, typically something like "mvel"
      * @return an instance of a ExpressionFilter with the configuration retrieved for the specified collection identifier
      */
     ExpressionFilter getExpressionFilter(String filterCollection);

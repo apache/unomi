@@ -70,10 +70,11 @@ public class HealthCheckServlet extends HttpServlet {
         response.getWriter().println(mapper.writeValueAsString(checks));
         response.setContentType("application/json");
         response.setHeader("Cache-Control", "no-cache");
-        if (checks.stream().allMatch(HealthCheckResponse::isLive)) {
-            response.setStatus(HttpServletResponse.SC_OK);
-        } else {
-            response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
-        }
+            if (checks.stream().allMatch(HealthCheckResponse::isLive)) {
+                response.setStatus(HttpServletResponse.SC_OK);
+            } else {
+                response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
+            }
+        response.flushBuffer();
     }
 }

@@ -17,6 +17,8 @@
 
 package org.apache.unomi.healthcheck.provider;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.auth.AuthScope;
@@ -26,17 +28,11 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.healthcheck.HealthCheckConfig;
 import org.apache.unomi.healthcheck.HealthCheckResponse;
-import org.apache.unomi.healthcheck.HealthCheckProvider;
 import org.apache.unomi.healthcheck.util.CachedValue;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,15 +43,13 @@ import java.util.concurrent.TimeUnit;
  * A Health Check that checks the status of the ElasticSearch connectivity according to the provided configuration.
  * This connectivity should be LIVE before any try to start Unomi.
  */
-@Component(service = HealthCheckProvider.class, immediate = true)
-public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
+public class ElasticSearchHealthCheckProvider implements PersistenceEngineHealthProvider {
 
     public static final String NAME = "elasticsearch";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchHealthCheckProvider.class.getName());
     private final CachedValue<HealthCheckResponse> cache = new CachedValue<>(10, TimeUnit.SECONDS);
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private HealthCheckConfig config;
 
     private CloseableHttpClient httpClient;
@@ -64,7 +58,6 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
         LOGGER.info("Building elasticsearch health provider service...");
     }
 
-    @Activate
     public void activate() {
         LOGGER.info("Activating elasticsearch health provider service...");
         CredentialsProvider credentialsProvider = null;
@@ -77,7 +70,7 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
         }
         try {
             httpClient = HttpUtils.initHttpClient(
-                    Boolean.parseBoolean(config.get(HealthCheckConfig.CONFIG_TRUST_ALL_CERTIFICATES)), credentialsProvider);
+                    Boolean.parseBoolean(config.get(HealthCheckConfig.CONFIG_ES_TRUST_ALL_CERTIFICATES)), credentialsProvider);
         } catch (IOException e) {
             LOGGER.error("Unable to initialize http client", e);
         }
@@ -99,6 +92,10 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
         return cache.getValue();
     }
 
+    @Override public HealthCheckResponse detailed() {
+        return execute();
+    }
+
     private HealthCheckResponse refresh() {
         LOGGER.debug("Refresh");
         HealthCheckResponse.Builder builder = new HealthCheckResponse.Builder();
@@ -112,9 +109,30 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
             if (response != null && response.getStatusLine().getStatusCode() == 200) {
                 builder.up();
                 HttpEntity entity = response.getEntity();
-                if (entity != null && EntityUtils.toString(entity).contains("\"status\":\"green\"")) {
-                    builder.live();
-                    //TODO parse and add cluster data
+                if (entity != null) {
+                    String content = EntityUtils.toString(entity);
+                    try {
+                        ObjectMapper mapper = new ObjectMapper();
+                        JsonNode root = mapper.readTree(content);
+                        if (root.has("status") && "green".equals(root.get("status").asText())) {
+                            builder.live();
+                        }
+                        if (root.has("cluster_name")) builder.withData("cluster_name", root.get("cluster_name").asText());
+                        if (root.has("status")) builder.withData("status", root.get("status").asText());
+                        if (root.has("timed_out")) builder.withData("timed_out", root.get("timed_out").asBoolean());
+                        if (root.has("number_of_nodes")) builder.withData("number_of_nodes", root.get("number_of_nodes").asLong());
+                        if (root.has("number_of_data_nodes")) builder.withData("number_of_data_nodes", root.get("number_of_data_nodes").asLong());
+                        if (root.has("active_primary_shards")) builder.withData("active_primary_shards", root.get("active_primary_shards").asLong());
+                        if (root.has("active_shards")) builder.withData("active_shards", root.get("active_shards").asLong());
+                        if (root.has("relocating_shards")) builder.withData("relocating_shards", root.get("relocating_shards").asLong());
+                        if (root.has("initializing_shards")) builder.withData("initializing_shards", root.get("initializing_shards").asLong());
+                        if (root.has("unassigned_shards")) builder.withData("unassigned_shards", root.get("unassigned_shards").asLong());
+                    } catch (Exception parseEx) {
+                        // Fallback to simple LIVE detection
+                        if (content.contains("\"status\":\"green\"")) {
+                            builder.live();
+                        }
+                    }
                 }
             }
         } catch (IOException e) {

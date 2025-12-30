@@ -17,10 +17,10 @@
   -->
 
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
-           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-           http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+           http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0 https://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.3.0.xsd">
 
     <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
                              update-strategy="reload" placeholder-prefix="${es.">
@@ -32,54 +32,51 @@
             <cm:property name="numberOfReplicas" value="0"/>
             <cm:property name="indexMappingTotalFieldsLimit" value="1000"/>
             <cm:property name="indexMaxDocValueFieldsSearch" value="1000"/>
-            <cm:property name="monthlyIndex.numberOfShards" value="3"/>
-            <cm:property name="monthlyIndex.numberOfReplicas" value="0"/>
-            <cm:property name="monthlyIndex.indexMappingTotalFieldsLimit" value="1000"/>
-            <cm:property name="monthlyIndex.indexMaxDocValueFieldsSearch" value="1000"/>
-            <cm:property name="monthlyIndex.itemsMonthlyIndexedOverride" value="event,session"/>
             <cm:property name="defaultQueryLimit" value="10"/>
 
-            <cm:property name="bulkProcessor.concurrentRequests" value="1" />
-            <cm:property name="bulkProcessor.bulkActions" value="1000" />
-            <cm:property name="bulkProcessor.bulkSize" value="5MB" />
-            <cm:property name="bulkProcessor.flushInterval" value="5s" />
-            <cm:property name="bulkProcessor.backoffPolicy" value="exponential" />
+            <cm:property name="bulkProcessor.concurrentRequests" value="1"/>
+            <cm:property name="bulkProcessor.bulkActions" value="1000"/>
+            <cm:property name="bulkProcessor.bulkSize" value="5"/>
+            <cm:property name="bulkProcessor.flushInterval" value="5"/>
+            <cm:property name="bulkProcessor.backoffPolicy" value="exponential"/>
 
-            <cm:property name="rollover.indices" value="" />
-            <cm:property name="rollover.maxSize" value="30gb" />
-            <cm:property name="rollover.maxAge" value="" />
-            <cm:property name="rollover.maxDocs" value="" />
-            <cm:property name="rollover.numberOfShards" value=""/>
-            <cm:property name="rollover.numberOfReplicas" value=""/>
-            <cm:property name="rollover.indexMappingTotalFieldsLimit" value=""/>
-            <cm:property name="rollover.indexMaxDocValueFieldsSearch" value=""/>
+            <cm:property name="rollover.indices" value=""/>
+            <cm:property name="rollover.maxSize" value="30gb"/>
+            <cm:property name="rollover.maxAge" value=""/>
+            <cm:property name="rollover.maxDocs" value=""/>
+            <cm:property name="rollover.numberOfShards" value="3"/>
+            <cm:property name="rollover.numberOfReplicas" value="0"/>
+            <cm:property name="rollover.indexMappingTotalFieldsLimit" value="1000"/>
+            <cm:property name="rollover.indexMaxDocValueFieldsSearch" value="1000"/>
 
-            <cm:property name="minimalElasticSearchVersion" value="7.0.0" />
-            <cm:property name="maximalElasticSearchVersion" value="8.0.0" />
+            <cm:property name="minimalElasticSearchVersion" value="9.0.3"/>
+            <cm:property name="maximalElasticSearchVersion" value="10.0.0"/>
 
-            <cm:property name="aggregateQueryBucketSize" value="5000" />
-            <cm:property name="clientSocketTimeout" value="-1" />
-            <cm:property name="taskWaitingTimeout" value="3600000" />
-            <cm:property name="taskWaitingPollingInterval" value="1000" />
-            <cm:property name="aggQueryMaxResponseSizeHttp" value="" />
-            <cm:property name="aggQueryThrowOnMissingDocs" value="false" />
-            <cm:property name="itemTypeToRefreshPolicy" value="" />
-            <cm:property name="useBatchingForSave" value="false" />
-            <cm:property name="useBatchingForUpdate" value="true" />
+            <cm:property name="aggregateQueryBucketSize" value="5000"/>
+            <cm:property name="clientSocketTimeout" value="-1"/>
+            <cm:property name="taskWaitingTimeout" value="3600000"/>
+            <cm:property name="taskWaitingPollingInterval" value="1000"/>
+            <cm:property name="aggQueryMaxResponseSizeHttp" value=""/>
+            <cm:property name="aggQueryThrowOnMissingDocs" value="false"/>
+            <cm:property name="itemTypeToRefreshPolicy" value=""/>
+            <cm:property name="useBatchingForSave" value="false"/>
+            <cm:property name="useBatchingForUpdate" value="true"/>
 
-            <cm:property name="username" value="" />
-            <cm:property name="password" value="" />
-            <cm:property name="sslEnable" value="false" />
-            <cm:property name="sslTrustAllCertificates" value="false" />
-            <cm:property name="throwExceptions" value="false" />
-            <cm:property name="alwaysOverwrite" value="true" />
-            <cm:property name="errorLogLevelRestClient" value="true" />
+            <cm:property name="username" value=""/>
+            <cm:property name="password" value=""/>
+            <cm:property name="sslEnable" value="false"/>
+            <cm:property name="sslTrustAllCertificates" value="false"/>
+            <cm:property name="throwExceptions" value="false"/>
+            <cm:property name="alwaysOverwrite" value="true"/>
+            <cm:property name="errorLogLevelRestClient" value="true"/>
 
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
-    <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor" />
+    <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
+    <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
+    <reference id="conditionEvaluatorDispatcherService"
+               interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher"/>
 
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
         <interfaces>
@@ -89,14 +86,8 @@
     </service>
 
     <bean id="conditionESQueryBuilderDispatcher"
-          class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
-        <property name="scriptExecutor" ref="scriptExecutor" />
-    </bean>
-
-    <bean id="conditionEvaluatorDispatcherImpl"
-          class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher">
-        <property name="metricsService" ref="metricsService" />
-        <property name="scriptExecutor" ref="scriptExecutor" />
+          class="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher">
+        <property name="scriptExecutor" ref="scriptExecutor"/>
     </bean>
 
     <bean id="elasticSearchPersistenceServiceImpl"
@@ -104,14 +95,9 @@
           init-method="start"
           destroy-method="stop">
         <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="conditionEvaluatorDispatcher" ref="conditionEvaluatorDispatcherImpl"/>
+        <property name="conditionEvaluatorDispatcher" ref="conditionEvaluatorDispatcherService"/>
         <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher"/>
-        <property name="clusterName" value="${es.cluster.name}"/>
         <property name="indexPrefix" value="${es.index.prefix}"/>
-        <property name="monthlyIndexNumberOfShards" value="${es.monthlyIndex.numberOfShards}"/>
-        <property name="monthlyIndexNumberOfReplicas" value="${es.monthlyIndex.numberOfReplicas}"/>
-        <property name="monthlyIndexMappingTotalFieldsLimit" value="${es.monthlyIndex.indexMappingTotalFieldsLimit}"/>
-        <property name="monthlyIndexMaxDocValueFieldsSearch" value="${es.monthlyIndex.indexMaxDocValueFieldsSearch}"/>
         <property name="numberOfShards" value="${es.numberOfShards}"/>
         <property name="numberOfReplicas" value="${es.numberOfReplicas}"/>
         <property name="indexMappingTotalFieldsLimit" value="${es.indexMappingTotalFieldsLimit}"/>
@@ -119,64 +105,104 @@
         <property name="elasticSearchAddresses" value="${es.elasticSearchAddresses}"/>
         <property name="fatalIllegalStateErrors" value="${es.fatalIllegalStateErrors}"/>
         <property name="defaultQueryLimit" value="${es.defaultQueryLimit}"/>
-        <property name="itemsMonthlyIndexedOverride" value="${es.monthlyIndex.itemsMonthlyIndexedOverride}" />
         <property name="routingByType">
             <map>
             </map>
         </property>
-        <property name="bulkProcessorConcurrentRequests" value="${es.bulkProcessor.concurrentRequests}" />
-        <property name="bulkProcessorBulkActions" value="${es.bulkProcessor.bulkActions}" />
-        <property name="bulkProcessorBulkSize" value="${es.bulkProcessor.bulkSize}" />
-        <property name="bulkProcessorFlushInterval" value="${es.bulkProcessor.flushInterval}" />
-        <property name="bulkProcessorBackoffPolicy" value="${es.bulkProcessor.backoffPolicy}" />
+        <property name="bulkProcessorConcurrentRequests" value="${es.bulkProcessor.concurrentRequests}"/>
+        <property name="bulkProcessorBulkActions" value="${es.bulkProcessor.bulkActions}"/>
+        <property name="bulkProcessorBulkSize" value="${es.bulkProcessor.bulkSize}"/>
+        <property name="bulkProcessorFlushIntervalInSeconds" value="${es.bulkProcessor.flushInterval}"/>
+        <property name="bulkProcessorBackoffPolicy" value="${es.bulkProcessor.backoffPolicy}"/>
 
-        <property name="rolloverIndices" value="${es.rollover.indices}" />
-        <property name="rolloverMaxSize" value="${es.rollover.maxSize}" />
-        <property name="rolloverMaxAge" value="${es.rollover.maxAge}" />
-        <property name="rolloverMaxDocs" value="${es.rollover.maxDocs}" />
+        <property name="rolloverIndices" value="${es.rollover.indices}"/>
+        <property name="rolloverMaxSize" value="${es.rollover.maxSize}"/>
+        <property name="rolloverMaxAge" value="${es.rollover.maxAge}"/>
+        <property name="rolloverMaxDocs" value="${es.rollover.maxDocs}"/>
         <property name="rolloverIndexNumberOfShards" value="${es.rollover.numberOfShards}"/>
         <property name="rolloverIndexNumberOfReplicas" value="${es.rollover.numberOfReplicas}"/>
         <property name="rolloverIndexMappingTotalFieldsLimit" value="${es.rollover.indexMappingTotalFieldsLimit}"/>
         <property name="rolloverIndexMaxDocValueFieldsSearch" value="${es.rollover.indexMaxDocValueFieldsSearch}"/>
 
-        <property name="minimalElasticSearchVersion" value="${es.minimalElasticSearchVersion}" />
-        <property name="maximalElasticSearchVersion" value="${es.maximalElasticSearchVersion}" />
+        <property name="minimalElasticSearchVersion" value="${es.minimalElasticSearchVersion}"/>
+        <property name="maximalElasticSearchVersion" value="${es.maximalElasticSearchVersion}"/>
 
-        <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
-        <property name="aggQueryMaxResponseSizeHttp" value="${es.aggQueryMaxResponseSizeHttp}" />
-        <property name="aggQueryThrowOnMissingDocs" value="${es.aggQueryThrowOnMissingDocs}" />
-        <property name="itemTypeToRefreshPolicy" value="${es.itemTypeToRefreshPolicy}" />
+        <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
+        <property name="aggQueryMaxResponseSizeHttp" value="${es.aggQueryMaxResponseSizeHttp}"/>
+        <property name="aggQueryThrowOnMissingDocs" value="${es.aggQueryThrowOnMissingDocs}"/>
+        <property name="itemTypeToRefreshPolicy" value="${es.itemTypeToRefreshPolicy}"/>
 
-        <property name="clientSocketTimeout" value="${es.clientSocketTimeout}" />
-        <property name="taskWaitingTimeout" value="${es.taskWaitingTimeout}" />
-        <property name="taskWaitingPollingInterval" value="${es.taskWaitingPollingInterval}" />
+        <property name="clientSocketTimeout" value="${es.clientSocketTimeout}"/>
+        <property name="taskWaitingTimeout" value="${es.taskWaitingTimeout}"/>
+        <property name="taskWaitingPollingInterval" value="${es.taskWaitingPollingInterval}"/>
 
-        <property name="metricsService" ref="metricsService" />
-        <property name="useBatchingForSave" value="${es.useBatchingForSave}" />
-        <property name="useBatchingForUpdate" value="${es.useBatchingForUpdate}" />
+        <property name="metricsService" ref="metricsService"/>
+        <property name="useBatchingForSave" value="${es.useBatchingForSave}"/>
+        <property name="useBatchingForUpdate" value="${es.useBatchingForUpdate}"/>
 
-        <property name="username" value="${es.username}" />
-        <property name="password" value="${es.password}" />
-        <property name="sslEnable" value="${es.sslEnable}" />
-        <property name="sslTrustAllCertificates" value="${es.sslTrustAllCertificates}" />
-        <property name="throwExceptions" value="${es.throwExceptions}" />
-        <property name="alwaysOverwrite" value="${es.alwaysOverwrite}" />
-        <property name="logLevelRestClient" value="${es.logLevelRestClient}" />
+        <property name="username" value="${es.username}"/>
+        <property name="password" value="${es.password}"/>
+        <property name="sslEnable" value="${es.sslEnable}"/>
+        <property name="sslTrustAllCertificates" value="${es.sslTrustAllCertificates}"/>
+        <property name="throwExceptions" value="${es.throwExceptions}"/>
+        <property name="alwaysOverwrite" value="${es.alwaysOverwrite}"/>
+        <property name="logLevelRestClient" value="${es.logLevelRestClient}"/>
     </bean>
 
-    <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
-    <reference-list id="conditionEvaluators"
-                    interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator"
+    <reference-list id="conditionESQueryBuilders"
+                    interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder"
                     availability="optional">
         <reference-listener
-                bind-method="bindConditionEvaluator" unbind-method="unbindConditionEvaluator" ref="elasticSearchPersistenceServiceImpl"/>
+                bind-method="bindConditionESQueryBuilder"
+                unbind-method="unbindConditionESQueryBuilder"
+                ref="elasticSearchPersistenceServiceImpl"/>
     </reference-list>
 
-    <reference-list id="conditionESQueryBuilders"
-                    interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder"
-        availability="optional">
-        <reference-listener
-                bind-method="bindConditionESQueryBuilder" unbind-method="unbindConditionESQueryBuilder" ref="elasticSearchPersistenceServiceImpl"/>
-    </reference-list>
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.BooleanConditionESQueryBuilder"/>
+    </service>
 
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="notConditionQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.NotConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="matchAllConditionQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.MatchAllConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="propertyConditionQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.PropertyConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="sourceEventPropertyConditionQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.SourceEventPropertyConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="nestedConditionQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.NestedConditionESQueryBuilder"/>
+    </service>
 </blueprint>

@@ -154,21 +154,21 @@ public class ProfileServiceIT extends BaseIT {
     public void testGetProfileWithWrongScrollerIdThrowException()
             throws InterruptedException, NoSuchFieldException, IllegalAccessException, IOException {
         boolean throwExceptionCurrent = false;
-        Configuration elasticSearchConfiguration = configurationAdmin.getConfiguration("org.apache.unomi.persistence.elasticsearch");
-        if (elasticSearchConfiguration != null && elasticSearchConfiguration.getProperties().get("throwExceptions") != null) {
+        Configuration searchEngineConfiguration = configurationAdmin.getConfiguration("org.apache.unomi.persistence." + searchEngine);
+        if (searchEngineConfiguration != null && searchEngineConfiguration.getProperties().get("throwExceptions") != null) {
             try {
-                if (elasticSearchConfiguration.getProperties().get("throwExceptions") instanceof String) {
-                    throwExceptionCurrent = Boolean.parseBoolean((String) elasticSearchConfiguration.getProperties().get("throwExceptions"));
+                if (searchEngineConfiguration.getProperties().get("throwExceptions") instanceof String) {
+                    throwExceptionCurrent = Boolean.parseBoolean((String) searchEngineConfiguration.getProperties().get("throwExceptions"));
                 } else {
                     // already a boolean
-                    throwExceptionCurrent = (Boolean) elasticSearchConfiguration.getProperties().get("throwExceptions");
+                    throwExceptionCurrent = (Boolean) searchEngineConfiguration.getProperties().get("throwExceptions");
                 }
             } catch (Throwable e) {
                 // Not able to cast the property
             }
         }
 
-        updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence.elasticsearch", "throwExceptions", true);
+        updateConfiguration(null, "org.apache.unomi.persistence." + searchEngine, "throwExceptions", true);
 
         Query query = new Query();
         query.setLimit(2);
@@ -181,7 +181,7 @@ public class ProfileServiceIT extends BaseIT {
         } catch (RuntimeException ex) {
             // Should get here since this scenario should throw exception
         } finally {
-            updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence.elasticsearch", "throwExceptions",
+            updateConfiguration(null, "org.apache.unomi.persistence." + searchEngine, "throwExceptions",
                     throwExceptionCurrent);
         }
     }
@@ -354,7 +354,7 @@ public class ProfileServiceIT extends BaseIT {
     }
 
     @Test
-    public void testMonthlyIndicesPurge() throws Exception {
+    public void testOldItemsPurge() throws Exception {
         Date currentDate = new Date();
         LocalDateTime minus10Months = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusMonths(10);
         LocalDateTime minus30Months = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusMonths(30);
@@ -364,7 +364,7 @@ public class ProfileServiceIT extends BaseIT {
         long originalSessionsCount  = persistenceService.getAllItemsCount(Session.ITEM_TYPE);
         long originalEventsCount  = persistenceService.getAllItemsCount(Event.ITEM_TYPE);
 
-        Profile profile = new Profile("dummy-profile-monthly-purge-test");
+        Profile profile = new Profile("dummy-profile-old-items-purge-test");
         persistenceService.save(profile);
 
         // create 10 months old items

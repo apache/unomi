@@ -21,18 +21,25 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>2.7.0-SNAPSHOT</version>
+        <version>3.1.0-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-itests</artifactId>
     <name>Apache Unomi :: Integration Tests</name>
     <description>Apache Unomi Context Server integration tests</description>
+    <packaging>jar</packaging>
+
+    <properties>
+        <unomi.search.engine>elasticsearch</unomi.search.engine>
+        <use.opensearch>false</use.opensearch>
+        <docker.container.name>itests-opensearch</docker.container.name>
+    </properties>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.apache.karaf</groupId>
-                <artifactId>karaf-bom</artifactId>
-                <version>${karaf.version}</version>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -111,30 +118,26 @@
         <dependency>
             <groupId>org.eclipse.jetty.websocket</groupId>
             <artifactId>websocket-client</artifactId>
-            <version>9.4.28.v20200408</version>
+            <version>${jetty.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-lifecycle-watcher</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>shell-commands</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-groovy-actions-services</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -145,64 +148,100 @@
         </dependency>
     </dependencies>
 
-    <profiles>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.googlecode.maven-download-plugin</groupId>
+                <artifactId>download-maven-plugin</artifactId>
+                <version>1.3.0</version>
+                <executions>
+                    <execution>
+                        <!-- the wget goal actually binds itself to this phase by default -->
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>wget</goal>
+                        </goals>
+                        <configuration>
+                            <url>
+                                https://search.maven.org/remotecontent?filepath=org/jacoco/jacoco/0.8.13/jacoco-0.8.13.zip
+                            </url>
+                            <outputFileName>jacoco.zip</outputFileName>
+                            <unpack>true</unpack>
+                            <outputDirectory>${project.build.directory}/jacoco/</outputDirectory>
+                            <failOnError>false</failOnError>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
 
+            <plugin>
+                <groupId>org.apache.servicemix.tooling</groupId>
+                <artifactId>depends-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-depends-file</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>generate-depends-file</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <tasks>
+                                <unzip src="${project.basedir}/src/test/resources/migration/snapshots_repository.zip" dest="${project.build.directory}" />
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
         <profile>
-            <id>run-tests</id>
+            <id>elasticsearch</id>
             <activation>
                 <activeByDefault>true</activeByDefault>
+                <property>
+                    <name>!use.opensearch</name> <!-- Deactivate if use.opensearch is set -->
+                </property>
             </activation>
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>com.googlecode.maven-download-plugin</groupId>
-                        <artifactId>download-maven-plugin</artifactId>
-                        <version>1.3.0</version>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>3.0.0-M4</version>
+                        <configuration>
+                            <includes>
+                                <include>**/*AllITs.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <my.system.property>foo</my.system.property>
+                                <unomi.search.engine>elasticsearch</unomi.search.engine>
+                            </systemPropertyVariables>
+                        </configuration>
                         <executions>
                             <execution>
-                                <!-- the wget goal actually binds itself to this phase by default -->
-                                <phase>pre-integration-test</phase>
+                                <id>integration-test</id>
                                 <goals>
-                                    <goal>wget</goal>
-                                </goals>
-                                <configuration>
-                                    <url>
-                                        https://search.maven.org/remotecontent?filepath=org/jacoco/jacoco/0.8.8/jacoco-0.8.8.zip
-                                    </url>
-                                    <outputFileName>jacoco.zip</outputFileName>
-                                    <unpack>true</unpack>
-                                    <outputDirectory>${project.build.directory}/jacoco/</outputDirectory>
-                                    <failOnError>false</failOnError>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <!-- Needed if you use versionAsInProject() -->
-                    <plugin>
-                        <groupId>org.apache.servicemix.tooling</groupId>
-                        <artifactId>depends-maven-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <id>generate-depends-file</id>
-                                <goals>
-                                    <goal>generate-depends-file</goal>
+                                    <goal>integration-test</goal>
                                 </goals>
                             </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <version>1.8</version>
-                        <executions>
                             <execution>
-                                <phase>generate-resources</phase>
-                                <configuration>
-                                    <tasks>
-                                        <unzip src="${project.basedir}/src/test/resources/migration/snapshots_repository.zip" dest="${project.build.directory}" />
-                                    </tasks>
-                                </configuration>
+                                <id>verify</id>
                                 <goals>
-                                    <goal>run</goal>
+                                    <goal>verify</goal>
                                 </goals>
                             </execution>
                         </executions>
@@ -211,14 +250,16 @@
                         <groupId>com.github.alexcojocaru</groupId>
                         <artifactId>elasticsearch-maven-plugin</artifactId>
                         <!-- REPLACE THE FOLLOWING WITH THE PLUGIN VERSION YOU NEED -->
-                        <version>6.23</version>
+                        <version>6.29</version>
                         <configuration>
+                            <!-- <downloadUrl>https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.1.3-darwin-aarch64.tar
+                            .gz</downloadUrl> -->
                             <clusterName>contextElasticSearchITests</clusterName>
                             <transportPort>9500</transportPort>
                             <httpPort>9400</httpPort>
                             <version>${elasticsearch.test.version}</version>
                             <autoCreateIndex>true</autoCreateIndex>
-                            <timeout>120</timeout>
+                            <instanceStartupTimeout>120</instanceStartupTimeout>
                             <environmentVariables>
                                 <ES_JAVA_OPTS>-Xms4g -Xmx4g</ES_JAVA_OPTS>
                             </environmentVariables>
@@ -227,7 +268,6 @@
                                     <xpack.ml.enabled>false</xpack.ml.enabled>
                                     <path.repo>${project.build.directory}/snapshots_repository</path.repo>
                                     <cluster.routing.allocation.disk.threshold_enabled>false</cluster.routing.allocation.disk.threshold_enabled>
-                                    <http.cors.allow-origin>*</http.cors.allow-origin>
                                     <http.cors.allow-methods>OPTIONS,HEAD,GET,POST,PUT,DELETE</http.cors.allow-methods>
                                     <http.cors.allow-headers>Authorization,X-Requested-With,X-Auth-Token,Content-Type,Content-Length</http.cors.allow-headers>
                                 </properties>
@@ -254,16 +294,33 @@
                             </execution>
                         </executions>
                     </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>opensearch</id>
+            <properties>
+                <opensearch.port>9401</opensearch.port>
+            </properties>
+            <activation>
+                <property>
+                    <name>use.opensearch</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>3.0.0-M4</version>
+                        <version>${maven-failsafe.plugin.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/*AllITs.java</include>
                             </includes>
                             <systemPropertyVariables>
                                 <my.system.property>foo</my.system.property>
+                                <unomi.search.engine>opensearch</unomi.search.engine>
+                                <org.apache.unomi.opensearch.addresses>localhost:${opensearch.port}</org.apache.unomi.opensearch.addresses>
                             </systemPropertyVariables>
                         </configuration>
                         <executions>
@@ -278,6 +335,68 @@
                                 <goals>
                                     <goal>verify</goal>
                                 </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <version>0.45.1</version>
+                        <configuration>
+                            <containerNamePattern>${docker.container.name}</containerNamePattern>
+                            <images>
+                                <image>
+                                    <name>opensearchproject/opensearch:${opensearch.version}</name>
+                                    <alias>opensearch</alias>
+                                    <run>
+                                        <ports>
+                                            <port>${opensearch.port}:9200</port>
+                                        </ports>
+                                        <env>
+                                            <discovery.type>single-node</discovery.type>
+                                            <OPENSEARCH_JAVA_OPTS>-Xms4g -Xmx4g -Dcluster.default.index.settings.number_of_replicas=0</OPENSEARCH_JAVA_OPTS>
+                                            <path.repo>/tmp/snapshots_repository</path.repo>
+                                            <plugins.security.disabled>true</plugins.security.disabled>
+                                            <OPENSEARCH_INITIAL_ADMIN_PASSWORD>Unomi.1ntegrat10n.Tests</OPENSEARCH_INITIAL_ADMIN_PASSWORD>
+                                        </env>
+                                        <volumes>
+                                            <bind>
+                                                <volume>${project.build.directory}/snapshots_repository:/tmp/snapshots_repository</volume>
+                                            </bind>
+                                        </volumes>
+                                        <wait>
+                                            <http>
+                                                <url>http://localhost:${opensearch.port}</url>
+                                                <method>GET</method>
+                                                <status>200</status>
+                                            </http>
+                                            <time>120000</time>
+                                        </wait>
+                                        <portPropertyFile>${project.build.directory}/opensearch-port.properties</portPropertyFile>
+                                    </run>
+                                </image>
+                            </images>
+                        </configuration>
+                        <executions>
+                            <!-- Force remove existing container before starting -->
+                            <execution>
+                                <id>remove-existing-container</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal> <!-- Stops the container if running -->
+                                    <goal>remove</goal> <!-- Removes the container -->
+                                </goals>
+                            </execution>
+
+                            <execution>
+                                <id>start-opensearch</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                                <configuration>
+                                    <showLogs>true</showLogs>
+                                </configuration>
                             </execution>
                         </executions>
                     </plugin>
@@ -323,7 +442,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.7.7.201606060606</version>
+                        <version>0.8.13</version>
                         <executions>
                             <execution>
                                 <phase>post-site</phase>

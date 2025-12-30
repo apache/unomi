@@ -7,16 +7,19 @@ on:
   push:
     branches: [master]
 
+env:
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+
 jobs:
   publish-docs-and-snapshots:
     name: Publish Javadoc and snapshots
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 11
+      - name: Set up JDK 17
         uses: actions/setup-java@v1
         with:
-          java-version: 11
+          java-version: 17
           server-id: apache.snapshots.https
           server-username: NEXUS_USER
           server-password: NEXUS_PW
@@ -33,10 +36,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 11
+      - name: Set up JDK 17
         uses: actions/setup-java@v1
         with:
-          java-version: 11
+          java-version: 17
           server-id: apache.snapshots.https
           server-username: NEXUS_USER
           server-password: NEXUS_PW

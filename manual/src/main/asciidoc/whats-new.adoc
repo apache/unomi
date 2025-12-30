@@ -11,167 +11,58 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-=== What's new in Apache Unomi 2.0
+=== What's new in Apache Unomi 3.0
 
-Apache Unomi 2 is a new release focused on improving core functionalities and robustness of the product.
+Apache Unomi 3 is a new release focused on integrations of the client to support elasticsearch version 9.
+It also include the upgrade of the Karaf version.
 
-The introduction of tighter data validation with JSON Schemas required some changes in the product data model, which presented an opportunity for noticeable improvements in the overall performance.
+=== Elasticsearch client upgrade
 
-This new release also introduces a first (beta) version of the Unomi GraphQL API.
+The official client for Elasticsearch has been added to Apache Unomi in version 3.0 in order to replace the old rest-client which
+is not supported anymore.
 
-==== Introducing profiles aliases
+The documentation of the client can be found here: https://www.elastic.co/docs/reference/elasticsearch/clients/java
 
-Profiles may now have alias IDs, which is a new way to reference profiles using multiple IDs. The Unomi ID still exists, but a new index with aliases can reference a single Unomi profile. This enables more flexible integrations with external systems, as well as provide more flexible and reliable merging mechanisms. A new REST API makes it easy to define, update and remove aliases for profiles. You can read more about <<What profile aliases are and how to use them,profile aliases here>>.
+===  Elasticsearch 7 data migration
 
-==== Scopes declarations are now required
+A procedure to migrate your data from Elasticsearch 7 to Elasticsearch 9 can be found in the <<Migrate from Elasticsearch 7 to Elasticsearch 9>> section
 
-Scopes declarations are now required in Unomi 2. When submitting an event and specifying a scope,
-that scope must already be declared on the platform.
+=== Karaf upgrade
 
-Scopes can be easily created via the corresponding REST API (`cxs/scopes`)
+The Karaf version has been upgraded from 4.2.15 to 4.4.8 in order to support the latest versions of the dependencies.
+This upgrade also brings support for Java 17.
 
-For example, an "apache" scope can be created using the following API call.
-[source]
-----
-curl --location --request POST 'http://localhost:8181/cxs/scopes' \
--u 'karaf:karaf' \
---header 'Content-Type: application/json' \
---data-raw '{
-"itemId": "apache",
-"itemType": "scope"
-}'
-----
+==== OpenSearch Support
 
-==== JSON Schemas
+Starting with version 3.0.0, Apache Unomi now officially supports OpenSearch 3 as an alternative to Elasticsearch. This addition gives users more flexibility in choosing their search engine backend. Key features include:
 
-Apache Unomi 2 introduces support for https://json-schema.org/specification.html[JSON Schema] for all of its publicly exposed endpoints.
-Data received by Apache Unomi 2 will first be validated against a known schema to make sure it complies with an expected payload.
-If the received payload does not match a known schema, it will be rejected by Apache Unomi 2.
+- Full support for OpenSearch 3
+- Seamless integration with existing Unomi features
+- Support for security features enabled by default in OpenSearch
+- Compatible with both standalone and Docker deployments
 
-Apache Unomi 2 also introduces a set of administrative endpoints allowing new schemas and/or schemas extensions to be registered.
+===== Configuration Options
 
-More details about JSON Schemas implementation are available in the <<JSON schemas,corresponding section>> of the documentation.
+Users can choose between ElasticSearch and OpenSearch through various configuration methods:
 
-==== Updated data model
+1. Using configuration properties
+2. Using Maven profiles during build
+3. Using Docker environment variables
 
-The introduction of JSON schema required us to modify Apache Unomi data model, One of the key differences is the removal of open maps.
+For detailed configuration instructions, see the <<Configuration,configuration section>>.
 
-The properties field in the events objects provided by unomi are now restricted by JSON schema.
-This means object properties must be declared in a JSON schema for an event to be accepted.
+===== Security Considerations
 
-A new property, flattenedProperties has been introduced to the event object, this property has been added to store the properties as
-flattened in Elasticsearch and should avoid mapping explosion for dynamic properties.
+When using OpenSearch:
+- Security is enabled by default and requires SSL/TLS
+- Default admin credentials are required
+- The initial admin password can be configured via environment variables
 
-If there is dynamic properties that you want to send with your event, you should use the flattenedProperties field of the event.
+===== Migration Notes
 
-It's also necessary to specify the format of the values which are added to flattenedProperties by JSON schema but these value will be
-stored as flattened and will not create dynamic mapping contrary to the properties field of the events.
+For users wanting to migrate from ElasticSearch to OpenSearch:
+- Data migration requires a full cluster shutdown
+- All existing features, including the flattened field type, are supported
+- Existing queries and aggregations work seamlessly with both backends
 
-Here is an example for objects that used dynamic properties for URL parameters:
-
-The following event example in Apache Unomi 1.x:
-[source]
-----
-{
-    "eventType":"view",
-    "scope":"digitall",
-    "properties":{
-        "URLParameters":{
-           "utm_source":"source"
-        }
-    },
-    "target":{
-        "scope":"digitall",
-        "itemId":"30c0a9e3-4330-417d-9c66-4c1beec85f08",
-        "itemType":"page",
-        "properties":{
-           "pageInfo":{
-              "pageID":"30c0a9e3-4330-417d-9c66-4c1beec85f08",
-              "nodeType":"jnt:page",
-              "pageName":"Home",
-              ...
-           },
-           "attributes":{},
-           "consentTypes":[]
-        }
-    },
-    "source":{
-        "scope":"digitall",
-        "itemId":"ff5886e0-d75a-4061-9de9-d90dfc9e18d8",
-        "itemType":"site"
-    }
-}
-----
-
-Is replaced by the following in Apache Unomi 2.x:
-[source]
-----
-{
-    "eventType":"view",
-    "scope":"digitall",
-    "flattenedProperties":{
-        "URLParameters":{
-           "utm_source":"source"
-        }
-    },
-    "target":{
-        "scope":"digitall",
-        "itemId":"30c0a9e3-4330-417d-9c66-4c1beec85f08",
-        "itemType":"page",
-        "properties":{
-           "pageInfo":{
-              "pageID":"30c0a9e3-4330-417d-9c66-4c1beec85f08",
-              "nodeType":"jnt:page",
-              "pageName":"Home",
-              ...
-           },
-           "attributes":{},
-           "consentTypes":[]
-        }
-    },
-    "source":{
-        "scope":"digitall",
-        "itemId":"ff5886e0-d75a-4061-9de9-d90dfc9e18d8",
-        "itemType":"site"
-    }
-}
-----
-
-If using the default Apache 1.x data model, our Unomi 2 migration process will handle the data model changes for you.
-
-If you are using custom events/objects, please refer to the detailed <<_migration_overview,migration guide>> for more details.
-
-==== New Web Tracker
-
-Apache Unomi 2.0 Web Tracker, located in `extensions/web-tracker/` has been completely rewritten. It is no longer based on an external library and is fully self-sufficient. It is based on an external contribution that has been used in production on many sites.
-
-You can find more information about the <<_unomi_web_tracking_tutorial,new web tracker here>>.
-
-==== GraphQL API - beta
-
-Apache Unomi 2.0 sees the introduction of a new (beta) GraphQL API.
-Available behind a feature flag (the API disabled by default), the GraphQL API is available for you to play with.
-
-More details about how to enable/disable the GraphQL API are available in the <<GraphQL API,corresponding section>> of the documentation.
-
-We welcome tickets/PRs to improve its robustness and progressively make it ready for prime time.
-
-==== Migrate from Unomi 1.x
-
-To facilitate migration we prepared a set of scripts that will automatically handle the migration of your data from Apache Unomi 1.5+ to Apache Unomi 2.0.
-
-It is worth keeping in mind that for Apache Unomi 2.0 we do not support “hot” migration,
-the migration process will require a shutdown of your cluster to guarantee that no new events will be collected while data migration is in progress.
-
-Special caution must be taken if you declared custom events as our migration scripts can only handle objects we know of.
-More details about migration (incl. of custom events) is available in the corresponding section <<Migrations,corresponding section>> of the documentation.
-
-==== Elasticsearch compatibility
-
-We currently recommend using Elasticsearch 7.17.5 with Apache Unomi 2.0,
-this ensure you are on a recent version that is not impacted by the log4j vulnerabilities (fixed in Elasticsearch 7.16.3).
-
-This version increase is releated to Apache Unomi 2.0 makeing use of a new Elasticsearch field type
-called https://www.elastic.co/guide/en/elasticsearch/reference/7.17/flattened.html[Flattened],
-and although it was available in prior versions of Elasticsearch, we do not recommend using those
-due to the above-mentioned log4j vulnerabilities.
+For detailed migration instructions, refer to the <<Migrations,migration guide>>.

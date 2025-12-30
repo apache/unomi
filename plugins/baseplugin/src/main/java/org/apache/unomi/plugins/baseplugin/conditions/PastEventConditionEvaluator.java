@@ -22,9 +22,10 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.scripting.ScriptExecutor;
 
 import java.util.ArrayList;
@@ -36,6 +37,7 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
     private PersistenceService persistenceService;
     private DefinitionsService definitionsService;
     private ScriptExecutor scriptExecutor;
+    private PastEventConditionPersistenceQueryBuilder pastEventConditionPersistenceQueryBuilder;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -43,6 +45,10 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void setPastEventConditionPersistenceQueryBuilder(PastEventConditionPersistenceQueryBuilder pastEventConditionPersistenceQueryBuilder) {
+        this.pastEventConditionPersistenceQueryBuilder = pastEventConditionPersistenceQueryBuilder;
     }
 
     public void setScriptExecutor(ScriptExecutor scriptExecutor) {
@@ -70,10 +76,10 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
             }
         } else {
             // TODO see for deprecation, this should not happen anymore each past event condition should have a generatedPropertyKey
-            count = persistenceService.queryCount(PastEventConditionESQueryBuilder.getEventCondition(condition, context, item.getItemId(), definitionsService, scriptExecutor), Event.ITEM_TYPE);
+            count = persistenceService.queryCount(pastEventConditionPersistenceQueryBuilder.getEventCondition(condition, context, item.getItemId(), definitionsService, scriptExecutor), Event.ITEM_TYPE);
         }
 
-        boolean eventsOccurred = PastEventConditionESQueryBuilder.getStrategyFromOperator((String) condition.getParameter("operator"));
+        boolean eventsOccurred = pastEventConditionPersistenceQueryBuilder.getStrategyFromOperator((String) condition.getParameter("operator"));
         if (eventsOccurred) {
             int minimumEventCount = parameters.get("minimumEventCount") == null  ? 0 : (Integer) parameters.get("minimumEventCount");
             int maximumEventCount = parameters.get("maximumEventCount") == null  ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");

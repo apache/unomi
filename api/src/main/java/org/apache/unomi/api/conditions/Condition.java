@@ -31,7 +31,7 @@ public class Condition implements Serializable {
 
     ConditionType conditionType;
     String conditionTypeId;
-    Map<String, Object> parameterValues = new HashMap<String, Object>();
+    Map<String, Object> parameterValues = new HashMap<>();
 
     /**
      * Instantiates a new Condition.

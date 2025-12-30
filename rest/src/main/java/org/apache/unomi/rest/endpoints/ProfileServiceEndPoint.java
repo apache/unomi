@@ -17,7 +17,7 @@
 
 package org.apache.unomi.rest.endpoints;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
@@ -32,8 +32,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -47,7 +45,6 @@ import java.util.*;
 /**
  * A JAX-RS endpoint to manage {@link Profile}s and {@link Persona}s.
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -76,22 +73,18 @@ public class ProfileServiceEndPoint {
         LOGGER.info("Initializing profile service endpoint...");
     }
 
-    @WebMethod(exclude = true)
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
     }
 
-    @WebMethod(exclude = true)
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }
 
-    @WebMethod(exclude = true)
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }
 
-    @WebMethod(exclude = true)
     public void setLocalizationHelper(LocalizationHelper localizationHelper) {
         this.localizationHelper = localizationHelper;
     }
@@ -439,12 +432,10 @@ public class ProfileServiceEndPoint {
         return eventService.searchEvents(sessionId, eventTypes, query, offset, size, sortBy);
     }
 
-    @WebMethod(exclude = true)
     public PartialList<Session> findProfileSessions(String profileId) {
         return null;
     }
 
-    @WebMethod(exclude = true)
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
         return profileService.matchCondition(condition, profile, session);
     }

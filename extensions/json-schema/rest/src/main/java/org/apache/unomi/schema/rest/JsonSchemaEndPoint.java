@@ -27,18 +27,13 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.*;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
 
-@WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
 @Path("/jsonSchema")
@@ -54,7 +49,6 @@ public class JsonSchemaEndPoint {
         LOGGER.info("Initializing JSON schema endpoint...");
     }
 
-    @WebMethod(exclude = true)
     public void setSchemaService(SchemaService schemaService) {
         this.schemaService = schemaService;
     }

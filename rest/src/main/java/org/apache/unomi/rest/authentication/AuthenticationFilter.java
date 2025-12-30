@@ -24,7 +24,7 @@ import org.apache.cxf.security.SecurityContext;
 import org.apache.karaf.jaas.boot.principal.RolePrincipal;
 import org.apache.karaf.jaas.boot.principal.UserPrincipal;
 
-import javax.annotation.Priority;
+import jakarta.annotation.Priority;
 import javax.security.auth.Subject;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.container.ContainerRequestContext;

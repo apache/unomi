@@ -16,28 +16,107 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# Wait for healthy ElasticSearch
-# next wait for ES status to turn to Green
 
-if [ "$UNOMI_ELASTICSEARCH_SSL_ENABLE" == 'true' ]; then
-  schema='https'
-else
-  schema='http'
+# Near the top of the file, add these default debug settings
+KARAF_DEBUG=${KARAF_DEBUG:-false}
+KARAF_DEBUG_PORT=${KARAF_DEBUG_PORT:-5005}
+KARAF_DEBUG_SUSPEND=${KARAF_DEBUG_SUSPEND:-n}
+
+# Before starting Karaf, add debug configuration
+if [ "$KARAF_DEBUG" = "true" ]; then
+    echo "Enabling Karaf debug mode on port $KARAF_DEBUG_PORT (suspend=$KARAF_DEBUG_SUSPEND)"
+    export JAVA_DEBUG_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=$KARAF_DEBUG_SUSPEND,address=*:$KARAF_DEBUG_PORT"
+    export KARAF_DEBUG=true
 fi
 
-if [ -v UNOMI_ELASTICSEARCH_USERNAME ] && [ -v UNOMI_ELASTICSEARCH_PASSWORD ]; then
-  elasticsearch_addresses="$schema://$UNOMI_ELASTICSEARCH_USERNAME:$UNOMI_ELASTICSEARCH_PASSWORD@$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status"
+# Determine search engine type from UNOMI_AUTO_START
+SEARCH_ENGINE="${UNOMI_AUTO_START:-elasticsearch}"
+export KARAF_OPTS="-Dunomi.autoStart=${UNOMI_AUTO_START}"
+
+if [ "$SEARCH_ENGINE" = "true" ]; then
+    SEARCH_ENGINE="elasticsearch"
+fi
+echo "SEARCH_ENGINE: $SEARCH_ENGINE"
+echo "KARAF_OPTS: $KARAF_OPTS"
+
+# Function to check cluster health for a specific node
+check_node_health() {
+    local node_url="$1"
+    local curl_opts="$2"
+    response=$(eval curl -v -fsSL ${curl_opts} "${node_url}" 2>&1)
+    if [ $? -eq 0 ]; then
+        echo "$response" | grep -o '"status"[ ]*:[ ]*"[^"]*"' | cut -d'"' -f4
+    else
+        echo ""
+    fi
+}
+
+# Configure connection parameters based on search engine type
+if [ "$SEARCH_ENGINE" = "opensearch" ]; then
+    # OpenSearch configuration
+    if [ -z "$UNOMI_OPENSEARCH_PASSWORD" ]; then
+        echo "Error: UNOMI_OPENSEARCH_PASSWORD must be set when using OpenSearch"
+        exit 1
+    fi
+
+    schema='https'
+    auth_header="Authorization: Basic $(echo -n "admin:${UNOMI_OPENSEARCH_PASSWORD}" | base64)"
+    health_endpoint="_cluster/health"
+    curl_opts="-k -H \"${auth_header}\" -H \"Content-Type: application/json\""
+    # Build array of node URLs
+    IFS=',' read -ra NODES <<< "${UNOMI_OPENSEARCH_ADDRESSES}"
 else
-  elasticsearch_addresses="$schema://$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status"
+    # Elasticsearch configuration
+    if [ "$UNOMI_ELASTICSEARCH_SSL_ENABLE" = 'true' ]; then
+        schema='https'
+    else
+        schema='http'
+    fi
+
+    if [ -v UNOMI_ELASTICSEARCH_USERNAME ] && [ -v UNOMI_ELASTICSEARCH_PASSWORD ]; then
+        auth_header="Authorization: Basic $(echo -n "${UNOMI_ELASTICSEARCH_USERNAME}:${UNOMI_ELASTICSEARCH_PASSWORD}" | base64)"
+        curl_opts="-k -H \"${auth_header}\""
+    fi
+    health_endpoint="_cluster/health"
+    # Build array of node URLs
+    IFS=',' read -ra NODES <<< "${UNOMI_ELASTICSEARCH_ADDRESSES}"
 fi
 
-health_check="$(curl -kfsSL "$elasticsearch_addresses")"
+# Wait for search engine to be ready
+echo "Waiting for ${SEARCH_ENGINE} to be ready..."
+echo "Checking nodes: ${NODES[@]}"
+health_check=""
 
-until ([ "$health_check" = 'yellow' ] || [ "$health_check" = 'green' ]); do
-    health_check="$(curl -kfsSL $elasticsearch_addresses)"
-    >&2 echo "Elastic Search is not yet available - waiting (health check=$health_check)..."
-    sleep 1
+while ([ -z "$health_check" ] || ([ "$health_check" != 'yellow' ] && [ "$health_check" != 'green' ])); do
+    # Try each node until we get a successful response
+    for node in "${NODES[@]}"; do
+        node_url="${schema}://${node}/${health_endpoint}"
+        echo "Checking health at: ${node_url}"
+        health_check=$(check_node_health "$node_url" "$curl_opts")
+
+        if [ ! -z "$health_check" ]; then
+            echo "Successfully connected to node: $node (status: ${health_check})"
+            break
+        else
+            >&2 echo "Connection failed to node: $node"
+        fi
+    done
+
+    if [ -z "$health_check" ]; then
+        >&2 echo "${SEARCH_ENGINE^} is not yet available - all nodes unreachable"
+        sleep 3
+        continue
+    fi
+
+    if [ "$health_check" != 'yellow' ] && [ "$health_check" != 'green' ]; then
+        >&2 echo "${SEARCH_ENGINE^} health status: ${health_check} (waiting for yellow or green)"
+        sleep 3
+    else
+        >&2 echo "${SEARCH_ENGINE^} health status: ${health_check}"
+    fi
 done
 
-# Run Unomi in current bash session, if Unomi crash or shutdown the container will stop
-$UNOMI_HOME/bin/karaf run
+echo "${SEARCH_ENGINE^} is ready with health status: ${health_check}"
+
+# Run Unomi in current bash session
+exec "$UNOMI_HOME/bin/karaf" run

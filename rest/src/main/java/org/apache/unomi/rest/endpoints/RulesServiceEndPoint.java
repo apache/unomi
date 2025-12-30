@@ -29,8 +29,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Map;
@@ -39,7 +37,6 @@ import java.util.Set;
 /**
  * A JAX-RS endpoint to manage {@link Rule}s.
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -59,7 +56,6 @@ public class RulesServiceEndPoint {
         LOGGER.info("Initializing rule service endpoint...");
     }
 
-    @WebMethod(exclude=true)
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
     }

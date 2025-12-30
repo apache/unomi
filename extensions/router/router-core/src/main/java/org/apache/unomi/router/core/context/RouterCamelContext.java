@@ -21,7 +21,6 @@ import org.apache.camel.Route;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.core.osgi.OsgiDefaultCamelContext;
 import org.apache.camel.model.RouteDefinition;
-import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -31,7 +30,6 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.services.ProfileExportService;
-import org.apache.unomi.router.core.event.UpdateCamelRouteEvent;
 import org.apache.unomi.router.core.processor.ExportRouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
 import org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor;
@@ -75,7 +73,6 @@ public class RouterCamelContext implements IRouterCamelContext {
     private String allowedEndpoints;
     private BundleContext bundleContext;
     private ConfigSharingService configSharingService;
-    private ClusterService clusterService;
 
     // TODO UNOMI-572: when fixing UNOMI-572 please remove the usage of the custom ScheduledExecutorService and re-introduce the Unomi Scheduler Service
     private ScheduledExecutorService scheduler;
@@ -100,10 +97,6 @@ public class RouterCamelContext implements IRouterCamelContext {
 
     public void setConfigSharingService(ConfigSharingService configSharingService) {
         this.configSharingService = configSharingService;
-    }
-
-    public void setClusterService(ClusterService clusterService) {
-        this.clusterService = clusterService;
     }
 
     public void setTracing(boolean tracing) {
@@ -154,7 +147,6 @@ public class RouterCamelContext implements IRouterCamelContext {
                                     importConfigToRefresh.getKey(), e);
                         }
                     }
-
 
                     for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> exportConfigToRefresh : exportConfigsToRefresh.entrySet()) {
                         try {
@@ -240,12 +232,6 @@ public class RouterCamelContext implements IRouterCamelContext {
                 camelContext.removeRouteDefinition(routeDefinition);
             }
         }
-
-        if (fireEvent) {
-            UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_REMOVE);
-            event.setRouteId(routeId);
-            clusterService.sendEvent(event);
-        }
     }
 
     public void updateProfileImportReaderRoute(String configId, boolean fireEvent) throws Exception {
@@ -266,11 +252,6 @@ public class RouterCamelContext implements IRouterCamelContext {
             builder.setJacksonDataFormat(jacksonDataFormat);
             builder.setContext(camelContext);
             camelContext.addRoutes(builder);
-
-            if (fireEvent) {
-                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_IMPORT);
-                clusterService.sendEvent(event);
-            }
         }
     }
 
@@ -291,11 +272,6 @@ public class RouterCamelContext implements IRouterCamelContext {
             profileExportCollectRouteBuilder.setJacksonDataFormat(jacksonDataFormat);
             profileExportCollectRouteBuilder.setContext(camelContext);
             camelContext.addRoutes(profileExportCollectRouteBuilder);
-
-            if (fireEvent) {
-                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_EXPORT);
-                clusterService.sendEvent(event);
-            }
         }
     }
 

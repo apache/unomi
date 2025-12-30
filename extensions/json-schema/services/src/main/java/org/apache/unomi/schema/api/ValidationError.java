@@ -17,8 +17,6 @@
 
 package org.apache.unomi.schema.api;
 
-import com.networknt.schema.ValidationMessage;
-
 import java.io.Serializable;
 
 /**

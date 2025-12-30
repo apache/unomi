@@ -18,75 +18,114 @@
 package org.apache.unomi.services.impl.cluster;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.karaf.cellar.config.ClusterConfigurationEvent;
-import org.apache.karaf.cellar.config.Constants;
-import org.apache.karaf.cellar.core.*;
-import org.apache.karaf.cellar.core.control.SwitchStatus;
-import org.apache.karaf.cellar.core.event.Event;
-import org.apache.karaf.cellar.core.event.EventProducer;
-import org.apache.karaf.cellar.core.event.EventType;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.ClusterNode;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.ServerInfo;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.ClusterService;
-import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.management.*;
 import java.io.Serializable;
 import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * Implementation of the persistence service interface
  */
 public class ClusterServiceImpl implements ClusterService {
 
-    public static final String KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION = "org.apache.unomi.nodes";
-    public static final String KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS = "publicEndpoints";
-    public static final String KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS = "internalEndpoints";
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterServiceImpl.class.getName());
-    PersistenceService persistenceService;
-    private ClusterManager karafCellarClusterManager;
-    private EventProducer karafCellarEventProducer;
-    private GroupManager karafCellarGroupManager;
-    private String karafCellarGroupName = Configurations.DEFAULT_GROUP_NAME;
-    private ConfigurationAdmin osgiConfigurationAdmin;
+
+    private PersistenceService persistenceService;
+
     private String publicAddress;
     private String internalAddress;
-    private Map<String, Map<String,Serializable>> nodeSystemStatistics = new ConcurrentHashMap<>();
-    private Group group = null;
-    private SchedulerService schedulerService;
-
+    //private SchedulerService schedulerService; /* Wait for PR UNOMI-878 to reactivate that code
+    private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
+    private String nodeId;
+    private long nodeStartTime;
     private long nodeStatisticsUpdateFrequency = 10000;
+    private Map<String, Map<String, Serializable>> nodeSystemStatistics = new ConcurrentHashMap<>();
+    private volatile boolean shutdownNow = false;
+    private volatile List<ClusterNode> cachedClusterNodes = Collections.emptyList();
 
+    private BundleWatcher bundleWatcher;
+    private ScheduledFuture<?> updateSystemStatsFuture;
+    private ScheduledFuture<?> cleanupStaleNodesFuture;
+
+    /**
+     * Max time to wait for persistence service (in milliseconds)
+     */
+    private static final long MAX_WAIT_TIME = 60000; // 60 seconds
+
+    /**
+     * Sets the bundle watcher used to retrieve server information
+     *
+     * @param bundleWatcher the bundle watcher
+     */
+    public void setBundleWatcher(BundleWatcher bundleWatcher) {
+        this.bundleWatcher = bundleWatcher;
+        LOGGER.info("BundleWatcher service set");
+    }
+
+    /**
+     * Waits for the persistence service to become available.
+     * This method will retry getting the persistence service with exponential backoff
+     * until it's available or until the maximum wait time is reached.
+     *
+     * @throws IllegalStateException if the persistence service is not available after the maximum wait time
+     */
+    private void waitForPersistenceService() {
+        if (shutdownNow) {
+            return;
+        }
+
+        // If persistence service is directly set (e.g., in unit tests), no need to wait
+        if (persistenceService != null) {
+            LOGGER.debug("Persistence service is already available, no need to wait");
+            return;
+        }
+
+        // Try to get the service with retries
+        long startTime = System.currentTimeMillis();
+        long waitTime = 50; // Start with 50ms wait time
+
+        while (System.currentTimeMillis() - startTime < MAX_WAIT_TIME) {
+            if (persistenceService != null) {
+                LOGGER.info("Persistence service is now available");
+                return;
+            }
+
+            try {
+                LOGGER.debug("Waiting for persistence service... ({}ms elapsed)", System.currentTimeMillis() - startTime);
+                Thread.sleep(waitTime);
+                // Exponential backoff with a maximum of 5 seconds
+                waitTime = Math.min(waitTime * 2, 5000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOGGER.error("Interrupted while waiting for persistence service", e);
+                break;
+            }
+        }
+
+        throw new IllegalStateException("PersistenceService not available after waiting " + MAX_WAIT_TIME + "ms");
+    }
+
+    /**
+     * For unit tests and backward compatibility - directly sets the persistence service
+     * @param persistenceService the persistence service to set
+     */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
-    }
-
-    public void setKarafCellarClusterManager(ClusterManager karafCellarClusterManager) {
-        this.karafCellarClusterManager = karafCellarClusterManager;
-    }
-
-    public void setKarafCellarEventProducer(EventProducer karafCellarEventProducer) {
-        this.karafCellarEventProducer = karafCellarEventProducer;
-    }
-
-    public void setKarafCellarGroupManager(GroupManager karafCellarGroupManager) {
-        this.karafCellarGroupManager = karafCellarGroupManager;
-    }
-
-    public void setKarafCellarGroupName(String karafCellarGroupName) {
-        this.karafCellarGroupName = karafCellarGroupName;
-    }
-
-    public void setOsgiConfigurationAdmin(ConfigurationAdmin osgiConfigurationAdmin) {
-        this.osgiConfigurationAdmin = osgiConfigurationAdmin;
+        LOGGER.info("PersistenceService set directly");
     }
 
     public void setPublicAddress(String publicAddress) {
@@ -101,8 +140,35 @@ public class ClusterServiceImpl implements ClusterService {
         this.nodeStatisticsUpdateFrequency = nodeStatisticsUpdateFrequency;
     }
 
+    /* Wait for PR UNOMI-878 to reactivate that code
     public void setSchedulerService(SchedulerService schedulerService) {
         this.schedulerService = schedulerService;
+
+        // If we're already initialized, initialize scheduled tasks now
+        // This handles the case when ClusterService was initialized before SchedulerService was set
+        if (schedulerService != null && System.currentTimeMillis() > nodeStartTime && nodeStartTime > 0) {
+            LOGGER.info("SchedulerService was set after ClusterService initialization, initializing scheduled tasks now");
+            initializeScheduledTasks();
+        }
+    }
+    */
+
+    /* Wait for PR UNOMI-878 to reactivate that code
+    /**
+     * Unbind method for the scheduler service, called by the OSGi framework when the service is unregistered
+     * @param schedulerService The scheduler service being unregistered
+     */
+    /*
+    public void unsetSchedulerService(SchedulerService schedulerService) {
+        if (this.schedulerService == schedulerService) {
+            LOGGER.info("SchedulerService was unset");
+            this.schedulerService = null;
+        }
+    }
+    */
+
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
     }
 
     public Map<String, Map<String, Serializable>> getNodeSystemStatistics() {
@@ -110,211 +176,345 @@ public class ClusterServiceImpl implements ClusterService {
     }
 
     public void init() {
-        if (karafCellarEventProducer != null && karafCellarClusterManager != null) {
-
-            boolean setupConfigOk = true;
-            group = karafCellarGroupManager.findGroupByName(karafCellarGroupName);
-            if (setupConfigOk && group == null) {
-                LOGGER.error("Cluster group {} doesn't exist, creating it...", karafCellarGroupName);
-                group = karafCellarGroupManager.createGroup(karafCellarGroupName);
-                if (group != null) {
-                    setupConfigOk = true;
-                } else {
-                    setupConfigOk = false;
-                }
-            }
-
-            // check if the producer is ON
-            if (setupConfigOk && karafCellarEventProducer.getSwitch().getStatus().equals(SwitchStatus.OFF)) {
-                LOGGER.error("Cluster event producer is OFF");
-                setupConfigOk = false;
-            }
-
-            // check if the config pid is allowed
-            if (setupConfigOk && !isClusterConfigPIDAllowed(group, Constants.CATEGORY, KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION, EventType.OUTBOUND)) {
-                LOGGER.error("Configuration PID " + KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION + " is blocked outbound for cluster group {}",
-                        karafCellarGroupName);
-                setupConfigOk = false;
-            }
-
-            if (setupConfigOk) {
-                Map<String, Properties> configurations = karafCellarClusterManager.getMap(Constants.CONFIGURATION_MAP + Configurations.SEPARATOR + karafCellarGroupName);
-                org.apache.karaf.cellar.core.Node thisKarafNode = karafCellarClusterManager.getNode();
-                Properties karafCellarClusterNodeConfiguration = configurations.get(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
-                if (karafCellarClusterNodeConfiguration == null) {
-                    karafCellarClusterNodeConfiguration = new Properties();
-                }
-                Map<String, String> publicEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + publicAddress);
-                publicEndpoints.put(thisKarafNode.getId(), publicAddress);
-                setMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, publicEndpoints);
-
-                Map<String, String> internalEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS, thisKarafNode.getId() + "=" + internalAddress);
-                internalEndpoints.put(thisKarafNode.getId(), internalAddress);
-                setMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS, internalEndpoints);
-
-                configurations.put(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION, karafCellarClusterNodeConfiguration);
-                ClusterConfigurationEvent clusterConfigurationEvent = new ClusterConfigurationEvent(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
-                sendEvent(clusterConfigurationEvent);
-            }
-
-            TimerTask statisticsTask = new TimerTask() {
-                @Override
-                public void run() {
-                    try {
-                        updateSystemStats();
-                    } catch (Throwable t) {
-                        LOGGER.error("Error updating system statistics", t);
-                    }
-                }
-            };
-            schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(statisticsTask, 0, nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS);
-
+        // Validate that nodeId is provided
+        if (StringUtils.isBlank(nodeId)) {
+            String errorMessage = "CRITICAL: nodeId is not set. This is a required setting for cluster operation.";
+            LOGGER.error(errorMessage);
+            throw new IllegalStateException(errorMessage);
         }
-        LOGGER.info("Cluster service initialized.");
+
+        // Wait for persistence service to be available
+        try {
+            waitForPersistenceService();
+        } catch (IllegalStateException e) {
+            LOGGER.error("Failed to initialize cluster service: {}", e.getMessage());
+            return;
+        }
+
+        nodeStartTime = System.currentTimeMillis();
+
+        // Register this node in the persistence service
+        registerNodeInPersistence();
+
+        /* Wait for PR UNOMI-878 to reactivate that code
+        /*
+        // Only initialize scheduled tasks if scheduler service is available
+        if (schedulerService != null) {
+            initializeScheduledTasks();
+        } else {
+            LOGGER.warn("SchedulerService not available during ClusterService initialization. Scheduled tasks will not be registered. They will be registered when SchedulerService becomes available.");
+        }
+        */
+        initializeScheduledTasks();
+
+        LOGGER.info("Cluster service initialized with node ID: {}", nodeId);
+    }
+
+    /**
+     * Initializes scheduled tasks for cluster management.
+     * This method can be called later if schedulerService wasn't available during init.
+     */
+    public void initializeScheduledTasks() {
+        /* Wait for PR UNOMI-878 to reactivate that code
+        if (schedulerService == null) {
+            LOGGER.error("Cannot initialize scheduled tasks: SchedulerService is not set");
+            return;
+        }
+        */
+
+        // Schedule regular updates of the node statistics
+        TimerTask statisticsTask = new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    updateSystemStats();
+                } catch (Throwable t) {
+                    LOGGER.error("Error updating system statistics", t);
+                }
+            }
+        };
+        /* Wait for PR UNOMI-878 to reactivate that code
+        schedulerService.createRecurringTask("clusterNodeStatisticsUpdate", nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS, statisticsTask, false);
+        */
+        updateSystemStatsFuture = scheduledExecutorService.scheduleAtFixedRate(statisticsTask, 100, nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS);
+
+        // Schedule cleanup of stale nodes
+        TimerTask cleanupTask = new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    cleanupStaleNodes();
+                } catch (Throwable t) {
+                    LOGGER.error("Error cleaning up stale nodes", t);
+                }
+            }
+        };
+        /* Wait for PR UNOMI-878 to reactivate that code
+        schedulerService.createRecurringTask("clusterStaleNodesCleanup", 60000, TimeUnit.MILLISECONDS, cleanupTask, false);
+        */
+        cleanupStaleNodesFuture = scheduledExecutorService.scheduleAtFixedRate(cleanupTask, 100, 60000, TimeUnit.MILLISECONDS);
+
+        LOGGER.info("Cluster service scheduled tasks initialized");
     }
 
     public void destroy() {
+        LOGGER.info("Cluster service shutting down...");
+        shutdownNow = true;
+
+        // Cancel scheduled tasks
+        if (updateSystemStatsFuture != null) {
+            boolean successfullyCancelled = updateSystemStatsFuture.cancel(false);
+            if (!successfullyCancelled) {
+                LOGGER.warn("Failed to cancel scheduled task: clusterNodeStatisticsUpdate");
+            } else {
+                LOGGER.info("Scheduled task: clusterNodeStatisticsUpdate cancelled");
+            }
+        }
+        if (cleanupStaleNodesFuture != null) {
+            boolean successfullyCancelled = cleanupStaleNodesFuture.cancel(false);
+            if (!successfullyCancelled) {
+                LOGGER.warn("Failed to cancel scheduled task: cleanupStaleNodesFuture");
+            } else {
+                LOGGER.info("Scheduled task: cleanupStaleNodesFuture cancelled");
+            }
+        }
+        if (scheduledExecutorService != null) {
+            scheduledExecutorService.shutdownNow();
+            try {
+                boolean successfullyTerminated = scheduledExecutorService.awaitTermination(10, TimeUnit.SECONDS);
+                if (!successfullyTerminated) {
+                    LOGGER.warn("Failed to terminate scheduled tasks after 10 seconds...");
+                } else {
+                    LOGGER.info("Scheduled tasks terminated");
+                }
+            } catch (InterruptedException e) {
+                LOGGER.error("Error waiting for scheduled tasks to terminate", e);
+            }
+        }
+
+        // Remove node from persistence service
+        if (persistenceService != null) {
+            try {
+                persistenceService.remove(nodeId, ClusterNode.class);
+                LOGGER.info("Node {} removed from cluster", nodeId);
+            } catch (Exception e) {
+                LOGGER.error("Error removing node from cluster", e);
+            }
+        }
+
+        // Clear references
+        persistenceService = null;
+        bundleWatcher = null;
+
         LOGGER.info("Cluster service shutdown.");
+    }
+
+    /**
+     * Register this node in the persistence service
+     */
+    private void registerNodeInPersistence() {
+        if (persistenceService == null) {
+            LOGGER.error("Cannot register node: PersistenceService not available");
+            return;
+        }
+
+        ClusterNode clusterNode = new ClusterNode();
+        clusterNode.setItemId(nodeId);
+        clusterNode.setPublicHostAddress(publicAddress);
+        clusterNode.setInternalHostAddress(internalAddress);
+        clusterNode.setStartTime(nodeStartTime);
+        clusterNode.setLastHeartbeat(System.currentTimeMillis());
+
+        // Set server information if BundleWatcher is available
+        if (bundleWatcher != null && !bundleWatcher.getServerInfos().isEmpty()) {
+            ServerInfo serverInfo = bundleWatcher.getServerInfos().get(0);
+            clusterNode.setServerInfo(serverInfo);
+            LOGGER.info("Added server info to node: version={}, build={}",
+                    serverInfo.getServerVersion(), serverInfo.getServerBuildNumber());
+        } else {
+            LOGGER.warn("BundleWatcher not available at registration time, server info will not be available");
+        }
+
+        updateSystemStatsForNode(clusterNode);
+
+        boolean success = persistenceService.save(clusterNode);
+        if (success) {
+            LOGGER.info("Node {} registered in cluster", nodeId);
+        } else {
+            LOGGER.error("Failed to register node {} in cluster", nodeId);
+        }
+    }
+
+    /**
+     * Updates system stats for the given cluster node
+     */
+    private void updateSystemStatsForNode(ClusterNode node) {
+        final RuntimeMXBean remoteRuntime = ManagementFactory.getRuntimeMXBean();
+        long uptime = remoteRuntime.getUptime();
+
+        double systemCpuLoad = 0.0;
+        try {
+            systemCpuLoad = ((com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()).getSystemCpuLoad();
+            // Check for NaN value which Elasticsearch and OpenSearch don't support for float fields
+            if (Double.isNaN(systemCpuLoad)) {
+                LOGGER.debug("System CPU load is NaN, setting to 0.0");
+                systemCpuLoad = 0.0;
+            }
+        } catch (Exception e) {
+            LOGGER.debug("Error retrieving system CPU load", e);
+        }
+
+        final OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
+        double systemLoadAverage = operatingSystemMXBean.getSystemLoadAverage();
+        // Check for NaN value which Elasticsearch/OpenSearch doesn't support for float fields
+        if (Double.isNaN(systemLoadAverage)) {
+            LOGGER.debug("System load average is NaN, setting to 0.0");
+            systemLoadAverage = 0.0;
+        }
+
+        node.setCpuLoad(systemCpuLoad);
+        node.setUptime(uptime);
+
+        ArrayList<Double> systemLoadAverageArray = new ArrayList<>();
+        systemLoadAverageArray.add(systemLoadAverage);
+        node.setLoadAverage(ArrayUtils.toPrimitive(systemLoadAverageArray.toArray(new Double[0])));
+
+        // Store system statistics in memory as well
+        Map<String, Serializable> systemStatistics = new TreeMap<>();
+        systemStatistics.put("systemLoadAverage", systemLoadAverageArray);
+        systemStatistics.put("systemCpuLoad", systemCpuLoad);
+        systemStatistics.put("uptime", uptime);
+        nodeSystemStatistics.put(nodeId, systemStatistics);
+    }
+
+    /**
+     * Updates the system statistics for this node and stores them in the persistence service
+     */
+    private void updateSystemStats() {
+        if (shutdownNow) {
+            return;
+        }
+
+        if (persistenceService == null) {
+            LOGGER.warn("Cannot update system stats: PersistenceService not available");
+            return;
+        }
+
+        // Load node from persistence
+        ClusterNode node = persistenceService.load(nodeId, ClusterNode.class);
+        if (node == null) {
+            LOGGER.warn("Node {} not found in persistence, re-registering", nodeId);
+            registerNodeInPersistence();
+            return;
+        }
+
+        try {
+            // Update its stats
+            updateSystemStatsForNode(node);
+
+            // Update server info if needed
+            if (bundleWatcher != null && !bundleWatcher.getServerInfos().isEmpty()) {
+                ServerInfo currentInfo = bundleWatcher.getServerInfos().get(0);
+                // Check if server info needs updating
+                if (node.getServerInfo() == null ||
+                        !currentInfo.getServerVersion().equals(node.getServerInfo().getServerVersion())) {
+
+                    node.setServerInfo(currentInfo);
+                    LOGGER.info("Updated server info for node {}: version={}, build={}",
+                            nodeId, currentInfo.getServerVersion(), currentInfo.getServerBuildNumber());
+                }
+            }
+
+            node.setLastHeartbeat(System.currentTimeMillis());
+
+            // Save back to persistence
+            boolean success = persistenceService.save(node);
+            if (!success) {
+                LOGGER.error("Failed to update node {} statistics", nodeId);
+            }
+
+            // Always refresh cluster nodes cache after attempting stats update
+            try {
+                List<ClusterNode> nodes = persistenceService.getAllItems(ClusterNode.class, 0, -1, null).getList();
+                cachedClusterNodes = nodes;
+            } catch (Exception e) {
+                LOGGER.warn("Failed to refresh cluster nodes cache during stats update", e);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error updating system statistics for node {}: {}", nodeId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Removes stale nodes from the cluster
+     */
+    private void cleanupStaleNodes() {
+        if (shutdownNow) {
+            return;
+        }
+
+        if (persistenceService == null) {
+            LOGGER.warn("Cannot cleanup stale nodes: PersistenceService not available");
+            return;
+        }
+
+        long cutoffTime = System.currentTimeMillis() - (nodeStatisticsUpdateFrequency * 3); // Node is stale if no heartbeat for 3x the update frequency
+
+        Condition staleNodesCondition = new Condition();
+        ConditionType propertyConditionType = new ConditionType();
+        propertyConditionType.setItemId("propertyCondition");
+        propertyConditionType.setItemType(ConditionType.ITEM_TYPE);
+        propertyConditionType.setConditionEvaluator("propertyConditionEvaluator");
+        propertyConditionType.setQueryBuilder("propertyConditionQueryBuilder");
+        staleNodesCondition.setConditionType(propertyConditionType);
+        staleNodesCondition.setConditionTypeId("propertyCondition");
+        staleNodesCondition.setParameter("propertyName", "lastHeartbeat");
+        staleNodesCondition.setParameter("comparisonOperator", "lessThan");
+        staleNodesCondition.setParameter("propertyValueInteger", cutoffTime);
+
+        PartialList<ClusterNode> staleNodes = persistenceService.query(staleNodesCondition, null, ClusterNode.class, 0, -1);
+
+        for (ClusterNode staleNode : staleNodes.getList()) {
+            LOGGER.info("Removing stale node: {}", staleNode.getItemId());
+            persistenceService.remove(staleNode.getItemId(), ClusterNode.class);
+            nodeSystemStatistics.remove(staleNode.getItemId());
+        }
     }
 
     @Override
     public List<ClusterNode> getClusterNodes() {
-        Map<String, ClusterNode> clusterNodes = new LinkedHashMap<String, ClusterNode>();
-
-        Set<org.apache.karaf.cellar.core.Node> karafCellarNodes = karafCellarClusterManager.listNodes();
-        org.apache.karaf.cellar.core.Node thisKarafNode = karafCellarClusterManager.getNode();
-        Map<String, Properties> clusterConfigurations = karafCellarClusterManager.getMap(Constants.CONFIGURATION_MAP + Configurations.SEPARATOR + karafCellarGroupName);
-        Properties karafCellarClusterNodeConfiguration = clusterConfigurations.get(KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION);
-        Map<String, String> publicNodeEndpoints = new TreeMap<>();
-        Map<String, String> internalNodeEndpoints = new TreeMap<>();
-        if (karafCellarClusterNodeConfiguration != null) {
-            publicNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS, thisKarafNode.getId() + "=" + publicAddress);
-            internalNodeEndpoints = getMapProperty(karafCellarClusterNodeConfiguration, KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS, thisKarafNode.getId() + "=" + internalAddress);
-        }
-        for (org.apache.karaf.cellar.core.Node karafCellarNode : karafCellarNodes) {
-            ClusterNode clusterNode = new ClusterNode();
-            String publicEndpoint = publicNodeEndpoints.get(karafCellarNode.getId());
-            if (publicEndpoint != null) {
-                clusterNode.setPublicHostAddress(publicEndpoint);
-            }
-            String internalEndpoint = internalNodeEndpoints.get(karafCellarNode.getId());
-            if (internalEndpoint != null) {
-                clusterNode.setInternalHostAddress(internalEndpoint);
-            }
-            Map<String,Serializable> nodeStatistics = nodeSystemStatistics.get(karafCellarNode.getId());
-            if (nodeStatistics != null) {
-                Long uptime = (Long) nodeStatistics.get("uptime");
-                if (uptime != null) {
-                    clusterNode.setUptime(uptime);
-                }
-                Double systemCpuLoad = (Double) nodeStatistics.get("systemCpuLoad");
-                if (systemCpuLoad != null) {
-                    clusterNode.setCpuLoad(systemCpuLoad);
-                }
-                List<Double> loadAverage = (List<Double>) nodeStatistics.get("systemLoadAverage");
-                if (loadAverage != null) {
-                    Double[] loadAverageArray = loadAverage.toArray(new Double[loadAverage.size()]);
-                    ArrayUtils.toPrimitive(loadAverageArray);
-                    clusterNode.setLoadAverage(ArrayUtils.toPrimitive(loadAverageArray));
-                }
-            }
-            clusterNodes.put(karafCellarNode.getId(), clusterNode);
-        }
-
-        return new ArrayList<ClusterNode>(clusterNodes.values());
+        // Return cached cluster nodes, creating a defensive copy
+        return cachedClusterNodes.isEmpty() ? Collections.emptyList() : new ArrayList<>(cachedClusterNodes);
     }
 
     @Override
     public void purge(Date date) {
+        if (persistenceService == null) {
+            LOGGER.warn("Cannot purge by date: PersistenceService not available");
+            return;
+        }
+
         persistenceService.purge(date);
     }
 
     @Override
     public void purge(String scope) {
+        if (persistenceService == null) {
+            LOGGER.warn("Cannot purge by scope: PersistenceService not available");
+            return;
+        }
+
         persistenceService.purge(scope);
     }
 
-    @Override
-    public void sendEvent(Serializable eventObject) {
-        Event event = (Event) eventObject;
-        event.setSourceGroup(group);
-        event.setSourceNode(karafCellarClusterManager.getNode());
-        karafCellarEventProducer.produce(event);
-    }
-
     /**
-     * Check if a configuration is allowed.
+     * Check if a persistence service is available.
+     * This can be used to quickly check before performing operations.
      *
-     * @param group    the cluster group.
-     * @param category the configuration category constant.
-     * @param pid      the configuration PID.
-     * @param type     the cluster event type.
-     * @return true if the cluster event type is allowed, false else.
+     * @return true if a persistence service is available (either directly set or via tracker)
      */
-    public boolean isClusterConfigPIDAllowed(Group group, String category, String pid, EventType type) {
-        CellarSupport support = new CellarSupport();
-        support.setClusterManager(this.karafCellarClusterManager);
-        support.setGroupManager(this.karafCellarGroupManager);
-        support.setConfigurationAdmin(this.osgiConfigurationAdmin);
-        return support.isAllowed(group, category, pid, type);
+    public boolean isPersistenceServiceAvailable() {
+        return persistenceService != null;
     }
-
-    private Map<String, String> getMapProperty(Properties properties, String propertyName, String defaultValue) {
-        String propertyValue = properties.getProperty(propertyName, defaultValue);
-        return getMapProperty(propertyValue);
-    }
-
-    private Map<String, String> getMapProperty(String propertyValue) {
-        String[] propertyValueArray = propertyValue.split(",");
-        Map<String, String> propertyMapValue = new LinkedHashMap<>();
-        for (String propertyValueElement : propertyValueArray) {
-            String[] propertyValueElementPrats = propertyValueElement.split("=");
-            propertyMapValue.put(propertyValueElementPrats[0], propertyValueElementPrats[1]);
-        }
-        return propertyMapValue;
-    }
-
-    private Map<String, String> setMapProperty(Properties properties, String propertyName, Map<String, String> propertyMapValue) {
-        StringBuilder propertyValueBuilder = new StringBuilder();
-        int entryCount = 0;
-        for (Map.Entry<String, String> propertyMapValueEntry : propertyMapValue.entrySet()) {
-            propertyValueBuilder.append(propertyMapValueEntry.getKey());
-            propertyValueBuilder.append("=");
-            propertyValueBuilder.append(propertyMapValueEntry.getValue());
-            if (entryCount < propertyMapValue.size() - 1) {
-                propertyValueBuilder.append(",");
-            }
-        }
-        String oldPropertyValue = (String) properties.setProperty(propertyName, propertyValueBuilder.toString());
-        if (oldPropertyValue == null) {
-            return null;
-        }
-        return getMapProperty(oldPropertyValue);
-    }
-
-    private void updateSystemStats() {
-        final RuntimeMXBean remoteRuntime = ManagementFactory.getRuntimeMXBean();
-        long uptime = remoteRuntime.getUptime();
-        ObjectName operatingSystemMXBeanName = ManagementFactory.getOperatingSystemMXBean().getObjectName();
-        Double systemCpuLoad = null;
-        try {
-            systemCpuLoad = (Double) ManagementFactory.getPlatformMBeanServer().getAttribute(operatingSystemMXBeanName, "SystemCpuLoad");
-        } catch (MBeanException | AttributeNotFoundException | InstanceNotFoundException | ReflectionException e) {
-            LOGGER.error("Error retrieving system CPU load", e);
-        }
-        final OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
-        double systemLoadAverage = operatingSystemMXBean.getSystemLoadAverage();
-
-        ClusterSystemStatisticsEvent clusterSystemStatisticsEvent = new ClusterSystemStatisticsEvent("org.apache.unomi.cluster.system.statistics");
-        Map<String,Serializable> systemStatistics = new TreeMap<>();
-        ArrayList<Double> systemLoadAverageArray = new ArrayList<>();
-        systemLoadAverageArray.add(systemLoadAverage);
-        systemStatistics.put("systemLoadAverage", systemLoadAverageArray);
-        systemStatistics.put("systemCpuLoad", systemCpuLoad);
-        systemStatistics.put("uptime", uptime);
-        clusterSystemStatisticsEvent.setStatistics(systemStatistics);
-        nodeSystemStatistics.put(karafCellarClusterManager.getNode().getId(), systemStatistics);
-        sendEvent(clusterSystemStatisticsEvent);
-    }
-
 }
+

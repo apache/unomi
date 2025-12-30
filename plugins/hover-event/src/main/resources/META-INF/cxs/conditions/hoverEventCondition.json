@@ -12,7 +12,46 @@
     ],
     "readOnly": true
   },
-  "queryBuilder": "hoverEventConditionESQueryBuilder",
+  "parentCondition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator": "and",
+      "subConditions": [
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "eventType",
+            "propertyValue": "hover",
+            "comparisonOperator": "equals"
+          }
+        },
+        {
+          "type": "booleanCondition",
+          "parameterValues": {
+            "operator": "or",
+            "subConditions": [
+              {
+                "type": "eventPropertyCondition",
+                "parameterValues": {
+                  "propertyName": "target.itemId",
+                  "propertyValue": "parameter::targetId",
+                  "comparisonOperator": "equals"
+                }
+              },
+              {
+                "type": "eventPropertyCondition",
+                "parameterValues": {
+                  "propertyName": "target.properties.pageInfo.pagePath",
+                  "propertyValue": "parameter::targetPath",
+                  "comparisonOperator": "equals"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  },
   "parameters": [
     {
       "id": "targetId",

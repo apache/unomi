@@ -20,10 +20,10 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
-import org.elasticsearch.common.geo.GeoDistance;
-import org.elasticsearch.common.unit.DistanceUnit;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
+import org.apache.unomi.persistence.spi.conditions.geo.GeoDistance;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

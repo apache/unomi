@@ -26,11 +26,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.*;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
@@ -58,11 +54,13 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.services.UserListService;
+import org.apache.unomi.shell.services.UnomiManagementService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.ConfigurationManager;
 import org.ops4j.pax.exam.CoreOptions;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -100,6 +98,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static org.ops4j.pax.exam.CoreOptions.maven;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
 import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
 
@@ -123,8 +122,13 @@ public abstract class BaseIT extends KarafTestSupport {
     protected static final int DEFAULT_TRYING_TIMEOUT = 2000;
     protected static final int DEFAULT_TRYING_TRIES = 30;
 
+    protected static final String SEARCH_ENGINE_PROPERTY = "unomi.search.engine";
+    protected static final String SEARCH_ENGINE_ELASTICSEARCH = "elasticsearch";
+    protected static final String SEARCH_ENGINE_OPENSEARCH = "opensearch";
+
     protected final static ObjectMapper objectMapper;
     protected static boolean unomiStarted = false;
+    protected static String searchEngine = SEARCH_ENGINE_ELASTICSEARCH;
 
     static {
         objectMapper = new ObjectMapper();
@@ -164,10 +168,25 @@ public abstract class BaseIT extends KarafTestSupport {
     public void waitForStartup() throws InterruptedException {
         // disable retry
         retry = new KarafTestSupport.Retry(false);
+        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
 
         // Start Unomi if not already done
         if (!unomiStarted) {
-            executeCommand("unomi:start");
+            // We must check that the Unomi Management Service is up and running before launching the
+            // command otherwise the start configuration will not be properly populated.
+            waitForUnomiManagementService();
+            if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
+                LOGGER.info("Starting Unomi with elasticsearch search engine...");
+                System.out.println("==== Starting Unomi with elasticsearch search engine...");
+                executeCommand("unomi:start");
+            } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)){
+                LOGGER.info("Starting Unomi with opensearch search engine...");
+                System.out.println("==== Starting Unomi with opensearch search engine...");
+                executeCommand("unomi:start " + SEARCH_ENGINE_OPENSEARCH);
+            } else {
+                LOGGER.error("Unknown search engine: " + searchEngine);
+                throw new InterruptedException("Unknown search engine: " + searchEngine);
+            }
             unomiStarted = true;
         }
 
@@ -200,13 +219,43 @@ public abstract class BaseIT extends KarafTestSupport {
         httpClient = initHttpClient(getHttpClientCredentialProvider());
     }
 
+    private void waitForUnomiManagementService() throws InterruptedException {
+        final int maxRetries = 5;
+        int retryCount = 0;
+        UnomiManagementService unomiManagementService = getOsgiService(UnomiManagementService.class, 600000);
+
+        while (unomiManagementService == null && retryCount < maxRetries) {
+            LOGGER.info("Waiting for Unomi Management Service to be available... (attempt {}/{})", retryCount + 1, maxRetries);
+            Thread.sleep(1000);
+            retryCount++;
+            unomiManagementService = getOsgiService(UnomiManagementService.class, 600000);
+        }
+
+        if (unomiManagementService == null) {
+            String errorMsg = String.format("Unomi Management Service was not available after %d retries.", maxRetries);
+            LOGGER.error(errorMsg);
+            throw new InterruptedException(errorMsg);
+        }
+    }
+
     @After
     public void shutdown() {
         closeHttpClient(httpClient);
         httpClient = null;
     }
 
+    protected String karafData() {
+        ConfigurationManager cm = new ConfigurationManager();
+        return cm.getProperty("karaf.data");
+    }
+
     protected void removeItems(final Class<? extends Item>... classes) throws InterruptedException {
+        if (definitionsService == null) {
+            throw new RuntimeException("definitionsService is null");
+        }
+        if (persistenceService == null) {
+            throw new RuntimeException("persistenceService is null");
+        }
         Condition condition = new Condition(definitionsService.getConditionType("matchAllCondition"));
         for (Class<? extends Item> aClass : classes) {
             persistenceService.removeByQuery(condition, aClass);
@@ -223,12 +272,76 @@ public abstract class BaseIT extends KarafTestSupport {
 
     @Override
     public MavenArtifactUrlReference getKarafDistribution() {
-        return CoreOptions.maven().groupId("org.apache.unomi").artifactId("unomi").versionAsInProject().type("tar.gz");
+        return maven().groupId("org.apache.unomi").artifactId("unomi").versionAsInProject().type("tar.gz");
     }
 
     @Configuration
     public Option[] config() {
+        LOGGER.info("==== Configuring container");
         System.out.println("==== Configuring container");
+
+        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        LOGGER.info("Search Engine: {}", searchEngine);
+        System.out.println("Search Engine: " + searchEngine);
+
+        // Define features option based on search engine
+        Option featuresOption;
+        if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
+            featuresOption = features(
+                    maven().groupId("org.apache.unomi").artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
+                    "unomi-base",
+                    "unomi-startup",
+                    "unomi-elasticsearch-core",
+                    "unomi-persistence-core",
+                    "unomi-services",
+                    "unomi-rest-api",
+                    "unomi-cxs-lists-extension",
+                    "unomi-cxs-geonames-extension",
+                    "unomi-cxs-privacy-extension",
+                    "unomi-elasticsearch-conditions",
+                    "unomi-plugins-base",
+                    "unomi-plugins-request",
+                    "unomi-plugins-mail",
+                    "unomi-plugins-optimization-test",
+                    "unomi-shell-dev-commands",
+                    "unomi-wab",
+                    "unomi-web-tracker",
+                    "unomi-healthcheck",
+                    "unomi-router-karaf-feature",
+                    "unomi-groovy-actions",
+                    "unomi-rest-ui",
+                    "unomi-startup-complete"
+            );
+        } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            featuresOption = features(
+                    maven().groupId("org.apache.unomi").artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
+                    "unomi-base",
+                    "unomi-startup",
+                    "unomi-opensearch-core",
+                    "unomi-persistence-core",
+                    "unomi-services",
+                    "unomi-rest-api",
+                    "unomi-cxs-lists-extension",
+                    "unomi-cxs-geonames-extension",
+                    "unomi-cxs-privacy-extension",
+                    "unomi-opensearch-conditions",
+                    "unomi-plugins-base",
+                    "unomi-plugins-request",
+                    "unomi-plugins-mail",
+                    "unomi-plugins-optimization-test",
+                    "unomi-shell-dev-commands",
+                    "unomi-wab",
+                    "unomi-web-tracker",
+                    "unomi-healthcheck",
+                    "unomi-router-karaf-feature",
+                    "unomi-groovy-actions",
+                    "unomi-rest-ui",
+                    "unomi-startup-complete"
+            );
+        } else {
+            throw new IllegalArgumentException("Unknown search engine: " + searchEngine);
+        }
+
         Option[] options = new Option[]{
                 replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File("src/test/resources/org.apache.unomi.router.cfg")),
 
@@ -244,25 +357,35 @@ public abstract class BaseIT extends KarafTestSupport {
                 replaceConfigurationFile("data/tmp/testLoginEventCondition.json", new File("src/test/resources/testLoginEventCondition.json")),
                 replaceConfigurationFile("data/tmp/testClickEventCondition.json", new File("src/test/resources/testClickEventCondition.json")),
                 replaceConfigurationFile("data/tmp/testRuleGroovyAction.json", new File("src/test/resources/testRuleGroovyAction.json")),
+                replaceConfigurationFile("data/tmp/conditions/testIdsConditionLegacy.json", new File("src/test/resources/conditions/testIdsConditionLegacy.json")),
+                replaceConfigurationFile("data/tmp/conditions/testIdsConditionNew.json", new File("src/test/resources/conditions/testIdsConditionNew.json")),
+                replaceConfigurationFile("data/tmp/conditions/testBooleanConditionLegacy.json", new File("src/test/resources/conditions/testBooleanConditionLegacy.json")),
+                replaceConfigurationFile("data/tmp/conditions/testPropertyConditionLegacy.json", new File("src/test/resources/conditions/testPropertyConditionLegacy.json")),
                 replaceConfigurationFile("data/tmp/groovy/UpdateAddressAction.groovy", new File("src/test/resources/groovy/UpdateAddressAction.groovy")),
 
                 editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.rootLogger.level", "INFO"),
                 editConfigurationFilePut("etc/org.apache.karaf.features.cfg", "serviceRequirements", "disable"),
                 editConfigurationFilePut("etc/system.properties", "my.system.property", System.getProperty("my.system.property")),
+                editConfigurationFilePut("etc/system.properties", SEARCH_ENGINE_PROPERTY, System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH)),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.graphql.feature.activated", "true"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.cluster.name", "contextElasticSearchITests"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:9400"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:" + getSearchPort()),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.rollover.maxDocs", "300"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.cluster.name", "contextElasticSearchITests"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.addresses", "localhost:" + getSearchPort()),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.username", "admin"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.password", "Unomi.1ntegrat10n.Tests"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslEnable", "false"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslTrustAllCertificates", "true"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
-                systemProperty("org.apache.unomi.hazelcast.group.name").value("cellar"),
-                systemProperty("org.apache.unomi.hazelcast.group.password").value("pass"),
-                systemProperty("org.apache.unomi.hazelcast.network.port").value("5701"),
-                systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
-                systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
 
+                featuresOption,  // Add the features option
+
+                configureConsole().startRemoteShell(),
                 logLevel(LogLevel.INFO),
                 keepRuntimeFolder(),
                 CoreOptions.bundleStartLevel(100),
@@ -273,6 +396,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
         String karafDebug = System.getProperty("it.karaf.debug");
         if (karafDebug != null) {
+            LOGGER.info("Found system Karaf Debug system property, activating configuration: {}", karafDebug);
             System.out.println("Found system Karaf Debug system property, activating configuration: " + karafDebug);
             String port = "5006";
             boolean hold = true;
@@ -309,6 +433,10 @@ public abstract class BaseIT extends KarafTestSupport {
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.name", customLoggingParts[0]));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.level", customLoggingParts[1]));
         }
+
+        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        LOGGER.info("Search Engine: {}", searchEngine);
+        System.out.println("Search Engine: " + searchEngine);
 
         return Stream.of(super.config(), karafOptions.toArray(new Option[karafOptions.size()])).flatMap(Stream::of).toArray(Option[]::new);
     }
@@ -383,6 +511,17 @@ public abstract class BaseIT extends KarafTestSupport {
         segmentService = getService(SegmentService.class);
     }
 
+    /**
+     * Updates an OSGi configuration with a single property value and optionally waits for the service to be reregistered.
+     * If serviceName is null, the method will not wait for service re-registration.
+     *
+     * @param serviceName The fully qualified name of the service to wait for, or null to skip waiting
+     * @param configPid   The persistent identifier of the configuration to update
+     * @param propName    The name of the property to update
+     * @param propValue   The new value for the property
+     * @throws InterruptedException If the thread is interrupted while waiting for service reregistration
+     * @throws IOException          If an error occurs while updating the configuration
+     */
     public void updateConfiguration(String serviceName, String configPid, String propName, Object propValue)
             throws InterruptedException, IOException {
         Map<String, Object> props = new HashMap<>();
@@ -390,20 +529,43 @@ public abstract class BaseIT extends KarafTestSupport {
         updateConfiguration(serviceName, configPid, props);
     }
 
+    /**
+     * Updates an OSGi configuration with multiple property values and optionally waits for the service to be reregistered.
+     * If serviceName is null, the method will not wait for service re-registration.
+     *
+     * @param serviceName The fully qualified name of the service to wait for, or null to skip waiting
+     * @param configPid   The persistent identifier of the configuration to update
+     * @param propsToSet  A map of property names to their new values
+     * @throws InterruptedException If the thread is interrupted while waiting for service reregistration
+     * @throws IOException          If an error occurs while updating the configuration
+     */
     public void updateConfiguration(String serviceName, String configPid, Map<String, Object> propsToSet)
             throws InterruptedException, IOException {
         org.osgi.service.cm.Configuration cfg = configurationAdmin.getConfiguration(configPid);
         Dictionary<String, Object> props = cfg.getProperties();
+
+        // Handle case where properties haven't been initialized yet
+        final Dictionary<String, Object> finalProps = (props != null) ? props : new Hashtable<>();
+
+        // Add new properties to the dictionary
         for (Map.Entry<String, Object> propToSet : propsToSet.entrySet()) {
-            props.put(propToSet.getKey(), propToSet.getValue());
+            finalProps.put(propToSet.getKey(), propToSet.getValue());
         }
 
-        waitForReRegistration(serviceName, () -> {
-            try {
-                cfg.update(props);
-            } catch (IOException ignored) {
-            }
-        });
+        // If serviceName is null, don't wait for service re-registration
+        if (serviceName == null) {
+            LOGGER.info("Updating configuration {} without waiting for service restart", configPid);
+            cfg.update(finalProps);
+            // Give the configuration change handler time to process
+            Thread.sleep(1000);
+        } else {
+            waitForReRegistration(serviceName, () -> {
+                try {
+                    cfg.update(finalProps);
+                } catch (IOException ignored) {
+                }
+            });
+        }
 
         waitForStartup();
 
@@ -529,6 +691,7 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request) throws IOException {
+        LOGGER.info("Executing request {} {}...", request.getMethod(), request.getURI());
         System.out.println("Executing request " + request.getMethod() + " " + request.getURI() + "...");
         CloseableHttpResponse response = httpClient.execute(request);
         int statusCode = response.getStatusLine().getStatusCode();
@@ -617,5 +780,17 @@ public abstract class BaseIT extends KarafTestSupport {
         BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
         credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
         return credsProvider;
+    }
+
+    protected static String getSearchPort() {
+        String searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            // For OpenSearch, get the port from the system property set by maven-failsafe-plugin
+            return System.getProperty("org.apache.unomi.opensearch.addresses", "localhost:9401")
+                    .split(":")[1]; // Extract port number from "localhost:9401"
+        } else {
+            // For Elasticsearch, use the default port or system property if set
+            return System.getProperty("elasticsearch.port", "9400");
+        }
     }
 }
