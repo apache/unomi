@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
 import java.util.*;
+import java.util.Comparator;
 import java.util.concurrent.*;
 
 import static org.apache.unomi.healthcheck.HealthCheckConfig.CONFIG_AUTH_REALM;
@@ -119,7 +120,7 @@ public class HealthCheckService {
 
     public List<HealthCheckResponse> check() {
         if (config == null || !config.isEnabled()) {
-            LOGGER.info("Healthcheck service is disabled");
+            LOGGER.warn("Healthcheck service is disabled");
             return Collections.emptyList();
         }
         if (!initialized) {
@@ -165,7 +166,8 @@ public class HealthCheckService {
                     health.add(provider.timeout());
                 }
             }
-            healthCache = health;
+            health.sort(Comparator.comparing(HealthCheckResponse::getName));
+            healthCache = List.copyOf(health);
             cacheTimestamp = System.currentTimeMillis();
         } catch (Exception e) {
             LOGGER.error("Error refreshing health cache", e);
