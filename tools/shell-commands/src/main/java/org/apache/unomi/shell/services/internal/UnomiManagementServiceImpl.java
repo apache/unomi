@@ -43,28 +43,24 @@ import java.util.concurrent.*;
  *
  * <p>This service handles the following responsibilities:</p>
  * <ul>
- *   <li>Loading configuration from the OSGi Configuration Admin service, including start features configuration and feature lists.</li>
- *   <li>Starting Apache Unomi by installing and starting the configured features for a selected start features configuration.</li>
+ *   <li>Loading distribution's feature from an environment variable, a java option or by calling the setupUnomiDistribution method.</li>
+ *   <li>Starting Apache Unomi by installing and starting the configured features for a selected distribution.</li>
  *   <li>Stopping Apache Unomi by uninstalling features in reverse order to ensure proper teardown.</li>
  *   <li>Interfacing with the {@link org.apache.unomi.shell.migration.MigrationService} for migration tasks during startup.</li>
  * </ul>
  *
- * <p>The class is designed to be used within an OSGi environment and integrates with the Configuration Admin service
- * to dynamically adjust its behavior based on external configurations. It leverages the {@link FeaturesService} to
+ * <p>The class is designed to be used within an OSGi environment. It leverages the {@link FeaturesService} to
  * manage Karaf features dynamically.</p>
  *
  * <p><b>Configuration</b></p>
- * <p>The service reads its configuration from the OSGi Configuration Admin under the PID <code>org.apache.unomi.start</code>.
- * The configuration includes:</p>
- * <ul>
- *   <li><b>startFeatures</b>: A semicolon-separated list of features mapped to persistence implementations
- *       in the format <code>persistenceImplementation:feature1,feature2</code>.</li>
- * </ul>
+ * <p>The service stores its distribution's name using the OSGi Configuration Admin under the PID <code>org.apache.unomi.setup</code>.
+ * This allows the service to persist the selected distribution across restarts. The default distribution is unomi-distribution-elasticsearch</p>
  *
  * <p><b>Usage</b></p>
  * <p>This service can be controlled programmatically through its methods:</p>
  * <ul>
- *   <li>{@link #startUnomi(String, boolean)}: Installs and starts features for the specified start features configuration.</li>
+ *   <li>{@link #setupUnomiDistribution(String, boolean)}: Sets up the Unomi distribution's feature name.</li>
+ *   <li>{@link #startUnomi(boolean)}: Installs and starts features for the configured distribution.</li>
  *   <li>{@link #stopUnomi()}: Stops and uninstalls the previously started features.</li>
  * </ul>
  *

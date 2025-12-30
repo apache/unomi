@@ -65,6 +65,11 @@ The commands control the lifecycle of the Apache Unomi server and are used to mi
 |===
 |Command|Arguments|Description
 
+|setup
+|distribution-feature-name,--force
+|This command must be used only when the Apache Unomi application is NOT STARTED. It will perform initial setup of the application
+using the specified distribution feature name (unomi-distribution-elasticsearch for example).
+
 |migrate
 |fromVersion
 |This command must be used only when the Apache Unomi application is NOT STARTED. It will perform migration of the data stored in search engine using the argument fromVersion as a starting point.
@@ -74,8 +79,8 @@ The commands control the lifecycle of the Apache Unomi server and are used to mi
 |Shutsdown the Apache Unomi application
 
 |start
-|startFeatures
-|Starts the Apache Unomi application with the specified start features configuration (elasticsearch or opensearch). Note that this state will be remembered between Apache Karaf launches, so in general it is only needed after a first installation or after a `migrate` command
+|n/a
+|Starts the Apache Unomi application with the specified distribution (or by default unomi-distribution-elasticsearch). Note that this state will be remembered between Apache Karaf launches, so in general it is only needed after a first installation
 
 |version
 |n/a

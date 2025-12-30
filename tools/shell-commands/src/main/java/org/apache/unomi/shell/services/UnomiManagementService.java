@@ -36,7 +36,7 @@ public interface UnomiManagementService {
     /**
      * This method will start Apache Unomi
      * @param mustStartFeatures true if features should be started, false if they should not
-     * @throws Exception if there was an error starting Unomi's bundles
+     * @throws Exception if there was an error starting Unomi's features
      */
     void startUnomi(boolean mustStartFeatures) throws Exception;
 

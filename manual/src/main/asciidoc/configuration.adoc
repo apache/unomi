@@ -876,60 +876,143 @@ The following permissions are required by Unomi:
  - required cluster privileges: `manage` OR `all`
  - required index privileges on unomi indices: `write, manage, read` OR `all`
 
-=== Customizing Start Features Configuration
+=== Unomi Distribution (features configuration)
 
-Apache Unomi allows you to customize which features and bundles are installed and started when using the `unomi:start` command. This is controlled through the `org.apache.unomi.start.cfg` configuration file.
+You can define a specific distribution for Apache Unomi to configure desired features when the server boots up. Is it a classic Karaf feature that defines desired features for Unomi.
+Be aware that, even if a distribution is a classic Karaf feature XML file, it must only be composed feature's dependencies as this file is interpreted by the Unomi ManagementService.
+No bundle nor config file will be processed from this file.
 
-==== Default Configuration
+To set the desired distribution, set the `unomi.distribution` system property or `UNOMI_DISTRIBUTION` environment variable to the name of your desired distribution.
+You can also use the dedicated `unomi:setup` command to set the distribution interactively.
 
-By default, Apache Unomi comes with two predefined start features configurations:
+Apache Unomi comes with some predefined distributions that you can use directly.
 
-[source]
-----
-startFeatures = [
-    "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
-    "opensearch=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
-]
-----
+==== Default Distributions
 
-**Key Differences Between Configurations:**
+By default, Apache Unomi comes with four predefined distributions:
+
+unomi-distribution-elasticsearch, unomi-distribution-elasticsearch-graphql, unomi-distribution-opensearch, unomi-distribution-opensearch-graphql
+
+**Key Differences Between Distributions:**
 
 The only difference between the Elasticsearch and OpenSearch configurations is the persistence layer:
 
 * **Elasticsearch**: Uses `unomi-elasticsearch-core` and `unomi-elasticsearch-conditions`
 * **OpenSearch**: Uses `unomi-opensearch-core` and `unomi-opensearch-conditions`
 
-All other features remain identical between both configurations.
+All other features remain identical between both configurations. Each one is derived with or without GraphQL support.
 
-==== Environment-Specific Configurations
+==== Environment-Specific Distributions
 
-You can create different configurations for different deployment environments by including or excluding certain features:
+You can create different distributions for different deployment environments by creating a dedicated distribution feature.
+
+Be aware that in distribution's feature, you should only reference other features, not bundles or configuration directly.
 
 **Development Environment** (includes development tools and debugging features):
-[source]
+[source,xml]
 ----
-startFeatures = [
-    "elasticsearch-dev=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
-    "opensearch-dev=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
-]
+<features name="unomi-distributions" xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0 https://karaf.apache.org/xmlns/features/v1.6.0">
+
+    <repository>mvn:org.apache.karaf.features/specs/${karaf.version}/xml/features</repository>
+    <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
+    <repository>mvn:org.apache.unomi/unomi-kar/${project.version}/xml/features</repository>
+
+    <feature name="unomi-distribution-elasticsearch-dev" description="Apache Unomi :: ElasticSearch Development Distribution" version="${project.version}">
+        <feature dependency="true" version="${project.version}">unomi-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-services</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-optimization-test</feature>
+        <feature dependency="true" version="${project.version}">unomi-shell-dev-commands</feature>
+        <feature dependency="true" version="${project.version}">unomi-wab</feature>
+        <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
+        <feature dependency="true" version="${project.version}">unomi-healthcheck-elasticsearch</feature>
+        <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
+        <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
+    </feature>
+</features>
 ----
 
 **Staging Environment** (production-like but with some development features):
-[source]
+[source,xml]
 ----
-startFeatures = [
-    "elasticsearch-staging=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
-    "opensearch-staging=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
-]
+<features name="unomi-distributions" xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0 https://karaf.apache.org/xmlns/features/v1.6.0">
+
+    <repository>mvn:org.apache.karaf.features/specs/${karaf.version}/xml/features</repository>
+    <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
+    <repository>mvn:org.apache.unomi/unomi-kar/${project.version}/xml/features</repository>
+
+    <feature name="unomi-distribution-elasticsearch-staging" description="Apache Unomi :: ElasticSearch Staging Distribution" version="${project.version}">
+        <feature dependency="true" version="${project.version}">unomi-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-services</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-optimization-test</feature>
+        <feature dependency="true" version="${project.version}">unomi-shell-dev-commands</feature>
+        <feature dependency="true" version="${project.version}">unomi-wab</feature>
+        <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
+        <feature dependency="true" version="${project.version}">unomi-healthcheck-elasticsearch</feature>
+        <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
+        <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
+    </feature>
+</features>
 ----
 
 **Production Environment** (minimal, secure configuration):
-[source]
+[source,xml]
 ----
-startFeatures = [
-    "elasticsearch-prod=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
-    "opensearch-prod=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
-]
+<features name="unomi-distributions" xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0 https://karaf.apache.org/xmlns/features/v1.6.0">
+
+    <repository>mvn:org.apache.karaf.features/specs/${karaf.version}/xml/features</repository>
+    <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
+    <repository>mvn:org.apache.unomi/unomi-kar/${project.version}/xml/features</repository>
+
+    <feature name="unomi-distribution-elasticsearch-prod" description="Apache Unomi :: ElasticSearch Production Distribution" version="${project.version}">
+        <feature dependency="true" version="${project.version}">unomi-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-services</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-optimization-test</feature>
+        <feature dependency="true" version="${project.version}">unomi-wab</feature>
+        <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
+        <feature dependency="true" version="${project.version}">unomi-healthcheck-elasticsearch</feature>
+        <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
+        <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
+    </feature>
+</features>
 ----
 
 **Environment Differences Summary:**
@@ -949,37 +1032,32 @@ startFeatures = [
 |✗ (excluded)
 |===
 
-==== Configuration Format
+==== Distribution Feature Format
 
-Each start features configuration follows this format:
+Each start features configuration follows the classic Karaf features XML format, but you must only reference other features in your distribution feature.
+If you reference bundles or configuration files directly, they will be ignored by Unomi.
 
-[source]
-----
-"configuration-name=feature1,feature2,feature3,..."
-----
+To use a custom distribution, the corresponding feature must be accessible by Karaf. It can be done by publishing the feature maven artefact and adding it as a feature repository in Karaf os for any other feature. Of course you can also add your distribution feature in the existing source code and repackage Unomi making it available directly.
 
-Where:
-* `configuration-name` is the identifier you'll use with the `unomi:start` command
-* The comma-separated list contains the Karaf features to install and start
+==== Using Custom Distributions
 
-==== Using Custom Configurations
-
-You can use your custom configurations with:
+You can use your custom distribution with:
 
 [source]
 ----
-# Development environment
-unomi:start elasticsearch-dev
-unomi:start opensearch-dev
+# Using system property
+-Dunomi.distribution=unomi-distribution-elasticsearch
 
-# Staging environment
-unomi:start elasticsearch-staging
-unomi:start opensearch-staging
+# Using environment variable
+UNOMI_DISTRIBUTION=unomi-distribution-opensearch
 
-# Production environment
-unomi:start elasticsearch-prod
-unomi:start opensearch-prod
+# Using the setup command
+unomi:setup unomi-distribution-elasticsearch-staging
 ----
+
+Once you have called the `unomi:setup` command with your desired distribution, you can start Apache Unomi using the `unomi:start` command.
+The setup command only needs to be called once unless you want to change the distribution ; it creates a marker file to remember the chosen distribution.
+In case you want to change it, you can use the `unomi:setup --force` command again with the desired distribution name (using the --force option will override the existing distribution).
 
 ==== Auto-Start
 
@@ -989,27 +1067,17 @@ To enable auto-start, set the `unomi.autoStart` system property or `UNOMI_AUTO_S
 
 Note: Auto-start only works when Apache Unomi is not already running. If the server is already started, the auto-start setting will be ignored.
 
-==== Unomi Distribution
+=== Customizing Apache Unomi Distribution
 
-You can define a specific distribution for Apache Unomi to configure desired features when the server boots up. Is it a classic Karaf feature that defines desired features for Unomi.
-Be aware that, even if a distribution is a classic Karaf feature XML file, it must only be composed feature's dependencies as this file is interpreted by the Unomi ManagementService.
-No bundle nor config file will be processed from this file.
+Apache Unomi allows you to create custom distributions by repackaging the standard distribution with your own configuration files and customizations. This is useful for creating deployment-specific packages that include your custom configurations, plugins, and settings.
 
-To set the desired distribution, set the `unomi.distribution` system property or `UNOMI_DISTRIBUTION` environment variable to the name of your desired distribution:
+==== Note on Custom Distributions (Advanced)
 
-[source]
-----
-# Using system property
--Dunomi.distribution=unomi-distribution-elasticsearch
+You can build custom distributions of Unomi using the Karaf Maven Plugin to assemble features and overlay configuration. This is an advanced path and not required for most users. We recommend Docker-based packaging and configuration overrides as documented above.
 
-# Using environment variable (Docker)
-UNOMI_DISTRIBUTION=unomi-distribution-opensearch
+For details about custom distributions, see the Karaf documentation (Karaf Maven Plugin):
 
-# Using custom distribution
-UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch-staging
-----
-
-To use a custom distribution, the corresponding feature must be accessible by Karaf. It can be done by publishing the feature maven artefact and adding it as a feature repository in Karaf os for any other feature. Of course you can also add your distribution feature in the existing source code and repackage Unomi making it available directly.
+`https://karaf.apache.org/manual/latest/#_karaf_maven_plugin`
 
 ==== Important Notes
 
@@ -1058,18 +1126,6 @@ services:
 - Mount your custom distribution feature repository file to `/opt/apache-unomi/etc/features/your-features-files.xml` (not necessary if the feature file is available in a online maven repository)
 - Declare the feature repository in Karaf using KARAF_FEATURES_REPOSITORIES environment variable pointing to your mounted file or a online maven artifact (mvn:com.example/custom-unomi-distribs/1.0.0/xml/features)
 - Use the `UNOMI_DISTRIBUTION` environment variable to specify which distribution (using the feature name) to use from that feature's repository
-
-=== Customizing Apache Unomi Distribution
-
-Apache Unomi allows you to create custom distributions by repackaging the standard distribution with your own configuration files and customizations. This is useful for creating deployment-specific packages that include your custom configurations, plugins, and settings.
-
-==== Note on Custom Distributions (Advanced)
-
-You can build custom distributions of Unomi using the Karaf Maven Plugin to assemble features and overlay configuration. This is an advanced path and not required for most users. We recommend Docker-based packaging and configuration overrides as documented above.
-
-For details about custom distributions, see the Karaf documentation (Karaf Maven Plugin):
-
-`https://karaf.apache.org/manual/latest/#_karaf_maven_plugin`
 
 ==== Configuration Override Priority
 
