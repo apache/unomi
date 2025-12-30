@@ -102,7 +102,7 @@ public class HealthCheckIT extends BaseIT {
         } finally {
             if ( executorService != null ) {
                 executorService.shutdownNow();
-                }
+            }
         }
     }
 
