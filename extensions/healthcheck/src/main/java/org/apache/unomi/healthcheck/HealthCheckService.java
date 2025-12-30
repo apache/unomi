@@ -26,8 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 import static org.apache.unomi.healthcheck.HealthCheckConfig.CONFIG_AUTH_REALM;
 
@@ -46,7 +47,6 @@ public class HealthCheckService {
     private volatile List<HealthCheckResponse> healthCache = Collections.emptyList();
     private volatile boolean initialized = false;
     private volatile boolean busy = false;
-    private ExecutorService executor;
     private boolean registered = false;
 
     @Reference
@@ -61,7 +61,6 @@ public class HealthCheckService {
     @Activate
     public void activate() throws ServletException, NamespaceException {
         LOGGER.info("Activating healthcheck service...");
-        executor = Executors.newCachedThreadPool();
         if (!registered) {
             setConfig(config);
         }
@@ -101,9 +100,6 @@ public class HealthCheckService {
             httpService.unregister("/health/check");
             registered = false;
         }
-        if (executor != null) {
-            executor.shutdown();
-        }
     }
 
     @Reference(service = HealthCheckProvider.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC, unbind = "unbind")
@@ -125,7 +121,7 @@ public class HealthCheckService {
         if (!initialized) {
             synchronized (cacheLock) {
                 if (!initialized) {
-                    refreshCacheSync();
+                    refreshCache();
                     initialized = true;
                 }
             }
@@ -133,13 +129,11 @@ public class HealthCheckService {
             synchronized (cacheLock) {
                 if (!busy) {
                     busy = true;
-                    executor.submit(() -> {
-                        try {
-                            refreshCacheSync();
-                        } finally {
-                            busy = false;
-                        }
-                    });
+                    try {
+                       refreshCache();
+                    } finally {
+                        busy = false;
+                    }
                 }
             }
         }
@@ -150,7 +144,7 @@ public class HealthCheckService {
         return !busy && (System.currentTimeMillis() - cacheTimestamp) > 1000;
     }
 
-    private void refreshCacheSync() {
+    private void refreshCache() {
         try {
             List<HealthCheckResponse> health = new ArrayList<>();
             health.add(HealthCheckResponse.live("karaf"));
