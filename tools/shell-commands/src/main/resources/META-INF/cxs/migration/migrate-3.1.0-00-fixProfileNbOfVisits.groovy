@@ -55,7 +55,7 @@ context.performMigrationStep("3.1.0-fix-profile-nbOfVisits", () -> {
             String profileId = hit._id
             profilesProcessed++
 
-            if (profilesProcessed % 100 == 0) {
+            if (profilesProcessed % 10000 == 0) {
                 context.printMessage("Processed ${profilesProcessed} profiles...")
             }
 
