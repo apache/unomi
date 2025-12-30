@@ -33,9 +33,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static org.junit.Assert.fail;
 
@@ -55,79 +56,54 @@ public class HealthCheckIT extends BaseIT {
     @Test
     public void testHealthCheck() {
         try {
-            // Retry health check until all required providers are LIVE
-            List<HealthCheckResponse> response = waitForHealthCheckReady();
+            List<HealthCheckResponse> response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {});
             LOGGER.info("health check response: {}", response);
             Assert.assertNotNull(response);
-            // Health check may return 4 or 5 providers depending on configuration (persistence may be included)
-            Assert.assertTrue("Health check should return at least 4 providers", response.size() >= 4);
-            Assert.assertTrue("Karaf health check should be LIVE",
-                    response.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
-            Assert.assertTrue("Search engine (" + searchEngine + ") health check should be LIVE",
-                    response.stream().anyMatch(r -> r.getName().equals(searchEngine) && r.getStatus() == HealthCheckResponse.Status.LIVE));
-            Assert.assertTrue("Unomi health check should be LIVE",
-                    response.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
-            Assert.assertTrue("Cluster health check should be LIVE",
-                    response.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+            Assert.assertEquals(4, response.size());
+            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals(searchEngine) && r.getStatus() == HealthCheckResponse.Status.LIVE));
+            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
         } catch (Exception e) {
             LOGGER.error("Error while executing health check", e);
             fail("Error while executing health check" + e.getMessage());
         }
     }
 
-    /**
-     * Waits for health check to be ready by retrying until all required providers are LIVE.
-     * This method retries the health check with exponential backoff up to a maximum timeout.
-     *
-     * @return List of health check responses when all required providers are LIVE
-     * @throws InterruptedException if the maximum timeout is reached
-     */
-    private List<HealthCheckResponse> waitForHealthCheckReady() throws InterruptedException {
-        final long maxWaitTime = TimeUnit.SECONDS.toMillis(30); // Maximum 30 seconds
-        final long initialRetryInterval = 500; // Start with 500ms
-        final long maxRetryInterval = 2000; // Max 2 seconds between retries
-        final long startTime = System.currentTimeMillis();
-        long retryInterval = initialRetryInterval;
-        int attemptCount = 0;
+    @Test
+    public void testConcurrentHealthCheck() {
+        final int NB_THREADS = 10;
+        final int NB_ITERATIONS = 20;
 
-        while (System.currentTimeMillis() - startTime < maxWaitTime) {
-            attemptCount++;
-            try {
-                List<HealthCheckResponse> response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {});
-                
-                if (response != null && response.size() >= 4) {
-                    // Check if all required providers are LIVE
-                    boolean karafLive = response.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE);
-                    boolean searchEngineLive = response.stream().anyMatch(r -> r.getName().equals(searchEngine) && r.getStatus() == HealthCheckResponse.Status.LIVE);
-                    boolean unomiLive = response.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE);
-                    boolean clusterLive = response.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE);
-
-                    if (karafLive && searchEngineLive && unomiLive && clusterLive) {
-                        LOGGER.info("All health checks are LIVE after {} attempts ({} ms)", attemptCount, System.currentTimeMillis() - startTime);
-                        return response;
-                    } else {
-                        LOGGER.debug("Health check attempt {}: karaf={}, {}={}, unomi={}, cluster={}", 
-                                attemptCount, karafLive, searchEngine, searchEngineLive, unomiLive, clusterLive);
-                    }
-                } else {
-                    LOGGER.debug("Health check attempt {}: response is null or has insufficient providers (size: {})", 
-                            attemptCount, response != null ? response.size() : 0);
+        ExecutorService executorService = null;
+        try {
+            executorService = Executors.newFixedThreadPool(NB_THREADS);
+            List<Future<List<HealthCheckResponse>>> futures = new ArrayList<>();
+            for (int i = 0; i < NB_ITERATIONS; i++) {
+                for (int j = 0; j < NB_THREADS; j++) {
+                    Future<List<HealthCheckResponse>> future = executorService.submit(() -> get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {}));
+                    futures.add(future);
                 }
-            } catch (Exception e) {
-                LOGGER.debug("Health check attempt {} failed: {}", attemptCount, e.getMessage());
+                for (Future<List<HealthCheckResponse>> future : futures) {
+                    List<HealthCheckResponse> health = future.get(10, TimeUnit.SECONDS);
+                    Assert.assertEquals(4, health.size());
+                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals(searchEngine) && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                }
+                Thread.sleep(10);
             }
-
-            // Wait before retrying with exponential backoff
-            Thread.sleep(retryInterval);
-            retryInterval = Math.min(retryInterval * 2, maxRetryInterval);
+            executorService.shutdown();
+            Assert.assertTrue(executorService.awaitTermination(10, TimeUnit.SECONDS));
+        } catch (Exception e) {
+            LOGGER.error("Error while executing concurrent health check", e);
+            fail("Error while executing concurrent health check: " + e.getMessage());
+        } finally {
+            if ( executorService != null ) {
+                executorService.shutdownNow();
+                }
         }
-
-        // Final attempt without waiting
-        List<HealthCheckResponse> finalResponse = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {});
-        if (finalResponse == null) {
-            throw new InterruptedException("Health check did not become ready within " + maxWaitTime + " ms after " + attemptCount + " attempts");
-        }
-        return finalResponse;
     }
 
     protected <T> T get(final String url, TypeReference<T> typeReference) {
