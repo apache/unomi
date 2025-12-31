@@ -32,7 +32,6 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -66,7 +65,6 @@ public class HealthCheckServlet extends HttpServlet {
             return;
         }
         List<HealthCheckResponse> checks = service.check();
-        checks.sort(Comparator.comparing(HealthCheckResponse::getName));
         response.getWriter().println(mapper.writeValueAsString(checks));
         response.setContentType("application/json");
         response.setHeader("Cache-Control", "no-cache");

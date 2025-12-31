@@ -23,6 +23,7 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.services.EventService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -30,6 +31,8 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Date;
@@ -38,6 +41,7 @@ import java.util.HashMap;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class SendEventActionIT extends BaseIT {
+    private final static Logger LOGGER = LoggerFactory.getLogger(SendEventActionIT.class);
 
     private final static String TEST_RULE_ID = "sendEventTest";
     private final static String EVENT_ID = "sendEventTestId";
@@ -80,7 +84,11 @@ public class SendEventActionIT extends BaseIT {
         profile.setProperty("j:nodename", "michel");
         Event testEvent = new Event(TEST_EVENT_TYPE, null, profile, null, null, profile, new Date());
         testEvent.setItemId(EVENT_ID);
-        eventService.send(testEvent);
+        int result = eventService.send(testEvent);
+        LOGGER.info("Event processing result: {}", result);
+        if (result == EventService.ERROR) {
+            LOGGER.error("Event processing resulted in ERROR. Event details: {}", testEvent);
+        }
         return testEvent;
     }
 

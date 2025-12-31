@@ -26,9 +26,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 import static org.apache.unomi.healthcheck.HealthCheckConfig.CONFIG_AUTH_REALM;
 
@@ -42,8 +43,11 @@ public class HealthCheckService {
     private static final Logger LOGGER = LoggerFactory.getLogger(HealthCheckService.class.getName());
 
     private final List<HealthCheckProvider> providers = new ArrayList<>();
-    private ExecutorService executor;
-    private boolean busy = false;
+    private final Object cacheLock = new Object();
+    private volatile long cacheTimestamp = 0L;
+    private volatile List<HealthCheckResponse> healthCache = Collections.emptyList();
+    private volatile boolean initialized = false;
+    private volatile boolean busy = false;
     private boolean registered = false;
 
     @Reference
@@ -58,7 +62,6 @@ public class HealthCheckService {
     @Activate
     public void activate() throws ServletException, NamespaceException {
         LOGGER.info("Activating healthcheck service...");
-        executor = Executors.newSingleThreadExecutor();
         if (!registered) {
             setConfig(config);
         }
@@ -98,9 +101,6 @@ public class HealthCheckService {
             httpService.unregister("/health/check");
             registered = false;
         }
-        if (executor != null) {
-            executor.shutdown();
-        }
     }
 
     @Reference(service = HealthCheckProvider.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC, unbind = "unbind")
@@ -114,37 +114,57 @@ public class HealthCheckService {
         providers.remove(provider);
     }
 
-    public List<HealthCheckResponse> check() throws RejectedExecutionException {
-        if (config !=null && config.isEnabled()) {
-            LOGGER.debug("Health check called");
-            if (busy) {
-                throw new RejectedExecutionException("Health check already in progress");
-            } else {
-                try {
-                    busy = true;
-                    List<HealthCheckResponse> health = new ArrayList<>();
-                    health.add(HealthCheckResponse.live("karaf"));
-                    for (HealthCheckProvider provider : providers.stream().filter(p -> config.getEnabledProviders().contains(p.name())).collect(Collectors.toList())) {
-                        Future<HealthCheckResponse> future = executor.submit(provider::execute);
-                        try {
-                            HealthCheckResponse response = future.get(config.getTimeout(), TimeUnit.MILLISECONDS);
-                            health.add(response);
-                        } catch (TimeoutException e) {
-                            future.cancel(true);
-                            health.add(provider.timeout());
-                        } catch (Exception e) {
-                            LOGGER.error("Error while executing health check", e);
-                        }
-                    }
-                    return health;
-                } finally {
-                    busy = false;
-                }
-            }
-        } else {
-            LOGGER.info("Healthcheck service is disabled");
+    public List<HealthCheckResponse> check() {
+        if (config == null || !config.isEnabled()) {
+            LOGGER.warn("Healthcheck service is disabled");
             return Collections.emptyList();
         }
+        if (!initialized) {
+            synchronized (cacheLock) {
+                if (!initialized) {
+                    refreshCache();
+                    initialized = true;
+                }
+            }
+        } else if (shouldRefreshCache()) {
+            synchronized (cacheLock) {
+                if (!busy) {
+                    busy = true;
+                    try {
+                        refreshCache();
+                    } finally {
+                        busy = false;
+                    }
+                }
+            }
+        }
+        return healthCache;
     }
 
+    private boolean shouldRefreshCache() {
+        return !busy && (System.currentTimeMillis() - cacheTimestamp) > 1000;
+    }
+
+    private void refreshCache() {
+        try {
+            List<HealthCheckResponse> health = new ArrayList<>();
+            health.add(HealthCheckResponse.live("karaf"));
+            for (HealthCheckProvider provider : providers.stream()
+                    .filter(p -> config.getEnabledProviders().contains(p.name()))
+                    .toList()) {
+                try {
+                    HealthCheckResponse response = provider.execute();
+                    health.add(response);
+                } catch (Exception e) {
+                    LOGGER.error("Error while executing health check", e);
+                    health.add(provider.timeout());
+                }
+            }
+            health.sort(Comparator.comparing(HealthCheckResponse::getName));
+            healthCache = List.copyOf(health);
+            cacheTimestamp = System.currentTimeMillis();
+        } catch (Exception e) {
+            LOGGER.error("Error refreshing health cache", e);
+        }
+    }
 }
