@@ -22,6 +22,7 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -166,10 +167,13 @@ public class CopyPropertiesActionIT extends BaseIT {
 
         Event event = new Event("copyProperties", null, profile, null, null, profile, new Date());
         event.setPersistent(false);
-
         event.setProperty("urlParameters", properties);
-
-        eventService.send(event);
+        int result = eventService.send(event);
+        LOGGER.info("Event processing result: {}", result);
+        if (result == EventService.ERROR) {
+            LOGGER.error("Event processing resulted in ERROR. Event details: {}", event);
+        }
+        Assert.assertNotEquals(EventService.ERROR, result);
         return event;
     }
 

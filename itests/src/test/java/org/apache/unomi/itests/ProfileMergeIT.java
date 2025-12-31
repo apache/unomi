@@ -20,6 +20,7 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.services.EventService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -27,6 +28,8 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -36,6 +39,8 @@ import java.util.*;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileMergeIT extends BaseIT {
+    private final static Logger LOGGER = LoggerFactory.getLogger(ProfileMergeIT.class);
+
     public static final String PERSONALIZATION_STRATEGY_STATUS = "personalizationStrategyStatus";
     public static final String PERSONALIZATION_STRATEGY_STATUS_ID = "personalizationId";
     public static final String PERSONALIZATION_STRATEGY_STATUS_IN_CTRL_GROUP = "inControlGroup";
@@ -468,7 +473,11 @@ public class ProfileMergeIT extends BaseIT {
         profile.setProperty("j:nodename", "michel");
         profile.getSystemProperties().put("mergeIdentifier", "jose");
         Event testEvent = new Event(TEST_EVENT_TYPE, null, profile, null, null, profile, new Date());
-        eventService.send(testEvent);
+        int result = eventService.send(testEvent);
+        LOGGER.info("Event processing result: {}", result);
+        if (result == EventService.ERROR) {
+            LOGGER.error("Event processing resulted in ERROR. Event details: {}", testEvent);
+        }
         return testEvent;
     }
 
