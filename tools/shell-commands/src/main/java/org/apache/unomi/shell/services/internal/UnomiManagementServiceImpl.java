@@ -50,7 +50,7 @@ import java.util.concurrent.*;
  * to dynamically adjust its behavior based on external configurations. It leverages the {@link FeaturesService} to
  * manage Karaf features dynamically.</p>
  *
- * <h3>Configuration</h3>
+ * <p><b>Configuration</b></p>
  * <p>The service reads its configuration from the OSGi Configuration Admin under the PID <code>org.apache.unomi.start</code>.
  * The configuration includes:</p>
  * <ul>
@@ -58,14 +58,14 @@ import java.util.concurrent.*;
  *       in the format <code>persistenceImplementation:feature1,feature2</code>.</li>
  * </ul>
  *
- * <h3>Usage</h3>
+ * <p><b>Usage</b></p>
  * <p>This service can be controlled programmatically through its methods:</p>
  * <ul>
  *   <li>{@link #startUnomi(String, boolean)}: Installs and starts features for the specified start features configuration.</li>
  *   <li>{@link #stopUnomi()}: Stops and uninstalls the previously started features.</li>
  * </ul>
  *
- * <h3>Dependencies</h3>
+ * <p><b>Dependencies</b></p>
  * <p>The following dependencies are required for this service:</p>
  * <ul>
  *   <li>{@link MigrationService}: Handles migration tasks during startup.</li>
