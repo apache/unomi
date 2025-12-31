@@ -40,6 +40,13 @@
         "storeInSession": false
       },
       "type": "incrementPropertyAction"
+    },
+    {
+      "parameterValues": {
+        "propertyName": "totalNbOfVisits",
+        "storeInSession": false
+      },
+      "type": "incrementPropertyAction"
     }
   ]
 }
