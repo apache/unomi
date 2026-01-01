@@ -17,6 +17,8 @@
 package org.apache.unomi.plugins.baseplugin.conditions;
 
 import org.apache.unomi.api.*;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
 import org.apache.unomi.scripting.ExpressionFilter;
@@ -24,11 +26,9 @@ import org.apache.unomi.scripting.ExpressionFilterFactory;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.File;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
@@ -191,6 +191,168 @@ public class PropertyConditionEvaluatorTest {
         mockSession.setSize(SESSION_SIZE);
         mockSession.setLastEventDate(SESSION_LAST_EVENT_DATE);
         return mockSession;
+    }
+
+    @Test
+    public void testNullSafeIntegerComparison_NonNumericActualValue() throws Exception {
+        // Test that non-numeric actualValue with expectedValueInteger does not throw NPE
+        Profile testProfile = new Profile();
+        testProfile.setItemId("testProfile");
+        testProfile.getProperties().put("nonNumericProperty", "notANumber");
+
+        Condition condition = new Condition();
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("propertyCondition");
+        condition.setConditionType(conditionType);
+        condition.setParameter("propertyName", "properties.nonNumericProperty");
+        condition.setParameter("comparisonOperator", "greaterThan");
+        condition.setParameter("propertyValueInteger", 10);
+
+        // Should not throw NPE, should return false since non-numeric cannot be compared
+        boolean result = propertyConditionEvaluator.eval(condition, testProfile, new HashMap<>(), null);
+        assertFalse("Non-numeric value should not match greaterThan comparison with integer", result);
+    }
+
+    @Test
+    public void testNullSafeIntegerComparison_NonNumericExpectedValue() throws Exception {
+        // Test that non-numeric expectedValueInteger does not throw NPE
+        Profile testProfile = new Profile();
+        testProfile.setItemId("testProfile");
+        testProfile.getProperties().put("numericProperty", 42);
+
+        Condition condition = new Condition();
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("propertyCondition");
+        condition.setConditionType(conditionType);
+        condition.setParameter("propertyName", "properties.numericProperty");
+        condition.setParameter("comparisonOperator", "greaterThan");
+        condition.setParameter("propertyValueInteger", "notANumber");
+
+        // Should not throw NPE, should return false since non-numeric expected cannot be compared
+        boolean result = propertyConditionEvaluator.eval(condition, testProfile, new HashMap<>(), null);
+        assertFalse("Non-numeric expected value should not match greaterThan comparison", result);
+    }
+
+    @Test
+    public void testNullSafeDoubleComparison_NonNumericActualValue() throws Exception {
+        // Test that non-numeric actualValue with expectedValueDouble does not throw NPE
+        Profile testProfile = new Profile();
+        testProfile.setItemId("testProfile");
+        testProfile.getProperties().put("nonNumericProperty", "notANumber");
+
+        Condition condition = new Condition();
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("propertyCondition");
+        condition.setConditionType(conditionType);
+        condition.setParameter("propertyName", "properties.nonNumericProperty");
+        condition.setParameter("comparisonOperator", "lessThan");
+        condition.setParameter("propertyValueDouble", 10.5);
+
+        // Should not throw NPE, should return false since non-numeric cannot be compared
+        boolean result = propertyConditionEvaluator.eval(condition, testProfile, new HashMap<>(), null);
+        assertFalse("Non-numeric value should not match lessThan comparison with double", result);
+    }
+
+    @Test
+    public void testNullSafeDoubleComparison_NonNumericExpectedValue() throws Exception {
+        // Test that non-numeric expectedValueDouble does not throw NPE
+        Profile testProfile = new Profile();
+        testProfile.setItemId("testProfile");
+        testProfile.getProperties().put("numericProperty", 42.5);
+
+        Condition condition = new Condition();
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("propertyCondition");
+        condition.setConditionType(conditionType);
+        condition.setParameter("propertyName", "properties.numericProperty");
+        condition.setParameter("comparisonOperator", "lessThan");
+        condition.setParameter("propertyValueDouble", "notANumber");
+
+        // Should not throw NPE, should return false since non-numeric expected cannot be compared
+        boolean result = propertyConditionEvaluator.eval(condition, testProfile, new HashMap<>(), null);
+        assertFalse("Non-numeric expected value should not match lessThan comparison", result);
+    }
+
+    @Test
+    public void testNullSafeDateComparison_NonDateActualValue() throws Exception {
+        // Test that non-date actualValue with expectedValueDate does not throw NPE
+        Profile testProfile = new Profile();
+        testProfile.setItemId("testProfile");
+        testProfile.getProperties().put("nonDateProperty", "notADate");
+
+        Condition condition = new Condition();
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("propertyCondition");
+        condition.setConditionType(conditionType);
+        condition.setParameter("propertyName", "properties.nonDateProperty");
+        condition.setParameter("comparisonOperator", "greaterThan");
+        condition.setParameter("propertyValueDate", new Date());
+
+        // Should not throw NPE, should return false since non-date cannot be compared
+        boolean result = propertyConditionEvaluator.eval(condition, testProfile, new HashMap<>(), null);
+        assertFalse("Non-date value should not match greaterThan comparison with date", result);
+    }
+
+    @Test
+    public void testNullSafeDateComparison_NonDateExpectedValue() throws Exception {
+        // Test that non-date expectedValueDate does not throw NPE
+        Profile testProfile = new Profile();
+        testProfile.setItemId("testProfile");
+        Date testDate = new Date();
+        testProfile.getProperties().put("dateProperty", testDate);
+
+        Condition condition = new Condition();
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("propertyCondition");
+        condition.setConditionType(conditionType);
+        condition.setParameter("propertyName", "properties.dateProperty");
+        condition.setParameter("comparisonOperator", "lessThan");
+        condition.setParameter("propertyValueDate", "notADate");
+
+        // Should not throw NPE, should return false since non-date expected cannot be compared
+        boolean result = propertyConditionEvaluator.eval(condition, testProfile, new HashMap<>(), null);
+        assertFalse("Non-date expected value should not match lessThan comparison", result);
+    }
+
+    @Test
+    public void testNullSafeDateExprComparison_NonDateActualValue() throws Exception {
+        // Test that non-date actualValue with expectedValueDateExpr does not throw NPE
+        Profile testProfile = new Profile();
+        testProfile.setItemId("testProfile");
+        testProfile.getProperties().put("nonDateProperty", "notADate");
+
+        Condition condition = new Condition();
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("propertyCondition");
+        condition.setConditionType(conditionType);
+        condition.setParameter("propertyName", "properties.nonDateProperty");
+        condition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
+        condition.setParameter("propertyValueDateExpr", new Date());
+
+        // Should not throw NPE, should return false since non-date cannot be compared
+        boolean result = propertyConditionEvaluator.eval(condition, testProfile, new HashMap<>(), null);
+        assertFalse("Non-date value should not match greaterThanOrEqualTo comparison with dateExpr", result);
+    }
+
+    @Test
+    public void testNullSafeDateExprComparison_NonDateExpectedValue() throws Exception {
+        // Test that non-date expectedValueDateExpr does not throw NPE
+        Profile testProfile = new Profile();
+        testProfile.setItemId("testProfile");
+        Date testDate = new Date();
+        testProfile.getProperties().put("dateProperty", testDate);
+
+        Condition condition = new Condition();
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("propertyCondition");
+        condition.setConditionType(conditionType);
+        condition.setParameter("propertyName", "properties.dateProperty");
+        condition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+        condition.setParameter("propertyValueDateExpr", "notADate");
+
+        // Should not throw NPE, should return false since non-date expected cannot be compared
+        boolean result = propertyConditionEvaluator.eval(condition, testProfile, new HashMap<>(), null);
+        assertFalse("Non-date expected value should not match lessThanOrEqualTo comparison", result);
     }
 
     class HardcodedWorker implements Callable<Object> {

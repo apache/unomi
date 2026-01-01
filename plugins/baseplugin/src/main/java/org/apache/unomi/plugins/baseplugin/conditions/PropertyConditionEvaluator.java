@@ -25,9 +25,9 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
+import org.apache.unomi.persistence.spi.conditions.DateUtils;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
-import org.apache.unomi.persistence.spi.conditions.DateUtils;
 import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
 import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
 import org.apache.unomi.scripting.ExpressionFilterFactory;
@@ -83,13 +83,37 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         }
 
         if (expectedValueInteger != null) {
-            return PropertyHelper.getInteger(actualValue).compareTo(PropertyHelper.getInteger(expectedValueInteger));
+            Integer actualInt = PropertyHelper.getInteger(actualValue);
+            Integer expectedInt = PropertyHelper.getInteger(expectedValueInteger);
+            if (actualInt == null || expectedInt == null) {
+                // If either value cannot be converted to integer, they are not equal
+                return actualInt == null && expectedInt == null ? 0 : (actualInt == null ? -1 : 1);
+            }
+            return actualInt.compareTo(expectedInt);
         } else if (expectedValueDouble != null) {
-            return PropertyHelper.getDouble(actualValue).compareTo(PropertyHelper.getDouble(expectedValueDouble));
+            Double actualDouble = PropertyHelper.getDouble(actualValue);
+            Double expectedDouble = PropertyHelper.getDouble(expectedValueDouble);
+            if (actualDouble == null || expectedDouble == null) {
+                // If either value cannot be converted to double, they are not equal
+                return actualDouble == null && expectedDouble == null ? 0 : (actualDouble == null ? -1 : 1);
+            }
+            return actualDouble.compareTo(expectedDouble);
         } else if (expectedValueDate != null) {
-            return getDate(actualValue).compareTo(getDate(expectedValueDate));
+            Date actualDate = getDate(actualValue);
+            Date expectedDate = getDate(expectedValueDate);
+            if (actualDate == null || expectedDate == null) {
+                // If either value cannot be converted to date, they are not equal
+                return actualDate == null && expectedDate == null ? 0 : (actualDate == null ? -1 : 1);
+            }
+            return actualDate.compareTo(expectedDate);
         } else if (expectedValueDateExpr != null) {
-            return getDate(actualValue).compareTo(getDate(expectedValueDateExpr));
+            Date actualDate = getDate(actualValue);
+            Date expectedDate = getDate(expectedValueDateExpr);
+            if (actualDate == null || expectedDate == null) {
+                // If either value cannot be converted to date, they are not equal
+                return actualDate == null && expectedDate == null ? 0 : (actualDate == null ? -1 : 1);
+            }
+            return actualDate.compareTo(expectedDate);
         } else {
             // We use foldToASCII here to match the behavior of the analyzer configuration in the persistence configuration
             return ConditionContextHelper.foldToASCII(actualValue.toString()).compareTo(expectedValue);
@@ -267,6 +291,64 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             return false;
         } else if (actualValue == null) {
             return op.equals("missing") || op.equals("notIn") || op.equals("notEquals") || op.equals("hasNoneOf");
+        } else if (expectedValueInteger != null &&
+                ("greaterThan".equals(op) || "greaterThanOrEqualTo".equals(op) || "lessThan".equals(op) || "lessThanOrEqualTo".equals(op))) {
+            Integer actualInt = PropertyHelper.getInteger(actualValue);
+            Integer expectedInt = PropertyHelper.getInteger(expectedValueInteger);
+            if (actualInt == null || expectedInt == null) {
+                return false;
+            }
+            switch (op) {
+                case "greaterThan":
+                    return actualInt.compareTo(expectedInt) > 0;
+                case "greaterThanOrEqualTo":
+                    return actualInt.compareTo(expectedInt) >= 0;
+                case "lessThan":
+                    return actualInt.compareTo(expectedInt) < 0;
+                case "lessThanOrEqualTo":
+                    return actualInt.compareTo(expectedInt) <= 0;
+                default:
+                    return false;
+            }
+        } else if (expectedValueDouble != null &&
+                ("greaterThan".equals(op) || "greaterThanOrEqualTo".equals(op) || "lessThan".equals(op) || "lessThanOrEqualTo".equals(op))) {
+            Double actualDouble = PropertyHelper.getDouble(actualValue);
+            Double expectedDouble = PropertyHelper.getDouble(expectedValueDouble);
+            if (actualDouble == null || expectedDouble == null) {
+                return false;
+            }
+            switch (op) {
+                case "greaterThan":
+                    return actualDouble.compareTo(expectedDouble) > 0;
+                case "greaterThanOrEqualTo":
+                    return actualDouble.compareTo(expectedDouble) >= 0;
+                case "lessThan":
+                    return actualDouble.compareTo(expectedDouble) < 0;
+                case "lessThanOrEqualTo":
+                    return actualDouble.compareTo(expectedDouble) <= 0;
+                default:
+                    return false;
+            }
+        } else if ((expectedValueDate != null || expectedValueDateExpr != null) &&
+                ("greaterThan".equals(op) || "greaterThanOrEqualTo".equals(op) || "lessThan".equals(op) || "lessThanOrEqualTo".equals(op))) {
+            Date actualDate = getDate(actualValue);
+            Object expectedDateObj = expectedValueDate != null ? expectedValueDate : expectedValueDateExpr;
+            Date expectedDate = getDate(expectedDateObj);
+            if (actualDate == null || expectedDate == null) {
+                return false;
+            }
+            switch (op) {
+                case "greaterThan":
+                    return actualDate.compareTo(expectedDate) > 0;
+                case "greaterThanOrEqualTo":
+                    return actualDate.compareTo(expectedDate) >= 0;
+                case "lessThan":
+                    return actualDate.compareTo(expectedDate) < 0;
+                case "lessThanOrEqualTo":
+                    return actualDate.compareTo(expectedDate) <= 0;
+                default:
+                    return false;
+            }
         } else if (op.equals("exists")) {
             if (actualValue instanceof List) {
                 return ((List) actualValue).size() > 0;
@@ -300,17 +382,56 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             Collection<?> expectedValuesDouble = (Collection<?>) condition.getParameter("propertyValuesDouble");
             Collection<?> expectedValuesDate = (Collection<?>) condition.getParameter("propertyValuesDate");
             Collection<?> expectedValuesDateExpr = (Collection<?>) condition.getParameter("propertyValuesDateExpr");
-            return compare(actualValue, null,
-                    getDate(getFirst(expectedValuesDate)),
-                    getFirst(expectedValuesInteger),
-                    getFirst(expectedValuesDateExpr),
-                    getFirst(expectedValuesDouble)) >= 0
-                    &&
-                    compare(actualValue, null,
-                            getDate(getSecond(expectedValuesDate)),
-                            getSecond(expectedValuesInteger),
-                            getSecond(expectedValuesDateExpr),
-                            getSecond(expectedValuesDouble)) <= 0;
+            Object firstInteger = getFirst(expectedValuesInteger);
+            Object secondInteger = getSecond(expectedValuesInteger);
+            Object firstDouble = getFirst(expectedValuesDouble);
+            Object secondDouble = getSecond(expectedValuesDouble);
+            Date firstDate = getDate(getFirst(expectedValuesDate));
+            Date secondDate = getDate(getSecond(expectedValuesDate));
+            Date firstDateExpr = getDate(getFirst(expectedValuesDateExpr));
+            Date secondDateExpr = getDate(getSecond(expectedValuesDateExpr));
+
+            // Numeric between (integer)
+            if (firstInteger != null || secondInteger != null) {
+                Integer actualInt = PropertyHelper.getInteger(actualValue);
+                Integer firstInt = PropertyHelper.getInteger(firstInteger);
+                Integer secondInt = PropertyHelper.getInteger(secondInteger);
+                if (actualInt == null || firstInt == null || secondInt == null) {
+                    return false;
+                }
+                return actualInt.compareTo(firstInt) >= 0 && actualInt.compareTo(secondInt) <= 0;
+            }
+
+            // Numeric between (double)
+            if (firstDouble != null || secondDouble != null) {
+                Double actualDouble = PropertyHelper.getDouble(actualValue);
+                Double firstD = PropertyHelper.getDouble(firstDouble);
+                Double secondD = PropertyHelper.getDouble(secondDouble);
+                if (actualDouble == null || firstD == null || secondD == null) {
+                    return false;
+                }
+                return actualDouble.compareTo(firstD) >= 0 && actualDouble.compareTo(secondD) <= 0;
+            }
+
+            // Date between (explicit date)
+            if (firstDate != null || secondDate != null) {
+                Date actualDate = getDate(actualValue);
+                if (actualDate == null || firstDate == null || secondDate == null) {
+                    return false;
+                }
+                return actualDate.compareTo(firstDate) >= 0 && actualDate.compareTo(secondDate) <= 0;
+            }
+
+            // Date between (date expression)
+            if (firstDateExpr != null || secondDateExpr != null) {
+                Date actualDate = getDate(actualValue);
+                if (actualDate == null || firstDateExpr == null || secondDateExpr == null) {
+                    return false;
+                }
+                return actualDate.compareTo(firstDateExpr) >= 0 && actualDate.compareTo(secondDateExpr) <= 0;
+            }
+
+            return false;
         } else if (op.equals("contains")) {
             return actualValue.toString().contains(expectedValue);
         } else if (op.equals("notContains")) {
