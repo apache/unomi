@@ -24,6 +24,7 @@ import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.api.tenants.TenantTransformationListener;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
@@ -36,15 +37,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryNotEmptyException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.text.Normalizer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * An in-memory implementation of PersistenceService for testing purposes.
@@ -91,7 +90,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     private Integer defaultQueryLimit = 10;
 
     // Tenant transformation listeners (simulates Elasticsearch/OpenSearch tenant transformations)
-    private final List<org.apache.unomi.api.tenants.TenantTransformationListener> transformationListeners = new ArrayList<>();
+    private final List<TenantTransformationListener> transformationListeners = new ArrayList<>();
 
     /**
      * Refresh policy enum that simulates Elasticsearch/OpenSearch refresh behavior.
@@ -193,7 +192,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 loadPersistedItems();
             } catch (IOException e) {
                 // For AccessDeniedException (common in tests), log without stack trace to reduce noise
-                if (e instanceof java.nio.file.AccessDeniedException) {
+                if (e instanceof AccessDeniedException) {
                     LOGGER.error("Failed to create or access storage directory: {} - {}", storageRootPath, e.getMessage());
                 } else {
                     LOGGER.error("Failed to create or access storage directory: {}", storageRootPath, e);
@@ -436,7 +435,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 while (parent != null && !parent.equals(storageRootPath)) {
                     try {
                         if (Files.exists(parent)) {
-                            try (java.util.stream.Stream<Path> stream = Files.list(parent)) {
+                            try (Stream<Path> stream = Files.list(parent)) {
                                 // Check if directory is truly empty
                                 if (stream.findFirst().isEmpty()) {
                                     // Directory is empty, try to delete it
@@ -2770,10 +2769,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             String tenantId = item.getTenantId();
             if (tenantId != null && !transformationListeners.isEmpty()) {
                 // Sort listeners by priority (higher priority first)
-                List<org.apache.unomi.api.tenants.TenantTransformationListener> sortedListeners = new ArrayList<>(transformationListeners);
+                List<TenantTransformationListener> sortedListeners = new ArrayList<>(transformationListeners);
                 sortedListeners.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
 
-                for (org.apache.unomi.api.tenants.TenantTransformationListener listener : sortedListeners) {
+                for (TenantTransformationListener listener : sortedListeners) {
                     if (listener.isTransformationEnabled()) {
                         try {
                             Item transformedItem = listener.transformItem(item, tenantId);
@@ -2806,10 +2805,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             String tenantId = item.getTenantId();
             if (tenantId != null && !transformationListeners.isEmpty()) {
                 // Sort listeners by priority (higher priority first) for reverse transformation
-                List<org.apache.unomi.api.tenants.TenantTransformationListener> sortedListeners = new ArrayList<>(transformationListeners);
+                List<TenantTransformationListener> sortedListeners = new ArrayList<>(transformationListeners);
                 sortedListeners.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
 
-                for (org.apache.unomi.api.tenants.TenantTransformationListener listener : sortedListeners) {
+                for (TenantTransformationListener listener : sortedListeners) {
                     if (listener.isTransformationEnabled()) {
                         try {
                             Item transformedItem = listener.reverseTransformItem(item, tenantId);
@@ -2834,7 +2833,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
      *
      * @param listener the transformation listener to add
      */
-    public void addTransformationListener(org.apache.unomi.api.tenants.TenantTransformationListener listener) {
+    public void addTransformationListener(TenantTransformationListener listener) {
         if (listener != null) {
             transformationListeners.add(listener);
             LOGGER.debug("Added tenant transformation listener: {}", listener.getTransformationType());
@@ -2846,7 +2845,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
      *
      * @param listener the transformation listener to remove
      */
-    public void removeTransformationListener(org.apache.unomi.api.tenants.TenantTransformationListener listener) {
+    public void removeTransformationListener(TenantTransformationListener listener) {
         if (listener != null) {
             transformationListeners.remove(listener);
             LOGGER.debug("Removed tenant transformation listener: {}", listener.getTransformationType());

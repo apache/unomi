@@ -22,6 +22,7 @@ import co.elastic.clients.elasticsearch._types.GeoDistanceType;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import co.elastic.clients.util.ObjectBuilder;
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
@@ -278,8 +279,8 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         }
 
         String centerString;
-        if (centerObj instanceof org.apache.unomi.api.GeoPoint) {
-            centerString = ((org.apache.unomi.api.GeoPoint) centerObj).asString();
+        if (centerObj instanceof GeoPoint) {
+            centerString = ((GeoPoint) centerObj).asString();
         } else if (centerObj instanceof String) {
             centerString = (String) centerObj;
         } else {

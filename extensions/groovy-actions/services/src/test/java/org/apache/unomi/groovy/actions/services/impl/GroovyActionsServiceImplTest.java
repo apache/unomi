@@ -16,10 +16,12 @@
  */
 package org.apache.unomi.groovy.actions.services.impl;
 
+import groovy.lang.Script;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.ExecutionContext;
+import org.apache.unomi.api.Parameter;
+import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionType;
-import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ExecutionContextManager;
@@ -31,7 +33,9 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.KarafSecurityService;
-import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
+import org.apache.unomi.services.impl.TestConditionEvaluators;
+import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
@@ -39,11 +43,15 @@ import org.junit.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.wiring.BundleWiring;
+
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Unit tests for the GroovyActionsServiceImpl class.
@@ -110,8 +118,7 @@ public class GroovyActionsServiceImplTest {
 
         cacheService = new MultiTypeCacheServiceImpl();
 
-        ConditionValidationService conditionValidationService = TestHelper.createConditionValidationService();
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, cacheService, contextManager, tenantService, conditionValidationService);
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, cacheService, contextManager, tenantService);
 
         // Set up Groovy actions service with spy to mock internal methods
         groovyActionsService = new GroovyActionsServiceImpl();
@@ -144,8 +151,8 @@ public class GroovyActionsServiceImplTest {
             if (resourceUrl == null) {
                 fail("Could not find test Groovy action file");
             }
-            groovyScript = new String(java.nio.file.Files.readAllBytes(
-                    java.nio.file.Paths.get(resourceUrl.toURI())));
+            groovyScript = new String(Files.readAllBytes(
+                    Paths.get(resourceUrl.toURI())));
         } catch (Exception e) {
             fail("Failed to load Groovy action from resource file: " + e.getMessage());
             return;
@@ -171,8 +178,8 @@ public class GroovyActionsServiceImplTest {
             if (resourceUrl == null) {
                 fail("Could not find test Groovy action file for removal test");
             }
-            groovyScript = new String(java.nio.file.Files.readAllBytes(
-                    java.nio.file.Paths.get(resourceUrl.toURI())));
+            groovyScript = new String(Files.readAllBytes(
+                    Paths.get(resourceUrl.toURI())));
         } catch (Exception e) {
             fail("Failed to load Groovy action from resource file: " + e.getMessage());
             return;
@@ -202,8 +209,8 @@ public class GroovyActionsServiceImplTest {
             if (resourceUrl == null) {
                 fail("Could not find test Groovy action file for execution test");
             }
-            groovyScript = new String(java.nio.file.Files.readAllBytes(
-                    java.nio.file.Paths.get(resourceUrl.toURI())));
+            groovyScript = new String(Files.readAllBytes(
+                    Paths.get(resourceUrl.toURI())));
         } catch (Exception e) {
             fail("Failed to load Groovy action from resource file: " + e.getMessage());
             return;
@@ -230,7 +237,7 @@ public class GroovyActionsServiceImplTest {
 
             try {
                 // Test 1: SESSION_UPDATED return value
-                org.apache.unomi.api.actions.Action action1 = new org.apache.unomi.api.actions.Action();
+                Action action1 = new Action();
                 action1.setActionTypeId(actionName);
                 action1.setParameter("returnType", "SESSION_UPDATED");
                 action1.setParameter("shouldFail", false);
@@ -239,7 +246,7 @@ public class GroovyActionsServiceImplTest {
                 assertEquals("Action should return SESSION_UPDATED", EventService.SESSION_UPDATED, result1);
 
                 // Test 2: NO_CHANGE return value
-                org.apache.unomi.api.actions.Action action2 = new org.apache.unomi.api.actions.Action();
+                Action action2 = new Action();
                 action2.setActionTypeId(actionName);
                 action2.setParameter("returnType", "NO_CHANGE");
                 action2.setParameter("shouldFail", false);
@@ -248,7 +255,7 @@ public class GroovyActionsServiceImplTest {
                 assertEquals("Action should return NO_CHANGE", EventService.NO_CHANGE, result2);
 
                 // Test 3: ERROR return value
-                org.apache.unomi.api.actions.Action action3 = new org.apache.unomi.api.actions.Action();
+                Action action3 = new Action();
                 action3.setActionTypeId(actionName);
                 action3.setParameter("returnType", "SESSION_UPDATED");
                 action3.setParameter("shouldFail", true);
@@ -275,7 +282,7 @@ public class GroovyActionsServiceImplTest {
 
             // Test that we can create an instance and execute it
             try {
-                groovy.lang.Script scriptInstance = scriptClass.getDeclaredConstructor().newInstance();
+                Script scriptInstance = scriptClass.getDeclaredConstructor().newInstance();
                 Object result = scriptInstance.run();
                 assertEquals("Script result should match", "Hello, World!", result);
             } catch (Exception e) {
@@ -376,23 +383,23 @@ public class GroovyActionsServiceImplTest {
             assertEquals("Should have 3 parameters", 3, actionType.getParameters().size());
 
             // Check parameters by id
-            Map<String, org.apache.unomi.api.Parameter> paramsById = new HashMap<>();
-            for (org.apache.unomi.api.Parameter param : actionType.getParameters()) {
+            Map<String, Parameter> paramsById = new HashMap<>();
+            for (Parameter param : actionType.getParameters()) {
                 paramsById.put(param.getId(), param);
             }
 
             assertTrue("Should have stringParam", paramsById.containsKey("stringParam"));
-            org.apache.unomi.api.Parameter stringParam = paramsById.get("stringParam");
+            Parameter stringParam = paramsById.get("stringParam");
             assertEquals("String parameter type should match", "string", stringParam.getType());
             assertFalse("String parameter should not be multivalued", stringParam.isMultivalued());
 
             assertTrue("Should have intParam", paramsById.containsKey("intParam"));
-            org.apache.unomi.api.Parameter intParam = paramsById.get("intParam");
+            Parameter intParam = paramsById.get("intParam");
             assertEquals("Integer parameter type should match", "integer", intParam.getType());
             assertTrue("Integer parameter should be multivalued", intParam.isMultivalued());
 
             assertTrue("Should have boolParam", paramsById.containsKey("boolParam"));
-            org.apache.unomi.api.Parameter boolParam = paramsById.get("boolParam");
+            Parameter boolParam = paramsById.get("boolParam");
             assertEquals("Boolean parameter type should match", "boolean", boolParam.getType());
             assertFalse("Boolean parameter should not be multivalued", boolParam.isMultivalued());
 
@@ -450,7 +457,7 @@ public class GroovyActionsServiceImplTest {
             dispatcher.setGroovyActionsService(groovyActionsService);
 
             Event event = new Event();
-            org.apache.unomi.api.actions.Action action = new org.apache.unomi.api.actions.Action();
+            Action action = new Action();
             action.setActionTypeId(actionName);
 
             // Test execution in tenant1

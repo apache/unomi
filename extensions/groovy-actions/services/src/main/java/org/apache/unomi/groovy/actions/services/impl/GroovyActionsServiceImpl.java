@@ -24,6 +24,7 @@ import groovy.util.GroovyScriptEngine;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.Parameter;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ExecutionContextManager;
@@ -57,12 +58,7 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -100,14 +96,14 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
     }
 
     private GroovyScriptEngine groovyScriptEngine;
-    
+
     // Thread-safe compilation shell for ScriptMetadata
     private final Object compilationLock = new Object();
     private GroovyShell compilationShell;
     private volatile Map<String, Map<String, ScriptMetadata>> scriptMetadataCacheByTenant = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> loggedRefreshErrors = new ConcurrentHashMap<>();
     private static final int MAX_LOGGED_ERRORS = 100; // Prevent memory leak
-    
+
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
     private static final String BASE_SCRIPT_NAME = "BaseScript";
     // Original path for Groovy actions
@@ -371,7 +367,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
 
         compilerConfiguration.setScriptBaseClass(BASE_SCRIPT_NAME);
         groovyScriptEngine.setConfig(compilerConfiguration);
-        
+
         // Initialize the compilation shell for ScriptMetadata
         this.compilationShell = new GroovyShell(groovyScriptEngine.getGroovyClassLoader(), compilerConfiguration);
         compilationShell.setVariable("actionExecutorDispatcher", actionExecutorDispatcher);
@@ -429,7 +425,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
     private void logRefreshError(String actionName, String message, Exception e) {
         String tenantId = contextManager.getCurrentContext().getTenantId();
         Set<String> tenantErrors = loggedRefreshErrors.computeIfAbsent(tenantId, k -> ConcurrentHashMap.newKeySet());
-        
+
         if (tenantErrors.size() < MAX_LOGGED_ERRORS) {
             tenantErrors.add(actionName);
             LOGGER.error("{} for action {}: {}", message, actionName, e.getMessage(), e);
@@ -438,7 +434,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             LOGGER.debug("{} for action {}: {}", message, actionName, e.getMessage());
         } else {
             // Too many errors logged, skip this one
-            LOGGER.debug("Skipping error log for action {} due to error limit ({}): {}", 
+            LOGGER.debug("Skipping error log for action {} due to error limit ({}): {}",
                 actionName, MAX_LOGGED_ERRORS, e.getMessage());
         }
     }
@@ -531,7 +527,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
 
         try {
             Map<String, ScriptMetadata> scriptMetadataMap = getScriptMetadataMap();
-            
+
             ScriptMetadata existingMetadata = scriptMetadataMap.get(actionName);
             if (existingMetadata != null && !existingMetadata.hasChanged(groovyScript)) {
                 LOGGER.info("Script {} unchanged, skipping recompilation ({}ms)", actionName,
@@ -580,7 +576,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         actionType.setActionExecutor(action.actionExecutor());
 
         actionType.setParameters(Stream.of(action.parameters())
-                .map(parameter -> new org.apache.unomi.api.Parameter(parameter.id(), parameter.type(), parameter.multivalued()))
+                .map(parameter -> new Parameter(parameter.id(), parameter.type(), parameter.multivalued()))
                 .collect(Collectors.toList()));
         definitionsService.setActionType(actionType);
     }
@@ -592,9 +588,9 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         LOGGER.info("Removing script: {}", actionName);
 
         Map<String, ScriptMetadata> scriptMetadataMap = getScriptMetadataMap();
-        
+
         ScriptMetadata removedMetadata = scriptMetadataMap.remove(actionName);
-        
+
         // Clean up error tracking to prevent memory leak
         String tenantId = contextManager.getCurrentContext().getTenantId();
         Set<String> tenantErrors = loggedRefreshErrors.get(tenantId);
@@ -623,7 +619,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         validateNotEmpty(actionName, "Script ID");
 
         Map<String, ScriptMetadata> scriptMetadataMap = getScriptMetadataMap();
-        
+
         ScriptMetadata metadata = scriptMetadataMap.get(actionName);
         if (metadata == null) {
             LOGGER.warn("Script {} not found in cache", actionName);
@@ -637,7 +633,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         validateNotEmpty(actionName, "Action name");
 
         Map<String, ScriptMetadata> scriptMetadataMap = getScriptMetadataMap();
-        
+
         return scriptMetadataMap.get(actionName);
     }
 

@@ -18,6 +18,7 @@
 package org.apache.unomi.persistence.opensearch.querybuilders.core;
 
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher;
@@ -159,8 +160,8 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
 
                 if (centerObj != null && distance != null) {
                     String centerString;
-                    if (centerObj instanceof org.apache.unomi.api.GeoPoint) {
-                        centerString = ((org.apache.unomi.api.GeoPoint) centerObj).asString();
+                    if (centerObj instanceof GeoPoint) {
+                        centerString = ((GeoPoint) centerObj).asString();
                     } else if (centerObj instanceof String) {
                         centerString = (String) centerObj;
                     } else {

@@ -19,7 +19,10 @@ package org.apache.unomi.persistence.opensearch;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.json.*;
+import jakarta.json.Json;
+import jakarta.json.JsonArrayBuilder;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonObjectBuilder;
 import jakarta.json.stream.JsonParser;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -45,9 +48,9 @@ import org.apache.unomi.api.tenants.TenantTransformationListener;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.aggregate.*;
 import org.apache.unomi.persistence.spi.aggregate.DateRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.IpRangeAggregate;
-import org.apache.unomi.persistence.spi.aggregate.*;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.config.ConfigurationUpdateHelper;
@@ -69,6 +72,7 @@ import org.opensearch.client.opensearch.core.search.HitsMetadata;
 import org.opensearch.client.opensearch.core.search.TotalHits;
 import org.opensearch.client.opensearch.core.search.TotalHitsRelation;
 import org.opensearch.client.opensearch.generic.Requests;
+import org.opensearch.client.opensearch.generic.Response;
 import org.opensearch.client.opensearch.indices.*;
 import org.opensearch.client.opensearch.indices.get_alias.IndexAliases;
 import org.opensearch.client.opensearch.tasks.GetTasksResponse;
@@ -385,15 +389,15 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             public Object execute(Object... args) throws Exception {
 
                 // Validate OpenSearch credentials: if username is configured but password is empty, fail fast
-                if (org.apache.commons.lang3.StringUtils.isNotBlank(username) && org.apache.commons.lang3.StringUtils.isBlank(password)) {
+                if (StringUtils.isNotBlank(username) && StringUtils.isBlank(password)) {
                     String envPassword = System.getenv("UNOMI_OPENSEARCH_PASSWORD");
-                    if (org.apache.commons.lang3.StringUtils.isBlank(envPassword)) {
+                    if (StringUtils.isBlank(envPassword)) {
                         LOGGER.error("OpenSearch username is configured but password is empty. Set UNOMI_OPENSEARCH_PASSWORD environment variable or configure org.apache.unomi.opensearch.password in etc/org.apache.unomi.persistence.opensearch.cfg");
                     } else {
                         // allow picking up the env var implicitly if config left blank
                         password = envPassword;
                     }
-                    if (org.apache.commons.lang3.StringUtils.isBlank(password)) {
+                    if (StringUtils.isBlank(password)) {
                         throw new IllegalStateException("OpenSearch password is not configured. Please set UNOMI_OPENSEARCH_PASSWORD or org.apache.unomi.opensearch.password.");
                     }
                 }
@@ -1348,7 +1352,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                             // Check if a policy exists and delete it if it does
                             try {
                                 // Use generic request to check if a policy exists
-                                org.opensearch.client.opensearch.generic.Response existingPolicyResponse = client.generic().execute(
+                                Response existingPolicyResponse = client.generic().execute(
                                         Requests.builder()
                                                 .method("GET")
                                                 .endpoint("_plugins/_ism/policies/" + policyName)
@@ -1422,7 +1426,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                             .build();
 
                     // Create the policy using the generic client
-                    org.opensearch.client.opensearch.generic.Response response = client.generic().execute(
+                    Response response = client.generic().execute(
                             Requests.builder()
                                     .method("PUT")
                                     .endpoint("_plugins/_ism/policies/" + policyName)

@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.shell.dev.services;
 
+import org.apache.karaf.shell.support.table.ShellTable;
+
 import java.util.List;
 import java.util.Map;
 
@@ -186,5 +188,5 @@ public interface CrudCommand {
      * @param table the table to add rows to
      * @param maxEntries maximum number of entries to include
      */
-    void buildRows(org.apache.karaf.shell.support.table.ShellTable table, int maxEntries);
+    void buildRows(ShellTable table, int maxEntries);
 }

@@ -22,10 +22,14 @@ import org.apache.camel.component.file.GenericFile;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.router.api.ImportConfiguration;
-import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * A Camel processor that retrieves import configurations based on file names.
@@ -79,7 +83,7 @@ public class ImportConfigByFileNameProcessor implements Processor {
         GenericFile<?> file = exchange.getIn().getBody(GenericFile.class);
         String fileName = sanitizeFileName(file.getFileName());
         String filePath = file.getAbsoluteFilePath();
-        
+
         if (!isValidFilePath(filePath)) {
             LOGGER.warn("Invalid file path detected (possible path traversal attempt): {}", filePath);
             exchange.setProperty(Exchange.ROUTE_STOP, Boolean.TRUE);
@@ -101,9 +105,9 @@ public class ImportConfigByFileNameProcessor implements Processor {
             return;
         }
         String importConfigId = fileName.substring(0, dotIndex);
-        
+
         // Load configuration in tenant context
-        ImportConfiguration importConfiguration = executionContextManager.executeAsTenant(tenantId, () -> 
+        ImportConfiguration importConfiguration = executionContextManager.executeAsTenant(tenantId, () ->
             importConfigurationService.load(importConfigId));
 
         if(importConfiguration != null) {
@@ -126,18 +130,18 @@ public class ImportConfigByFileNameProcessor implements Processor {
         if (filePath == null || filePath.isEmpty()) {
             return false;
         }
-        
+
         // Normalize path (resolve .. and . segments)
         String normalizedPath = java.nio.file.Paths.get(filePath).normalize().toString();
-        
+
         // Check if normalization changed the path (indicating potential path traversal)
         if (!filePath.equals(normalizedPath)) {
             return false;
         }
-        
+
         // Check for path traversal patterns
-        return !filePath.contains("../") && 
-               !filePath.contains("..\\") && 
+        return !filePath.contains("../") &&
+               !filePath.contains("..\\") &&
                !filePath.contains("%2e%2e%2f") && // URL encoded ../
                !filePath.contains("%2e%2e/") &&   // URL encoded ../ variant
                !filePath.contains("..%2f");       // URL encoded ../ variant
@@ -153,10 +157,10 @@ public class ImportConfigByFileNameProcessor implements Processor {
         if (fileName == null || fileName.isEmpty()) {
             return "";
         }
-        
+
         // Remove any path components
-        fileName = new java.io.File(fileName).getName();
-        
+        fileName = new File(fileName).getName();
+
         // Remove any non-alphanumeric characters except dots, hyphens, and underscores
         return fileName.replaceAll("[^a-zA-Z0-9._-]", "");
     }
@@ -171,7 +175,7 @@ public class ImportConfigByFileNameProcessor implements Processor {
         if (tenantId == null || tenantId.isEmpty()) {
             return false;
         }
-        
+
         // Only allow alphanumeric characters, hyphens, and underscores in tenant IDs
         return tenantId.matches("^[a-zA-Z0-9_-]+$");
     }
@@ -187,19 +191,19 @@ public class ImportConfigByFileNameProcessor implements Processor {
         if (filePath == null || filePath.isEmpty()) {
             return null;
         }
-        
+
         try {
             // Normalize the path first
             String normalizedPath = java.nio.file.Paths.get(filePath).normalize().toString();
-            
+
             // Split the path and get the parent directory name
-            java.nio.file.Path path = java.nio.file.Paths.get(normalizedPath);
+            Path path = Paths.get(normalizedPath);
             if (path.getParent() == null) {
                 return null;
             }
-            
+
             String tenantDir = path.getParent().getFileName().toString();
-            
+
             // Additional safety check for the tenant directory name
             return sanitizeTenantId(tenantDir);
         } catch (Exception e) {
@@ -218,10 +222,10 @@ public class ImportConfigByFileNameProcessor implements Processor {
         if (tenantId == null || tenantId.isEmpty()) {
             return null;
         }
-        
+
         // Remove any characters that aren't alphanumeric, hyphen, or underscore
         String sanitized = tenantId.replaceAll("[^a-zA-Z0-9_-]", "");
-        
+
         // Return null if the sanitization changed the string (indicating it contained invalid chars)
         return tenantId.equals(sanitized) ? sanitized : null;
     }

@@ -17,12 +17,14 @@
 package org.apache.unomi.services.impl.cluster;
 
 import org.apache.unomi.api.ClusterNode;
+import org.apache.unomi.api.ServerInfo;
+import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
-import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
+import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
 import org.apache.unomi.services.impl.TestConditionEvaluators;
 import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
@@ -36,14 +38,14 @@ import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 
 import java.io.Serializable;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.TimerTask;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,7 +64,7 @@ public class ClusterServiceImplTest {
 
     // Add mock for BundleWatcher
     @Mock
-    private org.apache.unomi.lifecycle.BundleWatcher bundleWatcher;
+    private BundleWatcher bundleWatcher;
 
     private static final String TEST_NODE_ID = "test-node-1";
     private static final String PUBLIC_ADDRESS = "http://localhost:8181";
@@ -111,7 +113,7 @@ public class ClusterServiceImplTest {
     @Test
     public void testInitRegistersNodeInPersistence() {
         // Setup mock BundleWatcher to return a ServerInfo
-        org.apache.unomi.api.ServerInfo mockServerInfo = new org.apache.unomi.api.ServerInfo();
+        ServerInfo mockServerInfo = new ServerInfo();
         mockServerInfo.setServerIdentifier("test-server");
         mockServerInfo.setServerVersion("1.0.0");
         mockServerInfo.setServerBuildNumber("123");
@@ -119,7 +121,7 @@ public class ClusterServiceImplTest {
         mockServerInfo.setServerTimestamp("20250314120000");
         mockServerInfo.setServerScmBranch("main");
 
-        when(bundleWatcher.getServerInfos()).thenReturn(java.util.Collections.singletonList(mockServerInfo));
+        when(bundleWatcher.getServerInfos()).thenReturn(Collections.singletonList(mockServerInfo));
 
         // Set the BundleWatcher in the ClusterService
         clusterService.setBundleWatcher(bundleWatcher);
@@ -235,7 +237,7 @@ public class ClusterServiceImplTest {
             () -> persistenceService.load(TEST_NODE_ID, ClusterNode.class),
             n -> n == null
         );
-        
+
         assertNull(node, "Node should be removed from persistence after destroy(), nodeId=" + TEST_NODE_ID);
     }
 
@@ -266,17 +268,17 @@ public class ClusterServiceImplTest {
             () -> persistenceService.getAllItems(ClusterNode.class, 0, -1, null).getList(),
             2
         );
-        
+
         // Manually refresh the cache by directly querying all nodes and setting the cache via reflection
         // This ensures the cache is populated immediately rather than waiting for the scheduled task
         try {
-            java.lang.reflect.Field cachedClusterNodesField = ClusterServiceImpl.class.getDeclaredField("cachedClusterNodes");
+            Field cachedClusterNodesField = ClusterServiceImpl.class.getDeclaredField("cachedClusterNodes");
             cachedClusterNodesField.setAccessible(true);
             cachedClusterNodesField.set(clusterService, queryableNodes);
         } catch (Exception e) {
             // If reflection fails, try calling updateSystemStats() instead
             try {
-                java.lang.reflect.Method updateSystemStatsMethod = ClusterServiceImpl.class.getDeclaredMethod("updateSystemStats");
+                Method updateSystemStatsMethod = ClusterServiceImpl.class.getDeclaredMethod("updateSystemStats");
                 updateSystemStatsMethod.setAccessible(true);
                 updateSystemStatsMethod.invoke(clusterService);
             } catch (Exception e2) {
@@ -297,7 +299,7 @@ public class ClusterServiceImplTest {
                 } while (System.currentTimeMillis() < deadline);
             }
         }
-        
+
         // Get the result from cache
         List<ClusterNode> result = clusterService.getClusterNodes();
 
@@ -327,7 +329,7 @@ public class ClusterServiceImplTest {
         // Simulate the statistics update task running
         // We need to access the private method via reflection
         try {
-            java.lang.reflect.Method updateStatsMethod = ClusterServiceImpl.class.getDeclaredMethod("updateSystemStats");
+            Method updateStatsMethod = ClusterServiceImpl.class.getDeclaredMethod("updateSystemStats");
             updateStatsMethod.setAccessible(true);
             updateStatsMethod.invoke(clusterService);
         } catch (Exception e) {
@@ -356,34 +358,47 @@ public class ClusterServiceImplTest {
         // Setup - create a stale node
         long cutoffTime = System.currentTimeMillis() - (NODE_STATISTICS_UPDATE_FREQUENCY * 3);
 
-        ClusterNode staleNode = new ClusterNode();
-        staleNode.setItemId("stale-node");
-        staleNode.setPublicHostAddress("http://stale:8181");
-        staleNode.setInternalHostAddress("https://stale:9443");
-        staleNode.setStartTime(cutoffTime - 60000);
-        staleNode.setLastHeartbeat(cutoffTime - 10000); // Older than cutoff
-        persistenceService.save(staleNode);
+        // Save nodes in system context to ensure proper tenant handling
+        executionContextManager.executeAsSystem(() -> {
+            ClusterNode staleNode = new ClusterNode();
+            staleNode.setItemId("stale-node");
+            staleNode.setPublicHostAddress("http://stale:8181");
+            staleNode.setInternalHostAddress("https://stale:9443");
+            staleNode.setStartTime(cutoffTime - 60000);
+            staleNode.setLastHeartbeat(cutoffTime - 10000); // Older than cutoff
+            persistenceService.save(staleNode);
 
-        // Create a fresh node
-        ClusterNode freshNode = new ClusterNode();
-        freshNode.setItemId("fresh-node");
-        freshNode.setPublicHostAddress("http://fresh:8181");
-        freshNode.setInternalHostAddress("https://fresh:9443");
-        freshNode.setStartTime(System.currentTimeMillis() - 60000);
-        freshNode.setLastHeartbeat(System.currentTimeMillis()); // Recent heartbeat
-        persistenceService.save(freshNode);
-
-        // Verify both nodes exist
-        assertNotNull(persistenceService.load("stale-node", ClusterNode.class));
-        assertNotNull(persistenceService.load("fresh-node", ClusterNode.class));
+            // Create a fresh node
+            ClusterNode freshNode = new ClusterNode();
+            freshNode.setItemId("fresh-node");
+            freshNode.setPublicHostAddress("http://fresh:8181");
+            freshNode.setInternalHostAddress("https://fresh:9443");
+            freshNode.setStartTime(System.currentTimeMillis() - 60000);
+            freshNode.setLastHeartbeat(System.currentTimeMillis()); // Recent heartbeat
+            persistenceService.save(freshNode);
+            return null;
+        });
 
         // Refresh persistence to ensure nodes are available for querying (handles refresh delay)
         persistenceService.refresh();
 
+        // Verify both nodes exist - use retry to handle potential race conditions with scheduled cleanup task
+        ClusterNode staleNodeBeforeCleanup = TestHelper.retryUntil(
+            () -> persistenceService.load("stale-node", ClusterNode.class),
+            node -> node != null
+        );
+        assertNotNull(staleNodeBeforeCleanup, "Stale node should exist before cleanup, nodeId=stale-node");
+
+        ClusterNode freshNodeBeforeCleanup = TestHelper.retryUntil(
+            () -> persistenceService.load("fresh-node", ClusterNode.class),
+            node -> node != null
+        );
+        assertNotNull(freshNodeBeforeCleanup, "Fresh node should exist before cleanup, nodeId=fresh-node");
+
         // Simulate the cleanup task running
         // We need to access the private method via reflection
         try {
-            java.lang.reflect.Method cleanupMethod = ClusterServiceImpl.class.getDeclaredMethod("cleanupStaleNodes");
+            Method cleanupMethod = ClusterServiceImpl.class.getDeclaredMethod("cleanupStaleNodes");
             cleanupMethod.setAccessible(true);
             cleanupMethod.invoke(clusterService);
         } catch (Exception e) {

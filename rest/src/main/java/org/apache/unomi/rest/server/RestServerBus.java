@@ -19,6 +19,7 @@ package org.apache.unomi.rest.server;
 import org.apache.cxf.Bus;
 import org.apache.cxf.bus.extension.ExtensionManagerBus;
 import org.apache.cxf.feature.LoggingFeature;
+import org.apache.cxf.metrics.MetricsFeature;
 import org.osgi.service.component.annotations.Component;
 
 /**
@@ -28,6 +29,6 @@ import org.osgi.service.component.annotations.Component;
 public class RestServerBus extends ExtensionManagerBus implements Bus {
     public RestServerBus() {
         this.getFeatures().add(new LoggingFeature());
-        this.getFeatures().add(new org.apache.cxf.metrics.MetricsFeature());
+        this.getFeatures().add(new MetricsFeature());
     }
 }

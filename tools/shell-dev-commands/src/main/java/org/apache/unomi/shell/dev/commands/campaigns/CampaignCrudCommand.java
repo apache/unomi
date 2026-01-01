@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.campaigns.Campaign;
 import org.apache.unomi.api.campaigns.CampaignDetail;
+import org.apache.unomi.api.goals.Goal;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.GoalsService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -68,7 +69,7 @@ public class CampaignCrudCommand extends BaseCrudCommand {
         String primaryGoalName = "";
         if (campaign.getPrimaryGoal() != null) {
             // Get the goal details to get its name
-            org.apache.unomi.api.goals.Goal primaryGoal = goalsService.getGoal(campaign.getPrimaryGoal());
+            Goal primaryGoal = goalsService.getGoal(campaign.getPrimaryGoal());
             if (primaryGoal != null) {
                 primaryGoalName = primaryGoal.getMetadata().getName();
             }

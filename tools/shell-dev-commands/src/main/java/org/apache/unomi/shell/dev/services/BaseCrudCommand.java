@@ -19,17 +19,22 @@ package org.apache.unomi.shell.dev.services;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.support.table.ShellTable;
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.common.DataTable;
 import org.apache.unomi.shell.dev.commands.ListCommandSupport;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -180,13 +185,13 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
     protected String getTenantIdFromItem(Object item) {
 
         // Handle tenant-specific objects
-        if (item instanceof org.apache.unomi.api.tenants.Tenant) {
-            return ((org.apache.unomi.api.tenants.Tenant) item).getItemId();
+        if (item instanceof Tenant) {
+            return ((Tenant) item).getItemId();
         }
 
         // Handle Item subclasses that directly have tenantId
-        if (item instanceof org.apache.unomi.api.Item) {
-            String tenantId = ((org.apache.unomi.api.Item) item).getTenantId();
+        if (item instanceof Item) {
+            String tenantId = ((Item) item).getTenantId();
             return tenantId;
         }
 
@@ -244,13 +249,13 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
      */
     protected String extractIdFromItem(Object item) {
         // Handle Item subclasses
-        if (item instanceof org.apache.unomi.api.Item) {
-            return ((org.apache.unomi.api.Item) item).getItemId();
+        if (item instanceof Item) {
+            return ((Item) item).getItemId();
         }
 
         // Handle Metadata objects
-        if (item instanceof org.apache.unomi.api.Metadata) {
-            return ((org.apache.unomi.api.Metadata) item).getId();
+        if (item instanceof Metadata) {
+            return ((Metadata) item).getId();
         }
 
         // Try reflection as a fallback
@@ -258,7 +263,7 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
             // Try common getter method names for ID
             for (String methodName : new String[]{"getId", "getItemId", "getIdentifier", "getKey", "getName"}) {
                 try {
-                    java.lang.reflect.Method method = item.getClass().getMethod(methodName);
+                    Method method = item.getClass().getMethod(methodName);
                     Object result = method.invoke(item);
                     if (result != null) {
                         return result.toString();
@@ -271,7 +276,7 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
             // Try direct field access as a last resort
             for (String fieldName : new String[]{"id", "itemId", "identifier", "key", "name"}) {
                 try {
-                    java.lang.reflect.Field field = item.getClass().getDeclaredField(fieldName);
+                    Field field = item.getClass().getDeclaredField(fieldName);
                     field.setAccessible(true);
                     Object value = field.get(item);
                     if (value != null) {

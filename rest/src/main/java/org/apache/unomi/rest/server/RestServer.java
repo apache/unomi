@@ -35,6 +35,7 @@ import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
@@ -326,12 +327,12 @@ public class RestServer {
         desers.put(EventsCollectorRequest.class, new EventsCollectorRequestDeserializer(schemaService));
 
         // Build the server
-        ObjectMapper objectMapper = new org.apache.unomi.persistence.spi.CustomObjectMapper(desers);
+        ObjectMapper objectMapper = new CustomObjectMapper(desers);
         JAXRSServerFactoryBean jaxrsServerFactoryBean = new JAXRSServerFactoryBean();
         jaxrsServerFactoryBean.setAddress("/");
         jaxrsServerFactoryBean.setBus(serverBus);
         jaxrsServerFactoryBean.setProvider(new JacksonJaxbJsonProvider(objectMapper, JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS));
-        jaxrsServerFactoryBean.setProvider(new org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter());
+        jaxrsServerFactoryBean.setProvider(new CrossOriginResourceSharingFilter());
         jaxrsServerFactoryBean.setProvider(new RetroCompatibilityParamConverterProvider(objectMapper));
 
         // Authentication and Security filters in order of priority
