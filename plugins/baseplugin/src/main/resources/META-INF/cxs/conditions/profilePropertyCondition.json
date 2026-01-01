@@ -25,26 +25,10 @@
         },
         {
             "id": "comparisonOperator",
-            "type": "string",
+            "type": "comparisonOperator",
             "multivalued": false,
             "validation": {
-                "required": true,
-                "allowedValues": [
-                    "equals",
-                    "notEquals",
-                    "lessThan",
-                    "greaterThan",
-                    "lessThanOrEqualTo",
-                    "greaterThanOrEqualTo",
-                    "between",
-                    "exists",
-                    "missing",
-                    "contains",
-                    "notContains",
-                    "startsWith",
-                    "endsWith",
-                    "matchesRegex"
-                ]
+                "required": true
             }
         },
         {
@@ -59,6 +43,15 @@
         {
             "id": "propertyValueInteger",
             "type": "integer",
+            "multivalued": false,
+            "validation": {
+                "exclusive": true,
+                "exclusiveGroup": "propertyValue"
+            }
+        },
+        {
+            "id": "propertyValueDouble",
+            "type": "double",
             "multivalued": false,
             "validation": {
                 "exclusive": true,
@@ -95,6 +88,15 @@
         {
             "id": "propertyValuesInteger",
             "type": "integer",
+            "multivalued": true,
+            "validation": {
+                "exclusive": true,
+                "exclusiveGroup": "propertyValues"
+            }
+        },
+        {
+            "id": "propertyValuesDouble",
+            "type": "double",
             "multivalued": true,
             "validation": {
                 "exclusive": true,

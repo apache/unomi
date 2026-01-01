@@ -24,8 +24,12 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.security.UnomiRoles;
-import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.PersonalizationService;
+import org.apache.unomi.api.services.PrivacyService;
+import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.schema.api.SchemaService;
@@ -382,7 +386,7 @@ public class ContextJsonEndpoint {
     private Object sanitizeValue(Object value) {
         if (value instanceof String) {
             String stringValue = (String) value;
-            if (stringValue.startsWith("script::") || stringValue.startsWith("parameter::")) {
+            if (ConditionContextHelper.isParameterReference(value)) {
                 LOGGER.warn("Scripting detected in context request, filtering out. See debug level for more information");
                 LOGGER.debug("Scripting detected in context request with value {}, filtering out...", value);
                 return null;

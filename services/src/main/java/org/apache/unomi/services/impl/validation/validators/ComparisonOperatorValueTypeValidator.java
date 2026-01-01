@@ -24,11 +24,22 @@ import java.util.Set;
 
 public class ComparisonOperatorValueTypeValidator implements ValueTypeValidator {
     private static final Set<String> VALID_OPERATORS = new HashSet<>(Arrays.asList(
-        "equals", "notEquals", "lessThan", "greaterThan",
-        "lessThanOrEqualTo", "greaterThanOrEqualTo",
-        "between", "contains", "startsWith", "endsWith",
-        "matchesRegex", "in", "notIn", "all", "exists",
-        "missing"
+        // Equality operators
+        "equals", "notEquals",
+        // Comparison operators
+        "lessThan", "greaterThan", "lessThanOrEqualTo", "greaterThanOrEqualTo",
+        // Range operator
+        "between",
+        // Existence operators
+        "exists", "missing",
+        // Content operators
+        "contains", "notContains", "startsWith", "endsWith", "matchesRegex",
+        // Collection operators
+        "in", "notIn", "all", "inContains", "hasSomeOf", "hasNoneOf",
+        // Date operators
+        "isDay", "isNotDay",
+        // Geographic operator
+        "distance"
     ));
 
     @Override

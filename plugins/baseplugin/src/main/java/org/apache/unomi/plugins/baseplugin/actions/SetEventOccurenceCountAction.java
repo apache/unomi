@@ -24,17 +24,14 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.PropertyHelper;
-import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 
+import javax.xml.bind.DatatypeConverter;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
-import java.util.stream.Collectors;
-
-import javax.xml.bind.DatatypeConverter;
 
 public class SetEventOccurenceCountAction implements ActionExecutor {
     private DefinitionsService definitionsService;
@@ -58,7 +55,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         RequestTracer tracer = null;
         if (tracerService != null && tracerService.isTracingEnabled()) {
             tracer = tracerService.getCurrentTracer();
-            tracer.startOperation("set-event-count", 
+            tracer.startOperation("set-event-count",
                 "Setting event occurrence count", action);
         }
 
@@ -78,7 +75,9 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             ArrayList<Condition> conditions = new ArrayList<Condition>();
 
             Condition eventCondition = (Condition) pastEventCondition.getParameter("eventCondition");
-            definitionsService.resolveConditionType(eventCondition);
+            if (eventCondition != null) {
+                definitionsService.getConditionValidationService().validate(eventCondition);
+            }
             conditions.add(eventCondition);
 
             Condition c = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
@@ -149,7 +148,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
                     "count", count,
                     "isUpdated", updated
                 ));
-                tracer.endOperation(updated, 
+                tracer.endOperation(updated,
                     updated ? "Event count updated successfully" : "No changes needed");
             }
             return updated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;

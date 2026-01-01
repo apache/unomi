@@ -37,6 +37,11 @@
       "multivalued": false
     },
     {
+      "id": "propertyValueDouble",
+      "type": "double",
+      "multivalued": false
+    },
+    {
       "id": "propertyValueDate",
       "type": "date",
       "multivalued": false
@@ -54,6 +59,11 @@
     {
       "id": "propertyValuesInteger",
       "type": "integer",
+      "multivalued": true
+    },
+    {
+      "id": "propertyValuesDouble",
+      "type": "double",
       "multivalued": true
     },
     {

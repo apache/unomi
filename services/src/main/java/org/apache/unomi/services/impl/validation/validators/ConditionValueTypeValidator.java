@@ -57,6 +57,9 @@ public class ConditionValueTypeValidator implements ValueTypeValidator {
         }
         Condition condition = (Condition) value;
 
+        // Note: This validator performs basic structure validation.
+        // Condition type resolution should happen before validation in ConditionValidationServiceImpl.
+        // If the type is not resolved here, it will be caught by the main validation.
         // Basic validation: must have type and metadata
         ConditionType type = condition.getConditionType();
         if (type == null || type.getMetadata() == null) {

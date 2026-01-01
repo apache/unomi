@@ -28,9 +28,11 @@ import java.util.Map;
 public interface ConditionValidationService {
 
     /**
-     * Validates a condition against its type definition
+     * Validates a condition against its type definition.
+     * Skips validation for parameters that contain references (`parameter::`) or script expressions (`script::`).
+     * Only validates parameters that are NOT parameter references or script expressions.
      * @param condition the condition to validate
-     * @return a list of validation errors, empty if the condition is valid
+     * @return a list of validation errors, empty if the condition is valid (for non-reference/script values)
      */
     List<ValidationError> validate(Condition condition);
 

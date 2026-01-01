@@ -30,7 +30,7 @@
       "id": "operator",
       "type": "string",
       "multivalued": false,
-      "defaultValue": "true",
+      "defaultValue": "eventsOccurred",
       "validation": {
         "recommended": true,
         "allowedValues": ["eventsOccurred", "eventsNotOccurred"]

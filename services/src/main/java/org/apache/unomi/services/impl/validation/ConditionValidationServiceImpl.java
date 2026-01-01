@@ -21,7 +21,9 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.conditions.ConditionValidation;
 import org.apache.unomi.api.services.ConditionValidationService;
+import org.apache.unomi.api.services.TypeResolutionService;
 import org.apache.unomi.api.services.ValueTypeValidator;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.services.impl.validation.validators.ConditionValueTypeValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,6 +37,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
 
     private final Map<String, ValueTypeValidator> validators = new ConcurrentHashMap<>();
     private List<ValueTypeValidator> builtInValidators;
+    private TypeResolutionService typeResolutionService;
 
     public void setBuiltInValidators(List<ValueTypeValidator> builtInValidators) {
         this.builtInValidators = builtInValidators;
@@ -59,6 +62,17 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             validators.remove(typeId);
             LOGGER.debug("Removed custom validator for type: {}", validator.getValueTypeId());
         }
+    }
+
+    /**
+     * Sets the TypeResolutionService for automatic type resolution during validation.
+     * This allows the validation service to automatically resolve condition types
+     * if they haven't been resolved yet, including nested conditions.
+     * 
+     * @param typeResolutionService the type resolution service to use
+     */
+    public void setTypeResolutionService(TypeResolutionService typeResolutionService) {
+        this.typeResolutionService = typeResolutionService;
     }
 
     private Map<String, Object> buildValidationContext(String paramName, Object value, Parameter param,
@@ -101,12 +115,24 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             return errors;
         }
 
+        // Auto-resolve condition type if needed (including nested conditions)
+        // This ensures types are resolved before validation, preventing validation failures
+        if (condition.getConditionType() == null && typeResolutionService != null) {
+            typeResolutionService.resolveConditionType(condition, "validation");
+        }
+
         ConditionType type = condition.getConditionType();
         if (type == null) {
-            Map<String, Object> context = buildValidationContext(null, null, null,
-                "condition type", Collections.singletonMap("type", condition.getConditionTypeId()));
-            errors.add(new ValidationError(null, "Condition type cannot be null",
-                ValidationErrorType.INVALID_CONDITION_TYPE, condition.getConditionTypeId(), null, context, null));
+            // Condition without type is invalid (could not be resolved)
+            String location = "condition[" + condition.getConditionTypeId() + "]";
+            Map<String, Object> context = buildValidationContext(null, null, null, location, null);
+            errors.add(new ValidationError(null,
+                "Condition type is missing or could not be resolved",
+                ValidationErrorType.INVALID_CONDITION_TYPE,
+                condition.getConditionTypeId(),
+                null,
+                context,
+                null));
             return errors;
         }
 
@@ -121,13 +147,18 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             }
         }
 
-        // Check each parameter
+        // Check each parameter, skipping those with references/scripts (partial validation)
         for (Parameter param : type.getParameters()) {
             String paramName = param.getId();
             Object value = condition.getParameter(paramName);
             String location = "condition[" + condition.getConditionTypeId() + "]." + paramName;
 
-            // Always validate basic type and multivalued constraints
+            // Skip validation entirely for parameters with references/scripts
+            if (ConditionContextHelper.hasContextualParameter(value)) {
+                continue;
+            }
+
+            // Validate basic type and multivalued constraints for non-reference values
             if (value != null) {
                 errors.addAll(validateParameterType(paramName, value, param, condition, type, location));
             }
@@ -138,11 +169,15 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             }
         }
 
-        // Check exclusive parameter groups
+        // Check exclusive parameter groups (only for non-reference/script values)
         for (Map.Entry<String, List<Parameter>> entry : exclusiveGroups.entrySet()) {
             List<Parameter> group = entry.getValue();
             long valuesCount = group.stream()
-                .map(p -> condition.getParameter(p.getId()))
+                .map(p -> {
+                    Object val = condition.getParameter(p.getId());
+                    // Only count non-reference/script values
+                    return val != null && !ConditionContextHelper.hasContextualParameter(val) ? val : null;
+                })
                 .filter(Objects::nonNull)
                 .count();
 
@@ -164,8 +199,22 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             }
         }
 
+        // Recursively validate nested conditions (with same partial logic)
+        for (Object value : condition.getParameterValues().values()) {
+            if (value instanceof Condition) {
+                errors.addAll(validate((Condition) value));
+            } else if (value instanceof Collection) {
+                for (Object item : (Collection<?>) value) {
+                    if (item instanceof Condition) {
+                        errors.addAll(validate((Condition) item));
+                    }
+                }
+            }
+        }
+
         return errors;
     }
+
 
     private List<ValidationError> validateAdditionalRules(String paramName, Object value, Parameter param,
             Condition condition, ConditionType type, String parentLocation) {
@@ -174,7 +223,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
 
         Map<String, Object> context = buildValidationContext(paramName, value, param, parentLocation, null);
 
-        // Check required parameters
+        // Check required parameters (skip if value is a parameter reference/script)
         if (validation.isRequired() && value == null) {
             errors.add(new ValidationError(paramName,
                 "Required parameter is missing",
@@ -186,7 +235,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             return errors; // Skip other validations if required parameter is missing
         }
 
-        // Check recommended parameters
+        // Check recommended parameters (skip if value is a parameter reference/script)
         if (validation.isRecommended() && value == null) {
             errors.add(new ValidationError(paramName,
                 "Parameter is recommended for optimal functionality",
@@ -197,7 +246,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
                 null));
         }
 
-        if (value != null) {
+        if (value != null && !ConditionContextHelper.hasContextualParameter(value)) {
             // Check allowed values
             if (validation.getAllowedValues() != null && !validation.getAllowedValues().isEmpty()) {
                 if (!validation.getAllowedValues().contains(value.toString())) {
@@ -335,6 +384,21 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
 
         // Skip type validation if type is not specified (for backward compatibility)
         if (paramType == null) {
+            return errors;
+        }
+
+        // Skip type validation for parameter references and script expressions
+        // These will be resolved later (via ConditionContextHelper.getContextualCondition)
+        // and validated at that point. Type validation here would fail incorrectly
+        // since parameter references appear as Strings but will resolve to the correct type.
+        if (ConditionContextHelper.isParameterReference(value)) {
+            // Parameter reference or script expression - skip type validation
+            // Other constraints (required, allowedValues, etc.) are still validated
+            // Type will be validated when the reference is resolved
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Skipping type validation for parameter reference: {}={}", 
+                    paramName, value);
+            }
             return errors;
         }
 

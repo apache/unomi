@@ -39,7 +39,6 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
@@ -64,7 +63,16 @@
         <bean class="org.apache.unomi.persistence.opensearch.querybuilders.advanced.GeoLocationByPointSessionConditionOSQueryBuilder"/>
     </service>
 
-    <service>
+    <bean id="pastEventConditionOSQueryBuilder" class="org.apache.unomi.persistence.opensearch.querybuilders.advanced.PastEventConditionOSQueryBuilder">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="segmentService" ref="segmentService"/>
+        <property name="scriptExecutor" ref="scriptExecutor"/>
+        <property name="maximumIdsQueryCount" value="${os.maximumIdsQueryCount}"/>
+        <property name="pastEventsDisablePartitions" value="${os.pastEventsDisablePartitions}"/>
+        <property name="aggregateQueryBucketSize" value="${os.aggregateQueryBucketSize}"/>
+    </bean>
+
+    <service ref="pastEventConditionOSQueryBuilder">
         <interfaces>
             <value>org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder</value>
             <value>org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder</value>
@@ -72,15 +80,16 @@
         <service-properties>
             <entry key="queryBuilderId" value="pastEventConditionQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.advanced.PastEventConditionOSQueryBuilder">
-            <property name="definitionsService" ref="definitionsService"/>
-            <property name="persistenceService" ref="persistenceService"/>
-            <property name="segmentService" ref="segmentService"/>
-            <property name="scriptExecutor" ref="scriptExecutor"/>
-            <property name="maximumIdsQueryCount" value="${os.maximumIdsQueryCount}"/>
-            <property name="pastEventsDisablePartitions" value="${os.pastEventsDisablePartitions}"/>
-            <property name="aggregateQueryBucketSize" value="${os.aggregateQueryBucketSize}"/>
-        </bean>
     </service>
+
+    <!-- DefinitionsService Reference with listener to avoid blueprint context restart -->
+    <reference id="definitionsService"
+               interface="org.apache.unomi.api.services.DefinitionsService"
+               availability="optional">
+        <reference-listener bind-method="bindDefinitionsService"
+                          unbind-method="unbindDefinitionsService">
+            <ref component-id="pastEventConditionOSQueryBuilder"/>
+        </reference-listener>
+    </reference>
 
 </blueprint>
