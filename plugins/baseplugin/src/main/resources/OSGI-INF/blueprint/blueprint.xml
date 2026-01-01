@@ -45,7 +45,7 @@
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
     <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
-    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
+    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService" timeout="2000"/>
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
@@ -199,6 +199,7 @@
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.EvaluateProfileSegmentsAction">
             <property name="segmentService" ref="segmentService"/>
+            <property name="profileService" ref="profileService"/>
             <property name="tracerService" ref="tracerService"/>
         </bean>
     </service>
@@ -208,6 +209,7 @@
             <entry key="actionExecutorId" value="evaluateProfileAge"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.EvaluateProfileAgeAction">
+            <property name="profileService" ref="profileService"/>
             <property name="tracerService" ref="tracerService"/>
         </bean>
     </service>

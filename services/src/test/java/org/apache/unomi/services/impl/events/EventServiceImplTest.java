@@ -20,22 +20,24 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
-import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
+import org.apache.unomi.services.impl.TestConditionEvaluators;
+import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
-import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -66,12 +68,11 @@ public class EventServiceImplTest {
 
     @Mock
     private BundleContext bundleContext;
-    private org.apache.unomi.api.services.SchedulerService schedulerService;
+    private SchedulerService schedulerService;
     @Mock
     private EventListenerService eventListener;
     @Mock
     private ServiceReference<EventListenerService> eventListenerReference;
-    private ConditionValidationService conditionValidationService;
     private TracerService tracerService;
 
     private static final String TENANT_1 = "tenant1";
@@ -80,11 +81,8 @@ public class EventServiceImplTest {
 
     @BeforeEach
     public void setUp() {
-        
-        tenantService = new TestTenantService();
 
-        // Initialize ConditionValidationService using TestHelper
-        this.conditionValidationService = TestHelper.createConditionValidationService();
+        tenantService = new TestTenantService();
 
         // Create tenants using TestHelper
         TestHelper.setupCommonTestData(tenantService);
@@ -106,7 +104,9 @@ public class EventServiceImplTest {
         schedulerService = TestHelper.createSchedulerService("event-service-scheduler-node", persistenceService, executionContextManager, bundleContext, null, -1, true, true);
 
         // Set up definitions service
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
+        // Inject definitionsService into the dispatcher
+        TestHelper.injectDefinitionsServiceIntoDispatcher(conditionEvaluatorDispatcher, definitionsService);
 
         TestConditionEvaluators.getConditionTypes().forEach((key, value) -> definitionsService.setConditionType(value));
 
@@ -123,7 +123,7 @@ public class EventServiceImplTest {
     @AfterEach
     public void tearDown() throws Exception {
         // Use the common tearDown method from TestHelper
-        org.apache.unomi.services.TestHelper.tearDown(
+        TestHelper.tearDown(
             schedulerService,
             multiTypeCacheService,
             persistenceService,
@@ -132,9 +132,9 @@ public class EventServiceImplTest {
         );
 
         // Clean up references using the helper method
-        org.apache.unomi.services.TestHelper.cleanupReferences(
+        TestHelper.cleanupReferences(
             tenantService, securityService, executionContextManager, eventService,
-            persistenceService, definitionsService, schedulerService, conditionValidationService,
+            persistenceService, definitionsService, schedulerService,
             multiTypeCacheService, auditService, bundleContext, eventListener,
             eventListenerReference, tracerService
         );
@@ -172,7 +172,7 @@ public class EventServiceImplTest {
 
         // Verify
         assertEquals(EventService.PROFILE_UPDATED, result & EventService.PROFILE_UPDATED, "Profile update flag should be set after listener triggers update");
-        verify(eventListener, times(11)).onEvent(any(Event.class)); // Original event + profileUpdated event recursive
+        verify(eventListener, times(21)).onEvent(any(Event.class)); // Original event + profileUpdated event recursive (max depth 20)
     }
 
     @Test
@@ -206,7 +206,7 @@ public class EventServiceImplTest {
         int result = eventService.send(event);
 
         // Verify that after max recursion is reached, we get NO_CHANGE
-        verify(eventListener, times(11)).onEvent(any(Event.class)); // 10 is max recursion depth
+        verify(eventListener, times(21)).onEvent(any(Event.class)); // 20 is max recursion depth
         assertEquals(EventService.PROFILE_UPDATED | EventService.SESSION_UPDATED, result, "Result flags should reflect last recursion state");
     }
 

@@ -19,18 +19,18 @@ package org.apache.unomi.services.impl.events;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.*;
-import org.apache.unomi.services.common.security.IPValidationUtils;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.ResolverService;
+import org.apache.unomi.api.services.TypeResolutionService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
+import org.apache.unomi.services.common.security.IPValidationUtils;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.BundleContext;
@@ -43,14 +43,59 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EventServiceImpl implements EventService {
     private static final Logger LOGGER = LoggerFactory.getLogger(EventServiceImpl.class);
-    private static final int MAX_RECURSION_DEPTH = 10;
+    private static final int MAX_RECURSION_DEPTH = 20;
+
+    /**
+     * Simple data class to hold event information for recursion tracking.
+     * Focuses on data relevant to rule condition matching: event type, scope, and key properties.
+     */
+    private static class EventInfo {
+        final String eventType;
+        final String scope;
+        final String propertyKeys;
+
+        EventInfo(Event event) {
+            this.eventType = event.getEventType();
+            this.scope = event.getScope();
+
+            // Collect property keys that might be used in conditions (limit to first 5 to avoid noise)
+            Map<String, Object> properties = event.getProperties();
+            if (properties != null && !properties.isEmpty()) {
+                List<String> keys = new ArrayList<>(properties.keySet());
+                int maxKeys = Math.min(5, keys.size());
+                this.propertyKeys = keys.subList(0, maxKeys).toString();
+            } else {
+                this.propertyKeys = null;
+            }
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder("Event{type=").append(eventType);
+            if (scope != null) {
+                sb.append(", scope=").append(scope);
+            }
+            if (propertyKeys != null) {
+                sb.append(", properties=").append(propertyKeys);
+            }
+            sb.append("}");
+            return sb.toString();
+        }
+    }
+
+    /**
+     * ThreadLocal to track event stack for event processing.
+     * This ensures the full event chain is tracked consistently even when send() is called directly
+     * from actions or other services, preventing infinite recursion and providing detailed
+     * diagnostics when recursion limits are reached.
+     */
+    private static final ThreadLocal<List<EventInfo>> EVENT_STACK = ThreadLocal.withInitial(ArrayList::new);
 
     private List<EventListenerService> eventListeners = new CopyOnWriteArrayList<EventListenerService>();
 
     private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
-    private ResolverService resolverService;
 
     private TenantService tenantService;
 
@@ -78,8 +123,12 @@ public class EventServiceImpl implements EventService {
         this.definitionsService = definitionsService;
     }
 
-    public void setResolverService(ResolverService resolverService) {
-        this.resolverService = resolverService;
+    /**
+     * Helper method to get TypeResolutionService from DefinitionsService.
+     * Returns null if DefinitionsService is not available or doesn't have TypeResolutionService.
+     */
+    private TypeResolutionService getTypeResolutionService() {
+        return definitionsService != null ? definitionsService.getTypeResolutionService() : null;
     }
 
     public void setTenantService(TenantService tenantService) {
@@ -135,16 +184,50 @@ public class EventServiceImpl implements EventService {
     public int send(Event event) {
         RequestTracer tracer = tracerService.getCurrentTracer();
         tracer.trace("Sending event: " + event.getEventType(), event.getItemId());
-        return send(event, 0);
-    }
 
-    private int send(Event event, int depth) {
-        RequestTracer tracer = tracerService.getCurrentTracer();
-        if (depth > MAX_RECURSION_DEPTH) {
+        // Get current event stack from ThreadLocal
+        List<EventInfo> eventStack = EVENT_STACK.get();
+
+        // Check depth before processing (matches original: if (depth > MAX_RECURSION_DEPTH))
+        // Original allowed depths 0-10 (11 calls), blocking at depth 11
+        if (eventStack.size() > MAX_RECURSION_DEPTH) {
+            EventInfo currentEventInfo = new EventInfo(event);
             tracer.trace("Max recursion depth reached for event: " + event.getEventType(), event.getItemId());
-            LOGGER.warn("Max recursion depth reached");
+
+            // Build detailed error message with full event chain
+            StringBuilder errorMsg = new StringBuilder("Max recursion depth reached (depth: ").append(eventStack.size() + 1)
+                    .append(", max: ").append(MAX_RECURSION_DEPTH + 1)
+                    .append("). Current event: ").append(currentEventInfo);
+
+            if (!eventStack.isEmpty()) {
+                errorMsg.append("\nEvent chain (oldest first):");
+                for (int i = 0; i < eventStack.size(); i++) {
+                    errorMsg.append("\n  [").append(i + 1).append("] ").append(eventStack.get(i));
+                }
+                errorMsg.append("\n  [").append(eventStack.size() + 1).append("] ").append(currentEventInfo).append(" <-- BLOCKED");
+            }
+
+            LOGGER.warn(errorMsg.toString());
             return NO_CHANGE;
         }
+
+        // Add current event to stack
+        EventInfo currentEventInfo = new EventInfo(event);
+        eventStack.add(currentEventInfo);
+
+        try {
+            return sendInternal(event);
+        } finally {
+            // Remove current event from stack and cleanup ThreadLocal if empty
+            eventStack.remove(eventStack.size() - 1);
+            if (eventStack.isEmpty()) {
+                EVENT_STACK.remove();
+            }
+        }
+    }
+
+    private int sendInternal(Event event) {
+        RequestTracer tracer = tracerService.getCurrentTracer();
 
         boolean saveSucceeded = true;
         if (event.isPersistent()) {
@@ -187,7 +270,8 @@ public class EventServiceImpl implements EventService {
                     Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
                     profileUpdated.setPersistent(false);
                     profileUpdated.getAttributes().putAll(event.getAttributes());
-                    changes |= send(profileUpdated, depth + 1);
+                    // Depth is automatically tracked via ThreadLocal, no need to pass parameter
+                    changes |= send(profileUpdated);
                     if (session != null && session.getProfileId() != null) {
                         changes |= SESSION_UPDATED;
                         session.setProfile(event.getProfile());
@@ -279,7 +363,12 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public PartialList<Event> searchEvents(Condition condition, int offset, int size) {
-        resolverService.resolveConditionType(condition, "event search");
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService != null) {
+            typeResolutionService.resolveConditionType(condition, "event search");
+        }
+        // Note: Effective condition resolution happens in the query builder dispatcher or condition evaluator dispatcher
+        // For in-memory persistence, the condition evaluator dispatcher will resolve the effective condition
         return persistenceService.query(condition, "timeStamp", Event.class, offset, size);
     }
 
@@ -322,13 +411,15 @@ public class EventServiceImpl implements EventService {
         if (query.getScrollIdentifier() != null) {
             return persistenceService.continueScrollQuery(Event.class, query.getScrollIdentifier(), query.getScrollTimeValidity());
         }
-        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
+        if (query.getCondition() != null) {
+            definitionsService.getConditionValidationService().validate(query.getCondition());
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
             } else {
                 return persistenceService.query(query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit(), query.getScrollTimeValidity());
             }
         } else {
+            // No condition - query without condition
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
             } else {

@@ -22,6 +22,7 @@ import org.apache.unomi.api.Profile;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -71,7 +72,7 @@ public class GraphQLEventIT extends BaseGraphQLIT {
         final Profile profile2 = new Profile("profile-2");
         persistenceService.save(profile2);
         createEvent("event-3", profile2);
-        
+
         // Wait for events to be properly indexed before querying via GraphQL
         refreshPersistence(Event.class, Profile.class);
         // Verify events are queryable via persistence service first
@@ -90,7 +91,7 @@ public class GraphQLEventIT extends BaseGraphQLIT {
                         CloseableHttpResponse resp = post("graphql/event/find-events.json");
                         if (resp != null && resp.getEntity() != null) {
                             // Buffer entity to allow multiple reads
-                            org.apache.http.entity.BufferedHttpEntity bufferedEntity = 
+                            org.apache.http.entity.BufferedHttpEntity bufferedEntity =
                                 new org.apache.http.entity.BufferedHttpEntity(resp.getEntity());
                             resp.setEntity(bufferedEntity);
                         }
@@ -114,7 +115,7 @@ public class GraphQLEventIT extends BaseGraphQLIT {
                     }
                 },
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-        
+
         try {
             Assert.assertNotNull("Response context should be available", contextHolder[0]);
             final ResponseContext context = contextHolder[0];
@@ -147,7 +148,9 @@ public class GraphQLEventIT extends BaseGraphQLIT {
     }
 
     private Event createEvent(final String eventID, final Profile profile) throws InterruptedException {
-        Event event = new Event(eventID, "profileUpdated", null, profile, "test", profile, null, new Date());
+        // Use a test-specific event type instead of "profileUpdated" to avoid triggering rules
+        // that match profileUpdated events and creating loops during integration tests
+        Event event = new Event(eventID, "testProfileUpdated", null, profile, "test", profile, null, new Date());
         persistenceService.save(event);
         return event;
     }
