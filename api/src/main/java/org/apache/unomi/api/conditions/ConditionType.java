@@ -21,10 +21,14 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Parameter;
 import org.apache.unomi.api.PluginType;
-import org.apache.unomi.api.utils.YamlUtils.*;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 
 import javax.xml.bind.annotation.XmlElement;
 import java.util.*;
+
+import static org.apache.unomi.api.utils.YamlUtils.circularRef;
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * ConditionTypes define new conditions that can be applied to items (for example to decide whether a rule needs to be triggered or if a profile is considered as taking part in a
