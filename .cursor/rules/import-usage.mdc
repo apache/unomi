@@ -1,0 +1,159 @@
+---
+description: Always use imports instead of fully qualified class names. Replace any fully qualified names found in code with proper imports, unless there's a type conflict. Also optimize imports by removing unused ones.
+alwaysApply: true
+---
+
+# Import Usage Rules
+
+## Core Principle
+
+**ALWAYS use imports and short class names instead of fully qualified class names (package.Class).**
+
+Fully qualified class names should **ONLY** be used when there's an actual type conflict (e.g., two classes with the same name from different packages).
+
+**This rule applies to ALL packages, not just org.apache.unomi.**
+
+## Mandatory Rules
+
+### Import Usage
+- **ALWAYS** add proper import statements at the top of the file
+- **ALWAYS** use short class names in code (e.g., `TypeResolutionService` instead of `org.apache.unomi.api.services.TypeResolutionService`)
+- **NEVER** use fully qualified class names in code unless there's a type conflict
+- **NEVER** use fully qualified class names in variable declarations, method calls, or type casts
+
+### When Fully Qualified Names Are Acceptable
+- **Package declarations** - `package org.apache.unomi.services.impl;` (required)
+- **Import statements** - `import org.apache.unomi.api.services.TypeResolutionService;` (required)
+- **Javadoc references** - `@see org.apache.unomi.api.services.TypeResolutionService` (acceptable for documentation)
+- **Configuration/XML files** - Fully qualified names in XML/configuration are acceptable
+- **Type conflicts** - When two classes have the same name from different packages, use fully qualified name for the less common one
+
+### When to Fix
+- **Variable declarations**: `org.apache.unomi.api.services.TypeResolutionService service;` → `TypeResolutionService service;` (with import)
+- **Method parameters**: `void method(org.apache.unomi.api.services.TypeResolutionService service)` → `void method(TypeResolutionService service)` (with import)
+- **Type casts**: `(org.apache.unomi.api.GeoPoint) obj` → `(GeoPoint) obj` (with import)
+- **Instanceof checks**: `obj instanceof org.apache.unomi.api.GeoPoint` → `obj instanceof GeoPoint` (with import)
+- **New instances**: `new org.apache.unomi.services.impl.TypeResolutionServiceImpl()` → `new TypeResolutionServiceImpl()` (with import)
+- **Method calls**: `org.apache.unomi.api.utils.ParserHelper.method()` → `ParserHelper.method()` (with import)
+
+## Code Review Rules
+
+When reviewing or generating code:
+
+1. **Check for fully qualified names** - Scan for patterns like `org.apache.unomi.` in actual code (not imports)
+2. **Verify imports exist** - If a fully qualified name is used, check if an import is missing
+3. **Add missing imports** - Add the import statement at the top of the file
+4. **Replace fully qualified names** - Replace all instances with short class names
+5. **Verify no conflicts** - Ensure there are no type conflicts that would require fully qualified names
+
+## Examples
+
+### ❌ DON'T: Use Fully Qualified Names in Code
+```java
+package org.apache.unomi.services.impl;
+
+import org.apache.unomi.api.services.DefinitionsService;
+
+public class MyService {
+    public void method() {
+        org.apache.unomi.api.services.TypeResolutionService service = 
+            definitionsService.getTypeResolutionService();
+        
+        if (obj instanceof org.apache.unomi.api.GeoPoint) {
+            org.apache.unomi.api.GeoPoint point = (org.apache.unomi.api.GeoPoint) obj;
+        }
+    }
+}
+```
+
+### ✅ DO: Use Imports and Short Names
+```java
+package org.apache.unomi.services.impl;
+
+import org.apache.unomi.api.GeoPoint;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.TypeResolutionService;
+
+public class MyService {
+    public void method() {
+        TypeResolutionService service = definitionsService.getTypeResolutionService();
+        
+        if (obj instanceof GeoPoint) {
+            GeoPoint point = (GeoPoint) obj;
+        }
+    }
+}
+```
+
+### ✅ ACCEPTABLE: Type Conflict Resolution
+```java
+package org.example;
+
+import java.util.Date;
+import java.sql.Date; // Conflict - both packages have Date class
+
+public class MyClass {
+    // Use fully qualified name for the less common one
+    public void method(java.util.Date utilDate, java.sql.Date sqlDate) {
+        // Or use fully qualified name for clarity
+        java.util.Date now = new java.util.Date();
+    }
+}
+```
+
+### ✅ ACCEPTABLE: Javadoc References
+```java
+/**
+ * Service for type resolution.
+ * 
+ * @see org.apache.unomi.api.services.TypeResolutionService
+ * @see org.apache.unomi.services.impl.TypeResolutionServiceImpl
+ */
+public class MyService {
+    // ...
+}
+```
+
+## What to Fix Immediately
+
+When reviewing or generating code, fix these issues:
+
+1. **Fully qualified names in variable declarations** → Add import, use short name
+2. **Fully qualified names in method parameters** → Add import, use short name
+3. **Fully qualified names in type casts** → Add import, use short name
+4. **Fully qualified names in instanceof checks** → Add import, use short name
+5. **Fully qualified names in new expressions** → Add import, use short name
+6. **Fully qualified names in method calls** → Add import, use short name
+
+## Code Generation Rules
+
+When generating new code:
+- **ALWAYS** add import statements for all classes used
+- **ALWAYS** use short class names in code
+- **NEVER** use fully qualified class names unless there's a type conflict
+- Group imports logically (standard library, third-party, project classes)
+- Use IDE import organization (alphabetical, grouped by package)
+
+## Scanning for Issues
+
+To find fully qualified names that should be replaced:
+- Search for patterns like `new [package].`, `instanceof [package].`, `([package].` in actual code (excluding import statements)
+- Look for variable declarations, method parameters, type casts, and method calls with fully qualified names
+- Check ALL packages (java., javax., org., com., etc.) - not just org.apache.unomi
+- Verify imports exist for all classes used
+- Remove unused imports to optimize the code
+
+## Import Optimization
+
+- **ALWAYS** remove unused imports
+- Use IDE import organization (alphabetical, grouped by package)
+- Group imports logically: standard library, third-party, project classes
+- Keep imports clean and minimal
+
+## Exception: Configuration Files
+
+Fully qualified names in configuration files (XML, properties, YAML, etc.) are acceptable and often required:
+- Blueprint XML files
+- Configuration properties files
+- Spring/OSGi configuration files
+- These files often require fully qualified class names for class loading
