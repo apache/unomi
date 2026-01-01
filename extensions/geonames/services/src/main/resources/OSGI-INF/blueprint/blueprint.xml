@@ -25,7 +25,7 @@
     <!-- References -->
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
-    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
+    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService" timeout="2000"/>
     <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService"/>
     <reference id="contextManager" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
 

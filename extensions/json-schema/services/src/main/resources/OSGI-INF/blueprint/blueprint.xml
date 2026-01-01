@@ -28,7 +28,7 @@
     <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService"/>
     <reference id="contextManager" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
     <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService"/>
-    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
+    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService" timeout="2000"/>
     <reference id="cacheService" interface="org.apache.unomi.api.services.cache.MultiTypeCacheService" />
 
     <!-- Configuration -->
