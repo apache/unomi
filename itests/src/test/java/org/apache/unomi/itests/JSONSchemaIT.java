@@ -25,6 +25,7 @@ import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.itests.tools.LogChecker;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.ValidationError;
@@ -57,6 +58,36 @@ public class JSONSchemaIT extends BaseIT {
     private static final int DEFAULT_TRYING_TIMEOUT = 2000;
     private static final int DEFAULT_TRYING_TRIES = 30;
     public static final String DUMMY_SCOPE = "dummy_scope";
+
+    /**
+     * Configure LogChecker with substrings for expected schema-related errors in this test.
+     * These are errors that are intentionally triggered to test schema validation logic.
+     */
+    @Override
+    protected LogChecker createLogChecker() {
+        return LogChecker.builder()
+            // Schema not found errors (expected when testing with missing schemas)
+            .addIgnoredSubstring("Schema not found for event type: dummy")
+            .addIgnoredSubstring("Schema not found for event type: flattened")
+            .addIgnoredSubstring("Couldn't find schema")
+            .addIgnoredSubstring("Failed to load json schema")
+            // Schema validation errors (expected when testing invalid events)
+            .addIgnoredSubstring("Schema validation found")
+            .addIgnoredSubstring("Validation error")
+            .addIgnoredSubstring("does not match the regex pattern")
+            .addIgnoredSubstring("There are unevaluated properties")
+            .addIgnoredSubstring("Unknown scope value")
+            .addIgnoredSubstring("may only have a maximum of")
+            .addIgnoredSubstring("string found, number expected")
+            // Schema-related exceptions (expected during schema operations)
+            .addIgnoredSubstring("JsonSchemaException")
+            .addIgnoredSubstring("InvocationTargetException")
+            .addIgnoredSubstring("IOException")
+            .addIgnoredSubstring("Error executing system operation: Test exception")
+            .addIgnoredSubstring("Couldn't find persona")
+            .addIgnoredSubstring("Unable to save schema")
+            .build();
+    }
 
     @Before
     public void setUp() throws InterruptedException {

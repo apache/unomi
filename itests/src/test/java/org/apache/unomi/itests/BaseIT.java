@@ -22,7 +22,11 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
+import org.apache.camel.CamelContext;
+import org.apache.camel.Route;
+import org.apache.camel.ServiceStatus;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
 import org.apache.http.config.Registry;
@@ -30,14 +34,13 @@ import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.HttpEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.karaf.itests.KarafTestSupport;
 import org.apache.unomi.api.Item;
@@ -52,22 +55,19 @@ import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
-import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.itests.tools.LogChecker;
+import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.IRouterCamelContext;
-import org.apache.camel.CamelContext;
-import org.apache.camel.Route;
-import org.apache.camel.ServiceStatus;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.services.UserListService;
 import org.apache.unomi.shell.services.UnomiManagementService;
-import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -102,7 +102,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyManagementException;
-import java.util.Hashtable;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
@@ -209,19 +208,13 @@ public abstract class BaseIT extends KarafTestSupport {
      */
     protected void checkSearchEngine() {
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
-        // Fix elasticsearch-maven-plugin default_template issue before any test setup
-        // The plugin creates a default_template with very high priority that overrides all user templates
-        // This must be done very early, before Unomi starts or any migration runs
-        if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
-            fixDefaultTemplateIfNeeded();
-        }
     }
 
     @Before
     public void waitForStartup() throws InterruptedException {
         // disable retry
         retry = new KarafTestSupport.Retry(false);
-        
+
         // Check search engine and apply any necessary fixes (e.g., default_template deletion)
         checkSearchEngine();
 
@@ -301,14 +294,16 @@ public abstract class BaseIT extends KarafTestSupport {
 
         // init httpClient without credentials provider - all auth handled via headers
         httpClient = initHttpClient(null);
-        
+
         // Initialize log checker if enabled
         if (isLogCheckingEnabled()) {
-            logChecker = new LogChecker();
+            // Use builder API - by default enable all patterns for backward compatibility
+            // Individual tests can override createLogChecker() to specify only needed patterns
+            logChecker = createLogChecker();
             LOGGER.info("Log checking enabled using in-memory appender");
         }
     }
-    
+
     /**
      * Mark log checkpoint before each test
      * This method is called automatically by JUnit before each test method
@@ -356,7 +351,7 @@ public abstract class BaseIT extends KarafTestSupport {
     public void shutdown() {
         // Check logs for unexpected errors/warnings before cleanup
         checkLogsForUnexpectedIssues();
-        
+
         if (testTenant != null) {
             try {
                 tenantService.deleteTenant(testTenant.getItemId());
@@ -371,7 +366,35 @@ public abstract class BaseIT extends KarafTestSupport {
         httpClient = null;
     }
 
-    
+
+    /**
+     * Create a LogChecker instance. Tests should override this method to add
+     * only the patterns they need, improving performance significantly.
+     *
+     * By default, only global patterns are included (e.g., BundleWatcher warnings).
+     *
+     * IMPORTANT: Prefer literal strings over regex for better performance.
+     * Literal strings use fast contains() matching instead of regex.
+     *
+     * Example override for a test that needs specific substrings:
+     * <pre>
+     * {@literal @}Override
+     * protected LogChecker createLogChecker() {
+     *     return LogChecker.builder()
+     *         .addIgnoredSubstring("Response status code: 400")                // Single substring
+     *         .addIgnoredMultiPart("Schema", "not found")                     // Multi-part: sequential
+     *         .build();
+     * }
+     * </pre>
+     *
+     * @return A configured LogChecker instance
+     */
+    protected LogChecker createLogChecker() {
+        // By default, only global patterns are included
+        // Individual tests should override this to add their specific patterns
+        return new LogChecker();
+    }
+
     /**
      * Check logs for unexpected errors and warnings since the last checkpoint
      * This is called automatically after each test
@@ -380,20 +403,20 @@ public abstract class BaseIT extends KarafTestSupport {
         if (logChecker == null) {
             return;
         }
-        
+
         try {
             LogChecker.LogCheckResult result = logChecker.checkLogsSinceLastCheckpoint();
-            
+
             if (result.hasUnexpectedIssues()) {
                 String summary = result.getSummary();
                 String testInfo = currentTestName != null ? "Test: " + currentTestName + "\n" : "";
-                
+
                 // Use System.err/out to avoid creating logs that would be captured by InMemoryLogAppender
                 // This prevents a feedback loop where log checking creates more logs to check
                 System.err.println("\n=== UNEXPECTED LOG ISSUES DETECTED ===");
                 System.err.println(testInfo + summary);
                 System.err.println("=======================================\n");
-                
+
                 // Add to JUnit test output by printing to System.out (captured by JUnit)
                 System.out.println("\n=== SERVER-SIDE LOG ISSUES ===");
                 System.out.println(testInfo + summary);
@@ -405,7 +428,7 @@ public abstract class BaseIT extends KarafTestSupport {
             e.printStackTrace(System.err);
         }
     }
-    
+
     /**
      * Check if log checking is enabled
      * Can be controlled via system property: it.unomi.log.checking.enabled
@@ -415,25 +438,25 @@ public abstract class BaseIT extends KarafTestSupport {
         String enabled = System.getProperty(ENABLE_LOG_CHECKING_PROPERTY, "true");
         return Boolean.parseBoolean(enabled);
     }
-    
+
     /**
-     * Add a pattern to ignore for log checking
+     * Add a substring to ignore for log checking
      * Useful for tests that expect certain errors/warnings
-     * @param pattern Regex pattern to match against log messages
+     * @param substring Literal substring or regex pattern to match against log messages
      */
-    protected void addIgnoredLogPattern(String pattern) {
+    protected void addIgnoredLogSubstring(String substring) {
         if (logChecker != null) {
-            logChecker.addIgnoredPattern(pattern);
+            logChecker.addIgnoredSubstring(substring);
         }
     }
-    
+
     /**
-     * Add multiple patterns to ignore for log checking
-     * @param patterns List of regex patterns
+     * Add multiple substrings to ignore for log checking
+     * @param substrings List of substrings (literal or regex)
      */
-    protected void addIgnoredLogPatterns(List<String> patterns) {
+    protected void addIgnoredLogSubstrings(List<String> substrings) {
         if (logChecker != null) {
-            logChecker.addIgnoredPatterns(patterns);
+            logChecker.addIgnoredSubstrings(substrings);
         }
     }
 
@@ -698,11 +721,11 @@ public abstract class BaseIT extends KarafTestSupport {
             LOGGER.info("Configuring in-memory log appender for log checking");
             // Configure the appender in Log4j2
             // The appender is already available via the log4j-extension fragment bundle
-            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", 
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg",
                 "log4j2.appender.inMemory.type", "InMemoryLogAppender"));
-            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", 
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg",
                 "log4j2.appender.inMemory.name", "InMemoryLogAppender"));
-            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", 
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg",
                 "log4j2.rootLogger.appenderRef.inMemory.ref", "InMemoryLogAppender"));
         }
 
@@ -1422,137 +1445,16 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     /**
-     * Fixes the default_template created by elasticsearch-maven-plugin that overrides all user templates.
-     * The plugin creates a template with index_patterns: ["*"] and very high priority (2147483520),
-     * which in ES 8/9 overrides all other templates since composable templates don't merge.
-     * This method detects and deletes the template if it has a very high priority.
-     * This must be called before Unomi starts since the ES persistence service isn't available yet.
-     */
-    private void fixDefaultTemplateIfNeeded() {
-        String templateName = "default_template";
-        String esBaseUrl = "http://localhost:" + getSearchPort();
-        String templateUrl = esBaseUrl + "/_index_template/" + templateName;
-        
-        CloseableHttpClient tempHttpClient = null;
-        try {
-            // Create a temporary HTTP client for ES requests
-            tempHttpClient = initHttpClient(null);
-            
-            // Check if default_template exists using HEAD request
-            HttpHead headRequest = new HttpHead(templateUrl);
-            CloseableHttpResponse headResponse = null;
-            try {
-                headResponse = tempHttpClient.execute(headRequest);
-                int statusCode = headResponse.getStatusLine().getStatusCode();
-                
-                if (statusCode == 404) {
-                    // Template doesn't exist, nothing to fix
-                    LOGGER.debug("default_template does not exist, no action needed");
-                    return;
-                } else if (statusCode != 200) {
-                    // Unexpected status, log and continue
-                    LOGGER.warn("Unexpected status code {} when checking for default_template, skipping fix", statusCode);
-                    return;
-                }
-            } finally {
-                if (headResponse != null) {
-                    headResponse.close();
-                }
-            }
-            
-            // Template exists, get its details to check priority
-            HttpGet getRequest = new HttpGet(templateUrl);
-            CloseableHttpResponse getResponse = null;
-            try {
-                getResponse = tempHttpClient.execute(getRequest);
-                int statusCode = getResponse.getStatusLine().getStatusCode();
-                
-                if (statusCode == 200) {
-                    String responseBody = IOUtils.toString(getResponse.getEntity().getContent(), "UTF-8");
-                    JsonNode jsonNode = objectMapper.readTree(responseBody);
-                    
-                    // Parse the template response
-                    // ES API returns: {"index_templates": [{"name": "default_template", "index_template": {...}}]}
-                    if (jsonNode.has("index_templates") && jsonNode.get("index_templates").isArray()) {
-                        JsonNode templates = jsonNode.get("index_templates");
-                        for (JsonNode template : templates) {
-                            if (template.has("name") && templateName.equals(template.get("name").asText())) {
-                                JsonNode indexTemplate = template.get("index_template");
-                                if (indexTemplate != null && indexTemplate.has("priority")) {
-                                    Long priority = indexTemplate.get("priority").asLong();
-                                    
-                                    // Check if priority is very high (>= 2147480000, near Integer.MAX_VALUE)
-                                    // This indicates it's the problematic template from elasticsearch-maven-plugin
-                                    if (priority >= 2147480000L) {
-                                        LOGGER.warn("Detected default_template with very high priority ({}). " +
-                                                "This template from elasticsearch-maven-plugin overrides all user templates in ES 8/9. " +
-                                                "Deleting it to allow user templates to work correctly.", priority);
-                                        
-                                        // Delete the template
-                                        HttpDelete deleteRequest = new HttpDelete(templateUrl);
-                                        CloseableHttpResponse deleteResponse = null;
-                                        try {
-                                            deleteResponse = tempHttpClient.execute(deleteRequest);
-                                            int deleteStatusCode = deleteResponse.getStatusLine().getStatusCode();
-                                            
-                                            if (deleteStatusCode == 200) {
-                                                // Parse delete response to check acknowledged
-                                                String deleteResponseBody = IOUtils.toString(deleteResponse.getEntity().getContent(), "UTF-8");
-                                                JsonNode deleteJsonNode = objectMapper.readTree(deleteResponseBody);
-                                                boolean acknowledged = deleteJsonNode.has("acknowledged") && 
-                                                                       deleteJsonNode.get("acknowledged").asBoolean();
-                                                
-                                                if (acknowledged) {
-                                                    LOGGER.info("Successfully deleted default_template. User templates will now work correctly.");
-                                                } else {
-                                                    LOGGER.warn("Failed to delete default_template - not acknowledged. User templates may not work correctly.");
-                                                }
-                                            } else {
-                                                LOGGER.warn("Failed to delete default_template - status code: {}. User templates may not work correctly.", deleteStatusCode);
-                                            }
-                                        } finally {
-                                            if (deleteResponse != null) {
-                                                deleteResponse.close();
-                                            }
-                                        }
-                                    } else {
-                                        LOGGER.debug("default_template exists but has normal priority ({}), no action needed.", priority);
-                                    }
-                                    break; // Found the template, no need to continue
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    LOGGER.warn("Failed to get default_template details - status code: {}, skipping fix", statusCode);
-                }
-            } finally {
-                if (getResponse != null) {
-                    getResponse.close();
-                }
-            }
-        } catch (Exception e) {
-            // Log but don't fail startup - this is a best-effort fix for integration tests
-            LOGGER.warn("Failed to check/fix default_template: {}. This may affect template application in integration tests.", 
-                    e.getMessage(), e);
-        } finally {
-            if (tempHttpClient != null) {
-                closeHttpClient(tempHttpClient);
-            }
-        }
-    }
-
-    /**
      * Enables Camel tracing and debug logging if requested via system property.
      * This provides visibility into Camel operations during test execution without modifying production code.
-     * 
+     *
      * To enable: Set system property -Dit.unomi.camel.debug=true
-     * 
+     *
      * This will:
      * - Enable Camel tracing (logs detailed message flow, body content, headers as messages traverse routes)
      *   Tracing is useful for understanding WHAT is happening in routes (message content, transformations)
      * - Enable DEBUG logging for Camel packages (configured in config() method)
-     * 
+     *
      * Note: Tracing provides different information than route status checking:
      * - Tracing: Shows message flow and content (useful for debugging message transformations)
      * - Route Status API: Shows if routes are running, exchange counts, processing times (useful for verifying execution)
@@ -1576,7 +1478,7 @@ public abstract class BaseIT extends KarafTestSupport {
      * Gets the Camel context from the router Camel context service.
      * Uses the interface method which returns Object to avoid exposing Camel dependency.
      * Based on official Camel API: https://camel.apache.org/manual/
-     * 
+     *
      * @return The CamelContext instance, or null if not available
      */
     protected CamelContext getCamelContext() {
@@ -1593,7 +1495,7 @@ public abstract class BaseIT extends KarafTestSupport {
     /**
      * Checks if a Camel route with the given route ID exists.
      * Uses official Camel API: CamelContext.getRoute(String routeId)
-     * 
+     *
      * @param routeId The route ID to check (typically the import configuration itemId)
      * @return true if the route exists, false otherwise
      */
@@ -1610,7 +1512,7 @@ public abstract class BaseIT extends KarafTestSupport {
      * Gets the status of a Camel route.
      * Uses Camel 2.23.1 API directly.
      * Returns ServiceStatus enum: Started, Stopped, Suspended, etc.
-     * 
+     *
      * @param routeId The route ID to get status for
      * @return The route status, or null if route doesn't exist or status unavailable
      */
@@ -1637,7 +1539,7 @@ public abstract class BaseIT extends KarafTestSupport {
     /**
      * Checks if a Camel route is started (running).
      * Uses official Camel API to check route status.
-     * 
+     *
      * @param routeId The route ID to check
      * @return true if the route exists and is started, false otherwise
      */
@@ -1649,7 +1551,7 @@ public abstract class BaseIT extends KarafTestSupport {
     /**
      * Gets detailed information about a Camel route including status, endpoints, and configuration.
      * Uses Camel 2.23.1 API to inspect route definitions and endpoints.
-     * 
+     *
      * @param routeId The route ID to get information for
      * @return A string describing the route status, endpoints, and configuration, or error message if route doesn't exist
      */
@@ -1663,10 +1565,10 @@ public abstract class BaseIT extends KarafTestSupport {
             if (route == null) {
                 return "Route '" + routeId + "' does not exist";
             }
-            
+
             StringBuilder info = new StringBuilder();
             info.append("Route '").append(routeId).append("': ");
-            
+
             // Get route status using official API
             ServiceStatus status = getCamelRouteStatus(routeId);
             if (status != null) {
@@ -1674,7 +1576,7 @@ public abstract class BaseIT extends KarafTestSupport {
             } else {
                 info.append("status=unknown");
             }
-            
+
             // Get route definition to inspect endpoints and configuration
             try {
                 org.apache.camel.model.RouteDefinition routeDefinition = camelContext.getRouteDefinition(routeId);
@@ -1687,7 +1589,7 @@ public abstract class BaseIT extends KarafTestSupport {
                             info.append(", from=").append(from.getUri());
                         }
                     }
-                    
+
                     // Get output endpoints (to)
                     java.util.List<org.apache.camel.model.ProcessorDefinition<?>> outputs = routeDefinition.getOutputs();
                     if (outputs != null && !outputs.isEmpty()) {
@@ -1714,10 +1616,10 @@ public abstract class BaseIT extends KarafTestSupport {
                 // Route definition inspection failed, that's okay
                 LOGGER.debug("Could not get route definition for {}: {}", routeId, e.getMessage());
             }
-            
+
             // Note: Management statistics (exchange counts, processing times) require camel-management dependency.
             // For test visibility, route status and endpoint information are the most useful.
-            
+
             return info.toString();
         } catch (Exception e) {
             return "Error getting route info for '" + routeId + "': " + e.getMessage();
@@ -1727,7 +1629,7 @@ public abstract class BaseIT extends KarafTestSupport {
     /**
      * Waits for a Camel route to be created and started.
      * This is useful for tests that need to verify the route was created by the timer.
-     * 
+     *
      * @param routeId The route ID to wait for
      * @param timeoutMs Timeout in milliseconds between retries
      * @param maxRetries Maximum number of retries
@@ -1751,7 +1653,7 @@ public abstract class BaseIT extends KarafTestSupport {
     /**
      * Gets a list of all Camel route IDs with their statuses.
      * Uses official Camel API: CamelContext.getRoutes()
-     * 
+     *
      * @return Map of route ID to status, or empty map if CamelContext is not available
      */
     protected java.util.Map<String, ServiceStatus> getAllCamelRoutesWithStatus() {
@@ -1779,7 +1681,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Gets a list of all Camel route IDs.
-     * 
+     *
      * @return List of route IDs, or empty list if CamelContext is not available
      */
     protected java.util.List<String> getAllCamelRouteIds() {

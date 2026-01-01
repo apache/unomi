@@ -22,6 +22,7 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.itests.tools.LogChecker;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -36,13 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Created by amidani on 12/10/2017.
@@ -59,6 +54,16 @@ public class CopyPropertiesActionIT extends BaseIT {
     public static final String SINGLE_PARAM_NAME = "singleParam";
     public static final String PROPERTY_TO_MAP = "PropertyToMap";
     public static final String MAPPED_PROPERTY = "MappedProperty";
+
+    /**
+     * Configure LogChecker with substrings for expected property copy errors in this test.
+     */
+    @Override
+    protected LogChecker createLogChecker() {
+        return LogChecker.builder()
+            .addIgnoredSubstring("Impossible to copy the property")
+            .build();
+    }
 
     @Before
     public void setUp() throws InterruptedException {
