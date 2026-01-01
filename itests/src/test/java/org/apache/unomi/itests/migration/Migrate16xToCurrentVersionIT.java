@@ -53,11 +53,19 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
             "context-patch", "context-jsonschema", "context-importconfig", "context-exportconfig", "context-rulestats");
 
     // Elasticsearch connection constants
-    private static final String ES_BASE_URL = "http://localhost:9400";
-    private static final String ES_SNAPSHOT_REPO = ES_BASE_URL + "/_snapshot/snapshots_repository/";
-    private static final String ES_SNAPSHOT_STATUS = ES_BASE_URL + "/_snapshot/_status";
+    private static String getEsBaseUrl() {
+        return "http://localhost:" + getSearchPort();
+    }
+    private static String getEsSnapshotRepo() {
+        return getEsBaseUrl() + "/_snapshot/snapshots_repository/";
+    }
+    private static String getEsSnapshotStatus() {
+        return getEsBaseUrl() + "/_snapshot/_status";
+    }
     private static final String ES_SNAPSHOT_2 = "snapshot_2";
-    private static final String ES_SNAPSHOT_RESTORE_URL = ES_SNAPSHOT_REPO + ES_SNAPSHOT_2 + "/_restore?wait_for_completion=true";
+    private static String getEsSnapshotRestoreUrl() {
+        return getEsSnapshotRepo() + ES_SNAPSHOT_2 + "/_restore?wait_for_completion=true";
+    }
 
     // Index prefix constants
     private static final String INDEX_PREFIX_CONTEXT = "context-";
@@ -113,16 +121,16 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         // Restore snapshot from 1.6.x
         try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(true, null)) {
             // Create snapshot repo
-            HttpUtils.executePutRequest(httpClient, ES_SNAPSHOT_REPO, resourceAsString(RESOURCE_CREATE_SNAPSHOTS_REPO), null);
+            HttpUtils.executePutRequest(httpClient, getEsSnapshotRepo(), resourceAsString(RESOURCE_CREATE_SNAPSHOTS_REPO), null);
             // Get snapshot, insure it exists
-            String snapshot = HttpUtils.executeGetRequest(httpClient, ES_SNAPSHOT_REPO + ES_SNAPSHOT_2, null);
+            String snapshot = HttpUtils.executeGetRequest(httpClient, getEsSnapshotRepo() + ES_SNAPSHOT_2, null);
             if (snapshot == null || !snapshot.contains(ES_SNAPSHOT_2)) {
                 throw new RuntimeException("Unable to retrieve 1.6.x snapshot for ES restore");
             }
             // Restore the snapshot
-            HttpUtils.executePostRequest(httpClient, ES_SNAPSHOT_RESTORE_URL, "{}", null);
+            HttpUtils.executePostRequest(httpClient, getEsSnapshotRestoreUrl(), "{}", null);
 
-            String snapshotStatus = HttpUtils.executeGetRequest(httpClient, ES_SNAPSHOT_STATUS, null);
+            String snapshotStatus = HttpUtils.executeGetRequest(httpClient, getEsSnapshotStatus(), null);
             System.out.println("Snapshot status: " + snapshotStatus);
             LOGGER.info("Snapshot status: {}", snapshotStatus);
 
@@ -209,6 +217,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         checkTenantIdsApplied();
         checkDefaultTenantCreated();
         checkDefinitionsServiceObjectsAccessible();
+        checkLegacyQueryBuilderMigration();
     }
 
     /**
@@ -218,16 +227,16 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
      * - persona sessions are now merged in session index due to index reduction in 2_2_0 (+2 sessions in final count)
      */
     private void checkEventSessionRollover2_2_0() throws IOException {
-        Assert.assertTrue(MigrationUtils.indexExists(httpClient, ES_BASE_URL, INDEX_EVENT + "000001"));
-        Assert.assertTrue(MigrationUtils.indexExists(httpClient, ES_BASE_URL, INDEX_SESSION + "000001"));
+        Assert.assertTrue(MigrationUtils.indexExists(httpClient, getEsBaseUrl(), INDEX_EVENT + "000001"));
+        Assert.assertTrue(MigrationUtils.indexExists(httpClient, getEsBaseUrl(), INDEX_SESSION + "000001"));
 
         int newEventcount = 0;
-        for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, ES_BASE_URL, INDEX_EVENT + "0")) {
+        for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, getEsBaseUrl(), INDEX_EVENT + "0")) {
             newEventcount += countItems(httpClient, eventIndex, null);
         }
 
         int newSessioncount = 0;
-        for (String sessionIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, ES_BASE_URL, INDEX_SESSION + "0")) {
+        for (String sessionIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, getEsBaseUrl(), INDEX_SESSION + "0")) {
             newSessioncount += countItems(httpClient, sessionIndex, null);
         }
         Assert.assertEquals(eventCount, newEventcount);
@@ -236,11 +245,11 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
 
     private void checkIndexReductions2_2_0() throws IOException {
         // new index for system items:
-        Assert.assertTrue(MigrationUtils.indexExists(httpClient, ES_BASE_URL, INDEX_SYSTEMITEMS));
+        Assert.assertTrue(MigrationUtils.indexExists(httpClient, getEsBaseUrl(), INDEX_SYSTEMITEMS));
 
         // old indices should be removed:
         for (String oldSystemItemsIndex : oldSystemItemsIndices) {
-            Assert.assertFalse(MigrationUtils.indexExists(httpClient, ES_BASE_URL, oldSystemItemsIndex));
+            Assert.assertFalse(MigrationUtils.indexExists(httpClient, getEsBaseUrl(), oldSystemItemsIndex));
         }
     }
 
@@ -248,16 +257,16 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
      * Multiple index mappings have been update, check a simple check that after migration those mappings contains the latest modifications.
      */
     private void checkForMappingUpdates() throws IOException {
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, ES_BASE_URL + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"match\":\"*\",\"match_mapping_type\":\"string\",\"mapping\":{\"analyzer\":\"folding\""));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, ES_BASE_URL + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, ES_BASE_URL + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"entryCondition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, ES_BASE_URL + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"parentCondition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, ES_BASE_URL + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"startEvent\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, ES_BASE_URL + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"data\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, ES_BASE_URL + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"parameterValues\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, ES_BASE_URL + "/" + INDEX_PROFILE + "/_mapping", null).contains("\"interests\":{\"type\":\"nested\""));
-        for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, ES_BASE_URL, INDEX_EVENT)) {
-            Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, ES_BASE_URL + "/" + eventIndex + "/_mapping", null).contains("\"flattenedProperties\":{\"type\":\"flattened\"}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"match\":\"*\",\"match_mapping_type\":\"string\",\"mapping\":{\"analyzer\":\"folding\""));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"entryCondition\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"parentCondition\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"startEvent\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"data\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_mapping", null).contains("\"parameterValues\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + INDEX_PROFILE + "/_mapping", null).contains("\"interests\":{\"type\":\"nested\""));
+        for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, getEsBaseUrl(), INDEX_EVENT)) {
+            Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + eventIndex + "/_mapping", null).contains("\"flattenedProperties\":{\"type\":\"flattened\"}"));
         }
     }
 
@@ -433,12 +442,12 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
 
     private void initCounts(CloseableHttpClient httpClient) {
         try {
-            for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, ES_BASE_URL, INDEX_EVENT + "date")) {
+            for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, getEsBaseUrl(), INDEX_EVENT + "date")) {
                 getScopeFromEvents(httpClient, eventIndex);
                 eventCount += countItems(httpClient, eventIndex, resourceAsString(RESOURCE_MUST_NOT_MATCH_EVENTTYPE));
             }
 
-            for (String sessionIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, ES_BASE_URL, INDEX_SESSION + "date")) {
+            for (String sessionIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, getEsBaseUrl(), INDEX_SESSION + "date")) {
                 sessionCount += countItems(httpClient, sessionIndex, null);
             }
         } catch (IOException e) {
@@ -448,7 +457,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
 
     private void countNumberOfSessionIndices() {
         try {
-           Set<String> sessionIndices = MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-session");
+           Set<String> sessionIndices = MigrationUtils.getIndexesPrefixedBy(httpClient, getEsBaseUrl(), "context-session");
             Assert.assertEquals(2, sessionIndices.size());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -456,7 +465,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
     }
     private void getScopeFromEvents(CloseableHttpClient httpClient, String eventIndex) throws IOException {
         String requestBody = resourceAsString(RESOURCE_MATCH_ALL_LOGIN_EVENT);
-        JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, ES_BASE_URL + "/" + eventIndex + "/_search", requestBody, null));
+        JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + eventIndex + "/_search", requestBody, null));
         if (jsonNode.has("hits") && jsonNode.get("hits").has("hits") && !jsonNode.get("hits").get("hits").isEmpty()) {
             jsonNode.get("hits").get("hits").forEach(doc -> {
                 JsonNode event = doc.get("_source");
@@ -480,7 +489,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         if (requestBody == null) {
             requestBody = resourceAsString(RESOURCE_MUST_NOT_MATCH_EVENTTYPE);
         }
-        JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, ES_BASE_URL + "/" + index + "/_count", requestBody, null));
+        JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + index + "/_count", requestBody, null));
         return jsonNode.get("count").asInt();
     }
 
@@ -513,12 +522,12 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         checkDocumentsInIndex(INDEX_PROFILE, TEST_TENANT_ID, false);
 
         // Check event IDs have tenant prefix and audit metadata
-        for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, ES_BASE_URL, INDEX_EVENT)) {
+        for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, getEsBaseUrl(), INDEX_EVENT)) {
             checkDocumentsInIndex(eventIndex, TEST_TENANT_ID, false);
         }
 
         // Check session IDs have tenant prefix and audit metadata
-        for (String sessionIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, ES_BASE_URL, INDEX_SESSION)) {
+        for (String sessionIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, getEsBaseUrl(), INDEX_SESSION)) {
             checkDocumentsInIndex(sessionIndex, TEST_TENANT_ID, false);
         }
 
@@ -534,7 +543,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
      * @param isSystemIndex Whether this is a system index that can have both system and test tenant IDs
      */
     private void checkDocumentsInIndex(String indexName, String expectedTenantId, boolean isSystemIndex) throws IOException {
-        String query = HttpUtils.executeGetRequest(httpClient, ES_BASE_URL + "/" + indexName + "/_search?size=10", null);
+        String query = HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + indexName + "/_search?size=10", null);
         JsonNode jsonNode = objectMapper.readTree(query);
         if (jsonNode.has("hits") && jsonNode.get("hits").has("hits") && !jsonNode.get("hits").get("hits").isEmpty()) {
             for (JsonNode hit : jsonNode.get("hits").get("hits")) {
@@ -614,7 +623,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         }
         
         // Check that the default tenant index exists
-        Assert.assertTrue("Default tenant index should exist", MigrationUtils.indexExists(httpClient, ES_BASE_URL, INDEX_PREFIX_CONTEXT + "tenant"));
+        Assert.assertTrue("Default tenant index should exist", MigrationUtils.indexExists(httpClient, getEsBaseUrl(), INDEX_PREFIX_CONTEXT + "tenant"));
         
         // Check that the default tenant was created with correct structure
         String tenantId = "itTestTenant"; // This should match the tenant ID from migration config
@@ -624,7 +633,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         // The migration creates a tenant with the ID from the migration config
         if (defaultTenant == null) {
             // Check if tenant exists in Elasticsearch directly
-            String query = HttpUtils.executeGetRequest(httpClient, ES_BASE_URL + "/" + INDEX_PREFIX_CONTEXT + "tenant/_search?q=itemId:" + tenantId, null);
+            String query = HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + INDEX_PREFIX_CONTEXT + "tenant/_search?q=itemId:" + tenantId, null);
             JsonNode jsonNode = objectMapper.readTree(query);
             if (jsonNode.has("hits") && jsonNode.get("hits").has("hits") && !jsonNode.get("hits").get("hits").isEmpty()) {
                 JsonNode tenantDoc = jsonNode.get("hits").get("hits").get(0).get("_source");
@@ -680,7 +689,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         query.set("query", queryWrapper);
         query.put("size", 1000);
         
-        String response = HttpUtils.executePostRequest(httpClient, ES_BASE_URL + "/" + INDEX_SYSTEMITEMS + "/_search", objectMapper.writeValueAsString(query), null);
+        String response = HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_search", objectMapper.writeValueAsString(query), null);
         JsonNode jsonNode = objectMapper.readTree(response);
         
         Set<String> itemIds = new HashSet<>();
@@ -757,6 +766,217 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         
         Assert.assertTrue("All " + itemTypeDescription + " should be accessible via definitionsService. Missing: " + inaccessibleItems, 
                 inaccessibleItems.isEmpty());
+    }
+
+    /**
+     * Test that condition types with legacy queryBuilder IDs have been migrated to use new queryBuilder IDs.
+     * This verifies that the migrate-3.1.0-15-updateLegacyQueryBuilder migration script correctly updates
+     * all condition types that use legacy *ESQueryBuilder syntax to use the new generic QueryBuilder syntax.
+     */
+    private void checkLegacyQueryBuilderMigration() throws Exception {
+        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            System.out.println("Migration from 1.x to 2.x not supported for OpenSearch, skipping checks");
+            return;
+        }
+        
+        // Refresh the definitions service cache to ensure migrated items are loaded
+        definitionsService.refresh();
+        Thread.sleep(1000);
+        
+        // Legacy to new queryBuilder ID mappings
+        // Based on ConditionQueryBuilderDispatcher.LEGACY_TO_NEW_QUERY_BUILDER_IDS
+        String[][] legacyMappings = {
+            {"idsConditionESQueryBuilder", "idsConditionQueryBuilder"},
+            {"geoLocationByPointSessionConditionESQueryBuilder", "geoLocationByPointSessionConditionQueryBuilder"},
+            {"pastEventConditionESQueryBuilder", "pastEventConditionQueryBuilder"},
+            {"booleanConditionESQueryBuilder", "booleanConditionQueryBuilder"},
+            {"notConditionESQueryBuilder", "notConditionQueryBuilder"},
+            {"matchAllConditionESQueryBuilder", "matchAllConditionQueryBuilder"},
+            {"propertyConditionESQueryBuilder", "propertyConditionQueryBuilder"},
+            {"sourceEventPropertyConditionESQueryBuilder", "sourceEventPropertyConditionQueryBuilder"},
+            {"nestedConditionESQueryBuilder", "nestedConditionQueryBuilder"}
+        };
+        
+        // Query systemitems index for condition types
+        ObjectNode query = JsonNodeFactory.instance.objectNode();
+        ObjectNode termQuery = JsonNodeFactory.instance.objectNode();
+        termQuery.put("itemType.keyword", "conditiontype");
+        ObjectNode queryWrapper = JsonNodeFactory.instance.objectNode();
+        queryWrapper.set("term", termQuery);
+        query.set("query", queryWrapper);
+        query.put("size", 1000);
+        
+        String response = HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_search", objectMapper.writeValueAsString(query), null);
+        JsonNode jsonNode = objectMapper.readTree(response);
+        
+        int conditionTypesChecked = 0;
+        int conditionTypesWithLegacyIds = 0;
+        int conditionTypesWithNewIds = 0;
+        
+        if (jsonNode.has("hits") && jsonNode.get("hits").has("hits")) {
+            for (JsonNode hit : jsonNode.get("hits").get("hits")) {
+                JsonNode source = hit.get("_source");
+                
+                // Only check condition types that have a queryBuilder field
+                if (source.has("queryBuilder")) {
+                    String queryBuilder = source.get("queryBuilder").asText();
+                    conditionTypesChecked++;
+                    
+                    // Check if this is a legacy ID
+                    boolean isLegacyId = false;
+                    for (String[] mapping : legacyMappings) {
+                        if (mapping[0].equals(queryBuilder)) {
+                            isLegacyId = true;
+                            conditionTypesWithLegacyIds++;
+                            String expectedNewId = mapping[1];
+                            Assert.fail("Condition type " + source.get("itemId") + " still has legacy queryBuilder ID: " + queryBuilder + 
+                                      ". Expected: " + expectedNewId);
+                            break;
+                        }
+                    }
+                    
+                    // Check if this is a new ID (verify migration worked)
+                    if (!isLegacyId) {
+                        for (String[] mapping : legacyMappings) {
+                            if (mapping[1].equals(queryBuilder)) {
+                                conditionTypesWithNewIds++;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Verify that no condition types have legacy IDs
+        Assert.assertEquals("All condition types with legacy queryBuilder IDs should have been migrated. Found " + 
+                          conditionTypesWithLegacyIds + " condition types still using legacy IDs", 
+                          0, conditionTypesWithLegacyIds);
+        
+        LOGGER.info("Checked {} condition types for legacy queryBuilder IDs. Found {} with new IDs.", 
+                   conditionTypesChecked, conditionTypesWithNewIds);
+        
+        // Verify that rules and segments don't have embedded condition types with legacy queryBuilder IDs
+        // Rules and segments only store conditionTypeId references, not full ConditionType objects,
+        // but we should verify this to be safe
+        checkRulesAndSegmentsForEmbeddedConditionTypes();
+    }
+    
+    /**
+     * Verifies that rules and segments don't have embedded ConditionType objects with legacy queryBuilder IDs.
+     * Rules and segments should only store conditionTypeId references, not full ConditionType objects.
+     * This test ensures that even if there were any embedded condition types in the past, they don't exist now.
+     */
+    private void checkRulesAndSegmentsForEmbeddedConditionTypes() throws Exception {
+        String[][] legacyMappings = {
+            {"idsConditionESQueryBuilder", "idsConditionQueryBuilder"},
+            {"geoLocationByPointSessionConditionESQueryBuilder", "geoLocationByPointSessionConditionQueryBuilder"},
+            {"pastEventConditionESQueryBuilder", "pastEventConditionQueryBuilder"},
+            {"booleanConditionESQueryBuilder", "booleanConditionQueryBuilder"},
+            {"notConditionESQueryBuilder", "notConditionQueryBuilder"},
+            {"matchAllConditionESQueryBuilder", "matchAllConditionQueryBuilder"},
+            {"propertyConditionESQueryBuilder", "propertyConditionQueryBuilder"},
+            {"sourceEventPropertyConditionESQueryBuilder", "sourceEventPropertyConditionQueryBuilder"},
+            {"nestedConditionESQueryBuilder", "nestedConditionQueryBuilder"}
+        };
+        
+        // Check rules index (rules are stored in systemitems index with itemType="rule")
+        // We need to query systemitems for rules, not a separate rules index
+        String rulesIndex = INDEX_SYSTEMITEMS;
+        if (MigrationUtils.indexExists(httpClient, getEsBaseUrl(), rulesIndex)) {
+            // Query for rules (itemType="rule") with condition field
+            ObjectNode query = JsonNodeFactory.instance.objectNode();
+            ObjectNode boolQuery = JsonNodeFactory.instance.objectNode();
+            ObjectNode termItemType = JsonNodeFactory.instance.objectNode();
+            termItemType.put("itemType.keyword", "rule");
+            boolQuery.set("must", JsonNodeFactory.instance.arrayNode().add(JsonNodeFactory.instance.objectNode().set("term", termItemType)));
+            query.set("query", JsonNodeFactory.instance.objectNode().set("bool", boolQuery));
+            query.put("size", 100);
+            query.put("_source", "condition");
+            
+            String response = HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + rulesIndex + "/_search", 
+                objectMapper.writeValueAsString(query), null);
+            JsonNode jsonNode = objectMapper.readTree(response);
+            
+            int rulesChecked = 0;
+            int rulesWithEmbeddedConditionTypes = 0;
+            
+            if (jsonNode.has("hits") && jsonNode.get("hits").has("hits")) {
+                for (JsonNode hit : jsonNode.get("hits").get("hits")) {
+                    JsonNode source = hit.get("_source");
+                    if (source.has("condition")) {
+                        rulesChecked++;
+                        // Check if condition has embedded conditionType with queryBuilder
+                        JsonNode condition = source.get("condition");
+                        if (condition.has("conditionType") && condition.get("conditionType").has("queryBuilder")) {
+                            rulesWithEmbeddedConditionTypes++;
+                            String queryBuilder = condition.get("conditionType").get("queryBuilder").asText();
+                            // Check if it's a legacy ID
+                            for (String[] mapping : legacyMappings) {
+                                if (mapping[0].equals(queryBuilder)) {
+                                    Assert.fail("Rule " + hit.get("_id").asText() + " has embedded ConditionType with legacy queryBuilder ID: " + 
+                                              queryBuilder + ". Rules should only store conditionTypeId references, not full ConditionType objects.");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            LOGGER.info("Checked {} rules for embedded ConditionType objects. Found {} with embedded types (should be 0).", 
+                       rulesChecked, rulesWithEmbeddedConditionTypes);
+            Assert.assertEquals("Rules should not have embedded ConditionType objects. Found " + rulesWithEmbeddedConditionTypes + 
+                              " rules with embedded types.", 0, rulesWithEmbeddedConditionTypes);
+        }
+        
+        // Check segments index (segments are stored in systemitems index with itemType="segment")
+        // We need to query systemitems for segments, not a separate segments index
+        String segmentsIndex = INDEX_SYSTEMITEMS;
+        if (MigrationUtils.indexExists(httpClient, getEsBaseUrl(), segmentsIndex)) {
+            // Query for segments (itemType="segment") with condition field
+            ObjectNode query = JsonNodeFactory.instance.objectNode();
+            ObjectNode boolQuery = JsonNodeFactory.instance.objectNode();
+            ObjectNode termItemType = JsonNodeFactory.instance.objectNode();
+            termItemType.put("itemType.keyword", "segment");
+            boolQuery.set("must", JsonNodeFactory.instance.arrayNode().add(JsonNodeFactory.instance.objectNode().set("term", termItemType)));
+            query.set("query", JsonNodeFactory.instance.objectNode().set("bool", boolQuery));
+            query.put("size", 100);
+            query.put("_source", "condition");
+            
+            String response = HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + segmentsIndex + "/_search", 
+                objectMapper.writeValueAsString(query), null);
+            JsonNode jsonNode = objectMapper.readTree(response);
+            
+            int segmentsChecked = 0;
+            int segmentsWithEmbeddedConditionTypes = 0;
+            
+            if (jsonNode.has("hits") && jsonNode.get("hits").has("hits")) {
+                for (JsonNode hit : jsonNode.get("hits").get("hits")) {
+                    JsonNode source = hit.get("_source");
+                    if (source.has("condition")) {
+                        segmentsChecked++;
+                        // Check if condition has embedded conditionType with queryBuilder
+                        JsonNode condition = source.get("condition");
+                        if (condition.has("conditionType") && condition.get("conditionType").has("queryBuilder")) {
+                            segmentsWithEmbeddedConditionTypes++;
+                            String queryBuilder = condition.get("conditionType").get("queryBuilder").asText();
+                            // Check if it's a legacy ID
+                            for (String[] mapping : legacyMappings) {
+                                if (mapping[0].equals(queryBuilder)) {
+                                    Assert.fail("Segment " + hit.get("_id").asText() + " has embedded ConditionType with legacy queryBuilder ID: " + 
+                                              queryBuilder + ". Segments should only store conditionTypeId references, not full ConditionType objects.");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            LOGGER.info("Checked {} segments for embedded ConditionType objects. Found {} with embedded types (should be 0).", 
+                       segmentsChecked, segmentsWithEmbeddedConditionTypes);
+            Assert.assertEquals("Segments should not have embedded ConditionType objects. Found " + segmentsWithEmbeddedConditionTypes + 
+                              " segments with embedded types.", 0, segmentsWithEmbeddedConditionTypes);
+        }
     }
 
 }
