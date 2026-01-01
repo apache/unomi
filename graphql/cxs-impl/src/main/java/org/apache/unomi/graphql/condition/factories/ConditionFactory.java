@@ -86,33 +86,39 @@ public class ConditionFactory {
         return propertyCondition(propertyName, operator, "propertyValue", propertyValue);
     }
 
-    public Condition integerPropertyCondition(final String propertyName, final Object propertyValue) {
-        return integerPropertyCondition(propertyName, "equals", propertyValue);
+    public Condition numberPropertyCondition(final String propertyName, final Object propertyValue) {
+        return numberPropertyCondition(propertyName, "equals", propertyValue);
     }
 
-    public Condition integerPropertyCondition(final String propertyName, final String operator, final Object propertyValue) {
-        return propertyCondition(propertyName, operator, "propertyValueInteger", propertyValue);
+    public Condition numberPropertyCondition(final String propertyName, final String operator, final Object propertyValue) {
+        if (propertyValue instanceof Integer || propertyValue instanceof Long) {
+            return propertyCondition(propertyName, operator, "propertyValueInteger", propertyValue);
+        } else if (propertyValue instanceof Double) {
+            return propertyCondition(propertyName, operator, "propertyValueDouble", propertyValue);
+        } else {
+            return propertyCondition(propertyName, operator, propertyValue);
+        }
     }
 
     public Condition datePropertyCondition(final String propertyName, final String operator, final Object propertyValue) {
         Object processedValue = propertyValue;
-        
+
         if (propertyValue != null) {
             if (propertyValue instanceof OffsetDateTime) {
                 // Convert OffsetDateTime to Date
                 processedValue = DateUtils.toDate((OffsetDateTime) propertyValue);
-                LOGGER.debug("Converted OffsetDateTime to Date for property {}: {} -> {}", 
+                LOGGER.debug("Converted OffsetDateTime to Date for property {}: {} -> {}",
                     propertyName, propertyValue, processedValue);
             } else if (propertyValue instanceof Date) {
                 // Already a Date object, use as is
                 LOGGER.debug("Using Date object as is for property {}: {}", propertyName, propertyValue);
             } else {
                 // Invalid value type, log warning
-                LOGGER.warn("Invalid value type for date property condition. Property: {}, Value: {}, Type: {}. Expected OffsetDateTime or Date.", 
+                LOGGER.warn("Invalid value type for date property condition. Property: {}, Value: {}, Type: {}. Expected OffsetDateTime or Date.",
                     propertyName, propertyValue, propertyValue.getClass().getSimpleName());
             }
         }
-        
+
         return propertyCondition(propertyName, operator, "propertyValueDate", processedValue);
     }
 
