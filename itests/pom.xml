@@ -254,6 +254,9 @@
     <profiles>
         <profile>
             <id>elasticsearch</id>
+            <properties>
+                <elasticsearch.port>9400</elasticsearch.port>
+            </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>
                 <property>
@@ -273,6 +276,7 @@
                             <systemPropertyVariables>
                                 <my.system.property>foo</my.system.property>
                                 <unomi.search.engine>elasticsearch</unomi.search.engine>
+                                <elasticsearch.port>${elasticsearch.port}</elasticsearch.port>
                             </systemPropertyVariables>
                         </configuration>
                         <executions>
@@ -291,43 +295,64 @@
                         </executions>
                     </plugin>
                     <plugin>
-                        <groupId>com.github.alexcojocaru</groupId>
-                        <artifactId>elasticsearch-maven-plugin</artifactId>
-                        <!-- REPLACE THE FOLLOWING WITH THE PLUGIN VERSION YOU NEED -->
-                        <version>6.29</version>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
                         <configuration>
-                            <!-- <downloadUrl>https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-9.1.3-darwin-aarch64.tar
-                            .gz</downloadUrl> -->
-                            <clusterName>contextElasticSearchITests</clusterName>
-                            <transportPort>9500</transportPort>
-                            <httpPort>9400</httpPort>
-                            <version>${elasticsearch.test.version}</version>
-                            <autoCreateIndex>true</autoCreateIndex>
-                            <instanceStartupTimeout>120</instanceStartupTimeout>
-                            <environmentVariables>
-                                <ES_JAVA_OPTS>-Xms4g -Xmx4g</ES_JAVA_OPTS>
-                            </environmentVariables>
-                            <instanceSettings>
-                                <properties>
-                                    <xpack.ml.enabled>false</xpack.ml.enabled>
-                                    <path.repo>${project.build.directory}/snapshots_repository</path.repo>
-                                    <cluster.routing.allocation.disk.threshold_enabled>false</cluster.routing.allocation.disk.threshold_enabled>
-                                    <http.cors.allow-methods>OPTIONS,HEAD,GET,POST,PUT,DELETE</http.cors.allow-methods>
-                                    <http.cors.allow-headers>Authorization,X-Requested-With,X-Auth-Token,Content-Type,Content-Length</http.cors.allow-headers>
-                                </properties>
-                            </instanceSettings>
+                            <containerNamePattern>itests-elasticsearch</containerNamePattern>
+                            <images>
+                                <image>
+                                    <name>docker.elastic.co/elasticsearch/elasticsearch:${elasticsearch.test.version}</name>
+                                    <alias>elasticsearch</alias>
+                                    <run>
+                                        <ports>
+                                            <port>${elasticsearch.port}:9200</port>
+                                        </ports>
+                                        <env>
+                                            <discovery.type>single-node</discovery.type>
+                                            <ES_JAVA_OPTS>-Xms8g -Xmx8g -Dcluster.default.index.settings.number_of_replicas=0</ES_JAVA_OPTS>
+                                            <xpack.security.enabled>false</xpack.security.enabled>
+                                            <xpack.ml.enabled>false</xpack.ml.enabled>
+                                            <path.repo>/tmp/snapshots_repository</path.repo>
+                                            <cluster.routing.allocation.disk.threshold_enabled>false</cluster.routing.allocation.disk.threshold_enabled>
+                                        </env>
+                                        <volumes>
+                                            <bind>
+                                                <volume>${project.build.directory}/snapshots_repository:/tmp/snapshots_repository</volume>
+                                            </bind>
+                                        </volumes>
+                                        <wait>
+                                            <http>
+                                                <url>http://localhost:${elasticsearch.port}</url>
+                                                <method>GET</method>
+                                                <status>200</status>
+                                            </http>
+                                            <time>120000</time>
+                                        </wait>
+                                        <portPropertyFile>${project.build.directory}/elasticsearch-port.properties</portPropertyFile>
+                                    </run>
+                                </image>
+                            </images>
                         </configuration>
                         <executions>
-                            <!--
-                                The elasticsearch maven plugin goals are by default bound to the
-                                pre-integration-test and post-integration-test phases
-                            -->
+                            <!-- Force remove existing container before starting -->
+                            <execution>
+                                <id>remove-existing-container</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal> <!-- Stops the container if running -->
+                                    <goal>remove</goal> <!-- Removes the container -->
+                                </goals>
+                            </execution>
+
                             <execution>
                                 <id>start-elasticsearch</id>
                                 <phase>pre-integration-test</phase>
                                 <goals>
-                                    <goal>runforked</goal>
+                                    <goal>start</goal>
                                 </goals>
+                                <configuration>
+                                    <showLogs>true</showLogs>
+                                </configuration>
                             </execution>
                             <execution>
                                 <id>stop-elasticsearch</id>

@@ -694,6 +694,65 @@ check_requirements() {
         has_errors=true
     fi
 
+    # Docker check for integration tests
+    if [ "$RUN_INTEGRATION_TESTS" = true ]; then
+        print_status "info" "Checking Docker availability for integration tests..."
+        if ! command_exists docker; then
+            print_status "error" "Docker is not installed or not in PATH"
+            echo "Integration tests require Docker to run Elasticsearch/OpenSearch containers."
+            echo "Please install Docker:"
+            if [[ "$(uname)" == "Darwin" ]]; then
+                echo "  - macOS: Download Docker Desktop from https://www.docker.com/products/docker-desktop"
+                echo "  - Or install via Homebrew: brew install --cask docker"
+            else
+                echo "  - Ubuntu/Debian: sudo apt install docker.io"
+                echo "  - CentOS/RHEL/Fedora: sudo yum install docker (or sudo dnf install docker)"
+                echo "  - Or follow: https://docs.docker.com/get-docker/"
+            fi
+            has_errors=true
+        else
+            # Check if Docker daemon is running and accessible
+            docker_info_output=$(docker info 2>&1)
+            docker_info_exit_code=$?
+            if [ $docker_info_exit_code -ne 0 ]; then
+                # Check if it's a permission issue vs daemon not running
+                if echo "$docker_info_output" | grep -q "permission denied\|Got permission denied"; then
+                    print_status "error" "Docker permission denied"
+                    echo "Docker is installed but you don't have permission to access it."
+                    if [[ "$(uname)" == "Darwin" ]]; then
+                        echo "On macOS, ensure Docker Desktop is running and you're logged in."
+                    else
+                        echo "On Linux, add your user to the docker group:"
+                        echo "  sudo usermod -aG docker $USER"
+                        echo "  Then log out and log back in, or run: newgrp docker"
+                        echo "Alternatively, you can use sudo (not recommended for security reasons)."
+                    fi
+                elif echo "$docker_info_output" | grep -q "Cannot connect to the Docker daemon\|Is the docker daemon running"; then
+                    print_status "error" "Docker daemon is not running"
+                    echo "Please start Docker daemon:"
+                    if [[ "$(uname)" == "Darwin" ]]; then
+                        echo "  - macOS: Start Docker Desktop application from Applications"
+                        echo "  - Or from command line: open -a Docker"
+                    else
+                        echo "  - Linux: sudo systemctl start docker"
+                        echo "  - Or for older systems: sudo service docker start"
+                        echo "  - To enable auto-start: sudo systemctl enable docker"
+                    fi
+                    echo "  - Verify status: docker info"
+                else
+                    print_status "error" "Docker is not accessible"
+                    echo "Docker command failed with:"
+                    echo "$docker_info_output"
+                    echo "Please check Docker installation and daemon status."
+                fi
+                has_errors=true
+            else
+                docker_version=$(docker --version 2>&1)
+                print_status "success" "✓ Docker available: ${docker_version}"
+            fi
+        fi
+    fi
+
     # OpenSearch password check
     if [ "$USE_OPENSEARCH" = true ] || [ "$AUTO_START" = "opensearch" ]; then
         if [ -z "$UNOMI_OPENSEARCH_PASSWORD" ]; then

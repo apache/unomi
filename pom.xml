@@ -157,7 +157,6 @@
         <exec-maven-plugin.version>3.1.0</exec-maven-plugin.version>
         <maven-remote-resources-plugin.version>3.0.0</maven-remote-resources-plugin.version>
         <docker-maven-plugin.version>0.46.0</docker-maven-plugin.version>
-        <elasticsearch-maven-plugin.version>6.29</elasticsearch-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
         <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
         <frontend-maven-plugin.version>1.12.1</frontend-maven-plugin.version>
@@ -941,11 +940,6 @@
                     <groupId>io.fabric8</groupId>
                     <artifactId>docker-maven-plugin</artifactId>
                     <version>${docker-maven-plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>com.github.alexcojocaru</groupId>
-                    <artifactId>elasticsearch-maven-plugin</artifactId>
-                    <version>${elasticsearch-maven-plugin.version}</version>
                 </plugin>
                 <plugin>
                     <groupId>org.jacoco</groupId>
