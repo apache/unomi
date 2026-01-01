@@ -95,7 +95,7 @@ public class InvalidObjectInfo {
 
     /**
      * Update the info when the object is encountered again.
-     * This method is called internally by ResolverService to track repeated encounters.
+     * This method is called internally by TypeResolutionService to track repeated encounters.
      * 
      * @param missingConditionTypeIds additional missing condition type IDs
      * @param missingActionTypeIds additional missing action type IDs

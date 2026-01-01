@@ -19,17 +19,23 @@ package org.apache.unomi.persistence.spi.conditions.evaluator.impl;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.TypeResolutionService;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.scripting.ScriptExecutor;
-import org.osgi.service.component.annotations.*;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.unomi.tracing.api.TracerService;
-import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,6 +55,7 @@ public class ConditionEvaluatorDispatcherImpl
     private MetricsService metricsService;
     private ScriptExecutor scriptExecutor;
     private TracerService tracerService;
+    private DefinitionsService definitionsService;
 
     public ConditionEvaluatorDispatcherImpl() {
     }
@@ -61,6 +68,15 @@ public class ConditionEvaluatorDispatcherImpl
     @Reference
     public void setScriptExecutor(ScriptExecutor scriptExecutor) {
         this.scriptExecutor = scriptExecutor;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    public void unsetDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = null;
     }
 
     @Reference(service = ConditionEvaluator.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
@@ -97,15 +113,6 @@ public class ConditionEvaluatorDispatcherImpl
         if (condition == null) {
             throw new UnsupportedOperationException("Null condition passed for item : " + item);
         }
-        if (condition.getConditionType() == null) {
-            LOGGER.debug("Condition type is null for condition typeID={}, returning false gracefully", condition.getConditionTypeId());
-            RequestTracer tracer = null;
-            if (tracerService != null && tracerService.isTracingEnabled()) {
-                tracer = tracerService.getCurrentTracer();
-                tracer.endOperation(false, "Condition type not resolved");
-            }
-            return false;
-        }
 
         RequestTracer tracer = null;
         if (tracerService != null && tracerService.isTracingEnabled()) {
@@ -115,33 +122,69 @@ public class ConditionEvaluatorDispatcherImpl
         }
 
         try {
-            String conditionEvaluatorKey = condition.getConditionType().getConditionEvaluator();
-            if (condition.getConditionType().getParentCondition() != null) {
-                context.putAll(condition.getParameterValues());
-                boolean result = eval(condition.getConditionType().getParentCondition(), item, context);
-                if (tracer != null) {
-                    tracer.endOperation(result, "Parent condition evaluation completed");
+            // Resolve condition type if needed - try to resolve first if definitionsService is available
+            if (condition.getConditionType() == null) {
+                if (definitionsService != null) {
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.resolveConditionType(condition, "condition evaluator");
+                    }
+                } else {
+                    LOGGER.debug("DefinitionsService not available, cannot resolve condition type for condition typeID={}", condition.getConditionTypeId());
                 }
-                return result;
+                // If still null after attempting resolution (or definitionsService was null), return false gracefully
+                if (condition.getConditionType() == null) {
+                    LOGGER.debug("Condition type is null for condition typeID={}, returning false gracefully", condition.getConditionTypeId());
+                    if (tracer != null) {
+                        tracer.endOperation(false, "Condition type not resolved");
+                    }
+                    return false;
+                }
             }
 
+            // Resolve effective condition from parent chain if needed
+            Condition effectiveCondition = condition;
+            if (definitionsService != null) {
+                effectiveCondition = ParserHelper.resolveEffectiveCondition(
+                    condition, definitionsService, context, "condition evaluator");
+            }
+
+            // Check if effective condition has a type - if not, return false gracefully
+            if (effectiveCondition.getConditionType() == null) {
+                LOGGER.debug("Effective condition type is null for condition typeID={}, returning false gracefully",
+                    effectiveCondition.getConditionTypeId());
+                if (tracer != null) {
+                    tracer.endOperation(false, "Effective condition type not resolved");
+                }
+                return false;
+            }
+
+            String conditionEvaluatorKey = effectiveCondition.getConditionType().getConditionEvaluator();
             if (conditionEvaluatorKey == null) {
-                throw new UnsupportedOperationException("No evaluator defined for : " + condition.getConditionTypeId());
+                LOGGER.warn("No evaluator defined for condition type: {}", effectiveCondition.getConditionTypeId());
+                if (tracer != null) {
+                    tracer.endOperation(false, "No evaluator defined for condition type");
+                }
+                return false;
             }
 
             if (evaluators.containsKey(conditionEvaluatorKey)) {
                 ConditionEvaluator evaluator = evaluators.get(conditionEvaluatorKey);
                 final ConditionEvaluatorDispatcher dispatcher = this;
                 try {
+                    // Use effective condition for evaluation
+                    Condition contextualCondition = ConditionContextHelper.getContextualCondition(effectiveCondition, context, scriptExecutor);
+                    if (contextualCondition == null) {
+                        if (tracer != null) {
+                            tracer.endOperation(false, "Contextual condition is null");
+                        }
+                        return false;
+                    }
+                    final Condition finalContextualCondition = contextualCondition;
                     boolean result = new MetricAdapter<Boolean>(metricsService, this.getClass().getName() + ".conditions." + conditionEvaluatorKey) {
                         @Override
                         public Boolean execute(Object... args) throws Exception {
-                            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
-                            if (contextualCondition != null) {
-                                return evaluator.eval(contextualCondition, item, context, dispatcher);
-                            } else {
-                                return true;
-                            }
+                            return evaluator.eval(finalContextualCondition, item, context, dispatcher);
                         }
                     }.runWithTimer();
 

@@ -23,7 +23,8 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.conditions.ConditionValidation;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
-import org.apache.unomi.persistence.spi.conditions.*;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
+import org.apache.unomi.persistence.spi.conditions.DateUtils;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.conditions.evaluator.impl.ConditionEvaluatorDispatcherImpl;
@@ -73,11 +74,9 @@ public class TestConditionEvaluators {
         dispatcher.addEvaluator("booleanConditionEvaluator", createBooleanConditionEvaluator());
         dispatcher.addEvaluator("propertyConditionEvaluator", createPropertyConditionEvaluator());
         dispatcher.addEvaluator("matchAllConditionEvaluator", createMatchAllConditionEvaluator());
-        dispatcher.addEvaluator("eventTypeConditionEvaluator", createEventTypeConditionEvaluator());
         dispatcher.addEvaluator("pastEventConditionEvaluator", createPastEventConditionEvaluator());
         dispatcher.addEvaluator("notConditionEvaluator", createNotConditionEvaluator());
         dispatcher.addEvaluator("nestedConditionEvaluator", createNestedConditionEvaluator());
-        dispatcher.addEvaluator("profileUpdatedEventConditionEvaluator", createProfileUpdatedEventConditionEvaluator());
         dispatcher.addEvaluator("idsConditionEvaluator", createIdsConditionEvaluator());
         initializeConditionTypes();
         return dispatcher;
@@ -97,7 +96,8 @@ public class TestConditionEvaluators {
             boolean isAnd = "and".equalsIgnoreCase(operator);
             tracer.trace("Using " + (isAnd ? "AND" : "OR") + " operator for " + subConditions.size() + " subconditions", condition);
 
-            for (Condition subCondition : subConditions) {
+            for (int i = 0; i < subConditions.size(); i++) {
+                Condition subCondition = subConditions.get(i);
                 boolean result = dispatcher.eval(subCondition, item, context);
                 if (isAnd && !result) {
                     tracer.endOperation(false, "AND condition failed on subcondition");
@@ -163,12 +163,25 @@ public class TestConditionEvaluators {
                 }
 
                 // Handle special cases for known types
-                if (current instanceof Event && "profile".equals(field)) {
-                    current = ((Event) current).getProfile();
-                    continue;
-                } else if (current instanceof Event && "session".equals(field)) {
-                    current = ((Event) current).getSession();
-                    continue;
+                if (current instanceof Event) {
+                    Event currentEvent = (Event) current;
+                    if ("profile".equals(field)) {
+                         current = currentEvent.getProfile();
+                        continue;
+                    } else if ("session".equals(field)) {
+                        current = currentEvent.getSession();
+                        continue;
+                    } else {
+                        // For Event, try getProperty() for custom properties
+                        if (currentEvent.getProperties() != null) {
+                            Object currentProperty = currentEvent.getProperty(field);
+                            if (currentProperty != null) {
+                                current = currentProperty;
+                                continue;
+                            }
+                        }
+                        // If getProperty returns null, it might not exist, but continue to try other methods
+                    }
                 }
 
                 // Try getter method
@@ -243,8 +256,38 @@ public class TestConditionEvaluators {
             case "greaterThanOrEqualTo":
             case "lessThan":
             case "lessThanOrEqualTo":
+                // For relational comparisons, ensure values are comparable (avoid NPE on invalid/non-numeric actual values)
+                if ("greaterThan".equals(operator) || "greaterThanOrEqualTo".equals(operator) ||
+                        "lessThan".equals(operator) || "lessThanOrEqualTo".equals(operator)) {
+                    if (expectedValueInteger != null) {
+                        Integer actualInt = PropertyHelper.getInteger(actualValue);
+                        Integer expectedInt = PropertyHelper.getInteger(expectedValueInteger);
+                        if (actualInt == null || expectedInt == null) {
+                            return false;
+                        }
+                        return evaluateComparison(operator, actualInt.compareTo(expectedInt));
+                    }
+                    if (expectedValueDouble != null) {
+                        Double actualDouble = PropertyHelper.getDouble(actualValue);
+                        Double expectedDouble = PropertyHelper.getDouble(expectedValueDouble);
+                        if (actualDouble == null || expectedDouble == null) {
+                            return false;
+                        }
+                        return evaluateComparison(operator, actualDouble.compareTo(expectedDouble));
+                    }
+                    if (expectedValueDate != null || expectedValueDateExpr != null) {
+                        Date actualDate = getDate(actualValue);
+                        Object expectedDateObj = expectedValueDate != null ? expectedValueDate : expectedValueDateExpr;
+                        Date expectedDateParsed = getDate(expectedDateObj);
+                        if (actualDate == null || expectedDateParsed == null) {
+                            return false;
+                        }
+                        return evaluateComparison(operator, actualDate.compareTo(expectedDateParsed));
+                    }
+                }
+
                 int comparisonResult = compareValues(actualValue, expectedValue, expectedValueDate,
-                    expectedValueInteger, expectedValueDateExpr, expectedValueDouble);
+                        expectedValueInteger, expectedValueDateExpr, expectedValueDouble);
                 return evaluateComparison(operator, comparisonResult);
 
             case "between":
@@ -399,13 +442,33 @@ public class TestConditionEvaluators {
         }
 
         if (expectedValueInteger != null) {
-            return PropertyHelper.getInteger(actualValue).compareTo(PropertyHelper.getInteger(expectedValueInteger));
+            Integer actualInt = PropertyHelper.getInteger(actualValue);
+            Integer expectedInt = PropertyHelper.getInteger(expectedValueInteger);
+            if (actualInt == null || expectedInt == null) {
+                return 1;
+            }
+            return actualInt.compareTo(expectedInt);
         } else if (expectedValueDouble != null) {
-            return PropertyHelper.getDouble(actualValue).compareTo(PropertyHelper.getDouble(expectedValueDouble));
+            Double actualDouble = PropertyHelper.getDouble(actualValue);
+            Double expectedDouble = PropertyHelper.getDouble(expectedValueDouble);
+            if (actualDouble == null || expectedDouble == null) {
+                return 1;
+            }
+            return actualDouble.compareTo(expectedDouble);
         } else if (expectedValueDate != null) {
-            return getDate(actualValue).compareTo(getDate(expectedValueDate));
+            Date actualDate = getDate(actualValue);
+            Date expectedDate = getDate(expectedValueDate);
+            if (actualDate == null || expectedDate == null) {
+                return 1;
+            }
+            return actualDate.compareTo(expectedDate);
         } else if (expectedValueDateExpr != null) {
-            return getDate(actualValue).compareTo(getDate(expectedValueDateExpr));
+            Date actualDate = getDate(actualValue);
+            Date expectedDate = getDate(expectedValueDateExpr);
+            if (actualDate == null || expectedDate == null) {
+                return 1;
+            }
+            return actualDate.compareTo(expectedDate);
         } else {
             return actualValue.toString().toLowerCase().compareTo(expectedValue);
         }
@@ -442,16 +505,6 @@ public class TestConditionEvaluators {
             tracer.startEvaluation(condition, "Evaluating matchAll condition");
             tracer.endEvaluation(condition, true, "MatchAll condition always returns true");
             return true;
-        };
-    }
-
-    private static ConditionEvaluator createEventTypeConditionEvaluator() {
-        return (condition, item, context, dispatcher) -> {
-            tracer.startOperation("eventType", "Evaluating event type condition", condition);
-            String eventType = (String) condition.getParameter("eventTypeId");
-            boolean result = item instanceof Event && eventType.equals(((Event) item).getEventType());
-            tracer.endOperation(result, "Event type condition evaluation completed");
-            return result;
         };
     }
 
@@ -492,7 +545,16 @@ public class TestConditionEvaluators {
                 tracer.trace(condition, "Direct event query returned count=" + count);
             }
 
-            boolean eventsOccurred = "true".equals(condition.getParameter("operator"));
+            // Match the behavior of getStrategyFromOperator in real evaluators
+            String operator = (String) condition.getParameter("operator");
+            boolean eventsOccurred;
+            if (operator != null && !operator.equals("eventsOccurred") && !operator.equals("eventsNotOccurred")) {
+                tracer.trace(condition, "Warning: Unsupported operator: " + operator + ", defaulting to eventsOccurred behavior");
+                eventsOccurred = true; // Default behavior for invalid values (matches null handling)
+            } else {
+                eventsOccurred = operator == null || operator.equals("eventsOccurred");
+            }
+
             if (eventsOccurred) {
                 int minimumEventCount = parameters.get("minimumEventCount") == null ? 0 : (Integer) parameters.get("minimumEventCount");
                 int maximumEventCount = parameters.get("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
@@ -518,15 +580,6 @@ public class TestConditionEvaluators {
         };
     }
 
-    private static ConditionEvaluator createProfileUpdatedEventConditionEvaluator() {
-        return (condition, item, context, dispatcher) -> {
-            if (!(item instanceof Event)) {
-                return false;
-            }
-            Event event = (Event) item;
-            return "profileUpdated".equals(event.getEventType());
-        };
-    }
 
     private static ConditionEvaluator createNestedConditionEvaluator() {
         return (condition, item, context, dispatcher) -> {
@@ -646,15 +699,29 @@ public class TestConditionEvaluators {
                         "eventCondition", "sessionCondition", "sourceEventCondition"));
         conditionTypes.put("matchAllCondition", matchAllConditionType);
 
-        // Create eventType condition type
-        ConditionType eventTypeConditionType = createConditionType("eventTypeCondition", "eventTypeConditionEvaluator",
-                "eventTypeConditionQueryBuilder", Set.of("profileTags", "event", "condition", "eventCondition"));
-        conditionTypes.put("eventTypeCondition", eventTypeConditionType);
-
-        // Create eventProperty condition type
+        // Create eventProperty condition type first (needed for eventTypeCondition parent)
         ConditionType eventPropertyConditionType = createConditionType("eventPropertyCondition", "propertyConditionEvaluator",
                 "propertyConditionQueryBuilder", Set.of("profileTags", "demographic", "condition", "eventCondition"));
         conditionTypes.put("eventPropertyCondition", eventPropertyConditionType);
+
+        // Create eventType condition type
+        // eventTypeCondition uses parentCondition (eventPropertyCondition) instead of direct evaluator or queryBuilder
+        ConditionType eventTypeConditionType = createConditionType("eventTypeCondition", null,
+                null, Set.of("profileTags", "event", "condition", "eventCondition"));
+
+        // Set up parent condition: eventPropertyCondition with propertyName="eventType", propertyValue="parameter::eventTypeId"
+        // The parent condition uses propertyConditionEvaluator (same as eventPropertyCondition)
+        Condition parentCondition = new Condition();
+        parentCondition.setConditionTypeId("eventPropertyCondition");
+        Map<String, Object> parentParameterValues = new HashMap<>();
+        parentParameterValues.put("propertyName", "eventType");
+        parentParameterValues.put("propertyValue", "parameter::eventTypeId");
+        parentParameterValues.put("comparisonOperator", "equals");
+        parentCondition.setParameterValues(parentParameterValues);
+        eventTypeConditionType.setParentCondition(parentCondition);
+
+        conditionTypes.put("eventTypeCondition", eventTypeConditionType);
+
 
         // Create sessionProperty condition type
         ConditionType sessionPropertyConditionType = createConditionType("sessionPropertyCondition", "propertyConditionEvaluator",
@@ -678,10 +745,20 @@ public class TestConditionEvaluators {
         conditionTypes.put("notCondition", notConditionType);
 
         // Create profileUpdatedEvent condition type
+        // profileUpdatedEventCondition uses parentCondition (eventTypeCondition) instead of direct evaluator or queryBuilder
         ConditionType profileUpdatedEventConditionType = createConditionType("profileUpdatedEventCondition",
-                "profileUpdatedEventConditionEvaluator",
-                "eventTypeConditionQueryBuilder",
+                null,
+                null,
                 Set.of("profileTags", "event", "condition", "eventCondition"));
+
+        // Set up parent condition: eventTypeCondition with eventTypeId="profileUpdated"
+        Condition profileUpdatedParentCondition = new Condition();
+        profileUpdatedParentCondition.setConditionTypeId("eventTypeCondition");
+        Map<String, Object> profileUpdatedParentParameterValues = new HashMap<>();
+        profileUpdatedParentParameterValues.put("eventTypeId", "profileUpdated");
+        profileUpdatedParentCondition.setParameterValues(profileUpdatedParentParameterValues);
+        profileUpdatedEventConditionType.setParentCondition(profileUpdatedParentCondition);
+
         conditionTypes.put("profileUpdatedEventCondition", profileUpdatedEventConditionType);
 
         // Create nested condition type

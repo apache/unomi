@@ -27,21 +27,21 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
-import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
-import org.apache.unomi.api.services.ResolverService;
+import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.utils.ParserHelper;
+import org.apache.unomi.persistence.spi.config.ConfigurationUpdateHelper;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
-import org.apache.unomi.persistence.spi.config.ConfigurationUpdateHelper;
 import org.osgi.framework.*;
 import org.osgi.service.cm.ManagedService;
+import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +54,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
-public class RulesServiceImpl extends AbstractMultiTypeCachingService implements RulesService, EventListenerService, ManagedService {
+public class RulesServiceImpl extends AbstractMultiTypeCachingService implements RulesService, EventListenerService, ManagedService, EventHandler {
 
     public static final String TRACKED_PARAMETER = "trackedConditionParameters";
     private static final Logger LOGGER = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
@@ -62,9 +62,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
     private DefinitionsService definitionsService;
     private EventService eventService;
     private ActionExecutorDispatcher actionExecutorDispatcher;
-    private ConditionValidationService conditionValidationService;
     private TracerService tracerService;
-    private ResolverService resolverService;
 
     private Integer rulesRefreshInterval = 1000;
     private Integer rulesStatisticsRefreshInterval = 10000;
@@ -77,6 +75,21 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
     private volatile Boolean optimizedRulesActivated = true;
 
     private ScheduledTask statisticsRefreshTask;
+    private ServiceRegistration<EventHandler> eventHandlerRegistration;
+
+    /**
+     * ThreadLocal to track event processing context for loop detection.
+     * Note: Depth protection is handled by EventServiceImpl.MAX_RECURSION_DEPTH to avoid duplication.
+     */
+    private static final ThreadLocal<ProcessingContext> PROCESSING_CONTEXT = ThreadLocal.withInitial(ProcessingContext::new);
+
+    /**
+     * Context object that holds event processing state for the current thread.
+     */
+    private static class ProcessingContext {
+        final Set<String> processingEvents = new HashSet<>();
+        final Set<String> reportedLoops = new HashSet<>();
+    }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -102,29 +115,29 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         this.optimizedRulesActivated = optimizedRulesActivated;
     }
 
-    public void setConditionValidationService(ConditionValidationService conditionValidationService) {
-        this.conditionValidationService = conditionValidationService;
-    }
-
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
     }
 
-    public void setResolverService(ResolverService resolverService) {
-        this.resolverService = resolverService;
+    /**
+     * Helper method to get TypeResolutionService from DefinitionsService.
+     * Returns null if DefinitionsService is not available or doesn't have TypeResolutionService.
+     */
+    private TypeResolutionService getTypeResolutionService() {
+        return definitionsService != null ? definitionsService.getTypeResolutionService() : null;
     }
 
     @Override
     public void updated(Dictionary<String, ?> properties) {
         Map<String, ConfigurationUpdateHelper.PropertyMapping> propertyMappings = new HashMap<>();
-        
+
         // Boolean properties
         propertyMappings.put("rules.optimizationActivated", ConfigurationUpdateHelper.booleanProperty(this::setOptimizedRulesActivated));
-        
+
         // Integer properties
         propertyMappings.put("rules.refresh.interval", ConfigurationUpdateHelper.integerProperty(this::setRulesRefreshInterval));
         propertyMappings.put("rules.statistics.refresh.interval", ConfigurationUpdateHelper.integerProperty(this::setRulesStatisticsRefreshInterval));
-        
+
         ConfigurationUpdateHelper.processConfigurationUpdates(properties, LOGGER, "Rules service", propertyMappings);
     }
 
@@ -159,9 +172,11 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                     setRule(rule, true);
                 })
                 .withPostProcessor(rule -> {
-                    // post processor is called when loading predefined types or when reloading from persistence
-                    resolveRule(rule);
-                    // Update rule by event type cache
+                    // Only ensure rule is resolved (for initial load and updates)
+                    // Re-evaluation of invalid rules happens via OSGi Event Admin when types change
+                    ensureRuleResolved(rule);
+
+                    // Update rule by event type cache (only indexes valid, enabled rules)
                     String tenantId = rule.getTenantId();
                     Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tenantId);
                     updateRulesByEventType(tenantEventTypeRules, rule);
@@ -191,6 +206,9 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         super.preDestroy();
         if (statisticsRefreshTask != null) {
             schedulerService.cancelTask(statisticsRefreshTask.getItemId());
+        }
+        if (eventHandlerRegistration != null) {
+            eventHandlerRegistration.unregister();
         }
         LOGGER.info("Rule service shutdown.");
     }
@@ -234,8 +252,10 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                         tenantEventTypeRules.clear();
 
                         for (Rule rule : rules) {
-                            // validate rule
-                            resolveRule(rule);
+                            // Only ensure rule is resolved (for refresh from persistence)
+                            // Re-evaluation of invalid rules happens via OSGi Event Admin when types change
+                            ensureRuleResolved(rule);
+
                             // Update cache service
                             cacheService.put(Rule.ITEM_TYPE, rule.getItemId(), tenantId, rule);
                             // Update event type index
@@ -312,7 +332,8 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
 
                 fireEvaluate(rule, event);
 
-                if (!persistenceService.testMatch(eventCondition, event)) {
+                boolean matchResult = persistenceService.testMatch(eventCondition, event);
+                if (!matchResult) {
                     updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
                 }
@@ -385,14 +406,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
     }
 
     public List<Rule> getAllRules() {
-        List<Rule> rules = new ArrayList<>(getAllItems(Rule.class, true));
-        // Re-resolve all rules on access (like original master branch)
-        for (Rule rule : rules) {
-            if (rule != null && rule.getCondition() != null) {
-                resolveRule(rule);
-            }
-        }
-        return rules;
+        return new ArrayList<>(getAllItems(Rule.class, true));
     }
 
     public boolean canHandle(Event event) {
@@ -400,11 +414,93 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
     }
 
     public int onEvent(Event event) {
+        if (event == null) {
+            return EventService.NO_CHANGE;
+        }
+
+        ProcessingContext context = PROCESSING_CONTEXT.get();
+
+        // Generate proper event key for loop detection
+        String eventKey = generateEventKey(event);
+
+        // Check if this event is already being processed (loop detection)
+        // Note: Depth protection is handled by EventServiceImpl.MAX_RECURSION_DEPTH
+        if (context.processingEvents.contains(eventKey)) {
+            if (context.reportedLoops.contains(eventKey)) {
+                String eventId = event.getItemId() != null ? event.getItemId() : "new";
+                LOGGER.warn("Loop detected again: event {} (type: {}) is already being processed. Skipping to prevent infinite loop.",
+                    eventId, event.getEventType());
+                return EventService.NO_CHANGE;
+            }
+            context.reportedLoops.add(eventKey);
+            logLoopDetected(event);
+            return EventService.NO_CHANGE;
+        }
+
+        // Add event to processing set
+        context.processingEvents.add(eventKey);
+        LOGGER.debug("Processing event {} (type: {})",
+            event.getItemId() != null ? event.getItemId() : "new", event.getEventType());
+        try {
+            return processEvent(event, context);
+        } finally {
+            // Always cleanup (even if exception occurs)
+            context.processingEvents.remove(eventKey);
+
+            // Clean up ThreadLocal if processing is complete
+            if (context.processingEvents.isEmpty()) {
+                LOGGER.debug("Event processing complete, cleaning up ThreadLocal context");
+                PROCESSING_CONTEXT.remove();
+            }
+        }
+    }
+
+    /**
+     * Generates a unique key for an event to track it in the processing chain.
+     * Uses event ID if available, otherwise creates a stable identifier.
+     */
+    private String generateEventKey(Event event) {
+        String eventType = event.getEventType();
+        if (eventType == null) {
+            eventType = "unknown";
+        }
+        String eventId = event.getItemId();
+        if (eventId != null && !eventId.isEmpty()) {
+            return eventType + ":" + eventId;
+        }
+        // Fallback: use event type and identity hash for events without ID
+        return eventType + ":hash:" + System.identityHashCode(event);
+    }
+
+    /**
+     * Logs when a loop is detected with diagnostic information.
+     */
+    private void logLoopDetected(Event event) {
+        String eventId = event.getItemId() != null ? event.getItemId() : "new";
+        String eventType = event.getEventType();
+        String cause = "ruleFired".equals(eventType)
+            ? "Rule(s) matching 'ruleFired' events (likely wildcard '*')"
+            : "Rule(s) matching '" + eventType + "' events send the same event type";
+        String fix = "ruleFired".equals(eventType)
+            ? "Exclude 'ruleFired' from wildcard rules or use specific event types"
+            : "Change rule actions to send different event types or make rules more specific";
+
+        LOGGER.error("Loop detected for event {} (type: {}). {}. Fix: {}.",
+            eventId, eventType, cause, fix);
+    }
+
+    private int processEvent(Event event, ProcessingContext context) {
         Set<Rule> rules = getMatchingRules(event);
         int changes = EventService.NO_CHANGE;
 
+        String eventId = event.getItemId();
+        if (eventId == null || eventId.isEmpty()) {
+            eventId = "new";
+        }
+
         for (Rule rule : rules) {
             LOGGER.debug("Fired rule {} for {} - {}", rule.getMetadata().getId(), event.getEventType(), event.getItemId());
+
             fireExecuteActions(rule, event);
 
             long actionsStartTime = System.currentTimeMillis();
@@ -454,6 +550,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         return stats;
     }
 
+    @Override
     public Map<String, RuleStatistics> getAllRuleStatistics() {
         String currentTenant = contextManager.getCurrentContext().getTenantId();
 
@@ -462,11 +559,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         // If not in system tenant, also get inherited statistics
         if (!SYSTEM_TENANT.equals(currentTenant)) {
             Map<String, RuleStatistics> systemStats = getRuleStatisticsForTenant(SYSTEM_TENANT);
-            for (Map.Entry<String, RuleStatistics> entry : systemStats.entrySet()) {
-                if (!result.containsKey(entry.getKey())) {
-                    result.put(entry.getKey(), entry.getValue());
-                }
-            }
+            result.putAll(systemStats);
         }
 
         return result;
@@ -503,7 +596,9 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         if (query.isForceRefresh()) {
             persistenceService.refreshIndex(Rule.class);
         }
-        definitionsService.resolveConditionType(query.getCondition());
+        if (query.getCondition() != null) {
+            definitionsService.getConditionValidationService().validate(query.getCondition());
+        }
         List<Metadata> descriptions = new LinkedList<>();
         PartialList<Rule> rules = persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit());
         for (Rule definition : rules.getList()) {
@@ -516,7 +611,9 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         if (query.isForceRefresh()) {
             persistenceService.refreshIndex(Rule.class);
         }
-        definitionsService.resolveConditionType(query.getCondition());
+        if (query.getCondition() != null) {
+            definitionsService.getConditionValidationService().validate(query.getCondition());
+        }
         PartialList<Rule> rules = persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit());
         List<Rule> details = new LinkedList<>();
         details.addAll(rules.getList());
@@ -525,12 +622,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
 
     @Override
     public Rule getRule(String ruleId) {
-        Rule rule = getItem(ruleId, Rule.class);
-        if (rule != null && rule.getCondition() != null) {
-            // Re-resolve condition types on access (like original master branch)
-            resolveRule(rule);
-        }
-        return rule;
+        return getItem(ruleId, Rule.class);
     }
 
     @Override
@@ -553,15 +645,26 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             rule.setTenantId(tenantId);
         }
 
+        // Attempt to resolve rule first to update missingPlugins flag
+        // This must happen before checking effectiveAllowInvalidRules
+        if (rule.getCondition() != null) {
+            try {
+                ensureRuleResolved(rule);
+            } catch (Exception e) {
+                // Resolution failure shouldn't prevent rule from being saved
+                // The rule will be marked as invalid and excluded from indexing
+                LOGGER.debug("Failed to resolve rule {} during setRule, will be marked as invalid: {}",
+                    rule.getItemId(), e.getMessage());
+            }
+        }
+
         // If missingPlugins is true, treat as if allowInvalidRules is true
-        boolean effectiveAllowInvalidRules = allowInvalidRules || rule.getMetadata().isMissingPlugins();
+        boolean effectiveAllowInvalidRules = allowInvalidRules || (rule.getMetadata() != null && rule.getMetadata().isMissingPlugins());
 
         Condition condition = rule.getCondition();
         if (condition != null) {
+            // Only validate eventCondition for enabled rules (disabled rules don't need to be executable)
             if (rule.getMetadata().isEnabled()) {
-                // Use ResolverService convenience method that automatically tracks invalid objects and handles missingPlugins
-                resolverService.resolveRule("rules", rule);
-                
                 try {
                     // Check rule's condition validity, throws an exception if not set properly.
                     definitionsService.extractConditionBySystemTag(condition, "eventCondition");
@@ -570,8 +673,11 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                         throw e;
                     } else {
                         LOGGER.warn("Invalid rule condition for rule {} : ", rule, e);
-                        resolverService.markInvalid("rules", rule.getItemId(), 
-                            "Missing eventCondition: " + e.getMessage());
+                        TypeResolutionService typeResolutionService = getTypeResolutionService();
+                        if (typeResolutionService != null) {
+                            typeResolutionService.markInvalid("rules", rule.getItemId(),
+                                "Missing eventCondition: " + e.getMessage());
+                        }
                     }
                 }
             }
@@ -586,7 +692,9 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                 }
             }
 
-            List<ValidationError> validationErrors = conditionValidationService.validate(rule.getCondition());
+            // Validate condition (skips parameters with references/scripts)
+            // Validation service will auto-resolve types if needed
+            List<ValidationError> validationErrors = definitionsService.getConditionValidationService().validate(rule.getCondition());
 
             // Add validation info to tracer
             if (tracerService != null) {
@@ -625,8 +733,11 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                     throw new IllegalArgumentException(errorMessage.toString());
                 } else {
                     LOGGER.warn("Invalid rule condition for rule {} : {}", rule, errorMessage.toString());
-                    resolverService.markInvalid("rules", rule.getItemId(), 
-                        "Condition validation errors: " + errorMessage.toString());
+                    TypeResolutionService typeResolutionService = getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.markInvalid("rules", rule.getItemId(),
+                            "Condition validation errors: " + errorMessage.toString());
+                    }
                 }
             }
         }
@@ -741,23 +852,298 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         }
     }
 
-    private void updateRulesByEventType(Map<String, Set<Rule>> rulesByEventType, Rule rule) {
-        Set<String> eventTypeIds = ParserHelper.resolveConditionEventTypes(rule.getCondition());
-        if (eventTypeIds.isEmpty()) {
-            eventTypeIds = Collections.singleton("*");
+    /**
+     * Checks if a rule should be excluded from event type indexing.
+     * Rules are excluded if they are disabled, have missing plugins, or are marked as invalid.
+     *
+     * Note: This method assumes ensureRuleResolved() has been called first to ensure
+     * the rule's resolution status is up-to-date. The flags checked here are set by
+     * resolveRule() which is called by ensureRuleResolved().
+     *
+     * @param rule the rule to check
+     * @return true if the rule should be excluded, false otherwise
+     */
+    private boolean shouldExcludeRuleFromEventTypeIndex(Rule rule) {
+        if (rule == null) {
+            return true;
         }
-        synchronized (rulesByEventType) {
-            // First remove the rule from all existing event type sets to handle updates
-            for (Set<Rule> rules : rulesByEventType.values()) {
+
+        // Exclude disabled rules
+        if (rule.getMetadata() == null || !rule.getMetadata().isEnabled()) {
+            return true;
+        }
+
+        // Check if rule has missing plugins or is invalid (set by resolveRule)
+        boolean hasMissingPlugins = rule.getMetadata().isMissingPlugins();
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        boolean isInvalid = typeResolutionService != null && typeResolutionService.isInvalid("rules", rule.getItemId());
+
+        if (hasMissingPlugins || isInvalid) {
+            String ruleName = getRuleName(rule);
+            String ruleId = rule.getItemId();
+            String reason = hasMissingPlugins ? "missing plugins" : "invalid rule";
+            LOGGER.debug("Excluding rule '{}' (id: {}) from event type index due to: {}", ruleName, ruleId, reason);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Gets a human-readable name for a rule, falling back to "unnamed" if not available.
+     *
+     * @param rule the rule
+     * @return the rule name or "unnamed"
+     */
+    private String getRuleName(Rule rule) {
+        return rule.getMetadata() != null && rule.getMetadata().getName() != null
+            ? rule.getMetadata().getName()
+            : "unnamed";
+    }
+
+    /**
+     * Removes a rule from all event type sets in the given map.
+     * This is used when a rule should be excluded from indexing.
+     * Uses copy of keys to avoid synchronization during iteration.
+     *
+     * @param rulesByEventType the map of event types to rule sets (ConcurrentHashMap)
+     * @param rule the rule to remove
+     */
+    private void removeRuleFromEventTypeIndex(Map<String, Set<Rule>> rulesByEventType, Rule rule) {
+        // Copy keys to avoid concurrent modification during iteration
+        // Since rulesByEventType is a ConcurrentHashMap, we can safely iterate over a copy of keys
+        Set<String> eventTypeIds = new HashSet<>(rulesByEventType.keySet());
+        for (String eventTypeId : eventTypeIds) {
+            Set<Rule> rules = rulesByEventType.get(eventTypeId);
+            if (rules != null) {
                 rules.remove(rule);
             }
-            // Then add the rule to the appropriate event type sets
-            for (String eventTypeId : eventTypeIds) {
-                Set<Rule> rules = rulesByEventType.computeIfAbsent(eventTypeId,
-                    k -> Collections.synchronizedSet(new HashSet<>()));
-                rules.add(rule);
+        }
+    }
+
+    /**
+     * Resolves event types from a rule's condition and logs warnings for wildcard usage.
+     * Only logs warnings for enabled rules that are actually being indexed.
+     *
+     * This method relies on ensureRuleResolvedForIndexing() having been called first, which will
+     * mark the rule as invalid/missingPlugins if there are unresolved condition types.
+     * If eventTypeIds is empty and the rule has unresolved types, this indicates the
+     * rule should be excluded rather than defaulting to wildcard.
+     *
+     * @param rule the rule (should have been resolved via ensureRuleResolvedForIndexing() first)
+     * @return the set of event type IDs, which may include "*" for wildcard matching, or empty set if condition has unresolved types
+     */
+    private Set<String> resolveEventTypesWithWarnings(Rule rule) {
+        Set<String> eventTypeIds = ParserHelper.resolveConditionEventTypes(rule.getCondition(), definitionsService);
+        boolean hasWildcard = eventTypeIds.contains("*");
+        boolean defaultingToWildcard = false;
+
+        // Before defaulting to wildcard when eventTypeIds is empty, check if rule has unresolved types
+        // This relies on ensureRuleResolvedForIndexing() having been called, which marks the rule appropriately
+        // We check for unresolved types by looking at the rule's resolution status (missingPlugins or invalid)
+        // This avoids duplicating the resolution logic - we rely on TypeResolutionService infrastructure
+        if (eventTypeIds.isEmpty()) {
+            // Check if rule has unresolved types by checking resolution status
+            // Note: shouldExcludeRuleFromEventTypeIndex() also checks disabled, so we need to check specifically
+            boolean hasMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
+            TypeResolutionService typeResolutionService = getTypeResolutionService();
+            boolean isInvalid = typeResolutionService != null && typeResolutionService.isInvalid("rules", rule.getItemId());
+            boolean hasUnresolvedTypes = hasMissingPlugins || isInvalid;
+
+            if (hasUnresolvedTypes) {
+                // Rule has unresolved types - return empty set to exclude rule
+                String ruleName = getRuleName(rule);
+                String ruleId = rule.getItemId();
+                LOGGER.debug("Rule '{}' (id: {}) has unresolved condition types - excluding from event type index instead of defaulting to wildcard",
+                    ruleName, ruleId);
+                return Collections.emptySet();
+            }
+            // No unresolved types - safe to default to wildcard
+            eventTypeIds = Collections.singleton("*");
+            defaultingToWildcard = true;
+        }
+
+        // Only log warning for enabled rules that are actually being indexed
+        // Disabled rules or invalid rules won't be indexed, so no need to warn
+        if ((hasWildcard || defaultingToWildcard) &&
+            rule.getMetadata() != null &&
+            rule.getMetadata().isEnabled() &&
+            !shouldExcludeRuleFromEventTypeIndex(rule)) {
+            String ruleName = getRuleName(rule);
+            String ruleId = rule.getItemId();
+            String reason = defaultingToWildcard
+                ? "no eventTypeCondition found in rule condition"
+                : "rule condition contains negated eventTypeCondition or wildcard";
+            LOGGER.debug("Rule '{}' (id: {}) uses wildcard event type matching (*). This can cause event loops if the rule triggers events that match its own conditions. Reason: {}. Consider using specific event types instead.",
+                ruleName, ruleId, reason);
+        }
+
+        return eventTypeIds;
+    }
+
+    /**
+     * Adds a rule to the appropriate event type sets in the index.
+     * Uses copy-and-swap pattern to avoid synchronization on the map.
+     *
+     * @param rulesByEventType the map of event types to rule sets (ConcurrentHashMap)
+     * @param rule the rule to add
+     * @param eventTypeIds the set of event type IDs to index the rule under
+     */
+    private void addRuleToEventTypeIndex(Map<String, Set<Rule>> rulesByEventType, Rule rule, Set<String> eventTypeIds) {
+        // First remove the rule from all existing event type sets to handle updates
+        // Copy keys to avoid concurrent modification during iteration
+        Set<String> existingEventTypes = new HashSet<>(rulesByEventType.keySet());
+        for (String eventTypeId : existingEventTypes) {
+            Set<Rule> rules = rulesByEventType.get(eventTypeId);
+            if (rules != null) {
+                rules.remove(rule);
             }
         }
+
+        // Then add the rule to the appropriate event type sets
+        // Since rulesByEventType is a ConcurrentHashMap, computeIfAbsent is thread-safe
+        for (String eventTypeId : eventTypeIds) {
+            Set<Rule> rules = rulesByEventType.computeIfAbsent(eventTypeId,
+                k -> ConcurrentHashMap.newKeySet());
+            rules.add(rule);
+        }
+    }
+
+    /**
+     * Ensures a rule is resolved (conditions and actions). This is idempotent - if the rule
+     * is already resolved, it returns immediately. If the rule was previously invalid or
+     * had missing plugins, it attempts to resolve it again (useful when new types are deployed).
+     *
+     * @param rule the rule to ensure is resolved
+     * @return true if the rule is now valid, false if it's still invalid
+     */
+    private boolean ensureRuleResolved(Rule rule) {
+        if (rule == null) {
+            return false;
+        }
+
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService == null) {
+            return false;
+        }
+
+        // Check if rule needs resolution (invalid or missing plugins)
+        boolean wasInvalid = typeResolutionService.isInvalid("rules", rule.getItemId());
+        boolean hadMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
+
+        // If rule is already valid, no need to resolve
+        if (!wasInvalid && !hadMissingPlugins) {
+            return true;
+        }
+
+        // Attempt to resolve the rule (conditions + actions)
+        // This will update missingPlugins flag and invalid status if resolution succeeds
+        return typeResolutionService.resolveRule("rules", rule);
+    }
+
+    /**
+     * Ensures a rule is resolved for indexing purposes. This always attempts resolution
+     * to detect unresolved types, even if the rule wasn't previously marked as invalid.
+     * This is safe for indexing because it doesn't affect validation behavior.
+     *
+     * @param rule the rule to ensure is resolved
+     * @return true if the rule is now valid, false if it's still invalid
+     */
+    private boolean ensureRuleResolvedForIndexing(Rule rule) {
+        if (rule == null) {
+            return false;
+        }
+
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService == null) {
+            return false;
+        }
+
+        // Always attempt to resolve the rule to ensure resolution status is up-to-date
+        // This is idempotent - resolveRule() efficiently checks if types are already resolved
+        // and only performs actual resolution if needed. This ensures newly loaded rules
+        // are properly checked for unresolved types before indexing.
+        return typeResolutionService.resolveRule("rules", rule);
+    }
+
+    /**
+     * Re-evaluates rule resolution and saves the rule if it becomes valid.
+     * This is called when rules are refreshed, allowing rules that were marked as invalid
+     * to be re-evaluated when new types are deployed.
+     *
+     * @param rule the rule to re-evaluate
+     * @return true if the rule was resolved (or was already valid), false if still invalid
+     */
+    private boolean reEvaluateRuleResolution(Rule rule) {
+        if (rule == null) {
+            return false;
+        }
+
+        // Check if rule was previously invalid or had missing plugins
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService == null) {
+            return false;
+        }
+        boolean wasInvalid = typeResolutionService.isInvalid("rules", rule.getItemId());
+        boolean hadMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
+
+        // Ensure rule is resolved (idempotent - only resolves if needed)
+        boolean resolved = ensureRuleResolved(rule);
+
+        // Only log and save if rule transitioned from invalid to valid
+        if (resolved && (wasInvalid || hadMissingPlugins)) {
+            // Rule is now resolved - save it to update the missingPlugins flag in persistence
+            try {
+                // Ensure we're in the correct tenant context before saving
+                String ruleTenantId = rule.getTenantId();
+                String currentTenantId = contextManager.getCurrentContext().getTenantId();
+
+                if (ruleTenantId != null && !ruleTenantId.equals(currentTenantId)) {
+                    // Need to switch tenant context
+                    contextManager.executeAsTenant(ruleTenantId, () -> {
+                        saveItem(rule, Rule::getItemId, Rule.ITEM_TYPE);
+                        return null;
+                    });
+                } else {
+                    // Already in correct tenant context (or rule has no tenant)
+                    saveItem(rule, Rule::getItemId, Rule.ITEM_TYPE);
+                }
+
+                String ruleName = getRuleName(rule);
+                String ruleId = rule.getItemId();
+                LOGGER.debug("Rule '{}' (id: {}) is now valid - previously missing condition/action types have been deployed",
+                    ruleName, ruleId);
+            } catch (Exception e) {
+                LOGGER.warn("Failed to save rule {} after successful re-resolution", rule.getItemId(), e);
+            }
+        }
+
+        return resolved;
+    }
+
+    private void updateRulesByEventType(Map<String, Set<Rule>> rulesByEventType, Rule rule) {
+        // Ensure rule is resolved for indexing purposes (always attempts resolution to detect unresolved types)
+        // This is safe for indexing - it doesn't affect validation behavior in setRule()
+        ensureRuleResolvedForIndexing(rule);
+
+        // Check if rule should be excluded from event type indexing (disabled, invalid, or missing plugins)
+        if (shouldExcludeRuleFromEventTypeIndex(rule)) {
+            removeRuleFromEventTypeIndex(rulesByEventType, rule);
+            return;
+        }
+
+        // Resolve event types and add rule to index
+        // Note: resolveEventTypesWithWarnings will check for unresolved types and return empty set
+        // if found, which will effectively exclude the rule from indexing
+        Set<String> eventTypeIds = resolveEventTypesWithWarnings(rule);
+
+        // If eventTypeIds is empty (due to unresolved types), exclude the rule
+        if (eventTypeIds.isEmpty()) {
+            removeRuleFromEventTypeIndex(rulesByEventType, rule);
+            return;
+        }
+
+        addRuleToEventTypeIndex(rulesByEventType, rule, eventTypeIds);
     }
 
     private Map<String, Set<Rule>> getRulesByEventTypeForTenant(String tenantId) {
@@ -794,42 +1180,50 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                     if (persistenceService.testMatch(evalCondition, source)) {
                         trackedConditions.add(trackedCondition);
                     }
-                } else if (
-                        trackedCondition.getConditionType() != null &&
-                                trackedCondition.getConditionType().getParameters() != null && !trackedCondition.getConditionType()
-                                .getParameters().isEmpty()
-                ) {
-                    // lookup for track parameters
-                    Map<String, Object> trackedParameters = new HashMap<>();
-                    trackedCondition.getConditionType().getParameters().forEach(parameter -> {
-                        try {
-                            if (TRACKED_PARAMETER.equals(parameter.getId())) {
-                                Arrays.stream(StringUtils.split(parameter.getDefaultValue().toString(), ",")).forEach(trackedParameter -> {
-                                    String[] param = StringUtils.split(StringUtils.trim(trackedParameter), ":");
-                                    trackedParameters.put(StringUtils.trim(param[1]), trackedCondition.getParameter(StringUtils.trim(param[0])));
-                                });
-                            }
-                        } catch (Exception e) {
-                            LOGGER.warn("Unable to parse tracked parameter from {} for condition type {}", parameter, trackedCondition.getConditionType().getItemId());
+                } else {
+                    // Resolve condition type if needed before accessing it
+                    if (trackedCondition.getConditionType() == null) {
+                        TypeResolutionService typeResolutionService = getTypeResolutionService();
+                        if (typeResolutionService != null) {
+                            typeResolutionService.resolveConditionType(trackedCondition, "tracked conditions");
                         }
-                    });
-                    if (!trackedParameters.isEmpty()) {
-                        evalCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-                        evalCondition.setParameter("operator", "and");
-                        ArrayList<Condition> conditions = new ArrayList<>();
-                        trackedParameters.forEach((key, value) -> {
-                            Condition propCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-                            propCondition.setParameter("comparisonOperator", "equals");
-                            propCondition.setParameter("propertyName", key);
-                            propCondition.setParameter("propertyValue", value);
-                            conditions.add(propCondition);
+                    }
+                    if (trackedCondition.getConditionType() != null &&
+                            trackedCondition.getConditionType().getParameters() != null && !trackedCondition.getConditionType()
+                            .getParameters().isEmpty()
+                    ) {
+                        // lookup for track parameters
+                        Map<String, Object> trackedParameters = new HashMap<>();
+                        trackedCondition.getConditionType().getParameters().forEach(parameter -> {
+                            try {
+                                if (TRACKED_PARAMETER.equals(parameter.getId())) {
+                                    Arrays.stream(StringUtils.split(parameter.getDefaultValue().toString(), ",")).forEach(trackedParameter -> {
+                                        String[] param = StringUtils.split(StringUtils.trim(trackedParameter), ":");
+                                        trackedParameters.put(StringUtils.trim(param[1]), trackedCondition.getParameter(StringUtils.trim(param[0])));
+                                    });
+                                }
+                            } catch (Exception e) {
+                                LOGGER.warn("Unable to parse tracked parameter from {} for condition type {}", parameter, trackedCondition.getConditionType().getItemId());
+                            }
                         });
-                        evalCondition.setParameter("subConditions", conditions);
-                        if (persistenceService.testMatch(evalCondition, source)) {
+                        if (!trackedParameters.isEmpty()) {
+                            evalCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+                            evalCondition.setParameter("operator", "and");
+                            ArrayList<Condition> conditions = new ArrayList<>();
+                            trackedParameters.forEach((key, value) -> {
+                                Condition propCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+                                propCondition.setParameter("comparisonOperator", "equals");
+                                propCondition.setParameter("propertyName", key);
+                                propCondition.setParameter("propertyValue", value);
+                                conditions.add(propCondition);
+                            });
+                            evalCondition.setParameter("subConditions", conditions);
+                            if (persistenceService.testMatch(evalCondition, source)) {
+                                trackedConditions.add(trackedCondition);
+                            }
+                        } else {
                             trackedConditions.add(trackedCondition);
                         }
-                    } else {
-                        trackedConditions.add(trackedCondition);
                     }
                 }
             }
@@ -838,16 +1232,71 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
     }
 
     /**
-     * Resolve a rule's types and track its validity status using the ResolverService.
-     * 
-     * @param rule the rule to resolve
+     * Handles OSGi Event Admin events for condition/action type changes.
+     * This method is called when condition types or action types are added, updated, or removed.
+     * It triggers re-evaluation of all invalid rules to check if they can now be resolved.
+     *
+     * @param event the OSGi event containing type change information
      */
-    private void resolveRule(Rule rule) {
-        if (rule == null || resolverService == null) {
+    @Override
+    public void handleEvent(org.osgi.service.event.Event event) {
+        String topic = event.getTopic();
+        String typeId = (String) event.getProperty("typeId");
+        String tenantId = (String) event.getProperty("tenantId");
+
+        if (typeId == null) {
+            LOGGER.warn("Received type change event without typeId: {}", topic);
             return;
         }
-        
-        // Use ResolverService convenience method that automatically tracks invalid objects and handles missingPlugins
-        resolverService.resolveRule("rules", rule);
+
+        LOGGER.debug("Received type change event: {} for type {} (tenant: {})", topic, typeId, tenantId);
+
+        // Re-evaluate all invalid rules across all tenants
+        // This works in cluster environments because events are published when types are saved to persistence
+        contextManager.executeAsSystem(() -> {
+            try {
+                // Get all tenants
+                Set<String> tenants = new HashSet<>();
+                for (Tenant tenant : tenantService.getAllTenants()) {
+                    tenants.add(tenant.getItemId());
+                }
+                tenants.add(SYSTEM_TENANT);
+
+                for (String tId : tenants) {
+                    contextManager.executeAsTenant(tId, () -> {
+                        // Get all rules for this tenant
+                        List<Rule> rules = persistenceService.query("tenantId", tId, "priority", Rule.class);
+
+                        for (Rule rule : rules) {
+                            // Only re-evaluate rules that were previously invalid or had missing plugins
+                            TypeResolutionService typeResolutionService = getTypeResolutionService();
+                            if (typeResolutionService == null) {
+                                continue;
+                            }
+                            boolean wasInvalid = typeResolutionService.isInvalid("rules", rule.getItemId());
+                            boolean hadMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
+
+                            if (wasInvalid || hadMissingPlugins) {
+                                // Re-evaluate this rule
+                                boolean resolved = reEvaluateRuleResolution(rule);
+
+                                if (resolved) {
+                                    // Rule is now resolved - update cache and event type index
+                                    cacheService.put(Rule.ITEM_TYPE, rule.getItemId(), tId, rule);
+                                    Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tId);
+                                    updateRulesByEventType(tenantEventTypeRules, rule);
+                                }
+                            }
+                        }
+                        return null;
+                    });
+                }
+
+                LOGGER.debug("Re-evaluated rules after type change: {} (type: {})", typeId, topic);
+            } catch (Exception e) {
+                LOGGER.error("Error re-evaluating rules after type change event: {}", topic, e);
+            }
+            return null;
+        });
     }
 }

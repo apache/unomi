@@ -28,11 +28,12 @@ import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.*;
-import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
-import org.apache.unomi.api.services.ResolverService;
+import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -45,8 +46,6 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.unomi.api.tasks.ScheduledTask;
-import org.apache.unomi.api.tasks.TaskExecutor;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -71,9 +70,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     private EventService eventService;
     private RulesService rulesService;
     private DefinitionsService definitionsService;
-    private ConditionValidationService conditionValidationService;
     private TracerService tracerService;
-    private ResolverService resolverService;
 
     private long taskExecutionPeriod = 1;
     private int segmentUpdateBatchSize = 1000;
@@ -103,16 +100,16 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         this.definitionsService = definitionsService;
     }
 
-    public void setConditionValidationService(ConditionValidationService conditionValidationService) {
-        this.conditionValidationService = conditionValidationService;
-    }
-
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
     }
 
-    public void setResolverService(ResolverService resolverService) {
-        this.resolverService = resolverService;
+    /**
+     * Helper method to get TypeResolutionService from DefinitionsService.
+     * Returns null if DefinitionsService is not available or doesn't have TypeResolutionService.
+     */
+    private TypeResolutionService getTypeResolutionService() {
+        return definitionsService != null ? definitionsService.getTypeResolutionService() : null;
     }
 
     public void setSegmentUpdateBatchSize(int segmentUpdateBatchSize) {
@@ -188,9 +185,6 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             .withBundleItemProcessor((bundleContext, segment) -> {
                 setSegmentDefinition(segment);
             })
-            .withPostProcessor(segment -> {
-                resolveSegment(segment);
-            })
             .build());
 
         // Post-processor for Scoring to resolve condition types in scoring elements
@@ -198,9 +192,6 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             .withIdExtractor(s -> s.getMetadata().getId())
             .withBundleItemProcessor((bundleContext, scoring) -> {
                 setScoringDefinition(scoring);
-            })
-            .withPostProcessor(scoring -> {
-                resolveScoring(scoring);
             })
             .build());
         return configs;
@@ -383,9 +374,6 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     public Segment getSegmentDefinition(String segmentId) {
         String currentTenant = contextManager.getCurrentContext().getTenantId();
         Segment segment = cacheService.getWithInheritance(segmentId, currentTenant, Segment.class);
-        if (segment != null && segment.getMetadata().isEnabled()) {
-            resolveSegment(segment);
-        }
         return segment;
     }
 
@@ -412,15 +400,15 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             }
 
             if (segment.getMetadata().isEnabled()) {
-                // Use ResolverService convenience method that automatically tracks invalid objects and handles missingPlugins
-                resolverService.resolveCondition("segments", segment, segment.getCondition(), "segment " + segment.getItemId());
-                if (!persistenceService.isValidCondition(segment.getCondition(), new Profile(VALIDATION_PROFILE_ID))) {
-                    resolverService.markInvalid("segments", segment.getItemId(), "Invalid condition validation");
-                    throw new BadSegmentConditionException();
+                TypeResolutionService typeResolutionService = getTypeResolutionService();
+                if (typeResolutionService != null) {
+                    typeResolutionService.resolveCondition("segments", segment, segment.getCondition(), "segment " + segment.getItemId());
                 }
             }
 
-            List<ValidationError> validationErrors = conditionValidationService.validate(segment.getCondition());
+            // Validate condition (skips parameters with references/scripts)
+            // Validation service will auto-resolve types if needed
+            List<ValidationError> validationErrors = definitionsService.getConditionValidationService().validate(segment.getCondition());
 
             // Add validation info to tracer
             if (tracerService != null) {
@@ -806,11 +794,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     @Override
     public Scoring getScoringDefinition(String scoringId) {
         String currentTenant = contextManager.getCurrentContext().getTenantId();
-        Scoring scoring = cacheService.getWithInheritance(scoringId, currentTenant, Scoring.class);
-        if (scoring != null && scoring.getMetadata().isEnabled()) {
-            resolveScoring(scoring);
-        }
-        return scoring;
+        return cacheService.getWithInheritance(scoringId, currentTenant, Scoring.class);
     }
 
     @Override
@@ -1044,6 +1028,16 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     }
 
     private void getAutoGeneratedRules(Metadata metadata, Condition condition, Condition parentCondition, List<Rule> rules) {
+        // Resolve condition type if needed before accessing it
+        if (condition.getConditionType() == null) {
+            TypeResolutionService typeResolutionService = getTypeResolutionService();
+            if (typeResolutionService != null) {
+                typeResolutionService.resolveConditionType(condition, "auto-generated rules");
+            }
+        }
+        if (condition.getConditionType() == null) {
+            return; // Cannot proceed without condition type
+        }
         Set<String> tags = condition.getConditionType().getMetadata().getSystemTags();
         if (tags.contains("eventCondition") && !tags.contains("profileCondition")) {
             String key = getGeneratedPropertyKey(condition, parentCondition);
@@ -1225,6 +1219,11 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
     @Override
     public void recalculatePastEventConditions() {
+        recalculatePastEventConditions(true);
+    }
+
+    @Override
+    public void recalculatePastEventConditions(boolean sendProfileUpdateEvents) {
         Set<String> segmentOrScoringIdsToReevaluate = new HashSet<>();
         // reevaluate auto generated rules used to store the event occurrence count on the profile
         for (Rule rule : rulesService.getAllRules()) {
@@ -1276,7 +1275,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 Segment linkedSegment = getSegmentDefinition(linkedItem);
                 if (linkedSegment != null) {
                     LOGGER.info("Start segment recalculation for segment: {} - {}", linkedSegment.getItemId(), linkedSegment.getMetadata().getName());
-                    updateExistingProfilesForSegment(linkedSegment);
+                    updateExistingProfilesForSegment(linkedSegment, sendProfileUpdateEvents);
                     continue;
                 }
 
@@ -1344,6 +1343,10 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     }
 
     private void updateExistingProfilesForSegment(Segment segment) {
+        updateExistingProfilesForSegment(segment, sendProfileUpdateEventForSegmentUpdate);
+    }
+
+    private void updateExistingProfilesForSegment(Segment segment, boolean sendProfileUpdateEvents) {
         long updateProfilesForSegmentStartTime = System.currentTimeMillis();
         long updatedProfileCount = 0;
         final String segmentId = segment.getItemId();
@@ -1377,10 +1380,10 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             profilesToRemoveSubConditions.add(notNewSegmentCondition);
             profilesToRemoveCondition.setParameter("subConditions", profilesToRemoveSubConditions);
 
-            updatedProfileCount += updateProfilesSegment(profilesToAddCondition, segmentId, true, sendProfileUpdateEventForSegmentUpdate);
-            updatedProfileCount += updateProfilesSegment(profilesToRemoveCondition, segmentId, false, sendProfileUpdateEventForSegmentUpdate);
+            updatedProfileCount += updateProfilesSegment(profilesToAddCondition, segmentId, true, sendProfileUpdateEvents);
+            updatedProfileCount += updateProfilesSegment(profilesToRemoveCondition, segmentId, false, sendProfileUpdateEvents);
         } else {
-            updatedProfileCount += updateProfilesSegment(segmentCondition, segmentId, false, sendProfileUpdateEventForSegmentUpdate);
+            updatedProfileCount += updateProfilesSegment(segmentCondition, segmentId, false, sendProfileUpdateEvents);
         }
         LOGGER.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - updateProfilesForSegmentStartTime);
     }
@@ -1623,7 +1626,9 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     }
 
     protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
-        definitionsService.resolveConditionType(query.getCondition());
+        if (query.getCondition() != null) {
+            definitionsService.getConditionValidationService().validate(query.getCondition());
+        }
         String currentTenantId = contextManager.getCurrentContext().getTenantId();
         if (currentTenantId == null) {
             LOGGER.error("No current tenant id available, unable retrieve segments");
@@ -1703,38 +1708,31 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         return new PartialList<Metadata>(finalDetails, query.getOffset(), query.getLimit(), totalSize, PartialList.Relation.EQUAL);
     }
 
-    /**
-     * Resolve a segment's types and track its validity status using the ResolverService.
-     * 
-     * @param segment the segment to resolve
-     */
-    private void resolveSegment(Segment segment) {
-        if (segment == null || resolverService == null) {
-            return;
-        }
-        
-        resolverService.resolveCondition("segments", segment, segment.getCondition(), "segment " + segment.getMetadata().getId());
-    }
 
     /**
-     * Resolve a scoring's types and track its validity status using the ResolverService.
+     * Resolve a scoring's types and track its validity status using the TypeResolutionService.
      * Automatically sets/clears the missingPlugins flag based on resolution success.
-     * 
+     *
      * @param scoring the scoring to resolve
      */
     private void resolveScoring(Scoring scoring) {
-        if (scoring == null || resolverService == null) {
+        if (scoring == null) {
             return;
         }
-        
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService == null) {
+            return;
+        }
+
         String scoringId = scoring.getMetadata().getId();
         boolean allResolved = true;
         List<String> reasons = new ArrayList<>();
-        
+
         if (scoring.getElements() != null) {
             for (ScoringElement element : scoring.getElements()) {
                 if (element.getCondition() != null) {
-                    boolean elementValid = resolverService.resolveConditionType(element.getCondition(),
+                    // Use partial resolution - resolves types but skips parameter resolution for references/scripts
+                    boolean elementValid = typeResolutionService != null && typeResolutionService.resolveConditionType(element.getCondition(),
                         "scoring element for scoring " + scoringId);
                     allResolved = allResolved && elementValid;
                     if (!elementValid) {
@@ -1744,17 +1742,19 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 }
             }
         }
-        
+
         // Set/clear missingPlugins based on resolution success
         if (scoring.getMetadata() != null) {
             scoring.getMetadata().setMissingPlugins(!allResolved);
         }
-        
+
         // Track invalid objects
-        if (!allResolved) {
-            resolverService.markInvalid("scoring", scoringId, String.join("; ", reasons));
-        } else {
-            resolverService.markValid("scoring", scoringId);
+        if (typeResolutionService != null) {
+            if (!allResolved) {
+                typeResolutionService.markInvalid("scoring", scoringId, String.join("; ", reasons));
+            } else {
+                typeResolutionService.markValid("scoring", scoringId);
+            }
         }
     }
 }

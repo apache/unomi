@@ -26,6 +26,7 @@ import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.InvalidObjectInfo;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -33,16 +34,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-public class ResolverServiceImplTest {
+public class TypeResolutionServiceImplTest {
 
-    private ResolverServiceImpl resolverService;
+    private TypeResolutionServiceImpl typeResolutionService;
 
     @Mock
     private DefinitionsService definitionsService;
@@ -52,8 +56,7 @@ public class ResolverServiceImplTest {
 
     @BeforeEach
     public void setUp() {
-        resolverService = new ResolverServiceImpl();
-        resolverService.setDefinitionsService(definitionsService);
+        typeResolutionService = new TypeResolutionServiceImpl(definitionsService);
 
         // Create test condition type
         testConditionType = new ConditionType(new Metadata());
@@ -74,7 +77,7 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getConditionType("testConditionType")).thenReturn(testConditionType);
 
-        boolean resolved = resolverService.resolveConditionType(condition, "test context");
+        boolean resolved = typeResolutionService.resolveConditionType(condition, "test context");
 
         assertTrue(resolved, "Condition type should resolve successfully when definition exists");
         assertNotNull(condition.getConditionType(), "Condition should have its type set after resolution");
@@ -88,7 +91,7 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getConditionType("nonExistentType")).thenReturn(null);
 
-        boolean resolved = resolverService.resolveConditionType(condition, "test context");
+        boolean resolved = typeResolutionService.resolveConditionType(condition, "test context");
 
         assertFalse(resolved, "Condition type should not resolve when definition doesn't exist");
         assertNull(condition.getConditionType(), "Condition should not have its type set when resolution fails");
@@ -96,7 +99,7 @@ public class ResolverServiceImplTest {
 
     @Test
     public void testResolveConditionType_NullCondition() {
-        boolean resolved = resolverService.resolveConditionType(null, "test context");
+        boolean resolved = typeResolutionService.resolveConditionType(null, "test context");
 
         assertFalse(resolved, "Null condition should return false");
     }
@@ -119,7 +122,7 @@ public class ResolverServiceImplTest {
         when(definitionsService.getConditionType("parentConditionType")).thenReturn(parentType);
         when(definitionsService.getConditionType("childConditionType")).thenReturn(childType);
 
-        boolean resolved = resolverService.resolveConditionType(parentCondition, "test context");
+        boolean resolved = typeResolutionService.resolveConditionType(parentCondition, "test context");
 
         assertTrue(resolved, "Parent condition with nested child should resolve successfully");
         assertNotNull(parentCondition.getConditionType(), "Parent condition should have its type set");
@@ -133,7 +136,7 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
 
-        boolean resolved = resolverService.resolveActionType(action);
+        boolean resolved = typeResolutionService.resolveActionType(action);
 
         assertTrue(resolved, "Action type should resolve successfully when definition exists");
         assertNotNull(action.getActionType(), "Action should have its type set after resolution");
@@ -147,7 +150,7 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getActionType("nonExistentActionType")).thenReturn(null);
 
-        boolean resolved = resolverService.resolveActionType(action);
+        boolean resolved = typeResolutionService.resolveActionType(action);
 
         assertFalse(resolved, "Action type should not resolve when definition doesn't exist");
         assertNull(action.getActionType(), "Action should not have its type set when resolution fails");
@@ -168,7 +171,7 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
 
-        boolean resolved = resolverService.resolveActionTypes(rule, false);
+        boolean resolved = typeResolutionService.resolveActionTypes(rule, false);
 
         assertTrue(resolved, "All actions should resolve successfully");
         assertNotNull(action1.getActionType(), "First action should have its type set");
@@ -191,7 +194,7 @@ public class ResolverServiceImplTest {
         when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
         when(definitionsService.getActionType("nonExistentActionType")).thenReturn(null);
 
-        boolean resolved = resolverService.resolveActionTypes(rule, false);
+        boolean resolved = typeResolutionService.resolveActionTypes(rule, false);
 
         assertFalse(resolved, "Should return false when any action fails to resolve");
         assertNotNull(action1.getActionType(), "First action should have its type set");
@@ -210,11 +213,11 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getConditionType("testConditionType")).thenReturn(testConditionType);
 
-        boolean resolved = resolverService.resolveCondition("segments", segment, condition, "test context");
+        boolean resolved = typeResolutionService.resolveCondition("segments", segment, condition, "test context");
 
         assertTrue(resolved, "Condition should resolve successfully");
         assertFalse(segment.getMetadata().isMissingPlugins(), "missingPlugins should be false when resolution succeeds");
-        assertFalse(resolverService.isInvalid("segments", "testSegment"), "Segment should not be marked as invalid");
+        assertFalse(typeResolutionService.isInvalid("segments", "testSegment"), "Segment should not be marked as invalid");
     }
 
     @Test
@@ -229,12 +232,12 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getConditionType("nonExistentType")).thenReturn(null);
 
-        boolean resolved = resolverService.resolveCondition("segments", segment, condition, "test context");
+        boolean resolved = typeResolutionService.resolveCondition("segments", segment, condition, "test context");
 
         assertFalse(resolved, "Condition should not resolve when type doesn't exist");
         assertTrue(segment.getMetadata().isMissingPlugins(), "missingPlugins should be true when resolution fails");
-        assertTrue(resolverService.isInvalid("segments", "testSegment"), "Segment should be marked as invalid");
-        assertNotNull(resolverService.getInvalidationReason("segments", "testSegment"), "Should have invalidation reason");
+        assertTrue(typeResolutionService.isInvalid("segments", "testSegment"), "Segment should be marked as invalid");
+        assertNotNull(typeResolutionService.getInvalidationReason("segments", "testSegment"), "Should have invalidation reason");
     }
 
     @Test
@@ -244,7 +247,7 @@ public class ResolverServiceImplTest {
         segment.setMetadata(new Metadata("testSegment"));
         segment.getMetadata().setMissingPlugins(true); // Set to true initially
 
-        boolean resolved = resolverService.resolveCondition("segments", segment, null, "test context");
+        boolean resolved = typeResolutionService.resolveCondition("segments", segment, null, "test context");
 
         assertTrue(resolved, "Null condition should be considered valid");
         assertFalse(segment.getMetadata().isMissingPlugins(), "missingPlugins should be cleared for null condition");
@@ -267,11 +270,11 @@ public class ResolverServiceImplTest {
         when(definitionsService.getConditionType("testConditionType")).thenReturn(testConditionType);
         when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
 
-        boolean resolved = resolverService.resolveRule("rules", rule);
+        boolean resolved = typeResolutionService.resolveRule("rules", rule);
 
         assertTrue(resolved, "Rule should resolve successfully when both condition and actions resolve");
         assertFalse(rule.getMetadata().isMissingPlugins(), "missingPlugins should be false when all types resolve");
-        assertFalse(resolverService.isInvalid("rules", "testRule"), "Rule should not be marked as invalid");
+        assertFalse(typeResolutionService.isInvalid("rules", "testRule"), "Rule should not be marked as invalid");
     }
 
     @Test
@@ -291,11 +294,11 @@ public class ResolverServiceImplTest {
         when(definitionsService.getConditionType("nonExistentConditionType")).thenReturn(null);
         when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
 
-        boolean resolved = resolverService.resolveRule("rules", rule);
+        boolean resolved = typeResolutionService.resolveRule("rules", rule);
 
         assertFalse(resolved, "Rule should not resolve when condition fails");
         assertTrue(rule.getMetadata().isMissingPlugins(), "missingPlugins should be true when condition fails");
-        assertTrue(resolverService.isInvalid("rules", "testRule"), "Rule should be marked as invalid");
+        assertTrue(typeResolutionService.isInvalid("rules", "testRule"), "Rule should be marked as invalid");
     }
 
     @Test
@@ -315,11 +318,11 @@ public class ResolverServiceImplTest {
         when(definitionsService.getConditionType("testConditionType")).thenReturn(testConditionType);
         when(definitionsService.getActionType("nonExistentActionType")).thenReturn(null);
 
-        boolean resolved = resolverService.resolveRule("rules", rule);
+        boolean resolved = typeResolutionService.resolveRule("rules", rule);
 
         assertFalse(resolved, "Rule should not resolve when actions fail");
         assertTrue(rule.getMetadata().isMissingPlugins(), "missingPlugins should be true when actions fail");
-        assertTrue(resolverService.isInvalid("rules", "testRule"), "Rule should be marked as invalid");
+        assertTrue(typeResolutionService.isInvalid("rules", "testRule"), "Rule should be marked as invalid");
     }
 
     @Test
@@ -335,7 +338,7 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
 
-        boolean resolved = resolverService.resolveRule("rules", rule);
+        boolean resolved = typeResolutionService.resolveRule("rules", rule);
 
         assertTrue(resolved, "Rule should resolve when condition is null but actions resolve");
         assertFalse(rule.getMetadata().isMissingPlugins(), "missingPlugins should be false");
@@ -353,7 +356,7 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
 
-        boolean resolved = resolverService.resolveActions("rules", rule);
+        boolean resolved = typeResolutionService.resolveActions("rules", rule);
 
         assertTrue(resolved, "Actions should resolve successfully");
         assertNotNull(action.getActionType(), "Action should have its type set");
@@ -362,24 +365,24 @@ public class ResolverServiceImplTest {
 
     @Test
     public void testMarkInvalid_AndMarkValid() {
-        resolverService.markInvalid("rules", "rule1", "Test reason");
+        typeResolutionService.markInvalid("rules", "rule1", "Test reason");
 
-        assertTrue(resolverService.isInvalid("rules", "rule1"), "Rule should be marked as invalid");
-        assertEquals("Test reason", resolverService.getInvalidationReason("rules", "rule1"), "Should return the invalidation reason");
+        assertTrue(typeResolutionService.isInvalid("rules", "rule1"), "Rule should be marked as invalid");
+        assertEquals("Test reason", typeResolutionService.getInvalidationReason("rules", "rule1"), "Should return the invalidation reason");
 
-        resolverService.markValid("rules", "rule1");
+        typeResolutionService.markValid("rules", "rule1");
 
-        assertFalse(resolverService.isInvalid("rules", "rule1"), "Rule should be marked as valid after markValid");
-        assertNull(resolverService.getInvalidationReason("rules", "rule1"), "Should return null for valid objects");
+        assertFalse(typeResolutionService.isInvalid("rules", "rule1"), "Rule should be marked as valid after markValid");
+        assertNull(typeResolutionService.getInvalidationReason("rules", "rule1"), "Should return null for valid objects");
     }
 
     @Test
     public void testGetAllInvalidObjects() {
-        resolverService.markInvalid("rules", "rule1", "Reason 1");
-        resolverService.markInvalid("rules", "rule2", "Reason 2");
-        resolverService.markInvalid("segments", "segment1", "Reason 3");
+        typeResolutionService.markInvalid("rules", "rule1", "Reason 1");
+        typeResolutionService.markInvalid("rules", "rule2", "Reason 2");
+        typeResolutionService.markInvalid("segments", "segment1", "Reason 3");
 
-        Map<String, Map<String, InvalidObjectInfo>> allInvalid = resolverService.getAllInvalidObjects();
+        Map<String, Map<String, InvalidObjectInfo>> allInvalid = typeResolutionService.getAllInvalidObjects();
 
         assertEquals(2, allInvalid.size(), "Should have two object types");
         assertTrue(allInvalid.containsKey("rules"), "Should contain rules");
@@ -390,11 +393,11 @@ public class ResolverServiceImplTest {
 
     @Test
     public void testGetInvalidObjects_ByType() {
-        resolverService.markInvalid("rules", "rule1", "Reason 1");
-        resolverService.markInvalid("rules", "rule2", "Reason 2");
-        resolverService.markInvalid("segments", "segment1", "Reason 3");
+        typeResolutionService.markInvalid("rules", "rule1", "Reason 1");
+        typeResolutionService.markInvalid("rules", "rule2", "Reason 2");
+        typeResolutionService.markInvalid("segments", "segment1", "Reason 3");
 
-        Map<String, InvalidObjectInfo> invalidRules = resolverService.getInvalidObjects("rules");
+        Map<String, InvalidObjectInfo> invalidRules = typeResolutionService.getInvalidObjects("rules");
 
         assertEquals(2, invalidRules.size(), "Should have 2 invalid rules");
         assertTrue(invalidRules.containsKey("rule1"), "Should contain rule1");
@@ -403,21 +406,21 @@ public class ResolverServiceImplTest {
 
     @Test
     public void testGetTotalInvalidObjectCount() {
-        resolverService.markInvalid("rules", "rule1", "Reason 1");
-        resolverService.markInvalid("rules", "rule2", "Reason 2");
-        resolverService.markInvalid("segments", "segment1", "Reason 3");
+        typeResolutionService.markInvalid("rules", "rule1", "Reason 1");
+        typeResolutionService.markInvalid("rules", "rule2", "Reason 2");
+        typeResolutionService.markInvalid("segments", "segment1", "Reason 3");
 
-        int total = resolverService.getTotalInvalidObjectCount();
+        int total = typeResolutionService.getTotalInvalidObjectCount();
 
         assertEquals(3, total, "Should have 3 total invalid objects");
     }
 
     @Test
     public void testGetInvalidObjectIds() {
-        resolverService.markInvalid("rules", "rule1", "Reason 1");
-        resolverService.markInvalid("rules", "rule2", "Reason 2");
+        typeResolutionService.markInvalid("rules", "rule1", "Reason 1");
+        typeResolutionService.markInvalid("rules", "rule2", "Reason 2");
 
-        Set<String> invalidIds = resolverService.getInvalidObjectIds("rules");
+        Set<String> invalidIds = typeResolutionService.getInvalidObjectIds("rules");
 
         assertEquals(2, invalidIds.size(), "Should have 2 invalid rule IDs");
         assertTrue(invalidIds.contains("rule1"), "Should contain rule1");
@@ -437,7 +440,7 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getConditionType("testConditionType")).thenReturn(testConditionType);
 
-        resolverService.resolveCondition("segments", segment, condition, "test context");
+        typeResolutionService.resolveCondition("segments", segment, condition, "test context");
 
         assertFalse(segment.getMetadata().isMissingPlugins(), "missingPlugins should be cleared when condition resolves successfully");
     }
@@ -460,7 +463,7 @@ public class ResolverServiceImplTest {
         when(definitionsService.getConditionType("testConditionType")).thenReturn(testConditionType);
         when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
 
-        resolverService.resolveRule("rules", rule);
+        typeResolutionService.resolveRule("rules", rule);
 
         assertFalse(rule.getMetadata().isMissingPlugins(), "missingPlugins should be cleared when both condition and actions resolve");
     }
@@ -481,7 +484,7 @@ public class ResolverServiceImplTest {
         when(definitionsService.getConditionType("testConditionType")).thenReturn(testConditionType);
         when(definitionsService.getConditionType("parentConditionType")).thenReturn(parentType);
 
-        boolean resolved = resolverService.resolveConditionType(condition, "test context");
+        boolean resolved = typeResolutionService.resolveConditionType(condition, "test context");
 
         assertTrue(resolved, "Condition with parent should resolve successfully");
         assertNotNull(condition.getConditionType(), "Condition should have its type set");
@@ -501,7 +504,7 @@ public class ResolverServiceImplTest {
         when(definitionsService.getConditionType("testConditionType")).thenReturn(testConditionType);
         when(definitionsService.getConditionType("nonExistentParentType")).thenReturn(null);
 
-        boolean resolved = resolverService.resolveConditionType(condition, "test context");
+        boolean resolved = typeResolutionService.resolveConditionType(condition, "test context");
 
         assertFalse(resolved, "Condition should not resolve when parent condition fails");
         assertNull(condition.getConditionType(), "Condition should not have its type set when parent fails");
@@ -511,21 +514,21 @@ public class ResolverServiceImplTest {
     public void testResolveValueType() {
         // This test would require PropertyType and ValueType classes
         // For now, we'll just verify the method exists and doesn't throw
-        assertDoesNotThrow(() -> resolverService.resolveValueType(null), "resolveValueType should handle null gracefully");
+        assertDoesNotThrow(() -> typeResolutionService.resolveValueType(null), "resolveValueType should handle null gracefully");
     }
 
     @Test
     public void testIsInvalid_WithNullParameters() {
-        assertFalse(resolverService.isInvalid(null, "rule1"), "Should return false for null objectType");
-        assertFalse(resolverService.isInvalid("rules", null), "Should return false for null objectId");
-        assertFalse(resolverService.isInvalid(null, null), "Should return false for both null");
+        assertFalse(typeResolutionService.isInvalid(null, "rule1"), "Should return false for null objectType");
+        assertFalse(typeResolutionService.isInvalid("rules", null), "Should return false for null objectId");
+        assertFalse(typeResolutionService.isInvalid(null, null), "Should return false for both null");
     }
 
     @Test
     public void testMarkInvalid_WithNullParameters() {
-        assertDoesNotThrow(() -> resolverService.markInvalid(null, "rule1", "reason"), "Should handle null objectType");
-        assertDoesNotThrow(() -> resolverService.markInvalid("rules", null, "reason"), "Should handle null objectId");
-        assertDoesNotThrow(() -> resolverService.markInvalid("rules", "rule1", null), "Should handle null reason");
+        assertDoesNotThrow(() -> typeResolutionService.markInvalid(null, "rule1", "reason"), "Should handle null objectType");
+        assertDoesNotThrow(() -> typeResolutionService.markInvalid("rules", null, "reason"), "Should handle null objectId");
+        assertDoesNotThrow(() -> typeResolutionService.markInvalid("rules", "rule1", null), "Should handle null reason");
     }
 
     @Test
@@ -539,14 +542,14 @@ public class ResolverServiceImplTest {
         segment.setCondition(condition);
 
         // First, mark as invalid
-        resolverService.markInvalid("segments", "testSegment", "Previous reason");
-        assertTrue(resolverService.isInvalid("segments", "testSegment"), "Should be invalid initially");
+        typeResolutionService.markInvalid("segments", "testSegment", "Previous reason");
+        assertTrue(typeResolutionService.isInvalid("segments", "testSegment"), "Should be invalid initially");
 
         // Then resolve successfully
         when(definitionsService.getConditionType("testConditionType")).thenReturn(testConditionType);
-        resolverService.resolveCondition("segments", segment, condition, "test context");
+        typeResolutionService.resolveCondition("segments", segment, condition, "test context");
 
-        assertFalse(resolverService.isInvalid("segments", "testSegment"), "Should be marked as valid after successful resolution");
+        assertFalse(typeResolutionService.isInvalid("segments", "testSegment"), "Should be marked as valid after successful resolution");
     }
 
     // Tests for enhanced InvalidObjectInfo functionality
@@ -563,9 +566,9 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getConditionType("missingCondType")).thenReturn(null);
 
-        resolverService.resolveCondition("segments", segment, condition, "segment testSegment");
+        typeResolutionService.resolveCondition("segments", segment, condition, "segment testSegment");
 
-        Map<String, InvalidObjectInfo> invalidSegments = resolverService.getInvalidObjects("segments");
+        Map<String, InvalidObjectInfo> invalidSegments = typeResolutionService.getInvalidObjects("segments");
         InvalidObjectInfo info = invalidSegments.get("testSegment");
 
         assertNotNull(info, "InvalidObjectInfo should be created");
@@ -597,9 +600,9 @@ public class ResolverServiceImplTest {
         when(definitionsService.getConditionType("missingCond2")).thenReturn(null);
 
         // First encounter
-        resolverService.resolveCondition("segments", segment, condition1, "context1");
+        typeResolutionService.resolveCondition("segments", segment, condition1, "context1");
 
-        InvalidObjectInfo info1 = resolverService.getInvalidObjects("segments").get("testSegment");
+        InvalidObjectInfo info1 = typeResolutionService.getInvalidObjects("segments").get("testSegment");
         long firstSeen = info1.getFirstSeenTimestamp();
         int firstEncounterCount = info1.getEncounterCount();
 
@@ -614,9 +617,9 @@ public class ResolverServiceImplTest {
         }
 
         // Second encounter with different missing type
-        resolverService.resolveCondition("segments", segment, condition2, "context2");
+        typeResolutionService.resolveCondition("segments", segment, condition2, "context2");
 
-        InvalidObjectInfo info2 = resolverService.getInvalidObjects("segments").get("testSegment");
+        InvalidObjectInfo info2 = typeResolutionService.getInvalidObjects("segments").get("testSegment");
 
         assertEquals(firstSeen, info2.getFirstSeenTimestamp(), "First seen timestamp should not change");
         assertTrue(info2.getLastSeenTimestamp() > firstSeen, "Last seen timestamp should be updated");
@@ -641,9 +644,9 @@ public class ResolverServiceImplTest {
 
         when(definitionsService.getConditionType("nonExistentType")).thenReturn(null);
 
-        resolverService.resolveCondition("segments", segment, condition, "segment testSegment");
+        typeResolutionService.resolveCondition("segments", segment, condition, "segment testSegment");
 
-        Map<String, InvalidObjectInfo> invalidSegments = resolverService.getInvalidObjects("segments");
+        Map<String, InvalidObjectInfo> invalidSegments = typeResolutionService.getInvalidObjects("segments");
         InvalidObjectInfo info = invalidSegments.get("testSegment");
 
         assertNotNull(info, "InvalidObjectInfo should be created");
@@ -668,9 +671,9 @@ public class ResolverServiceImplTest {
         when(definitionsService.getActionType("nonExistentAction1")).thenReturn(null);
         when(definitionsService.getActionType("nonExistentAction2")).thenReturn(null);
 
-        resolverService.resolveActions("rules", rule);
+        typeResolutionService.resolveActions("rules", rule);
 
-        Map<String, InvalidObjectInfo> invalidRules = resolverService.getInvalidObjects("rules");
+        Map<String, InvalidObjectInfo> invalidRules = typeResolutionService.getInvalidObjects("rules");
         InvalidObjectInfo info = invalidRules.get("testRule");
 
         assertNotNull(info, "InvalidObjectInfo should be created");
@@ -698,9 +701,9 @@ public class ResolverServiceImplTest {
         when(definitionsService.getConditionType("nonExistentConditionType")).thenReturn(null);
         when(definitionsService.getActionType("nonExistentActionType")).thenReturn(null);
 
-        resolverService.resolveRule("rules", rule);
+        typeResolutionService.resolveRule("rules", rule);
 
-        Map<String, InvalidObjectInfo> invalidRules = resolverService.getInvalidObjects("rules");
+        Map<String, InvalidObjectInfo> invalidRules = typeResolutionService.getInvalidObjects("rules");
         InvalidObjectInfo info = invalidRules.get("testRule");
 
         assertNotNull(info, "InvalidObjectInfo should be created");
@@ -714,9 +717,9 @@ public class ResolverServiceImplTest {
 
     @Test
     public void testInvalidObjectInfo_TimestampFields() {
-        resolverService.markInvalid("rules", "rule1", "Test reason");
+        typeResolutionService.markInvalid("rules", "rule1", "Test reason");
 
-        InvalidObjectInfo info1 = resolverService.getInvalidObjects("rules").get("rule1");
+        InvalidObjectInfo info1 = typeResolutionService.getInvalidObjects("rules").get("rule1");
         long firstSeen = info1.getFirstSeenTimestamp();
         long lastSeen = info1.getLastSeenTimestamp();
 
@@ -731,9 +734,9 @@ public class ResolverServiceImplTest {
         }
 
         // Second encounter
-        resolverService.markInvalid("rules", "rule1", "Updated reason");
+        typeResolutionService.markInvalid("rules", "rule1", "Updated reason");
 
-        InvalidObjectInfo info2 = resolverService.getInvalidObjects("rules").get("rule1");
+        InvalidObjectInfo info2 = typeResolutionService.getInvalidObjects("rules").get("rule1");
 
         assertEquals(firstSeen, info2.getFirstSeenTimestamp(), "First seen timestamp should not change");
         assertTrue(info2.getLastSeenTimestamp() > firstSeen, "Last seen timestamp should be updated");
@@ -743,9 +746,9 @@ public class ResolverServiceImplTest {
     @Test
     public void testInvalidObjectInfo_BackwardCompatibility() {
         // Test that the basic markInvalid(String, String, String) still works
-        resolverService.markInvalid("rules", "rule1", "Simple reason");
+        typeResolutionService.markInvalid("rules", "rule1", "Simple reason");
 
-        InvalidObjectInfo info = resolverService.getInvalidObjects("rules").get("rule1");
+        InvalidObjectInfo info = typeResolutionService.getInvalidObjects("rules").get("rule1");
 
         assertNotNull(info, "InvalidObjectInfo should be created");
         assertEquals("rules", info.getObjectType(), "Object type should match");
@@ -774,9 +777,9 @@ public class ResolverServiceImplTest {
         when(definitionsService.getConditionType("missingCond1")).thenReturn(null);
         when(definitionsService.getActionType("missingAction1")).thenReturn(null);
 
-        resolverService.resolveRule("rules", rule);
+        typeResolutionService.resolveRule("rules", rule);
 
-        InvalidObjectInfo info = resolverService.getInvalidObjects("rules").get("rule1");
+        InvalidObjectInfo info = typeResolutionService.getInvalidObjects("rules").get("rule1");
         String toString = info.toString();
 
         assertTrue(toString.contains("rules"), "toString should contain object type");
@@ -793,14 +796,14 @@ public class ResolverServiceImplTest {
         // We can't easily test logging without a logging framework, but we can verify
         // that the encounter count increases and information accumulates
 
-        resolverService.markInvalid("rules", "rule1", "First reason");
+        typeResolutionService.markInvalid("rules", "rule1", "First reason");
 
-        InvalidObjectInfo info1 = resolverService.getInvalidObjects("rules").get("rule1");
+        InvalidObjectInfo info1 = typeResolutionService.getInvalidObjects("rules").get("rule1");
         assertEquals(1, info1.getEncounterCount(), "First encounter should have count of 1");
 
-        resolverService.markInvalid("rules", "rule1", "Second reason");
+        typeResolutionService.markInvalid("rules", "rule1", "Second reason");
 
-        InvalidObjectInfo info2 = resolverService.getInvalidObjects("rules").get("rule1");
+        InvalidObjectInfo info2 = typeResolutionService.getInvalidObjects("rules").get("rule1");
         assertEquals(2, info2.getEncounterCount(), "Second encounter should have count of 2");
         // The reason should still be the first one (not updated)
         assertEquals("First reason", info2.getReason(), "Reason should remain the first one");
@@ -821,21 +824,146 @@ public class ResolverServiceImplTest {
         when(definitionsService.getConditionType("missingType2")).thenReturn(null);
 
         // First encounter with one missing type
-        resolverService.resolveCondition("segments", segment, condition1, "context1");
+        typeResolutionService.resolveCondition("segments", segment, condition1, "context1");
 
-        InvalidObjectInfo info1 = resolverService.getInvalidObjects("segments").get("testSegment");
+        InvalidObjectInfo info1 = typeResolutionService.getInvalidObjects("segments").get("testSegment");
         assertEquals(1, info1.getEncounterCount(), "Should have 1 encounter");
         assertEquals(1, info1.getMissingConditionTypeIds().size(), "Should have 1 missing condition type");
 
         // Second encounter with different missing type
-        resolverService.resolveCondition("segments", segment, condition2, "context2");
+        typeResolutionService.resolveCondition("segments", segment, condition2, "context2");
 
-        InvalidObjectInfo info2 = resolverService.getInvalidObjects("segments").get("testSegment");
+        InvalidObjectInfo info2 = typeResolutionService.getInvalidObjects("segments").get("testSegment");
         assertEquals(2, info2.getEncounterCount(), "Should have 2 encounters");
         assertEquals(2, info2.getMissingConditionTypeIds().size(), "Should accumulate both missing condition types");
         assertTrue(info2.getMissingConditionTypeIds().contains("missingType1"), "Should contain first missing type");
         assertTrue(info2.getMissingConditionTypeIds().contains("missingType2"), "Should contain second missing type");
         assertEquals(2, info2.getContextNames().size(), "Should have both contexts");
+    }
+
+    @Nested
+    class ResolutionTests {
+        @Test
+        public void testResolveCondition_Success() {
+            Segment segment = new Segment();
+            segment.setItemId("testSegment");
+            segment.setMetadata(new Metadata("testSegment"));
+
+            Condition condition = new Condition();
+            condition.setConditionTypeId("testConditionType");
+            segment.setCondition(condition);
+
+            when(definitionsService.getConditionType("testConditionType")).thenReturn(testConditionType);
+
+            boolean resolved = typeResolutionService.resolveCondition("segments", segment, condition, "test context");
+
+            assertTrue(resolved, "Condition type should resolve successfully");
+            assertFalse(segment.getMetadata().isMissingPlugins(), "missingPlugins should be false when resolution succeeds");
+            assertFalse(typeResolutionService.isInvalid("segments", "testSegment"), "Segment should not be marked as invalid");
+        }
+
+        @Test
+        public void testResolveCondition_WithUnresolvedType() {
+            Segment segment = new Segment();
+            segment.setItemId("testSegment");
+            segment.setMetadata(new Metadata("testSegment"));
+
+            Condition condition = new Condition();
+            condition.setConditionTypeId("nonExistentType");
+            segment.setCondition(condition);
+
+            when(definitionsService.getConditionType("nonExistentType")).thenReturn(null);
+
+            boolean resolved = typeResolutionService.resolveCondition("segments", segment, condition, "test context");
+
+            assertFalse(resolved, "Should return false when condition type cannot be resolved");
+            assertTrue(segment.getMetadata().isMissingPlugins(), "missingPlugins should be true when resolution fails");
+            assertTrue(typeResolutionService.isInvalid("segments", "testSegment"), "Segment should be marked as invalid");
+        }
+
+        @Test
+        public void testResolveActions_Success() {
+            Rule rule = new Rule();
+            rule.setItemId("testRule");
+            rule.setMetadata(new Metadata("testRule"));
+
+            Action action = new Action();
+            action.setActionTypeId("testActionType");
+            rule.setActions(Collections.singletonList(action));
+
+            when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
+
+            boolean resolved = typeResolutionService.resolveActions("rules", rule);
+
+            assertTrue(resolved, "Action types should resolve successfully");
+            assertFalse(rule.getMetadata().isMissingPlugins(), "missingPlugins should be false when resolution succeeds");
+        }
+
+        @Test
+        public void testResolveActions_WithUnresolvedType() {
+            Rule rule = new Rule();
+            rule.setItemId("testRule");
+            rule.setMetadata(new Metadata("testRule"));
+
+            Action action = new Action();
+            action.setActionTypeId("nonExistentActionType");
+            rule.setActions(Collections.singletonList(action));
+
+            when(definitionsService.getActionType("nonExistentActionType")).thenReturn(null);
+
+            boolean resolved = typeResolutionService.resolveActions("rules", rule);
+
+            assertFalse(resolved, "Should return false when action type cannot be resolved");
+            assertTrue(rule.getMetadata().isMissingPlugins(), "missingPlugins should be true when resolution fails");
+        }
+
+        @Test
+        public void testResolveRule_Success() {
+            Rule rule = new Rule();
+            rule.setItemId("testRule");
+            rule.setMetadata(new Metadata("testRule"));
+
+            Condition condition = new Condition();
+            condition.setConditionTypeId("testConditionType");
+            rule.setCondition(condition);
+
+            Action action = new Action();
+            action.setActionTypeId("testActionType");
+            rule.setActions(Collections.singletonList(action));
+
+            when(definitionsService.getConditionType("testConditionType")).thenReturn(testConditionType);
+            when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
+
+            boolean resolved = typeResolutionService.resolveRule("rules", rule);
+
+            assertTrue(resolved, "Rule should resolve successfully when both condition and actions resolve");
+            assertFalse(rule.getMetadata().isMissingPlugins(), "missingPlugins should be false when all types resolve");
+            assertFalse(typeResolutionService.isInvalid("rules", "testRule"), "Rule should not be marked as invalid");
+        }
+
+        @Test
+        public void testResolveRule_WithUnresolvedCondition() {
+            Rule rule = new Rule();
+            rule.setItemId("testRule");
+            rule.setMetadata(new Metadata("testRule"));
+
+            Condition condition = new Condition();
+            condition.setConditionTypeId("nonExistentConditionType");
+            rule.setCondition(condition);
+
+            Action action = new Action();
+            action.setActionTypeId("testActionType");
+            rule.setActions(Collections.singletonList(action));
+
+            when(definitionsService.getConditionType("nonExistentConditionType")).thenReturn(null);
+            when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
+
+            boolean resolved = typeResolutionService.resolveRule("rules", rule);
+
+            assertFalse(resolved, "Should return false when condition type cannot be resolved");
+            assertTrue(rule.getMetadata().isMissingPlugins(), "missingPlugins should be true when resolution fails");
+            assertTrue(typeResolutionService.isInvalid("rules", "testRule"), "Rule should be marked as invalid");
+        }
     }
 }
 

@@ -17,19 +17,21 @@
 package org.apache.unomi.services.impl.profiles;
 
 import org.apache.unomi.api.*;
-import org.apache.unomi.api.services.ConditionValidationService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
-import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
+import org.apache.unomi.services.impl.TestBundleContext;
+import org.apache.unomi.services.impl.TestConditionEvaluators;
+import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
-import org.apache.unomi.services.common.security.AuditServiceImpl;
-import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -38,14 +40,12 @@ import org.mockito.quality.Strictness;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleEvent;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
-import java.net.MalformedURLException;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -60,8 +60,7 @@ public class ProfileServiceImplTest {
     private MultiTypeCacheServiceImpl multiTypeCacheService;
     private KarafSecurityService securityService;
     private AuditServiceImpl auditService;
-    private org.apache.unomi.api.services.SchedulerService schedulerService;
-    private ConditionValidationService conditionValidationService;
+    private SchedulerService schedulerService;
 
     private static final String TENANT_1 = "tenant1";
     private static final String SYSTEM_TENANT = "system";
@@ -77,8 +76,6 @@ public class ProfileServiceImplTest {
 
         // Create tenants using TestHelper
         TestHelper.setupCommonTestData(tenantService);
-
-        conditionValidationService = new ConditionValidationServiceImpl();
 
         // Set up condition evaluator dispatcher
         ConditionEvaluatorDispatcher conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
@@ -100,7 +97,9 @@ public class ProfileServiceImplTest {
         schedulerService = TestHelper.createSchedulerService("profile-service-scheduler-node", persistenceService, executionContextManager, bundleContext, null, -1, true, true);
 
         // Set up definitions service
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
+        // Inject definitionsService into the dispatcher
+        TestHelper.injectDefinitionsServiceIntoDispatcher(conditionEvaluatorDispatcher, definitionsService);
 
         // Set up value types
         ValueType stringType = new ValueType();
@@ -127,12 +126,8 @@ public class ProfileServiceImplTest {
         profileService.setCacheService(multiTypeCacheService);
         // Ensure tenantService is available for initial data loading
         profileService.setTenantService(tenantService);
-        
-        // Create and inject ResolverService
-        ResolverServiceImpl resolverService = new ResolverServiceImpl();
-        resolverService.setDefinitionsService(definitionsService);
-        profileService.setResolverService(resolverService);
-        
+
+
         profileService.postConstruct();
 
         // Load predefined data
@@ -142,7 +137,7 @@ public class ProfileServiceImplTest {
     @AfterEach
     public void tearDown() throws Exception {
         // Use the common tearDown method from TestHelper
-        org.apache.unomi.services.TestHelper.tearDown(
+        TestHelper.tearDown(
             schedulerService,
             multiTypeCacheService,
             persistenceService,
@@ -151,10 +146,10 @@ public class ProfileServiceImplTest {
         );
 
         // Clean up references using the helper method
-        org.apache.unomi.services.TestHelper.cleanupReferences(
+        TestHelper.cleanupReferences(
             tenantService, securityService, executionContextManager, profileService,
             persistenceService, definitionsService, bundleContext, schedulerService,
-            conditionValidationService, multiTypeCacheService, auditService
+            multiTypeCacheService, auditService
         );
     }
 

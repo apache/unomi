@@ -24,21 +24,22 @@ import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.api.services.ConditionValidationService;
+import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.TenantLifecycleListener;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.utils.ConditionBuilder;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
+import org.apache.unomi.services.impl.TypeResolutionServiceImpl;
+import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,72 +69,91 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     private static final long TASK_TIMEOUT_MS = 60000; // 1 minute timeout for tasks
 
-    private ConditionValidationService conditionValidationService;
+    private ConditionValidationServiceImpl conditionValidationService;
     private TracerService tracerService;
+    private EventAdmin eventAdmin;
+    private TypeResolutionServiceImpl typeResolutionService;
+
+    // OSGi Event Admin topic constants for type change events
+    private static final String TOPIC_CONDITION_TYPE_ADDED = "org/apache/unomi/definitions/conditionType/ADDED";
+    private static final String TOPIC_CONDITION_TYPE_UPDATED = "org/apache/unomi/definitions/conditionType/UPDATED";
+    private static final String TOPIC_CONDITION_TYPE_REMOVED = "org/apache/unomi/definitions/conditionType/REMOVED";
+    private static final String TOPIC_ACTION_TYPE_ADDED = "org/apache/unomi/definitions/actionType/ADDED";
+    private static final String TOPIC_ACTION_TYPE_UPDATED = "org/apache/unomi/definitions/actionType/UPDATED";
+    private static final String TOPIC_ACTION_TYPE_REMOVED = "org/apache/unomi/definitions/actionType/REMOVED";
+
+    // Event property keys
+    private static final String PROP_TYPE_ID = "typeId";
+    private static final String PROP_TENANT_ID = "tenantId";
 
     public void setCacheService(MultiTypeCacheService cacheService) {
         super.setCacheService(cacheService);
-    }
-
-    public void setConditionValidationService(ConditionValidationService conditionValidationService) {
-        this.conditionValidationService = conditionValidationService;
     }
 
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
     }
 
+    public void setEventAdmin(EventAdmin eventAdmin) {
+        this.eventAdmin = eventAdmin;
+    }
+
     public DefinitionsServiceImpl() {
         // Initialize other components
         conditionBuilder = new ConditionBuilder(this);
+        // Create TypeResolutionService internally - it will get DefinitionsService reference in postConstruct
+        typeResolutionService = new TypeResolutionServiceImpl(this);
+        // Create ConditionValidationService internally
+        conditionValidationService = new ConditionValidationServiceImpl();
+        // Pass TypeResolutionService to validation service for auto-resolution
+        conditionValidationService.setTypeResolutionService(typeResolutionService);
     }
 
     @Override
     public void postConstruct() {
         super.postConstruct();
 
-        // After all bundles are loaded and initial data is loaded, ensure all parent conditions are resolved
-        // This is needed because the post-refresh callback only runs if there are changes, but we need
-        // to resolve parent conditions even if items were already in cache from bundle loading
-        contextManager.executeAsSystem(() -> {
-            try {
-                resolveAllParentConditions();
-            } catch (Exception e) {
-                LOGGER.error("Error resolving parent conditions during initialization", e);
-            }
-            return null;
-        });
-
         LOGGER.debug("Definitions service initialized.");
     }
 
     /**
-     * Resolves all parent conditions for all condition types in the cache.
-     * This ensures parent conditions are resolved regardless of load order.
+     * Sets the built-in validators for the ConditionValidationService.
+     * This is called by Blueprint after the service is created.
+     *
+     * @param builtInValidators the list of built-in validators
      */
-    private void resolveAllParentConditions() {
-        for (String tenantId : getTenants()) {
-            Map<String, ConditionType> cachedTypes = cacheService.getTenantCache(tenantId, ConditionType.class);
-            if (cachedTypes != null) {
-                for (ConditionType conditionType : cachedTypes.values()) {
-                    if (conditionType != null && conditionType.getParentCondition() != null) {
-                        // Only resolve if not already resolved
-                        if (conditionType.getParentCondition().getConditionType() == null) {
-                            boolean resolved = ParserHelper.resolveConditionType(this, conditionType.getParentCondition(),
-                                "condition type " + conditionType.getItemId());
-                            if (resolved) {
-                                // Update the cached item with resolved parent condition
-                                cacheService.put(ConditionType.ITEM_TYPE, conditionType.getItemId(),
-                                    tenantId, conditionType);
-                            } else {
-                                LOGGER.debug("Parent condition for {} not yet available, will be resolved on next refresh",
-                                    conditionType.getItemId());
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    public void setConditionValidationServiceBuiltInValidators(List<ValueTypeValidator> builtInValidators) {
+        conditionValidationService.setBuiltInValidators(builtInValidators);
+    }
+
+    /**
+     * Binds a validator to the ConditionValidationService.
+     * Called by OSGi reference listener.
+     *
+     * @param validator the validator to bind
+     */
+    public void bindValidator(ValueTypeValidator validator) {
+        conditionValidationService.bindValidator(validator);
+    }
+
+    /**
+     * Unbinds a validator from the ConditionValidationService.
+     * Called by OSGi reference listener.
+     *
+     * @param validator the validator to unbind
+     */
+    public void unbindValidator(ValueTypeValidator validator) {
+        conditionValidationService.unbindValidator(validator);
+    }
+
+    @Override
+    public TypeResolutionService getTypeResolutionService() {
+        return typeResolutionService;
+    }
+
+    @Override
+    public ConditionValidationService getConditionValidationService() {
+        return conditionValidationService;
     }
 
     public void setDefinitionsRefreshInterval(long definitionsRefreshInterval) {
@@ -217,29 +237,32 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public ConditionType getConditionType(String id) {
-        ConditionType conditionType = getItem(id, ConditionType.class);
-        if (conditionType != null && conditionType.getParentCondition() != null
-                && conditionType.getParentCondition().getConditionType() == null) {
-            // Resolve parent condition on demand if not already resolved
-            boolean resolved = ParserHelper.resolveConditionType(this, conditionType.getParentCondition(),
-                "condition type " + conditionType.getItemId());
-            if (resolved) {
-                // Update the cached item with resolved parent condition
-                String tenantId = contextManager.getCurrentContext().getTenantId();
-                cacheService.put(ConditionType.ITEM_TYPE, conditionType.getItemId(), tenantId, conditionType);
-            }
-        }
-        return conditionType;
+        return getItem(id, ConditionType.class);
     }
 
     @Override
     public void setConditionType(ConditionType conditionType) {
+        String typeId = conditionType.getItemId();
+        String tenantId = conditionType.getTenantId() != null ? conditionType.getTenantId() : SYSTEM_TENANT;
+
+        // Check if this is an update (type already exists) or a new addition
+        boolean isUpdate = getConditionType(typeId) != null;
+
         saveItem(conditionType, ConditionType::getItemId, ConditionType.ITEM_TYPE);
+
+        // Publish OSGi event to notify other services (e.g., RulesService) about the change
+        publishTypeChangeEvent(isUpdate ? TOPIC_CONDITION_TYPE_UPDATED : TOPIC_CONDITION_TYPE_ADDED, typeId, tenantId);
     }
 
     @Override
     public void removeConditionType(String id) {
+        ConditionType existing = getConditionType(id);
+        String tenantId = existing != null && existing.getTenantId() != null ? existing.getTenantId() : SYSTEM_TENANT;
+
         removeItem(id, ConditionType.class, ConditionType.ITEM_TYPE);
+
+        // Publish OSGi event to notify other services (e.g., RulesService) about the removal
+        publishTypeChangeEvent(TOPIC_CONDITION_TYPE_REMOVED, id, tenantId);
     }
 
     @Override
@@ -264,12 +287,27 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public void setActionType(ActionType actionType) {
+        String typeId = actionType.getItemId();
+        String tenantId = actionType.getTenantId() != null ? actionType.getTenantId() : SYSTEM_TENANT;
+
+        // Check if this is an update (type already exists) or a new addition
+        boolean isUpdate = getActionType(typeId) != null;
+
         saveItem(actionType, ActionType::getItemId, ActionType.ITEM_TYPE);
+
+        // Publish OSGi event to notify other services (e.g., RulesService) about the change
+        publishTypeChangeEvent(isUpdate ? TOPIC_ACTION_TYPE_UPDATED : TOPIC_ACTION_TYPE_ADDED, typeId, tenantId);
     }
 
     @Override
     public void removeActionType(String id) {
+        ActionType existing = getActionType(id);
+        String tenantId = existing != null && existing.getTenantId() != null ? existing.getTenantId() : SYSTEM_TENANT;
+
         removeItem(id, ActionType.class, ActionType.ITEM_TYPE);
+
+        // Publish OSGi event to notify other services (e.g., RulesService) about the removal
+        publishTypeChangeEvent(TOPIC_ACTION_TYPE_REMOVED, id, tenantId);
     }
 
     @Override
@@ -430,7 +468,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
                 }
             }
             throw new IllegalArgumentException();
-        } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getMetadata().getTags().contains(tag)) {
+        } else if (isConditionMatchingTag(rootCondition, tag)) {
             return rootCondition;
         } else {
             return null;
@@ -479,10 +517,44 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     }
 
     private boolean isConditionMatchingSystemTag(Condition condition, String systemTag) {
+        ensureConditionTypeResolved(condition);
         return condition.getConditionType() != null &&
                 condition.getConditionType().getMetadata() != null &&
                 condition.getConditionType().getMetadata().getSystemTags() != null &&
                 condition.getConditionType().getMetadata().getSystemTags().contains(systemTag);
+    }
+
+    private boolean isConditionMatchingTag(Condition condition, String tag) {
+        if (condition == null || tag == null) {
+            return false;
+        }
+        ensureConditionTypeResolved(condition);
+        return condition.getConditionType() != null &&
+                condition.getConditionType().getMetadata() != null &&
+                condition.getConditionType().getMetadata().getTags() != null &&
+                condition.getConditionType().getMetadata().getTags().contains(tag);
+    }
+
+    /**
+     * Best-effort resolution of {@link Condition#getConditionType()} from {@link Condition#getConditionTypeId()}.
+     * This is important for conditions deserialized from JSON that only contain the type id.
+     * We keep it intentionally lightweight (no validation/tracing) as it may be called during extraction.
+     */
+    private void ensureConditionTypeResolved(Condition condition) {
+        if (condition == null) {
+            return;
+        }
+        if (condition.getConditionType() != null) {
+            return;
+        }
+        String typeId = condition.getConditionTypeId();
+        if (typeId == null) {
+            return;
+        }
+        ConditionType resolvedType = getConditionType(typeId);
+        if (resolvedType != null) {
+            condition.setConditionType(resolvedType);
+        }
     }
 
     private Condition createBooleanCondition(List<Condition> conditions) {
@@ -499,9 +571,14 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
         return res;
     }
 
+    @Deprecated
     @Override
     public boolean resolveConditionType(Condition rootCondition) {
-        boolean resolved = ParserHelper.resolveConditionType(this, rootCondition, (rootCondition != null ? "condition type " + rootCondition.getConditionTypeId() : "unknown"));
+        if (rootCondition == null) {
+            return false;
+        }
+        // Delegate to TypeResolutionService for resolution
+        boolean resolved = typeResolutionService.resolveConditionType(rootCondition, "condition type " + rootCondition.getConditionTypeId());
         if (resolved) {
             // Start validation operation in tracer
             if (tracerService != null) {
@@ -511,7 +588,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
                 }
             }
 
-            // Validate the condition after resolving its type
+            // Validate the condition after resolving its type (validation service will auto-resolve if needed)
             List<ValidationError> validationErrors = conditionValidationService.validate(rootCondition);
 
             // Add validation info to tracer
@@ -656,35 +733,17 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
             .build());
 
         // Condition Type configuration with bundle processor
-        // Resolve parent conditions when loading from bundles, but don't fail if parent isn't available yet
         BiConsumer<BundleContext, ConditionType> conditionTypeProcessor = (bundleContext, type) -> {
             type.setPluginId(bundleContext.getBundle().getBundleId());
             type.setTenantId(SYSTEM_TENANT);
-
-            // Try to resolve parent condition if present, but don't fail if parent isn't loaded yet
-            // The post-refresh callback will resolve it later once all items are loaded
-            if (type.getParentCondition() != null && type.getParentCondition().getConditionType() == null) {
-                boolean resolved = ParserHelper.resolveConditionType(this, type.getParentCondition(),
-                    "condition type " + type.getItemId());
-                if (!resolved) {
-                    LOGGER.debug("Parent condition for {} not yet available during bundle load, will resolve after refresh",
-                        type.getItemId());
-                }
-            }
-
             setConditionType(type);
         };
 
-        // Post-refresh callback: Resolve all parent conditions after all items are loaded
-        // This ensures parent conditions are resolved during refresh cycles
-        // We always resolve parent conditions, even if no changes were detected, to handle
-        // cases where items were loaded from bundles before the refresh
         BiConsumer<Map<String, Map<String, ConditionType>>, Map<String, Map<String, ConditionType>>> postRefreshCallback =
             (oldState, newState) -> {
-                resolveAllParentConditions();
                 if (!initialRefreshComplete) {
                     initialRefreshComplete = true;
-                    LOGGER.debug("Initial condition type refresh completed, all parent conditions resolved");
+                    LOGGER.debug("Initial condition type refresh completed");
                 }
             };
 
@@ -702,14 +761,43 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
         for (CacheableTypeConfig<?> config : getTypeConfigs()) {
             refreshTypeCache(config);
         }
-        // After refresh, ensure all parent conditions are resolved
-        // This handles cases where the post-refresh callback didn't run due to no changes detected
         if (!initialRefreshComplete) {
             contextManager.executeAsSystem(() -> {
-                resolveAllParentConditions();
                 initialRefreshComplete = true;
                 return null;
             });
+        }
+    }
+
+    /**
+     * Publishes an OSGi Event Admin event for type changes (condition/action types).
+     *
+     * Uses {@link EventAdmin#postEvent(org.osgi.service.event.Event)} for asynchronous delivery.
+     * This ensures that type saving operations are non-blocking and responsive, even when
+     * rule re-evaluation (which may process many rules across multiple tenants) takes time.
+     *
+     * If synchronous delivery is needed (e.g., to ensure rules are immediately available),
+     * use {@link EventAdmin#sendEvent(org.osgi.service.event.Event)} instead.
+     *
+     * @param topic the event topic
+     * @param typeId the type ID that changed
+     * @param tenantId the tenant ID
+     */
+    private void publishTypeChangeEvent(String topic, String typeId, String tenantId) {
+        try {
+            Map<String, Object> properties = new HashMap<>();
+            properties.put(PROP_TYPE_ID, typeId);
+            properties.put(PROP_TENANT_ID, tenantId);
+
+            Event event = new Event(topic, properties);
+            // Use postEvent() for asynchronous delivery (non-blocking)
+            // Use sendEvent() for synchronous delivery (blocking until handlers complete)
+            eventAdmin.postEvent(event);
+
+            LOGGER.debug("Published OSGi event {} for type {} (tenant: {})", topic, typeId, tenantId);
+        } catch (Exception e) {
+            // Log error but continue - event publishing failure should not block type saving
+            LOGGER.warn("Failed to publish OSGi event {} for type {}: {}", topic, typeId, e.getMessage(), e);
         }
     }
 

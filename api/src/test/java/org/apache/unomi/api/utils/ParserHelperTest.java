@@ -288,8 +288,11 @@ public class ParserHelperTest {
         rootCondition.setConditionTypeId("eventTypeCondition");
         rootCondition.setParameter("eventTypeId", "testEvent");
 
+        // Mock definitionsService to return null for condition types (not needed for this simple parameter extraction test)
+        when(definitionsService.getConditionType(anyString())).thenReturn(null);
+
         // Test event type resolution
-        Set<String> eventTypes = ParserHelper.resolveConditionEventTypes(rootCondition);
+        Set<String> eventTypes = ParserHelper.resolveConditionEventTypes(rootCondition, definitionsService);
 
         assertTrue("Should contain event type", eventTypes.contains("testEvent"));
         assertEquals("Should only contain one event type", 1, eventTypes.size());
@@ -307,8 +310,11 @@ public class ParserHelperTest {
 
         notCondition.setParameter("subCondition", eventCondition);
 
+        // Mock definitionsService to return null for condition types (not needed for this simple parameter extraction test)
+        when(definitionsService.getConditionType(anyString())).thenReturn(null);
+
         // Test event type resolution
-        Set<String> eventTypes = ParserHelper.resolveConditionEventTypes(notCondition);
+        Set<String> eventTypes = ParserHelper.resolveConditionEventTypes(notCondition, definitionsService);
 
         assertTrue("Should use wildcard for negated event condition", eventTypes.contains("*"));
         assertEquals("Should only contain wildcard", 1, eventTypes.size());
@@ -722,5 +728,433 @@ public class ParserHelperTest {
         
         boolean result = ParserHelper.resolveConditionType(definitionsService, rootA, "testContext");
         assertFalse("Up → down → back up cycle (B->C->B) should be detected", result);
+    }
+
+    @Test
+    public void testResolveEffectiveConditionDeepCopyNestedConditions() {
+        // Create a condition type with parent condition containing nested conditions
+        ConditionType childType = new ConditionType();
+        childType.setItemId("childConditionType");
+        
+        // Create parent condition with nested conditions
+        Condition parentCondition = new Condition();
+        parentCondition.setConditionTypeId("booleanCondition");
+        parentCondition.setParameter("operator", "and");
+        
+        // Create nested conditions
+        Condition nested1 = new Condition();
+        nested1.setConditionTypeId("eventTypeCondition");
+        nested1.setParameter("eventTypeId", "view");
+        
+        Condition nested2 = new Condition();
+        nested2.setConditionTypeId("eventPropertyCondition");
+        nested2.setParameter("propertyName", "testProperty");
+        nested2.setParameter("propertyValue", "testValue");
+        
+        parentCondition.setParameter("subConditions", Arrays.asList(nested1, nested2));
+        childType.setParentCondition(parentCondition);
+        
+        // Create condition types
+        ConditionType booleanType = new ConditionType();
+        booleanType.setItemId("booleanCondition");
+        
+        ConditionType eventTypeConditionType = new ConditionType();
+        eventTypeConditionType.setItemId("eventTypeCondition");
+        
+        ConditionType eventPropertyConditionType = new ConditionType();
+        eventPropertyConditionType.setItemId("eventPropertyCondition");
+        
+        // Mock definitions service
+        when(definitionsService.getConditionType("childConditionType")).thenReturn(childType);
+        when(definitionsService.getConditionType("booleanCondition")).thenReturn(booleanType);
+        when(definitionsService.getConditionType("eventTypeCondition")).thenReturn(eventTypeConditionType);
+        when(definitionsService.getConditionType("eventPropertyCondition")).thenReturn(eventPropertyConditionType);
+        
+        // Create condition to resolve
+        Condition condition = new Condition();
+        condition.setConditionTypeId("childConditionType");
+        condition.setParameter("customParam", "customValue");
+        
+        // Resolve effective condition
+        Map<String, Object> context = new HashMap<>();
+        Condition effectiveCondition = ParserHelper.resolveEffectiveCondition(
+            condition, definitionsService, context, "test context");
+        
+        // Verify effective condition is the parent (booleanCondition)
+        assertNotNull("Effective condition should not be null", effectiveCondition);
+        assertEquals("Effective condition should be booleanCondition", 
+            "booleanCondition", effectiveCondition.getConditionTypeId());
+        
+        // Verify nested conditions are deep copied (not shared references)
+        @SuppressWarnings("unchecked")
+        List<Condition> effectiveSubConditions = (List<Condition>) effectiveCondition.getParameter("subConditions");
+        assertNotNull("SubConditions should be present", effectiveSubConditions);
+        assertEquals("Should have two subConditions", 2, effectiveSubConditions.size());
+        
+        // Verify nested conditions are independent (modifying copy doesn't affect original)
+        Condition originalNested1 = nested1;
+        Condition copiedNested1 = effectiveSubConditions.get(0);
+        
+        // Modify the copied nested condition
+        copiedNested1.setParameter("eventTypeId", "modified");
+        
+        // Verify original is not affected
+        assertEquals("Original nested condition should not be modified", 
+            "view", originalNested1.getParameter("eventTypeId"));
+        
+        // Verify copied nested condition is modified
+        assertEquals("Copied nested condition should be modified", 
+            "modified", copiedNested1.getParameter("eventTypeId"));
+        
+        // Verify nested conditions have their types resolved
+        assertNotNull("First nested condition type should be resolved", 
+            effectiveSubConditions.get(0).getConditionType());
+        assertNotNull("Second nested condition type should be resolved", 
+            effectiveSubConditions.get(1).getConditionType());
+        
+        // Verify nested condition parameters are preserved
+        assertEquals("First nested condition should have eventTypeId parameter", 
+            "modified", effectiveSubConditions.get(0).getParameter("eventTypeId"));
+        assertEquals("Second nested condition should have propertyName parameter", 
+            "testProperty", effectiveSubConditions.get(1).getParameter("propertyName"));
+        assertEquals("Second nested condition should have propertyValue parameter", 
+            "testValue", effectiveSubConditions.get(1).getParameter("propertyValue"));
+    }
+
+    @Test
+    public void testResolveEffectiveConditionDeepCopySingleNestedCondition() {
+        // Test deep copy with a single nested condition (not in a collection)
+        ConditionType childType = new ConditionType();
+        childType.setItemId("childConditionType");
+        
+        // Create parent condition with single nested condition
+        Condition parentCondition = new Condition();
+        parentCondition.setConditionTypeId("parentConditionType");
+        
+        Condition nested = new Condition();
+        nested.setConditionTypeId("nestedConditionType");
+        nested.setParameter("nestedParam", "nestedValue");
+        
+        parentCondition.setParameter("subCondition", nested);
+        childType.setParentCondition(parentCondition);
+        
+        // Create condition types
+        ConditionType parentType = new ConditionType();
+        parentType.setItemId("parentConditionType");
+        
+        ConditionType nestedType = new ConditionType();
+        nestedType.setItemId("nestedConditionType");
+        
+        // Mock definitions service
+        when(definitionsService.getConditionType("childConditionType")).thenReturn(childType);
+        when(definitionsService.getConditionType("parentConditionType")).thenReturn(parentType);
+        when(definitionsService.getConditionType("nestedConditionType")).thenReturn(nestedType);
+        
+        // Create condition to resolve
+        Condition condition = new Condition();
+        condition.setConditionTypeId("childConditionType");
+        
+        // Resolve effective condition
+        Map<String, Object> context = new HashMap<>();
+        Condition effectiveCondition = ParserHelper.resolveEffectiveCondition(
+            condition, definitionsService, context, "test context");
+        
+        // Verify nested condition is deep copied
+        Condition effectiveNested = (Condition) effectiveCondition.getParameter("subCondition");
+        assertNotNull("Nested condition should be present", effectiveNested);
+        
+        // Verify it's a deep copy (not the same reference)
+        assertNotSame("Nested condition should be a copy, not the same reference", 
+            nested, effectiveNested);
+        
+        // Modify the copied nested condition
+        effectiveNested.setParameter("nestedParam", "modifiedValue");
+        
+        // Verify original is not affected
+        assertEquals("Original nested condition should not be modified", 
+            "nestedValue", nested.getParameter("nestedParam"));
+        
+        // Verify copied nested condition is modified
+        assertEquals("Copied nested condition should be modified", 
+            "modifiedValue", effectiveNested.getParameter("nestedParam"));
+    }
+
+    @Test
+    public void testResolveEffectiveConditionDeepCopyRecursiveNesting() {
+        // Test deep copy with recursively nested conditions (nested condition contains another nested condition)
+        ConditionType childType = new ConditionType();
+        childType.setItemId("childConditionType");
+        
+        // Create parent condition with nested condition that itself has a nested condition
+        Condition parentCondition = new Condition();
+        parentCondition.setConditionTypeId("booleanCondition");
+        parentCondition.setParameter("operator", "and");
+        
+        Condition nested1 = new Condition();
+        nested1.setConditionTypeId("booleanCondition");
+        nested1.setParameter("operator", "or");
+        
+        Condition nested2 = new Condition();
+        nested2.setConditionTypeId("eventTypeCondition");
+        nested2.setParameter("eventTypeId", "view");
+        
+        nested1.setParameter("subConditions", Arrays.asList(nested2));
+        parentCondition.setParameter("subConditions", Arrays.asList(nested1));
+        childType.setParentCondition(parentCondition);
+        
+        // Create condition types
+        ConditionType booleanType = new ConditionType();
+        booleanType.setItemId("booleanCondition");
+        
+        ConditionType eventTypeConditionType = new ConditionType();
+        eventTypeConditionType.setItemId("eventTypeCondition");
+        
+        // Mock definitions service
+        when(definitionsService.getConditionType("childConditionType")).thenReturn(childType);
+        when(definitionsService.getConditionType("booleanCondition")).thenReturn(booleanType);
+        when(definitionsService.getConditionType("eventTypeCondition")).thenReturn(eventTypeConditionType);
+        
+        // Create condition to resolve
+        Condition condition = new Condition();
+        condition.setConditionTypeId("childConditionType");
+        
+        // Resolve effective condition
+        Map<String, Object> context = new HashMap<>();
+        Condition effectiveCondition = ParserHelper.resolveEffectiveCondition(
+            condition, definitionsService, context, "test context");
+        
+        // Verify all levels are deep copied
+        @SuppressWarnings("unchecked")
+        List<Condition> level1SubConditions = (List<Condition>) effectiveCondition.getParameter("subConditions");
+        assertNotNull("Level 1 subConditions should be present", level1SubConditions);
+        assertEquals("Should have one level 1 subCondition", 1, level1SubConditions.size());
+        
+        Condition level1Nested = level1SubConditions.get(0);
+        assertNotSame("Level 1 nested condition should be a copy", nested1, level1Nested);
+        
+        @SuppressWarnings("unchecked")
+        List<Condition> level2SubConditions = (List<Condition>) level1Nested.getParameter("subConditions");
+        assertNotNull("Level 2 subConditions should be present", level2SubConditions);
+        assertEquals("Should have one level 2 subCondition", 1, level2SubConditions.size());
+        
+        Condition level2Nested = level2SubConditions.get(0);
+        assertNotSame("Level 2 nested condition should be a copy", nested2, level2Nested);
+        
+        // Verify modifying deeply nested condition doesn't affect original
+        level2Nested.setParameter("eventTypeId", "modified");
+        assertEquals("Original level 2 nested condition should not be modified", 
+            "view", nested2.getParameter("eventTypeId"));
+        assertEquals("Copied level 2 nested condition should be modified", 
+            "modified", level2Nested.getParameter("eventTypeId"));
+    }
+
+    @Test
+    public void testResolveEffectiveConditionPreservesParameters() {
+        // Test that all parameters are preserved in the deep copy
+        ConditionType childType = new ConditionType();
+        childType.setItemId("childConditionType");
+        
+        // Create parent condition with various parameter types
+        Condition parentCondition = new Condition();
+        parentCondition.setConditionTypeId("parentConditionType");
+        parentCondition.setParameter("stringParam", "stringValue");
+        parentCondition.setParameter("intParam", 42);
+        parentCondition.setParameter("boolParam", true);
+        parentCondition.setParameter("listParam", Arrays.asList("item1", "item2"));
+        
+        // Create nested condition
+        Condition nested = new Condition();
+        nested.setConditionTypeId("nestedConditionType");
+        nested.setParameter("nestedString", "nestedValue");
+        parentCondition.setParameter("nestedCondition", nested);
+        
+        childType.setParentCondition(parentCondition);
+        
+        // Create condition types
+        ConditionType parentType = new ConditionType();
+        parentType.setItemId("parentConditionType");
+        
+        ConditionType nestedType = new ConditionType();
+        nestedType.setItemId("nestedConditionType");
+        
+        // Mock definitions service
+        when(definitionsService.getConditionType("childConditionType")).thenReturn(childType);
+        when(definitionsService.getConditionType("parentConditionType")).thenReturn(parentType);
+        when(definitionsService.getConditionType("nestedConditionType")).thenReturn(nestedType);
+        
+        // Create condition to resolve with additional parameters
+        Condition condition = new Condition();
+        condition.setConditionTypeId("childConditionType");
+        condition.setParameter("customParam", "customValue");
+        
+        // Resolve effective condition
+        Map<String, Object> context = new HashMap<>();
+        Condition effectiveCondition = ParserHelper.resolveEffectiveCondition(
+            condition, definitionsService, context, "test context");
+        
+        // Verify all parameter types are preserved
+        assertEquals("String parameter should be preserved", 
+            "stringValue", effectiveCondition.getParameter("stringParam"));
+        assertEquals("Integer parameter should be preserved", 
+            42, effectiveCondition.getParameter("intParam"));
+        assertEquals("Boolean parameter should be preserved", 
+            true, effectiveCondition.getParameter("boolParam"));
+        assertEquals("List parameter should be preserved", 
+            Arrays.asList("item1", "item2"), effectiveCondition.getParameter("listParam"));
+        
+        // Verify nested condition parameter is preserved
+        Condition effectiveNested = (Condition) effectiveCondition.getParameter("nestedCondition");
+        assertNotNull("Nested condition should be present", effectiveNested);
+        assertEquals("Nested condition parameter should be preserved", 
+            "nestedValue", effectiveNested.getParameter("nestedString"));
+        
+        // Verify condition's custom parameter is merged (highest priority)
+        assertEquals("Condition parameter should override parent parameter if same key", 
+            "customValue", effectiveCondition.getParameter("customParam"));
+    }
+
+    @Test
+    public void testResolveEffectiveConditionWithNullCondition() {
+        // Test that null condition is handled gracefully
+        Map<String, Object> context = new HashMap<>();
+        Condition result = ParserHelper.resolveEffectiveCondition(
+            null, definitionsService, context, "test context");
+        
+        assertNull("Null condition should return null", result);
+    }
+
+    @Test
+    public void testResolveEffectiveConditionWithNoParent() {
+        // Test condition without parent condition
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("testConditionType");
+        
+        Condition condition = new Condition();
+        condition.setConditionTypeId("testConditionType");
+        condition.setParameter("param1", "value1");
+        
+        when(definitionsService.getConditionType("testConditionType")).thenReturn(conditionType);
+        
+        Map<String, Object> context = new HashMap<>();
+        Condition result = ParserHelper.resolveEffectiveCondition(
+            condition, definitionsService, context, "test context");
+        
+        // Should return the original condition (no parent to resolve)
+        assertNotNull("Result should not be null", result);
+        assertEquals("Should return original condition when no parent", 
+            condition, result);
+        assertEquals("Parameter should be preserved", 
+            "value1", result.getParameter("param1"));
+    }
+
+    @Test
+    public void testConditionDeepCopy() {
+        // Test direct deep copy method on Condition
+        Condition original = new Condition();
+        original.setConditionTypeId("testConditionType");
+        original.setParameter("stringParam", "stringValue");
+        original.setParameter("intParam", 42);
+        original.setParameter("boolParam", true);
+        
+        // Create nested condition
+        Condition nested = new Condition();
+        nested.setConditionTypeId("nestedConditionType");
+        nested.setParameter("nestedParam", "nestedValue");
+        original.setParameter("nestedCondition", nested);
+        
+        // Create nested condition in collection
+        Condition nestedInList = new Condition();
+        nestedInList.setConditionTypeId("nestedInListType");
+        nestedInList.setParameter("listParam", "listValue");
+        original.setParameter("nestedList", Arrays.asList(nestedInList));
+        
+        // Perform deep copy
+        Condition copied = original.deepCopy();
+        
+        // Verify it's a copy, not the same reference
+        assertNotSame("Copied condition should be a different object", original, copied);
+        
+        // Verify basic properties are copied
+        assertEquals("Condition type ID should be copied", 
+            "testConditionType", copied.getConditionTypeId());
+        assertEquals("String parameter should be copied", 
+            "stringValue", copied.getParameter("stringParam"));
+        assertEquals("Integer parameter should be copied", 
+            42, copied.getParameter("intParam"));
+        assertEquals("Boolean parameter should be copied", 
+            true, copied.getParameter("boolParam"));
+        
+        // Verify nested condition is deep copied
+        Condition copiedNested = (Condition) copied.getParameter("nestedCondition");
+        assertNotNull("Nested condition should be present", copiedNested);
+        assertNotSame("Nested condition should be a different object", nested, copiedNested);
+        assertEquals("Nested condition type ID should be copied", 
+            "nestedConditionType", copiedNested.getConditionTypeId());
+        assertEquals("Nested condition parameter should be copied", 
+            "nestedValue", copiedNested.getParameter("nestedParam"));
+        
+        // Verify nested condition in list is deep copied
+        @SuppressWarnings("unchecked")
+        List<Condition> copiedList = (List<Condition>) copied.getParameter("nestedList");
+        assertNotNull("Nested list should be present", copiedList);
+        assertEquals("Nested list should have one item", 1, copiedList.size());
+        assertNotSame("Nested condition in list should be a different object", 
+            nestedInList, copiedList.get(0));
+        assertEquals("Nested condition in list type ID should be copied", 
+            "nestedInListType", copiedList.get(0).getConditionTypeId());
+        assertEquals("Nested condition in list parameter should be copied", 
+            "listValue", copiedList.get(0).getParameter("listParam"));
+        
+        // Verify modifying copied condition doesn't affect original
+        copied.setParameter("stringParam", "modified");
+        assertEquals("Original parameter should not be modified", 
+            "stringValue", original.getParameter("stringParam"));
+        assertEquals("Copied parameter should be modified", 
+            "modified", copied.getParameter("stringParam"));
+        
+        // Verify modifying nested condition doesn't affect original
+        copiedNested.setParameter("nestedParam", "modifiedNested");
+        assertEquals("Original nested parameter should not be modified", 
+            "nestedValue", nested.getParameter("nestedParam"));
+        assertEquals("Copied nested parameter should be modified", 
+            "modifiedNested", copiedNested.getParameter("nestedParam"));
+        
+        // Verify modifying nested condition in list doesn't affect original
+        copiedList.get(0).setParameter("listParam", "modifiedList");
+        assertEquals("Original nested list parameter should not be modified", 
+            "listValue", nestedInList.getParameter("listParam"));
+        assertEquals("Copied nested list parameter should be modified", 
+            "modifiedList", copiedList.get(0).getParameter("listParam"));
+    }
+
+    @Test
+    public void testConditionDeepCopyWithNullValues() {
+        // Test deep copy handles null values gracefully
+        Condition original = new Condition();
+        original.setConditionTypeId("testConditionType");
+        original.setParameter("nullParam", null);
+        original.setParameter("stringParam", "value");
+        
+        Condition copied = original.deepCopy();
+        
+        assertNotNull("Copied condition should not be null", copied);
+        assertNull("Null parameter should remain null", copied.getParameter("nullParam"));
+        assertEquals("String parameter should be copied", 
+            "value", copied.getParameter("stringParam"));
+    }
+
+    @Test
+    public void testConditionDeepCopyWithEmptyParameters() {
+        // Test deep copy with empty parameter map
+        Condition original = new Condition();
+        original.setConditionTypeId("testConditionType");
+        
+        Condition copied = original.deepCopy();
+        
+        assertNotNull("Copied condition should not be null", copied);
+        assertEquals("Condition type ID should be copied", 
+            "testConditionType", copied.getConditionTypeId());
+        assertNotNull("Parameter values map should exist", copied.getParameterValues());
+        assertTrue("Parameter values map should be empty", copied.getParameterValues().isEmpty());
     }
 }

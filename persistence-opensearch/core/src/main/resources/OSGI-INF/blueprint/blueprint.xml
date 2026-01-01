@@ -94,6 +94,16 @@
         <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
+    <!-- DefinitionsService Reference with listener to avoid blueprint context restart -->
+    <reference id="definitionsService"
+               interface="org.apache.unomi.api.services.DefinitionsService"
+               availability="optional">
+        <reference-listener bind-method="bindDefinitionsService"
+                          unbind-method="unbindDefinitionsService">
+            <ref component-id="conditionOSQueryBuilderDispatcher"/>
+        </reference-listener>
+    </reference>
+
     <reference id="conditionEvaluatorDispatcher" interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher" />
 
     <bean id="openSearchPersistenceServiceImpl"

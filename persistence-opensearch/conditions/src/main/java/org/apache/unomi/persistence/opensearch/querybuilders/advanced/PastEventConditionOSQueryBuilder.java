@@ -26,20 +26,24 @@ import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder;
 import org.apache.unomi.scripting.ScriptExecutor;
-import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
+import org.opensearch.client.opensearch._types.query_dsl.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class PastEventConditionOSQueryBuilder implements ConditionOSQueryBuilder, PastEventConditionPersistenceQueryBuilder {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PastEventConditionOSQueryBuilder.class.getName());
 
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;
@@ -54,6 +58,18 @@ public class PastEventConditionOSQueryBuilder implements ConditionOSQueryBuilder
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void bindDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+        LOGGER.debug("DefinitionsService bound to PastEventConditionOSQueryBuilder");
+    }
+
+    public void unbindDefinitionsService(DefinitionsService definitionsService) {
+        if (this.definitionsService == definitionsService) {
+            this.definitionsService = null;
+            LOGGER.debug("DefinitionsService unbound from PastEventConditionOSQueryBuilder");
+        }
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {

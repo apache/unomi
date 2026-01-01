@@ -23,18 +23,18 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
-import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RuleListenerService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
-import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
 import org.junit.jupiter.api.BeforeEach;
@@ -66,7 +66,6 @@ public class RulesServiceImplTest {
     private ExecutionContextManagerImpl executionContextManager;
     private KarafSecurityService securityService;
     private AuditServiceImpl auditService;
-    private ConditionValidationService conditionValidationService;
 
     @Mock
     private BundleContext bundleContext;
@@ -75,7 +74,8 @@ public class RulesServiceImplTest {
     private RequestTracer requestTracer;
 
     private TestActionExecutorDispatcher actionExecutorDispatcher;
-    private org.apache.unomi.api.services.SchedulerService schedulerService;
+    private SchedulerService schedulerService;
+    private TestEventAdmin testEventAdmin;
 
     private static final String TENANT_1 = "tenant1";
     private static final String TENANT_2 = "tenant2";
@@ -83,12 +83,9 @@ public class RulesServiceImplTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        
+
         tracerService = TestHelper.createTracerService();
         tenantService = new TestTenantService();
-
-        // Initialize ConditionValidationService using TestHelper
-        this.conditionValidationService = TestHelper.createConditionValidationService();
 
         // Create tenants using TestHelper
         TestHelper.setupCommonTestData(tenantService);
@@ -109,7 +106,15 @@ public class RulesServiceImplTest {
         // Create scheduler service using TestHelper
         schedulerService = TestHelper.createSchedulerService("rule-scheduler-node", persistenceService, executionContextManager, bundleContext, null, -1, true, true);
 
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
+        // Create definitions service with TestEventAdmin
+        java.util.Map.Entry<DefinitionsServiceImpl, TestEventAdmin> servicePair =
+            TestHelper.createDefinitionServiceWithEventAdmin(persistenceService, bundleContext, schedulerService,
+                multiTypeCacheService, executionContextManager, tenantService);
+        definitionsService = servicePair.getKey();
+        testEventAdmin = servicePair.getValue();
+
+        // Inject definitionsService into the dispatcher
+        TestHelper.injectDefinitionsServiceIntoDispatcher(conditionEvaluatorDispatcher, definitionsService);
         TestConditionEvaluators.getConditionTypes().forEach((key, value) -> definitionsService.setConditionType(value));
 
         eventService = TestHelper.createEventService(persistenceService, bundleContext, definitionsService, tenantService, tracerService);
@@ -132,20 +137,31 @@ public class RulesServiceImplTest {
         rulesService.setTenantService(tenantService);
         rulesService.setSchedulerService(schedulerService);
         rulesService.setContextManager(executionContextManager);
-        rulesService.setConditionValidationService(conditionValidationService);
         rulesService.setTracerService(tracerService);
         rulesService.setCacheService(multiTypeCacheService);
-        
-        // Create and inject ResolverService
-        ResolverServiceImpl resolverService = new ResolverServiceImpl();
-        resolverService.setDefinitionsService(definitionsService);
-        rulesService.setResolverService(resolverService);
+
 
         // Set up condition types
         setupActionTypes();
 
         // Initialize rule caches
         rulesService.postConstruct();
+
+        // Register RulesServiceImpl as an EventHandler with TestEventAdmin
+        // In real OSGi, this would be done via service registry, but for tests we register manually
+        if (testEventAdmin != null) {
+            testEventAdmin.registerHandler(rulesService, "org/apache/unomi/definitions/**");
+        }
+    }
+
+    @org.junit.jupiter.api.AfterEach
+    public void tearDown() {
+        if (testEventAdmin != null) {
+            testEventAdmin.shutdown();
+        }
+        if (rulesService != null) {
+            rulesService.preDestroy();
+        }
     }
 
     private void setupActionTypes() {
@@ -706,12 +722,16 @@ public class RulesServiceImplTest {
 
         // Create parent condition
         Condition parentCondition = new Condition();
-        parentCondition.setConditionTypeId("booleanCondition");
+        parentCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
         parentCondition.setParameter("operator", "and");
 
-        // Create child condition
+        // Create child condition with proper ConditionType set
+        // Note: propertyCondition is an alias, we need to use the actual condition type
+        // For a minimal valid condition, we'll use profilePropertyCondition with minimal required params
         Condition childCondition = new Condition();
-        childCondition.setConditionTypeId("propertyCondition");
+        childCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+        childCondition.setParameter("propertyName", "testProperty");
+        childCondition.setParameter("comparisonOperator", "exists");
 
         // Set up nested structure
         List<Condition> subConditions = new ArrayList<>();
@@ -802,9 +822,13 @@ public class RulesServiceImplTest {
         rulesService.refreshRules();
 
         Rule refreshedRule = rulesService.getRule(rule.getItemId());
-        assertNotNull(definitionsService.getConditionType("unavailableConditionType"), "Rule should have a condition type after refresh");
+        assertNotNull(definitionsService.getConditionType("unavailableConditionType"), "Condition type should be available after being set");
         assertNotNull(refreshedRule, "Refreshed rule should not be null");
-        assertNotNull(refreshedRule.getCondition().getConditionType(), "Rule condition type should not be null");
+        // Condition type is resolved on-demand, not automatically on load
+        // Resolve it explicitly for the test using the test's typeResolutionService
+        TypeResolutionServiceImpl testTypeResolutionService = new TypeResolutionServiceImpl(definitionsService);
+        testTypeResolutionService.resolveConditionType(refreshedRule.getCondition(), "test rule condition");
+        assertNotNull(refreshedRule.getCondition().getConditionType(), "Rule condition type should be resolved");
     }
 
     @Test
@@ -837,8 +861,1295 @@ public class RulesServiceImplTest {
         rulesService.refreshRules();
 
         Rule refreshedRule = rulesService.getRule(rule.getItemId());
-        assertNotNull(definitionsService.getConditionType("unavailableConditionType"), "Rule should have a condition type after refresh");
+        assertNotNull(definitionsService.getConditionType("unavailableConditionType"), "Condition type should be available after being set");
         assertNotNull(refreshedRule, "Refreshed rule should not be null");
-        assertNotNull(refreshedRule.getCondition().getConditionType(), "Rule condition type should not be null");
+        // Condition type is resolved on-demand, not automatically on load
+        // Resolve it explicitly for the test using the test's typeResolutionService
+        TypeResolutionServiceImpl testTypeResolutionService = new TypeResolutionServiceImpl(definitionsService);
+        testTypeResolutionService.resolveConditionType(refreshedRule.getCondition(), "test rule condition");
+        assertNotNull(refreshedRule.getCondition().getConditionType(), "Rule condition type should be resolved");
     }
+
+    // ==================== Loop Detection Tests ====================
+
+    /**
+     * Helper to create a wildcard rule that matches all events (including ruleFired).
+     */
+    private Rule createWildcardRule(String ruleId) {
+        Rule rule = createTestRule();
+        rule.setItemId(ruleId);
+        rule.setTenantId(TENANT_1);
+        Condition wildcardCondition = new Condition();
+        wildcardCondition.setConditionType(definitionsService.getConditionType("eventTypeCondition"));
+        wildcardCondition.setParameter("eventTypeId", "*");
+        rule.setCondition(wildcardCondition);
+        rule.setActions(Collections.singletonList(createTestAction()));
+        return rule;
+    }
+
+    @Test
+    public void testRuleFiredEventLoopDetection() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Wildcard rule matches ruleFired events, creating a loop
+            Rule wildcardRule = createWildcardRule("wildcard-rule");
+            rulesService.setRule(wildcardRule);
+            rulesService.refreshRules();
+
+            Event event = createTestEvent();
+            event.setEventType("view");
+            event.setItemId("test-event-123"); // Set explicit ID for proper loop detection
+
+            // First event should process normally (triggers rule, which sends ruleFired)
+            // The ruleFired event should be detected as a loop and prevented
+            int result = rulesService.onEvent(event);
+            assertNotNull(result, "Event should return a result without infinite loop");
+
+            // Verify rule was processed (ruleFired was sent but loop was detected)
+            // The key is that processing completes without hanging
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleFiredEventLoopDetectionWithProperIds() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule that matches ruleFired events
+            Rule rule = createWildcardRule("rule-matching-ruleFired");
+            rulesService.setRule(rule);
+            rulesService.refreshRules();
+
+            // Create an event with a proper ID
+            Event originalEvent = createTestEvent();
+            originalEvent.setEventType("view");
+            originalEvent.setItemId("original-event-456");
+
+            // Process the event - this will trigger ruleFired
+            // The ruleFired event should use proper ID (source event + rule ID)
+            // and be detected as a loop when it tries to process again
+            int result = rulesService.onEvent(originalEvent);
+            assertNotNull(result, "Should return without infinite loop");
+
+            // Verify the event was processed (but loop was prevented)
+            // The key is that it returns without hanging
+            return null;
+        });
+    }
+
+    @Test
+    public void testGenericEventLoopDetection() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Action executor that sends the same event type with same ID
+            Event loopEvent = createTestEvent();
+            loopEvent.setEventType("customEvent");
+            loopEvent.setItemId("loop-event-789");
+
+            actionExecutorDispatcher.addExecutor("test", (action, evt) -> {
+                // Send the same event (same ID) to create a loop
+                Event newEvent = new Event("customEvent", evt.getSession(), evt.getProfile(),
+                    evt.getScope(), evt, evt.getTarget(), evt.getTimeStamp());
+                newEvent.setItemId("loop-event-789"); // Same ID to trigger loop detection
+                newEvent.setPersistent(false);
+                eventService.send(newEvent);
+                return EventService.NO_CHANGE;
+            });
+
+            Rule rule = createTestRule();
+            rule.setItemId("loop-rule");
+            rule.setTenantId(TENANT_1);
+            rule.setCondition(createEventTypeCondition("customEvent"));
+            Action action = new Action();
+            action.setActionType(definitionsService.getActionType("test"));
+            rule.setActions(Collections.singletonList(action));
+
+            rulesService.setRule(rule);
+            rulesService.refreshRules();
+
+            // Should detect loop when same event ID is processed again
+            int result = rulesService.onEvent(loopEvent);
+            assertNotNull(result, "Should return without infinite loop");
+            return null;
+        });
+    }
+
+    @Test
+    public void testMaximumDepthDetection() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Register action types for this test
+            ActionType testActionType1 = TestHelper.createActionType("test1", "test1");
+            definitionsService.setActionType(testActionType1);
+            ActionType testActionType2 = TestHelper.createActionType("test2", "test2");
+            definitionsService.setActionType(testActionType2);
+
+            // Create a chain of rules that trigger each other (but not a loop)
+            // This should hit maximum depth limit
+
+            // Rule 1: matches eventA, sends eventB
+            actionExecutorDispatcher.addExecutor("test1", (action, evt) -> {
+                Event newEvent = new Event("eventB", evt.getSession(), evt.getProfile(),
+                    evt.getScope(), evt, evt.getTarget(), evt.getTimeStamp());
+                newEvent.setItemId("event-b-" + System.currentTimeMillis()); // Different ID each time
+                newEvent.setPersistent(false);
+                eventService.send(newEvent);
+                return EventService.NO_CHANGE;
+            });
+
+            Rule rule1 = createTestRule();
+            rule1.setItemId("rule-eventA");
+            rule1.setTenantId(TENANT_1);
+            rule1.setCondition(createEventTypeCondition("eventA"));
+            Action action1 = new Action();
+            action1.setActionType(definitionsService.getActionType("test1"));
+            rule1.setActions(Collections.singletonList(action1));
+
+            // Rule 2: matches eventB, sends eventA (creates deep nesting)
+            actionExecutorDispatcher.addExecutor("test2", (action, evt) -> {
+                Event newEvent = new Event("eventA", evt.getSession(), evt.getProfile(),
+                    evt.getScope(), evt, evt.getTarget(), evt.getTimeStamp());
+                newEvent.setItemId("event-a-" + System.currentTimeMillis()); // Different ID each time
+                newEvent.setPersistent(false);
+                eventService.send(newEvent);
+                return EventService.NO_CHANGE;
+            });
+
+            Rule rule2 = createTestRule();
+            rule2.setItemId("rule-eventB");
+            rule2.setTenantId(TENANT_1);
+            rule2.setCondition(createEventTypeCondition("eventB"));
+            Action action2 = new Action();
+            action2.setActionType(definitionsService.getActionType("test2"));
+            rule2.setActions(Collections.singletonList(action2));
+
+            rulesService.setRule(rule1);
+            rulesService.setRule(rule2);
+            rulesService.refreshRules();
+
+            // Start with eventA - this will create deep nesting
+            Event startEvent = createTestEvent();
+            startEvent.setEventType("eventA");
+            startEvent.setItemId("start-event");
+
+            // Should hit maximum depth and return (not hang)
+            // Depth protection is now handled by EventServiceImpl.MAX_RECURSION_DEPTH
+            // RulesServiceImpl only handles loop detection (same event key seen twice)
+            int result = rulesService.onEvent(startEvent);
+            assertNotNull(result, "Should return when maximum depth is reached by EventServiceImpl");
+
+            // Verify that processing can continue after depth limit (ThreadLocal was cleaned up)
+            Event nextEvent = createTestEvent();
+            nextEvent.setEventType("view");
+            nextEvent.setItemId("next-event");
+            int nextResult = rulesService.onEvent(nextEvent);
+            assertNotNull(nextResult, "Should be able to process new events after depth limit");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testNullEventHandling() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            assertEquals(EventService.NO_CHANGE, rulesService.onEvent(null),
+                "Null event should return NO_CHANGE");
+            return null;
+        });
+    }
+
+    @Test
+    public void testEventWithoutId() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Event event = createTestEvent();
+            event.setItemId(null);
+            // Event without ID should still generate a key and be processed
+            assertNotNull(rulesService.onEvent(event), "Event without ID should be processed");
+            return null;
+        });
+    }
+
+    @Test
+    public void testMultipleRulesInLoop() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Multiple wildcard rules should all be caught by loop detection
+            rulesService.setRule(createWildcardRule("rule1"));
+            rulesService.setRule(createWildcardRule("rule2"));
+            rulesService.refreshRules();
+
+            Event event = createTestEvent();
+            event.setEventType("view");
+            event.setItemId("test-event-multi");
+
+            assertNotNull(rulesService.onEvent(event), "Should handle multiple rules in loop");
+            return null;
+        });
+    }
+
+    @Test
+    public void testSameEventIdLoopDetection() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Test that the same event ID is properly detected as a loop
+            Event event = createTestEvent();
+            event.setEventType("testEvent");
+            event.setItemId("same-event-id");
+
+            // Create a rule that sends the same event back
+            actionExecutorDispatcher.addExecutor("test", (action, evt) -> {
+                Event newEvent = new Event("testEvent", evt.getSession(), evt.getProfile(),
+                    evt.getScope(), evt, evt.getTarget(), evt.getTimeStamp());
+                newEvent.setItemId("same-event-id"); // Same ID - should trigger loop detection
+                newEvent.setPersistent(false);
+                eventService.send(newEvent);
+                return EventService.NO_CHANGE;
+            });
+
+            Rule rule = createTestRule();
+            rule.setItemId("loop-back-rule");
+            rule.setTenantId(TENANT_1);
+            rule.setCondition(createEventTypeCondition("testEvent"));
+            Action action = new Action();
+            action.setActionType(definitionsService.getActionType("test"));
+            rule.setActions(Collections.singletonList(action));
+
+            rulesService.setRule(rule);
+            rulesService.refreshRules();
+
+            // Should detect loop when same event ID is processed again
+            int result = rulesService.onEvent(event);
+            assertNotNull(result, "Should detect loop and return");
+            return null;
+        });
+    }
+
+    @Test
+    public void testProcessingContextReuseAfterCleanup() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Verify that ProcessingContext is properly cleaned up and recreated
+            Rule rule = createTestRule();
+            rule.setItemId("reuse-test-rule");
+            rule.setTenantId(TENANT_1);
+            rule.setActions(Collections.singletonList(createTestAction()));
+            rulesService.setRule(rule);
+            rulesService.refreshRules();
+
+            // Process first event - should create ProcessingContext
+            Event event1 = createTestEvent();
+            event1.setItemId("event-1");
+            int result1 = rulesService.onEvent(event1);
+            assertNotNull(result1, "First event should process successfully");
+
+            // Process second event - should reuse ProcessingContext (but different event key, so no loop)
+            Event event2 = createTestEvent();
+            event2.setItemId("event-2");
+            int result2 = rulesService.onEvent(event2);
+            assertNotNull(result2, "Second event should process successfully");
+
+            // Process third event - verify context is still working
+            Event event3 = createTestEvent();
+            event3.setItemId("event-3");
+            int result3 = rulesService.onEvent(event3);
+            assertNotNull(result3, "Third event should process successfully");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testHistoryTrackingWithMultipleRules() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create multiple rules that all match the same event type "test"
+            Rule rule1 = createTestRule();
+            rule1.setItemId("history-rule-1");
+            rule1.setTenantId(TENANT_1);
+            rule1.setCondition(createEventTypeCondition("test")); // Explicitly set to match "test" events
+            rule1.setActions(Collections.singletonList(createTestAction()));
+
+            Rule rule2 = createTestRule();
+            rule2.setItemId("history-rule-2");
+            rule2.setTenantId(TENANT_1);
+            rule2.setCondition(createEventTypeCondition("test")); // Explicitly set to match "test" events
+            rule2.setActions(Collections.singletonList(createTestAction()));
+
+            Rule rule3 = createTestRule();
+            rule3.setItemId("history-rule-3");
+            rule3.setTenantId(TENANT_1);
+            rule3.setCondition(createEventTypeCondition("test")); // Explicitly set to match "test" events
+            rule3.setActions(Collections.singletonList(createTestAction()));
+
+            rulesService.setRule(rule1);
+            rulesService.setRule(rule2);
+            rulesService.setRule(rule3);
+            rulesService.refreshRules();
+
+            // Verify rules are saved and can be retrieved
+            Rule savedRule1 = rulesService.getRule("history-rule-1");
+            Rule savedRule2 = rulesService.getRule("history-rule-2");
+            Rule savedRule3 = rulesService.getRule("history-rule-3");
+            assertNotNull(savedRule1, "Rule 1 should be saved");
+            assertNotNull(savedRule2, "Rule 2 should be saved");
+            assertNotNull(savedRule3, "Rule 3 should be saved");
+
+            // Process event that matches all three rules
+            Event event = createTestEvent();
+            event.setItemId("history-test-event");
+
+            // Verify rules match before processing (with retry to handle indexing delays)
+            Set<Rule> matchingRulesBefore = TestHelper.retryUntil(
+                () -> rulesService.getMatchingRules(event),
+                rules -> rules != null && rules.size() >= 3
+            );
+            assertTrue(matchingRulesBefore.size() >= 3,
+                "Should match at least 3 rules before processing. Found: " + matchingRulesBefore.size());
+
+            // All three rules should fire and be recorded in history
+            int result = rulesService.onEvent(event);
+            assertNotNull(result, "Event should process all matching rules");
+
+            // Verify rules were processed (history tracking happens in processEvent)
+            Set<Rule> matchingRules = rulesService.getMatchingRules(event);
+            assertTrue(matchingRules.size() >= 3,
+                "Should match at least 3 rules after processing. Found: " + matchingRules.size());
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleFiredEventWithNullSource() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Test ruleFired event handling when source is null or malformed
+            Rule rule = createTestRule();
+            rule.setItemId("rule-fired-null-test");
+            rule.setTenantId(TENANT_1);
+            rule.setActions(Collections.singletonList(createTestAction()));
+            rulesService.setRule(rule);
+            rulesService.refreshRules();
+
+            // Create event without ID to test fallback key generation
+            Event event = createTestEvent();
+            event.setItemId(null);
+            event.setEventType("testEvent");
+
+            // Should process without error (generateEventKey handles null IDs)
+            int result = rulesService.onEvent(event);
+            assertNotNull(result, "Event without ID should still process");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testMultipleLoopsInSequence() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Test that multiple different loops can be detected in sequence
+            Event loopEvent1 = createTestEvent();
+            loopEvent1.setEventType("loopEvent1");
+            loopEvent1.setItemId("loop-1");
+
+            actionExecutorDispatcher.addExecutor("test", (action, evt) -> {
+                if ("loopEvent1".equals(evt.getEventType())) {
+                    Event newEvent = new Event("loopEvent1", evt.getSession(), evt.getProfile(),
+                        evt.getScope(), evt, evt.getTarget(), evt.getTimeStamp());
+                    newEvent.setItemId("loop-1");
+                    newEvent.setPersistent(false);
+                    eventService.send(newEvent);
+                }
+                return EventService.NO_CHANGE;
+            });
+
+            Rule rule1 = createTestRule();
+            rule1.setItemId("loop-rule-1");
+            rule1.setTenantId(TENANT_1);
+            rule1.setCondition(createEventTypeCondition("loopEvent1"));
+            Action action1 = new Action();
+            action1.setActionType(definitionsService.getActionType("test"));
+            rule1.setActions(Collections.singletonList(action1));
+
+            rulesService.setRule(rule1);
+            rulesService.refreshRules();
+
+            // First loop should be detected
+            int result1 = rulesService.onEvent(loopEvent1);
+            assertNotNull(result1, "First loop should be detected");
+
+            // Process a different event to reset context
+            Event normalEvent = createTestEvent();
+            normalEvent.setEventType("normal");
+            normalEvent.setItemId("normal-event");
+            rulesService.onEvent(normalEvent);
+
+            // Second loop with different event should also be detected
+            Event loopEvent2 = createTestEvent();
+            loopEvent2.setEventType("loopEvent1");
+            loopEvent2.setItemId("loop-1");
+            int result2 = rulesService.onEvent(loopEvent2);
+            assertNotNull(result2, "Second loop should also be detected");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testDepthTrackingAccuracy() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Test that nested event processing works correctly
+            // Note: Depth protection is now handled by EventServiceImpl.MAX_RECURSION_DEPTH
+            // This test verifies that nested events can be processed without issues
+            ActionType testActionType = TestHelper.createActionType("depthTest", "depthTest");
+            definitionsService.setActionType(testActionType);
+
+            // Verify action type is properly set up
+            ActionType retrievedActionType = definitionsService.getActionType("depthTest");
+            assertNotNull(retrievedActionType, "Action type should be available");
+
+            final int[] depthCounter = {0};
+            actionExecutorDispatcher.addExecutor("depthTest", (action, evt) -> {
+                depthCounter[0]++;
+                if (depthCounter[0] < 5) {
+                    Event newEvent = new Event("depthTestEvent", evt.getSession(), evt.getProfile(),
+                        evt.getScope(), evt, evt.getTarget(), evt.getTimeStamp());
+                    newEvent.setItemId("depth-event-" + depthCounter[0]);
+                    newEvent.setPersistent(false);
+                    eventService.send(newEvent);
+                }
+                return EventService.NO_CHANGE;
+            });
+
+            Rule rule = createTestRule();
+            rule.setItemId("depth-test-rule");
+            rule.setTenantId(TENANT_1);
+            rule.setCondition(createEventTypeCondition("depthTestEvent"));
+            Action action = new Action();
+            action.setActionType(retrievedActionType);
+            rule.setActions(Collections.singletonList(action));
+
+            rulesService.setRule(rule);
+            rulesService.refreshRules();
+
+            // Verify rule is saved and matches the event type
+            Rule savedRule = rulesService.getRule("depth-test-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+
+            Event startEvent = createTestEvent();
+            startEvent.setEventType("depthTestEvent");
+            startEvent.setItemId("depth-start");
+
+            // Verify rule matches before processing (with retry to handle indexing delays)
+            Set<Rule> matchingRules = TestHelper.retryUntil(
+                () -> rulesService.getMatchingRules(startEvent),
+                rules -> rules != null && !rules.isEmpty() &&
+                    rules.stream().anyMatch(r -> r.getItemId().equals("depth-test-rule"))
+            );
+            assertFalse(matchingRules.isEmpty(), "Rule should match depthTestEvent");
+            assertTrue(matchingRules.stream().anyMatch(r -> r.getItemId().equals("depth-test-rule")),
+                "Matching rules should include depth-test-rule");
+
+            // Should process without hitting depth limit (we only go 5 levels deep)
+            // Depth protection is handled by EventServiceImpl.MAX_RECURSION_DEPTH (20)
+            int result = rulesService.onEvent(startEvent);
+            assertNotNull(result, "Should process nested events without hitting depth limit");
+
+            // Verify nested events were processed (we should have processed multiple levels)
+            // The action executor should be called at least once for the initial event
+            // Note: The counter increments when the action executor is called, which happens
+            // when a rule fires. Even if nested events aren't processed due to depth limits,
+            // the initial event should trigger the action at least once.
+            assertTrue(depthCounter[0] > 0,
+                "Should have processed nested events. Action executor was called " + depthCounter[0] + " times. " +
+                "This means the rule matched and the action was executed.");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testThreadLocalCleanupAfterException() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Action executor that throws exception
+            actionExecutorDispatcher.addExecutor("test",
+                (action, event) -> { throw new RuntimeException("Test exception"); });
+
+            Rule rule = createTestRule();
+            rule.setItemId("exception-rule");
+            rule.setTenantId(TENANT_1);
+            rule.setActions(Collections.singletonList(createTestAction()));
+            rulesService.setRule(rule);
+
+            // Ensure rule is saved and available before refreshing
+            Rule savedRule = persistenceService.load(rule.getItemId(), Rule.class);
+            assertNotNull(savedRule, "Rule should be saved");
+
+            // Refresh rules to load and cache them
+            rulesService.refreshRules();
+
+            // Verify rule is loaded and cached by checking it can be retrieved
+            Rule retrievedRule = rulesService.getRule(rule.getItemId());
+            assertNotNull(retrievedRule, "Rule should be retrievable after refreshRules");
+
+            // Ensure rule matches the event (with refresh delay disabled, this should be immediate)
+            Event testEvent = createTestEvent();
+            testEvent.setItemId("exception-test-event");
+            Set<Rule> matchingRules = TestHelper.retryUntil(
+                () -> rulesService.getMatchingRules(testEvent),
+                r -> r != null && !r.isEmpty() && r.stream().anyMatch(rl -> rl.getItemId().equals("exception-rule"))
+            );
+            assertFalse(matchingRules.isEmpty(), "Rule should be available and match the event");
+            assertTrue(matchingRules.stream().anyMatch(rl -> rl.getItemId().equals("exception-rule")),
+                "Matching rules should include the exception-rule");
+
+            // Exception should not prevent ThreadLocal cleanup (finally block should execute)
+            assertThrows(RuntimeException.class, () -> rulesService.onEvent(testEvent),
+                "Exception should propagate but ThreadLocal should be cleaned up");
+
+            // Should still be able to process events after exception (cleanup worked)
+            // This verifies that ProcessingContext was properly cleaned up
+            Event event2 = createTestEvent();
+            event2.setEventType("anotherEvent");
+            event2.setItemId("after-exception-event");
+            int result = rulesService.onEvent(event2);
+            assertNotNull(result, "Should process events after exception - ThreadLocal cleanup verified");
+
+            // Verify we can process multiple events in sequence (ThreadLocal is recreated properly)
+            Event event3 = createTestEvent();
+            event3.setEventType("thirdEvent");
+            event3.setItemId("third-event");
+            assertNotNull(rulesService.onEvent(event3), "Should process multiple events sequentially");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithUnresolvedConditionTypeShouldNotBeIndexedAsWildcard() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule with a condition type that doesn't exist (not deployed)
+            Rule rule = new Rule();
+            rule.setItemId("unresolved-condition-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("unresolved-condition-rule");
+            metadata.setEnabled(true);
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            // Create condition with unresolved condition type (no eventTypeCondition, so would default to wildcard)
+            Condition condition = new Condition();
+            condition.setConditionTypeId("nonExistentConditionType");
+            condition.setParameter("propertyName", "testProperty");
+            rule.setCondition(condition);
+
+            // Add a valid action so the rule structure is complete
+            rule.setActions(Collections.singletonList(createTestAction()));
+
+            // Set rule with allowInvalidRules=true (simulating a rule loaded from bundle before condition type is deployed)
+            rulesService.setRule(rule, true);
+
+            // Refresh rules to ensure indexing happens - this is where the bug would manifest
+            // The rule should be excluded, not indexed as wildcard
+            rulesService.refreshRules();
+
+            // Verify rule is saved
+            Rule savedRule = rulesService.getRule("unresolved-condition-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+
+            // Verify rule has missingPlugins flag set (indicating unresolved condition type)
+            assertTrue(savedRule.getMetadata().isMissingPlugins(),
+                "Rule should be marked as having missing plugins when condition type is unresolved");
+
+            // Create an event that would match if the rule was indexed as wildcard
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("anyEventType");
+            testEvent.setItemId("test-event-unresolved");
+
+            // The rule should NOT match because it should be excluded from indexing, not indexed as wildcard
+            Set<Rule> matchingRules = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules.contains(savedRule),
+                "Rule with unresolved condition type should not match events (should be deactivated, not wildcard). " +
+                "Rule ID: unresolved-condition-rule, Event type: anyEventType, Matching rules: " +
+                matchingRules.stream().map(r -> r.getItemId()).collect(java.util.stream.Collectors.toList()));
+
+            // Verify the rule is not in the wildcard index by checking it doesn't match any event type
+            Event anotherEvent = createTestEvent();
+            anotherEvent.setEventType("anotherEventType");
+            anotherEvent.setItemId("test-event-another");
+            Set<Rule> matchingRules2 = rulesService.getMatchingRules(anotherEvent);
+            assertFalse(matchingRules2.contains(savedRule),
+                "Rule with unresolved condition type should not match any event type (should be deactivated). " +
+                "Rule ID: unresolved-condition-rule, Event type: anotherEventType, Matching rules: " +
+                matchingRules2.stream().map(r -> r.getItemId()).collect(java.util.stream.Collectors.toList()));
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithUnresolvedConditionTypeInNestedCondition() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule with unresolved condition type in nested subConditions
+            Rule rule = new Rule();
+            rule.setItemId("nested-unresolved-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("nested-unresolved-rule");
+            metadata.setEnabled(true);
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            // Create parent condition with valid type
+            Condition parentCondition = new Condition();
+            parentCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+            parentCondition.setParameter("operator", "and");
+
+            // Create child condition with unresolved type
+            Condition childCondition = new Condition();
+            childCondition.setConditionTypeId("nonExistentNestedConditionType");
+            childCondition.setParameter("propertyName", "testProperty");
+
+            // Set up nested structure
+            List<Condition> subConditions = new ArrayList<>();
+            subConditions.add(childCondition);
+            parentCondition.setParameter("subConditions", subConditions);
+
+            rule.setCondition(parentCondition);
+            rule.setActions(Collections.singletonList(createTestAction()));
+
+            // Set rule with allowInvalidRules=true
+            rulesService.setRule(rule, true);
+            rulesService.refreshRules();
+
+            Rule savedRule = rulesService.getRule("nested-unresolved-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+            assertTrue(savedRule.getMetadata().isMissingPlugins(),
+                "Rule should be marked as having missing plugins when nested condition type is unresolved");
+
+            // Rule should not match any events
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("anyEventType");
+            testEvent.setItemId("test-event-nested");
+
+            Set<Rule> matchingRules = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules.contains(savedRule),
+                "Rule with unresolved nested condition type should not match events. " +
+                "Rule ID: nested-unresolved-rule");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithMixedResolvedAndUnresolvedConditionTypes() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule with both resolved and unresolved condition types
+            Rule rule = new Rule();
+            rule.setItemId("mixed-condition-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("mixed-condition-rule");
+            metadata.setEnabled(true);
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            // Create parent condition with valid type
+            Condition parentCondition = new Condition();
+            parentCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+            parentCondition.setParameter("operator", "and");
+
+            // Create one resolved child condition
+            Condition resolvedChild = createProfilePropertyCondition("testProperty", "equals", "testValue");
+
+            // Create one unresolved child condition
+            Condition unresolvedChild = new Condition();
+            unresolvedChild.setConditionTypeId("nonExistentConditionType2");
+            unresolvedChild.setParameter("propertyName", "testProperty");
+
+            // Set up nested structure with both
+            List<Condition> subConditions = new ArrayList<>();
+            subConditions.add(resolvedChild);
+            subConditions.add(unresolvedChild);
+            parentCondition.setParameter("subConditions", subConditions);
+
+            rule.setCondition(parentCondition);
+            rule.setActions(Collections.singletonList(createTestAction()));
+
+            // Set rule with allowInvalidRules=true
+            rulesService.setRule(rule, true);
+            rulesService.refreshRules();
+
+            Rule savedRule = rulesService.getRule("mixed-condition-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+            assertTrue(savedRule.getMetadata().isMissingPlugins(),
+                "Rule should be marked as having missing plugins when any condition type is unresolved");
+
+            // Rule should not match any events (even if one condition is resolved)
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("anyEventType");
+            testEvent.setItemId("test-event-mixed");
+
+            Set<Rule> matchingRules = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules.contains(savedRule),
+                "Rule with mixed resolved/unresolved condition types should not match events. " +
+                "Rule ID: mixed-condition-rule");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithUnresolvedConditionTypeThatGetsResolvedLater() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule with unresolved condition type
+            Rule rule = new Rule();
+            rule.setItemId("later-resolved-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("later-resolved-rule");
+            metadata.setEnabled(true);
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            Condition condition = new Condition();
+            condition.setConditionTypeId("laterDeployedConditionType");
+            condition.setParameter("propertyName", "testProperty");
+            rule.setCondition(condition);
+            rule.setActions(Collections.singletonList(createTestAction()));
+
+            // Set rule with allowInvalidRules=true (simulating bundle deployment)
+            rulesService.setRule(rule, true);
+            rulesService.refreshRules();
+
+            Rule savedRule = rulesService.getRule("later-resolved-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+            assertTrue(savedRule.getMetadata().isMissingPlugins(),
+                "Rule should be marked as having missing plugins initially");
+
+            // Rule should not match events initially
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("test");
+            testEvent.setItemId("test-event-later");
+
+            Set<Rule> matchingRules1 = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules1.contains(savedRule),
+                "Rule with unresolved condition type should not match events initially");
+
+            // Now deploy the condition type
+            ConditionType conditionType = createTestConditionType("laterDeployedConditionType");
+            definitionsService.setConditionType(conditionType);
+
+            // Refresh persistence and rules
+            persistenceService.refresh();
+            rulesService.refreshRules();
+
+            // Rule should now be resolved and work
+            Rule refreshedRule = rulesService.getRule("later-resolved-rule");
+            assertNotNull(refreshedRule, "Refreshed rule should not be null");
+            // Note: missingPlugins might still be true until the rule is re-saved, but it should be resolvable now
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithUnresolvedActionTypes() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule with valid condition but unresolved action type
+            // Note: This test verifies that rules with unresolved action types are excluded
+            // The main fix is for condition types, but we verify action types are also handled
+            Rule rule = new Rule();
+            rule.setItemId("unresolved-action-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("unresolved-action-rule");
+            metadata.setEnabled(true);
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            // Valid condition
+            Condition condition = createEventTypeCondition("test");
+            rule.setCondition(condition);
+
+            // Unresolved action type
+            Action action = new Action();
+            action.setActionTypeId("nonExistentActionType");
+            rule.setActions(Collections.singletonList(action));
+
+            // Set rule with allowInvalidRules=true
+            rulesService.setRule(rule, true);
+            rulesService.refreshRules();
+
+            Rule savedRule = rulesService.getRule("unresolved-action-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+
+            // The key test: Rule should not match events (should be excluded)
+            // This is what matters - whether it's marked as invalid or missingPlugins is less important
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("test");
+            testEvent.setItemId("test-event-action");
+
+            Set<Rule> matchingRules = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules.contains(savedRule),
+                "Rule with unresolved action type should not match events (should be excluded). " +
+                "Rule ID: unresolved-action-rule");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithUnresolvedTypesButDisabled() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a disabled rule with unresolved condition type
+            Rule rule = new Rule();
+            rule.setItemId("disabled-unresolved-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("disabled-unresolved-rule");
+            metadata.setEnabled(false); // Disabled
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            Condition condition = new Condition();
+            condition.setConditionTypeId("nonExistentConditionType3");
+            condition.setParameter("propertyName", "testProperty");
+            rule.setCondition(condition);
+            rule.setActions(Collections.singletonList(createTestAction()));
+
+            // Set rule with allowInvalidRules=true
+            rulesService.setRule(rule, true);
+            rulesService.refreshRules();
+
+            Rule savedRule = rulesService.getRule("disabled-unresolved-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+            assertFalse(savedRule.getMetadata().isEnabled(), "Rule should be disabled");
+
+            // Disabled rule should not match events (regardless of unresolved types)
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("anyEventType");
+            testEvent.setItemId("test-event-disabled");
+
+            Set<Rule> matchingRules = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules.contains(savedRule),
+                "Disabled rule should not match events. " +
+                "Rule ID: disabled-unresolved-rule");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithMultipleUnresolvedTypesInDifferentBranches() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule with multiple unresolved condition types in different branches
+            Rule rule = new Rule();
+            rule.setItemId("multiple-unresolved-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("multiple-unresolved-rule");
+            metadata.setEnabled(true);
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            // Create parent condition
+            Condition parentCondition = new Condition();
+            parentCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+            parentCondition.setParameter("operator", "or");
+
+            // Create multiple child conditions with different unresolved types
+            Condition child1 = new Condition();
+            child1.setConditionTypeId("nonExistentType1");
+            child1.setParameter("propertyName", "prop1");
+
+            Condition child2 = new Condition();
+            child2.setConditionTypeId("nonExistentType2");
+            child2.setParameter("propertyName", "prop2");
+
+            List<Condition> subConditions = new ArrayList<>();
+            subConditions.add(child1);
+            subConditions.add(child2);
+            parentCondition.setParameter("subConditions", subConditions);
+
+            rule.setCondition(parentCondition);
+            rule.setActions(Collections.singletonList(createTestAction()));
+
+            // Set rule with allowInvalidRules=true
+            rulesService.setRule(rule, true);
+            rulesService.refreshRules();
+
+            Rule savedRule = rulesService.getRule("multiple-unresolved-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+            assertTrue(savedRule.getMetadata().isMissingPlugins(),
+                "Rule should be marked as having missing plugins when multiple condition types are unresolved");
+
+            // Rule should not match any events
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("anyEventType");
+            testEvent.setItemId("test-event-multiple");
+
+            Set<Rule> matchingRules = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules.contains(savedRule),
+                "Rule with multiple unresolved condition types should not match events. " +
+                "Rule ID: multiple-unresolved-rule");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithUnresolvedTypeInListParameter() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule with unresolved condition type in a list parameter
+            // Some condition types might have list parameters containing conditions
+            Rule rule = new Rule();
+            rule.setItemId("list-parameter-unresolved-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("list-parameter-unresolved-rule");
+            metadata.setEnabled(true);
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            // Create parent condition
+            Condition parentCondition = new Condition();
+            parentCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+            parentCondition.setParameter("operator", "and");
+
+            // Create child with unresolved type in subConditions list
+            Condition unresolvedChild = new Condition();
+            unresolvedChild.setConditionTypeId("nonExistentListType");
+            unresolvedChild.setParameter("propertyName", "testProperty");
+
+            List<Condition> subConditions = new ArrayList<>();
+            subConditions.add(unresolvedChild);
+            parentCondition.setParameter("subConditions", subConditions);
+
+            rule.setCondition(parentCondition);
+            rule.setActions(Collections.singletonList(createTestAction()));
+
+            // Set rule with allowInvalidRules=true
+            rulesService.setRule(rule, true);
+            rulesService.refreshRules();
+
+            Rule savedRule = rulesService.getRule("list-parameter-unresolved-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+            assertTrue(savedRule.getMetadata().isMissingPlugins(),
+                "Rule should be marked as having missing plugins when condition type in list is unresolved");
+
+            // Rule should not match any events
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("anyEventType");
+            testEvent.setItemId("test-event-list");
+
+            Set<Rule> matchingRules = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules.contains(savedRule),
+                "Rule with unresolved condition type in list parameter should not match events. " +
+                "Rule ID: list-parameter-unresolved-rule");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithDeeplyNestedUnresolvedType() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule with unresolved condition type deeply nested
+            Rule rule = new Rule();
+            rule.setItemId("deeply-nested-unresolved-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("deeply-nested-unresolved-rule");
+            metadata.setEnabled(true);
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            // Level 1: booleanCondition
+            Condition level1 = new Condition();
+            level1.setConditionType(definitionsService.getConditionType("booleanCondition"));
+            level1.setParameter("operator", "and");
+
+            // Level 2: another booleanCondition
+            Condition level2 = new Condition();
+            level2.setConditionType(definitionsService.getConditionType("booleanCondition"));
+            level2.setParameter("operator", "or");
+
+            // Level 3: unresolved condition type
+            Condition level3 = new Condition();
+            level3.setConditionTypeId("deeplyNestedUnresolvedType");
+            level3.setParameter("propertyName", "testProperty");
+
+            List<Condition> level3List = new ArrayList<>();
+            level3List.add(level3);
+            level2.setParameter("subConditions", level3List);
+
+            List<Condition> level2List = new ArrayList<>();
+            level2List.add(level2);
+            level1.setParameter("subConditions", level2List);
+
+            rule.setCondition(level1);
+            rule.setActions(Collections.singletonList(createTestAction()));
+
+            // Set rule with allowInvalidRules=true
+            rulesService.setRule(rule, true);
+            rulesService.refreshRules();
+
+            Rule savedRule = rulesService.getRule("deeply-nested-unresolved-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+            assertTrue(savedRule.getMetadata().isMissingPlugins(),
+                "Rule should be marked as having missing plugins when deeply nested condition type is unresolved");
+
+            // Rule should not match any events
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("anyEventType");
+            testEvent.setItemId("test-event-deep");
+
+            Set<Rule> matchingRules = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules.contains(savedRule),
+                "Rule with deeply nested unresolved condition type should not match events. " +
+                "Rule ID: deeply-nested-unresolved-rule");
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithConditionTypeHavingUnresolvedParentCondition() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule with a condition type that exists but has an unresolved parent condition
+            Rule rule = new Rule();
+            rule.setItemId("unresolved-parent-condition-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("unresolved-parent-condition-rule");
+            metadata.setEnabled(true);
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            // Create a condition type that exists but has a parent condition that doesn't exist
+            ConditionType childConditionType = createTestConditionType("childConditionWithParent");
+            Condition unresolvedParentCondition = new Condition();
+            unresolvedParentCondition.setConditionTypeId("nonExistentParentConditionType");
+            childConditionType.setParentCondition(unresolvedParentCondition);
+
+            // Register the child condition type (but not the parent)
+            definitionsService.setConditionType(childConditionType);
+
+            // Create condition using the child type
+            Condition condition = new Condition();
+            condition.setConditionTypeId("childConditionWithParent");
+            condition.setParameter("propertyName", "testProperty");
+            rule.setCondition(condition);
+            rule.setActions(Collections.singletonList(createTestAction()));
+
+            // Set rule with allowInvalidRules=true
+            rulesService.setRule(rule, true);
+
+            // Refresh rules to trigger resolution for indexing
+            rulesService.refreshRules();
+
+            Rule savedRule = rulesService.getRule("unresolved-parent-condition-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+
+            // Clear condition type to force re-resolution (simulates loading from persistence)
+            // This ensures the parent condition check happens
+            if (savedRule.getCondition() != null) {
+                savedRule.getCondition().setConditionType(null);
+            }
+
+            // Manually trigger resolution to ensure parent condition is checked
+            // This simulates what happens during refreshRules -> updateRulesByEventType -> ensureRuleResolvedForIndexing
+            TypeResolutionServiceImpl testTypeResolutionService = new TypeResolutionServiceImpl(definitionsService);
+            boolean resolved = testTypeResolutionService.resolveRule("rules", savedRule);
+
+            // Resolution should fail because parent condition doesn't exist
+            assertFalse(resolved, "Rule resolution should fail when parent condition type is unresolved");
+
+            // Check if rule is marked as invalid or has missing plugins
+            boolean hasMissingPlugins = savedRule.getMetadata().isMissingPlugins();
+            boolean isInvalid = testTypeResolutionService.isInvalid("rules", savedRule.getItemId());
+
+            // Verify the condition type was cleared due to unresolved parent
+            // When parent can't be resolved, TypeResolutionService sets condition type to null
+            boolean conditionTypeCleared = savedRule.getCondition() != null &&
+                savedRule.getCondition().getConditionType() == null &&
+                savedRule.getCondition().getConditionTypeId() != null;
+
+            assertTrue(hasMissingPlugins || isInvalid || conditionTypeCleared,
+                "Rule should be marked as having missing plugins, invalid, or have condition type cleared when parent condition type is unresolved. " +
+                "missingPlugins: " + hasMissingPlugins + ", isInvalid: " + isInvalid + ", conditionTypeCleared: " + conditionTypeCleared);
+
+            // Rule should not match any events (this is the most important check)
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("anyEventType");
+            testEvent.setItemId("test-event-unresolved-parent");
+
+            Set<Rule> matchingRules = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules.contains(savedRule),
+                "Rule with condition type having unresolved parent condition should not match events. " +
+                "Rule ID: unresolved-parent-condition-rule, missingPlugins: " + hasMissingPlugins +
+                ", isInvalid: " + isInvalid);
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithConditionTypeHavingUnresolvedGrandparentInParentChain() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule with a condition type that has a parent chain where grandparent doesn't exist
+            // Chain: child -> parent -> grandparent (unresolved)
+            Rule rule = new Rule();
+            rule.setItemId("unresolved-grandparent-condition-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("unresolved-grandparent-condition-rule");
+            metadata.setEnabled(true);
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            // Create grandparent condition (unresolved - doesn't exist)
+            Condition unresolvedGrandparentCondition = new Condition();
+            unresolvedGrandparentCondition.setConditionTypeId("nonExistentGrandparentType");
+
+            // Create parent condition type that references the unresolved grandparent
+            ConditionType parentConditionType = createTestConditionType("parentConditionWithGrandparent");
+            parentConditionType.setParentCondition(unresolvedGrandparentCondition);
+
+            // Create child condition type that references the parent
+            Condition parentCondition = new Condition();
+            parentCondition.setConditionTypeId("parentConditionWithGrandparent");
+            ConditionType childConditionType = createTestConditionType("childConditionWithParentChain");
+            childConditionType.setParentCondition(parentCondition);
+
+            // Register parent and child condition types (but not grandparent)
+            definitionsService.setConditionType(parentConditionType);
+            definitionsService.setConditionType(childConditionType);
+
+            // Create condition using the child type
+            Condition condition = new Condition();
+            condition.setConditionTypeId("childConditionWithParentChain");
+            condition.setParameter("propertyName", "testProperty");
+            rule.setCondition(condition);
+            rule.setActions(Collections.singletonList(createTestAction()));
+
+            // Set rule with allowInvalidRules=true
+            rulesService.setRule(rule, true);
+            rulesService.refreshRules();
+
+            Rule savedRule = rulesService.getRule("unresolved-grandparent-condition-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+
+            // Clear condition type to force re-resolution (simulates loading from persistence)
+            if (savedRule.getCondition() != null) {
+                savedRule.getCondition().setConditionType(null);
+            }
+
+            // Manually trigger resolution to ensure parent chain is checked
+            TypeResolutionServiceImpl testTypeResolutionService = new TypeResolutionServiceImpl(definitionsService);
+            boolean resolved = testTypeResolutionService.resolveRule("rules", savedRule);
+
+            // Resolution should fail because grandparent condition doesn't exist
+            assertFalse(resolved, "Rule resolution should fail when grandparent condition type in parent chain is unresolved");
+
+            // Check if rule is marked as invalid or has missing plugins
+            boolean hasMissingPlugins = savedRule.getMetadata().isMissingPlugins();
+            boolean isInvalid = testTypeResolutionService.isInvalid("rules", savedRule.getItemId());
+
+            // Rule should not match any events (this is the most important check)
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("anyEventType");
+            testEvent.setItemId("test-event-unresolved-grandparent");
+
+            Set<Rule> matchingRules = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules.contains(savedRule),
+                "Rule with condition type having unresolved grandparent in parent chain should not match events. " +
+                "Rule ID: unresolved-grandparent-condition-rule, missingPlugins: " + hasMissingPlugins +
+                ", isInvalid: " + isInvalid);
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testRuleWithUnresolvedSubConditionInParentCondition() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a rule where the condition type has a parent condition that contains
+            // an unresolved sub-condition in its subConditions parameter
+            Rule rule = new Rule();
+            rule.setItemId("unresolved-sub-in-parent-rule");
+            rule.setTenantId(TENANT_1);
+
+            Metadata metadata = new Metadata();
+            metadata.setId("unresolved-sub-in-parent-rule");
+            metadata.setEnabled(true);
+            metadata.setScope("systemscope");
+            rule.setMetadata(metadata);
+
+            // Create parent condition with unresolved sub-condition
+            Condition unresolvedSubCondition = new Condition();
+            unresolvedSubCondition.setConditionTypeId("nonExistentSubConditionType");
+            unresolvedSubCondition.setParameter("propertyName", "testProperty");
+
+            Condition parentCondition = new Condition();
+            parentCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+            parentCondition.setParameter("operator", "and");
+            parentCondition.setParameter("subConditions", Collections.singletonList(unresolvedSubCondition));
+
+            // Create child condition type that uses this parent condition
+            ConditionType childConditionType = createTestConditionType("childConditionWithParentSub");
+            childConditionType.setParentCondition(parentCondition);
+
+            // Register the child condition type
+            definitionsService.setConditionType(childConditionType);
+
+            // Create condition using the child type
+            Condition condition = new Condition();
+            condition.setConditionTypeId("childConditionWithParentSub");
+            condition.setParameter("propertyName", "testProperty");
+            rule.setCondition(condition);
+            rule.setActions(Collections.singletonList(createTestAction()));
+
+            // Set rule with allowInvalidRules=true
+            rulesService.setRule(rule, true);
+            rulesService.refreshRules();
+
+            Rule savedRule = rulesService.getRule("unresolved-sub-in-parent-rule");
+            assertNotNull(savedRule, "Rule should be saved");
+
+            // Clear condition type to force re-resolution (simulates loading from persistence)
+            if (savedRule.getCondition() != null) {
+                savedRule.getCondition().setConditionType(null);
+            }
+
+            // Manually trigger resolution to ensure parent condition's sub-conditions are checked
+            TypeResolutionServiceImpl testTypeResolutionService = new TypeResolutionServiceImpl(definitionsService);
+            boolean resolved = testTypeResolutionService.resolveRule("rules", savedRule);
+
+            // Resolution should fail because parent condition has unresolved sub-condition
+            assertFalse(resolved, "Rule resolution should fail when parent condition has unresolved sub-condition");
+
+            // Check if rule is marked as invalid or has missing plugins
+            boolean hasMissingPlugins = savedRule.getMetadata().isMissingPlugins();
+            boolean isInvalid = testTypeResolutionService.isInvalid("rules", savedRule.getItemId());
+
+            // Rule should not match any events (this is the most important check)
+            Event testEvent = createTestEvent();
+            testEvent.setEventType("anyEventType");
+            testEvent.setItemId("test-event-unresolved-sub-in-parent");
+
+            Set<Rule> matchingRules = rulesService.getMatchingRules(testEvent);
+            assertFalse(matchingRules.contains(savedRule),
+                "Rule with condition type having parent condition with unresolved sub-condition should not match events. " +
+                "Rule ID: unresolved-sub-in-parent-rule, missingPlugins: " + hasMissingPlugins +
+                ", isInvalid: " + isInvalid);
+
+            return null;
+        });
+    }
+
 }

@@ -23,29 +23,33 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.exceptions.BadSegmentConditionException;
+import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.segments.SegmentsAndScores;
-import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
-import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
+import org.apache.unomi.services.impl.TestConditionEvaluators;
+import org.apache.unomi.services.impl.TestEventAdmin;
+import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.events.EventServiceImpl;
 import org.apache.unomi.services.impl.rules.RulesServiceImpl;
 import org.apache.unomi.services.impl.rules.TestActionExecutorDispatcher;
 import org.apache.unomi.services.impl.rules.TestEvaluateProfileSegmentsAction;
+import org.apache.unomi.services.impl.rules.TestSetEventOccurrenceCountAction;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -75,13 +79,12 @@ public class SegmentServiceImplTest {
     private KarafSecurityService securityService;
     private RulesServiceImpl rulesService;
     private TestActionExecutorDispatcher actionExecutorDispatcher;
-    private ConditionValidationService conditionValidationService;
 
     private BundleContext bundleContext;
     private TracerService tracerService;
     private RequestTracer requestTracer;
 
-    private org.apache.unomi.api.services.SchedulerService schedulerService;
+    private SchedulerService schedulerService;
 
     private static final String TENANT_1 = "tenant1";
     private static final String TENANT_2 = "tenant2";
@@ -89,11 +92,10 @@ public class SegmentServiceImplTest {
 
     @BeforeEach
     public void setUp() throws IOException {
-        
+
         tenantService = new TestTenantService();
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
-        conditionValidationService = TestHelper.createConditionValidationService();
         TracerService tracerService = TestHelper.createTracerService();
 
         // Create tenants using TestHelper
@@ -111,7 +113,15 @@ public class SegmentServiceImplTest {
 
         multiTypeCacheService = new MultiTypeCacheServiceImpl();
 
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
+        // Create definitions service with EventAdmin
+        java.util.Map.Entry<DefinitionsServiceImpl, TestEventAdmin> servicePair =
+            TestHelper.createDefinitionServiceWithEventAdmin(persistenceService, bundleContext, schedulerService,
+                multiTypeCacheService, executionContextManager, tenantService);
+        definitionsService = servicePair.getKey();
+        TestEventAdmin testEventAdmin = servicePair.getValue();
+
+        // Inject definitionsService into the dispatcher
+        TestHelper.injectDefinitionsServiceIntoDispatcher(conditionEvaluatorDispatcher, definitionsService);
 
         TestConditionEvaluators.getConditionTypes().forEach((key, value) -> definitionsService.setConditionType(value));
 
@@ -124,8 +134,8 @@ public class SegmentServiceImplTest {
         actionExecutorDispatcher.setDefaultReturnValue(EventService.PROFILE_UPDATED);
         actionExecutorDispatcher.setTracer(requestTracer);
 
-        // Set up rules service using TestHelper
-        rulesService = TestHelper.createRulesService(persistenceService, bundleContext, schedulerService, definitionsService, eventService, executionContextManager, tenantService, conditionValidationService, multiTypeCacheService);
+        // Set up rules service using TestHelper with EventAdmin
+        rulesService = TestHelper.createRulesService(persistenceService, bundleContext, schedulerService, definitionsService, eventService, executionContextManager, tenantService, multiTypeCacheService, actionExecutorDispatcher, testEventAdmin);
         rulesService.setTracerService(tracerService);
 
         // Set up segment service
@@ -139,14 +149,12 @@ public class SegmentServiceImplTest {
         segmentService.setSchedulerService(schedulerService);
         segmentService.setCacheService(multiTypeCacheService);
         segmentService.setTenantService(tenantService);
-        segmentService.setConditionValidationService(conditionValidationService);
         segmentService.setTracerService(tracerService);
-        
-        // Create and inject ResolverService
-        ResolverServiceImpl resolverService = new ResolverServiceImpl();
-        resolverService.setDefinitionsService(definitionsService);
-        segmentService.setResolverService(resolverService);
-        rulesService.setResolverService(resolverService);
+
+        actionExecutorDispatcher.addExecutor("setEventOccurenceCountAction",
+                new TestSetEventOccurrenceCountAction(definitionsService, persistenceService));
+        actionExecutorDispatcher.addExecutor("evaluateProfileSegments",
+                new TestEvaluateProfileSegmentsAction(segmentService));
 
         // Register TestEvaluateProfileSegmentsAction
         actionExecutorDispatcher.addExecutor("evaluateProfileSegments", new TestEvaluateProfileSegmentsAction(segmentService));
@@ -175,7 +183,6 @@ public class SegmentServiceImplTest {
 
             // Create profile updated condition
             Condition condition = new Condition();
-            condition.setConditionType(definitionsService.getConditionType("profileUpdatedEventCondition"));
             condition.setConditionTypeId("profileUpdatedEventCondition");
             segmentEvaluationRule.setCondition(condition);
 
@@ -193,7 +200,7 @@ public class SegmentServiceImplTest {
     @AfterEach
     public void tearDown() throws Exception {
         // Use the common tearDown method from TestHelper
-        org.apache.unomi.services.TestHelper.tearDown(
+        TestHelper.tearDown(
             schedulerService,
             multiTypeCacheService,
             persistenceService,
@@ -202,10 +209,10 @@ public class SegmentServiceImplTest {
         );
 
         // Clean up references using the helper method
-        org.apache.unomi.services.TestHelper.cleanupReferences(
+        TestHelper.cleanupReferences(
             tenantService, securityService, executionContextManager, segmentService,
             eventService, persistenceService, definitionsService, schedulerService,
-            conditionValidationService, multiTypeCacheService, bundleContext,
+            multiTypeCacheService, bundleContext,
             rulesService, actionExecutorDispatcher, tracerService, requestTracer
         );
     }
@@ -260,7 +267,7 @@ public class SegmentServiceImplTest {
         if (numberOfDays > 0) {
             pastEventCondition.setParameter("numberOfDays", numberOfDays);
         }
-        pastEventCondition.setParameter("operator", "true");
+        pastEventCondition.setParameter("operator", "eventsOccurred");
         segment.setCondition(pastEventCondition);
 
         return segment;
@@ -523,7 +530,7 @@ public class SegmentServiceImplTest {
             Condition condition = segment.getCondition();
             condition.setParameter("fromDate", "2024-01-01T00:00:00Z");
             condition.setParameter("toDate", "2024-12-31T23:59:59Z");
-            condition.setParameter("operator", "true");
+            condition.setParameter("operator", "eventsOccurred");
             segmentService.setSegmentDefinition(segment);
 
             // Create and save event within date range
@@ -829,7 +836,9 @@ public class SegmentServiceImplTest {
             // Register custom condition type with boolean parent condition
             ConditionType customEventConditionType = new ConditionType();
             customEventConditionType.setItemId("customEventCondition");
-            customEventConditionType.setConditionEvaluator("eventTypeConditionEvaluator"); // Required for proper evaluation
+            // No direct evaluator or queryBuilder - will use parent condition's evaluator (booleanConditionEvaluator)
+            customEventConditionType.setConditionEvaluator(null);
+            customEventConditionType.setQueryBuilder(null);
 
             // Create simple boolean parent condition
             Condition booleanParent = new Condition(definitionsService.getConditionType("booleanCondition"));
@@ -860,10 +869,12 @@ public class SegmentServiceImplTest {
             // Create past event condition using the custom condition
             Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
             Condition customCondition = new Condition(customEventConditionType);
+            // Add "value" parameter to make it available in context for parameter::value reference
             customCondition.setParameter("value", "test");
 
             pastEventCondition.setParameter("eventCondition", customCondition);
             pastEventCondition.setParameter("numberOfDays", 30);
+            pastEventCondition.setParameter("operator", "eventsOccurred");
             segment.setCondition(pastEventCondition);
 
             segmentService.setSegmentDefinition(segment);
@@ -911,8 +922,8 @@ public class SegmentServiceImplTest {
             Condition pastEventCondition1 = new Condition(definitionsService.getConditionType("pastEventCondition"));
             pastEventCondition1.setParameter("eventCondition", eventCondition1);
             pastEventCondition1.setParameter("numberOfDays", 30);
-            pastEventCondition1.setParameter("minimumCount", 1);
-            pastEventCondition1.setParameter("operator", "true");
+            pastEventCondition1.setParameter("minimumEventCount", 1);
+            pastEventCondition1.setParameter("operator", "eventsOccurred");
 
             // Create second past event condition (login events)
             Condition eventCondition2 = new Condition(definitionsService.getConditionType("eventTypeCondition"));
@@ -923,8 +934,8 @@ public class SegmentServiceImplTest {
             Condition pastEventCondition2 = new Condition(definitionsService.getConditionType("pastEventCondition"));
             pastEventCondition2.setParameter("eventCondition", eventCondition2);
             pastEventCondition2.setParameter("numberOfDays", 30);
-            pastEventCondition2.setParameter("minimumCount", 1);
-            pastEventCondition2.setParameter("operator", "true");
+            pastEventCondition2.setParameter("minimumEventCount", 1);
+            pastEventCondition2.setParameter("operator", "eventsOccurred");
 
             // Combine with boolean condition
             Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
@@ -957,11 +968,6 @@ public class SegmentServiceImplTest {
             // Force event indexing and recalculation
             persistenceService.refresh();
             segmentService.recalculatePastEventConditions();
-
-            // Trigger profile update to force segment evaluation
-            Event profileUpdatedEvent = new Event("profileUpdated", null, profile, null, null, profile, new Date());
-            profileUpdatedEvent.setPersistent(false);
-            eventService.send(profileUpdatedEvent);
 
             // Reload profile and verify final state
             profile = persistenceService.load(profile.getItemId(), Profile.class);

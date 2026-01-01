@@ -232,13 +232,27 @@ public interface DefinitionsService {
     Condition extractConditionBySystemTag(Condition rootCondition, String systemTag);
 
     /**
-     * Resolves (if possible) the {@link ConditionType}s for the specified condition and its sub-conditions (if any) from the type identifiers existing on the specified condition
+     * @deprecated Use {@link #getTypeResolutionService()} for resolution only, or
+     * {@link #getConditionValidationService()} for resolution + validation.
+     * This method will be removed in a future version.
      *
-     * TODO: remove from API and move to a different class?
+     * <p>For resolution only (query operations):
+     * <pre>{@code
+     * definitionsService.getTypeResolutionService()
+     *     .resolveConditionType(condition, "query");
+     * }</pre>
+     *
+     * <p>For resolution + validation (save operations):
+     * <pre>{@code
+     * List<ValidationError> errors = definitionsService.getConditionValidationService()
+     *     .validate(condition);
+     * // Handle errors...
+     * }</pre>
      *
      * @param rootCondition the condition for which we want to resolve the condition types from the existing condition type identifiers
-     * @return {@code true}
+     * @return {@code true} if resolution succeeded
      */
+    @Deprecated
     boolean resolveConditionType(Condition rootCondition);
 
     /**
@@ -252,4 +266,21 @@ public interface DefinitionsService {
      * @return the condition builder instance
      */
     ConditionBuilder getConditionBuilder();
+
+    /**
+     * Gets the TypeResolutionService instance.
+     * This service handles type resolution and invalid object tracking.
+     *
+     * @return the TypeResolutionService instance
+     */
+    TypeResolutionService getTypeResolutionService();
+
+    /**
+     * Gets the ConditionValidationService instance.
+     * This service validates conditions against their type definitions.
+     * The service automatically resolves condition types if needed before validation.
+     *
+     * @return the ConditionValidationService instance
+     */
+    ConditionValidationService getConditionValidationService();
 }

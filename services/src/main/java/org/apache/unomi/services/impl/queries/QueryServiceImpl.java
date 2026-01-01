@@ -21,7 +21,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.AggregateQuery;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.QueryService;
-import org.apache.unomi.api.services.ResolverService;
+import org.apache.unomi.api.services.TypeResolutionService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
 import org.slf4j.Logger;
@@ -35,7 +35,6 @@ public class QueryServiceImpl implements QueryService {
     private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
-    private ResolverService resolverService;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -45,8 +44,12 @@ public class QueryServiceImpl implements QueryService {
         this.definitionsService = definitionsService;
     }
 
-    public void setResolverService(ResolverService resolverService) {
-        this.resolverService = resolverService;
+    /**
+     * Helper method to get TypeResolutionService from DefinitionsService.
+     * Returns null if DefinitionsService is not available or doesn't have TypeResolutionService.
+     */
+    private TypeResolutionService getTypeResolutionService() {
+        return definitionsService != null ? definitionsService.getTypeResolutionService() : null;
     }
 
     public void postConstruct() {
@@ -79,7 +82,10 @@ public class QueryServiceImpl implements QueryService {
     @Override
     public Map<String, Double> getMetric(String type, String property, String slashConcatenatedMetrics, Condition condition) {
         if (condition.getConditionType() == null) {
-            resolverService.resolveConditionType(condition, "metric " + type + " on property " + property);
+            TypeResolutionService typeResolutionService = getTypeResolutionService();
+            if (typeResolutionService != null) {
+                typeResolutionService.resolveConditionType(condition, "metric " + type + " on property " + property);
+            }
         }
         return persistenceService.getSingleValuesMetrics(condition, slashConcatenatedMetrics.split("/"), property, type);
     }
@@ -87,7 +93,10 @@ public class QueryServiceImpl implements QueryService {
     @Override
     public long getQueryCount(String itemType, Condition condition) {
         if (condition.getConditionType() == null) {
-            resolverService.resolveConditionType(condition, "query count on " +itemType);
+            TypeResolutionService typeResolutionService = getTypeResolutionService();
+            if (typeResolutionService != null) {
+                typeResolutionService.resolveConditionType(condition, "query count on " +itemType);
+            }
         }
         return persistenceService.queryCount(condition, itemType);
     }
@@ -95,7 +104,10 @@ public class QueryServiceImpl implements QueryService {
     private Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query, boolean optimizedQuery) {
         if (query != null) {
             // resolve condition
-            resolverService.resolveConditionType(query.getCondition(), "aggregate on property " + property + " for type " + itemType);
+            TypeResolutionService typeResolutionService = getTypeResolutionService();
+            if (typeResolutionService != null) {
+                typeResolutionService.resolveConditionType(query.getCondition(), "aggregate on property " + property + " for type " + itemType);
+            }
 
             // resolve aggregate
             BaseAggregate baseAggregate = null;

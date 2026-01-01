@@ -19,13 +19,15 @@ package org.apache.unomi.services.impl;
 
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.Action;
+import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.InvalidObjectInfo;
-import org.apache.unomi.api.services.ResolverService;
-import org.apache.unomi.api.utils.ParserHelper;
+import org.apache.unomi.api.services.TypeResolutionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,18 +35,49 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Implementation of ResolverService that resolves condition types, action types, and value types,
+ * Implementation of TypeResolutionService that resolves condition types, action types, and value types,
  * with automatic tracking of invalid objects that have unresolved types.
+ * 
+ * This service centralizes all resolution logic that was previously in ParserHelper.
+ * It can work in degraded mode when DefinitionsService is not available (returns false for resolution attempts).
  */
-public class ResolverServiceImpl implements ResolverService {
+public class TypeResolutionServiceImpl implements TypeResolutionService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ResolverServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(TypeResolutionServiceImpl.class.getName());
+    
+    private static final int MAX_RECURSION_DEPTH = 1000;
     
     private DefinitionsService definitionsService;
     
     // Map of object type -> Map of object ID -> InvalidObjectInfo
     private final Map<String, Map<String, InvalidObjectInfo>> invalidObjects = new ConcurrentHashMap<>();
+    
+    // Track unresolved types to avoid log spam (similar to ParserHelper's static sets)
+    private final Set<String> unresolvedActionTypes = Collections.synchronizedSet(new HashSet<>());
+    private final Set<String> unresolvedConditionTypes = Collections.synchronizedSet(new HashSet<>());
+    // Track rules that have already been warned about null/empty actions to avoid log spam
+    private final Set<String> warnedRulesWithNullActions = Collections.synchronizedSet(new HashSet<>());
 
+    /**
+     * Constructor that requires DefinitionsService.
+     * TypeResolutionService cannot function without DefinitionsService.
+     * 
+     * @param definitionsService the definitions service to use for resolution (required, cannot be null)
+     * @throws IllegalArgumentException if definitionsService is null
+     */
+    public TypeResolutionServiceImpl(DefinitionsService definitionsService) {
+        if (definitionsService == null) {
+            throw new IllegalArgumentException("DefinitionsService is required for TypeResolutionServiceImpl");
+        }
+        this.definitionsService = definitionsService;
+    }
+
+    /**
+     * Sets the DefinitionsService. This method allows setting the service after construction,
+     * which is useful for circular dependency scenarios or when the service becomes available later.
+     * 
+     * @param definitionsService the definitions service to use for resolution
+     */
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
@@ -55,7 +88,92 @@ public class ResolverServiceImpl implements ResolverService {
             LOGGER.warn("DefinitionsService not available, cannot resolve condition type for {}", contextObjectName);
             return false;
         }
-        return ParserHelper.resolveConditionType(definitionsService, rootCondition, contextObjectName);
+        return resolveConditionTypeInternal(rootCondition, contextObjectName, new HashSet<>(), false, 0);
+    }
+
+    /**
+     * Internal recursive method for resolving condition types.
+     * Handles parent conditions, nested conditions, and circular reference detection.
+     */
+    private boolean resolveConditionTypeInternal(Condition rootCondition, String contextObjectName, 
+                                                 Set<String> parentChainPath, boolean isGoingUp, int depth) {
+        if (rootCondition == null) {
+            LOGGER.warn("Couldn't resolve null condition for {}", contextObjectName);
+            return false;
+        }
+
+        if (depth > MAX_RECURSION_DEPTH) {
+            LOGGER.error("Maximum recursion depth ({}) exceeded when resolving condition type {} in {}",
+                    MAX_RECURSION_DEPTH, rootCondition.getConditionTypeId(), contextObjectName);
+            return false;
+        }
+
+        if (isGoingUp) {
+            if (!parentChainPath.add(rootCondition.getConditionTypeId())) {
+                LOGGER.warn("Detected circular reference for condition type {} in {}", rootCondition.getConditionTypeId(), contextObjectName);
+                return false;
+            }
+        }
+
+        try {
+            // Resolve current condition type if needed
+            if (rootCondition.getConditionType() == null) {
+                String conditionTypeId = rootCondition.getConditionTypeId();
+                if (conditionTypeId == null) {
+                    LOGGER.warn("Condition has no type ID for {}", contextObjectName);
+                    return false;
+                }
+                ConditionType conditionType = definitionsService.getConditionType(conditionTypeId);
+                if (conditionType == null) {
+                    if (!unresolvedConditionTypes.contains(conditionTypeId)) {
+                        unresolvedConditionTypes.add(conditionTypeId);
+                        LOGGER.warn("Couldn't resolve condition type: {} for {}", conditionTypeId, contextObjectName);
+                    }
+                    return false;
+                }
+                unresolvedConditionTypes.remove(rootCondition.getConditionTypeId());
+                rootCondition.setConditionType(conditionType);
+
+                if (conditionType.getParentCondition() != null) {
+                    Set<String> pathForParent = new HashSet<>(parentChainPath);
+                    if (!isGoingUp) {
+                        pathForParent.add(rootCondition.getConditionTypeId());
+                    }
+                    if (!resolveConditionTypeInternal(conditionType.getParentCondition(), contextObjectName,
+                            pathForParent, true, depth + 1)) {
+                        rootCondition.setConditionType(null);
+                        LOGGER.warn("Failed to resolve parent condition for type: {} in {}",
+                            rootCondition.getConditionTypeId(), contextObjectName);
+                        return false;
+                    }
+                }
+            }
+
+            // Recursively resolve nested conditions in parameter values
+            for (Object value : rootCondition.getParameterValues().values()) {
+                if (value instanceof Condition) {
+                    if (!resolveConditionTypeInternal((Condition) value, contextObjectName,
+                            parentChainPath, false, depth + 1)) {
+                        return false;
+                    }
+                } else if (value instanceof Collection) {
+                    for (Object item : (Collection<?>) value) {
+                        if (item instanceof Condition) {
+                            if (!resolveConditionTypeInternal((Condition) item, contextObjectName,
+                                    parentChainPath, false, depth + 1)) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return true;
+        } finally {
+            if (isGoingUp) {
+                parentChainPath.remove(rootCondition.getConditionTypeId());
+            }
+        }
     }
 
     @Override
@@ -63,7 +181,31 @@ public class ResolverServiceImpl implements ResolverService {
         if (definitionsService == null) {
             return false;
         }
-        return ParserHelper.resolveActionTypes(definitionsService, rule, ignoreErrors);
+        
+        boolean result = true;
+        String ruleId = rule.getItemId();
+        if (rule.getActions() == null) {
+            if (!ignoreErrors) {
+                // Only warn once per rule to avoid log spam
+                if (warnedRulesWithNullActions.add(ruleId)) {
+                    LOGGER.warn("Rule {}:{} has null actions", ruleId, rule.getMetadata() != null ? rule.getMetadata().getName() : "unknown");
+                }
+            }
+            return false;
+        }
+        if (rule.getActions().isEmpty()) {
+            if (!ignoreErrors) {
+                // Only warn once per rule to avoid log spam
+                if (warnedRulesWithNullActions.add(ruleId)) {
+                    LOGGER.warn("Rule {}:{} has empty actions", ruleId, rule.getMetadata() != null ? rule.getMetadata().getName() : "unknown");
+                }
+            }
+            return false;
+        }
+        for (Action action : rule.getActions()) {
+            result &= resolveActionType(action);
+        }
+        return result;
     }
 
     @Override
@@ -71,7 +213,20 @@ public class ResolverServiceImpl implements ResolverService {
         if (definitionsService == null) {
             return false;
         }
-        return ParserHelper.resolveActionType(definitionsService, action);
+        if (action.getActionType() == null) {
+            ActionType actionType = definitionsService.getActionType(action.getActionTypeId());
+            if (actionType != null) {
+                unresolvedActionTypes.remove(action.getActionTypeId());
+                action.setActionType(actionType);
+            } else {
+                if (!unresolvedActionTypes.contains(action.getActionTypeId())) {
+                    LOGGER.warn("Couldn't resolve action type : {}", action.getActionTypeId());
+                    unresolvedActionTypes.add(action.getActionTypeId());
+                }
+                return false;
+            }
+        }
+        return true;
     }
 
     @Override
@@ -79,7 +234,12 @@ public class ResolverServiceImpl implements ResolverService {
         if (definitionsService == null || propertyType == null) {
             return;
         }
-        ParserHelper.resolveValueType(definitionsService, propertyType);
+        if (propertyType.getValueType() == null) {
+            ValueType valueType = definitionsService.getValueType(propertyType.getValueTypeId());
+            if (valueType != null) {
+                propertyType.setValueType(valueType);
+            }
+        }
     }
 
     @Override
@@ -155,8 +315,6 @@ public class ResolverServiceImpl implements ResolverService {
             if (objectId != null) {
                 markValid(objectType, objectId);
             }
-            // Note: missingPlugins is only cleared when both condition and actions are resolved
-            // This is handled in resolveRule() method
         }
         return resolved;
     }
@@ -173,7 +331,6 @@ public class ResolverServiceImpl implements ResolverService {
         List<String> missingConditionTypeIds = new ArrayList<>();
         List<String> missingActionTypeIds = new ArrayList<>();
         
-        // Resolve condition (without setting missingPlugins yet)
         boolean conditionResolved = true;
         if (rule.getCondition() != null) {
             conditionResolved = resolveConditionType(rule.getCondition(), contextName);
@@ -186,7 +343,6 @@ public class ResolverServiceImpl implements ResolverService {
             }
         }
         
-        // Resolve actions
         boolean actionsResolved = resolveActionTypes(rule, false);
         if (!actionsResolved) {
             // Collect all unresolved action type IDs

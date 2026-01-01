@@ -21,18 +21,20 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionDispatcher;
 import org.apache.unomi.api.actions.ActionExecutor;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.TypeResolutionService;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.scripting.ScriptExecutor;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.unomi.tracing.api.TracerService;
-import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -48,6 +50,7 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
     private BundleContext bundleContext;
     private ScriptExecutor scriptExecutor;
     private TracerService tracerService;
+    private DefinitionsService definitionsService;
 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
@@ -63,6 +66,18 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
 
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    /**
+     * Helper method to get TypeResolutionService from DefinitionsService.
+     * Returns null if DefinitionsService is not available or doesn't have TypeResolutionService.
+     */
+    private TypeResolutionService getTypeResolutionService() {
+        return definitionsService != null ? definitionsService.getTypeResolutionService() : null;
     }
 
     public ActionExecutorDispatcherImpl() {
@@ -89,22 +104,45 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
 
 
     public int execute(Action action, Event event) {
-        String actionKey = null;
-        if (action.getActionType() != null) {
-            actionKey = action.getActionType().getActionExecutor();
-        }
-        if (actionKey == null) {
-            throw new UnsupportedOperationException("No service defined for : " + action.getActionTypeId());
+        if (action == null) {
+            throw new UnsupportedOperationException("Null action passed for event : " + event);
         }
 
+        String actionKey = null;
         RequestTracer tracer = null;
         if (tracerService != null && tracerService.isTracingEnabled()) {
             tracer = tracerService.getCurrentTracer();
-            tracer.startOperation("action-execution", 
+            tracer.startOperation("action-execution",
                 "Executing action: " + action.getActionTypeId(), action);
         }
 
         try {
+            // Resolve action type if needed (actions deserialized from JSON may only have actionTypeId)
+            if (action.getActionType() == null) {
+                TypeResolutionService typeResolutionService = getTypeResolutionService();
+                if (typeResolutionService != null) {
+                    typeResolutionService.resolveActionType(action);
+                } else {
+                    LOGGER.debug("TypeResolutionService not available, cannot resolve action type for actionTypeId={}", action.getActionTypeId());
+                }
+                if (action.getActionType() == null) {
+                    LOGGER.warn("Action type is null for actionTypeId={}, action won't execute", action.getActionTypeId());
+                    if (tracer != null) {
+                        tracer.endOperation(EventService.NO_CHANGE, "Action type not resolved");
+                    }
+                    return EventService.NO_CHANGE;
+                }
+            }
+
+            actionKey = action.getActionType().getActionExecutor();
+            if (actionKey == null) {
+                LOGGER.warn("No action executor configured for actionTypeId={}, action won't execute", action.getActionTypeId());
+                if (tracer != null) {
+                    tracer.endOperation(EventService.NO_CHANGE, "No action executor configured for action type");
+                }
+                return EventService.NO_CHANGE;
+            }
+
             int colonPos = actionKey.indexOf(":");
             if (colonPos > 0) {
                 String actionPrefix = actionKey.substring(0, colonPos);
@@ -113,7 +151,7 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
                 if (actionDispatcher == null) {
                     LOGGER.warn("Couldn't find any action dispatcher for prefix '{}', action {} won't execute !", actionPrefix, actionKey);
                     if (tracer != null) {
-                        tracer.endOperation(EventService.NO_CHANGE, 
+                        tracer.endOperation(EventService.NO_CHANGE,
                             "No action dispatcher found for prefix: " + actionPrefix);
                     }
                     return EventService.NO_CHANGE;
@@ -140,7 +178,7 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
                 } catch (Exception e) {
                     LOGGER.error("Error executing action with key={}", actionKey, e);
                     if (tracer != null) {
-                        tracer.endOperation(EventService.NO_CHANGE, 
+                        tracer.endOperation(EventService.NO_CHANGE,
                             "Error during action execution: " + e.getMessage());
                     }
                     return EventService.NO_CHANGE;
@@ -148,7 +186,7 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
             } else {
                 LOGGER.error("Couldn't find executor with key={}", actionKey);
                 if (tracer != null) {
-                    tracer.endOperation(EventService.NO_CHANGE, 
+                    tracer.endOperation(EventService.NO_CHANGE,
                         "No executor found for action type: " + actionKey);
                 }
                 return EventService.NO_CHANGE;
@@ -156,7 +194,7 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
         } catch (Exception e) {
             LOGGER.error("Error during action execution", e);
             if (tracer != null) {
-                tracer.endOperation(EventService.NO_CHANGE, 
+                tracer.endOperation(EventService.NO_CHANGE,
                     "Error during action execution: " + e.getMessage());
             }
             return EventService.NO_CHANGE;

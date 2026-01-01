@@ -239,4 +239,20 @@ public interface SegmentService {
      * So use it carefully or execute this method in a dedicated thread.
      */
     void recalculatePastEventConditions();
+
+    /**
+     * This will recalculate the past event conditions from existing rules
+     * It will also recalculate date relative Segments and Scorings (when they contains date expression conditions for example)
+     * This operation can be heavy and take time, it will:
+     * - browse existing rules to extract the past event condition,
+     * - query the matching events for those conditions,
+     * - update the corresponding profiles
+     * - reevaluate segments/scorings linked to this rules to engaged/disengaged profiles after the occurrences have been updated
+     * - reevaluate segments/scoring that contains date expressions
+     * So use it carefully or execute this method in a dedicated thread.
+     *
+     * @param sendProfileUpdateEvents if true, profileUpdated events will be sent when profiles are updated. Set to false to disable
+     *                                 event sending (useful in tests to avoid race conditions).
+     */
+    void recalculatePastEventConditions(boolean sendProfileUpdateEvents);
 }

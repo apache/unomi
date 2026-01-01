@@ -33,7 +33,7 @@ import java.util.Set;
  * This service centralizes type resolution logic and automatically tracks objects
  * that fail to resolve, providing detailed error information.
  */
-public interface ResolverService {
+public interface TypeResolutionService {
     
     /**
      * Resolve a condition type and all its nested conditions.
@@ -78,25 +78,31 @@ public interface ResolverService {
     /**
      * Resolve condition types for a MetadataItem with automatic tracking and missingPlugins handling.
      * 
+     * <p>This method resolves condition types (needed for validation) but skips parameter value resolution.
+     * Parameter resolution happens on-demand in query builders and evaluators.
+     * 
      * <p>This method performs three operations:
      * <ul>
-     *   <li>Resolves the condition type</li>
+     *   <li>Resolves the condition type (always)</li>
      *   <li>Tracks invalid objects in the tracking service</li>
      *   <li>Sets/clears the missingPlugins flag on the item's metadata</li>
      * </ul>
      * 
-     * <p>This is the recommended method for validation contexts (e.g., when saving rules, segments, goals).
+     * <p>This is the recommended method for save operations (e.g., when saving rules, segments, goals).
      * 
      * @param objectType the type of object (e.g., "rules", "segments", "goals", "campaigns", "scoring")
      * @param item the MetadataItem object (e.g., Rule, Segment, Goal, Campaign, Scoring)
      * @param condition the condition to resolve (may be null)
      * @param contextName context name for error messages
-     * @return true if condition resolved successfully (or was null), false otherwise
+     * @return true if condition type resolved successfully (or was null), false otherwise
      */
     boolean resolveCondition(String objectType, MetadataItem item, Condition condition, String contextName);
     
     /**
      * Resolve action types for a rule with automatic tracking and missingPlugins handling.
+     * 
+     * <p>This method resolves action types (needed for validation) but skips parameter value resolution.
+     * Parameter resolution happens on-demand in query builders and evaluators.
      * 
      * <p>This method performs three operations:
      * <ul>
@@ -109,19 +115,22 @@ public interface ResolverService {
      * 
      * @param objectType the type of object (e.g., "rules")
      * @param rule the rule containing actions to resolve
-     * @return true if all actions resolved successfully, false otherwise
+     * @return true if all action types resolved successfully, false otherwise
      */
     boolean resolveActions(String objectType, Rule rule);
     
     /**
      * Resolve both condition and actions for a rule with automatic tracking and missingPlugins handling.
      * 
+     * <p>This method resolves condition and action types (needed for validation) but skips parameter value resolution.
+     * Parameter resolution happens on-demand in query builders and evaluators.
+     * 
      * <p>This is a convenience method that handles both condition and action resolution together,
      * ensuring missingPlugins is set correctly based on both resolutions.
      * 
      * @param objectType the type of object (e.g., "rules")
      * @param rule the rule to resolve
-     * @return true if both condition and actions resolved successfully, false otherwise
+     * @return true if both condition and action types resolved successfully, false otherwise
      */
     boolean resolveRule(String objectType, Rule rule);
     

@@ -21,6 +21,7 @@ import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.goals.Goal;
 import org.apache.unomi.api.services.ConditionValidationService;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -28,14 +29,18 @@ import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorD
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
-import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
+import org.apache.unomi.services.impl.TestConditionEvaluators;
+import org.apache.unomi.services.impl.TestEventAdmin;
+import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.events.EventServiceImpl;
+import org.apache.unomi.services.impl.rules.TestActionExecutorDispatcher;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -45,10 +50,7 @@ import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -63,14 +65,13 @@ public class GoalsServiceImplTest {
     private RulesService rulesService;
     private EventServiceImpl eventService;
     private SchedulerService schedulerService;
-    private ConditionValidationService conditionValidationService;
     private MultiTypeCacheServiceImpl multiTypeCacheService;
     @Mock
     private BundleContext bundleContext;
 
     @BeforeEach
     public void setUp() throws IOException {
-        
+
         TracerService tracerService = TestHelper.createTracerService();
         tenantService = new TestTenantService();
         tenantService.setCurrentTenantId("test-tenant");
@@ -78,37 +79,40 @@ public class GoalsServiceImplTest {
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
-        conditionValidationService = TestHelper.createConditionValidationService();
         // Mock bundle context
         bundleContext = TestHelper.createMockBundleContext();
         schedulerService = TestHelper.createSchedulerService("goals-service-scheduler-node", persistenceService, executionContextManager, bundleContext, null, -1, true, true);
         // Create scheduler service using TestHelper
         multiTypeCacheService = new MultiTypeCacheServiceImpl();
 
-        // Initialize mocked services using TestHelper
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
+        // Initialize mocked services using TestHelper with EventAdmin
+        java.util.Map.Entry<DefinitionsServiceImpl, TestEventAdmin> servicePair =
+            TestHelper.createDefinitionServiceWithEventAdmin(persistenceService, bundleContext, schedulerService,
+                multiTypeCacheService, executionContextManager, tenantService);
+        definitionsService = servicePair.getKey();
+        TestEventAdmin testEventAdmin = servicePair.getValue();
+
+        // Inject definitionsService into the dispatcher
+        TestHelper.injectDefinitionsServiceIntoDispatcher(conditionEvaluatorDispatcher, definitionsService);
         TestConditionEvaluators.getConditionTypes().forEach((key, value) -> definitionsService.setConditionType(value));
         ActionType setPropertyAction = TestHelper.createActionType("setPropertyAction", "setPropertyActionExecutor");
         definitionsService.setActionType(setPropertyAction);
         ActionType sendEventAction = TestHelper.createActionType("sendEventAction", "sendEventActionExecutor");
         definitionsService.setActionType(sendEventAction);
+        TestActionExecutorDispatcher actionExecutorDispatcher = new TestActionExecutorDispatcher(definitionsService, persistenceService);
+        actionExecutorDispatcher.setDefaultReturnValue(EventService.PROFILE_UPDATED);
         eventService = TestHelper.createEventService(persistenceService, bundleContext, definitionsService, tenantService, tracerService);
-        rulesService = TestHelper.createRulesService(persistenceService, bundleContext, schedulerService, definitionsService, eventService, executionContextManager, tenantService, conditionValidationService, multiTypeCacheService);
+        rulesService = TestHelper.createRulesService(persistenceService, bundleContext, schedulerService, definitionsService, eventService, executionContextManager, tenantService, multiTypeCacheService, actionExecutorDispatcher, testEventAdmin);
 
         // Set the services
         goalsService = new GoalsServiceImpl();
         goalsService.setPersistenceService(persistenceService);
         goalsService.setDefinitionsService(definitionsService);
         goalsService.setRulesService(rulesService);
-        goalsService.setConditionValidationService(conditionValidationService);
         goalsService.setTracerService(tracerService);
         goalsService.setCacheService(multiTypeCacheService);
         goalsService.setContextManager(executionContextManager);
-        
-        // Create and inject ResolverService
-        ResolverServiceImpl resolverService = new ResolverServiceImpl();
-        resolverService.setDefinitionsService(definitionsService);
-        goalsService.setResolverService(resolverService);
+
 
         // Mock action type for goal rules
         ActionType goalActionType = new ActionType() {
@@ -140,6 +144,10 @@ public class GoalsServiceImplTest {
 
     @AfterEach
     public void tearDown() throws Exception {
+        // Shutdown TestEventAdmin if it exists (created via createDefinitionServiceWithEventAdmin)
+        // Note: TestEventAdmin is created internally by createDefinitionService, but we only have access
+        // to it when using createDefinitionServiceWithEventAdmin. For now, we rely on JVM cleanup.
+
         // Stop scheduler service
         if (schedulerService != null && schedulerService instanceof SchedulerServiceImpl) {
             ((SchedulerServiceImpl) schedulerService).preDestroy();
@@ -154,7 +162,7 @@ public class GoalsServiceImplTest {
         // Clear persistence service data if possible
         if (persistenceService != null && persistenceService instanceof InMemoryPersistenceServiceImpl) {
             // For test cleanup, we'll pass null which is accepted by the implementation for purging all data
-            ((InMemoryPersistenceServiceImpl) persistenceService).purge((java.util.Date)null);
+            ((InMemoryPersistenceServiceImpl) persistenceService).purge((Date)null);
         }
 
         // Reset tenant context
@@ -172,7 +180,6 @@ public class GoalsServiceImplTest {
         rulesService = null;
         eventService = null;
         schedulerService = null;
-        conditionValidationService = null;
         multiTypeCacheService = null;
         bundleContext = null;
     }

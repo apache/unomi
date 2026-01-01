@@ -42,7 +42,6 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.util.Date;
 import java.util.*;
 
 import static org.junit.Assert.assertNotNull;
@@ -512,7 +511,7 @@ public class SegmentIT extends BaseIT {
         // Wait for profile updates to complete - recalculatePastEventConditions updates profiles
         // and then recalculates scorings, which may take some time
         refreshPersistence(Profile.class);
-        keepTrying("Profile should be engaged in the scoring with a score of 50", 
+        keepTrying("Profile should be engaged in the scoring with a score of 50",
                 () -> {
                     try {
                         // Reload profile from persistence to get updated scores
@@ -709,7 +708,7 @@ public class SegmentIT extends BaseIT {
         Profile profile = new Profile();
         profile.setItemId("test_profile_id");
         profileService.save(profile);
-        persistenceService.refreshIndex(Profile.class, null); // wait for profile to be full persisted and index
+        persistenceService.refreshIndex(Profile.class); // wait for profile to be full persisted and index
 
         // create the conditions
         Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
@@ -727,11 +726,13 @@ public class SegmentIT extends BaseIT {
         booleanCondition.setParameter("operator", "and");
         booleanCondition.setParameter("subConditions", subConditions);
 
-        // create segment and scoring
+        // create segment
         Metadata segmentMetadata = new Metadata("relative-date-segment-test");
         Segment segment = new Segment(segmentMetadata);
         segment.setCondition(booleanCondition);
         segmentService.setSegmentDefinition(segment);
+
+        // create scoring
         Metadata scoringMetadata = new Metadata("relative-date-scoring-test");
         Scoring scoring = new Scoring(scoringMetadata);
         ScoringElement scoringElement = new ScoringElement();
@@ -752,30 +753,37 @@ public class SegmentIT extends BaseIT {
         LocalDate localDate = LocalDate.now().minusDays(3);
         profile.setProperty("lastVisit", Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         profileService.save(profile);
-        persistenceService.refreshIndex(Profile.class, null); // wait for profile to be full persisted and index
+        persistenceService.refreshIndex(Profile.class); // wait for profile to be full persisted and index
 
         // insure the profile is not yet engaged since we directly saved the profile in ES
         profile = profileService.load("test_profile_id");
         Assert.assertFalse("Profile should not be engaged in the segment", profile.getSegments().contains("relative-date-segment-test"));
         Assert.assertTrue("Profile should not be engaged in the scoring",
-                profile.getScores() == null || profile.getScores().containsKey("relative-date-scoring-test"));
+                profile.getScores() == null || !profile.getScores().containsKey("relative-date-scoring-test"));
 
         // now force the recalculation of the date relative segments/scorings
-        segmentService.recalculatePastEventConditions();
+        // Disable profileUpdated events to avoid race conditions in tests
+        segmentService.recalculatePastEventConditions(false);
         persistenceService.refreshIndex(Profile.class, null);
         keepTrying("Profile should be engaged in the segment and scoring", () -> profileService.load("test_profile_id"),
                 updatedProfile -> updatedProfile.getSegments().contains("relative-date-segment-test") && updatedProfile.getScores() != null
                         && updatedProfile.getScores().get("relative-date-scoring-test") == 5, 1000, 20);
 
+        // Reload the profile to get the latest version with updated segments from recalculatePastEventConditions
+        // This prevents overwriting the segments with stale data when we save the profile
+        profile = profileService.load("test_profile_id");
+
         // update the profile to a date out of date expression
         localDate = LocalDate.now().minusDays(15);
         profile.setProperty("lastVisit", Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         profileService.save(profile);
-        persistenceService.refreshIndex(Profile.class, null); // wait for profile to be full persisted and index
+        persistenceService.refreshIndex(Profile.class); // wait for profile to be full persisted and index
 
         // now force the recalculation of the date relative segments/scorings
-        segmentService.recalculatePastEventConditions();
-        persistenceService.refreshIndex(Profile.class, null);
+        // Disable profileUpdated events to avoid race conditions in tests
+        // This should not re-add the profile since it doesn't match the condition anymore
+        segmentService.recalculatePastEventConditions(false);
+        persistenceService.refreshIndex(Profile.class);
         keepTrying("Profile should not be engaged in the segment and scoring anymore", () -> profileService.load("test_profile_id"),
                 updatedProfile -> !updatedProfile.getSegments().contains("relative-date-segment-test") && (
                         updatedProfile.getScores() == null || !updatedProfile.getScores().containsKey("relative-date-scoring-test")), 1000,

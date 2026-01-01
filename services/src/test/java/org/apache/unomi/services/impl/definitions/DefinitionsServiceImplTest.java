@@ -23,14 +23,17 @@ import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.services.TypeResolutionService;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
-import org.apache.unomi.api.utils.ParserHelper;
-import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
+import org.apache.unomi.services.impl.TestConditionEvaluators;
+import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
-import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -48,6 +51,7 @@ import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -75,7 +79,7 @@ class DefinitionsServiceImplTest {
     private BundleContext bundleContext;
     @Mock
     private Bundle bundle;
-    private org.apache.unomi.api.services.SchedulerService schedulerService;
+    private SchedulerService schedulerService;
 
     private TestTenantService tenantService;
     private DefinitionsServiceImpl definitionsService;
@@ -83,7 +87,6 @@ class DefinitionsServiceImplTest {
     private MultiTypeCacheServiceImpl multiTypeCacheService;
     private KarafSecurityService securityService;
     private ExecutionContextManagerImpl executionContextManager;
-    private ConditionValidationServiceImpl conditionValidationService;
 
     @BeforeEach
     void setUp() {
@@ -93,13 +96,14 @@ class DefinitionsServiceImplTest {
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
-        conditionValidationService = new ConditionValidationServiceImpl();
         // Mock bundle context
         bundleContext = TestHelper.createMockBundleContext();
         schedulerService = TestHelper.createSchedulerService("definitions-service-scheduler-node", persistenceService, executionContextManager, bundleContext, null, -1, true, true);
         // Create scheduler service using TestHelper
         multiTypeCacheService = new MultiTypeCacheServiceImpl();
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
+        // Inject definitionsService into the dispatcher
+        TestHelper.injectDefinitionsServiceIntoDispatcher(conditionEvaluatorDispatcher, definitionsService);
     }
 
     @Nested
@@ -1547,9 +1551,11 @@ class DefinitionsServiceImplTest {
             definitionsService.setConditionType(taggedType);
             definitionsService.setConditionType(untaggedType);
 
-            // Create test conditions
-            Condition taggedCondition = new Condition(taggedType);
-            Condition untaggedCondition = new Condition(untaggedType);
+            // Create test conditions (simulate JSON-deserialized conditions that only have type IDs)
+            Condition taggedCondition = new Condition();
+            taggedCondition.setConditionTypeId("taggedCondition");
+            Condition untaggedCondition = new Condition();
+            untaggedCondition.setConditionTypeId("untaggedCondition");
 
             // Create boolean condition containing both
             ConditionType booleanType = createTestConditionType("booleanCondition", new HashSet<>(), null);
@@ -1560,15 +1566,18 @@ class DefinitionsServiceImplTest {
 
             // Test extraction
             Condition extracted = definitionsService.extractConditionBySystemTag(booleanCondition, "testTag");
-            assertNotNull(extracted);
-            assertEquals(taggedCondition, extracted);
+            assertNotNull(extracted, "Extracted condition should not be null when a sub-condition has systemTag=testTag");
+            assertEquals(taggedCondition, extracted, "Extracted condition should match the tagged sub-condition (systemTag=testTag)");
 
             // Test with non-existent tag
-            assertNull(definitionsService.extractConditionBySystemTag(booleanCondition, "nonExistentTag"));
+            assertNull(definitionsService.extractConditionBySystemTag(booleanCondition, "nonExistentTag"),
+                    "Extraction should return null when no sub-condition matches systemTag=nonExistentTag");
 
             // Test with null inputs
-            assertNull(definitionsService.extractConditionBySystemTag(null, "testTag"));
-            assertNull(definitionsService.extractConditionBySystemTag(booleanCondition, null));
+            assertNull(definitionsService.extractConditionBySystemTag(null, "testTag"),
+                    "Extraction should return null when root condition is null");
+            assertNull(definitionsService.extractConditionBySystemTag(booleanCondition, null),
+                    "Extraction should return null when systemTag is null");
         }
 
         @Test
@@ -1640,13 +1649,15 @@ class DefinitionsServiceImplTest {
             definitionsService.setConditionType(taggedType);
             definitionsService.setConditionType(untaggedType);
 
-            // Create test conditions
-            Condition taggedCondition = new Condition(taggedType);
-            Condition untaggedCondition = new Condition(untaggedType);
+            // Create test conditions (simulate JSON-deserialized conditions that only have type IDs)
+            Condition taggedCondition = new Condition();
+            taggedCondition.setConditionTypeId("taggedCondition");
+            Condition untaggedCondition = new Condition();
+            untaggedCondition.setConditionTypeId("untaggedCondition");
 
             // Test simple extraction
             Condition extracted = definitionsService.extractConditionByTag(taggedCondition, "testTag");
-            assertEquals(taggedCondition, extracted);
+            assertEquals(taggedCondition, extracted, "Deprecated tag extraction should match when conditionTypeId=taggedCondition has tag=testTag");
 
             // Test with boolean AND condition
             ConditionType booleanType = createTestConditionType("booleanCondition", new HashSet<>(), null);
@@ -1656,14 +1667,14 @@ class DefinitionsServiceImplTest {
             booleanCondition.setParameter("subConditions", Arrays.asList(taggedCondition, taggedCondition));
 
             extracted = definitionsService.extractConditionByTag(booleanCondition, "testTag");
-            assertNotNull(extracted);
-            assertEquals(booleanCondition, extracted);
+            assertNotNull(extracted, "Deprecated tag extraction should not be null when all sub-conditions match tag=testTag");
+            assertEquals(booleanCondition, extracted, "Deprecated tag extraction should return the AND boolean condition when all sub-conditions match tag=testTag");
 
             // Test with mixed conditions
             booleanCondition.setParameter("subConditions", Arrays.asList(taggedCondition, untaggedCondition));
             extracted = definitionsService.extractConditionByTag(booleanCondition, "testTag");
-            assertNotNull(extracted);
-            assertEquals(taggedCondition, extracted);
+            assertNotNull(extracted, "Deprecated tag extraction should not be null when at least one sub-condition matches tag=testTag");
+            assertEquals(taggedCondition, extracted, "Deprecated tag extraction should return the single matching sub-condition when only one matches tag=testTag");
         }
     }
 
@@ -1690,7 +1701,7 @@ class DefinitionsServiceImplTest {
         @Test
         void shouldHandleRefreshFailureGracefully() throws InterruptedException {
             // Save original persistence service
-            org.apache.unomi.persistence.spi.PersistenceService originalPersistence = definitionsService.getPersistenceService();
+            PersistenceService originalPersistence = definitionsService.getPersistenceService();
 
             try {
                 // Create a test condition type before breaking persistence
@@ -1724,7 +1735,7 @@ class DefinitionsServiceImplTest {
 
             try {
                 // Verify the service is marked as shutdown
-                java.lang.reflect.Field isShutdownField = DefinitionsServiceImpl.class.getDeclaredField("isShutdown");
+                Field isShutdownField = DefinitionsServiceImpl.class.getDeclaredField("isShutdown");
                 isShutdownField.setAccessible(true);
                 assertTrue((Boolean) isShutdownField.get(definitionsService));
 
@@ -1745,7 +1756,7 @@ class DefinitionsServiceImplTest {
             // Create parent condition type
             ConditionType parentType = createTestConditionType("parentCondition", new HashSet<>(Arrays.asList("tag1")), null);
             parentType.setTenantId(SYSTEM_TENANT);
-            
+
             // Create child condition type with parent condition
             Condition parentCondition = new Condition();
             parentCondition.setConditionTypeId("parentCondition");
@@ -1764,13 +1775,21 @@ class DefinitionsServiceImplTest {
             // Trigger refresh - this should handle parent resolution even if child was loaded first
             definitionsService.refresh();
 
-            // Verify both condition types are loaded and parent condition is resolved
+            // Verify both condition types are loaded (parent condition resolution removed - happens on-demand in query builders/evaluators)
             executionContextManager.executeAsSystem(() -> {
                 ConditionType loadedChild = definitionsService.getConditionType("childCondition");
                 assertNotNull(loadedChild, "Child condition type should be loaded");
                 assertNotNull(loadedChild.getParentCondition(), "Parent condition should be set");
-                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Parent condition type should be resolved");
                 assertEquals("parentCondition", loadedChild.getParentCondition().getConditionTypeId());
+                // Parent condition type is not automatically resolved - resolution happens on-demand
+                // If we need it resolved, we can manually call TypeResolutionService.resolveConditionType()
+                if (loadedChild.getParentCondition().getConditionType() == null) {
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.resolveConditionType(loadedChild.getParentCondition(), "test");
+                    }
+                }
+                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Parent condition type should be resolvable");
                 assertEquals(parentType, loadedChild.getParentCondition().getConditionType());
 
                 ConditionType loadedParent = definitionsService.getConditionType("parentCondition");
@@ -1786,13 +1805,13 @@ class DefinitionsServiceImplTest {
             // Create a chain: grandparent -> parent -> child
             ConditionType grandparentType = createTestConditionType("grandparentCondition", new HashSet<>(Arrays.asList("tag1")), null);
             grandparentType.setTenantId(SYSTEM_TENANT);
-            
+
             Condition grandparentCondition = new Condition();
             grandparentCondition.setConditionTypeId("grandparentCondition");
             ConditionType parentType = createTestConditionType("parentCondition", new HashSet<>(Arrays.asList("tag2")), null);
             parentType.setTenantId(SYSTEM_TENANT);
             parentType.setParentCondition(grandparentCondition);
-            
+
             Condition parentCondition = new Condition();
             parentCondition.setConditionTypeId("parentCondition");
             ConditionType childType = createTestConditionType("childCondition", new HashSet<>(Arrays.asList("tag3")), null);
@@ -1806,21 +1825,35 @@ class DefinitionsServiceImplTest {
                 persistenceService.save(grandparentType);
             });
 
-            // Trigger refresh - should resolve all parent conditions regardless of load order
+            // Trigger refresh (parent condition resolution removed - happens on-demand in query builders/evaluators)
             definitionsService.refresh();
 
-            // Verify all parent conditions are resolved
+            // Verify condition types are loaded (parent resolution happens on-demand)
             executionContextManager.executeAsSystem(() -> {
                 ConditionType loadedChild = definitionsService.getConditionType("childCondition");
                 assertNotNull(loadedChild, "Child condition type should be loaded");
                 assertNotNull(loadedChild.getParentCondition(), "Child should have parent condition");
-                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Child's parent condition type should be resolved");
+                // Manually resolve parent if needed for test
+                if (loadedChild.getParentCondition().getConditionType() == null) {
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.resolveConditionType(loadedChild.getParentCondition(), "test");
+                    }
+                }
+                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Child's parent condition type should be resolvable");
                 assertEquals("parentCondition", loadedChild.getParentCondition().getConditionTypeId());
 
                 ConditionType loadedParent = definitionsService.getConditionType("parentCondition");
                 assertNotNull(loadedParent, "Parent condition type should be loaded");
                 assertNotNull(loadedParent.getParentCondition(), "Parent should have parent condition");
-                assertNotNull(loadedParent.getParentCondition().getConditionType(), "Parent's parent condition type should be resolved");
+                // Manually resolve parent's parent if needed for test
+                if (loadedParent.getParentCondition().getConditionType() == null) {
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.resolveConditionType(loadedParent.getParentCondition(), "test");
+                    }
+                }
+                assertNotNull(loadedParent.getParentCondition().getConditionType(), "Parent's parent condition type should be resolvable");
                 assertEquals("grandparentCondition", loadedParent.getParentCondition().getConditionTypeId());
 
                 ConditionType loadedGrandparent = definitionsService.getConditionType("grandparentCondition");
@@ -1837,7 +1870,7 @@ class DefinitionsServiceImplTest {
             // Create parent and child condition types
             ConditionType parentType = createTestConditionType("bundleParentCondition", new HashSet<>(Arrays.asList("tag1")), bundleId);
             parentType.setTenantId(SYSTEM_TENANT);
-            
+
             Condition parentCondition = new Condition();
             parentCondition.setConditionTypeId("bundleParentCondition");
             ConditionType childType = createTestConditionType("bundleChildCondition", new HashSet<>(Arrays.asList("tag2")), bundleId);
@@ -1852,15 +1885,22 @@ class DefinitionsServiceImplTest {
                 registerPluginType(parentType, bundleId);
             });
 
-            // Trigger refresh to ensure parent conditions are resolved
+            // Trigger refresh (parent condition resolution removed - happens on-demand in query builders/evaluators)
             definitionsService.refresh();
 
-            // Verify parent conditions are resolved
+            // Verify condition types are loaded (parent resolution happens on-demand)
             executionContextManager.executeAsSystem(() -> {
                 ConditionType loadedChild = definitionsService.getConditionType("bundleChildCondition");
                 assertNotNull(loadedChild, "Child condition type from bundle should be loaded");
                 assertNotNull(loadedChild.getParentCondition(), "Child should have parent condition");
-                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Child's parent condition type should be resolved");
+                // Manually resolve parent if needed for test
+                if (loadedChild.getParentCondition().getConditionType() == null) {
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.resolveConditionType(loadedChild.getParentCondition(), "test");
+                    }
+                }
+                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Child's parent condition type should be resolvable");
                 assertEquals("bundleParentCondition", loadedChild.getParentCondition().getConditionTypeId());
                 assertEquals(parentType, loadedChild.getParentCondition().getConditionType());
             });
@@ -1871,7 +1911,7 @@ class DefinitionsServiceImplTest {
             // Create system tenant condition types
             ConditionType systemParentType = createTestConditionType("sharedParent", new HashSet<>(Arrays.asList("tag1")), null);
             systemParentType.setTenantId(SYSTEM_TENANT);
-            
+
             Condition systemParentCondition = new Condition();
             systemParentCondition.setConditionTypeId("sharedParent");
             ConditionType systemChildType = createTestConditionType("sharedChild", new HashSet<>(Arrays.asList("tag2")), null);
@@ -1899,27 +1939,40 @@ class DefinitionsServiceImplTest {
             // Trigger refresh
             definitionsService.refresh();
 
-            // Verify system tenant resolution
+            // Verify system tenant resolution (parent resolution happens on-demand)
             executionContextManager.executeAsSystem(() -> {
                 ConditionType loadedChild = definitionsService.getConditionType("sharedChild");
                 assertNotNull(loadedChild, "System child condition type should be loaded");
                 assertNotNull(loadedChild.getParentCondition(), "System child should have parent condition");
-                assertNotNull(loadedChild.getParentCondition().getConditionType(), "System child's parent should be resolved");
+                // Manually resolve parent if needed for test
+                if (loadedChild.getParentCondition().getConditionType() == null) {
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.resolveConditionType(loadedChild.getParentCondition(), "test");
+                    }
+                }
+                assertNotNull(loadedChild.getParentCondition().getConditionType(), "System child's parent should be resolvable");
                 assertEquals(SYSTEM_TENANT, loadedChild.getTenantId());
             });
 
-            // Verify tenant-specific override resolution
+            // Verify tenant-specific override resolution (parent resolution happens on-demand)
             // Note: getConditionType uses inheritance, so it may return system version if tenant version not in cache
-            // But the important thing is that parent conditions are resolved correctly
             executionContextManager.executeAsTenant("tenant1", () -> {
                 ConditionType loadedChild = definitionsService.getConditionType("sharedChild");
                 assertNotNull(loadedChild, "Child condition type should be loaded (may be system or tenant version)");
                 assertNotNull(loadedChild.getParentCondition(), "Child should have parent condition");
-                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Child's parent should be resolved");
+                // Manually resolve parent if needed for test
+                if (loadedChild.getParentCondition().getConditionType() == null) {
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.resolveConditionType(loadedChild.getParentCondition(), "test");
+                    }
+                }
+                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Child's parent should be resolvable");
                 // Parent should resolve to system tenant version (inheritance)
                 assertEquals("sharedParent", loadedChild.getParentCondition().getConditionTypeId());
                 assertNotNull(loadedChild.getParentCondition().getConditionType());
-                
+
                 // Verify tenant-specific version exists in persistence
                 ConditionType tenantChild = persistenceService.load("sharedChild", ConditionType.class);
                 assertNotNull(tenantChild, "Tenant-specific child should exist in persistence");
@@ -1963,15 +2016,17 @@ class DefinitionsServiceImplTest {
                 ConditionType tenantChild = persistenceService.load("childType", ConditionType.class);
                 assertNotNull(tenantChild, "Tenant child should exist in persistence");
                 assertEquals("tenant1", tenantChild.getTenantId(), "Tenant child should have correct tenant ID");
-                
+
                 ConditionType tenantParent = persistenceService.load("parentType", ConditionType.class);
                 assertNotNull(tenantParent, "Tenant-specific parent should exist in persistence");
                 assertEquals("tenant1", tenantParent.getTenantId(), "Tenant-specific parent should have correct tenant ID");
-                
+
                 // Verify parent condition resolution works when resolving the condition directly
                 // This tests the core functionality: parent conditions should be resolvable
                 if (tenantChild.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, tenantChild.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(tenantChild.getParentCondition(), "test");
                     assertTrue(resolved, "Parent condition should be resolvable");
                     assertNotNull(tenantChild.getParentCondition().getConditionType(), "Parent condition type should be resolved");
                 }
@@ -2020,22 +2075,25 @@ class DefinitionsServiceImplTest {
                 ConditionType tenantDerived = persistenceService.load("derivedCondition", ConditionType.class);
                 assertNotNull(tenantDerived, "Derived condition type should exist in persistence");
                 assertEquals("tenant1", tenantDerived.getTenantId(), "Derived should have correct tenant ID");
-                
+
                 // Verify parent condition resolution works when resolving the condition directly
                 // This tests the core functionality: parent conditions should be resolvable in chains
                 if (tenantDerived.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, tenantDerived.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(tenantDerived.getParentCondition(), "test");
                     assertTrue(resolved, "Derived's parent condition should be resolvable");
                     assertNotNull(tenantDerived.getParentCondition().getConditionType(), "Derived's parent should be resolved");
-                    
+
                     // Verify intermediate is resolved
                     ConditionType intermediate = tenantDerived.getParentCondition().getConditionType();
                     assertEquals("intermediateCondition", intermediate.getItemId());
                     if (intermediate.getParentCondition() != null) {
-                        boolean intermediateResolved = ParserHelper.resolveConditionType(definitionsService, intermediate.getParentCondition(), "test");
+                        boolean intermediateResolved = typeResolutionService != null &&
+                            typeResolutionService.resolveConditionType(intermediate.getParentCondition(), "test");
                         assertTrue(intermediateResolved, "Intermediate's parent condition should be resolvable");
                         assertNotNull(intermediate.getParentCondition().getConditionType(), "Intermediate's parent should be resolved");
-                        
+
                         // Verify base is resolved
                         ConditionType base = intermediate.getParentCondition().getConditionType();
                         assertEquals("baseCondition", base.getItemId());
@@ -2053,7 +2111,7 @@ class DefinitionsServiceImplTest {
 
             ConditionType parentType = createTestConditionType("bundleParent", new HashSet<>(Arrays.asList("tag1")), bundleId);
             parentType.setTenantId(SYSTEM_TENANT);
-            
+
             Condition parentCondition = new Condition();
             parentCondition.setConditionTypeId("bundleParent");
             ConditionType childType = createTestConditionType("bundleChild", new HashSet<>(Arrays.asList("tag2")), bundleId);
@@ -2066,15 +2124,22 @@ class DefinitionsServiceImplTest {
                 registerPluginType(childType, bundleId);
             });
 
-            // Trigger refresh to ensure parent conditions are resolved
+            // Trigger refresh (parent condition resolution removed - happens on-demand in query builders/evaluators)
             definitionsService.refresh();
 
-            // Verify parent is resolved
+            // Verify condition types are loaded (parent resolution happens on-demand)
             executionContextManager.executeAsSystem(() -> {
                 ConditionType loadedChild = definitionsService.getConditionType("bundleChild");
                 assertNotNull(loadedChild, "Child should be loaded");
                 assertNotNull(loadedChild.getParentCondition(), "Child should have parent condition");
-                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Parent should be resolved after bundle load");
+                // Manually resolve parent if needed for test
+                if (loadedChild.getParentCondition().getConditionType() == null) {
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.resolveConditionType(loadedChild.getParentCondition(), "test");
+                    }
+                }
+                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Parent should be resolvable after bundle load");
             });
 
             // Stop bundle (removes types)
@@ -2092,15 +2157,22 @@ class DefinitionsServiceImplTest {
                 persistenceService.save(childType);
             });
 
-            // Trigger refresh
+            // Trigger refresh (parent condition resolution removed - happens on-demand in query builders/evaluators)
             definitionsService.refresh();
 
-            // Verify parent is resolved after restart
+            // Verify condition types are loaded (parent resolution happens on-demand)
             executionContextManager.executeAsSystem(() -> {
                 ConditionType loadedChild = definitionsService.getConditionType("bundleChild");
                 assertNotNull(loadedChild, "Child should be loaded from persistence");
                 assertNotNull(loadedChild.getParentCondition(), "Child should have parent condition");
-                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Parent should be resolved after restart");
+                // Manually resolve parent if needed for test
+                if (loadedChild.getParentCondition().getConditionType() == null) {
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.resolveConditionType(loadedChild.getParentCondition(), "test");
+                    }
+                }
+                assertNotNull(loadedChild.getParentCondition().getConditionType(), "Parent should be resolvable after restart");
             });
         }
 
@@ -2145,10 +2217,12 @@ class DefinitionsServiceImplTest {
                 ConditionType tenant1Child = persistenceService.load("multiTenantChild", ConditionType.class);
                 assertNotNull(tenant1Child, "Tenant1 child should exist in persistence");
                 assertEquals("tenant1", tenant1Child.getTenantId(), "Tenant1 child should have correct tenant ID");
-                
+
                 // Verify parent condition resolution works
                 if (tenant1Child.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, tenant1Child.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(tenant1Child.getParentCondition(), "test");
                     assertTrue(resolved, "Tenant1 child's parent condition should be resolvable");
                     assertNotNull(tenant1Child.getParentCondition().getConditionType(), "Tenant1 child's parent should be resolved");
                 }
@@ -2159,10 +2233,12 @@ class DefinitionsServiceImplTest {
                 ConditionType tenant2Child = persistenceService.load("multiTenantChild", ConditionType.class);
                 assertNotNull(tenant2Child, "Tenant2 child should exist in persistence");
                 assertEquals("tenant2", tenant2Child.getTenantId(), "Tenant2 child should have correct tenant ID");
-                
+
                 // Verify parent condition resolution works
                 if (tenant2Child.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, tenant2Child.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(tenant2Child.getParentCondition(), "test");
                     assertTrue(resolved, "Tenant2 child's parent condition should be resolvable");
                     assertNotNull(tenant2Child.getParentCondition().getConditionType(), "Tenant2 child's parent should be resolved");
                 }
@@ -2200,14 +2276,16 @@ class DefinitionsServiceImplTest {
                 ConditionType tenantChild = persistenceService.load("tenantChild", ConditionType.class);
                 assertNotNull(tenantChild, "Tenant child should exist in persistence");
                 assertEquals("tenant1", tenantChild.getTenantId(), "Tenant child should have correct tenant ID");
-                
+
                 // Verify parent condition resolution works when resolving the condition directly
                 // This tests the core functionality: parent conditions should be resolvable across tenants
                 if (tenantChild.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, tenantChild.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(tenantChild.getParentCondition(), "test");
                     assertTrue(resolved, "Child's parent condition should be resolvable");
                     assertNotNull(tenantChild.getParentCondition().getConditionType(), "Child's parent should be resolved");
-                    
+
                     // Parent should resolve to system tenant version (inheritance)
                     ConditionType resolvedParent = tenantChild.getParentCondition().getConditionType();
                     assertNotNull(resolvedParent, "Parent should be resolved");
@@ -2222,19 +2300,19 @@ class DefinitionsServiceImplTest {
             // Create multiple condition types with parent conditions
             int numTypes = 10;
             List<ConditionType> types = new ArrayList<>();
-            
+
             executionContextManager.executeAsSystem(() -> {
                 // Create a chain: type0 -> type1 -> ... -> type9
                 for (int i = 0; i < numTypes; i++) {
                     ConditionType type = createTestConditionType("type" + i, new HashSet<>(Arrays.asList("tag" + i)), null);
                     type.setTenantId(SYSTEM_TENANT);
-                    
+
                     if (i > 0) {
                         Condition parentCondition = new Condition();
                         parentCondition.setConditionTypeId("type" + (i - 1));
                         type.setParentCondition(parentCondition);
                     }
-                    
+
                     types.add(type);
                     // Save in reverse order to maximize load order issues
                     persistenceService.save(type);
@@ -2265,14 +2343,21 @@ class DefinitionsServiceImplTest {
             assertTrue(endLatch.await(5, TimeUnit.SECONDS), "Test timed out");
             assertFalse(failed.get(), "One or more threads failed");
 
-            // Verify all parent conditions are resolved
+            // Verify condition types are loaded (parent resolution happens on-demand)
             executionContextManager.executeAsSystem(() -> {
                 for (int i = 1; i < numTypes; i++) {
                     ConditionType loadedType = definitionsService.getConditionType("type" + i);
                     assertNotNull(loadedType, "Type " + i + " should be loaded");
                     assertNotNull(loadedType.getParentCondition(), "Type " + i + " should have parent condition");
-                    assertNotNull(loadedType.getParentCondition().getConditionType(), 
-                        "Type " + i + "'s parent condition should be resolved");
+                    // Manually resolve parent if needed for test
+                    if (loadedType.getParentCondition().getConditionType() == null) {
+                        TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                        if (typeResolutionService != null) {
+                            typeResolutionService.resolveConditionType(loadedType.getParentCondition(), "test");
+                        }
+                    }
+                    assertNotNull(loadedType.getParentCondition().getConditionType(),
+                        "Type " + i + "'s parent condition should be resolvable");
                     assertEquals("type" + (i - 1), loadedType.getParentCondition().getConditionTypeId());
                 }
             });
@@ -2283,7 +2368,7 @@ class DefinitionsServiceImplTest {
             // Create condition types and save to persistence
             ConditionType parentType = createTestConditionType("postConstructParent", new HashSet<>(Arrays.asList("tag1")), null);
             parentType.setTenantId(SYSTEM_TENANT);
-            
+
             Condition parentCondition = new Condition();
             parentCondition.setConditionTypeId("postConstructParent");
             ConditionType childType = createTestConditionType("postConstructChild", new HashSet<>(Arrays.asList("tag2")), null);
@@ -2299,16 +2384,23 @@ class DefinitionsServiceImplTest {
             // Create a new service instance to trigger postConstruct
             // This simulates the real startup scenario
             DefinitionsServiceImpl newService = TestHelper.createDefinitionService(
-                persistenceService, bundleContext, schedulerService, multiTypeCacheService, 
-                executionContextManager, tenantService, conditionValidationService);
+                persistenceService, bundleContext, schedulerService, multiTypeCacheService,
+                executionContextManager, tenantService);
 
-            // Verify parent conditions are resolved after postConstruct
+            // Verify condition types are loaded (parent resolution happens on-demand, not in postConstruct)
             executionContextManager.executeAsSystem(() -> {
                 ConditionType loadedChild = newService.getConditionType("postConstructChild");
                 assertNotNull(loadedChild, "Child condition type should be loaded after postConstruct");
                 assertNotNull(loadedChild.getParentCondition(), "Child should have parent condition");
-                assertNotNull(loadedChild.getParentCondition().getConditionType(), 
-                    "Child's parent condition should be resolved after postConstruct");
+                // Manually resolve parent if needed for test
+                if (loadedChild.getParentCondition().getConditionType() == null) {
+                    TypeResolutionService typeResolutionService = newService.getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.resolveConditionType(loadedChild.getParentCondition(), "test");
+                    }
+                }
+                assertNotNull(loadedChild.getParentCondition().getConditionType(),
+                    "Child's parent condition should be resolvable after postConstruct");
                 assertEquals("postConstructParent", loadedChild.getParentCondition().getConditionTypeId());
             });
         }
@@ -2318,13 +2410,13 @@ class DefinitionsServiceImplTest {
             // Test: child -> parent -> grandparent (worst case load order)
             ConditionType grandparentType = createTestConditionType("grandparentLast", new HashSet<>(Arrays.asList("tag1")), null);
             grandparentType.setTenantId(SYSTEM_TENANT);
-            
+
             Condition grandparentCondition = new Condition();
             grandparentCondition.setConditionTypeId("grandparentLast");
             ConditionType parentType = createTestConditionType("parentLast", new HashSet<>(Arrays.asList("tag2")), null);
             parentType.setTenantId(SYSTEM_TENANT);
             parentType.setParentCondition(grandparentCondition);
-            
+
             Condition parentCondition = new Condition();
             parentCondition.setConditionTypeId("parentLast");
             ConditionType childType = createTestConditionType("childLast", new HashSet<>(Arrays.asList("tag3")), null);
@@ -2345,12 +2437,15 @@ class DefinitionsServiceImplTest {
                 ConditionType loadedChild = persistenceService.load("childLast", ConditionType.class);
                 assertNotNull(loadedChild, "Child should exist");
                 if (loadedChild.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, loadedChild.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(loadedChild.getParentCondition(), "test");
                     assertTrue(resolved, "Child's parent should be resolvable");
                     ConditionType parent = loadedChild.getParentCondition().getConditionType();
                     assertNotNull(parent, "Parent should be resolved");
                     if (parent.getParentCondition() != null) {
-                        boolean parentResolved = ParserHelper.resolveConditionType(definitionsService, parent.getParentCondition(), "test");
+                        boolean parentResolved = typeResolutionService != null &&
+                            typeResolutionService.resolveConditionType(parent.getParentCondition(), "test");
                         assertTrue(parentResolved, "Parent's parent (grandparent) should be resolvable");
                         assertNotNull(parent.getParentCondition().getConditionType(), "Grandparent should be resolved");
                     }
@@ -2363,10 +2458,10 @@ class DefinitionsServiceImplTest {
             // Create one parent and multiple children
             ConditionType parentType = createTestConditionType("sharedParent", new HashSet<>(Arrays.asList("tag1")), null);
             parentType.setTenantId(SYSTEM_TENANT);
-            
+
             Condition parentCondition = new Condition();
             parentCondition.setConditionTypeId("sharedParent");
-            
+
             List<ConditionType> children = new ArrayList<>();
             for (int i = 1; i <= 5; i++) {
                 Condition childParentCondition = new Condition();
@@ -2395,7 +2490,9 @@ class DefinitionsServiceImplTest {
                     ConditionType child = persistenceService.load("child" + i, ConditionType.class);
                     assertNotNull(child, "Child " + i + " should exist");
                     if (child.getParentCondition() != null) {
-                        boolean resolved = ParserHelper.resolveConditionType(definitionsService, child.getParentCondition(), "test");
+                        TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                        boolean resolved = typeResolutionService != null &&
+                            typeResolutionService.resolveConditionType(child.getParentCondition(), "test");
                         assertTrue(resolved, "Child " + i + "'s parent should be resolvable");
                         assertEquals("sharedParent", child.getParentCondition().getConditionTypeId());
                         assertNotNull(child.getParentCondition().getConditionType(), "Child " + i + "'s parent should be resolved");
@@ -2409,13 +2506,13 @@ class DefinitionsServiceImplTest {
             // Test: child references parent, parent references grandparent, but grandparent loaded last
             ConditionType grandparentType = createTestConditionType("grandparentDelayed", new HashSet<>(Arrays.asList("tag1")), null);
             grandparentType.setTenantId(SYSTEM_TENANT);
-            
+
             Condition grandparentCondition = new Condition();
             grandparentCondition.setConditionTypeId("grandparentDelayed");
             ConditionType parentType = createTestConditionType("parentDelayed", new HashSet<>(Arrays.asList("tag2")), null);
             parentType.setTenantId(SYSTEM_TENANT);
             parentType.setParentCondition(grandparentCondition);
-            
+
             Condition parentCondition = new Condition();
             parentCondition.setConditionTypeId("parentDelayed");
             ConditionType childType = createTestConditionType("childDelayed", new HashSet<>(Arrays.asList("tag3")), null);
@@ -2436,13 +2533,16 @@ class DefinitionsServiceImplTest {
                 ConditionType loadedChild = persistenceService.load("childDelayed", ConditionType.class);
                 assertNotNull(loadedChild, "Child should exist");
                 if (loadedChild.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, loadedChild.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(loadedChild.getParentCondition(), "test");
                     assertTrue(resolved, "Child's parent should be resolvable");
                     ConditionType parent = loadedChild.getParentCondition().getConditionType();
                     assertNotNull(parent, "Parent should be resolved");
                     // Parent should also have its parent resolved
                     if (parent.getParentCondition() != null) {
-                        boolean parentResolved = ParserHelper.resolveConditionType(definitionsService, parent.getParentCondition(), "test");
+                        boolean parentResolved = typeResolutionService != null &&
+                            typeResolutionService.resolveConditionType(parent.getParentCondition(), "test");
                         assertTrue(parentResolved, "Parent's parent should be resolvable");
                         assertNotNull(parent.getParentCondition().getConditionType(), "Grandparent should be resolved");
                     }
@@ -2459,7 +2559,7 @@ class DefinitionsServiceImplTest {
             // Bundle items
             ConditionType bundleParentType = createTestConditionType("bundleParent", new HashSet<>(Arrays.asList("tag1")), bundleId);
             bundleParentType.setTenantId(SYSTEM_TENANT);
-            
+
             Condition bundleParentCondition = new Condition();
             bundleParentCondition.setConditionTypeId("bundleParent");
             ConditionType bundleChildType = createTestConditionType("bundleChild", new HashSet<>(Arrays.asList("tag2")), bundleId);
@@ -2469,7 +2569,7 @@ class DefinitionsServiceImplTest {
             // Persistence items
             ConditionType persistenceParentType = createTestConditionType("persistenceParent", new HashSet<>(Arrays.asList("tag3")), null);
             persistenceParentType.setTenantId(SYSTEM_TENANT);
-            
+
             Condition persistenceParentCondition = new Condition();
             persistenceParentCondition.setConditionTypeId("persistenceParent");
             ConditionType persistenceChildType = createTestConditionType("persistenceChild", new HashSet<>(Arrays.asList("tag4")), null);
@@ -2498,15 +2598,19 @@ class DefinitionsServiceImplTest {
                     bundleChild = definitionsService.getConditionType("bundleChild");
                 }
                 if (bundleChild != null && bundleChild.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, bundleChild.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(bundleChild.getParentCondition(), "test");
                     assertTrue(resolved, "Bundle child's parent should be resolvable");
                 }
-                
+
                 // Persistence child
                 ConditionType persistenceChild = persistenceService.load("persistenceChild", ConditionType.class);
                 assertNotNull(persistenceChild, "Persistence child should exist");
                 if (persistenceChild.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, persistenceChild.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(persistenceChild.getParentCondition(), "test");
                     assertTrue(resolved, "Persistence child's parent should be resolvable");
                 }
             });
@@ -2539,7 +2643,9 @@ class DefinitionsServiceImplTest {
                 ConditionType tenantChild = persistenceService.load("tenantChildDelayed", ConditionType.class);
                 assertNotNull(tenantChild, "Tenant child should exist");
                 if (tenantChild.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, tenantChild.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(tenantChild.getParentCondition(), "test");
                     assertTrue(resolved, "Tenant child's parent should be resolvable");
                     assertNotNull(tenantChild.getParentCondition().getConditionType(), "Parent should be resolved");
                     assertEquals(SYSTEM_TENANT, tenantChild.getParentCondition().getConditionType().getTenantId());
@@ -2552,7 +2658,7 @@ class DefinitionsServiceImplTest {
             // Test: Multiple tenants, same child ID, different parents, loaded in various orders
             ConditionType systemParent1 = createTestConditionType("systemParent1", new HashSet<>(Arrays.asList("tag1")), null);
             systemParent1.setTenantId(SYSTEM_TENANT);
-            
+
             ConditionType systemParent2 = createTestConditionType("systemParent2", new HashSet<>(Arrays.asList("tag2")), null);
             systemParent2.setTenantId(SYSTEM_TENANT);
 
@@ -2592,7 +2698,9 @@ class DefinitionsServiceImplTest {
                 assertNotNull(child, "Tenant1 child should exist");
                 assertEquals("tenant1", child.getTenantId());
                 if (child.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, child.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(child.getParentCondition(), "test");
                     assertTrue(resolved, "Tenant1 child's parent should be resolvable");
                     assertEquals("systemParent1", child.getParentCondition().getConditionTypeId());
                 }
@@ -2603,7 +2711,9 @@ class DefinitionsServiceImplTest {
                 assertNotNull(child, "Tenant2 child should exist");
                 assertEquals("tenant2", child.getTenantId());
                 if (child.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, child.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(child.getParentCondition(), "test");
                     assertTrue(resolved, "Tenant2 child's parent should be resolvable");
                     assertEquals("systemParent2", child.getParentCondition().getConditionTypeId());
                 }
@@ -2615,7 +2725,7 @@ class DefinitionsServiceImplTest {
             // Test: System child has one parent, tenant override has different parent
             ConditionType systemParent1 = createTestConditionType("systemParent1", new HashSet<>(Arrays.asList("tag1")), null);
             systemParent1.setTenantId(SYSTEM_TENANT);
-            
+
             ConditionType systemParent2 = createTestConditionType("systemParent2", new HashSet<>(Arrays.asList("tag2")), null);
             systemParent2.setTenantId(SYSTEM_TENANT);
 
@@ -2652,7 +2762,9 @@ class DefinitionsServiceImplTest {
                 ConditionType child = persistenceService.load("overrideChild", ConditionType.class);
                 assertNotNull(child, "System child should exist");
                 if (child.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, child.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(child.getParentCondition(), "test");
                     assertTrue(resolved, "System child's parent should be resolvable");
                     assertEquals("systemParent1", child.getParentCondition().getConditionTypeId());
                 }
@@ -2664,7 +2776,9 @@ class DefinitionsServiceImplTest {
                 assertNotNull(child, "Tenant child should exist");
                 assertEquals("tenant1", child.getTenantId());
                 if (child.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, child.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(child.getParentCondition(), "test");
                     assertTrue(resolved, "Tenant child's parent should be resolvable");
                     assertEquals("systemParent2", child.getParentCondition().getConditionTypeId());
                 }
@@ -2706,21 +2820,23 @@ class DefinitionsServiceImplTest {
                 ConditionType child = persistenceService.load("tenantChild", ConditionType.class);
                 assertNotNull(child, "Tenant child should exist in persistence");
                 assertEquals("tenant1", child.getTenantId());
-                
+
                 ConditionType parent = persistenceService.load("tenantParent", ConditionType.class);
                 assertNotNull(parent, "Tenant parent should exist in persistence");
                 assertEquals("tenant1", parent.getTenantId());
-                
+
                 // Verify child's parent condition can be resolved
                 if (child.getParentCondition() != null) {
                     // Ensure parent is in cache first
                     definitionsService.setConditionType(parent);
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, child.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(child.getParentCondition(), "test");
                     assertTrue(resolved, "Child's parent should be resolvable");
                     ConditionType resolvedParent = child.getParentCondition().getConditionType();
                     assertNotNull(resolvedParent, "Parent should be resolved");
                     assertEquals("tenant1", resolvedParent.getTenantId());
-                    
+
                     // Verify parent's parent (grandparent) can be resolved
                     if (resolvedParent.getParentCondition() != null) {
                         // Ensure grandparent is in cache first
@@ -2734,8 +2850,9 @@ class DefinitionsServiceImplTest {
                             }
                             return null;
                         });
-                        
-                        boolean parentResolved = ParserHelper.resolveConditionType(definitionsService, resolvedParent.getParentCondition(), "test");
+
+                        boolean parentResolved = typeResolutionService != null &&
+                            typeResolutionService.resolveConditionType(resolvedParent.getParentCondition(), "test");
                         assertTrue(parentResolved, "Parent's parent (grandparent) should be resolvable");
                         assertNotNull(resolvedParent.getParentCondition().getConditionType(), "Grandparent should be resolved");
                         assertEquals(SYSTEM_TENANT, resolvedParent.getParentCondition().getConditionType().getTenantId());
@@ -2775,7 +2892,9 @@ class DefinitionsServiceImplTest {
                 ConditionType child = persistenceService.load("tenantChild", ConditionType.class);
                 assertNotNull(child, "Tenant child should exist");
                 if (child.getParentCondition() != null) {
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, child.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(child.getParentCondition(), "test");
                     assertTrue(resolved, "Child's parent should be resolvable");
                     // Should prefer tenant-specific parent if available
                     ConditionType resolvedParent = child.getParentCondition().getConditionType();
@@ -2834,11 +2953,11 @@ class DefinitionsServiceImplTest {
                 ConditionType finalType = persistenceService.load("tenantFinal", ConditionType.class);
                 assertNotNull(finalType, "Final type should exist in persistence");
                 assertEquals("tenant1", finalType.getTenantId());
-                
+
                 ConditionType intermediate = persistenceService.load("tenantIntermediate", ConditionType.class);
                 assertNotNull(intermediate, "Intermediate should exist in persistence");
                 assertEquals("tenant1", intermediate.getTenantId());
-                
+
                 // Ensure system items are in cache
                 executionContextManager.executeAsSystem(() -> {
                     ConditionType cachedDerived = definitionsService.getConditionType("systemDerived");
@@ -2857,18 +2976,20 @@ class DefinitionsServiceImplTest {
                     }
                     return null;
                 });
-                
+
                 // Verify tenant intermediate can resolve its parent (systemBase via inheritance)
                 // This is the valid scenario: tenant items resolving to system items
                 if (intermediate.getParentCondition() != null) {
-                    boolean intermediateResolved = ParserHelper.resolveConditionType(definitionsService, intermediate.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean intermediateResolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(intermediate.getParentCondition(), "test");
                     assertTrue(intermediateResolved, "Intermediate's parent (systemBase) should be resolvable via inheritance");
                     ConditionType base = intermediate.getParentCondition().getConditionType();
                     assertNotNull(base, "Base should be resolved");
                     assertEquals("systemBase", base.getItemId());
                     assertEquals(SYSTEM_TENANT, base.getTenantId());
                 }
-                
+
                 // Verify tenant final can resolve its parent (systemDerived via inheritance)
                 // Note: systemDerived references tenantIntermediate, which is an edge case
                 // We verify that tenant->system resolution works (the valid part)
@@ -2885,29 +3006,32 @@ class DefinitionsServiceImplTest {
                         }
                         return null;
                     });
-                    
+
                     // Ensure tenantIntermediate is also in cache (from tenant context)
                     definitionsService.setConditionType(intermediate);
-                    
+
                     // Now verify tenant final can resolve to systemDerived
                     // Since both systemDerived and tenantIntermediate are in cache,
                     // the resolution should work from tenant context
-                    boolean resolved = ParserHelper.resolveConditionType(definitionsService, finalType.getParentCondition(), "test");
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    boolean resolved = typeResolutionService != null &&
+                        typeResolutionService.resolveConditionType(finalType.getParentCondition(), "test");
                     assertTrue(resolved, "Final's parent (systemDerived) should be resolvable via inheritance from tenant context");
                     ConditionType derived = finalType.getParentCondition().getConditionType();
                     assertNotNull(derived, "Derived should be resolved");
                     assertEquals(SYSTEM_TENANT, derived.getTenantId(), "Derived should be system tenant");
-                    
+
                     // Verify that systemDerived's parent (tenantIntermediate) can also be resolved
                     // This should work because we're in tenant context and tenantIntermediate is in cache
                     if (derived.getParentCondition() != null) {
-                        boolean derivedParentResolved = ParserHelper.resolveConditionType(definitionsService, derived.getParentCondition(), "test");
+                        boolean derivedParentResolved = typeResolutionService != null &&
+                            typeResolutionService.resolveConditionType(derived.getParentCondition(), "test");
                         assertTrue(derivedParentResolved, "SystemDerived's parent (tenantIntermediate) should be resolvable from tenant context");
                         assertNotNull(derived.getParentCondition().getConditionType(), "TenantIntermediate should be resolved");
                         assertEquals("tenant1", derived.getParentCondition().getConditionType().getTenantId());
                     }
                 }
-                
+
                 // Note: systemDerived references tenantIntermediate, which is an edge case
                 // System items typically shouldn't reference tenant items due to tenant isolation
                 // We verify that the parts that can be resolved (tenant->system) work correctly

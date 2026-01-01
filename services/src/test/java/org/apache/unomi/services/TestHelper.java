@@ -18,8 +18,8 @@ package org.apache.unomi.services;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.actions.ActionType;
-import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.security.SecurityServiceConfiguration;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
@@ -28,50 +28,39 @@ import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.api.tenants.AuditService;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.impl.ConditionEvaluatorDispatcherImpl;
+import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
-import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
-import org.apache.unomi.services.impl.TestRequestTracer;
-import org.apache.unomi.services.impl.ResolverServiceImpl;
+import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.cluster.ClusterServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.events.EventServiceImpl;
 import org.apache.unomi.services.impl.rules.RulesServiceImpl;
 import org.apache.unomi.services.impl.rules.TestActionExecutorDispatcher;
-import org.apache.unomi.services.impl.scheduler.PersistenceSchedulerProvider;
-import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
-import org.apache.unomi.services.impl.scheduler.TaskExecutionManager;
-import org.apache.unomi.services.impl.scheduler.TaskExecutorRegistry;
-import org.apache.unomi.services.impl.scheduler.TaskHistoryManager;
-import org.apache.unomi.services.impl.scheduler.TaskLockManager;
-import org.apache.unomi.services.impl.scheduler.TaskMetricsManager;
-import org.apache.unomi.services.impl.scheduler.TaskRecoveryManager;
-import org.apache.unomi.services.impl.scheduler.TaskStateManager;
-import org.apache.unomi.services.impl.scheduler.TaskValidationManager;
-import org.apache.unomi.services.common.security.AuditServiceImpl;
+import org.apache.unomi.services.impl.scheduler.*;
 import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.apache.unomi.services.impl.validation.validators.*;
 import org.apache.unomi.tracing.api.RequestTracer;
-import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.tracing.api.TraceNode;
+import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.event.EventAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.unomi.services.impl.cluster.ClusterServiceImpl;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestHelper {
 
@@ -113,8 +102,21 @@ public class TestHelper {
         SchedulerService schedulerService,
         MultiTypeCacheService multiTypeCacheService,
         ExecutionContextManager executionContextManager,
+        TenantService tenantService
+    ) {
+        TestEventAdmin eventAdmin = new TestEventAdmin();
+        return createDefinitionService(persistenceService, bundleContext, schedulerService,
+            multiTypeCacheService, executionContextManager, tenantService, eventAdmin);
+    }
+
+    public static DefinitionsServiceImpl createDefinitionService(
+        PersistenceService persistenceService,
+        BundleContext bundleContext,
+        SchedulerService schedulerService,
+        MultiTypeCacheService multiTypeCacheService,
+        ExecutionContextManager executionContextManager,
         TenantService tenantService,
-        ConditionValidationService conditionValidationService
+        EventAdmin eventAdmin
     ) {
         DefinitionsServiceImpl definitionsService = new DefinitionsServiceImpl();
         TracerService tracerService = createTracerService();
@@ -124,10 +126,53 @@ public class TestHelper {
         definitionsService.setCacheService(multiTypeCacheService);
         definitionsService.setContextManager(executionContextManager);
         definitionsService.setTenantService(tenantService);
-        definitionsService.setConditionValidationService(conditionValidationService);
         definitionsService.setTracerService(tracerService);
+        definitionsService.setEventAdmin(eventAdmin);
+
+        // Configure built-in validators for the ConditionValidationService created internally
+        List<ValueTypeValidator> validators = new ArrayList<>();
+        validators.add(new StringValueTypeValidator());
+        validators.add(new IntegerValueTypeValidator());
+        validators.add(new LongValueTypeValidator());
+        validators.add(new FloatValueTypeValidator());
+        validators.add(new DoubleValueTypeValidator());
+        validators.add(new BooleanValueTypeValidator());
+        validators.add(new DateValueTypeValidator());
+        validators.add(new ComparisonOperatorValueTypeValidator());
+        validators.add(new ConditionValueTypeValidator());
+        definitionsService.setConditionValidationServiceBuiltInValidators(validators);
+
         definitionsService.postConstruct();
         return definitionsService;
+    }
+
+    /**
+     * Creates a DefinitionsServiceImpl with a TestEventAdmin and returns both.
+     * This allows tests to register EventHandlers with the TestEventAdmin.
+     *
+     * @param persistenceService the persistence service
+     * @param bundleContext the bundle context
+     * @param schedulerService the scheduler service
+     * @param multiTypeCacheService the cache service
+     * @param executionContextManager the execution context manager
+     * @param tenantService the tenant service
+     * @return a pair containing the DefinitionsServiceImpl and the TestEventAdmin
+     */
+    public static java.util.Map.Entry<DefinitionsServiceImpl, org.apache.unomi.services.impl.TestEventAdmin> createDefinitionServiceWithEventAdmin(
+        PersistenceService persistenceService,
+        BundleContext bundleContext,
+        SchedulerService schedulerService,
+        MultiTypeCacheService multiTypeCacheService,
+        ExecutionContextManager executionContextManager,
+        TenantService tenantService
+    ) {
+        TestEventAdmin eventAdmin = new TestEventAdmin();
+        DefinitionsServiceImpl definitionsService = createDefinitionService(
+            persistenceService, bundleContext, schedulerService,
+            multiTypeCacheService, executionContextManager, tenantService,
+            eventAdmin
+        );
+        return new AbstractMap.SimpleEntry<>(definitionsService, eventAdmin);
     }
 
     public static RulesServiceImpl createRulesService(
@@ -138,12 +183,27 @@ public class TestHelper {
         EventServiceImpl eventService,
         ExecutionContextManager executionContextManager,
         TenantService tenantService,
-        ConditionValidationService conditionValidationService,
-        MultiTypeCacheService multiTypeCacheService
+        MultiTypeCacheService multiTypeCacheService,
+        TestActionExecutorDispatcher actionExecutorDispatcher
+    ) {
+        return createRulesService(persistenceService, bundleContext, schedulerService,
+            definitionsService, eventService, executionContextManager, tenantService,
+            multiTypeCacheService, actionExecutorDispatcher, null);
+    }
+
+    public static RulesServiceImpl createRulesService(
+        PersistenceService persistenceService,
+        BundleContext bundleContext,
+        SchedulerService schedulerService,
+        DefinitionsServiceImpl definitionsService,
+        EventServiceImpl eventService,
+        ExecutionContextManager executionContextManager,
+        TenantService tenantService,
+        MultiTypeCacheService multiTypeCacheService,
+        TestActionExecutorDispatcher actionExecutorDispatcher,
+        EventAdmin eventAdmin
     ) {
         RulesServiceImpl rulesService = new RulesServiceImpl();
-        TestActionExecutorDispatcher actionExecutorDispatcher = new TestActionExecutorDispatcher(definitionsService, persistenceService);
-        actionExecutorDispatcher.setDefaultReturnValue(EventService.PROFILE_UPDATED);
 
         // Set up tracing
         TracerService tracerService = createTracerService();
@@ -158,13 +218,9 @@ public class TestHelper {
         rulesService.setTenantService(tenantService);
         rulesService.setSchedulerService(schedulerService);
         rulesService.setContextManager(executionContextManager);
-        rulesService.setConditionValidationService(conditionValidationService);
         rulesService.setTracerService(tracerService);
         rulesService.setCacheService(multiTypeCacheService);
-        
-        // Create and inject ResolverService
-        ResolverService resolverService = createResolverService(definitionsService);
-        rulesService.setResolverService(resolverService);
+
 
         // Create and register test action type
         ActionType testActionType = new ActionType();
@@ -189,6 +245,13 @@ public class TestHelper {
         // Initialize rule caches
         rulesService.postConstruct();
         eventService.addEventListenerService(rulesService);
+
+        // Register RulesServiceImpl as EventHandler with EventAdmin if provided
+        // In real OSGi, this would be done via service registry, but for tests we register manually
+        if (eventAdmin instanceof TestEventAdmin) {
+            ((TestEventAdmin) eventAdmin).registerHandler(
+                rulesService, "org/apache/unomi/definitions/**");
+        }
 
         return rulesService;
     }
@@ -627,24 +690,19 @@ public class TestHelper {
         eventService.setDefinitionsService(definitionsService);
         eventService.setTenantService(tenantService);
         eventService.setTracerService(tracerService);
-        
-        // Create and inject ResolverService
-        ResolverService resolverService = createResolverService(definitionsService);
-        eventService.setResolverService(resolverService);
-        
+
+
         return eventService;
     }
 
     /**
-     * Creates a ResolverService instance for testing purposes.
+     * Creates a TypeResolutionService instance for testing purposes.
      *
      * @param definitionsService The definitions service to use
-     * @return A configured ResolverServiceImpl instance
+     * @return A configured TypeResolutionServiceImpl instance
      */
-    public static ResolverService createResolverService(DefinitionsService definitionsService) {
-        ResolverServiceImpl resolverService = new ResolverServiceImpl();
-        resolverService.setDefinitionsService(definitionsService);
-        return resolverService;
+    public static TypeResolutionService createTypeResolutionService(DefinitionsService definitionsService) {
+        return new TypeResolutionServiceImpl(definitionsService);
     }
 
     public static void setupSegmentActionTypes(DefinitionsServiceImpl definitionsService) {
@@ -663,22 +721,6 @@ public class TestHelper {
         actionType.setMetadata(metadata);
 
         definitionsService.setActionType(actionType);
-
-        // Register the profileUpdatedEventCondition type
-        ConditionType conditionType = new ConditionType();
-        conditionType.setItemId("profileUpdatedEventCondition");
-        conditionType.setConditionEvaluator("profileUpdatedEventConditionEvaluator");
-        conditionType.setQueryBuilder("eventTypeConditionQueryBuilder");
-
-        Metadata conditionMetadata = new Metadata();
-        conditionMetadata.setId("profileUpdatedEventCondition");
-        conditionMetadata.setName("Profile Updated Event");
-        conditionMetadata.setDescription("Condition to match profile updated events");
-        conditionMetadata.setSystemTags(new HashSet<>(Arrays.asList("profileTags", "event", "condition", "eventCondition")));
-        conditionMetadata.setEnabled(true);
-        conditionType.setMetadata(conditionMetadata);
-
-        definitionsService.setConditionType(conditionType);
     }
 
     /**
@@ -795,7 +837,7 @@ public class TestHelper {
      * This is useful for tests that need to wait for refresh delay in in-memory persistence service.
      * The method will retry the query until the expected number of items are found, or until
      * any items are found if expectedCount is null.
-     * 
+     *
      * @param querySupplier Supplier that returns the query result (List or PartialList)
      * @param expectedCount Expected number of items (null to wait for any items > 0)
      * @param maxWaitMs Maximum time to wait in milliseconds (defaults to 2000ms if <= 0)
@@ -808,27 +850,27 @@ public class TestHelper {
         long maxWait = maxWaitMs > 0 ? maxWaitMs : 2000L;
         long startTime = System.currentTimeMillis();
         long retryDelay = Math.min(50L, maxWait / 20); // Adaptive retry delay
-        
+
         T result = querySupplier.get();
-        
+
         while (System.currentTimeMillis() - startTime < maxWait) {
             int currentCount = 0;
-            
+
             if (result instanceof List) {
                 currentCount = ((List<?>) result).size();
-            } else if (result instanceof org.apache.unomi.api.PartialList) {
-                currentCount = ((org.apache.unomi.api.PartialList<?>) result).getList().size();
+            } else if (result instanceof PartialList) {
+                currentCount = ((PartialList<?>) result).getList().size();
             }
-            
+
             // Check if condition is met
-            boolean conditionMet = expectedCount != null 
-                ? currentCount == expectedCount 
+            boolean conditionMet = expectedCount != null
+                ? currentCount == expectedCount
                 : currentCount > 0;
-            
+
             if (conditionMet) {
                 return result;
             }
-            
+
             // Wait before retrying
             try {
                 Thread.sleep(retryDelay);
@@ -836,18 +878,18 @@ public class TestHelper {
                 Thread.currentThread().interrupt();
                 break;
             }
-            
+
             result = querySupplier.get();
         }
-        
+
         // If we get here, timeout was reached
         int finalCount = 0;
         if (result instanceof List) {
             finalCount = ((List<?>) result).size();
-        } else if (result instanceof org.apache.unomi.api.PartialList) {
-            finalCount = ((org.apache.unomi.api.PartialList<?>) result).getList().size();
+        } else if (result instanceof PartialList) {
+            finalCount = ((PartialList<?>) result).getList().size();
         }
-        
+
         String message = expectedCount != null
             ? String.format("Query did not return expected count %d after %d ms (got %d)", expectedCount, maxWait, finalCount)
             : String.format("Query did not return any items after %d ms", maxWait);
@@ -857,7 +899,7 @@ public class TestHelper {
     /**
      * Retries a query operation until items are available.
      * Uses default timeout of 2000ms.
-     * 
+     *
      * @param querySupplier Supplier that returns the query result
      * @param expectedCount Expected number of items (null to wait for any items > 0)
      * @param <T> The type of query result
@@ -870,7 +912,7 @@ public class TestHelper {
     /**
      * Retries a query operation until any items are available.
      * Uses default timeout of 2000ms.
-     * 
+     *
      * @param querySupplier Supplier that returns the query result
      * @param <T> The type of query result
      * @return The query result when items are found
@@ -891,15 +933,15 @@ public class TestHelper {
      * @throws Exception If an error occurs during teardown
      */
     public static void tearDown(
-            org.apache.unomi.api.services.SchedulerService schedulerService,
-            org.apache.unomi.api.services.cache.MultiTypeCacheService multiTypeCacheService,
-            org.apache.unomi.persistence.spi.PersistenceService persistenceService,
-            org.apache.unomi.api.tenants.TenantService tenantService,
+            SchedulerService schedulerService,
+            MultiTypeCacheService multiTypeCacheService,
+            PersistenceService persistenceService,
+            TenantService tenantService,
             String... tenantIds) throws Exception {
 
         // Stop scheduler service
-        if (schedulerService != null && schedulerService instanceof org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) {
-            ((org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) schedulerService).preDestroy();
+        if (schedulerService != null && schedulerService instanceof SchedulerServiceImpl) {
+            ((SchedulerServiceImpl) schedulerService).preDestroy();
         }
 
         // Clear cache by clearing each tenant
@@ -912,13 +954,13 @@ public class TestHelper {
         }
 
         // Clear persistence service data if possible
-        if (persistenceService != null && persistenceService instanceof org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl) {
-            ((org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl) persistenceService).purge((java.util.Date)null);
+        if (persistenceService != null && persistenceService instanceof InMemoryPersistenceServiceImpl) {
+            ((InMemoryPersistenceServiceImpl) persistenceService).purge((Date)null);
         }
 
         // Reset tenant context
-        if (tenantService != null && tenantService instanceof org.apache.unomi.services.impl.TestTenantService) {
-            ((org.apache.unomi.services.impl.TestTenantService) tenantService).setCurrentTenantId(null);
+        if (tenantService != null && tenantService instanceof TestTenantService) {
+            ((TestTenantService) tenantService).setCurrentTenantId(null);
         }
     }
 
@@ -935,5 +977,21 @@ public class TestHelper {
         // parameters, the calling code is setting those instance variables to null,
         // which is the intended effect. This method is simply a cleaner way to organize
         // the nulling of multiple references.
+    }
+
+    /**
+     * Injects the definitions service into the condition evaluator dispatcher.
+     * This is required for proper condition type resolution, especially for conditions
+     * with parent conditions that need to be resolved through the definitions service.
+     *
+     * @param conditionEvaluatorDispatcher The condition evaluator dispatcher to inject into
+     * @param definitionsService The definitions service to inject
+     */
+    public static void injectDefinitionsServiceIntoDispatcher(
+            ConditionEvaluatorDispatcher conditionEvaluatorDispatcher,
+            DefinitionsService definitionsService) {
+        if (conditionEvaluatorDispatcher instanceof ConditionEvaluatorDispatcherImpl) {
+            ((ConditionEvaluatorDispatcherImpl) conditionEvaluatorDispatcher).setDefinitionsService(definitionsService);
+        }
     }
 }

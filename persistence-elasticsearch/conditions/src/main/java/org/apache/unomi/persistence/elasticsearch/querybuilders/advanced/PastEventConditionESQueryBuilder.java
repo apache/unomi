@@ -27,19 +27,23 @@ import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder;
 import org.apache.unomi.scripting.ScriptExecutor;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder, PastEventConditionPersistenceQueryBuilder {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PastEventConditionESQueryBuilder.class.getName());
 
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;
@@ -54,6 +58,18 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void bindDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+        LOGGER.debug("DefinitionsService bound to PastEventConditionESQueryBuilder");
+    }
+
+    public void unbindDefinitionsService(DefinitionsService definitionsService) {
+        if (this.definitionsService == definitionsService) {
+            this.definitionsService = null;
+            LOGGER.debug("DefinitionsService unbound from PastEventConditionESQueryBuilder");
+        }
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {

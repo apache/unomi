@@ -25,13 +25,16 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.services.TypeResolutionService;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.services.sorts.ControlGroupPersonalizationStrategy;
-import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +52,6 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileServiceImpl.class.getName());
 
     private DefinitionsService definitionsService;
-    private ResolverService resolverService;
 
     private SegmentService segmentService;
 
@@ -77,8 +79,12 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
         this.definitionsService = definitionsService;
     }
 
-    public void setResolverService(ResolverService resolverService) {
-        this.resolverService = resolverService;
+    /**
+     * Helper method to get TypeResolutionService from DefinitionsService.
+     * Returns null if DefinitionsService is not available or doesn't have TypeResolutionService.
+     */
+    private TypeResolutionService getTypeResolutionService() {
+        return definitionsService != null ? definitionsService.getTypeResolutionService() : null;
     }
 
     public void setSegmentService(SegmentService segmentService) {
@@ -305,7 +311,8 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
         if (query.getScrollIdentifier() != null) {
             return persistenceService.continueScrollQuery(clazz, query.getScrollIdentifier(), query.getScrollTimeValidity());
         }
-        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
+        if (query.getCondition() != null) {
+            definitionsService.getConditionValidationService().validate(query.getCondition());
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
             } else {
@@ -772,7 +779,10 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
 
     @Override
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
-        resolverService.resolveConditionType(condition, "profile " + profile.getItemId() + " matching");
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService != null) {
+            typeResolutionService.resolveConditionType(condition, "profile " + profile.getItemId() + " matching");
+        }
 
         if (condition.getConditionTypeId().equals("booleanCondition")) {
             List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
@@ -801,7 +811,10 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
         long startTime = System.currentTimeMillis();
         long updatedCount = 0;
 
-        resolverService.resolveConditionType(update.getCondition(), "batch update on property " + update.getPropertyName());
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService != null) {
+            typeResolutionService.resolveConditionType(update.getCondition(), "batch update on property " + update.getPropertyName());
+        }
         PartialList<Profile> profiles = persistenceService.query(update.getCondition(), null, Profile.class, 0,update.getScrollBatchSize(), update.getScrollTimeValidity());
 
         while (profiles != null && !profiles.getList().isEmpty()) {

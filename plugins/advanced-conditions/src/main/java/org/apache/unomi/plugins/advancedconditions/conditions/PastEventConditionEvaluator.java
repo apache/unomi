@@ -23,9 +23,10 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
-import org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder;
 import org.apache.unomi.scripting.ScriptExecutor;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -88,8 +89,12 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
 
         boolean eventsOccurred = pastEventConditionPersistenceQueryBuilder.getStrategyFromOperator((String) condition.getParameter("operator"));
         if (eventsOccurred) {
-            int minimumEventCount = parameters.get("minimumEventCount") == null  ? 0 : (Integer) parameters.get("minimumEventCount");
-            int maximumEventCount = parameters.get("maximumEventCount") == null  ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
+            // Use PropertyHelper to safely convert string/integer values to Integer
+            // Parameters may be strings from JSON deserialization or API input
+            Integer minCount = PropertyHelper.getInteger(parameters.get("minimumEventCount"));
+            int minimumEventCount = minCount != null ? minCount : 0;
+            Integer maxCount = PropertyHelper.getInteger(parameters.get("maximumEventCount"));
+            int maximumEventCount = maxCount != null ? maxCount : Integer.MAX_VALUE;
             return count > 0 && (count >= minimumEventCount && count <= maximumEventCount);
         } else {
             return count == 0;

@@ -21,10 +21,14 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.karaf.shell.support.table.ShellTable;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.InvalidObjectInfo;
-import org.apache.unomi.api.services.ResolverService;
+import org.apache.unomi.api.services.TypeResolutionService;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Karaf shell command to list all invalid objects across all services.
@@ -35,16 +39,22 @@ import java.util.*;
 public class ListInvalidObjects implements Action {
 
     @Reference
-    ResolverService resolverService;
+    DefinitionsService definitionsService;
 
     public Object execute() throws Exception {
-        if (resolverService == null) {
-            System.out.println("ResolverService is not available.");
+        if (definitionsService == null) {
+            System.out.println("DefinitionsService is not available.");
             return null;
         }
 
-        Map<String, Map<String, InvalidObjectInfo>> allInvalidObjects = resolverService.getAllInvalidObjects();
-        int totalCount = resolverService.getTotalInvalidObjectCount();
+        TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+        if (typeResolutionService == null) {
+            System.out.println("TypeResolutionService is not available.");
+            return null;
+        }
+
+        Map<String, Map<String, InvalidObjectInfo>> allInvalidObjects = typeResolutionService.getAllInvalidObjects();
+        int totalCount = typeResolutionService.getTotalInvalidObjectCount();
 
         if (totalCount == 0) {
             System.out.println("No invalid objects found.");
