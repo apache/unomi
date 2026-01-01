@@ -18,12 +18,12 @@ package org.apache.unomi.services.impl.scheduler;
 
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
-import org.apache.unomi.api.services.SchedulerService;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.Date;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -115,7 +115,7 @@ public class TaskExecutionManager {
                 TASK_CHECK_INTERVAL,
                 TimeUnit.MILLISECONDS
             );
-            LOGGER.info("Task checker started with interval {} ms", TASK_CHECK_INTERVAL);
+            LOGGER.debug("Task checker started with interval {} ms", TASK_CHECK_INTERVAL);
         }
     }
 
@@ -126,7 +126,7 @@ public class TaskExecutionManager {
         if (running.compareAndSet(true, false) && taskCheckerFuture != null) {
             taskCheckerFuture.cancel(false);
             taskCheckerFuture = null;
-            LOGGER.info("Task checker stopped");
+            LOGGER.debug("Task checker stopped");
         }
     }
 
@@ -263,7 +263,7 @@ public class TaskExecutionManager {
                 LOGGER.debug("Node {} : Skipping task {} execution as scheduler is shutting down", nodeId, task != null ? task.getItemId() : "unknown");
                 return;
             }
-            
+
             if (task == null) {
                 LOGGER.error("Node {} : Cannot execute null task", nodeId);
                 return;
@@ -291,7 +291,7 @@ public class TaskExecutionManager {
             if (!prepareForExecution(task)) {
                 return;
             }
-            
+
             // Final shutdown check before executing
             if (schedulerService != null && schedulerService.isShutdownNow()) {
                 LOGGER.debug("Node {} : Skipping task {} execution as scheduler is shutting down", nodeId, taskId);

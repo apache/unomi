@@ -139,6 +139,16 @@
                     </instructions>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!-- Suppress stack traces in unit tests for expected errors to reduce log noise -->
+                        <org.apache.unomi.ipvalidation.suppress.stacktraces>true</org.apache.unomi.ipvalidation.suppress.stacktraces>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 

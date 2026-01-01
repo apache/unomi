@@ -316,7 +316,7 @@ public class SchedulerServiceImpl implements SchedulerService {
                 return; // Services not ready yet
             }
 
-            LOGGER.info("Processing {} pending operations", pendingOperations.size());
+            LOGGER.debug("Processing {} pending operations", pendingOperations.size());
             int processedCount = 0;
             int errorCount = 0;
             int skippedCount = 0;
@@ -374,7 +374,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             }
 
             if (processedCount > 0 || errorCount > 0 || skippedCount > 0) {
-                LOGGER.info("Processed {} pending operations ({} successful, {} errors, {} skipped due to missing persistence)",
+                LOGGER.debug("Processed {} pending operations ({} successful, {} errors, {} skipped due to missing persistence)",
                     processedCount + errorCount + skippedCount, processedCount, errorCount, skippedCount);
             }
         } finally {
@@ -602,7 +602,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
         // Process any pending operations that were waiting for the persistence provider
         if (servicesInitialized.get() && !pendingOperations.isEmpty()) {
-            LOGGER.info("Processing {} pending operations that were waiting for persistence provider", pendingOperations.size());
+            LOGGER.debug("Processing {} pending operations that were waiting for persistence provider", pendingOperations.size());
             processPendingOperations();
         }
     }
@@ -674,13 +674,13 @@ public class SchedulerServiceImpl implements SchedulerService {
 
         int clearedCount = originalSize - validOperations.size();
         if (clearedCount > 0) {
-            LOGGER.info("Cleared {} expired operations from pending queue", clearedCount);
+            LOGGER.debug("Cleared {} expired operations from pending queue", clearedCount);
         }
     }
 
     public void unsetPersistenceProvider(SchedulerProvider persistenceProvider) {
         this.persistenceProvider = null;
-        LOGGER.info("PersistenceSchedulerProvider unbound from SchedulerService");
+        LOGGER.debug("PersistenceSchedulerProvider unbound from SchedulerService");
     }
 
     /**
@@ -753,13 +753,13 @@ public class SchedulerServiceImpl implements SchedulerService {
         shutdownNow = true; // Set shutdown flag before other operations
         running.set(false);
 
-        LOGGER.info("SchedulerService preDestroy: beginning shutdown process");
+        LOGGER.debug("SchedulerService preDestroy: beginning shutdown process");
 
         // Clear pending operations queue
         int pendingCount = pendingOperations.size();
         if (pendingCount > 0) {
             pendingOperations.clear();
-            LOGGER.info("Cleared {} pending operations during shutdown", pendingCount);
+            LOGGER.debug("Cleared {} pending operations during shutdown", pendingCount);
         }
 
         // Notify all managers about shutdown
@@ -810,7 +810,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             LOGGER.debug("Error clearing task collections: {}", e.getMessage());
         }
 
-        LOGGER.info("SchedulerService shutdown completed");
+        LOGGER.debug("SchedulerService shutdown completed");
     }
 
     /**
@@ -1450,7 +1450,7 @@ public class SchedulerServiceImpl implements SchedulerService {
      */
     private void initializeTaskPurgeInternal() {
         if (!purgeTaskEnabled) {
-            LOGGER.info("Task purge is disabled, skipping initialization");
+            LOGGER.debug("Task purge is disabled, skipping initialization");
             return;
         }
 
@@ -1471,12 +1471,12 @@ public class SchedulerServiceImpl implements SchedulerService {
 
             @Override
             public void execute(ScheduledTask task, TaskStatusCallback callback) {
-                LOGGER.info("Purge task executor called - starting purge of old tasks");
+                LOGGER.debug("Purge task executor called - starting purge of old tasks");
                 try {
                     if (persistenceProvider != null) {
-                        LOGGER.info("Calling persistenceProvider.purgeOldTasks() with TTL: {} days", completedTaskTtlDays);
+                        LOGGER.debug("Calling persistenceProvider.purgeOldTasks() with TTL: {} days", completedTaskTtlDays);
                         persistenceProvider.purgeOldTasks();
-                        LOGGER.info("Purge task completed successfully");
+                        LOGGER.debug("Purge task completed successfully");
                     } else {
                         LOGGER.warn("Persistence provider is null, cannot purge tasks");
                     }
@@ -1489,7 +1489,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         };
 
         registerTaskExecutor(taskPurgeExecutor);
-        LOGGER.info("Registered purge task executor");
+        LOGGER.debug("Registered purge task executor");
 
         // Check if a task purge task already exists
         List<ScheduledTask> existingTasks = getTasksByType("task-purge", 0, 1, null).getList();
@@ -1504,7 +1504,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             taskPurgeTask.setFixedRate(true);
             taskPurgeTask.setEnabled(true);
             saveTask(taskPurgeTask);
-            LOGGER.info("Reusing existing system task purge task: {}", taskPurgeTask.getItemId());
+            LOGGER.debug("Reusing existing system task purge task: {}", taskPurgeTask.getItemId());
         } else {
             // Create a new task if none exists or existing one isn't a system task
             taskPurgeTask = newTask("task-purge")
@@ -1512,7 +1512,7 @@ public class SchedulerServiceImpl implements SchedulerService {
                 .withFixedRate()
                 .asSystemTask()
                 .schedule();
-            LOGGER.info("Created new system task purge task: {}", taskPurgeTask.getItemId());
+            LOGGER.debug("Created new system task purge task: {}", taskPurgeTask.getItemId());
         }
     }
 
@@ -1995,7 +1995,7 @@ public class SchedulerServiceImpl implements SchedulerService {
                 if (!existingTasks.isEmpty() && existingTasks.get(0).isSystemTask()) {
                     // Reuse the existing system task
                     ScheduledTask existingTask = existingTasks.get(0);
-                    LOGGER.info("Reusing existing system task: {}", existingTask.getItemId());
+                    LOGGER.debug("Reusing existing system task: {}", existingTask.getItemId());
 
                     // Schedule the existing task
                     schedulerService.scheduleTask(existingTask);

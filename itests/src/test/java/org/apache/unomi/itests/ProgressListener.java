@@ -21,6 +21,10 @@ import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -125,6 +129,8 @@ public class ProgressListener extends RunListener {
     private long startTime = System.currentTimeMillis();
     /** Timestamp when the current individual test started */
     private long startTestTime = System.currentTimeMillis();
+    /** Formatter for human-readable timestamps */
+    private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
      * Creates a new ProgressListener instance.
@@ -162,6 +168,28 @@ public class ProgressListener extends RunListener {
             return color + text + RESET;
         }
         return text;
+    }
+
+    /**
+     * Generates a separator bar of the specified length using the separator character.
+     *
+     * @param length the desired length of the separator bar
+     * @return a string of separator characters of the specified length
+     */
+    private String generateSeparator(int length) {
+        return "━".repeat(Math.max(1, length));
+    }
+
+    /**
+     * Calculates the visual length of a string, excluding ANSI escape codes.
+     *
+     * @param text the text to measure
+     * @return the visual length of the text without ANSI codes
+     */
+    private int getVisualLength(String text) {
+        // Remove ANSI escape sequences (pattern: ESC[ ... m)
+        String withoutAnsi = text.replaceAll("\u001B\\[[0-9;]*m", "");
+        return withoutAnsi.length();
     }
 
     /**
@@ -228,10 +256,13 @@ public class ProgressListener extends RunListener {
         startTestTime = System.currentTimeMillis();
         // Print test start boundary with test name
         String testName = extractTestName(description);
+        String timestamp = formatTimestamp(startTestTime);
+        String message = "▶ START: " + testName + " [" + timestamp + "]";
+        String separator = generateSeparator(message.length());
         System.out.println(); // Blank line before test
-        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", CYAN));
-        System.out.println(colorize("▶ START: " + testName, GREEN));
-        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", CYAN));
+        System.out.println(colorize(separator, CYAN));
+        System.out.println(colorize(message, GREEN));
+        System.out.println(colorize(separator, CYAN));
     }
 
     /**
@@ -241,7 +272,8 @@ public class ProgressListener extends RunListener {
      */
     @Override
     public void testFinished(Description description) {
-        long testDuration = System.currentTimeMillis() - startTestTime;
+        long endTestTime = System.currentTimeMillis();
+        long testDuration = endTestTime - startTestTime;
         completedTests.incrementAndGet();
         successfulTests.incrementAndGet(); // Default to success unless a failure is recorded separately.
         slowTests.add(new TestTime(description.getDisplayName(), testDuration));
@@ -252,9 +284,12 @@ public class ProgressListener extends RunListener {
         // Print test end boundary
         String testName = extractTestName(description);
         String durationStr = formatTime(testDuration);
-        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", CYAN));
-        System.out.println(colorize("✓ END: " + testName + " (Duration: " + durationStr + ")", GREEN));
-        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", CYAN));
+        String timestamp = formatTimestamp(endTestTime);
+        String message = "✓ END: " + testName + " [" + timestamp + "] (Duration: " + durationStr + ")";
+        String separator = generateSeparator(message.length());
+        System.out.println(colorize(separator, CYAN));
+        System.out.println(colorize(message, GREEN));
+        System.out.println(colorize(separator, CYAN));
         System.out.println(); // Blank line before progress bar
         displayProgress();
         System.out.println(); // Blank line after progress bar
@@ -405,9 +440,21 @@ public class ProgressListener extends RunListener {
         String progressBar = generateProgressBar(((double) completed / totalTests) * 100);
         String humanReadableTime = formatTime(estimatedRemainingTime);
 
-        // Add visual separator and make progress bar more prominent
-        String separator = colorize("════════════════════════════════════════════════════════════════════════════════", CYAN);
-        System.out.println(separator);
+        // Build the plain message string (without ANSI codes) to calculate its length
+        String progressBarPlain = progressBar.replaceAll("\u001B\\[[0-9;]*m", "");
+        String plainMessage = String.format("[%s] Progress: %.2f%% (%d/%d tests). Estimated time remaining: %s. " +
+                        "Successful: %d, Failed: %d",
+                progressBarPlain,
+                ((double) completed / totalTests) * 100,
+                completed,
+                totalTests,
+                humanReadableTime,
+                successfulTests.get(),
+                failedTests.get());
+        
+        // Generate separator to match message length
+        String separator = generateSeparator(plainMessage.length());
+        System.out.println(colorize(separator, CYAN));
         System.out.printf("%s[%s]%s %sProgress: %s%.2f%%%s (%d/%d tests). Estimated time remaining: %s%s%s. " +
                         "Successful: %s%d%s, Failed: %s%d%s%n",
                 ansiSupported ? CYAN : "",
@@ -428,12 +475,23 @@ public class ProgressListener extends RunListener {
                 ansiSupported ? RED : "",
                 failedTests.get(),
                 ansiSupported ? RESET : "");
-        System.out.println(separator);
+        System.out.println(colorize(separator, CYAN));
 
         if (completed % Math.max(1, totalTests / 10) == 0 && completed < totalTests) {
             String quote = QUOTES[completed % QUOTES.length];
             System.out.println(colorize("Motivational Quote: " + quote, YELLOW));
         }
+    }
+
+    /**
+     * Formats a timestamp in milliseconds into a human-readable date-time string.
+     *
+     * @param timeInMillis the timestamp in milliseconds since epoch
+     * @return a formatted timestamp string (e.g., "2024-01-15 14:30:45")
+     */
+    private String formatTimestamp(long timeInMillis) {
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(timeInMillis), ZoneId.systemDefault())
+                .format(TIMESTAMP_FORMATTER);
     }
 
     /**

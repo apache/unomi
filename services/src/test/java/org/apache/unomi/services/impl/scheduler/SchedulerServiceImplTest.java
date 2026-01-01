@@ -17,6 +17,7 @@
 package org.apache.unomi.services.impl.scheduler;
 
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.services.SchedulerService.TaskBuilder;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -24,15 +25,14 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
-import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
+import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
 import org.apache.unomi.services.impl.TestConditionEvaluators;
 import org.apache.unomi.services.impl.cluster.ClusterServiceImpl;
-import org.apache.unomi.api.services.SchedulerService.TaskBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -40,10 +40,14 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -76,7 +80,7 @@ import static org.mockito.Mockito.when;
 public class SchedulerServiceImplTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerServiceImplTest.class);
 
-    
+
 
     // Test configuration constants
     /** Maximum number of retries for storage operations */
@@ -206,7 +210,7 @@ public class SchedulerServiceImplTest {
         assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute");
         assertTrue(executed.get(), "Task should have executed");
 
-        ScheduledTask completedTask = schedulerService.getTask(task.getItemId());
+        ScheduledTask completedTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_WAIT_TIMEOUT, 50);
         assertEquals(ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus(), "Task should be completed");
         assertNotNull(completedTask.getStatusDetails().get("executionHistory"), "Task should have execution history");
     }
@@ -1541,7 +1545,7 @@ public class SchedulerServiceImplTest {
                 long extendedTimeout = Math.max(TEST_TIMEOUT, 3000); // At least 3 seconds
                 node2Executed = node2Latch.await(extendedTimeout, TEST_TIME_UNIT);
             }
-            
+
             assertTrue(
                 node2Executed,
                 "Task should execute on node2 within timeout after discovery (allowing for task period and checker cycles)");
