@@ -49,11 +49,37 @@ public class YamlUtils {
      */
     public interface YamlConvertible {
         /**
+         * Converts this object to a Map structure for YAML output with depth limiting.
+         * This method accepts an optional visited set to detect circular references and a max depth
+         * to prevent StackOverflowError from extremely deep nested structures.
+         *
+         * @param visited optional set of visited objects to detect circular references (may be null)
+         * @param maxDepth maximum recursion depth (prevents StackOverflowError from deep nesting)
+         * @return a Map representation of this object
+         */
+        Map<String, Object> toYaml(Set<Object> visited, int maxDepth);
+
+        /**
          * Converts this object to a Map structure for YAML output.
+         * This method accepts an optional visited set to detect circular references.
+         * Uses a default max depth of 20 to prevent StackOverflowError.
+         *
+         * @param visited optional set of visited objects to detect circular references (may be null)
+         * @return a Map representation of this object
+         */
+        default Map<String, Object> toYaml(Set<Object> visited) {
+            return toYaml(visited, 20);
+        }
+
+        /**
+         * Converts this object to a Map structure for YAML output.
+         * This is a convenience method that calls toYaml(null, 20).
          *
          * @return a Map representation of this object
          */
-        Map<String, Object> toYaml();
+        default Map<String, Object> toYaml() {
+            return toYaml(null, 20);
+        }
     }
 
     /**
@@ -148,6 +174,28 @@ public class YamlUtils {
         }
 
         /**
+         * Merges all fields from a Map into this builder.
+         * This is useful for inheritance where subclasses want to include parent class fields.
+         * 
+         * Usage in subclasses:
+         * <pre>
+         * return YamlMapBuilder.create()
+         *     .mergeObject(super.toYaml(visitedSet))
+         *     .putIfNotNull("field", value)
+         *     .build();
+         * </pre>
+         *
+         * @param objectMap the Map containing fields to merge (may be null, in which case nothing is merged)
+         * @return this builder for chaining
+         */
+        public YamlMapBuilder mergeObject(Map<String, Object> objectMap) {
+            if (objectMap != null) {
+                objectMap.forEach(map::put);
+            }
+            return this;
+        }
+
+        /**
          * Builds and returns a defensive copy of the map.
          *
          * @return a new LinkedHashMap containing the built entries
@@ -190,34 +238,62 @@ public class YamlUtils {
 
     /**
      * Converts a value to YAML-compatible format, handling nested structures.
-     * Note: This method does not perform circular reference detection for generic objects.
-     * For objects that implement YamlConvertible, circular reference detection should be
-     * handled in their toYaml() implementation.
+     * For objects that implement YamlConvertible, circular reference detection is
+     * handled by passing the visited set to their toYaml() implementation.
      *
      * @param value the value to convert
-     * @param visited set of visited objects (currently unused, reserved for future circular reference detection)
+     * @param visited set of visited objects for circular reference detection (may be null)
      * @return the converted value
      */
     public static Object toYamlValue(Object value, Set<Object> visited) {
+        return toYamlValue(value, visited, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Converts a value to YAML-compatible format with depth limiting to prevent StackOverflowError.
+     * For objects that implement YamlConvertible, circular reference detection is
+     * handled by passing the visited set to their toYaml() implementation.
+     *
+     * @param value the value to convert
+     * @param visited set of visited objects for circular reference detection (may be null)
+     * @param maxDepth maximum recursion depth (prevents StackOverflowError from deep nesting)
+     * @return the converted value, or a placeholder if max depth exceeded
+     */
+    public static Object toYamlValue(Object value, Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return "<max depth exceeded>";
+        }
         if (value == null) {
             return null;
         }
         if (value instanceof YamlConvertible) {
-            return ((YamlConvertible) value).toYaml();
+            // For YamlConvertible, get the Map and then process it as a Map to ensure sorting
+            // Pass maxDepth - 1 to the toYaml method to continue depth limiting
+            Map<String, Object> result = ((YamlConvertible) value).toYaml(visited, maxDepth - 1);
+            // Process the result as a Map to ensure it's sorted (this handles both sorting and recursive processing)
+            return toYamlValue(result, visited, maxDepth - 1);
         }
         if (value instanceof List) {
             return ((List<?>) value).stream()
-                .map(item -> toYamlValue(item, visited))
+                .map(item -> toYamlValue(item, visited, maxDepth - 1))
                 .collect(Collectors.toList());
         }
         if (value instanceof Map) {
+            Map<?, ?> inputMap = (Map<?, ?>) value;
             Map<String, Object> result = new LinkedHashMap<>();
-            ((Map<?, ?>) value).forEach((key, val) ->
-                result.put(String.valueOf(key), toYamlValue(val, visited)));
+            
+            if (!inputMap.isEmpty()) {
+                // Sort entries alphabetically by key string representation
+                inputMap.entrySet().stream()
+                    .sorted((e1, e2) -> String.valueOf(e1.getKey()).compareTo(String.valueOf(e2.getKey())))
+                    .forEach(entry ->
+                        result.put(String.valueOf(entry.getKey()), toYamlValue(entry.getValue(), visited, maxDepth - 1)));
+            }
             return result;
         }
         return value;
     }
+
 
     /**
      * Formats a value as YAML using SnakeYaml.

@@ -21,17 +21,10 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Parameter;
 import org.apache.unomi.api.PluginType;
-import org.apache.unomi.api.utils.YamlUtils;
+import org.apache.unomi.api.utils.YamlUtils.*;
 
 import javax.xml.bind.annotation.XmlElement;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import static org.apache.unomi.api.utils.YamlUtils.*;
+import java.util.*;
 
 /**
  * ConditionTypes define new conditions that can be applied to items (for example to decide whether a rule needs to be triggered or if a profile is considered as taking part in a
@@ -39,7 +32,7 @@ import static org.apache.unomi.api.utils.YamlUtils.*;
  * optimized by coding it. They may also be defined as combination of other conditions. A simple condition  could be: “User is male”, while a more generic condition with
  * parameters may test whether a given property has a specific value: “User property x has value y”.
  */
-public class ConditionType extends MetadataItem implements PluginType {
+public class ConditionType extends MetadataItem implements PluginType, YamlConvertible {
     public static final String ITEM_TYPE = "conditionType";
 
     private static final long serialVersionUID = -6965481691241954969L;
@@ -164,37 +157,36 @@ public class ConditionType extends MetadataItem implements PluginType {
 
     /**
      * Converts this condition type to a Map structure for YAML output.
+     * Implements YamlConvertible interface with circular reference detection.
      *
-     * @param visited set of already visited condition types to prevent infinite recursion
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
      * @return a Map representation of this condition type
      */
-    public Map<String, Object> toYaml(Set<ConditionType> visited) {
-        if (visited.contains(this)) {
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlMapBuilder.create()
+                .put("parentCondition", "<max depth exceeded>")
+                .put("parameters", "<max depth exceeded>")
+                .put("pluginId", pluginId)
+                .build();
+        }
+        if (visited != null && visited.contains(this)) {
             return circularRef();
         }
-        visited.add(this);
+        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        visitedSet.add(this);
         try {
             return YamlMapBuilder.create()
-                .putIfNotNull("id", itemId)
+                .mergeObject(super.toYaml(visitedSet, maxDepth))
                 .putIfNotNull("conditionEvaluator", conditionEvaluator)
                 .putIfNotNull("queryBuilder", queryBuilder)
-                .putIfNotNull("parentCondition", parentCondition != null ? parentCondition.toYaml(new HashSet<>()) : null)
-                .putIfNotEmpty("parameters", parameters != null ? parameters.stream()
-                    .map(Parameter::toYaml)
-                    .collect(Collectors.toList()) : null)
+                .putIfNotNull("parentCondition", parentCondition != null ? toYamlValue(parentCondition, visitedSet, maxDepth - 1) : null)
+                .putIfNotEmpty("parameters", parameters != null ? (Collection<?>) toYamlValue(parameters, visitedSet, maxDepth - 1) : null)
                 .put("pluginId", pluginId)
-                .putIfNotNull("name", metadata != null ? metadata.getName() : null)
-                .putIfNotNull("description", metadata != null ? metadata.getDescription() : null)
-                .putIfNotNull("scope", metadata != null ? metadata.getScope() : null)
                 .build();
         } finally {
-            visited.remove(this);
+            visitedSet.remove(this);
         }
-    }
-
-    @Override
-    public String toString() {
-        Map<String, Object> map = toYaml(new HashSet<>());
-        return YamlUtils.format(map);
     }
 }

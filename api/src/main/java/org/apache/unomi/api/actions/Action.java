@@ -18,18 +18,26 @@
 package org.apache.unomi.api.actions;
 
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.utils.YamlUtils;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+
+import static org.apache.unomi.api.utils.YamlUtils.circularRef;
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * An action that can be executed as a consequence of a {@link Rule} being triggered. An action is characterized by its associated {@link
  * ActionType} and parameter values.
  */
-public class Action implements Serializable {
+public class Action implements Serializable, YamlConvertible {
     private ActionType actionType;
     private String actionTypeId;
     private Map<String, Object> parameterValues = new HashMap<>();
@@ -115,6 +123,44 @@ public class Action implements Serializable {
      */
     public void setParameter(String name, Object value) {
         parameterValues.put(name, value);
+    }
+
+    /**
+     * Converts this action to a Map structure for YAML output.
+     * Implements YamlConvertible interface with circular reference detection.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @return a Map representation of this action
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlMapBuilder.create()
+                .put("type", actionTypeId != null ? actionTypeId : "Action")
+                .put("parameterValues", "<max depth exceeded>")
+                .build();
+        }
+        if (visited != null && visited.contains(this)) {
+            return circularRef();
+        }
+        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        visitedSet.add(this);
+        try {
+            YamlMapBuilder builder = YamlMapBuilder.create()
+                .put("type", actionTypeId != null ? actionTypeId : "Action");
+            if (parameterValues != null && !parameterValues.isEmpty()) {
+                builder.put("parameterValues", toYamlValue(parameterValues, visitedSet, maxDepth - 1));
+            }
+            return builder.build();
+        } finally {
+            visitedSet.remove(this);
+        }
+    }
+
+    @Override
+    public String toString() {
+        Map<String, Object> map = toYaml();
+        return YamlUtils.format(map);
     }
 
 }

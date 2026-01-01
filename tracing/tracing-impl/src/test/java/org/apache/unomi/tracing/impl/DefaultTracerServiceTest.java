@@ -18,9 +18,9 @@ package org.apache.unomi.tracing.impl;
 
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TraceNode;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
@@ -28,7 +28,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for {@link DefaultTracerService}
@@ -39,12 +39,12 @@ public class DefaultTracerServiceTest {
     private static final int THREAD_COUNT = 10;
     private static final int TIMEOUT_SECONDS = 10;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         tracerService = new DefaultTracerService();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         tracerService.cleanup();
     }
@@ -52,32 +52,32 @@ public class DefaultTracerServiceTest {
     @Test
     public void testGetCurrentTracer() {
         RequestTracer tracer = tracerService.getCurrentTracer();
-        assertNotNull("Current tracer should not be null", tracer);
-        assertTrue("Current tracer should be an instance of DefaultRequestTracer", tracer instanceof DefaultRequestTracer);
+        assertNotNull(tracer, "Current tracer should not be null");
+        assertTrue(tracer instanceof DefaultRequestTracer, "Current tracer should be an instance of DefaultRequestTracer");
         
         // Test that we get the same tracer instance for the same thread
         RequestTracer secondTracer = tracerService.getCurrentTracer();
-        assertSame("Should get same tracer instance within same thread", tracer, secondTracer);
+        assertSame(tracer, secondTracer, "Should get same tracer instance within same thread");
     }
 
     @Test
     public void testEnableDisableTracing() {
-        assertFalse("Tracing should be disabled by default", tracerService.isTracingEnabled());
+        assertFalse(tracerService.isTracingEnabled(), "Tracing should be disabled by default");
 
         tracerService.enableTracing();
-        assertTrue("Tracing should be enabled after enableTracing()", tracerService.isTracingEnabled());
+        assertTrue(tracerService.isTracingEnabled(), "Tracing should be enabled after enableTracing()");
 
         tracerService.disableTracing();
-        assertFalse("Tracing should be disabled after disableTracing()", tracerService.isTracingEnabled());
+        assertFalse(tracerService.isTracingEnabled(), "Tracing should be disabled after disableTracing()");
         
         // Verify that enable/disable resets the trace
         tracerService.enableTracing();
         RequestTracer tracer = tracerService.getCurrentTracer();
         tracer.startOperation("test", "description", null);
-        assertNotNull("Should have trace node after operation", tracerService.getTraceNode());
+        assertNotNull(tracerService.getTraceNode(), "Should have trace node after operation");
         
         tracerService.disableTracing();
-        assertNull("Trace node should be reset after disable", tracerService.getTraceNode());
+        assertNull(tracerService.getTraceNode(), "Trace node should be reset after disable");
     }
 
     @Test
@@ -104,23 +104,23 @@ public class DefaultTracerServiceTest {
 
         // Get and verify the trace tree
         TraceNode rootNode = tracerService.getTraceNode();
-        assertNotNull("Root node should not be null", rootNode);
-        assertEquals("Root operation type should match", "test", rootNode.getOperationType());
-        assertEquals("Root description should match", "Root completed", rootNode.getDescription());
-        assertEquals("Root result should match", "root-result", rootNode.getResult());
-        assertEquals("Root should have 2 traces", 2, rootNode.getTraces().size());
-        assertEquals("Root should have 1 child", 1, rootNode.getChildren().size());
-        assertTrue("Root start time should be valid", rootNode.getStartTime() >= startTime);
-        assertTrue("Root end time should be valid", rootNode.getEndTime() <= endTime);
+        assertNotNull(rootNode, "Root node should not be null");
+        assertEquals("test", rootNode.getOperationType(), "Root operation type should match");
+        assertEquals("Root completed", rootNode.getDescription(), "Root description should match");
+        assertEquals("root-result", rootNode.getResult(), "Root result should match");
+        assertEquals(2, rootNode.getTraces().size(), "Root should have 2 traces");
+        assertEquals(1, rootNode.getChildren().size(), "Root should have 1 child");
+        assertTrue(rootNode.getStartTime() >= startTime, "Root start time should be valid");
+        assertTrue(rootNode.getEndTime() <= endTime, "Root end time should be valid");
 
         TraceNode childNode = rootNode.getChildren().get(0);
-        assertEquals("Child operation type should match", "child", childNode.getOperationType());
-        assertEquals("Child description should match", "Child completed", childNode.getDescription());
-        assertEquals("Child context should match", "child-context", childNode.getContext());
-        assertEquals("Child result should match", "child-result", childNode.getResult());
-        assertEquals("Child should have 1 trace", 1, childNode.getTraces().size());
-        assertTrue("Child start time should be after root", childNode.getStartTime() >= rootNode.getStartTime());
-        assertTrue("Child end time should be before root end", childNode.getEndTime() <= rootNode.getEndTime());
+        assertEquals("child", childNode.getOperationType(), "Child operation type should match");
+        assertEquals("Child completed", childNode.getDescription(), "Child description should match");
+        assertEquals("child-context", childNode.getContext(), "Child context should match");
+        assertEquals("child-result", childNode.getResult(), "Child result should match");
+        assertEquals(1, childNode.getTraces().size(), "Child should have 1 trace");
+        assertTrue(childNode.getStartTime() >= rootNode.getStartTime(), "Child start time should be after root");
+        assertTrue(childNode.getEndTime() <= rootNode.getEndTime(), "Child end time should be before root end");
     }
 
     @Test
@@ -133,12 +133,12 @@ public class DefaultTracerServiceTest {
         tracer.endOperation(false, "Validation failed");
 
         TraceNode node = tracerService.getTraceNode();
-        assertNotNull("Node should not be null", node);
-        assertEquals("Should have 1 validation trace", 1, node.getTraces().size());
+        assertNotNull(node, "Node should not be null");
+        assertEquals(1, node.getTraces().size(), "Should have 1 validation trace");
         String validationTrace = node.getTraces().get(0);
-        assertTrue("Validation trace should contain schema id", validationTrace.contains("test-schema"));
-        assertTrue("Validation trace should contain first error", validationTrace.contains("error1"));
-        assertTrue("Validation trace should contain second error", validationTrace.contains("error2"));
+        assertTrue(validationTrace.contains("test-schema"), "Validation trace should contain schema id");
+        assertTrue(validationTrace.contains("error1"), "Validation trace should contain first error");
+        assertTrue(validationTrace.contains("error2"), "Validation trace should contain second error");
     }
 
     @Test
@@ -151,7 +151,7 @@ public class DefaultTracerServiceTest {
         tracer.addValidationInfo(Arrays.asList("error"), "schema");
         tracer.endOperation("result", "Completed");
 
-        assertNull("No trace node should be created when tracing is disabled", tracerService.getTraceNode());
+        assertNull(tracerService.getTraceNode(), "No trace node should be created when tracing is disabled");
     }
 
     @Test
@@ -161,13 +161,13 @@ public class DefaultTracerServiceTest {
 
         tracer.startOperation("test", "Test operation", null);
         tracer.trace("Test message", null);
-        assertNotNull("Should have trace node before reset", tracerService.getTraceNode());
+        assertNotNull(tracerService.getTraceNode(), "Should have trace node before reset");
 
         tracer.reset();
-        assertNull("Should not have trace node after reset", tracerService.getTraceNode());
+        assertNull(tracerService.getTraceNode(), "Should not have trace node after reset");
         
         // Verify that tracing is still enabled after reset
-        assertTrue("Tracing should still be enabled after reset", tracerService.isTracingEnabled());
+        assertTrue(tracerService.isTracingEnabled(), "Tracing should still be enabled after reset");
     }
 
     @Test
@@ -181,9 +181,9 @@ public class DefaultTracerServiceTest {
         tracerService.cleanup();
         RequestTracer newTracer = tracerService.getCurrentTracer();
 
-        assertNotSame("Should get new tracer instance after cleanup", originalTracer, newTracer);
-        assertFalse("New tracer should be disabled", newTracer.isEnabled());
-        assertNull("New tracer should have no trace node", tracerService.getTraceNode());
+        assertNotSame(originalTracer, newTracer, "Should get new tracer instance after cleanup");
+        assertFalse(newTracer.isEnabled(), "New tracer should be disabled");
+        assertNull(tracerService.getTraceNode(), "New tracer should have no trace node");
     }
 
     @Test
@@ -210,9 +210,9 @@ public class DefaultTracerServiceTest {
                         
                         // Verify this thread's trace
                         TraceNode node = tracer.getTraceNode();
-                        assertNotNull("Thread " + threadId + " should have a trace node", node);
-                        assertEquals("Thread " + threadId + " should have correct operation type", 
-                                "thread-" + threadId, node.getOperationType());
+                        assertNotNull(node, "Thread " + threadId + " should have a trace node");
+                        assertEquals("thread-" + threadId, node.getOperationType(),
+                                "Thread " + threadId + " should have correct operation type");
                         
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -227,8 +227,8 @@ public class DefaultTracerServiceTest {
             startLatch.countDown();
             
             // Wait for all threads to complete
-            assertTrue("All threads should complete within timeout", 
-                    completionLatch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS));
+            assertTrue(completionLatch.await(TIMEOUT_SECONDS, TimeUnit.SECONDS),
+                    "All threads should complete within timeout");
         } finally {
             executor.shutdown();
             if (!executor.awaitTermination(TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
@@ -249,10 +249,33 @@ public class DefaultTracerServiceTest {
         tracer.endOperation(null, null);
 
         TraceNode node = tracerService.getTraceNode();
-        assertNotNull("Node should exist even with null values", node);
-        assertNull("Operation type should be null", node.getOperationType());
-        assertNull("Description should be null", node.getDescription());
-        assertNull("Context should be null", node.getContext());
-        assertNull("Result should be null", node.getResult());
+        assertNotNull(node, "Node should exist even with null values");
+        assertNull(node.getOperationType(), "Operation type should be null");
+        assertNull(node.getDescription(), "Description should be null");
+        assertNull(node.getContext(), "Context should be null");
+        assertNull(node.getResult(), "Result should be null");
+    }
+
+    @Test
+    public void testTraceShouldNotFailWhenContextToStringOverflowsStack() {
+        tracerService.enableTracing();
+        RequestTracer tracer = tracerService.getCurrentTracer();
+
+        tracer.startOperation("test", "Root operation", null);
+        Object badContext = new Object() {
+            @Override
+            public String toString() {
+                return toString();
+            }
+        };
+
+        assertDoesNotThrow(() -> tracer.trace("Test with bad context", badContext),
+                "Tracer.trace should not throw even if context.toString overflows the stack");
+
+        TraceNode rootNode = tracerService.getTraceNode();
+        assertNotNull(rootNode, "Root node should be created");
+        assertEquals(1, rootNode.getTraces().size(), "Trace should be recorded even when context rendering fails");
+        assertTrue(rootNode.getTraces().get(0).contains("StackOverflowError"),
+                "Trace should contain a StackOverflowError marker when context rendering overflows");
     }
 } 

@@ -21,6 +21,15 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.campaigns.Campaign;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
+
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import static org.apache.unomi.api.utils.YamlUtils.circularRef;
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * A tracked activity / action that can be accomplished by site (scope) visitors. These are tracked in general because they relate to specific business objectives or are
@@ -32,7 +41,7 @@ import org.apache.unomi.api.conditions.Condition;
  * <li>audience filtering: any visitor is considered for scope-level goals while campaign-level goals only consider visitors who match the campaign's conditions
  * </ul>
  */
-public class Goal extends MetadataItem {
+public class Goal extends MetadataItem implements YamlConvertible {
     public static final String ITEM_TYPE = "goal";
     private static final long serialVersionUID = 6131648013470949983L;
     private Condition startEvent;
@@ -86,5 +95,38 @@ public class Goal extends MetadataItem {
 
     public void setCampaignId(String campaignId) {
         this.campaignId = campaignId;
+    }
+
+    /**
+     * Converts this goal to a Map structure for YAML output.
+     * Implements YamlConvertible interface with circular reference detection.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @return a Map representation of this goal
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlMapBuilder.create()
+                .put("startEvent", "<max depth exceeded>")
+                .put("targetEvent", "<max depth exceeded>")
+                .put("campaignId", campaignId)
+                .build();
+        }
+        if (visited != null && visited.contains(this)) {
+            return circularRef();
+        }
+        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        visitedSet.add(this);
+        try {
+            return YamlMapBuilder.create()
+                .mergeObject(super.toYaml(visitedSet, maxDepth))
+                .putIfNotNull("startEvent", startEvent != null ? toYamlValue(startEvent, visitedSet, maxDepth - 1) : null)
+                .putIfNotNull("targetEvent", targetEvent != null ? toYamlValue(targetEvent, visitedSet, maxDepth - 1) : null)
+                .putIfNotNull("campaignId", campaignId)
+                .build();
+        } finally {
+            visitedSet.remove(this);
+        }
     }
 }

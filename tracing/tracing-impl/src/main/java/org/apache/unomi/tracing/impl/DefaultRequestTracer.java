@@ -19,7 +19,8 @@ package org.apache.unomi.tracing.impl;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TraceNode;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Stack;
 
 /**
  * Default implementation of the RequestTracer interface that stores trace information in a tree structure
@@ -30,6 +31,24 @@ public class DefaultRequestTracer implements RequestTracer {
     private final ThreadLocal<TraceNode> currentNode = new ThreadLocal<>();
     private final ThreadLocal<TraceNode> rootNode = new ThreadLocal<>();
     private final ThreadLocal<Stack<TraceNode>> nodeStack = ThreadLocal.withInitial(Stack::new);
+    private static final int MAX_CONTEXT_STRING_LENGTH = 4096;
+
+    private static String safeContextToString(Object context) {
+        if (context == null) {
+            return "null";
+        }
+        try {
+            String rendered = String.valueOf(context);
+            if (rendered != null && rendered.length() > MAX_CONTEXT_STRING_LENGTH) {
+                return rendered.substring(0, MAX_CONTEXT_STRING_LENGTH) + "...(truncated)";
+            }
+            return rendered;
+        } catch (StackOverflowError e) {
+            return "<context-toString StackOverflowError class=" + context.getClass().getName() + ">";
+        } catch (Throwable t) {
+            return "<context-toString failed class=" + context.getClass().getName() + " error=" + t.getClass().getName() + ">";
+        }
+    }
 
     @Override
     public void startOperation(String operationType, String description, Object context) {
@@ -42,7 +61,7 @@ public class DefaultRequestTracer implements RequestTracer {
         node.setDescription(description);
         node.setContext(context);
         node.setStartTime(System.currentTimeMillis());
-        
+
         if (rootNode.get() == null) {
             rootNode.set(node);
             currentNode.set(node);
@@ -81,7 +100,7 @@ public class DefaultRequestTracer implements RequestTracer {
         TraceNode node = currentNode.get();
         if (node != null) {
             if (context != null) {
-                node.getTraces().add(message + " - Context: " + context);
+                node.getTraces().add(message + " - Context: " + safeContextToString(context));
             } else {
                 node.getTraces().add(message);
             }
@@ -96,7 +115,7 @@ public class DefaultRequestTracer implements RequestTracer {
 
         TraceNode node = currentNode.get();
         if (node != null) {
-            node.getTraces().add("Validation against schema " + schemaId + ": " + validationMessages);
+            node.getTraces().add("Validation against schema " + schemaId + ": " + safeContextToString(validationMessages));
         }
     }
 
@@ -124,4 +143,4 @@ public class DefaultRequestTracer implements RequestTracer {
         currentNode.remove();
         nodeStack.get().clear();
     }
-} 
+}

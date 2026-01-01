@@ -88,6 +88,10 @@
             <artifactId>osgi.core</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+        </dependency>
 
         <!-- Test Dependencies -->
         <dependency>

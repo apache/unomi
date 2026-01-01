@@ -21,14 +21,18 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Parameter;
 import org.apache.unomi.api.PluginType;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+
+import static org.apache.unomi.api.utils.YamlUtils.circularRef;
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * A type definition for {@link Action}s.
  */
-public class ActionType extends MetadataItem implements PluginType {
+public class ActionType extends MetadataItem implements PluginType, YamlConvertible {
     public static final String ITEM_TYPE = "actionType";
 
     private static final long serialVersionUID = -3522958600710010935L;
@@ -112,5 +116,37 @@ public class ActionType extends MetadataItem implements PluginType {
     @Override
     public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
+    }
+
+    /**
+     * Converts this action type to a Map structure for YAML output.
+     * Implements YamlConvertible interface with circular reference detection.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @return a Map representation of this action type
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlMapBuilder.create()
+                .put("parameters", "<max depth exceeded>")
+                .put("pluginId", pluginId)
+                .build();
+        }
+        if (visited != null && visited.contains(this)) {
+            return circularRef();
+        }
+        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        visitedSet.add(this);
+        try {
+            return YamlMapBuilder.create()
+                .mergeObject(super.toYaml(visitedSet, maxDepth))
+                .putIfNotNull("actionExecutor", actionExecutor)
+                .putIfNotEmpty("parameters", parameters != null ? (Collection<?>) toYamlValue(parameters, visitedSet, maxDepth - 1) : null)
+                .put("pluginId", pluginId)
+                .build();
+        } finally {
+            visitedSet.remove(this);
+        }
     }
 }

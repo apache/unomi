@@ -18,14 +18,20 @@
 package org.apache.unomi.api;
 
 import org.apache.unomi.api.conditions.ConditionValidation;
+import org.apache.unomi.api.utils.YamlUtils;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
 
 import java.io.Serializable;
+import java.util.Map;
+import java.util.Set;
+
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * A representation of a condition parameter, to be used in the segment building UI to either select parameters from a
  * choicelist or to enter a specific value.
  */
-public class Parameter implements Serializable {
+public class Parameter implements Serializable, YamlConvertible {
 
     private static final long serialVersionUID = 6019392686888941547L;
 
@@ -93,14 +99,32 @@ public class Parameter implements Serializable {
         this.validation = validation;
     }
 
+    /**
+     * Converts this parameter to a Map structure for YAML output.
+     * Implements YamlConvertible interface.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @return a Map representation of this parameter
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlUtils.YamlMapBuilder.create()
+                .put("id", id)
+                .put("validation", "<max depth exceeded>")
+                .build();
+        }
+        return YamlUtils.YamlMapBuilder.create()
+            .putIfNotNull("id", id)
+            .putIfNotNull("type", type)
+            .putIf("multivalued", true, multivalued)
+            .putIfNotNull("defaultValue", defaultValue)
+            .putIfNotNull("validation", validation != null ? toYamlValue(validation, visited, maxDepth - 1) : null)
+            .build();
+    }
+
     @Override
     public String toString() {
-        return "Parameter{" +
-                "id='" + id + '\'' +
-                ", type='" + type + '\'' +
-                ", multivalued=" + multivalued +
-                ", defaultValue=" + defaultValue +
-                ", validation=" + validation +
-                '}';
+        return YamlUtils.format(toYaml());
     }
 }

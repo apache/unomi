@@ -17,16 +17,24 @@
 
 package org.apache.unomi.api;
 
+import org.apache.unomi.api.utils.YamlUtils;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
+
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Set;
+
+import static org.apache.unomi.api.utils.YamlUtils.circularRef;
 
 /**
  * A class providing information about context server entities.
  *
  * @see MetadataItem
  */
-public class Metadata implements Comparable<Metadata>, Serializable {
+public class Metadata implements Comparable<Metadata>, Serializable, YamlConvertible {
 
     private static final long serialVersionUID = 7446061538573517071L;
 
@@ -279,19 +287,41 @@ public class Metadata implements Comparable<Metadata>, Serializable {
         return result;
     }
 
+    /**
+     * Converts this metadata to a Map structure for YAML output.
+     * Implements YamlConvertible interface with circular reference detection.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @return a Map representation of this metadata
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (visited != null && visited.contains(this)) {
+            return circularRef();
+        }
+        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        visitedSet.add(this);
+        try {
+            return YamlMapBuilder.create()
+                .putIfNotNull("id", id)
+                .putIfNotNull("name", name)
+                .putIfNotNull("description", description)
+                .putIfNotNull("scope", scope)
+                .putIfNotEmpty("tags", tags)
+                .putIfNotEmpty("systemTags", systemTags)
+                .putIf("enabled", true, enabled)
+                .putIf("missingPlugins", true, missingPlugins)
+                .putIf("hidden", true, hidden)
+                .putIf("readOnly", true, readOnly)
+                .build();
+        } finally {
+            visitedSet.remove(this);
+        }
+    }
+
     @Override
     public String toString() {
-        return "Metadata{" +
-                "id='" + id + '\'' +
-                ", name='" + name + '\'' +
-                ", description='" + description + '\'' +
-                ", scope='" + scope + '\'' +
-                ", tags=" + tags +
-                ", systemTags=" + systemTags +
-                ", enabled=" + enabled +
-                ", missingPlugins=" + missingPlugins +
-                ", hidden=" + hidden +
-                ", readOnly=" + readOnly +
-                '}';
+        Map<String, Object> map = toYaml();
+        return YamlUtils.format(map);
     }
 }

@@ -16,6 +16,10 @@
  */
 package org.apache.unomi.api.utils;
 
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.actions.Action;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.rules.Rule;
 import org.junit.Test;
 
 import java.util.*;
@@ -189,7 +193,7 @@ public class YamlUtilsTest {
 
     @Test
     public void testToYamlValueWithYamlConvertible() {
-        YamlUtils.YamlConvertible convertible = () -> {
+        YamlUtils.YamlConvertible convertible = (visited, maxDepth) -> {
             Map<String, Object> map = new LinkedHashMap<>();
             map.put("test", "value");
             return map;
@@ -251,5 +255,356 @@ public class YamlUtilsTest {
         assertNotNull("Format should return a string", result);
         assertTrue("Format should contain key", result.contains("key"));
         assertTrue("Format should contain value", result.contains("value"));
+    }
+
+    // ========== Circular Reference Detection Tests ==========
+
+    @Test
+    public void testRuleInheritanceChainNoCircularRef() {
+        // Test that Rule -> MetadataItem -> Item inheritance chain doesn't produce false circular refs
+        Rule rule = new Rule();
+        rule.setItemId("test-rule");
+        Metadata metadata = new Metadata("test-rule");
+        metadata.setScope("systemscope");
+        rule.setMetadata(metadata);
+        
+        Condition condition = new Condition();
+        condition.setConditionTypeId("testCondition");
+        rule.setCondition(condition);
+        
+        Map<String, Object> result = rule.toYaml(null);
+        assertNotNull("Rule should serialize to YAML", result);
+        assertFalse("Should not contain circular reference marker", result.containsKey("$ref"));
+        assertTrue("Should contain condition", result.containsKey("condition"));
+        assertTrue("Should contain itemId from Item parent", result.containsKey("itemId"));
+        assertTrue("Should contain metadata from MetadataItem parent", result.containsKey("metadata"));
+    }
+
+    @Test
+    public void testRuleWithCircularReferenceInCondition() {
+        // Test that a real circular reference (Rule referenced in condition's parameterValues) is detected
+        Rule rule = new Rule();
+        rule.setItemId("test-rule");
+        Metadata metadata = new Metadata("test-rule");
+        rule.setMetadata(metadata);
+        
+        Condition condition = new Condition();
+        condition.setConditionTypeId("testCondition");
+        // Create a circular reference: condition's parameterValues contains the rule itself
+        condition.getParameterValues().put("referencedRule", rule);
+        rule.setCondition(condition);
+        
+        Map<String, Object> result = rule.toYaml(null);
+        assertNotNull("Rule should serialize to YAML", result);
+        assertTrue("Should contain condition", result.containsKey("condition"));
+        
+        // Check that the circular reference is detected in the condition's parameterValues
+        Map<String, Object> conditionMap = (Map<String, Object>) result.get("condition");
+        assertNotNull("Condition should be serialized", conditionMap);
+        Map<String, Object> paramValues = (Map<String, Object>) conditionMap.get("parameterValues");
+        assertNotNull("Parameter values should exist", paramValues);
+        Map<String, Object> circularRef = (Map<String, Object>) paramValues.get("referencedRule");
+        assertNotNull("Circular reference should be detected", circularRef);
+        assertEquals("Should contain circular reference marker", "circular", circularRef.get("$ref"));
+    }
+
+    @Test
+    public void testRuleWithCircularReferenceInActions() {
+        // Test circular reference in actions list
+        Rule rule = new Rule();
+        rule.setItemId("test-rule");
+        Metadata metadata = new Metadata("test-rule");
+        rule.setMetadata(metadata);
+        
+        Action action = new Action();
+        action.setActionTypeId("testAction");
+        // Create circular reference: action's parameterValues contains the rule
+        action.getParameterValues().put("triggeringRule", rule);
+        rule.setActions(Collections.singletonList(action));
+        
+        Map<String, Object> result = rule.toYaml(null);
+        assertNotNull("Rule should serialize to YAML", result);
+        assertTrue("Should contain actions", result.containsKey("actions"));
+        
+        List<?> actions = (List<?>) result.get("actions");
+        assertNotNull("Actions list should exist", actions);
+        assertEquals("Should have one action", 1, actions.size());
+        
+        Map<String, Object> actionMap = (Map<String, Object>) actions.get(0);
+        Map<String, Object> paramValues = (Map<String, Object>) actionMap.get("parameterValues");
+        assertNotNull("Parameter values should exist", paramValues);
+        Map<String, Object> circularRef = (Map<String, Object>) paramValues.get("triggeringRule");
+        assertNotNull("Circular reference should be detected", circularRef);
+        assertEquals("Should contain circular reference marker", "circular", circularRef.get("$ref"));
+    }
+
+    @Test
+    public void testNestedCircularReference() {
+        // Test nested circular reference: Rule -> Condition -> nested Condition -> Rule
+        Rule rule = new Rule();
+        rule.setItemId("test-rule");
+        Metadata metadata = new Metadata("test-rule");
+        rule.setMetadata(metadata);
+        
+        Condition outerCondition = new Condition();
+        outerCondition.setConditionTypeId("outerCondition");
+        
+        Condition nestedCondition = new Condition();
+        nestedCondition.setConditionTypeId("nestedCondition");
+        // Nested condition references the rule
+        nestedCondition.getParameterValues().put("ruleRef", rule);
+        
+        // Outer condition contains nested condition
+        outerCondition.getParameterValues().put("nested", nestedCondition);
+        rule.setCondition(outerCondition);
+        
+        Map<String, Object> result = rule.toYaml(null);
+        assertNotNull("Rule should serialize to YAML", result);
+        
+        // Navigate through the nested structure
+        Map<String, Object> conditionMap = (Map<String, Object>) result.get("condition");
+        Map<String, Object> paramValues = (Map<String, Object>) conditionMap.get("parameterValues");
+        Map<String, Object> nestedConditionMap = (Map<String, Object>) paramValues.get("nested");
+        Map<String, Object> nestedParamValues = (Map<String, Object>) nestedConditionMap.get("parameterValues");
+        Map<String, Object> circularRef = (Map<String, Object>) nestedParamValues.get("ruleRef");
+        
+        assertNotNull("Circular reference should be detected in nested structure", circularRef);
+        assertEquals("Should contain circular reference marker", "circular", circularRef.get("$ref"));
+    }
+
+    @Test
+    public void testMultipleCircularReferences() {
+        // Test multiple circular references to the same object
+        Rule rule = new Rule();
+        rule.setItemId("test-rule");
+        Metadata metadata = new Metadata("test-rule");
+        rule.setMetadata(metadata);
+        
+        Condition condition = new Condition();
+        condition.setConditionTypeId("testCondition");
+        // Multiple references to the same rule
+        condition.getParameterValues().put("rule1", rule);
+        condition.getParameterValues().put("rule2", rule);
+        condition.getParameterValues().put("rule3", rule);
+        rule.setCondition(condition);
+        
+        Map<String, Object> result = rule.toYaml(null);
+        Map<String, Object> conditionMap = (Map<String, Object>) result.get("condition");
+        Map<String, Object> paramValues = (Map<String, Object>) conditionMap.get("parameterValues");
+        
+        // All three references should show circular ref
+        for (String key : Arrays.asList("rule1", "rule2", "rule3")) {
+            Map<String, Object> circularRef = (Map<String, Object>) paramValues.get(key);
+            assertNotNull("Circular reference should be detected for " + key, circularRef);
+            assertEquals("Should contain circular reference marker for " + key, "circular", circularRef.get("$ref"));
+        }
+    }
+
+
+    @Test
+    public void testCircularReferenceInList() {
+        // Test circular reference in a list
+        Rule rule = new Rule();
+        rule.setItemId("test-rule");
+        Metadata metadata = new Metadata("test-rule");
+        rule.setMetadata(metadata);
+        
+        Condition condition = new Condition();
+        condition.setConditionTypeId("testCondition");
+        // List containing the rule itself
+        condition.getParameterValues().put("ruleList", Arrays.asList(rule, "other", rule));
+        rule.setCondition(condition);
+        
+        Map<String, Object> result = rule.toYaml(null);
+        Map<String, Object> conditionMap = (Map<String, Object>) result.get("condition");
+        Map<String, Object> paramValues = (Map<String, Object>) conditionMap.get("parameterValues");
+        List<?> ruleList = (List<?>) paramValues.get("ruleList");
+        
+        assertNotNull("Rule list should exist", ruleList);
+        assertEquals("List should have 3 elements", 3, ruleList.size());
+        
+        // First element should be circular ref
+        Map<String, Object> circularRef1 = (Map<String, Object>) ruleList.get(0);
+        assertEquals("First element should be circular ref", "circular", circularRef1.get("$ref"));
+        
+        // Second element should be string
+        assertEquals("Second element should be string", "other", ruleList.get(1));
+        
+        // Third element should also be circular ref
+        Map<String, Object> circularRef2 = (Map<String, Object>) ruleList.get(2);
+        assertEquals("Third element should be circular ref", "circular", circularRef2.get("$ref"));
+    }
+
+    @Test
+    public void testCircularReferenceInNestedMap() {
+        // Test circular reference in nested map structure
+        Rule rule = new Rule();
+        rule.setItemId("test-rule");
+        Metadata metadata = new Metadata("test-rule");
+        rule.setMetadata(metadata);
+        
+        Condition condition = new Condition();
+        condition.setConditionTypeId("testCondition");
+        // Nested map containing the rule
+        Map<String, Object> nestedMap = new HashMap<>();
+        nestedMap.put("level1", new HashMap<String, Object>() {{
+            put("level2", new HashMap<String, Object>() {{
+                put("rule", rule);
+            }});
+        }});
+        condition.getParameterValues().put("nested", nestedMap);
+        rule.setCondition(condition);
+        
+        Map<String, Object> result = rule.toYaml(null);
+        Map<String, Object> conditionMap = (Map<String, Object>) result.get("condition");
+        Map<String, Object> paramValues = (Map<String, Object>) conditionMap.get("parameterValues");
+        Map<String, Object> nested = (Map<String, Object>) paramValues.get("nested");
+        Map<String, Object> level1 = (Map<String, Object>) nested.get("level1");
+        Map<String, Object> level2 = (Map<String, Object>) level1.get("level2");
+        Map<String, Object> circularRef = (Map<String, Object>) level2.get("rule");
+        
+        assertNotNull("Circular reference should be detected in nested map", circularRef);
+        assertEquals("Should contain circular reference marker", "circular", circularRef.get("$ref"));
+    }
+
+    @Test
+    public void testNoFalseCircularRefInInheritance() {
+        // Test that inheritance chain (Rule -> MetadataItem -> Item) doesn't create false circular refs
+        // This is the main bug we're fixing
+        Rule rule = new Rule();
+        rule.setItemId("test-rule");
+        Metadata metadata = new Metadata("test-rule");
+        metadata.setScope("systemscope");
+        rule.setMetadata(metadata);
+        
+        Condition condition = new Condition();
+        condition.setConditionTypeId("unavailableConditionType");
+        condition.getParameterValues().put("comparisonOperator", "equals");
+        condition.getParameterValues().put("propertyName", "testProperty");
+        condition.getParameterValues().put("propertyValue", "testValue");
+        rule.setCondition(condition);
+        
+        Action action = new Action();
+        action.setActionTypeId("test");
+        rule.setActions(Collections.singletonList(action));
+        
+        Map<String, Object> result = rule.toYaml(null);
+        
+        // Should NOT contain $ref: circular at the top level
+        assertNotNull("Rule should serialize", result);
+        assertFalse("Should not have false circular reference at top level", 
+                    result.containsKey("$ref") && "circular".equals(result.get("$ref")));
+        
+        // Should contain all expected fields from inheritance chain
+        assertTrue("Should contain itemId from Item", result.containsKey("itemId"));
+        assertTrue("Should contain itemType from Item", result.containsKey("itemType"));
+        assertEquals("itemType should be 'rule'", "rule", result.get("itemType"));
+        assertTrue("Should contain metadata from MetadataItem", result.containsKey("metadata"));
+        assertTrue("Should contain condition", result.containsKey("condition"));
+        assertTrue("Should contain actions", result.containsKey("actions"));
+        
+        // Verify condition structure
+        Map<String, Object> conditionMap = (Map<String, Object>) result.get("condition");
+        assertNotNull("Condition should be present", conditionMap);
+        assertEquals("Condition should have correct type", "unavailableConditionType", conditionMap.get("type"));
+        
+        // Verify actions structure
+        List<?> actions = (List<?>) result.get("actions");
+        assertNotNull("Actions should be present", actions);
+        assertEquals("Should have one action", 1, actions.size());
+    }
+
+    @Test
+    public void testItemTypeIsAlwaysIncluded() {
+        // Test that itemType is always included in YAML output, even if null
+        // This reflects the actual state of the object
+        Rule rule = new Rule();
+        Metadata metadata = new Metadata("test-id");
+        metadata.setScope("systemscope");
+        rule.setMetadata(metadata);
+        
+        Map<String, Object> result = rule.toYaml(null);
+        
+        // itemType should always be present in output (set in Item constructor for Rule)
+        assertTrue("itemType should be included", result.containsKey("itemType"));
+        assertEquals("itemType should be 'rule'", "rule", result.get("itemType"));
+        
+        // itemId should also always be included
+        assertTrue("itemId should be included", result.containsKey("itemId"));
+    }
+
+    @Test
+    public void testItemIdAndItemTypeIncludedEvenWhenNull() {
+        // Test that itemId and itemType are always included, even when null
+        // This ensures YAML output reflects the actual state of the object
+        Rule rule = new Rule();
+        // Explicitly set itemId and itemType to null to test null handling
+        rule.setItemId(null);
+        rule.setItemType(null);
+        
+        Map<String, Object> result = rule.toYaml(null);
+        
+        // Both should be included even if null
+        assertTrue("itemId should be included even when null", result.containsKey("itemId"));
+        assertNull("itemId should be null", result.get("itemId"));
+        
+        assertTrue("itemType should be included even when null", result.containsKey("itemType"));
+        assertNull("itemType should be null", result.get("itemType"));
+    }
+
+    @Test
+    public void testItemIdFromMetadata() {
+        // Test that itemId is set from metadata and included in YAML
+        Rule rule = new Rule();
+        Metadata metadata = new Metadata("test-rule-id");
+        metadata.setScope("systemscope");
+        rule.setMetadata(metadata);
+        
+        Map<String, Object> result = rule.toYaml(null);
+        
+        // itemId should be set from metadata.getId()
+        assertTrue("itemId should be included when set from metadata", result.containsKey("itemId"));
+        assertEquals("itemId should match metadata id", "test-rule-id", result.get("itemId"));
+    }
+
+    @Test
+    public void testVisitedSetIsSharedCorrectly() {
+        // Test that visited set is properly shared across nested calls
+        Rule rule1 = new Rule();
+        rule1.setItemId("rule1");
+        rule1.setMetadata(new Metadata("rule1"));
+        
+        Rule rule2 = new Rule();
+        rule2.setItemId("rule2");
+        rule2.setMetadata(new Metadata("rule2"));
+        
+        // rule1 references rule2, rule2 references rule1 (mutual circular reference)
+        Condition condition1 = new Condition();
+        condition1.setConditionTypeId("test");
+        condition1.getParameterValues().put("otherRule", rule2);
+        rule1.setCondition(condition1);
+        
+        Condition condition2 = new Condition();
+        condition2.setConditionTypeId("test");
+        condition2.getParameterValues().put("otherRule", rule1);
+        rule2.setCondition(condition2);
+        
+        // Serialize rule1 - should detect circular ref when it encounters rule2 which references rule1
+        Map<String, Object> result1 = rule1.toYaml(null);
+        assertNotNull("Rule1 should serialize", result1);
+        
+        Map<String, Object> conditionMap1 = (Map<String, Object>) result1.get("condition");
+        Map<String, Object> paramValues1 = (Map<String, Object>) conditionMap1.get("parameterValues");
+        Map<String, Object> rule2Ref = (Map<String, Object>) paramValues1.get("otherRule");
+        
+        // rule2 should be serialized, but when it tries to reference rule1, it should detect circular ref
+        assertNotNull("Rule2 reference should exist", rule2Ref);
+        // rule2 itself should be fully serialized (not circular), but its condition's otherRule should be circular
+        Map<String, Object> conditionMap2 = (Map<String, Object>) rule2Ref.get("condition");
+        assertNotNull("Rule2's condition should exist", conditionMap2);
+        Map<String, Object> paramValues2 = (Map<String, Object>) conditionMap2.get("parameterValues");
+        Map<String, Object> rule1CircularRef = (Map<String, Object>) paramValues2.get("otherRule");
+        assertNotNull("Circular reference to rule1 should be detected", rule1CircularRef);
+        assertEquals("Should contain circular reference marker", "circular", rule1CircularRef.get("$ref"));
     }
 }
