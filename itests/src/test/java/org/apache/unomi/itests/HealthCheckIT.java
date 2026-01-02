@@ -88,10 +88,11 @@ public class HealthCheckIT extends BaseIT {
                 }
                 for (Future<List<HealthCheckResponse>> future : futures) {
                     List<HealthCheckResponse> health = future.get(10, TimeUnit.SECONDS);
-                    Assert.assertEquals(4, health.size());
+                    Assert.assertEquals(5, health.size());
                     Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
                     Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals(searchEngine) && r.getStatus() == HealthCheckResponse.Status.LIVE));
                     Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("persistence") && r.getStatus() == HealthCheckResponse.Status.LIVE));
                     Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
                 }
                 Thread.sleep(10);
