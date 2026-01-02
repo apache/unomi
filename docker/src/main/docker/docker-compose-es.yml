@@ -23,7 +23,7 @@ networks:
 
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.3
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.1
     container_name: elasticsearch
     volumes:
       - unomi-3-elasticsearch-data:/usr/share/elasticsearch/data
@@ -41,7 +41,8 @@ services:
   node-1:
     image: apache/unomi:${project.version}
     environment:
-      - UNOMI_AUTO_START=elasticsearch
+      - UNOMI_AUTO_START=true
+      - UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
       # Debug settings
       - KARAF_DEBUG=${DEBUG:-false}

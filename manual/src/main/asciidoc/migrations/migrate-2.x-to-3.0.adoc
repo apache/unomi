@@ -222,8 +222,8 @@ When legacy queryBuilder IDs are used, Apache Unomi will log warning messages th
 **Example Warning Log:**
 [source]
 ----
-WARN - DEPRECATED: Using legacy queryBuilderId 'idsConditionESQueryBuilder' for condition type 'customIdsCondition'. 
-Please update your condition definition to use the new queryBuilderId 'idsConditionQueryBuilder'. 
+WARN - DEPRECATED: Using legacy queryBuilderId 'idsConditionESQueryBuilder' for condition type 'customIdsCondition'.
+Please update your condition definition to use the new queryBuilderId 'idsConditionQueryBuilder'.
 Legacy mappings are deprecated and may be removed in future versions.
 ----
 
@@ -253,11 +253,11 @@ org.apache.unomi.opensearch.sslTrustAllCertificates=true
 
 ===== Docker Configuration Changes
 
-When using Docker, you can specify the search engine backend:
+When using Docker, you can specify the search engine backend using the distribution environment variable `UNOMI_DISTRIBUTION`.:
 
-- **For Elasticsearch**: `UNOMI_AUTO_START=elasticsearch`
-- **For OpenSearch**: `UNOMI_AUTO_START=opensearch`
-- **For custom configurations**: `UNOMI_AUTO_START=your-custom-config-name`
+- **For Elasticsearch**: `UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch`
+- **For OpenSearch**: `UNOMI_DISTRIBUTION=unomi-distribution-opensearch`
+- **For custom configurations**: `UNOMI_DISTRIBUTION=your-custom-distribution-name`
 
 ==== Migrating from Elasticsearch to OpenSearch
 

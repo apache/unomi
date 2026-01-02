@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.shell.services;
 
+import org.apache.unomi.shell.services.internal.UnomiSetup;
 import org.osgi.framework.BundleException;
 
 /**
@@ -25,32 +26,38 @@ import org.osgi.framework.BundleException;
 public interface UnomiManagementService {
 
     /**
-     * This method will start Apache Unomi with the specified start features configuration
-     * @param selectedStartFeatures the start features configuration to use
-     * @param mustStartFeatures true if features should be started, false if they should not
-     * @throws BundleException if there was an error starting Unomi's bundles
+     * This method will set up Unomi distribution's feature name
+     * @param distribution the distribution feature name to set up
+     * @param overwrite to force setup even if already exists
+     * @throws BundleException if the setup already exists and overwrite is false
      */
-    void startUnomi(String selectedStartFeatures, boolean mustStartFeatures) throws Exception;
+    void setupUnomiDistribution(String distribution, boolean overwrite) throws Exception;
 
     /**
-     * This method will start Apache Unomi with the specified start features configuration
-     * @param selectedStartFeatures the start features configuration to use
+     * This method will start Apache Unomi
+     * @param mustStartFeatures true if features should be started, false if they should not
+     * @throws Exception if there was an error starting Unomi's features
+     */
+    void startUnomi(boolean mustStartFeatures) throws Exception;
+
+    /**
+     * This method will start Apache Unomi
      * @param mustStartFeatures true if features should be started, false if they should not
      * @param waitForCompletion true if the method should wait for completion, false if it should not
-     * @throws BundleException if there was an error starting Unomi's bundles
+     * @throws Exception if there was an error starting Unomi's bundles
      */
-    void startUnomi(String selectedStartFeatures, boolean mustStartFeatures, boolean waitForCompletion) throws Exception;
+    void startUnomi(boolean mustStartFeatures, boolean waitForCompletion) throws Exception;
 
     /**
      * This method will stop Apache Unomi
-     * @throws BundleException if there was an error stopping Unomi's bundles
+     * @throws Exception if there was an error stopping Unomi's bundles
      */
     void stopUnomi() throws Exception;
 
     /**
      * This method will stop Apache Unomi
      * @param waitForCompletion true if the method should wait for completion, false if it should not
-     * @throws BundleException if there was an error stopping Unomi's bundles
+     * @throws Exception if there was an error stopping Unomi's bundles
      */
     void stopUnomi(boolean waitForCompletion) throws Exception;
 }

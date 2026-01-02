@@ -57,12 +57,14 @@ public class HealthCheckIT extends BaseIT {
     public void testHealthCheck() {
         try {
             List<HealthCheckResponse> response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {});
+            LOGGER.info("configured search engine: {}", searchEngine);
             LOGGER.info("health check response: {}", response);
             Assert.assertNotNull(response);
-            Assert.assertEquals(4, response.size());
+            Assert.assertEquals(5, response.size());
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals(searchEngine) && r.getStatus() == HealthCheckResponse.Status.LIVE));
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("persistence") && r.getStatus() == HealthCheckResponse.Status.LIVE));
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
         } catch (Exception e) {
             LOGGER.error("Error while executing health check", e);
@@ -86,10 +88,11 @@ public class HealthCheckIT extends BaseIT {
                 }
                 for (Future<List<HealthCheckResponse>> future : futures) {
                     List<HealthCheckResponse> health = future.get(10, TimeUnit.SECONDS);
-                    Assert.assertEquals(4, health.size());
+                    Assert.assertEquals(5, health.size());
                     Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
                     Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals(searchEngine) && r.getStatus() == HealthCheckResponse.Status.LIVE));
                     Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("persistence") && r.getStatus() == HealthCheckResponse.Status.LIVE));
                     Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
                 }
                 Thread.sleep(10);
