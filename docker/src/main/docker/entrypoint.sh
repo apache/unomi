@@ -44,12 +44,15 @@ check_node_health() {
     local node_url="$1"
     local curl_opts="$2"
     response=$(eval curl -v -fsSL ${curl_opts} "${node_url}" 2>&1)
-    if [ $? -eq 0 ]; then
+    rc=$?
+    if [ $rc -eq 0 ]; then
         echo "$response" | grep -o '"status"[ ]*:[ ]*"[^"]*"' | cut -d'"' -f4
     else
         echo ""
     fi
 }
+
+curl_opts=""
 
 # Configure connection parameters based on search engine type
 if [ "$SEARCH_ENGINE" = "opensearch" ]; then
@@ -71,7 +74,7 @@ else
         schema='http'
     fi
 
-    if [ -v UNOMI_ELASTICSEARCH_USERNAME ] && [ -v UNOMI_ELASTICSEARCH_PASSWORD ]; then
+    if [ -n "${UNOMI_ELASTICSEARCH_USERNAME:-}" ] && [ -n "${UNOMI_ELASTICSEARCH_PASSWORD:-}" ]; then
         auth_header="Authorization: Basic $(echo -n "${UNOMI_ELASTICSEARCH_USERNAME}:${UNOMI_ELASTICSEARCH_PASSWORD}" | base64)"
         curl_opts="-H \"${auth_header}\""
     fi
@@ -85,10 +88,8 @@ else
     IFS=',' read -ra NODES <<< "${UNOMI_ELASTICSEARCH_ADDRESSES}"
 fi
 
-# Ensure curl options allow insecure deployments when needed.
-# - For HTTPS with self-signed certs: add -k
-# - For HTTP: -k is harmless, but we only add it when schema is https to keep things tidy.
-if [ "$schema" = "https" ]; then
+# Ensure curl options allow insecure deployments when needed (HTTPS self-signed)
+if [ "$SEARCH_ENGINE" != "opensearch" ] && [ "$schema" = "https" ]; then
     curl_opts="$curl_opts -k"
 fi
 
