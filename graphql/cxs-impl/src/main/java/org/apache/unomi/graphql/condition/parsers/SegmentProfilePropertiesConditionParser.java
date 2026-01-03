@@ -24,13 +24,7 @@ import org.apache.unomi.graphql.schema.ComparisonConditionTranslator;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.utils.DateUtils;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -147,7 +141,7 @@ public class SegmentProfilePropertiesConditionParser {
         Object value;
 
         if (condition.getParameter("propertyValueDate") != null) {
-            value = condition.getParameter("propertyValueDate");
+            value = DateUtils.offsetDateTimeFromMap((Map<String, Object>) condition.getParameter("propertyValueDate"));
         } else if (condition.getParameter("propertyValueInteger") != null) {
             value = condition.getParameter("propertyValueInteger");
         } else {

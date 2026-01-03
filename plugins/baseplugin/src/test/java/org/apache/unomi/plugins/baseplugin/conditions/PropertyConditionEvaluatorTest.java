@@ -34,6 +34,7 @@ import java.util.regex.Pattern;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertNull;
+import static org.junit.Assert.assertFalse;
 
 public class PropertyConditionEvaluatorTest {
 

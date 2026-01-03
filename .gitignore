@@ -16,7 +16,8 @@ allCountries.zip
 rest/.miredot-offline.json
 /extensions/salesforce-connector/test.properties
 **/*.versionsBackup
-itests/src/maindependency_tree.txt
+itests/src/main
+dependency_tree.txt
 .mvn/.develocity/develocity-workspace-id
 /.cursor/rules/always-read-existing-code.mdc
 /.cursor/rules/avoid-code-duplication.mdc
