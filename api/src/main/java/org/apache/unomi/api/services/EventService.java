@@ -71,14 +71,6 @@ public interface EventService {
     boolean isEventAllowedForTenant(Event event, String tenantId, String sourceIP);
 
     /**
-     * Retrieves the list of available event properties.
-     *
-     * @return a list of available event properties
-     * @deprecated use event types instead
-     */
-    List<EventProperty> getEventProperties();
-
-    /**
      * Retrieves the set of known event type identifiers.
      *
      * @return the set of known event type identifiers.

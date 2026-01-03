@@ -694,24 +694,6 @@ public interface PersistenceService {
     <T extends Item> void purgeTimeBasedItems(int existsNumberOfDays, Class<T> clazz);
 
     /**
-     * Retrieves all items of the specified Item subclass which specified ranged property is within the specified bounds, ordered according to the specified {@code sortBy} String
-     * and and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
-     *
-     * @param <T>    the type of the Item subclass we want to retrieve
-     * @param s      the name of the range property we want items to retrieve to be included between the specified start and end points
-     * @param from   the beginning of the range we want to consider
-     * @param to     the end of the range we want to consider
-     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *               elements according to the property order in the String, considering each in turn and moving on to the next one in case of equality of all preceding ones.
-     *               Each property name is optionally followed by a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @param clazz  the {@link Item} subclass of the items we want to retrieve
-     * @param offset zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
-     * @param size   a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
-     * @return a {@link PartialList} of items matching the specified criteria
-     */
-    <T extends Item> PartialList<T> rangeQuery(String s, String from, String to, String sortBy, Class<T> clazz, int offset, int size);
-
-    /**
      * Retrieves the specified metrics for the specified field of items of the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and matching the
      * specified {@link Condition}.
      *

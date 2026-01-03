@@ -42,10 +42,16 @@ public class TermsAggregate extends BaseAggregate{
         this.numPartitions = numPartitions;
     }
 
+    /**
+     * Returns the zero-based partition index, or {@code -1} if partitioning is disabled.
+     */
     public int getPartition() {
         return partition;
     }
 
+    /**
+     * Returns the total number of partitions, or {@code -1} if partitioning is disabled.
+     */
     public int getNumPartitions() {
         return numPartitions;
     }

@@ -26,8 +26,8 @@
     </parent>
 
     <artifactId>unomi-persistence-elasticsearch</artifactId>
-    <name>Apache Unomi :: Persistence :: ElasticSearch</name>
-    <description>ElasticSearch persistence implementation for the Apache Unomi Context Server</description>
+    <name>Apache Unomi :: Persistence :: Elasticsearch</name>
+    <description>Elasticsearch persistence implementation for the Apache Unomi Context Server</description>
     <packaging>pom</packaging>
 
     <modules>

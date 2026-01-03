@@ -120,6 +120,7 @@
             <plugin>
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
+                <version>0.46.0</version>
                 <configuration>
                     <images>
                         <image>

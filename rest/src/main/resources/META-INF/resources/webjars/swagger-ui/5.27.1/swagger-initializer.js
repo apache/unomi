@@ -14,18 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.scripting;
-
-/**
- * A factory interface to generate ExpressionFilter instances from a centralized configuration
- */
-public interface ExpressionFilterFactory {
-
-    /**
-     * Retrieve an expression filter for the specified filterCollection identifier.
-     * @param filterCollection a filter collection identifier, typically something like "mvel"
-     * @return an instance of a ExpressionFilter with the configuration retrieved for the specified collection identifier
-     */
-    ExpressionFilter getExpressionFilter(String filterCollection);
-
-}
+window.onload = function() {
+  window.ui = SwaggerUIBundle({
+    url: "/openapi.json",
+    dom_id: '#swagger-ui',
+    deepLinking: true,
+    presets: [
+      SwaggerUIBundle.presets.apis,
+      SwaggerUIStandalonePreset
+    ],
+    plugins: [
+      SwaggerUIBundle.plugins.DownloadUrl
+    ],
+    layout: "StandaloneLayout"
+  });
+};

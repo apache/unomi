@@ -960,7 +960,7 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
-        // set the property as  concealed
+        // set the property as concealed
         customPropertyType.getMetadata().getSystemTags().add("concealed");
         profileService.deletePropertyType(customPropertyType.getItemId());
         profileService.setPropertyType(customPropertyType);

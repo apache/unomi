@@ -78,7 +78,7 @@ When implementing a new condition type, you need to provide implementations for 
 <!-- OpenSearch Query Builder -->
 <service interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
     <service-properties>
-        <entry key="queryBuilderId" value="booleanConditionOSQueryBuilder"/>
+        <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
     </service-properties>
     <bean class="org.apache.unomi.persistence.opensearch.BooleanConditionOSQueryBuilder"/>
 </service>
