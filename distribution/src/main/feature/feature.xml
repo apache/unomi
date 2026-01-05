@@ -34,6 +34,7 @@
         <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
@@ -59,6 +60,7 @@
         <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
@@ -85,6 +87,7 @@
         <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-opensearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
@@ -110,6 +113,7 @@
         <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-opensearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
