@@ -29,16 +29,17 @@
         <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
         <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
         <feature dependency="true" version="${project.version}">unomi-services</feature>
-        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
-        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension-services</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-optimization-test</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-shell-dev-commands</feature>
         <feature dependency="true" version="${project.version}">unomi-wab</feature>
         <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
@@ -55,16 +56,17 @@
         <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
         <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
         <feature dependency="true" version="${project.version}">unomi-services</feature>
-        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
-        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension-services</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-optimization-test</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-shell-dev-commands</feature>
         <feature dependency="true" version="${project.version}">unomi-wab</feature>
         <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
@@ -82,16 +84,17 @@
         <feature dependency="true" version="${project.version}">unomi-opensearch-core</feature>
         <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
         <feature dependency="true" version="${project.version}">unomi-services</feature>
-        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-opensearch-conditions</feature>
-        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension-services</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-optimization-test</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-opensearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-shell-dev-commands</feature>
         <feature dependency="true" version="${project.version}">unomi-wab</feature>
         <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
@@ -108,16 +111,17 @@
         <feature dependency="true" version="${project.version}">unomi-opensearch-core</feature>
         <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
         <feature dependency="true" version="${project.version}">unomi-services</feature>
-        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-opensearch-conditions</feature>
-        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension-services</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-optimization-test</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-opensearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-advanced-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-shell-dev-commands</feature>
         <feature dependency="true" version="${project.version}">unomi-wab</feature>
         <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
