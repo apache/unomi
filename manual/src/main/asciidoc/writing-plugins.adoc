@@ -993,7 +993,7 @@ my-custom-plugin/
        elasticsearch:
          image: docker.elastic.co/elasticsearch/elasticsearch:9.15.0
        opensearch:
-         image: opensearchproject/opensearch:3.0.0
+         image: opensearchproject/opensearch:3.4.0
      ```
    - Test with both search engines to ensure compatibility
 

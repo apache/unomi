@@ -242,7 +242,7 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
         } else if (fieldValue instanceof OffsetDateTime) {
             return fieldValueBuilder.stringValue(convertDateToISO((OffsetDateTime) fieldValue).toString());
         } else {
-            throw new IllegalArgumentException("Impossible to build ES filter, unsupported value type: " + fieldValue.getClass().getName());
+            throw new IllegalArgumentException("Impossible to build OS filter, unsupported value type: " + fieldValue.getClass().getName());
         }
     }
 

@@ -58,13 +58,13 @@ docker run -d --name elasticsearch --net unomi -p 9200:9200 -p 9300:9300 \
 For OpenSearch:
 
 ```bash
-docker pull opensearchproject/opensearch:3.0.0
+docker pull opensearchproject/opensearch:3.4.0
 docker network create unomi
 export OPENSEARCH_ADMIN_PASSWORD=enter_your_custom_admin_password_here
 docker run -d --name opensearch --net unomi -p 9200:9200 -p 9300:9300 \
     -e "discovery.type=single-node" \
     -e OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
-    opensearchproject/opensearch:3.0.0
+    opensearchproject/opensearch:3.4.0
 ```
     
 For Unomi (with ElasticSearch):
