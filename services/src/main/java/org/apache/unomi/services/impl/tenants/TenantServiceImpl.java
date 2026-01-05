@@ -100,6 +100,8 @@ public class TenantServiceImpl implements TenantService {
             generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
             generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
 
+            persistenceService.refreshIndex(Tenant.class);
+
             // Reload tenant to get the updated version with API keys
             return getTenant(tenant.getItemId());
         });
