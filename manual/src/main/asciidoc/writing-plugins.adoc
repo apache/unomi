@@ -162,14 +162,40 @@ OpenSearch Bundle (my-plugin-opensearch):
 
 ==== Configuration and Deployment
 
-Administrators can control which search engine implementation to use through the `org.apache.unomi.start.cfg` configuration file. This file determines which features (including your plugin's bundles) are deployed based on the chosen search engine:
+Administrators can control which search engine implementation to use by setting up a distribution. This distribution 'macro' feature determines which features (including your plugin's bundles) are deployed based on the chosen search engine:
 
-[source]
+[source,xml]
 ----
-startFeatures = [
-    "elasticsearch=unomi-persistence-elasticsearch,my-plugin-elasticsearch,unomi-services,...",
-    "opensearch=unomi-persistence-opensearch,my-plugin-opensearch,unomi-services,..."
-]
+<features>
+    <feature name="my-plugin-feature" version="${project.version}">
+        <bundle>mvn:my.group.id/my-plugin-common/${project.version}</bundle>
+        <bundle>mvn:my.group.id/my-plugin-${search.engine}/${project.version}</bundle>
+    </feature>
+
+    <feature name="my-unomi-distribution-with-my-plugin" version="${project.version}">
+        <feature dependency="true" version="${project.version}">unomi-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-services</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
+        <feature dependency="true" version="${project.version}">unomi-wab</feature>
+        <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
+        <feature dependency="true" version="${project.version}">unomi-healthcheck-elasticsearch</feature>
+        <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
+        <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
+        <feature dependency="true" version="${project.version}">my-plugin-feature</feature>
+    </feature>
+</features>
 ----
 
 ==== Custom Plugins
@@ -979,26 +1005,45 @@ my-custom-plugin/
      - For OpenSearch: `feature:install my-custom-plugin-opensearch`
    - Document dependencies and requirements clearly
 
-==== Custom Start Configuration
+==== Custom Distribution Feature
 
-For production deployments, you can create a custom `org.apache.unomi.start.cfg` file to automatically include your plugin features in the startup configuration. This approach ensures your plugin is automatically deployed when Apache Unomi starts.
+For production deployments, you can create a custom distribution's feature file to automatically include your plugin features in the startup configuration. This approach ensures your plugin is automatically deployed when Apache Unomi starts.
 
-**Creating a Custom Start Configuration:**
+**Creating a Custom Distribution Feature:**
 
-1. **Create the configuration file** in your deployment directory:
-   ```
-   etc/org.apache.unomi.start.cfg
-   ```
+1. **Create the feature file** in a dedicated maven module. You can use the unomi-distribution module as a reference.
 
-2. **Define your custom configurations** by extending the default ones:
+2. **Define your custom distribution** by extending the default ones:
 
-[source,properties]
+[source,xml]
 ----
-# Custom start configurations that include your plugin features
-startFeatures = [ "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete,my-custom-plugin-elasticsearch", \
-                  "opensearch=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete,my-custom-plugin-opensearch" ]
+<features name="unomi-distributions" xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0 https://karaf.apache.org/xmlns/features/v1.6.0">
+    <feature name="unomi-distribution-custom" version="${project.version}">
+        <feature dependency="true" version="${project.version}">unomi-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-services</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
+        <feature dependency="true" version="${project.version}">unomi-wab</feature>
+        <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
+        <feature dependency="true" version="${project.version}">unomi-healthcheck-elasticsearch</feature>
+        <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
+        <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
+        <feature dependency="true" version="${project.version}">custom-feature</feature>
+    </feature>
+</features>
 ----
-+
+
 **Key Points:**
 
 - **Feature ordering**: Your custom plugin features should be added at the end of the feature list, after the core Apache Unomi features
@@ -1006,16 +1051,16 @@ startFeatures = [ "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-co
 - **Dependency management**: Ensure your plugin features are listed after their dependencies (e.g., after `unomi-elasticsearch-core` or `unomi-opensearch-core`)
 
 
-**Benefits of Custom Start Configuration:**
+**Benefits of Custom Distribution Feature:**
 
 - **Automatic deployment**: Your plugin is automatically installed when Apache Unomi starts
 - **Consistent environments**: Ensures the same features are deployed across all environments
 - **Production ready**: No manual feature installation required
 - **Version control**: Configuration can be versioned and managed with your deployment
 
-**Note**: For more detailed information about customizing start features configurations, including environment-specific examples, see the <<Customizing Start Features Configuration,Configuration>> section of the documentation.
-+
-3. **Migration from Legacy Implementations**
+**Note**: For more detailed information about custom distributions, including environment-specific examples, see the <<Custom Distribution Feature,Configuration>> section of the documentation.
+
+6. **Migration from Legacy Implementations**
    - **DO NOT** use legacy mappings for custom query builders
    - Rename existing query builders to follow new naming conventions
    - Update condition type definitions to use new queryBuilder IDs
