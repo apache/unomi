@@ -101,16 +101,14 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     private BundleWatcher bundleWatcher;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private final List<String> installedDistributionDependencies = new ArrayList<>();
-    private final List<String> startedDistributionDependencies = new ArrayList<>();
-
-    private BundleContext bundleContext;
+    private final List<String> trackedInstalledDistributionDependencies = new ArrayList<>();
+    private final List<String> trackedStartedDistributionDependencies = new ArrayList<>();
 
     @Activate
     public void init(ComponentContext componentContext) throws Exception {
         LOGGER.info("Initializing Unomi management service");
         try {
-            this.bundleContext = componentContext.getBundleContext();
+            BundleContext bundleContext = componentContext.getBundleContext();
 
             UnomiSetup setup = getUnomiSetup();
             if (setup == null) {
@@ -201,10 +199,28 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                 return;
             }
             for (Dependency dependency : feature.getDependencies()) {
-                if (!installedDistributionDependencies.contains(dependency.getName())) {
-                    LOGGER.info("Installing distribution feature's dependency: {}", dependency.getName());
-                    featuresService.installFeature(dependency.getName(), dependency.getVersion(), EnumSet.of(FeaturesService.Option.NoAutoStartBundles));
-                    installedDistributionDependencies.add(dependency.getName());
+                try {
+                    Feature depFeature = featuresService.getFeature(dependency.getName(), dependency.getVersion());
+                    if (depFeature != null) {
+                        List<Feature> karafInstalledFeatures = Arrays.stream(featuresService.listInstalledFeatures()).toList();
+                        if (!trackedInstalledDistributionDependencies.contains(dependency.getName())) {
+                            Optional<Feature> karafInstalledFeature = karafInstalledFeatures.stream()
+                                    .filter(f -> f.getName().equals(depFeature.getName()) && f.getVersion().equals(depFeature.getVersion())).findFirst();
+                            if (karafInstalledFeature.isEmpty()) {
+                                LOGGER.info("Installing distribution's dependency feature: {}", depFeature);
+                                featuresService.installFeature(depFeature, EnumSet.of(FeaturesService.Option.NoAutoStartBundles));
+                            } else {
+                                LOGGER.info("Feature {} is already installed, skipping installation.", karafInstalledFeature.get());
+                            }
+                            LOGGER.info("Installing distribution feature's dependency: {}", dependency.getName());
+                            featuresService.installFeature(dependency.getName(), dependency.getVersion(), EnumSet.of(FeaturesService.Option.NoAutoStartBundles));
+                            trackedInstalledDistributionDependencies.add(dependency.getName());
+                        }
+                    } else {
+                        LOGGER.error("Distribution's dependency feature not found: {}", dependency);
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Error installing distribution's dependency feature: {}", dependency, e);
                 }
             }
         } catch (Exception e) {
@@ -213,18 +229,18 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
 
         if (mustStartDistribution) {
             LOGGER.info("Starting distribution: {}", distribution);
-            for (String featureName : installedDistributionDependencies) {
+            for (String featureName : trackedInstalledDistributionDependencies) {
                 try {
                     Feature feature = featuresService.getFeature(featureName);
                     if (feature == null) {
                         LOGGER.error("Distribution feature's dependency not found: {}", featureName);
                         continue;
                     }
-                    LOGGER.info("Starting dependency: {}", featureName);
-                    startFeature(featureName);
-                    startedDistributionDependencies.add(featureName); // Keep track of started distribution dependencies
+                    LOGGER.info("Starting distribution's dependency feature: {}", featureName);
+                    startFeature(feature.getName(), feature.getVersion());
+                    trackedStartedDistributionDependencies.add(featureName); // Keep track of started distribution dependencies
                 } catch (Exception e) {
-                    LOGGER.error("Error starting feature: {}", featureName, e);
+                    LOGGER.error("Error starting distribution's dependency feature: {}", featureName, e);
                 }
             }
         }
@@ -258,57 +274,63 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     }
 
     private void doStopUnomi() throws Exception {
-        if (startedDistributionDependencies.isEmpty()) {
-            LOGGER.info("No features to stop.");
+        if (trackedStartedDistributionDependencies.isEmpty()) {
+            LOGGER.info("No distribution's dependency features to stop.");
         } else {
-            LOGGER.info("Stopping features in reverse order...");
-            ListIterator<String> iterator = startedDistributionDependencies.listIterator(startedDistributionDependencies.size());
+            LOGGER.info("Stopping distribution's dependency features in reverse order...");
+            ListIterator<String> iterator = trackedStartedDistributionDependencies.listIterator(trackedStartedDistributionDependencies.size());
             while (iterator.hasPrevious()) {
                 String featureName = iterator.previous();
                 try {
-                    LOGGER.info("Stopping feature: {}", featureName);
+                    LOGGER.info("Stopping distribution's dependency feature: {}", featureName);
                     stopFeature(featureName);
                 } catch (Exception e) {
-                    LOGGER.error("Error stopping feature: {}", featureName, e);
+                    LOGGER.error("Error stopping distribution's dependency feature: {}", featureName, e);
                 }
             }
 
-            startedDistributionDependencies.clear(); // Clear the list after stopping all features
+            trackedStartedDistributionDependencies.clear(); // Clear the list after stopping all features
         }
-        if (installedDistributionDependencies.isEmpty()) {
-            LOGGER.info("No features to uninstall.");
+        if (trackedInstalledDistributionDependencies.isEmpty()) {
+            LOGGER.info("No distribution's dependency features to uninstall.");
         } else {
-            LOGGER.info("Stopping features in reverse order...");
-            ListIterator<String> iterator = installedDistributionDependencies.listIterator(installedDistributionDependencies.size());
+            LOGGER.info("Stopping distribution's dependency features in reverse order...");
+            ListIterator<String> iterator = trackedInstalledDistributionDependencies.listIterator(trackedInstalledDistributionDependencies.size());
             while (iterator.hasPrevious()) {
                 String featureName = iterator.previous();
                 try {
-                    LOGGER.info("Uninstalling feature: {}", featureName);
+                    LOGGER.info("Uninstalling distribution's dependency feature: {}", featureName);
                     featuresService.uninstallFeature(featureName);
                 } catch (Exception e) {
-                    LOGGER.error("Error uninstalling feature: {}", featureName, e);
+                    LOGGER.error("Error uninstalling distribution's dependency feature: {}", featureName, e);
                 }
             }
-            installedDistributionDependencies.clear(); // Clear the list after stopping all features
+            trackedInstalledDistributionDependencies.clear(); // Clear the list after stopping all features
         }
     }
 
-    private void startFeature(String featureName) throws Exception {
-        Feature feature = featuresService.getFeature(featureName);
+    private void startFeature(String featureName, String version) throws Exception {
+        Feature feature = featuresService.getFeature(featureName, version);
         Map<String, Map<String, FeatureState>> stateChanges = new HashMap<>();
         Map<String, FeatureState> regionChanges = new HashMap<>();
-        regionChanges.put(feature.getId(), FeatureState.Started);
-        stateChanges.put(FeaturesService.ROOT_REGION, regionChanges);
-        featuresService.updateFeaturesState(stateChanges, EnumSet.of(FeaturesService.Option.Verbose));
+        FeatureState state = featuresService.getState(feature.getId());
+        if (state != FeatureState.Started) {
+            regionChanges.put(feature.getId(), FeatureState.Started);
+            stateChanges.put(FeaturesService.ROOT_REGION, regionChanges);
+            featuresService.updateFeaturesState(stateChanges, EnumSet.of(FeaturesService.Option.Verbose));
+        }
     }
 
     private void stopFeature(String featureName) throws Exception {
         Feature feature = featuresService.getFeature(featureName);
         Map<String, Map<String, FeatureState>> stateChanges = new HashMap<>();
         Map<String, FeatureState> regionChanges = new HashMap<>();
-        regionChanges.put(feature.getId(), FeatureState.Resolved);
-        stateChanges.put(FeaturesService.ROOT_REGION, regionChanges);
-        featuresService.updateFeaturesState(stateChanges, EnumSet.of(FeaturesService.Option.Verbose));
+        FeatureState state = featuresService.getState(feature.getId());
+        if (state == FeatureState.Started) {
+            regionChanges.put(feature.getId(), FeatureState.Resolved);
+            stateChanges.put(FeaturesService.ROOT_REGION, regionChanges);
+            featuresService.updateFeaturesState(stateChanges, EnumSet.of(FeaturesService.Option.Verbose));
+        }
     }
 
     @Deactivate
