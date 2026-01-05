@@ -365,8 +365,7 @@
                         <feature>unomi-rest-ui</feature>
                         <feature>unomi-healthcheck</feature>
                         <feature>cdp-graphql-feature</feature>
-
-<feature>unomi-distribution-elasticsearch</feature>
+                        <feature>unomi-distribution-elasticsearch</feature>
                         <feature>unomi-distribution-opensearch</feature>
                     </installedFeatures>
                     <javase>17</javase>
