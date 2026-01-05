@@ -945,8 +945,8 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
         return getItem(id, PropertyType.class);
     }
 
-    public PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy) {
-        return persistenceService.query("profileId", personaId, sortBy, Session.class, offset, size);
+    public PartialList<PersonaSession> getPersonaSessions(String personaId, int offset, int size, String sortBy) {
+        return persistenceService.query("profileId", personaId, sortBy, PersonaSession.class, offset, size);
     }
 
     public PersonaWithSessions savePersonaWithSessions(PersonaWithSessions personaToSave) {

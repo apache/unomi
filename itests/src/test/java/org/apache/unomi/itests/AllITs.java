@@ -37,6 +37,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ConditionQueryBuilderIT.class,
         SegmentIT.class,
         ProfileServiceIT.class,
+        PersonaIT.class,
         ProfileImportBasicIT.class,
         ProfileImportSurfersIT.class,
         ProfileImportRankingIT.class,

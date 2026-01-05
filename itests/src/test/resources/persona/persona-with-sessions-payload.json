@@ -1,0 +1,36 @@
+{
+  "persona": {
+    "itemId": "test-persona-with-sessions",
+    "version": null,
+    "properties": {
+      "firstName": "Test",
+      "lastName": "Persona",
+      "email": "test.persona@example.com"
+    },
+    "systemProperties": {},
+    "segments": [],
+    "scores": {},
+    "mergedWith": null,
+    "consents": {}
+  },
+  "sessions": [
+    {
+      "itemId": "test-session-1",
+      "scope": "test",
+      "profile": {
+        "itemId": "test-persona-with-sessions",
+        "properties": {
+          "firstName": "Test",
+          "lastName": "Persona"
+        }
+      },
+      "properties": {
+        "operatingSystemName": "OS X",
+        "sessionStartDate": "2024-01-01T00:00:00Z"
+      },
+      "timeStamp": "2024-01-01T00:00:00Z",
+      "lastEventDate": "2024-01-01T01:00:00Z"
+    }
+  ]
+}
+

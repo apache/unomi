@@ -278,7 +278,7 @@ public interface ProfileService {
      *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of sessions for the persona identified by the specified identifier
      */
-    PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy);
+    PartialList<PersonaSession> getPersonaSessions(String personaId, int offset, int size, String sortBy);
 
     /**
      * Save a persona with its sessions.

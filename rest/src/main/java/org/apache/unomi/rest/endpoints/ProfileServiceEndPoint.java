@@ -392,7 +392,7 @@ public class ProfileServiceEndPoint {
      */
     @GET
     @Path("/personas/{personaId}/sessions")
-    public PartialList<Session> getPersonaSessions(@PathParam("personaId") String personaId,
+    public PartialList<PersonaSession> getPersonaSessions(@PathParam("personaId") String personaId,
                                                    @QueryParam("offset") @DefaultValue("0") int offset,
                                                    @QueryParam("size") @DefaultValue("50") int size,
                                                    @QueryParam("sort") String sortBy) {
