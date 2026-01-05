@@ -23,7 +23,7 @@ Begin by creating a `docker-compose.yml` file. You can choose between ElasticSea
 version: '3.8'
 services:
     elasticsearch:
-        image: docker.elastic.co/elasticsearch/elasticsearch:7.17.5
+        image: docker.elastic.co/elasticsearch/elasticsearch:9.2.1
         environment:
             - discovery.type=single-node
         ports:
@@ -75,10 +75,11 @@ services:
     unomi:
         image: apache/unomi:3.0.0
         environment:
-            - UNOMI_AUTO_START=opensearch
+            - UNOMI_DISTRIBUTION=unomi-distribution-opensearch
             - UNOMI_OPENSEARCH_ADDRESSES=opensearch-node1:9200
             - UNOMI_OPENSEARCH_USERNAME=admin
             - UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
+            - UNOMI_HEALTHCHECK_PROVIDERS=cluster,opensearch,unomi,persistence
         ports:
             - 8181:8181
             - 9443:9443
@@ -100,7 +101,7 @@ Try accessing https://localhost:9443/cxs/cluster with username/password: karaf/k
 
 1) Install JDK 17 and make sure you set the JAVA_HOME variable (see our <<JDK compatibility,Getting Started>> guide for more information on JDK compatibility)
 
-2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-5 (please *make sure* you use the proper version : 7.17.5)
+2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-9-2-1 (please *make sure* you use the proper version : 9.2.1)
 
 3) Uncompress it and change the `config/elasticsearch.yml` to include the following config :
 
@@ -134,10 +135,14 @@ discovery.type: single-node
 6) Start it using : `./bin/karaf`
 
 7) Start the Apache Unomi packages using:
-- For ElasticSearch: `unomi:start elasticsearch`
-- For OpenSearch: `unomi:start opensearch`
+- `unomi:start`
 
-The parameter specifies which start features configuration to use (elasticsearch or opensearch), which determines which set of features and bundles are installed and started.
+Note that you could change or set the distribution (if not defined using environment variable) using:
+- `unomi:setup -d=unomi-distribution-opensearch -f=true`
+- `unomi:start`
+
+The unomi:setup parameter specifies which distribution to use (unomi-distribution-elasticsearch or unomi-distribution-opensearch),
+which determines which set of features and bundles are installed and started. A custom distribution can also be used if available in Karaf (by adding the relevant feature repository)
 
 8) Wait for startup to complete
 

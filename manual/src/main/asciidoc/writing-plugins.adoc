@@ -162,14 +162,40 @@ OpenSearch Bundle (my-plugin-opensearch):
 
 ==== Configuration and Deployment
 
-Administrators can control which search engine implementation to use through the `org.apache.unomi.start.cfg` configuration file. This file determines which features (including your plugin's bundles) are deployed based on the chosen search engine:
+Administrators can control which search engine implementation to use by setting up a distribution. This distribution 'macro' feature determines which features (including your plugin's bundles) are deployed based on the chosen search engine:
 
-[source]
+[source,xml]
 ----
-startFeatures = [
-    "elasticsearch=unomi-persistence-elasticsearch,my-plugin-elasticsearch,unomi-services,...",
-    "opensearch=unomi-persistence-opensearch,my-plugin-opensearch,unomi-services,..."
-]
+<features>
+    <feature name="my-plugin-feature" version="${project.version}">
+        <bundle>mvn:my.group.id/my-plugin-common/${project.version}</bundle>
+        <bundle>mvn:my.group.id/my-plugin-${search.engine}/${project.version}</bundle>
+    </feature>
+
+    <feature name="my-unomi-distribution-with-my-plugin" version="${project.version}">
+        <feature dependency="true" version="${project.version}">unomi-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-services</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
+        <feature dependency="true" version="${project.version}">unomi-wab</feature>
+        <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
+        <feature dependency="true" version="${project.version}">unomi-healthcheck-elasticsearch</feature>
+        <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
+        <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
+        <feature dependency="true" version="${project.version}">my-plugin-feature</feature>
+    </feature>
+</features>
 ----
 
 ==== Custom Plugins
@@ -680,14 +706,14 @@ import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatc
 import java.util.Map;
 
 public class MyCustomQueryBuilder implements ConditionESQueryBuilder {
-    
+
     @Override
-    public Query buildQuery(Condition condition, Map<String, Object> context, 
+    public Query buildQuery(Condition condition, Map<String, Object> context,
                            ConditionESQueryBuilderDispatcher dispatcher) {
         // Get parameters from the condition
         String fieldName = (String) condition.getParameter("fieldName");
         String fieldValue = (String) condition.getParameter("fieldValue");
-        
+
         // Build Elasticsearch-specific query using the new client
         return Query.of(q -> q
             .bool(b -> b
@@ -700,9 +726,9 @@ public class MyCustomQueryBuilder implements ConditionESQueryBuilder {
             )
         );
     }
-    
+
     @Override
-    public long count(Condition condition, Map<String, Object> context, 
+    public long count(Condition condition, Map<String, Object> context,
                      ConditionESQueryBuilderDispatcher dispatcher) {
         // Implement count logic if needed
         return 0;
@@ -723,14 +749,14 @@ import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher
 import java.util.Map;
 
 public class MyCustomQueryBuilder implements ConditionOSQueryBuilder {
-    
+
     @Override
-    public Query buildQuery(Condition condition, Map<String, Object> context, 
+    public Query buildQuery(Condition condition, Map<String, Object> context,
                            ConditionOSQueryBuilderDispatcher dispatcher) {
         // Get parameters from the condition
         String fieldName = (String) condition.getParameter("fieldName");
         String fieldValue = (String) condition.getParameter("fieldValue");
-        
+
         // Build OpenSearch-specific query
         return Query.of(q -> q
             .bool(b -> b
@@ -743,9 +769,9 @@ public class MyCustomQueryBuilder implements ConditionOSQueryBuilder {
             )
         );
     }
-    
+
     @Override
-    public long count(Condition condition, Map<String, Object> context, 
+    public long count(Condition condition, Map<String, Object> context,
                      ConditionOSQueryBuilderDispatcher dispatcher) {
         // Implement count logic if needed
         return 0;
@@ -800,7 +826,7 @@ public class MyCustomQueryBuilder implements ConditionOSQueryBuilder {
       "multivalued": false
     },
     {
-      "id": "fieldValue", 
+      "id": "fieldValue",
       "type": "string",
       "multivalued": false
     }
@@ -854,14 +880,14 @@ my-custom-plugin/
     <artifactId>my-custom-plugin</artifactId>
     <version>1.0.0</version>
     <packaging>pom</packaging>
-    
+
     <modules>
         <module>my-custom-plugin-common</module>
         <module>my-custom-plugin-elasticsearch</module>
         <module>my-custom-plugin-opensearch</module>
         <module>my-custom-plugin-features</module>
     </modules>
-    
+
     <properties>
         <unomi.version>3.0.0</unomi.version>
     </properties>
@@ -877,10 +903,10 @@ my-custom-plugin/
         <artifactId>my-custom-plugin</artifactId>
         <version>1.0.0</version>
     </parent>
-    
+
     <artifactId>my-custom-plugin-elasticsearch</artifactId>
     <packaging>bundle</packaging>
-    
+
     <dependencies>
         <dependency>
             <groupId>org.apache.unomi</groupId>
@@ -898,7 +924,7 @@ my-custom-plugin/
             <version>1.0.0</version>
         </dependency>
     </dependencies>
-    
+
     <build>
         <plugins>
             <plugin>
@@ -926,14 +952,14 @@ my-custom-plugin/
 ----
 <?xml version="1.0" encoding="UTF-8"?>
 <features name="my-custom-plugin" version="1.0.0">
-    
+
     <!-- Elasticsearch feature -->
     <feature name="my-custom-plugin-elasticsearch" version="1.0.0">
         <bundle>mvn:org.apache.unomi.plugins/my-custom-plugin-common/1.0.0</bundle>
         <bundle>mvn:org.apache.unomi.plugins/my-custom-plugin-elasticsearch/1.0.0</bundle>
         <feature>unomi-elasticsearch</feature>
     </feature>
-    
+
     <!-- OpenSearch feature -->
     <feature name="my-custom-plugin-opensearch" version="1.0.0">
         <bundle>mvn:org.apache.unomi.plugins/my-custom-plugin-common/1.0.0</bundle>
@@ -981,24 +1007,43 @@ my-custom-plugin/
      - For OpenSearch: `feature:install my-custom-plugin-opensearch`
    - Document dependencies and requirements clearly
 
-==== Custom Start Configuration
+==== Custom Distribution Feature
 
-For production deployments, you can create a custom `org.apache.unomi.start.cfg` file to automatically include your plugin features in the startup configuration. This approach ensures your plugin is automatically deployed when Apache Unomi starts.
+For production deployments, you can create a custom distribution's feature file to automatically include your plugin features in the startup configuration. This approach ensures your plugin is automatically deployed when Apache Unomi starts.
 
-**Creating a Custom Start Configuration:**
+**Creating a Custom Distribution Feature:**
 
-1. **Create the configuration file** in your deployment directory:
-   ```
-   etc/org.apache.unomi.start.cfg
-   ```
+1. **Create the feature file** in a dedicated maven module. You can use the unomi-distribution module as a reference.
 
-2. **Define your custom configurations** by extending the default ones:
+2. **Define your custom distribution** by extending the default ones:
 
-[source,properties]
+[source,xml]
 ----
-# Custom start configurations that include your plugin features
-startFeatures = [ "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete,my-custom-plugin-elasticsearch", \
-                  "opensearch=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete,my-custom-plugin-opensearch" ]
+<features name="unomi-distributions" xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0 https://karaf.apache.org/xmlns/features/v1.6.0">
+    <feature name="unomi-distribution-custom" version="${project.version}">
+        <feature dependency="true" version="${project.version}">unomi-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-services</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
+        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
+        <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
+        <feature dependency="true" version="${project.version}">unomi-wab</feature>
+        <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
+        <feature dependency="true" version="${project.version}">unomi-healthcheck-elasticsearch</feature>
+        <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
+        <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
+        <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
+        <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
+        <feature dependency="true" version="${project.version}">custom-feature</feature>
+    </feature>
+</features>
 ----
 
 **Key Points:**
@@ -1008,14 +1053,14 @@ startFeatures = [ "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-co
 - **Dependency management**: Ensure your plugin features are listed after their dependencies (e.g., after `unomi-elasticsearch-core` or `unomi-opensearch-core`)
 
 
-**Benefits of Custom Start Configuration:**
+**Benefits of Custom Distribution Feature:**
 
 - **Automatic deployment**: Your plugin is automatically installed when Apache Unomi starts
 - **Consistent environments**: Ensures the same features are deployed across all environments
 - **Production ready**: No manual feature installation required
 - **Version control**: Configuration can be versioned and managed with your deployment
 
-**Note**: For more detailed information about customizing start features configurations, including environment-specific examples, see the <<Customizing Start Features Configuration,Configuration>> section of the documentation.
+**Note**: For more detailed information about custom distributions, including environment-specific examples, see the <<Custom Distribution Feature,Configuration>> section of the documentation.
 
 6. **Migration from Legacy Implementations**
    - **DO NOT** use legacy mappings for custom query builders

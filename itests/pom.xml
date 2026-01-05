@@ -341,7 +341,7 @@
                     <plugin>
                         <groupId>io.fabric8</groupId>
                         <artifactId>docker-maven-plugin</artifactId>
-                        <version>0.45.1</version>
+                        <version>0.48.0</version>
                         <configuration>
                             <containerNamePattern>${docker.container.name}</containerNamePattern>
                             <images>

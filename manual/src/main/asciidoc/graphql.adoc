@@ -21,19 +21,7 @@ https://the-asf.slack.com/messages/CBP2Z98Q7/[Unomi Slack channel] or https://is
 
 === Enabling the API
 
-The GraphQL API must be enabled using a system property (or environment variable):
-
-[source]
-----
-# Extract from: etc/custom.system.properties
-#######################################################################################################################
-## Settings for GraphQL                                                                                              ##
-#######################################################################################################################
-org.apache.unomi.graphql.feature.activated=${env:UNOMI_GRAPHQL_FEATURE_ACTIVATED:-false}
-----
-
-You can either modify the `org.apache.unomi.graphql.feature.activated` property or specify the `UNOMI_GRAPHQL_FEATURE_ACTIVATED`
-environment variable (if using Docker for example).
+The GraphQL API must be enabled using the related distribution (`unomi-distribution-elasticsearch-graphql` or `unomi-distribution-opensearch-graphql`) or use the dedicated feature (`cdp-graphql-feature`) in your own.
 
 === Endpoints
 

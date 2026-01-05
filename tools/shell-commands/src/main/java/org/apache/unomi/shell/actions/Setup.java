@@ -17,26 +17,28 @@
 package org.apache.unomi.shell.actions;
 
 import org.apache.karaf.shell.api.action.Action;
-import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.shell.services.UnomiManagementService;
 
-@Command(scope = "unomi", name = "start", description = "This will start Apache Unomi")
+@Command(scope = "unomi", name = "setup", description = "This will setup some Apache Unomi runtime options")
 @Service
-public class Start implements Action {
+public class Setup implements Action {
 
     @Reference
     UnomiManagementService unomiManagementService;
 
-    @Option(name = "-i", aliases = "--install-only", description = "Only install distribution feature's dependencies, don't start them", required = false, multiValued = false)
-    boolean installOnly = false;
+    @Option(name = "-d", aliases = "--distribution", description = "Unomi Distribution feature to configure", required = true, multiValued = false)
+    String distribution = "unomi-distribution-elasticsearch";
+
+    @Option(name = "-f", aliases = "--force", description = "Force setting up distribution feature name even if already exists (use with caution)", required = false, multiValued = false)
+    boolean force = false;
 
     public Object execute() throws Exception {
-        System.out.println("Starting Apache Unomi");
-        unomiManagementService.startUnomi(!installOnly);
+        System.out.println("Setting up Apache Unomi distribution: " + distribution);
+        unomiManagementService.setupUnomiDistribution(distribution, force);
         return null;
     }
 

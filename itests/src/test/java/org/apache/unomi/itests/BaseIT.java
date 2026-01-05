@@ -178,11 +178,13 @@ public abstract class BaseIT extends KarafTestSupport {
             if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
                 LOGGER.info("Starting Unomi with elasticsearch search engine...");
                 System.out.println("==== Starting Unomi with elasticsearch search engine...");
+                executeCommand("unomi:setup -d=unomi-distribution-elasticsearch -f=true");
                 executeCommand("unomi:start");
             } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)){
                 LOGGER.info("Starting Unomi with opensearch search engine...");
                 System.out.println("==== Starting Unomi with opensearch search engine...");
-                executeCommand("unomi:start " + SEARCH_ENGINE_OPENSEARCH);
+                executeCommand("unomi:setup -d=unomi-distribution-opensearch -f=true");
+                executeCommand("unomi:start");
             } else {
                 LOGGER.error("Unknown search engine: " + searchEngine);
                 throw new InterruptedException("Unknown search engine: " + searchEngine);
@@ -286,6 +288,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
         // Define features option based on search engine
         Option featuresOption;
+        Option distributionOption;
         if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
             featuresOption = features(
                     maven().groupId("org.apache.unomi").artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
@@ -306,11 +309,16 @@ public abstract class BaseIT extends KarafTestSupport {
                     "unomi-shell-dev-commands",
                     "unomi-wab",
                     "unomi-web-tracker",
-                    "unomi-healthcheck",
+                    "unomi-healthcheck-elasticsearch",
                     "unomi-router-karaf-feature",
                     "unomi-groovy-actions",
                     "unomi-rest-ui",
+                    "cdp-graphql-feature",
                     "unomi-startup-complete"
+            );
+            distributionOption = features(
+                    maven().groupId("org.apache.unomi").artifactId("unomi-distribution").versionAsInProject().type("xml").classifier("features"),
+                    "unomi-distribution-elasticsearch-graphql"
             );
         } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
             featuresOption = features(
@@ -332,11 +340,16 @@ public abstract class BaseIT extends KarafTestSupport {
                     "unomi-shell-dev-commands",
                     "unomi-wab",
                     "unomi-web-tracker",
-                    "unomi-healthcheck",
+                    "unomi-healthcheck-opensearch",
                     "unomi-router-karaf-feature",
                     "unomi-groovy-actions",
                     "unomi-rest-ui",
+                    "cdp-graphql-feature",
                     "unomi-startup-complete"
+            );
+            distributionOption = features(
+                    maven().groupId("org.apache.unomi").artifactId("unomi-distribution").versionAsInProject().type("xml").classifier("features"),
+                    "unomi-distribution-opensearch-graphql"
             );
         } else {
             throw new IllegalArgumentException("Unknown search engine: " + searchEngine);
@@ -344,7 +357,6 @@ public abstract class BaseIT extends KarafTestSupport {
 
         Option[] options = new Option[]{
                 replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File("src/test/resources/org.apache.unomi.router.cfg")),
-
                 replaceConfigurationFile("data/tmp/1-basic-test.csv", new File("src/test/resources/1-basic-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", new File("src/test/resources/2-surfers-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv", new File("src/test/resources/3-surfers-overwrite-test.csv")),
@@ -367,7 +379,6 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/org.apache.karaf.features.cfg", "serviceRequirements", "disable"),
                 editConfigurationFilePut("etc/system.properties", "my.system.property", System.getProperty("my.system.property")),
                 editConfigurationFilePut("etc/system.properties", SEARCH_ENGINE_PROPERTY, System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH)),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.graphql.feature.activated", "true"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.cluster.name", "contextElasticSearchITests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:" + getSearchPort()),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
@@ -384,6 +395,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
 
                 featuresOption,  // Add the features option
+                distributionOption, // Add the distribution option
 
                 configureConsole().startRemoteShell(),
                 logLevel(LogLevel.INFO),
