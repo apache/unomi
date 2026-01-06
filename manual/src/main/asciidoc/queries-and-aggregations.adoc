@@ -132,7 +132,7 @@ Aggregations may be of different types. They are listed here below.
 Date aggregations make it possible to automatically generate "buckets" by time periods. The format is compatible with both ElasticSearch and OpenSearch. 
 For more information about the format, you can refer to:
 - ElasticSearch documentation: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-aggregations-bucket-datehistogram-aggregation.html
-- OpenSearch documentation: https://opensearch.org/docs/2.11/aggregations/bucket/datehistogram/
+- OpenSearch documentation: https://opensearch.org/docs/latest/aggregations/bucket/datehistogram/
 
 Here's an example of a request to retrieve a histogram of by day of all the session that have been create by newcomers (nbOfVisits=1)
 
@@ -270,7 +270,9 @@ The resulting JSON response will look something like this:
 }
 ----
 
-You can find more information about the date range formats here: https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-aggregations-bucket-daterange-aggregation.html
+You can find more information about the date range formats here:
+- ElasticSearch documentation: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-aggregations-bucket-daterange-aggregation.html
+- OpenSearch documentation: https://opensearch.org/docs/latest/aggregations/bucket/daterange/
 
 
 ===== Numeric range

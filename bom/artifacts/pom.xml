@@ -72,6 +72,11 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-persistence-elasticsearch-conditions</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-persistence-opensearch-core</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -285,6 +290,13 @@
             <dependency>
                 <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-router-karaf-feature</artifactId>
+                <version>${project.version}</version>
+                <classifier>features</classifier>
+                <type>xml</type>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-distribution</artifactId>
                 <version>${project.version}</version>
                 <classifier>features</classifier>
                 <type>xml</type>

@@ -140,7 +140,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     private String rolloverIndexMappingTotalFieldsLimit;
     private String rolloverIndexMaxDocValueFieldsSearch;
 
-    private String minimalOpenSearchVersion = "2.1.0";
+    private String minimalOpenSearchVersion = "3.0.0";
     private String maximalOpenSearchVersion = "4.0.0";
 
     // authentication props

@@ -49,7 +49,7 @@
             <cm:property name="rollover.indexMappingTotalFieldsLimit" value="1000"/>
             <cm:property name="rollover.indexMaxDocValueFieldsSearch" value="1000"/>
 
-            <cm:property name="minimalOpenSearchVersion" value="2.1.0" />
+            <cm:property name="minimalOpenSearchVersion" value="3.0.0" />
             <cm:property name="maximalOpenSearchVersion" value="4.0.0" />
 
             <cm:property name="aggregateQueryBucketSize" value="5000" />

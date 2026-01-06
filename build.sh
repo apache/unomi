@@ -254,6 +254,7 @@ KARAF_DEBUG_SUSPEND=n
 USE_OPENSEARCH=false
 NO_KARAF=false
 AUTO_START=""
+UNOMI_DISTRIBUTION=""
 SINGLE_TEST=""
 IT_DEBUG=false
 IT_DEBUG_PORT=5006
@@ -292,6 +293,7 @@ EOF
         echo -e "  ${CYAN}--purge-maven-cache${NC}        Purge local Maven cache before building"
         echo -e "  ${CYAN}--karaf-home PATH${NC}          Set Karaf home directory for deployment"
         echo -e "  ${CYAN}--use-opensearch${NC}          Use OpenSearch instead of ElasticSearch"
+        echo -e "  ${CYAN}--distribution DIST${NC}       Set Unomi distribution (e.g., unomi-distribution-opensearch)"
         echo -e "  ${CYAN}--no-karaf${NC}               Build without starting Karaf"
         echo -e "  ${CYAN}--auto-start ENGINE${NC}      Auto-start with specified engine"
         echo -e "  ${CYAN}--single-test TEST${NC}         Run a single integration test"
@@ -327,6 +329,7 @@ EOF
         echo "  --purge-maven-cache        Purge local Maven cache before building"
         echo "  --karaf-home PATH          Set Karaf home directory for deployment"
         echo "  --use-opensearch          Use OpenSearch instead of ElasticSearch"
+        echo "  --distribution DIST       Set Unomi distribution (e.g., unomi-distribution-opensearch)"
         echo "  --no-karaf               Build without starting Karaf"
         echo "  --auto-start ENGINE      Auto-start with specified engine"
         echo "  --single-test TEST         Run a single integration test"
@@ -415,6 +418,10 @@ while [ "$1" != "" ]; do
         --use-opensearch)
             USE_OPENSEARCH=true
             ;;
+        --distribution)
+            shift
+            UNOMI_DISTRIBUTION="$1"
+            ;;
         --no-karaf)
             NO_KARAF=true
             ;;
@@ -453,6 +460,17 @@ while [ "$1" != "" ]; do
     esac
     shift
 done
+
+# Wire distribution and use-opensearch parameters
+# If --use-opensearch is set, automatically set distribution to opensearch if not already set
+if [ "$USE_OPENSEARCH" = true ] && [ -z "$UNOMI_DISTRIBUTION" ]; then
+    UNOMI_DISTRIBUTION="unomi-distribution-opensearch"
+fi
+
+# If distribution contains "opensearch", automatically enable USE_OPENSEARCH for integration tests
+if [ ! -z "$UNOMI_DISTRIBUTION" ] && [[ "$UNOMI_DISTRIBUTION" == *opensearch* ]]; then
+    USE_OPENSEARCH=true
+fi
 
 # Set environment
 DIRNAME=`dirname "$0"`
@@ -932,6 +950,12 @@ check_integration_test_env_vars() {
     fi
 }
 
+# Add unomi.distribution system property if set
+if [ ! -z "$UNOMI_DISTRIBUTION" ]; then
+    MVN_OPTS="$MVN_OPTS -Dunomi.distribution=$UNOMI_DISTRIBUTION"
+    echo "Using Unomi distribution: $UNOMI_DISTRIBUTION"
+fi
+
 # Add profile options
 PROFILES=""
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
@@ -1235,11 +1259,26 @@ EOF
         exit 1
     fi
 
+    # Build KARAF_OPTS with auto-start and distribution
+    KARAF_OPTS_ARGS=""
     if [ ! -z "$AUTO_START" ]; then
         print_status "info" "Configuring auto-start for $AUTO_START"
-        export KARAF_OPTS="-Dunomi.autoStart=$AUTO_START"
+        KARAF_OPTS_ARGS="-Dunomi.autoStart=$AUTO_START"
     else
         print_status "info" "Use [unomi:start] to start Unomi after Karaf initialization"
+    fi
+    
+    if [ ! -z "$UNOMI_DISTRIBUTION" ]; then
+        if [ ! -z "$KARAF_OPTS_ARGS" ]; then
+            KARAF_OPTS_ARGS="$KARAF_OPTS_ARGS -Dunomi.distribution=$UNOMI_DISTRIBUTION"
+        else
+            KARAF_OPTS_ARGS="-Dunomi.distribution=$UNOMI_DISTRIBUTION"
+        fi
+        print_status "info" "Using Unomi distribution: $UNOMI_DISTRIBUTION"
+    fi
+    
+    if [ ! -z "$KARAF_OPTS_ARGS" ]; then
+        export KARAF_OPTS="$KARAF_OPTS_ARGS"
     fi
 
     ./karaf || {
