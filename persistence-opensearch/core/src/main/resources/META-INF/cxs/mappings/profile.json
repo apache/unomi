@@ -35,6 +35,9 @@
         "nbOfVisits": {
           "type": "long"
         },
+        "totalNbOfVisits": {
+          "type": "long"
+        },
         "interests": {
           "type": "nested"
         }

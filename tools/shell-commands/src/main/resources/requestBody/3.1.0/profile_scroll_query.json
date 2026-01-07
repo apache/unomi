@@ -1,0 +1,23 @@
+{
+  "size": 1000,
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "itemType": "profile"
+          }
+        }
+      ],
+      "filter": [
+        {
+          "exists": {
+            "field": "properties.nbOfVisits"
+          }
+        }
+      ]
+    }
+  },
+  "_source": ["itemId"]
+}
+
