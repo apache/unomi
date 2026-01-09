@@ -51,6 +51,8 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileServiceImpl.class.getName());
 
+    private static final String DECREMENT_NB_OF_VISITS_SCRIPT = "decNbOfVisits";
+
     private DefinitionsService definitionsService;
 
     private SegmentService segmentService;
@@ -215,8 +217,105 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
     @Override
     public void purgeSessionItems(int existsNumberOfDays) {
         if (existsNumberOfDays > 0) {
+            ConditionType sessionPropertyConditionType = definitionsService.getConditionType("sessionPropertyCondition");
+            if (sessionPropertyConditionType == null) {
+                LOGGER.error("Could not find sessionPropertyCondition type");
+                return;
+            }
+            Condition timeCondition = new Condition(sessionPropertyConditionType);
+            timeCondition.setParameter("propertyName", "timeStamp");
+            timeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+            timeCondition.setParameter("propertyValueDateExpr", "now-" + existsNumberOfDays + "d");
+
+            TermsAggregate profileIdAggregate = new TermsAggregate("profileId");
+            Map<String, Long> impactedProfiles = persistenceService.aggregateWithOptimizedQuery(timeCondition, profileIdAggregate, Session.ITEM_TYPE);
+            // Remove technical aggregation keys like "_filtered" that are not actual profile IDs
+            impactedProfiles.remove("_filtered");
+
             LOGGER.info("Purging: Sessions created since more than {} days", existsNumberOfDays);
             persistenceService.purgeTimeBasedItems(existsNumberOfDays, Session.class);
+
+            LOGGER.info("Syncing profiles: decrementing nbOfVisits for session purge's {} impacted profiles", impactedProfiles.size());
+            this.decrementProfilesNbOfVisits(impactedProfiles);
+        }
+    }
+
+    /**
+     * Decrements the nbOfVisits property for profiles based on a map of ProfileId, nbVisits.
+     * Profiles are grouped by decrement value and processed in batches for optimal performance.
+     *
+     * @param profilesVisits Map of profile IDs to the number of visits to decrement
+     */
+    private void decrementProfilesNbOfVisits(Map<String, Long> profilesVisits) {
+        if (profilesVisits == null || profilesVisits.isEmpty()) {
+            LOGGER.info("No profiles to update for nbOfVisits decrement");
+            return;
+        }
+        LOGGER.info("Decrementing nbOfVisits for {} profiles", profilesVisits.size());
+
+        Map<Long, List<String>> profilesByDecrement = new TreeMap<>();
+        profilesVisits.forEach((profileId, decrement) -> {
+            if (StringUtils.isNotBlank(profileId) && decrement != null && decrement > 0) {
+                profilesByDecrement.computeIfAbsent(decrement, k -> new ArrayList<>()).add(profileId);
+            }
+        });
+
+        int totalUpdated = 0;
+
+        for (Map.Entry<Long, List<String>> entry : profilesByDecrement.entrySet()) {
+            Long decrementValue = entry.getKey();
+            List<String> profileIds = entry.getValue();
+            LOGGER.debug("Processing {} profiles with decrement value {}", profileIds.size(), decrementValue);
+            // Split into batches of NB_OF_VISITS_DECREMENT_BATCH_SIZE to avoid too large requests
+            for (int i = 0; i < profileIds.size(); i += NB_OF_VISITS_DECREMENT_BATCH_SIZE) {
+                int endIndex = Math.min(i + NB_OF_VISITS_DECREMENT_BATCH_SIZE, profileIds.size());
+                List<String> batchProfileIds = profileIds.subList(i, endIndex);
+                if (applyNbOfVisitsDecrementForBatch(batchProfileIds, decrementValue)) {
+                    totalUpdated += batchProfileIds.size();
+                }
+            }
+        }
+        LOGGER.info("Successfully decremented nbOfVisits for {} profiles", totalUpdated);
+    }
+
+    /**
+     * Applies the nbOfVisits decrement for a batch of profiles with the same decrement value.
+     *
+     * @param profileIds List of profile IDs to update
+     * @param decrementValue The value to decrement from nbOfVisits
+     * @return true if the update was successful
+     */
+    private boolean applyNbOfVisitsDecrementForBatch(List<String> profileIds, Long decrementValue) {
+        if (profileIds == null || profileIds.isEmpty() || decrementValue == null || decrementValue <= 0) {
+            return false;
+        }
+
+        try {
+            long startTime = System.currentTimeMillis();
+
+            String[] scripts = new String[1];
+            Map<String, Object>[] scriptParams = new HashMap[1];
+            Condition[] conditions = new Condition[1];
+
+            conditions[0] = new Condition();
+            conditions[0].setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+            conditions[0].setParameter("propertyName", "itemId");
+            conditions[0].setParameter("comparisonOperator", "in");
+            conditions[0].setParameter("propertyValues", new ArrayList<>(profileIds));
+            scriptParams[0] = new HashMap<>();
+            scriptParams[0].put("decrementValue", decrementValue);
+            scripts[0] = DECREMENT_NB_OF_VISITS_SCRIPT;
+
+            boolean updated = persistenceService.updateWithQueryAndStoredScript(Profile.class, scripts, scriptParams, conditions);
+            if (!updated) {
+                LOGGER.error("Failed to decrement nbOfVisits for {} profiles with decrement value {}", profileIds.size(), decrementValue);
+            } else {
+                LOGGER.info("Updated nbOfVisits for {} profiles in {}ms", profileIds.size(), System.currentTimeMillis() - startTime);
+            }
+            return updated;
+        } catch (Exception e) {
+            LOGGER.error("Error while decrementing nbOfVisits for batch of {} profiles", profileIds.size(), e);
+            return false;
         }
     }
 
@@ -235,9 +334,26 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
     }
 
     private void initializePurge() {
+        LOGGER.info("Purge: Initializing");
+
         if (purgeProfileExistTime <= 0 && purgeProfileInactiveTime <= 0 && purgeSessionExistTime <= 0 && purgeEventExistTime <= 0) {
             return;
         }
+
+        if (purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0 || purgeSessionExistTime > 0 || purgeEventExistTime > 0) {
+            if (purgeProfileInactiveTime > 0) {
+                LOGGER.info("Purge: Profile with no visits since more than {} days, will be purged", purgeProfileInactiveTime);
+            }
+            if (purgeProfileExistTime > 0) {
+                LOGGER.info("Purge: Profile created since more than {} days, will be purged", purgeProfileExistTime);
+            }
+
+            if (purgeSessionExistTime > 0) {
+                LOGGER.info("Purge: Session items created since more than {} days, will be purged", purgeSessionExistTime);
+            }
+            if (purgeEventExistTime > 0) {
+                LOGGER.info("Purge: Event items created since more than {} days, will be purged", purgeEventExistTime);
+            }
 
         // Register the task executor for profile purge
         TaskExecutor profilePurgeExecutor = new TaskExecutor() {
@@ -250,6 +366,10 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
             public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
                 contextManager.executeAsSystem(() -> {
                     try {
+                        long purgeStartTime = System.currentTimeMillis();
+                        LOGGER.info("Purge: triggered");
+
+                        // Profile purge
                         purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
                         if (purgeSessionExistTime > 0) {
                             purgeSessionItems(purgeSessionExistTime);
@@ -257,6 +377,8 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
                         if (purgeEventExistTime > 0) {
                             purgeEventItems(purgeEventExistTime);
                         }
+                        LOGGER.info("Purge: executed in {} ms", System.currentTimeMillis() - purgeStartTime);
+                        
                         callback.complete();
                     } catch (Throwable t) {
                         // During shutdown, services may be unavailable - only log if not shutting down

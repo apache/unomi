@@ -19,7 +19,6 @@ package org.apache.unomi.itests;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -151,8 +150,7 @@ public class ProfileServiceIT extends BaseIT {
 
     // Relevant only when throwExceptions system property is true
     @Test
-    public void testGetProfileWithWrongScrollerIdThrowException()
-            throws InterruptedException, NoSuchFieldException, IllegalAccessException, IOException {
+    public void testGetProfileWithWrongScrollerIdThrowException() throws InterruptedException, IOException {
         boolean throwExceptionCurrent = false;
         Configuration searchEngineConfiguration = configurationAdmin.getConfiguration("org.apache.unomi.persistence." + searchEngine);
         if (searchEngineConfiguration != null && searchEngineConfiguration.getProperties().get("throwExceptions") != null) {
@@ -469,5 +467,72 @@ public class ProfileServiceIT extends BaseIT {
         oldProfilesCondition.setParameter("propertyValue", "Boby");
         keepTrying("We should not be able to retrieve previous profile based on previous value", () -> persistenceService.queryCount(oldProfilesCondition, Profile.ITEM_TYPE),
                 (count) -> count == 0, 1000, 100);
+    }
+
+    @Test
+    public void testPurgeSessions() throws Exception {
+        Date currentDate = new Date();
+        LocalDateTime minus6Months = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusMonths(6);
+        LocalDateTime minus18Months = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusMonths(18);
+        Date currentDateMinus6Months = Date.from(minus6Months.atZone(ZoneId.systemDefault()).toInstant());
+        Date currentDateMinus18Months = Date.from(minus18Months.atZone(ZoneId.systemDefault()).toInstant());
+
+        long originalSessionsCount  = persistenceService.getAllItemsCount(Session.ITEM_TYPE);
+
+        //Create 10 profiles with sessions
+        Profile[] profiles = new Profile[10];
+        for (int i=0; i < profiles.length; i++) {
+            profiles[i] = new Profile("dummy-profile-session-purge-test-" + i);
+            profiles[i].setProperty("nbOfVisits", 20);
+            profiles[i].setProperty("totalNbOfVisits", 20);
+            persistenceService.save(profiles[i]);
+        }
+
+        // create 6 months old sessions
+        for (int i = 0; i < profiles.length * 10; i++) {
+            Session session = new Session("6-months-old-session-" + i, profiles[i%10], currentDateMinus6Months, "dummy-scope");
+            persistenceService.save(session);
+        }
+
+        // create 18 months old sessions
+        for (int i = 0; i < profiles.length * 10; i++) {
+            Session session = new Session("18-months-old-session-" + i, profiles[i%10], currentDateMinus18Months, "dummy-scope");
+            persistenceService.save(session);
+        }
+
+        keepTrying("Sessions number should be 200", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
+                (count) -> count == (200 + originalSessionsCount), 1000, 100);
+        for (Profile value : profiles) {
+            String profileId = value.getItemId();
+            keepTrying("Profile should have nbOfVisits=20", () -> profileService.load(profileId),
+                    (profile) -> (Integer) profile.getProperty("nbOfVisits") == 20, 1000, 100);
+            keepTrying("Profile should have totalNbOfVisits=20", () -> profileService.load(profileId),
+                    (profile) -> (Integer) profile.getProperty("totalNbOfVisits") == 20, 1000, 100);
+        }
+
+        // Should have no effect
+        profileService.purgeSessionItems(0);
+        keepTrying("Sessions number should be 200", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
+                (count) -> count == (200 + originalSessionsCount), 1000, 100);
+        for (Profile value : profiles) {
+            String profileId = value.getItemId();
+            keepTrying("Profile should have nbOfVisits=20", () -> profileService.load(profileId),
+                    (profile) -> (Integer) profile.getProperty("nbOfVisits") == 20, 1000, 100);
+            keepTrying("Profile should have totalNbOfVisits=20", () -> profileService.load(profileId),
+                    (profile) -> (Integer) profile.getProperty("totalNbOfVisits") == 20, 1000, 100);
+        }
+
+        // Should purge sessions older than 365 days
+        profileService.purgeSessionItems(365);
+        keepTrying("Sessions number should be 100", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
+                (count) -> count == (100 + originalSessionsCount), 1000, 100);
+        for (Profile value : profiles) {
+            String profileId = value.getItemId();
+            keepTrying("Profile should have nbOfVisits=10", () -> profileService.load(profileId),
+                    (profile) -> (Integer) profile.getProperty("nbOfVisits") == 10, 1000, 100);
+            keepTrying("Profile should have totalNbOfVisits=20", () -> profileService.load(profileId),
+                    (profile) -> (Integer) profile.getProperty("totalNbOfVisits") == 20, 1000, 100);
+        }
+
     }
 }
