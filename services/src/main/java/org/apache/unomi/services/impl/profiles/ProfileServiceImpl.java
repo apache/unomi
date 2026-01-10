@@ -33,6 +33,7 @@ import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.services.sorts.ControlGroupPersonalizationStrategy;
 import org.osgi.framework.*;
@@ -52,6 +53,7 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileServiceImpl.class.getName());
 
     private static final String DECREMENT_NB_OF_VISITS_SCRIPT = "decNbOfVisits";
+    private static final int NB_OF_VISITS_DECREMENT_BATCH_SIZE = 500;
 
     private DefinitionsService definitionsService;
 
@@ -354,6 +356,7 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
             if (purgeEventExistTime > 0) {
                 LOGGER.info("Purge: Event items created since more than {} days, will be purged", purgeEventExistTime);
             }
+        }
 
         // Register the task executor for profile purge
         TaskExecutor profilePurgeExecutor = new TaskExecutor() {
@@ -378,7 +381,7 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
                             purgeEventItems(purgeEventExistTime);
                         }
                         LOGGER.info("Purge: executed in {} ms", System.currentTimeMillis() - purgeStartTime);
-                        
+
                         callback.complete();
                     } catch (Throwable t) {
                         // During shutdown, services may be unavailable - only log if not shutting down
