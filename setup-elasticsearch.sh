@@ -53,8 +53,14 @@ _setup_elasticsearch() {
     # Clear OpenSearch environment variables first
     clear_opposite "${SCRIPT_DIR}" "opensearch" || { echo "WARNING: Failed to clear OpenSearch variables" >&2; }
 
-    # Load .env.local file if it exists
-    load_env_local "${SCRIPT_DIR}"
+    # Load only the Elasticsearch password from .env.local if it exists
+    # This ensures we don't load the OpenSearch password
+    if ! load_password_from_env_local "${SCRIPT_DIR}" "UNOMI_ELASTICSEARCH_PASSWORD"; then
+        # If not found in .env.local, check if it's already set in environment
+        if [ -z "${UNOMI_ELASTICSEARCH_PASSWORD}" ]; then
+            echo "Note: UNOMI_ELASTICSEARCH_PASSWORD not found in .env.local or environment"
+        fi
+    fi
 
     # Check if password is set
     if ! check_password "UNOMI_ELASTICSEARCH_PASSWORD"; then
@@ -69,7 +75,11 @@ _setup_elasticsearch() {
     export UNOMI_ELASTICSEARCH_SSL_TRUST_ALL_CERTIFICATES=true
     # Password is already set from .env.local or environment
 
+    # Set the distribution to use Elasticsearch (default, but explicit for clarity)
+    export UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch
+
     echo "Elasticsearch 9 environment variables configured."
+    echo "  Distribution: ${UNOMI_DISTRIBUTION}"
     echo "  Cluster: ${UNOMI_ELASTICSEARCH_CLUSTERNAME} (overridden from default: contextElasticSearch)"
     echo "  Username: ${UNOMI_ELASTICSEARCH_USERNAME} (overridden from default: empty)"
     echo "  SSL Enabled: ${UNOMI_ELASTICSEARCH_SSL_ENABLE} (overridden from default: false)"

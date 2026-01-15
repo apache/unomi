@@ -51,8 +51,14 @@ _setup_opensearch() {
     # Clear Elasticsearch environment variables first
     clear_opposite "${SCRIPT_DIR}" "elasticsearch" || { echo "WARNING: Failed to clear Elasticsearch variables" >&2; }
 
-    # Load .env.local file if it exists
-    load_env_local "${SCRIPT_DIR}"
+    # Load only the OpenSearch password from .env.local if it exists
+    # This ensures we don't load the Elasticsearch password
+    if ! load_password_from_env_local "${SCRIPT_DIR}" "UNOMI_OPENSEARCH_PASSWORD"; then
+        # If not found in .env.local, check if it's already set in environment
+        if [ -z "${UNOMI_OPENSEARCH_PASSWORD}" ]; then
+            echo "Note: UNOMI_OPENSEARCH_PASSWORD not found in .env.local or environment"
+        fi
+    fi
 
     # Check if password is set
     if ! check_password "UNOMI_OPENSEARCH_PASSWORD"; then
@@ -63,7 +69,11 @@ _setup_opensearch() {
     # Password is already set from .env.local or environment, just ensure it's exported
     export UNOMI_OPENSEARCH_PASSWORD
 
+    # Set the distribution to use OpenSearch
+    export UNOMI_DISTRIBUTION=unomi-distribution-opensearch
+
     echo "OpenSearch 3 environment variables configured."
+    echo "  Distribution: ${UNOMI_DISTRIBUTION}"
     echo "  Password: (set from .env.local or environment)"
     echo "  Note: Using Unomi defaults for other OpenSearch settings (cluster, addresses, username, SSL)"
     

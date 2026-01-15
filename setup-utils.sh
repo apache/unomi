@@ -72,6 +72,42 @@ load_env_local() {
     fi
 }
 
+# Load a specific password variable from .env.local file if it exists
+# This function only loads the specified variable, not the entire file
+# Usage: load_password_from_env_local SCRIPT_DIR PASSWORD_VAR_NAME
+load_password_from_env_local() {
+    local script_dir="$1"
+    local password_var="$2"
+    local env_local="${script_dir}/.env.local"
+    
+    if [ -f "${env_local}" ]; then
+        # Use grep to find the line with the password variable
+        # Match lines that start with optional whitespace, 'export', one or more whitespace, variable name, '='
+        local matching_line
+        matching_line=$(grep -E "^[[:space:]]*export[[:space:]]+${password_var}=" "${env_local}" 2>/dev/null | head -n 1)
+        
+        if [ -n "${matching_line}" ]; then
+            # Extract just the variable assignment part (VAR=value)
+            # This handles cases where the line might have comments or extra whitespace
+            local var_assignment
+            # Remove 'export' keyword and trim whitespace
+            var_assignment="${matching_line#export}"
+            var_assignment="${var_assignment#"${var_assignment%%[![:space:]]*}"}"
+            # Remove any trailing comments (everything after #)
+            var_assignment="${var_assignment%%#*}"
+            # Trim trailing whitespace
+            var_assignment="${var_assignment%"${var_assignment##*[![:space:]]}"}"
+            
+            # Export the variable by evaluating the assignment
+            # This is safe because we've already validated the variable name matches
+            eval "export ${var_assignment}"
+            echo "Loaded ${password_var} from .env.local"
+            return 0
+        fi
+    fi
+    return 1
+}
+
 # Check if password environment variable is set
 # Usage: check_password PASSWORD_VAR_NAME
 # Returns: 0 if password is set, 1 if not set
