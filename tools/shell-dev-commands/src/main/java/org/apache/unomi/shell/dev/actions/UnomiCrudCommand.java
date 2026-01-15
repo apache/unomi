@@ -63,6 +63,9 @@ public class UnomiCrudCommand implements Action {
     @Option(name = "-f", aliases = "--file", description = "JSON file containing object properties (for create/update)")
     private String file;
 
+    @Option(name = "-d", aliases = "--data", description = "Inline JSON string containing object properties (for create/update)")
+    private String data;
+
     @Option(name = "--csv", description = "Output list in CSV format")
     private boolean csv;
 
@@ -72,6 +75,22 @@ public class UnomiCrudCommand implements Action {
     @Init
     public void init() {
         LOGGER.debug("UnomiCrudCommand init");
+    }
+
+    /**
+     * Parse JSON properties from either a file or inline data.
+     * @return Map of properties, or null if neither file nor data is provided
+     * @throws Exception if there's an error parsing the JSON
+     */
+    private Map<String, Object> parseProperties() throws Exception {
+        if (data != null && !data.trim().isEmpty()) {
+            // Use inline data if provided
+            return OBJECT_MAPPER.readValue(data, Map.class);
+        } else if (file != null && !file.trim().isEmpty()) {
+            // Fall back to file if no inline data
+            return OBJECT_MAPPER.readValue(Files.readString(Paths.get(file)), Map.class);
+        }
+        return null;
     }
 
     @Override
@@ -86,11 +105,11 @@ public class UnomiCrudCommand implements Action {
                     try {
                         switch (operation.toLowerCase()) {
                             case "create":
-                                if (file == null) {
-                                    System.err.println("--file option is required for create operation");
+                                Map<String, Object> createProps = parseProperties();
+                                if (createProps == null) {
+                                    System.err.println("Either --file or --data option is required for create operation");
                                     return null;
                                 }
-                                Map<String, Object> createProps = OBJECT_MAPPER.readValue(Files.readString(Paths.get(file)), Map.class);
                                 String newId = cmd.create(createProps);
                                 System.out.println("Created " + type + " with ID: " + newId);
                                 break;
@@ -109,11 +128,15 @@ public class UnomiCrudCommand implements Action {
                                 break;
 
                             case "update":
-                                if (id == null || file == null) {
-                                    System.err.println("ID and --file options are required for update operation");
+                                if (id == null) {
+                                    System.err.println("ID is required for update operation");
                                     return null;
                                 }
-                                Map<String, Object> updateProps = OBJECT_MAPPER.readValue(Files.readString(Paths.get(file)), Map.class);
+                                Map<String, Object> updateProps = parseProperties();
+                                if (updateProps == null) {
+                                    System.err.println("Either --file or --data option is required for update operation");
+                                    return null;
+                                }
                                 cmd.update(id, updateProps);
                                 System.out.println("Updated " + type + " with ID: " + id);
                                 break;
