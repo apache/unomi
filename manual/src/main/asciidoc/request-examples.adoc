@@ -84,6 +84,19 @@ curl -X POST http://localhost:8181/cxs/scopes \
 
 TIP: The scope creation response will include a public API key that you should save for use with the public APIs.
 
+[IMPORTANT]
+====
+**Tenant Resolution (Version 3.1+)**
+
+Starting with Apache Unomi 3.1, tenant resolution is mandatory for all requests to `/cxs/context.json` and `/cxs/eventcollector` endpoints. The tenant must be identified before Apache Unomi can process the request. This is done automatically when you use:
+
+* **Public API Key** (recommended for public endpoints): The `X-Unomi-Api-Key` header with a public API key automatically resolves the tenant
+* **Private API Key**: Basic authentication with `tenantId:privateApiKey` resolves the tenant from the credentials
+* **Tenant ID Header**: When using JAAS authentication, the `X-Unomi-Tenant-Id` header can be used
+
+All examples in this document use the `X-Unomi-Api-Key` header with a public API key, which is the recommended approach for public-facing applications. See <<_how_profile_tracking_works,How profile tracking works>> for complete details about tenant resolution.
+====
+
 NOTE: In all the examples below, replace:
 - `YOUR_TENANT_ID` with `mytenant`
 - `YOUR_PRIVATE_API_KEY` with your actual private API key
@@ -131,6 +144,7 @@ For multi-line curl requests using heredoc syntax (`<<'EOF'`), you can still use
 # With heredoc
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d @- <<'EOF' | jq '.'
 {
     "source": {
@@ -182,7 +196,8 @@ You can retrieve a context using curl like this :
 
 [source]
 ----
-curl http://localhost:8181/cxs/context.js?sessionId=1234
+curl http://localhost:8181/cxs/context.js?sessionId=1234 \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY"
 ----
 
 This will retrieve a JavaScript script that contains a `cxs` object that contains the context with the current user
@@ -208,7 +223,8 @@ If you prefer to retrieve a pure JSON object, you can simply use a request forme
 
 [source]
 ----
-curl http://localhost:8181/cxs/context.json?sessionId=1234
+curl http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY"
 ----
 
 The same automatic profile and session creation behavior applies to `context.json` requests. See <<_how_profile_tracking_works,How profile tracking works>> for complete details.
@@ -226,12 +242,13 @@ scores
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d @- <<'EOF'
 {
     "source": {
         "itemId":"homepage",
         "itemType":"page",
-        "scope":"example"
+        "scope":"mydigital"
     },
     "requiredProfileProperties":["*"],
     "requiredSessionProperties":["*"],
@@ -255,25 +272,26 @@ illustrated in the following example:
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d @- <<'EOF'
 {
     "source":{
         "itemId":"homepage",
         "itemType":"page",
-        "scope":"example"
+        "scope":"mydigital"
     },
     "events":[
         {
             "eventType":"view",
-            "scope": "example",
+            "scope": "mydigital",
             "source":{
                 "itemType": "site",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId": "mysite"
             },
             "target":{
                 "itemType":"page",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
@@ -301,21 +319,22 @@ respond quickly and minimize network traffic. Here is an example of using this s
 ----
 curl -X POST http://localhost:8181/cxs/eventcollector \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d @- <<'EOF'
 {
     "sessionId" : "1234",
     "events":[
         {
             "eventType":"view",
-            "scope": "example",
+            "scope": "mydigital",
             "source":{
                 "itemType": "site",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId": "mysite"
             },
             "target":{
                 "itemType":"page",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
@@ -334,8 +353,8 @@ to send additional events.
 
 ==== Where to go from here
 
-* You can find more <<Useful Apache Unomi URLs,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
-* Read the <<Twitter sample,Twitter sample>> documentation that contains a detailed example of how to integrate with Apache Unomi.
+* You can find more <<_useful_apache_unomi_urls,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
+* Read the <<_twitter_sample,Twitter sample>> documentation that contains a detailed example of how to integrate with Apache Unomi.
 
 === Public API Examples
 
@@ -1347,7 +1366,8 @@ To remove the Groovy action:
 [source]
 ----
 curl -X DELETE http://localhost:8181/cxs/groovyActions/extractBirthday \
---user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY"
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json"
 ----
 
 NOTE: This will only remove the Groovy script. You'll need to separately delete the action definition and rule if desired.
@@ -1379,7 +1399,7 @@ To use the explain parameter, you must have one of the following roles:
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234&explain=true \
---user "karaf:karaf" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -1399,7 +1419,7 @@ EOF
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/eventcollector?explain=true \
---user "karaf:karaf" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -1581,7 +1601,7 @@ This example demonstrates using the explain parameter to understand how personal
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234&explain=true \
---user "karaf:karaf" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {

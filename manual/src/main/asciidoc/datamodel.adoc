@@ -683,7 +683,7 @@ Here is an example of a simple segment definition registered using the REST API:
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/segments \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {

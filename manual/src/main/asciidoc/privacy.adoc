@@ -69,8 +69,11 @@ session data will also be detached from the current profile and anonymized.
 
 [source]
 ----
-curl -X DELETE http://localhost:8181/cxs/privacy/profiles/{profileID}?withData=false --user karaf:karaf
+curl -X DELETE http://localhost:8181/cxs/privacy/profiles/{profileID}?withData=false \
+--user "TENANT_ID:PRIVATE_KEY"
 ----
+
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (`karaf:karaf`).
 
 where `{profileID}` must be replaced by the actual identifier of a profile
 and the `withData` specifies whether the data associated with the profile must be anonymized or not

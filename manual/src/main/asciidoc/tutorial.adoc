@@ -95,7 +95,7 @@ You might notice the `scope` used in the snippet. All events sent to Unomi must 
 [source,shell]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/scopes' \
-  --header 'Authorization: Basic a2FyYWY6a2FyYWY=' \
+  --user "TENANT_ID:PRIVATE_KEY" \
   --header 'Content-Type: application/json' \
   --data-raw '{
     "itemId": "unomi-tracker-test",
@@ -106,7 +106,7 @@ curl --location --request POST 'http://localhost:8181/cxs/scopes' \
   }'
 ----
 
-The authorization is the default username/password for the REST API, which is `karaf:karaf` and you that should definitely be changed as soon as possible by modifying the `etc/users.properties` file.
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (`karaf:karaf`). The default `karaf:karaf` credentials should be changed as soon as possible by modifying the `etc/users.properties` file.
 
 ==== Using tracker in your own JavaScript projects
 
@@ -184,7 +184,7 @@ There are multiple ways to view the events that were received. For example, you 
 [source,shell]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/events/search' \
-  --header 'Authorization: Basic a2FyYWY6a2FyYWY=' \
+  --user "TENANT_ID:PRIVATE_KEY" \
   --header 'Content-Type: application/json' \
   --data-raw '{
     "sortby" : "timeStamp:desc",
@@ -221,7 +221,7 @@ You could also retrieve the profile details using the REST API by using a reques
 [source,shell]
 ----
 curl --location --request GET 'http://localhost:8181/cxs/profiles/PROFILE_UUID' \
---header 'Authorization: Basic a2FyYWY6a2FyYWY=' \
+--user "TENANT_ID:PRIVATE_KEY"
 ----
 
 ==== Adding a rule
@@ -233,7 +233,7 @@ In this example we will simply setup a basic rule that will react to the `view` 
 [source,shell]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/rules' \
---header 'Authorization: Basic a2FyYWY6a2FyYWY=' \
+--user "TENANT_ID:PRIVATE_KEY" \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "metadata": {

@@ -67,10 +67,52 @@ Initializing profile service endpoint...
 Initializing cluster service endpoint...
 ----
 
-This indicates that all the Unomi services are started and ready to react to requests. You can then:
+This indicates that all the Unomi services are started and ready to react to requests. 
+
+Before you can use the API, you need to create a tenant:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/tenants \
+  --user karaf:karaf \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestedId": "default",
+    "properties": {
+      "name": "Default Tenant",
+      "description": "Default tenant for getting started"
+    }
+  }'
+----
+
+Save the API keys from the response - you'll need them for all subsequent API calls.
+
+Now you can:
 
 1. Access the RESTful services list: `http://localhost:8181/cxs`
-2. Retrieve an initial context: `http://localhost:8181/cxs/context.json`
+
+2. Retrieve an initial context:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+  -H "Content-Type: application/json" \
+  -H "X-Unomi-Api-Key: <YOUR_PUBLIC_API_KEY>" \
+  -d '{
+    "source": {
+      "itemId": "homepage",
+      "itemType": "page",
+      "scope": "default"
+    }
+  }'
+----
+
+[NOTE]
+====
+This request will automatically create a profile and session if they don't exist, and return a cookie with the profile ID. See <<_how_profile_tracking_works,How profile tracking works>> for details.
+====
+
++
 3. View the introduction page: `http://localhost:8181`
 
 Also now that your service is up and running you can go look at the

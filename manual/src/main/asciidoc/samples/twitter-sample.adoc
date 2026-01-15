@@ -215,6 +215,7 @@ Here is an example of a filter request:
 ----
 curl --location --request POST 'http://localhost:8181/cxs/context.json' \
 --header 'Content-Type: application/json' \
+--header 'X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY' \
 --header 'Cookie: JSESSIONID=48C8AFB3E18B8E3C93C2F4D5B7BD43B7; context-profile-id=01060c4c-a055-4c8f-9692-8a699d0c434a' \
 --data-raw '{
     "source": null,
@@ -284,6 +285,7 @@ Here is an example of a `personalizations` request:
 ----
 curl --location --request POST 'http://localhost:8181/cxs/context.json' \
 --header 'Content-Type: application/json' \
+--header 'X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY' \
 --header 'Cookie: JSESSIONID=48C8AFB3E18B8E3C93C2F4D5B7BD43B7; context-profile-id=01060c4c-a055-4c8f-9692-8a699d0c434a' \
 --data-raw '{
     "source": null,

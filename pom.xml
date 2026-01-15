@@ -160,7 +160,7 @@
         <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
         <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
         <frontend-maven-plugin.version>1.12.1</frontend-maven-plugin.version>
-        <asciidoctor-maven-plugin.version>3.1.1</asciidoctor-maven-plugin.version>
+        <asciidoctor-maven-plugin.version>3.2.0</asciidoctor-maven-plugin.version>
         <checksum-maven-plugin.version>1.7</checksum-maven-plugin.version>
         <maven-jar-plugin.version>3.2.2</maven-jar-plugin.version>
         <maven-checkstyle-plugin.version>2.13</maven-checkstyle-plugin.version>

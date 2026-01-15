@@ -16,6 +16,8 @@
 
 The JSON schema endpoints are private, so the user has to be authenticated to manage the JSON schema in Unomi.
 
+IMPORTANT: JSON schema endpoints require tenant authentication using Basic Auth with `tenantId:privateKey`. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (`karaf:karaf`).
+
 ==== List existing schemas
 
 The REST endpoint GET `{{url}}/cxs/jsonSchema` allows to get all ids of available schemas and subschemas.
@@ -62,12 +64,14 @@ Example:
 [source]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/jsonSchema/query' \
--u 'karaf:karaf'
+--user 'TENANT_ID:PRIVATE_KEY' \
 --header 'Content-Type: text/plain' \
---header 'Cookie: context-profile-id=0f2fbca8-c242-4e6d-a439-d65fcbf0f0a8' \
 --data-raw 'https://unomi.apache.org/schemas/json/event/1-0-0'
 ----
 
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. You can obtain these when creating a tenant via the Tenant API (which requires system administrator authentication).
+
+[[_create_update_json_schema]]
 ==== Create / update a JSON schema to validate an event
 
 It’s possible to add or update JSON schema by calling the endpoint `POST {{url}}/cxs/jsonSchema` with the JSON schema in the payload of the request.
@@ -78,9 +82,8 @@ Example of creation:
 [source]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/jsonSchema' \
--u 'karaf:karaf' \
+--user 'TENANT_ID:PRIVATE_KEY' \
 --header 'Content-Type: application/json' \
---header 'Cookie: context-profile-id=0f2fbca8-c242-4e6d-a439-d65fcbf0f0a8' \
 --data-raw '{
     "$id": "https://vendor.test.com/schemas/json/events/dummy/1-0-0",
     "$schema": "https://json-schema.org/draft/2019-09/schema",
@@ -116,11 +119,12 @@ Example:
 [source]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/jsonSchema/delete' \
--u 'karaf:karaf' \
+--user 'TENANT_ID:PRIVATE_KEY' \
 --header 'Content-Type: text/plain' \
---header 'Cookie: context-profile-id=0f2fbca8-c242-4e6d-a439-d65fcbf0f0a8' \
 --data-raw 'https://vendor.test.com/schemas/json/events/dummy/1-0-0'
 ----
+
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key.
 
 ==== Error Management
 

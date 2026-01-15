@@ -386,12 +386,12 @@ unomi:tenant-generate-key mytenant PUBLIC 30
 
 There are three ways to authenticate with the Unomi API:
 
-1. JAAS Authentication (Full Admin Access):
+1. Tenant Authentication (Recommended for most endpoints):
 [source,bash]
 ----
-# List all profiles (admin access)
+# List all profiles (tenant access)
 curl -X GET "http://localhost:8181/cxs/profiles" \
-  -u karaf:karaf \
+  --user "TENANT_ID:PRIVATE_KEY" \
   -H "Accept: application/json"
 
 # Response (HTTP 200 OK):
@@ -443,7 +443,7 @@ curl -X POST "http://localhost:8181/cxs/context.json" \
 ----
 # Get profiles using tenant credentials
 curl -X GET "http://localhost:8181/cxs/profiles" \
-  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  --user "mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6" \
   -H "Accept: application/json"
 
 # Response (HTTP 200 OK):
@@ -525,12 +525,12 @@ Example private endpoint access:
 ----
 # Get segment details
 curl -X GET "http://localhost:8181/cxs/segments/important-customers" \
-  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  --user "mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6" \
   -H "Accept: application/json"
 
 # Create a new segment
 curl -X POST "http://localhost:8181/cxs/segments" \
-  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  --user "mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6" \
   -H "Content-Type: application/json" \
   -d '{
     "itemId": "high-value-customers",
@@ -795,9 +795,11 @@ Deploy/update an Action:
 [source,bash]
 ----
 curl -X POST 'http://localhost:8181/cxs/groovyActions' \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 --form 'file=@"<file location>"'
 ----
+
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key.
 
 A Groovy Action can be updated by submitting another Action with the same id.
 
@@ -805,7 +807,7 @@ Delete an Action:
 [source,bash]
 ----
 curl -X DELETE 'http://localhost:8181/cxs/groovyActions/<Action id>' \
---user karaf:karaf
+--user "TENANT_ID:PRIVATE_KEY"
 ----
 
 Note that when a groovy action is deleted by the API, the action type associated with this action will also be deleted.
@@ -834,7 +836,7 @@ Once the action has been created you need to submit it to Unomi (from the same f
 [source,bash]
 ----
 curl -X POST 'http://localhost:8181/cxs/groovyActions' \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 --form 'file=@helloWorldGroovyAction.groovy'
 ----
 
@@ -844,7 +846,7 @@ Finally, register a rule to trigger execution of the groovy action:
 [source,bash]
 ----
 curl -X POST 'http://localhost:8181/cxs/rules' \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 --header 'Content-Type: application/json' \
 --data-raw '{
  "metadata": {
@@ -877,14 +879,14 @@ Once you're done with the Hello World! action, it can be deleted using the follo
 [source,bash]
 ----
 curl -X DELETE 'http://localhost:8181/cxs/groovyActions/helloWorldGroovyAction' \
---user karaf:karaf
+--user "TENANT_ID:PRIVATE_KEY"
 ----
 
 And the corresponding rule can be deleted using the following command:
 [source,bash]
 ----
 curl -X DELETE 'http://localhost:8181/cxs/rules/scriptGroovyActionRule' \
---user karaf:karaf
+--user "TENANT_ID:PRIVATE_KEY"
 ----
 
 ===== Inject an OSGI service in a groovy script
@@ -1882,7 +1884,7 @@ curl -X POST "http://localhost:8181/cxs/context.json" \
 ----
 # Get profiles using tenant credentials
 curl -X GET "http://localhost:8181/cxs/profiles" \
-  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  --user "mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6" \
   -H "Accept: application/json"
 
 # Response (HTTP 200 OK):
@@ -1964,12 +1966,12 @@ Example private endpoint access:
 ----
 # Get segment details
 curl -X GET "http://localhost:8181/cxs/segments/important-customers" \
-  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  --user "mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6" \
   -H "Accept: application/json"
 
 # Create a new segment
 curl -X POST "http://localhost:8181/cxs/segments" \
-  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  --user "mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6" \
   -H "Content-Type: application/json" \
   -d '{
     "itemId": "high-value-customers",

@@ -175,7 +175,7 @@ To make this query work you need to supply authorization token in the `HTTP head
 }
 ----
 
-The above header adds `Basic` authorization scheme with base64 encoded `karaf:karaf` value to the request.
+NOTE: When using curl, you can use the `--user` option instead of manually encoding credentials. For example, `--user karaf:karaf` automatically handles Base64 encoding for Basic authentication.
 
 The result will now show the list of profiles:
 

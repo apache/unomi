@@ -14,22 +14,1173 @@
 [[_how_profile_tracking_works]]
 === How profile tracking works
 
-In this section you will learn how Apache Unomi keeps track of visitors.
+In this section you will learn how Apache Unomi keeps track of visitors and processes context requests.
 
-==== Steps
+==== Overview
 
-1. A visitor comes to a website
-2. The web server resolves a previous request session ID if it exists, or if it doesn't it create a new sessionID
-3. A request to Apache Unomi's /cxs/context.json servlet is made passing the web server session ID as a query parameter
-4. Unomi uses the sessionID and tries to load an existing session, if none is found a new session is created with the
-ID passed by the web server
-5. If a session was found, the profile ID is extracted from the session and if it not found, Unomi looks for a cookie
-called `context-profile-id` to read the profileID. If no profileID is found or if the session didn't exist, a new
-profile ID is created by Apache Unomi
-6. If the profile ID existed, the corresponding profile is loaded by Apache Unomi, otherwise a new profile is created
-7. If events were passed along with the request to the context.json endpoint, they are processed against the profile
-8. The updated profile is sent back as a response to the context.json request. Along with the response
+When a visitor interacts with a website that uses Apache Unomi, a single request to the `/cxs/context.json` or `/cxs/context.js` endpoint can perform multiple operations:
 
-It is important to note that the profileID is always server-generated. Injecting a custom cookie with a non-valid
-profile ID will result in failure to load the profile. Profile ID are UUIDs, which make them (pretty) safe from brute-
-forcing.
+* Automatically create or load a visitor profile
+* Automatically create or load a visitor session
+* Process events (if provided)
+* Execute rules triggered by those events
+* Resolve personalization (if requested)
+* Set a cookie with the profile ID for future requests
+
+All of this happens in a single request-response cycle, making Apache Unomi efficient and easy to integrate.
+
+[plantuml]
+----
+@startuml
+title Overview: Single Request Processing Flow
+
+Client -> ContextEndpoint: POST /cxs/context.json\n+ X-Unomi-Api-Key\n+ sessionId\n+ events (optional)\n+ filters (optional)\n+ personalizations (optional)
+activate ContextEndpoint
+
+ContextEndpoint -> AuthenticationFilter: Resolve tenant
+activate AuthenticationFilter
+AuthenticationFilter -> TenantService: Lookup tenant by API key
+TenantService --> AuthenticationFilter: Tenant ID
+AuthenticationFilter --> ContextEndpoint: Tenant context set
+deactivate AuthenticationFilter
+
+ContextEndpoint -> RestServiceUtils: initEventsRequest()
+activate RestServiceUtils
+RestServiceUtils -> RestServiceUtils: Resolve profile ID\n(from cookie/parameter)
+RestServiceUtils -> ProfileService: Load profile
+alt Profile not found
+    RestServiceUtils -> RestServiceUtils: Create new profile\n(generate UUID)
+end
+RestServiceUtils -> ProfileService: Load session
+alt Session not found
+    RestServiceUtils -> RestServiceUtils: Create new session
+    RestServiceUtils -> EventService: Send sessionCreated event
+end
+alt Profile was created
+    RestServiceUtils -> EventService: Send profileUpdated event
+end
+RestServiceUtils --> ContextEndpoint: EventsRequestContext
+deactivate RestServiceUtils
+
+alt Events provided
+    ContextEndpoint -> RestServiceUtils: performEventsRequest()
+    activate RestServiceUtils
+    loop For each event
+        RestServiceUtils -> EventService: Send event
+        EventService -> RulesService: Execute matching rules
+        RulesService -> RulesService: Update profile/segments/scores
+    end
+    RestServiceUtils --> ContextEndpoint: Updated context
+    deactivate RestServiceUtils
+end
+
+alt Filters provided
+    ContextEndpoint -> PersonalizationService: Filter content
+    PersonalizationService -> PersonalizationService: Evaluate conditions\n(using updated profile)
+    PersonalizationService --> ContextEndpoint: Filtering results
+end
+
+alt Personalizations provided
+    ContextEndpoint -> PersonalizationService: Resolve personalization
+    PersonalizationService -> PersonalizationService: Evaluate filters\n(using updated profile)
+    PersonalizationService --> ContextEndpoint: Selected content
+end
+
+ContextEndpoint -> RestServiceUtils: finalizeEventsRequest()
+activate RestServiceUtils
+RestServiceUtils -> ProfileService: Save profile (if updated)
+RestServiceUtils -> ProfileService: Save session (if updated)
+RestServiceUtils -> HttpUtils: Generate cookie string
+RestServiceUtils --> ContextEndpoint: Cookie set in response
+deactivate RestServiceUtils
+
+ContextEndpoint --> Client: ContextResponse\n+ Profile data\n+ Session data\n+ Personalization results\n+ Set-Cookie header
+deactivate ContextEndpoint
+
+@enduml
+----
+
+==== Detailed Request Flow
+
+When a request is made to `/cxs/context.json` or `/cxs/context.js`, Apache Unomi processes it through the following steps:
+
+[IMPORTANT]
+====
+**Tenant Resolution (Version 3.1+)**
+
+Starting with Apache Unomi 3.1, tenant resolution is mandatory for all requests to `/cxs/context.json` and `/cxs/eventcollector` endpoints. Apache Unomi must know which tenant's data to use before processing the request. The tenant is resolved through one of the following methods (in priority order):
+
+1. **Public API Key Authentication** (Recommended for public endpoints):
+   * Send the `X-Unomi-Api-Key` header with a public API key
+   * Apache Unomi automatically resolves the tenant from the API key
+   * This is the recommended method for public-facing applications
+
+2. **Basic Authentication with Private API Key**:
+   * Use Basic Auth with format: `tenantId:privateApiKey`
+   * The tenant is resolved from the credentials
+   * This is used for administrative or server-to-server requests
+
+3. **Tenant ID Header** (When using JAAS authentication):
+   * Send the `X-Unomi-Tenant-Id` header with the tenant ID
+   * Used when authenticating via JAAS (e.g., `karaf:karaf`)
+   * The tenant ID must exist in the system
+
+If no tenant can be resolved, the request will fail with an `UNAUTHORIZED` (401) error. This ensures that all data operations are scoped to the correct tenant in multi-tenant deployments.
+====
+
+===== Example: Tenant Resolution
+
+Here are examples of how to authenticate and resolve the tenant:
+
+**Example 1: Using Public API Key (Recommended)**
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "X-Unomi-Api-Key: public-key-abc123..." \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    }
+}'
+----
+
+The tenant is automatically resolved from the public API key. No additional headers needed.
+
+**Example 2: Using Basic Auth with Private API Key**
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+--user "mytenant:private-key-xyz789..." \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    }
+}'
+----
+
+The tenant is resolved from the Basic Auth credentials (`mytenant` is the tenant ID).
+
+**Example 3: Using JAAS Auth with Tenant Header**
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+--user "karaf:karaf" \
+-H "X-Unomi-Tenant-Id: mytenant" \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    }
+}'
+----
+
+The tenant is resolved from the `X-Unomi-Tenant-Id` header when using JAAS authentication.
+
+[plantuml]
+----
+@startuml
+title Tenant Resolution Flow (Version 3.1+)
+
+Client -> AuthenticationFilter: Request with authentication
+activate AuthenticationFilter
+
+alt Public API Key (Recommended)
+    Client -> AuthenticationFilter: X-Unomi-Api-Key header
+    AuthenticationFilter -> TenantService: getTenantByApiKey(apiKey, PUBLIC)
+    TenantService --> AuthenticationFilter: Tenant
+    AuthenticationFilter -> ExecutionContextManager: Set tenant context
+    AuthenticationFilter --> Client: Request authorized
+else Basic Auth with Private Key
+    Client -> AuthenticationFilter: Basic Auth: tenantId:privateKey
+    AuthenticationFilter -> TenantService: validateApiKeyWithType(tenantId, key, PRIVATE)
+    TenantService --> AuthenticationFilter: Valid
+    AuthenticationFilter -> ExecutionContextManager: Set tenant context
+    AuthenticationFilter --> Client: Request authorized
+else JAAS Auth with Tenant Header
+    Client -> AuthenticationFilter: JAAS Auth + X-Unomi-Tenant-Id header
+    AuthenticationFilter -> TenantService: getTenant(tenantId)
+    TenantService --> AuthenticationFilter: Tenant
+    AuthenticationFilter -> ExecutionContextManager: Set tenant context
+    AuthenticationFilter --> Client: Request authorized
+else No Tenant Resolved
+    AuthenticationFilter --> Client: 401 UNAUTHORIZED
+end
+
+deactivate AuthenticationFilter
+
+note right of AuthenticationFilter
+    Tenant resolution is mandatory
+    in version 3.1+ for context.json
+    and eventcollector endpoints
+end note
+
+@enduml
+----
+
+===== Step 1: Profile Identification and Creation
+
+[IMPORTANT]
+====
+At least one of the following must be provided in the request: `sessionId`, `profileId` (as a parameter or in a cookie), or `personaId`. If none of these are provided, the request will fail with a `BadRequestException` (400 error).
+====
+
+Apache Unomi attempts to identify the visitor's profile through the following process:
+
+1. **Profile ID Resolution**: 
+   * First checks for a `profileId` parameter in the request
+   * If not found, looks for a cookie named `context-profile-id` (configurable via `org.apache.unomi.profile.cookie.name`)
+   * Cookie values are validated against a JSON schema - invalid values (e.g., containing script tags) will cause a `400 Bad Request` error
+   * The resolved profile ID is used to attempt loading the profile from the database
+
+2. **Session Profile Override** (if session exists):
+   * If a session is found (see Step 2) and contains a profile ID that differs from the cookie/profileId parameter
+   * Apache Unomi uses the session's profile ID instead (this handles cases where a user switches accounts)
+   * The profile is reloaded from the database using the session's profile ID
+
+3. **Profile Creation**: If no profile ID is found or the profile doesn't exist:
+   * If a profile ID was provided (from parameter or cookie) but doesn't exist in the database, creates a new profile with that ID
+   * If no profile ID was found, generates a new UUID as the profile ID and creates a new profile
+   * Sets the `firstVisit` property to the current timestamp
+   * Marks the profile for persistence
+   * Note: The `profileUpdated` event is sent after session creation (if a session is created) to ensure proper event ordering
+
+This ensures that profiles are always available for processing, even for first-time visitors or after database resets.
+
+[IMPORTANT]
+====
+The profile ID is always server-generated (UUID format). Even if a client sends a custom profile ID in a cookie or parameter, Apache Unomi validates it exists in the database. If it doesn't exist, a new profile is created (potentially with that ID if provided via parameter, or with a newly generated UUID). This makes profile IDs secure and prevents profile ID manipulation.
+====
+
+===== Example: Profile Identification
+
+**Example 1: First-Time Visitor (No Cookie)**
+
+[source,bash]
+----
+# Request (no cookie sent)
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    }
+}'
+----
+
+**Response Headers:**
+[source,http]
+----
+Set-Cookie: context-profile-id=a1b2c3d4-e5f6-7890-abcd-ef1234567890; Path=/; Max-Age=31536000; SameSite=Lax
+----
+
+**Response Body:**
+[source,json]
+----
+{
+    "profileId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "sessionId": "1234"
+}
+----
+
+Apache Unomi generated a new UUID (`a1b2c3d4-e5f6-7890-abcd-ef1234567890`) and created a new profile. The profile ID is returned in both the response body and the `Set-Cookie` header.
+
+**Example 2: Returning Visitor (With Cookie)**
+
+[source,bash]
+----
+# Request (browser automatically sends cookie)
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Cookie: context-profile-id=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    }
+}'
+----
+
+**Response:**
+[source,json]
+----
+{
+    "profileId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "sessionId": "1234"
+}
+----
+
+Apache Unomi loaded the existing profile using the profile ID from the cookie.
+
+**Example 3: Using profileId Parameter**
+
+[source,bash]
+----
+# Request with explicit profileId parameter
+curl -X POST "http://localhost:8181/cxs/context.json?sessionId=1234&profileId=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    }
+}'
+----
+
+The `profileId` parameter takes precedence over the cookie value.
+
+[plantuml]
+----
+@startuml
+title Profile and Session Identification Flow
+
+RestServiceUtils -> RestServiceUtils: Get profileId from parameter
+alt profileId parameter exists
+    RestServiceUtils -> ProfileService: load(profileId)
+else Check cookie
+    RestServiceUtils -> HttpServletRequest: getCookie("context-profile-id")
+    HttpServletRequest --> RestServiceUtils: profileId from cookie
+    RestServiceUtils -> ProfileService: load(profileId)
+end
+
+alt Profile found
+    RestServiceUtils -> RestServiceUtils: Use existing profile
+else Profile not found
+    RestServiceUtils -> RestServiceUtils: createNewProfile(profileId or null)
+    RestServiceUtils -> RestServiceUtils: Generate UUID if needed
+    RestServiceUtils -> RestServiceUtils: Set firstVisit property
+    RestServiceUtils -> EventService: Send profileUpdated event
+    RestServiceUtils -> RestServiceUtils: Mark for persistence
+end
+
+alt sessionId provided
+    RestServiceUtils -> ProfileService: loadSession(sessionId)
+    alt Session found
+        RestServiceUtils -> RestServiceUtils: Check session profile
+        alt Session profile differs
+            RestServiceUtils -> ProfileService: load(sessionProfileId)
+            RestServiceUtils -> RestServiceUtils: Use session's profile
+        end
+    else Session not found
+        RestServiceUtils -> RestServiceUtils: Create new Session(sessionId, profile)
+        RestServiceUtils -> EventService: Send sessionCreated event
+        RestServiceUtils -> RestServiceUtils: Mark for persistence
+    end
+end
+
+@enduml
+----
+
+===== Step 2: Session Identification and Creation
+
+If a `sessionId` is provided in the request:
+
+1. **Session Loading**: Apache Unomi attempts to load the existing session from the database
+2. **Profile Association**: If a session is found, it may contain a profile ID that takes precedence over the cookie/profileId parameter
+3. **Session Creation**: If no session is found or the session is invalidated:
+   * Creates a new session with the provided `sessionId`
+   * Associates the session with the current profile (or anonymous profile if privacy settings require it)
+   * Sends a `sessionCreated` event (this happens before the `profileUpdated` event if both profile and session are created)
+   * Marks the session for persistence
+   * After session creation, if a new profile was created, sends a `profileUpdated` event (non-persistent) to mark the profile creation
+
+If no `sessionId` is provided, a transient (non-persisted) session may be used for the request.
+
+===== Example: Session Creation
+
+**Example: Creating a New Session**
+
+[source,bash]
+----
+# First request with a new sessionId
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=abc-123-xyz \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    }
+}'
+----
+
+Apache Unomi will:
+1. Check if session `abc-123-xyz` exists
+2. If not found, create a new session with ID `abc-123-xyz`
+3. Associate it with the current profile
+4. Send a `sessionCreated` event
+5. Save the session to the database
+
+**Subsequent Request with Same Session:**
+
+[source,bash]
+----
+# Request with existing sessionId
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=abc-123-xyz \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Cookie: context-profile-id=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "product-page",
+        "itemType": "page",
+        "scope": "mydigital"
+    }
+}'
+----
+
+Apache Unomi loads the existing session `abc-123-xyz` and uses the profile associated with it.
+
+===== Step 3: Event Processing
+
+If events are provided in the request body:
+
+1. **Event Validation**: Each event is validated against its JSON schema
+2. **Event Authorization**: 
+   * Events are checked for tenant authorization (the tenant must be authorized to send the event type)
+   * Events are filtered based on privacy settings (if the profile has opted out of certain event types)
+   * Events are checked against IP address restrictions if configured
+3. **Event Execution**: For each valid event:
+   * The event is sent to the event service
+   * All matching rules are automatically executed (this happens synchronously during the request)
+   * Rules can trigger actions that modify the profile, session, or trigger other events
+   * Profile segments and scores are recalculated based on rule execution
+   * If the profile is updated during rule execution, the updated profile is used for subsequent events in the same request
+4. **Profile Updates**: If events cause profile changes, the profile is marked for persistence
+
+This is where the power of Apache Unomi's rule engine comes into play - events automatically trigger rules, which can perform complex logic, update profiles, add segments, calculate scores, and more. All of this happens within the same request, ensuring that personalization and subsequent operations use the most up-to-date profile state.
+
+===== Example: Event Processing with Rule Execution
+
+**Example: Sending a View Event**
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Cookie: context-profile-id=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "product-page",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "events": [
+        {
+            "eventType": "view",
+            "scope": "mydigital",
+            "source": {
+                "itemType": "site",
+                "scope": "mydigital",
+                "itemId": "mysite"
+            },
+            "target": {
+                "itemType": "product",
+                "scope": "mydigital",
+                "itemId": "product-123",
+                "properties": {
+                    "name": "Awesome Product",
+                    "category": "electronics",
+                    "price": 99.99
+                }
+            }
+        }
+    ]
+}'
+----
+
+**What Happens:**
+
+1. The `view` event is validated against its schema
+2. The event is checked for tenant authorization
+3. The event is sent to the event service
+4. All rules matching the `view` event are executed:
+   * Rules might increment a `pageViewCount` property
+   * Rules might add the profile to a "product-viewers" segment
+   * Rules might calculate a score based on product category
+   * Rules might trigger additional events
+5. The profile is updated with any changes from rule execution
+6. The updated profile is used for personalization (if requested)
+
+**Response:**
+[source,json]
+----
+{
+    "profileId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "sessionId": "1234",
+    "processedEvents": 1
+}
+----
+
+The `processedEvents` field indicates that 1 event was successfully processed. The profile may have been updated by rules triggered by this event.
+
+[plantuml]
+----
+@startuml
+title Event Processing and Rule Execution Flow
+
+RestServiceUtils -> RestServiceUtils: performEventsRequest(events)
+activate RestServiceUtils
+
+loop For each event in request
+    RestServiceUtils -> SchemaService: Validate event schema
+    alt Event valid
+        RestServiceUtils -> RestServiceUtils: Check tenant authorization
+        RestServiceUtils -> PrivacyService: Check privacy filters
+        alt Event authorized and not filtered
+            RestServiceUtils -> EventService: send(event)
+            activate EventService
+            EventService -> RulesService: Find matching rules
+            activate RulesService
+            loop For each matching rule
+                RulesService -> RulesService: Evaluate rule conditions
+                alt Conditions match
+                    RulesService -> RulesService: Execute rule actions
+                    RulesService -> ProfileService: Update profile properties
+                    RulesService -> ProfileService: Recalculate segments
+                    RulesService -> ProfileService: Recalculate scores
+                    RulesService -> EventService: Trigger additional events (if any)
+                end
+            end
+            deactivate RulesService
+            EventService --> RestServiceUtils: Event processed
+            deactivate EventService
+            RestServiceUtils -> RestServiceUtils: Update profile from event
+        else Event filtered or not authorized
+            RestServiceUtils -> RestServiceUtils: Skip event
+        end
+    else Event invalid
+        RestServiceUtils -> RestServiceUtils: Skip event
+    end
+end
+
+RestServiceUtils -> RestServiceUtils: Mark profile for persistence\nif changes occurred
+deactivate RestServiceUtils
+
+note right of RulesService
+    Rules execute synchronously
+    during the request, ensuring
+    profile updates are immediately
+    available for personalization
+end note
+
+@enduml
+----
+
+===== Step 4: Content Filtering and Personalization Resolution
+
+If filters or personalization requests are provided in the request body:
+
+1. **Content Filtering** (if `filters` are provided):
+   * For each filter node, evaluates conditions against the current profile and session
+   * Returns filtering results indicating which content variants match
+   * Results are added to the response's `filteringResults` object
+
+2. **Personalization Resolution** (if `personalizations` are provided):
+   * For each personalization request:
+     * Evaluates content filters against the current profile and session (which may have been updated by events in Step 3)
+     * Filters use conditions to determine which content variants match
+     * Applies the personalization strategy (e.g., "matching-first", "random", etc.)
+   * **Content Selection**: Selects the appropriate content based on:
+     * Filter condition evaluation results
+     * Personalization strategy
+     * Fallback content (if no filters match)
+   * Results are added to both `personalizationResults` (detailed results) and `personalizations` (selected content IDs) in the response
+
+Note that personalization uses the profile state after event processing, ensuring that events can influence which content is selected.
+
+===== Example: Personalization Resolution
+
+**Example: Request with Events and Personalization**
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Cookie: context-profile-id=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "events": [
+        {
+            "eventType": "view",
+            "scope": "mydigital",
+            "target": {
+                "itemType": "page",
+                "scope": "mydigital",
+                "itemId": "homepage"
+            }
+        }
+    ],
+    "personalizations": [
+        {
+            "id": "homepage-hero",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "default-hero"
+            },
+            "contents": [
+                {
+                    "id": "premium-user-hero",
+                    "content": "Welcome, Premium Member!",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "profileSegmentCondition",
+                                "parameterValues": {
+                                    "segments": ["premium-users"]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "new-visitor-hero",
+                    "content": "Welcome! Sign up today!",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "profilePropertyCondition",
+                                "parameterValues": {
+                                    "propertyName": "properties.firstVisit",
+                                    "comparisonOperator": "exists"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "requireSegments": true
+}'
+----
+
+**Processing Flow:**
+
+1. **Event Processing**: The `view` event is processed first, which may trigger rules that:
+   * Add the profile to segments
+   * Update profile properties
+   * Calculate scores
+
+2. **Personalization Resolution**: After events are processed, personalization is evaluated:
+   * For a first-time visitor: The `new-visitor-hero` content matches (because `firstVisit` exists)
+   * For a premium user: The `premium-user-hero` content matches (if the profile is in the "premium-users" segment)
+   * The `matching-first` strategy selects the first matching content
+
+3. **Response**: The response includes the selected content
+
+**Response:**
+[source,json]
+----
+{
+    "profileId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "sessionId": "1234",
+    "processedEvents": 1,
+    "profileSegments": ["new-visitors"],
+    "personalizations": {
+        "homepage-hero": "new-visitor-hero"
+    },
+    "personalizationResults": {
+        "homepage-hero": {
+            "selectedContentId": "new-visitor-hero",
+            "strategy": "matching-first"
+        }
+    }
+}
+----
+
+The `personalizations` object shows the selected content ID for each personalization request. The `personalizationResults` provides detailed information about the selection process.
+
+[plantuml]
+----
+@startuml
+title Personalization Resolution Flow
+
+ContextEndpoint -> PersonalizationService: personalizeList(profile, session, request)
+activate PersonalizationService
+
+loop For each personalization request
+    PersonalizationService -> PersonalizationService: Get content variants
+    
+    loop For each content variant
+        PersonalizationService -> PersonalizationService: Evaluate content filters
+        activate PersonalizationService
+        
+        loop For each filter condition
+            PersonalizationService -> ConditionService: Evaluate condition\n(profile, session, event history)
+            ConditionService --> PersonalizationService: Match result
+        end
+        
+        alt All filters match
+            PersonalizationService -> PersonalizationService: Content variant matches
+        else Filters don't match
+            PersonalizationService -> PersonalizationService: Skip variant
+        end
+        deactivate PersonalizationService
+    end
+    
+    PersonalizationService -> PersonalizationService: Apply strategy\n(matching-first, random, etc.)
+    alt Content selected
+        PersonalizationService -> PersonalizationService: Use selected content
+    else No content matches
+        PersonalizationService -> PersonalizationService: Use fallback content
+    end
+end
+
+PersonalizationService --> ContextEndpoint: PersonalizationResult
+deactivate PersonalizationService
+
+note right of PersonalizationService
+    Personalization uses the profile
+    state AFTER event processing,
+    so events can influence
+    content selection
+end note
+
+@enduml
+----
+
+===== Step 5: Response Preparation
+
+The response is built with the following information (based on what was requested in the `ContextRequest`):
+
+* **Profile Information**: 
+  * Profile ID (always included)
+  * Profile properties (if `requiredProfileProperties` is specified, with `"*"` for all properties)
+  * Profile segments (if `requireSegments` is `true`)
+  * Profile scores (if `requireScores` is `true`)
+  * Anonymous browsing status
+  * Consent information
+* **Session Information**: 
+  * Session ID (if session exists)
+  * Session properties (if `requiredSessionProperties` is specified)
+* **Event Processing Results**: 
+  * Count of processed events (`processedEvents`)
+* **Personalization Results**: 
+  * `personalizations`: Map of personalization ID to selected content IDs
+  * `personalizationResults`: Detailed results for each personalization request
+* **Filtering Results**: 
+  * `filteringResults`: Results of content filtering operations (if `filters` were provided)
+* **Tracked Conditions**: 
+  * Conditions that are being tracked for the current source (if not using a Persona)
+
+===== Step 6: Cookie Setting
+
+After processing, Apache Unomi sets a cookie in the HTTP response header (`Set-Cookie`) with:
+
+[NOTE]
+====
+Cookies are only set for regular profiles, not for Personas. If a `personaId` is used in the request, no cookie will be set in the response.
+====
+
+* **Cookie Name**: `context-profile-id` (configurable, default: `context-profile-id`)
+* **Cookie Value**: The profile ID (UUID)
+* **Cookie Attributes**:
+  * `Path=/` - Available for all paths on the domain
+  * `Max-Age=31536000` - Valid for 1 year by default (configurable via `org.apache.unomi.profile.cookie.maxAgeInSeconds`)
+  * `SameSite=Lax` - CSRF protection
+  * `Secure` - Set if the request is over HTTPS (configurable)
+  * `HttpOnly` - Configurable via `org.apache.unomi.profile.cookie.httpOnly` (default: false)
+  * `Domain` - Configurable via `org.apache.unomi.profile.cookie.domain`
+
+This cookie allows the browser to automatically send the profile ID on subsequent requests, enabling Apache Unomi to load the existing profile.
+
+===== Example: Cookie Setting
+
+**Example: Cookie in Response Headers**
+
+When you make a request, Apache Unomi sets a cookie in the response. Here's what the cookie looks like:
+
+**Response Headers:**
+[source,http]
+----
+HTTP/1.1 200 OK
+Content-Type: application/json;charset=UTF-8
+Set-Cookie: context-profile-id=a1b2c3d4-e5f6-7890-abcd-ef1234567890; Path=/; Max-Age=31536000; SameSite=Lax
+----
+
+**Cookie Breakdown:**
+* `context-profile-id` - Cookie name (configurable)
+* `a1b2c3d4-e5f6-7890-abcd-ef1234567890` - Profile ID (UUID)
+* `Path=/` - Available for all paths on the domain
+* `Max-Age=31536000` - Valid for 1 year (31,536,000 seconds)
+* `SameSite=Lax` - CSRF protection
+
+**Subsequent Requests:**
+
+On the next request, the browser automatically includes the cookie:
+
+[source,http]
+----
+# Browser automatically sends cookie
+GET /cxs/context.json?sessionId=1234 HTTP/1.1
+Host: localhost:8181
+X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY
+Cookie: context-profile-id=a1b2c3d4-e5f6-7890-abcd-ef1234567890
+----
+
+Apache Unomi reads the cookie and loads the existing profile, maintaining continuity across requests.
+
+===== Step 7: Persistence
+
+Finally, Apache Unomi persists any changes:
+
+* **Profile Persistence**: If the profile was created or updated, it is saved to the database
+* **Session Persistence**: If the session was created or updated, it is saved to the database
+
+==== First-Time Visitor Flow
+
+For a first-time visitor making their first request:
+
+1. No `context-profile-id` cookie exists
+2. No `profileId` parameter is provided
+3. Apache Unomi generates a new UUID and creates a new profile
+4. If a `sessionId` is provided, a new session is created
+5. The profile ID is returned in a cookie
+6. The browser stores the cookie
+7. On subsequent requests, the browser automatically sends the cookie
+8. Apache Unomi loads the existing profile using the cookie value
+
+===== Complete Example: First-Time Visitor Journey
+
+**Request 1: First Visit (No Cookie)**
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=visitor-123 \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "events": [
+        {
+            "eventType": "view",
+            "scope": "mydigital",
+            "target": {
+                "itemType": "page",
+                "scope": "mydigital",
+                "itemId": "homepage"
+            }
+        }
+    ],
+    "requiredProfileProperties": ["properties.firstVisit"]
+}'
+----
+
+**Response Headers:**
+[source,http]
+----
+Set-Cookie: context-profile-id=7f8e9d0c-1b2a-3456-7890-abcdef123456; Path=/; Max-Age=31536000; SameSite=Lax
+----
+
+**Response Body:**
+[source,json]
+----
+{
+    "profileId": "7f8e9d0c-1b2a-3456-7890-abcdef123456",
+    "sessionId": "visitor-123",
+    "processedEvents": 1,
+    "profileProperties": {
+        "firstVisit": "2024-01-15T10:30:00Z"
+    }
+}
+----
+
+**What Happened:**
+* New profile created with UUID `7f8e9d0c-1b2a-3456-7890-abcdef123456`
+* `firstVisit` property set to current timestamp
+* New session created with ID `visitor-123`
+* `sessionCreated` event sent (triggers any matching rules)
+* `profileUpdated` event sent (triggers any matching rules)
+* `view` event processed (may have triggered rules)
+* Cookie set in response header
+* Profile and session saved to database
+
+**Request 2: Second Visit (Cookie Present)**
+
+[source,bash]
+----
+# Browser automatically includes the cookie from Request 1
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=visitor-123 \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Cookie: context-profile-id=7f8e9d0c-1b2a-3456-7890-abcdef123456" \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "product-page",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "events": [
+        {
+            "eventType": "view",
+            "scope": "mydigital",
+            "target": {
+                "itemType": "product",
+                "scope": "mydigital",
+                "itemId": "product-456"
+            }
+        }
+    ],
+    "requiredProfileProperties": ["properties.firstVisit", "properties.pageViewCount"]
+}'
+----
+
+**Response:**
+[source,json]
+----
+{
+    "profileId": "7f8e9d0c-1b2a-3456-7890-abcdef123456",
+    "sessionId": "visitor-123",
+    "processedEvents": 1,
+    "profileProperties": {
+        "firstVisit": "2024-01-15T10:30:00Z",
+        "pageViewCount": 2
+    }
+}
+----
+
+**What Happened:**
+* Existing profile loaded using cookie value `7f8e9d0c-1b2a-3456-7890-abcdef123456`
+* Existing session loaded using `visitor-123`
+* `view` event processed, which may have triggered a rule that incremented `pageViewCount`
+* Cookie refreshed in response (expiration extended)
+* Updated profile saved to database
+
+The profile is now being tracked across multiple requests, and any rules triggered by events can build up a profile of the visitor's behavior.
+
+[plantuml]
+----
+@startuml
+title First-Time Visitor vs Returning Visitor Flow
+
+== First Request (First-Time Visitor) ==
+
+Client -> ContextEndpoint: POST /context.json\n+ X-Unomi-Api-Key\n+ sessionId=1234
+activate ContextEndpoint
+
+ContextEndpoint -> RestServiceUtils: initEventsRequest()
+RestServiceUtils -> HttpServletRequest: getCookie("context-profile-id")
+HttpServletRequest --> RestServiceUtils: null (no cookie)
+RestServiceUtils -> RestServiceUtils: profileId = null
+RestServiceUtils -> RestServiceUtils: createNewProfile(null)
+RestServiceUtils -> RestServiceUtils: Generate UUID: "abc-123-def"
+RestServiceUtils -> ProfileService: Create profile with firstVisit
+RestServiceUtils -> EventService: Send profileUpdated event
+RestServiceUtils -> ProfileService: Create session(sessionId, profile)
+RestServiceUtils -> EventService: Send sessionCreated event
+RestServiceUtils --> ContextEndpoint: Profile and session created
+
+ContextEndpoint -> RestServiceUtils: finalizeEventsRequest()
+RestServiceUtils -> ProfileService: Save profile
+RestServiceUtils -> ProfileService: Save session
+RestServiceUtils -> HttpUtils: Generate cookie: "context-profile-id=abc-123-def"
+RestServiceUtils -> HttpServletResponse: setHeader("Set-Cookie", cookie)
+RestServiceUtils --> ContextEndpoint: Cookie set
+
+ContextEndpoint --> Client: ContextResponse\n+ Set-Cookie: context-profile-id=abc-123-def
+deactivate ContextEndpoint
+
+Client -> Client: Browser stores cookie
+
+== Subsequent Request (Returning Visitor) ==
+
+Client -> ContextEndpoint: POST /context.json\n+ X-Unomi-Api-Key\n+ sessionId=1234\n+ Cookie: context-profile-id=abc-123-def
+activate ContextEndpoint
+
+ContextEndpoint -> RestServiceUtils: initEventsRequest()
+RestServiceUtils -> HttpServletRequest: getCookie("context-profile-id")
+HttpServletRequest --> RestServiceUtils: "abc-123-def"
+RestServiceUtils -> ProfileService: load("abc-123-def")
+ProfileService --> RestServiceUtils: Existing profile
+RestServiceUtils -> ProfileService: loadSession("1234")
+ProfileService --> RestServiceUtils: Existing session
+RestServiceUtils --> ContextEndpoint: Profile and session loaded
+
+ContextEndpoint -> RestServiceUtils: finalizeEventsRequest()
+RestServiceUtils -> HttpUtils: Generate cookie: "context-profile-id=abc-123-def"
+RestServiceUtils -> HttpServletResponse: setHeader("Set-Cookie", cookie)
+RestServiceUtils --> ContextEndpoint: Cookie refreshed
+
+ContextEndpoint --> Client: ContextResponse\n+ Set-Cookie: context-profile-id=abc-123-def\n(refreshed expiration)
+deactivate ContextEndpoint
+
+@enduml
+----
+
+==== Complete Example: Full Request Flow
+
+Here's a complete example showing all aspects of a context request:
+
+**Request:**
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=example-session \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Cookie: context-profile-id=existing-profile-uuid" \
+-H "Content-Type: application/json" \
+-d '{
+    "source": {
+        "itemId": "checkout-page",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "events": [
+        {
+            "eventType": "view",
+            "scope": "mydigital",
+            "target": {
+                "itemType": "page",
+                "scope": "mydigital",
+                "itemId": "checkout-page"
+            }
+        }
+    ],
+    "personalizations": [
+        {
+            "id": "checkout-banner",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "default-banner"
+            },
+            "contents": [
+                {
+                    "id": "discount-banner",
+                    "content": "Use code SAVE10 for 10% off!",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "profileSegmentCondition",
+                                "parameterValues": {
+                                    "segments": ["frequent-buyers"]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "requiredProfileProperties": ["*"],
+    "requireSegments": true,
+    "requireScores": true
+}'
+----
+
+**Processing Steps:**
+
+1. **Tenant Resolution**: Resolved from `X-Unomi-Api-Key` header
+2. **Profile Loading**: Loaded existing profile `existing-profile-uuid` from cookie
+3. **Session Loading**: Loaded existing session `example-session`
+4. **Event Processing**: 
+   * `view` event validated and processed
+   * Rules executed (may update profile, segments, scores)
+   * Profile updated if rules triggered changes
+5. **Personalization**: 
+   * Evaluated using updated profile state
+   * Selected content based on segment membership
+6. **Response Building**: Constructed with all requested data
+7. **Cookie Setting**: Cookie refreshed in response header
+8. **Persistence**: Profile and session saved if updated
+
+**Response:**
+[source,json]
+----
+{
+    "profileId": "existing-profile-uuid",
+    "sessionId": "example-session",
+    "processedEvents": 1,
+    "profileProperties": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "john.doe@example.com",
+        "pageViewCount": 15
+    },
+    "profileSegments": ["frequent-buyers", "premium-customers"],
+    "profileScores": {
+        "loyalty": 85,
+        "engagement": 92
+    },
+    "personalizations": {
+        "checkout-banner": "discount-banner"
+    },
+    "personalizationResults": {
+        "checkout-banner": {
+            "selectedContentId": "discount-banner",
+            "strategy": "matching-first"
+        }
+    }
+}
+----
+
+**Response Headers:**
+[source,http]
+----
+Set-Cookie: context-profile-id=existing-profile-uuid; Path=/; Max-Age=31536000; SameSite=Lax
+----
+
+This example demonstrates how a single request can:
+* Load an existing profile and session
+* Process events that trigger rules
+* Update the profile based on rule execution
+* Resolve personalization using the updated profile state
+* Return comprehensive profile data
+* Maintain tracking via cookies
+
+==== Summary
+
+A single request to `/cxs/context.json` or `/cxs/context.js` performs the following operations in sequence:
+
+1. **Tenant Resolution** (mandatory in 3.1+): Identifies which tenant's data to use
+2. **Profile/Session Management**: Creates or loads profiles and sessions automatically
+3. **Event Processing**: Processes events and executes matching rules (synchronously)
+4. **Content Filtering**: Evaluates filter conditions (if `filters` are provided)
+5. **Personalization**: Resolves personalization requests (if `personalizations` are provided)
+6. **Response Building**: Constructs the response with requested data (properties, segments, scores, etc.)
+7. **Persistence**: Saves any changes to the database (profile and session)
+8. **Cookie Setting**: Sets the profile ID cookie for future requests
+
+This integrated approach ensures that:
+* Profiles and sessions are always available, even for first-time visitors
+* Events immediately trigger rules, updating profiles in real-time
+* Personalization uses the most up-to-date profile state
+* The browser automatically tracks the visitor across requests via cookies
+
+==== Configuration
+
+The following configuration properties control profile tracking behavior:
+
+* `org.apache.unomi.profile.cookie.name` - Cookie name (default: `context-profile-id`)
+* `org.apache.unomi.profile.cookie.maxAgeInSeconds` - Cookie expiration time (default: `31536000` = 1 year)
+* `org.apache.unomi.profile.cookie.httpOnly` - Whether cookie is HTTP-only (default: `false`)
+* `org.apache.unomi.profile.cookie.domain` - Cookie domain (optional)
+
+These can be configured in the `org.apache.unomi.web.cfg` configuration file.

@@ -38,7 +38,7 @@ Here is an example of a request contains the `itemdId`
 ----
 curl -X POST http://localhost:8181/cxs/context.json \
 -H "Content-Type: application/json" \
--H "Authorization: Basic {base64-encoded-credentials}" \
+--user "TENANT_ID:PRIVATE_KEY" \
 -d @- <<'EOF'
 {
     "events":[
@@ -65,6 +65,7 @@ this can be achieved by adding `"raiseEventOnlyOnce": false` to the rule definit
 ----
 curl -X POST http://localhost:8181/cxs/context.json \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d @- <<'EOF'
 {
   "metadata": {

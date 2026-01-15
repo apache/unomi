@@ -82,6 +82,7 @@ Here is an example that will retrieve all the session and profile properties, as
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 --data-raw '{
     "source": {
         "itemId":"homepage",
@@ -143,7 +144,7 @@ Let's go into more detail about the preferred way to update a profile. Let's con
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/rules \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "metadata": {
@@ -199,7 +200,7 @@ We will start by creating a scope called "example" scope:
 [source]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/scopes' \
--u 'karaf:karaf' \
+--user "TENANT_ID:PRIVATE_KEY" \
 --header 'Content-Type: application/json' \
 --data-raw '{
 "itemId": "example",
@@ -207,12 +208,14 @@ curl --location --request POST 'http://localhost:8181/cxs/scopes' \
 }'
 ----
 
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (`karaf:karaf`).
+
 The next step consist in creating a JSON Schema to validate our event.
 
 [source]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/jsonSchema' \
--u 'karaf:karaf' \
+--user "TENANT_ID:PRIVATE_KEY" \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "$id": "https://unomi.apache.org/schemas/json/events/contactInfoSubmitted/1-0-0",
@@ -266,6 +269,7 @@ Finally, send the `contactInfoSubmitted` event using a request similar to this o
 ----
 curl -X POST http://localhost:8181/cxs/eventcollector \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 --data-raw '{
     "sessionId" : "1234",
     "events":[
@@ -297,7 +301,7 @@ The event we just submitted can be retrieved using the following request:
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/events/search \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "offset" : 0,
@@ -346,7 +350,7 @@ that looks something like this (and https://unomi.apache.org/rest-api-doc/#17681
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/events/search \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "offset" : 0,
@@ -378,7 +382,7 @@ on the Apache Unomi server.
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/rules \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "metadata": {
@@ -413,7 +417,7 @@ structure. Here's an example of a profile search with a Query object:
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/profiles/search \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "text" : "unomi",
