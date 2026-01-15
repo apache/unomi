@@ -32,48 +32,80 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Provider
-@Component(service=ExceptionMapper.class)
-public class RuntimeExceptionMapper implements ExceptionMapper<RuntimeException> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RuntimeExceptionMapper.class.getName());
+@Component(service = ExceptionMapper.class)
+public class InternalServerErrorExceptionMapper implements ExceptionMapper<javax.ws.rs.InternalServerErrorException> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(InternalServerErrorExceptionMapper.class.getName());
 
     @Override
-    public Response toResponse(RuntimeException exception) {
-        HashMap<String, Object> body = new HashMap<>();
-        body.put("errorMessage", "internalServerError");
-        
+    public Response toResponse(javax.ws.rs.InternalServerErrorException exception) {
         String requestContext = buildRequestContext();
         Throwable rootCause = getRootCause(exception);
         
-        String rootCauseClassName = sanitizeClassName(rootCause != null ? rootCause.getClass().getSimpleName() : "Unknown");
-        String rootCauseMessage = sanitizeForLogging(rootCause != null && rootCause.getMessage() != null 
-                ? rootCause.getMessage() : (exception.getMessage() != null ? exception.getMessage() : ""));
-        
-        // For client errors (like deserialization), log at WARN level with limited stack trace
-        // For true server errors, log at ERROR level
+        // Check if this is actually a client error (JSON deserialization) that was wrapped
         boolean isClientError = rootCause != null && 
             (rootCause instanceof com.fasterxml.jackson.databind.JsonMappingException ||
              rootCause instanceof com.fasterxml.jackson.core.JsonParseException);
         
         if (isClientError) {
-            LOGGER.warn(
-                    "Bad request on {} - Root cause: {} - {} (Set RuntimeExceptionMapper to debug to get the full stacktrace)",
-                    requestContext,
-                    rootCauseClassName,
-                    rootCauseMessage
-            );
-            LOGGER.debug("Full exception details for request: {}", requestContext, exception);
-        } else {
-            LOGGER.error(
-                    "Internal server error on {} - Root cause: {} - {} (Set RuntimeExceptionMapper in debug to get the full stacktrace)",
-                    requestContext,
-                    rootCauseClassName,
-                    rootCauseMessage,
-                    exception
-            );
-            LOGGER.debug("Full exception details for request: {}", requestContext, exception);
+            // Return 400 Bad Request for client errors
+            HashMap<String, Object> body = new HashMap<>();
+            body.put("errorMessage", "badRequest");
+            
+            String errorMessage = sanitizeForLogging(extractJsonErrorMessage(rootCause));
+            
+            LOGGER.warn("Bad request on {} - JSON deserialization error: {} (Set InternalServerErrorExceptionMapper to debug to get the full stacktrace)", 
+                    requestContext, errorMessage);
+            LOGGER.debug("Full JSON mapping exception details for request: {}", requestContext, exception);
+            
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .header("Content-Type", MediaType.APPLICATION_JSON)
+                    .entity(body)
+                    .build();
         }
         
-        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header("Content-Type", MediaType.APPLICATION_JSON).entity(body).build();
+        // True server error - return 500
+        HashMap<String, Object> body = new HashMap<>();
+        body.put("errorMessage", "internalServerError");
+        
+        // Build detailed error message
+        StringBuilder errorDetails = new StringBuilder();
+        errorDetails.append("Request failed: ").append(requestContext);
+        
+        if (rootCause != null && rootCause != exception) {
+            String rootCauseClassName = sanitizeClassName(rootCause.getClass().getSimpleName());
+            errorDetails.append(" - Root cause: ").append(rootCauseClassName);
+            String rootCauseMessage = rootCause.getMessage();
+            if (rootCauseMessage != null && !rootCauseMessage.isEmpty()) {
+                errorDetails.append(" (").append(sanitizeForLogging(rootCauseMessage)).append(")");
+            }
+        }
+        
+        String exceptionMessage = exception.getMessage();
+        if (exceptionMessage != null && !exceptionMessage.isEmpty() && 
+            (rootCause == null || !exceptionMessage.equals(rootCause.getMessage()))) {
+            errorDetails.append(" - Error: ").append(sanitizeForLogging(exceptionMessage));
+        }
+        
+        LOGGER.error("{} (Set InternalServerErrorExceptionMapper to debug to get the full stacktrace)", 
+                errorDetails.toString(), exception);
+        LOGGER.debug("Full exception details for request: {}", requestContext, exception);
+        
+        return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .header("Content-Type", MediaType.APPLICATION_JSON)
+                .entity(body)
+                .build();
+    }
+
+    private String extractJsonErrorMessage(Throwable throwable) {
+        if (throwable == null) {
+            return "Unknown JSON error";
+        }
+        
+        String message = throwable.getMessage();
+        if (message != null && !message.isEmpty()) {
+            return message;
+        }
+        return throwable.getClass().getSimpleName();
     }
 
     private String buildRequestContext() {

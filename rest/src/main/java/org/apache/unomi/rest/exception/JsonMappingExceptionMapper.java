@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.rest.exception;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.apache.cxf.message.Message;
 import org.osgi.service.component.annotations.Component;
@@ -32,48 +33,46 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Provider
-@Component(service=ExceptionMapper.class)
-public class RuntimeExceptionMapper implements ExceptionMapper<RuntimeException> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RuntimeExceptionMapper.class.getName());
+@Component(service = ExceptionMapper.class)
+public class JsonMappingExceptionMapper implements ExceptionMapper<JsonMappingException> {
+    private static final Logger LOGGER = LoggerFactory.getLogger(JsonMappingExceptionMapper.class.getName());
 
     @Override
-    public Response toResponse(RuntimeException exception) {
+    public Response toResponse(JsonMappingException exception) {
         HashMap<String, Object> body = new HashMap<>();
-        body.put("errorMessage", "internalServerError");
+        body.put("errorMessage", "badRequest");
         
         String requestContext = buildRequestContext();
-        Throwable rootCause = getRootCause(exception);
+        String errorMessage = sanitizeForLogging(extractErrorMessage(exception));
         
-        String rootCauseClassName = sanitizeClassName(rootCause != null ? rootCause.getClass().getSimpleName() : "Unknown");
-        String rootCauseMessage = sanitizeForLogging(rootCause != null && rootCause.getMessage() != null 
-                ? rootCause.getMessage() : (exception.getMessage() != null ? exception.getMessage() : ""));
+        // Log at WARN level for client errors (not ERROR), and only include stack trace in debug
+        LOGGER.warn("Bad request on {} - JSON deserialization error: {} (Set JsonMappingExceptionMapper to debug to get the full stacktrace)", 
+                requestContext, errorMessage);
+        LOGGER.debug("Full JSON mapping exception details for request: {}", requestContext, exception);
         
-        // For client errors (like deserialization), log at WARN level with limited stack trace
-        // For true server errors, log at ERROR level
-        boolean isClientError = rootCause != null && 
-            (rootCause instanceof com.fasterxml.jackson.databind.JsonMappingException ||
-             rootCause instanceof com.fasterxml.jackson.core.JsonParseException);
-        
-        if (isClientError) {
-            LOGGER.warn(
-                    "Bad request on {} - Root cause: {} - {} (Set RuntimeExceptionMapper to debug to get the full stacktrace)",
-                    requestContext,
-                    rootCauseClassName,
-                    rootCauseMessage
-            );
-            LOGGER.debug("Full exception details for request: {}", requestContext, exception);
-        } else {
-            LOGGER.error(
-                    "Internal server error on {} - Root cause: {} - {} (Set RuntimeExceptionMapper in debug to get the full stacktrace)",
-                    requestContext,
-                    rootCauseClassName,
-                    rootCauseMessage,
-                    exception
-            );
-            LOGGER.debug("Full exception details for request: {}", requestContext, exception);
+        return Response.status(Response.Status.BAD_REQUEST)
+                .header("Content-Type", MediaType.APPLICATION_JSON)
+                .entity(body)
+                .build();
+    }
+
+    private String extractErrorMessage(JsonMappingException exception) {
+        if (exception == null) {
+            return "Unknown JSON mapping error";
         }
         
-        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header("Content-Type", MediaType.APPLICATION_JSON).entity(body).build();
+        String message = exception.getMessage();
+        if (message != null && !message.isEmpty()) {
+            // Extract the meaningful part of the error message
+            if (message.contains("Unrecognized field")) {
+                return message;
+            }
+            if (message.contains("Cannot deserialize")) {
+                return message;
+            }
+            return message;
+        }
+        return exception.getClass().getSimpleName();
     }
 
     private String buildRequestContext() {
@@ -137,12 +136,9 @@ public class RuntimeExceptionMapper implements ExceptionMapper<RuntimeException>
         if (url == null) {
             return "null";
         }
-        // Limit URL length to prevent log injection and excessive logging
         if (url.length() > 500) {
             url = url.substring(0, 500) + "...[truncated]";
         }
-        // Remove ALL control characters (0x00-0x1F, 0x7F-0x9F) and other dangerous characters
-        // Only allow printable ASCII characters and safe URL characters
         return sanitizeForLogging(url);
     }
 
@@ -150,43 +146,10 @@ public class RuntimeExceptionMapper implements ExceptionMapper<RuntimeException>
         if (queryString == null) {
             return "";
         }
-        // Limit query string length
         if (queryString.length() > 200) {
             queryString = queryString.substring(0, 200) + "...[truncated]";
         }
-        // Remove ALL control characters and dangerous characters
         return sanitizeForLogging(queryString);
-    }
-
-    private String sanitizeForLogging(String input) {
-        if (input == null) {
-            return "";
-        }
-        StringBuilder sanitized = new StringBuilder(input.length());
-        for (int i = 0; i < input.length(); i++) {
-            char c = input.charAt(i);
-            // Allow printable ASCII characters (0x20-0x7E) except potentially dangerous ones
-            // Also allow some safe non-ASCII characters for international URLs (but be conservative)
-            if (c >= 0x20 && c <= 0x7E) {
-                // Remove characters that could be used for injection: newlines, carriage returns, tabs, backslashes
-                // Also remove characters that could break log format: { } % $ 
-                if (c != '\n' && c != '\r' && c != '\t' && c != '\\' && c != '{' && c != '}' && c != '%' && c != '$') {
-                    sanitized.append(c);
-                } else {
-                    sanitized.append('_');
-                }
-            } else if (c == '\n' || c == '\r' || c == '\t') {
-                // Explicitly handle common control characters
-                sanitized.append('_');
-            } else if (c < 0x20 || (c >= 0x7F && c <= 0x9F)) {
-                // Remove all other control characters (0x00-0x1F, 0x7F-0x9F)
-                sanitized.append('_');
-            } else {
-                // For other characters (like unicode), replace with underscore to be safe
-                sanitized.append('_');
-            }
-        }
-        return sanitized.toString();
     }
 
     private String sanitizeQueryParameters(Map<String, java.util.List<String>> queryParams) {
@@ -217,57 +180,43 @@ public class RuntimeExceptionMapper implements ExceptionMapper<RuntimeException>
         return sb.toString();
     }
 
+    private String sanitizeForLogging(String input) {
+        if (input == null) {
+            return "";
+        }
+        StringBuilder sanitized = new StringBuilder(input.length());
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            if (c >= 0x20 && c <= 0x7E) {
+                if (c != '\n' && c != '\r' && c != '\t' && c != '\\' && c != '{' && c != '}' && c != '%' && c != '$') {
+                    sanitized.append(c);
+                } else {
+                    sanitized.append('_');
+                }
+            } else if (c == '\n' || c == '\r' || c == '\t') {
+                sanitized.append('_');
+            } else if (c < 0x20 || (c >= 0x7F && c <= 0x9F)) {
+                sanitized.append('_');
+            } else {
+                sanitized.append('_');
+            }
+        }
+        return sanitized.toString();
+    }
+
     private String sanitizeHttpMethod(String method) {
         if (method == null || method.isEmpty()) {
             return "UNKNOWN";
         }
-        // HTTP methods should only contain uppercase letters, but sanitize to be safe
         String sanitized = sanitizeForLogging(method.toUpperCase());
-        // Whitelist valid HTTP methods
         if (sanitized.equals("GET") || sanitized.equals("POST") || sanitized.equals("PUT") || 
             sanitized.equals("DELETE") || sanitized.equals("PATCH") || sanitized.equals("HEAD") || 
             sanitized.equals("OPTIONS") || sanitized.equals("TRACE") || sanitized.equals("CONNECT")) {
             return sanitized;
         }
-        // If not a standard method, still return sanitized but truncated
         if (sanitized.length() > 10) {
             return sanitized.substring(0, 10) + "...";
         }
         return sanitized;
-    }
-
-    private String sanitizeClassName(String className) {
-        if (className == null || className.isEmpty()) {
-            return "Unknown";
-        }
-        // Class names should only contain alphanumeric, $, and _ characters
-        // Remove anything else to prevent injection
-        StringBuilder sanitized = new StringBuilder(className.length());
-        for (int i = 0; i < className.length(); i++) {
-            char c = className.charAt(i);
-            if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || 
-                (c >= '0' && c <= '9') || c == '$' || c == '_' || c == '.') {
-                sanitized.append(c);
-            } else {
-                sanitized.append('_');
-            }
-        }
-        // Limit length
-        String result = sanitized.toString();
-        if (result.length() > 100) {
-            return result.substring(0, 100) + "...";
-        }
-        return result;
-    }
-
-    private Throwable getRootCause(Throwable throwable) {
-        if (throwable == null) {
-            return null;
-        }
-        Throwable cause = throwable.getCause();
-        if (cause == null || cause == throwable) {
-            return throwable;
-        }
-        return getRootCause(cause);
     }
 }
