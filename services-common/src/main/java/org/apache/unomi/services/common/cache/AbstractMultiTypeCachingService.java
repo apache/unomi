@@ -151,7 +151,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
         shutdownTimers();
-        logger.info("{} service shutdown.", getClass().getSimpleName());
+        logger.debug("{} service shutdown.", getClass().getSimpleName());
     }
 
     protected void initializeCaches() {

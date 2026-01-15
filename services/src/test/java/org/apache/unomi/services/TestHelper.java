@@ -772,27 +772,40 @@ public class TestHelper {
     /**
      * Cleans up the default storage directory used in tests.
      * Attempts to delete the directory with retries in case of failures.
+     * Optimized for speed with shorter retry intervals.
      *
      * @param maxRetries The maximum number of deletion attempts
      * @throws RuntimeException if the directory cannot be deleted after all retries
      */
     public static void cleanDefaultStorageDirectory(int maxRetries) {
         Path defaultStorageDir = Paths.get(InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR).toAbsolutePath().normalize();
+        if (!Files.exists(defaultStorageDir)) {
+            return; // Already clean, skip expensive operations
+        }
         int count = 0;
         while (Files.exists(defaultStorageDir) && count < maxRetries) {
-        try {
-            FileUtils.deleteDirectory(defaultStorageDir.toFile());
-        } catch (IOException e) {
-            LOGGER.warn("Error deleting default storage directory, will retry in 1 second: {}", e.getMessage());
-        }
-        try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            try {
+                FileUtils.deleteDirectory(defaultStorageDir.toFile());
+                // If deletion succeeded, break early
+                if (!Files.exists(defaultStorageDir)) {
+                    return;
+                }
+            } catch (IOException e) {
+                LOGGER.warn("Error deleting default storage directory, will retry: {}", e.getMessage());
+            }
+            // Use shorter sleep time (100ms instead of 1000ms) for faster retries
+            // This significantly speeds up test execution when cleanup is needed
+            if (count < maxRetries - 1) { // Don't sleep after last attempt
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
             count++;
         }
-        if (count == maxRetries) {
+        if (Files.exists(defaultStorageDir)) {
             throw new RuntimeException("Failed to delete default storage directory after " + maxRetries + " retries");
         }
     }

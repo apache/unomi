@@ -60,6 +60,9 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class InMemoryPersistenceServiceImplTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryPersistenceServiceImplTest.class);
+    // Fast refresh interval for tests (50ms instead of 1000ms) - significantly speeds up test execution
+    // while still testing refresh delay behavior
+    private static final long FAST_REFRESH_INTERVAL_MS = 50L;
     private InMemoryPersistenceServiceImpl persistenceService;
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private ExecutionContextManagerImpl executionContextManager;
@@ -157,18 +160,24 @@ public class InMemoryPersistenceServiceImplTest {
             }
             persistenceService = null;
         }
-        // Use robust directory deletion with retries
-        TestHelper.cleanDefaultStorageDirectory(10);
+        // Skip directory cleanup when file storage is disabled - saves significant time
+        // File storage is disabled by default for most tests (only FileStorageOperations needs it)
+        // Only clean directory if it exists and we might be using file storage
+        Path defaultStorageDir = Paths.get(InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR).toAbsolutePath().normalize();
+        if (Files.exists(defaultStorageDir)) {
+            TestHelper.cleanDefaultStorageDirectory(3);
+        }
         conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
-        // Create service with refresh delay DISABLED by default for fast test execution
-        // Most tests don't need refresh delay simulation - they test other functionality
-        // Refresh delay behavior is tested in the dedicated RefreshDelaySimulationTests nested class
-        // retryQueryUntilAvailable() will still work but succeed immediately when delay is disabled
+        // Create service with file storage DISABLED by default for fast test execution
+        // File storage is primarily a debugging tool and adds significant I/O overhead
+        // (directory cleanup, file operations, loadPersistedItems on startup)
+        // Only FileStorageOperations nested class needs it - it creates its own instances with file storage enabled
+        // Also disable refresh delay by default - only RefreshDelaySimulationTests needs it
         persistenceService = new InMemoryPersistenceServiceImpl(
                 executionContextManager, conditionEvaluatorDispatcher,
-                InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, false, 1000L);
+                InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, false, 1000L);
 
         // Set up minimal definitions service and register dummy action types to prevent warnings
         // when rules with unresolved action types are loaded from persisted files
@@ -227,12 +236,13 @@ public class InMemoryPersistenceServiceImplTest {
             }
             persistenceService = null;
         }
-        // Clean up directory after service is shut down
+        // Only clean up directory if file storage was enabled (most tests don't use it)
+        // This saves significant time by skipping expensive directory operations
         Path defaultStorageDir = Paths.get(InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR).toAbsolutePath().normalize();
         if (Files.exists(defaultStorageDir)) {
             try {
-                // Use robust deletion with retries
-                TestHelper.cleanDefaultStorageDirectory(10);
+                // Use fewer retries and shorter sleep times for faster cleanup
+                TestHelper.cleanDefaultStorageDirectory(3);
             } catch (Exception e) {
                 // Log but don't fail test if cleanup fails
                 LOGGER.warn("Failed to clean up storage directory in tearDown: {}", e.getMessage());
@@ -793,15 +803,16 @@ public class InMemoryPersistenceServiceImplTest {
                 1
             );
 
-            // Wait for scroll to expire
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            // Wait for scroll to expire (retry until scroll is expired)
+            // Scroll validity is 1ms, so we check if it has expired by calling continueScrollQuery
+            String scrollId = firstPage.getScrollIdentifier();
+            TestHelper.retryUntil(
+                () -> persistenceService.continueScrollQuery(Profile.class, "1000", scrollId),
+                result -> result.getList().isEmpty() && result.getScrollIdentifier() == null
+            );
 
             // when - try to continue expired scroll
-            PartialList<Profile> secondPage = persistenceService.continueScrollQuery(Profile.class, "1000", firstPage.getScrollIdentifier());
+            PartialList<Profile> secondPage = persistenceService.continueScrollQuery(Profile.class, "1000", scrollId);
 
             // then
             assertNotNull(secondPage);
@@ -4256,8 +4267,12 @@ public class InMemoryPersistenceServiceImplTest {
             assertNotNull(scrollId, "Should have a scroll identifier");
             assertEquals(3, firstPage.getList().size());
 
-            // Wait for scroll to expire
-            Thread.sleep(200);
+            // Wait for scroll to expire (retry until scroll is expired)
+            // Scroll validity is 100ms, so we check if it has expired by calling continueCustomItemScrollQuery
+            TestHelper.retryUntil(
+                () -> persistenceService.continueCustomItemScrollQuery(itemType, scrollId, "100ms"),
+                result -> result.getList().isEmpty() && result.getScrollIdentifier() == null
+            );
 
             // When - Try to continue the expired scroll query
             PartialList<CustomItem> secondPage = persistenceService.continueCustomItemScrollQuery(itemType, scrollId, "100ms");
@@ -4459,9 +4474,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldNotReturnItemsImmediatelyAfterSaveWhenRefreshDelayEnabled() throws InterruptedException {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save an item
             Profile profile = new Profile();
@@ -4482,9 +4499,10 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldReturnItemsAfterRefreshInterval() throws InterruptedException {
             // given - create persistence service with short refresh interval for testing
+            // File storage disabled for performance (not needed for refresh delay tests)
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 100L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save an item
             Profile profile = new Profile();
@@ -4495,10 +4513,7 @@ public class InMemoryPersistenceServiceImplTest {
             List<Profile> queryResults = serviceWithDelay.query(null, null, Profile.class);
             assertTrue(queryResults.isEmpty(), "Item should not be immediately available");
 
-            // wait for refresh interval to pass
-            Thread.sleep(150);
-
-            // now item should be available (retry until available)
+            // Wait for item to be available after refresh interval (retry until available)
             queryResults = TestHelper.retryQueryUntilAvailable(
                 () -> serviceWithDelay.query(null, null, Profile.class),
                 1
@@ -4510,9 +4525,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldReturnItemsImmediatelyAfterExplicitRefresh() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save an item
             Profile profile = new Profile();
@@ -4538,9 +4555,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldReturnItemsImmediatelyAfterRefreshIndex() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save an item
             Profile profile = new Profile();
@@ -4583,35 +4602,58 @@ public class InMemoryPersistenceServiceImplTest {
 
         @Test
         void shouldFilterMultipleItemsByRefreshStatus() throws InterruptedException {
-            // given - create persistence service with short refresh interval
+            // given - create persistence service with fast refresh interval for testing
+            // File storage disabled for performance
+            long testRefreshInterval = FAST_REFRESH_INTERVAL_MS;
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 200L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, testRefreshInterval);
 
             // when - save multiple items
             Profile profile1 = new Profile();
             profile1.setItemId("profile1");
             serviceWithDelay.save(profile1);
 
-            Thread.sleep(250); // Wait for first item to be refreshed
+            // Wait for first item to be refreshed (retry until available)
+            TestHelper.retryQueryUntilAvailable(
+                () -> serviceWithDelay.query(null, null, Profile.class),
+                1,
+                testRefreshInterval + 100
+            );
 
             Profile profile2 = new Profile();
             profile2.setItemId("profile2");
             serviceWithDelay.save(profile2);
 
-            // then - only first item should be available (retry until available)
-            List<Profile> queryResults = TestHelper.retryQueryUntilAvailable(
-                () -> serviceWithDelay.query(null, null, Profile.class),
-                1
-            );
-            assertEquals(1, queryResults.size(), "Only refreshed items should be available");
-            assertEquals("profile1", queryResults.get(0).getItemId());
+            // then - only first item should be available (second item not yet refreshed)
+            // Check immediately after saving profile2 - profile2 should not be available yet
+            // profile1 should be available since we waited for its refresh interval
+            List<Profile> queryResults = serviceWithDelay.query(null, null, Profile.class);
+            // With fast refresh, there's a small race condition window, so we check that:
+            // - We have at most 1 item (profile1 might not be ready yet, but profile2 definitely shouldn't be)
+            // - If we have 1 item, it must be profile1
+            assertTrue(queryResults.size() <= 1, 
+                    "Profile2 was just saved and should not be available yet, got " + queryResults.size() + " items");
+            if (queryResults.size() == 1) {
+                assertEquals("profile1", queryResults.get(0).getItemId(), 
+                        "Only profile1 should be available if any");
+            }
+            // Ensure profile1 is available by retrying if needed
+            if (queryResults.isEmpty()) {
+                queryResults = TestHelper.retryQueryUntilAvailable(
+                    () -> serviceWithDelay.query(null, null, Profile.class),
+                    1,
+                    testRefreshInterval + 50
+                );
+                assertEquals(1, queryResults.size(), "Profile1 should be available after refresh");
+                assertEquals("profile1", queryResults.get(0).getItemId());
+            }
 
-            // wait for second item to be refreshed
-            Thread.sleep(250);
+            // Wait for second item to be refreshed (retry until both items are available)
             queryResults = TestHelper.retryQueryUntilAvailable(
                 () -> serviceWithDelay.query(null, null, Profile.class),
-                2
+                2,
+                testRefreshInterval + 100
             );
             assertEquals(2, queryResults.size(), "Both items should be available after refresh");
         }
@@ -4619,9 +4661,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldRespectRefreshDelayInQueryCount() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save items
             Profile profile1 = new Profile();
@@ -4650,9 +4694,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldRespectRefreshDelayInGetAllItemsCount() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save items
             Profile profile1 = new Profile();
@@ -4681,9 +4727,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldShutdownRefreshThread() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - shutdown
             serviceWithDelay.shutdown();
@@ -4696,9 +4744,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldDeleteItemsImmediatelyRegardlessOfRefreshStatus() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save items
             Profile profile1 = new Profile();
@@ -4736,9 +4786,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldDeleteByQueryAllMatchingItemsRegardlessOfRefreshStatus() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save multiple items
             Profile profile1 = new Profile();
@@ -4790,9 +4842,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldCleanupPendingRefreshItemsOnDelete() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save and immediately delete an item
             Profile profile = new Profile();
@@ -4813,9 +4867,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldPurgeItemsWithRefreshDelay() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save items with different creation dates
             Calendar oldDate = Calendar.getInstance();
@@ -4857,9 +4913,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldRemoveIndexWithRefreshDelay() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save items
             TestMetadataItem item1 = new TestMetadataItem();
@@ -4894,9 +4952,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldRemoveCustomItemWithRefreshDelay() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save custom item
             CustomItem customItem = new CustomItem();
@@ -4931,9 +4991,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldHandleUpdateOfAlreadyRefreshedItem() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - save and refresh an item
             Profile profile = new Profile();
@@ -4978,9 +5040,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldRespectFalseRefreshPolicy() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - set FALSE refresh policy for a custom item type
             serviceWithDelay.setRefreshPolicy("testItem", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
@@ -5003,9 +5067,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldRespectTrueRefreshPolicy() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - set TRUE refresh policy for a custom item type
             serviceWithDelay.setRefreshPolicy("testItem", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
@@ -5028,9 +5094,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldRespectWaitForRefreshPolicy() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - set WAIT_FOR refresh policy for a custom item type
             serviceWithDelay.setRefreshPolicy("testItem", InMemoryPersistenceServiceImpl.RefreshPolicy.WAIT_FOR);
@@ -5053,9 +5121,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldSetRefreshPolicyFromJson() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - set refresh policies from JSON (Elasticsearch/OpenSearch format)
             String json = "{\"event\":\"WAIT_FOR\",\"rule\":\"FALSE\",\"scheduledTask\":\"TRUE\"}";
@@ -5092,9 +5162,11 @@ public class InMemoryPersistenceServiceImplTest {
         @Test
         void shouldParseElasticsearchRefreshPolicyValues() {
             // given - create persistence service with refresh delay explicitly enabled
+            // File storage disabled for performance (not needed for refresh policy tests)
+            // Fast refresh interval (50ms) for faster test execution
             InMemoryPersistenceServiceImpl serviceWithDelay = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher,
-                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
 
             // when - set refresh policies using Elasticsearch string values
             String json = "{\"item1\":\"NONE\",\"item2\":\"IMMEDIATE\",\"item3\":\"WAIT_UNTIL\"}";
@@ -5653,8 +5725,10 @@ public class InMemoryPersistenceServiceImplTest {
             // Test all combinations: per-item-type policy × request override × operation type
 
             // Combination 1: FALSE policy, no override, save
+            // File storage disabled and fast refresh for performance
             InMemoryPersistenceServiceImpl service1 = new InMemoryPersistenceServiceImpl(
-                    executionContextManager, conditionEvaluatorDispatcher);
+                    executionContextManager, conditionEvaluatorDispatcher,
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
             service1.setRefreshPolicy("type1", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
             TestMetadataItem item1 = new TestMetadataItem();
             item1.setItemId("item1");
@@ -5684,8 +5758,10 @@ public class InMemoryPersistenceServiceImplTest {
                     "Item2 should be visible");
 
             // Combination 3: TRUE policy, no override, save
+            // File storage disabled and fast refresh for performance
             InMemoryPersistenceServiceImpl service2 = new InMemoryPersistenceServiceImpl(
-                    executionContextManager, conditionEvaluatorDispatcher);
+                    executionContextManager, conditionEvaluatorDispatcher,
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
             service2.setRefreshPolicy("type2", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
             TestMetadataItem item3 = new TestMetadataItem();
             item3.setItemId("item3");
@@ -5712,8 +5788,10 @@ public class InMemoryPersistenceServiceImplTest {
                     "TRUE policy, FALSE override, save: override should take precedence (not available)");
 
             // Combination 5: WAIT_FOR policy, no override, save
+            // File storage disabled and fast refresh for performance
             InMemoryPersistenceServiceImpl service3 = new InMemoryPersistenceServiceImpl(
-                    executionContextManager, conditionEvaluatorDispatcher);
+                    executionContextManager, conditionEvaluatorDispatcher,
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
             service3.setRefreshPolicy("type3", InMemoryPersistenceServiceImpl.RefreshPolicy.WAIT_FOR);
             TestMetadataItem item5 = new TestMetadataItem();
             item5.setItemId("item5");
@@ -5745,8 +5823,10 @@ public class InMemoryPersistenceServiceImplTest {
             // Test all combinations for update operations
 
             // Combination 1: FALSE policy, no override, update
+            // File storage disabled and fast refresh for performance
             InMemoryPersistenceServiceImpl service1 = new InMemoryPersistenceServiceImpl(
-                    executionContextManager, conditionEvaluatorDispatcher);
+                    executionContextManager, conditionEvaluatorDispatcher,
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
             service1.setRefreshPolicy("type1", InMemoryPersistenceServiceImpl.RefreshPolicy.FALSE);
             TestMetadataItem item1 = new TestMetadataItem();
             item1.setItemId("item1");
@@ -5782,8 +5862,10 @@ public class InMemoryPersistenceServiceImplTest {
                     "FALSE policy, TRUE override, update: should be immediately available");
 
             // Combination 3: TRUE policy, no override, update
+            // File storage disabled and fast refresh for performance
             InMemoryPersistenceServiceImpl service2 = new InMemoryPersistenceServiceImpl(
-                    executionContextManager, conditionEvaluatorDispatcher);
+                    executionContextManager, conditionEvaluatorDispatcher,
+                    InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR, false, true, true, true, FAST_REFRESH_INTERVAL_MS);
             service2.setRefreshPolicy("type2", InMemoryPersistenceServiceImpl.RefreshPolicy.TRUE);
             TestMetadataItem item2 = new TestMetadataItem();
             item2.setItemId("item2");
@@ -5905,10 +5987,11 @@ public class InMemoryPersistenceServiceImplTest {
             assertTrue(results1.isEmpty(),
                     "FALSE policy: should not be immediately available");
 
-            Thread.sleep(150); // Wait for automatic refresh
+            // Wait for automatic refresh (retry until item is available)
             List<TestMetadataItem> results2 = TestHelper.retryQueryUntilAvailable(
                 () -> service1.query(null, null, TestMetadataItem.class),
-                1
+                1,
+                FAST_REFRESH_INTERVAL_MS + 100
             );
             assertEquals(1, results2.size(),
                     "FALSE policy + automatic refresh: should be available after interval");

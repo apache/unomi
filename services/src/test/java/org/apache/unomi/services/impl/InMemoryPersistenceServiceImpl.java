@@ -166,11 +166,13 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         this.refreshIntervalMs = refreshIntervalMs > 0 ? refreshIntervalMs : 1000L;
         this.defaultQueryLimit = defaultQueryLimit > 0 ? defaultQueryLimit : 10;
 
+        // Initialize objectMapper even when file storage is disabled - it's needed for property mapping
+        this.objectMapper = new CustomObjectMapper();
+        if (prettyPrintJson) {
+            this.objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
+        }
+
         if (fileStorageEnabled) {
-            this.objectMapper = new CustomObjectMapper();
-            if (prettyPrintJson) {
-                this.objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
-            }
             this.storageRootPath = Paths.get(storageDir).toAbsolutePath().normalize();
             LOGGER.debug("Using storage root path: {}", storageRootPath);
 
@@ -200,7 +202,6 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 throw new RuntimeException("Failed to initialize storage", e);
             }
         } else {
-            this.objectMapper = null;
             this.storageRootPath = null;
         }
 
