@@ -118,6 +118,10 @@
         }
       }
     },
+    "parameters": {
+      "type": "object",
+      "enabled": false
+    },
     "elements": {
       "properties": {
         "condition": {

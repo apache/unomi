@@ -25,6 +25,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -121,6 +124,8 @@ public class ProgressListener extends RunListener {
     private final AtomicInteger successfulTests = new AtomicInteger(0);
     /** Thread-safe counter for failed tests */
     private final AtomicInteger failedTests = new AtomicInteger(0);
+    /** Thread-safe list to track failed test names */
+    private final List<String> failedTestNames = Collections.synchronizedList(new ArrayList<>());
     /** Priority queue to track the slowest tests (limited to top 10) */
     private final PriorityQueue<TestTime> slowTests;
     /** Flag indicating whether ANSI color codes are supported in the terminal */
@@ -305,6 +310,8 @@ public class ProgressListener extends RunListener {
         successfulTests.decrementAndGet(); // Remove the previous success count for this test.
         failedTests.incrementAndGet();
         String testName = extractTestName(failure.getDescription());
+        // Add to failed tests list (thread-safe)
+        failedTestNames.add(testName);
         System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", RED));
         System.out.println(colorize("✗ FAILED: " + testName, RED));
         System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", RED));
@@ -476,6 +483,18 @@ public class ProgressListener extends RunListener {
                 failedTests.get(),
                 ansiSupported ? RESET : "");
         System.out.println(colorize(separator, CYAN));
+
+        // Display failed tests list if any failures occurred
+        if (!failedTestNames.isEmpty()) {
+            System.out.println();
+            System.out.println(colorize("Failed Tests So Far (" + failedTestNames.size() + "):", RED));
+            synchronized (failedTestNames) {
+                for (int i = 0; i < failedTestNames.size(); i++) {
+                    System.out.println(colorize("  " + (i + 1) + ". " + failedTestNames.get(i), RED));
+                }
+            }
+            System.out.println();
+        }
 
         if (completed % Math.max(1, totalTests / 10) == 0 && completed < totalTests) {
             String quote = QUOTES[completed % QUOTES.length];
