@@ -63,18 +63,17 @@ public class TenantEndpoint {
      * Retrieves a specific tenant by ID.
      *
      * @param tenantId the ID of the tenant to retrieve
-     * @return the requested tenant
-     * @throws WebApplicationException with 404 status if tenant is not found
+     * @return the requested tenant with 200 status, or 404 if tenant is not found
      */
     @GET
     @Path("/{tenantId}")
     @Produces(MediaType.APPLICATION_JSON)
-    public Tenant getTenant(@PathParam("tenantId") String tenantId) {
+    public Response getTenant(@PathParam("tenantId") String tenantId) {
         Tenant tenant = tenantService.getTenant(tenantId);
         if (tenant == null) {
-            throw new WebApplicationException("Tenant not found", Response.Status.NOT_FOUND);
+            return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return tenant;
+        return Response.ok(tenant).build();
     }
 
     /**

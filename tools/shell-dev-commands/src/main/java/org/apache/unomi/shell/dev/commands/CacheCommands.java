@@ -21,11 +21,13 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService.CacheStatistics;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService.CacheStatistics.TypeStatistics;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.shell.dev.commands.TenantContextHelper;
 
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
@@ -47,6 +49,9 @@ public class CacheCommands implements Action {
 
     @Reference
     private ExecutionContextManager executionContextManager;
+
+    @Reference
+    private Session session;
 
     @Option(name = "--stats", description = "Display cache statistics", required = false)
     private boolean showStats = false;
@@ -87,6 +92,9 @@ public class CacheCommands implements Action {
             System.out.println("Cache service not available");
             return null;
         }
+
+        // Initialize execution context from session
+        TenantContextHelper.initializeExecutionContext(session, executionContextManager);
 
         // Set default tenant if not specified
         if (tenantId == null) {

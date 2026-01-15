@@ -18,8 +18,11 @@ package org.apache.unomi.shell.dev.commands;
 
 import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Option;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.console.Session;
 import org.apache.karaf.shell.support.table.Row;
 import org.apache.karaf.shell.support.table.ShellTable;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.common.DataTable;
 
 import java.util.ArrayList;
@@ -28,6 +31,12 @@ import java.util.ArrayList;
  * A utility class to make it easier to build tables for listing Apache Unomi objects.
  */
 public abstract class ListCommandSupport implements Action {
+
+    @Reference
+    protected Session session;
+
+    @Reference
+    protected ExecutionContextManager executionContextManager;
 
     @Option(name = "--csv", description = "Output table in CSV format", required = false, multiValued = false)
     boolean csv;
@@ -47,6 +56,8 @@ public abstract class ListCommandSupport implements Action {
     protected abstract DataTable buildDataTable();
 
     public Object execute() throws Exception {
+        // Initialize execution context from session before executing command
+        TenantContextHelper.initializeExecutionContext(session, executionContextManager);
 
         DataTable dataTable = buildDataTable();
 
