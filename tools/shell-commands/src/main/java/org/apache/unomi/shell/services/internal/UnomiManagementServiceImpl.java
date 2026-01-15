@@ -333,6 +333,12 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         }
     }
 
+    @Override
+    public String getCurrentDistribution() throws Exception {
+        UnomiSetup setup = getUnomiSetup();
+        return setup != null ? setup.getDistribution() : null;
+    }
+
     @Deactivate
     public void deactivate() {
         executor.shutdown();

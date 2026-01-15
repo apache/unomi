@@ -254,7 +254,11 @@ KARAF_DEBUG_SUSPEND=n
 USE_OPENSEARCH=false
 NO_KARAF=false
 AUTO_START=""
-UNOMI_DISTRIBUTION=""
+# Only initialize UNOMI_DISTRIBUTION if not already set (e.g., by setup-opensearch.sh or setup-elasticsearch.sh)
+# This preserves the environment variable if it was set by the setup scripts
+if [ -z "${UNOMI_DISTRIBUTION+x}" ]; then
+    UNOMI_DISTRIBUTION=""
+fi
 SINGLE_TEST=""
 IT_DEBUG=false
 IT_DEBUG_PORT=5006
