@@ -271,7 +271,7 @@ Each schema where the *target* value is set to *events*, will be used to validat
 The others are simply used as part of JSON schema or can be used in additional JSON schemas.
 
 It’s possible to add JSON schemas to validate your own event by using the API, the explanations to manage JSON schema through the API are
-in the <<Create / update a JSON schema to validate an event, Create / update a JSON schema to validate an event>> section.
+in the <<_create_update_json_schema,Create / update a JSON schema to validate an event>> section.
 
 Contrary to the predefined schemas, the schemas added through the API will be persisted in Elasticsearch in the jsonSchema index.
 Schemas persisted in Elasticsearch do not require a restart of the platform to reflect changes.

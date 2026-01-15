@@ -18,6 +18,7 @@
 In this section of the documentation we provide quick recipes focused on helping you achieve a specific result with
 Apache Unomi.
 
+[[_enabling_debug_mode]]
 ==== Enabling debug mode
 
 Although the examples provided in this documentation are correct (they will work "as-is"), 
@@ -69,6 +70,11 @@ therefore to find the source of a schema validation issue it's best to start fro
 
 The simplest way to retrieve profile data for the current profile is to simply send a request to the /cxs/context.json
 endpoint. However you will need to send a body along with that request. Here's an example:
+
+[NOTE]
+====
+The `/cxs/context.json` endpoint automatically creates or loads profiles and sessions as needed. See <<_how_profile_tracking_works,How profile tracking works>> for complete details about the automatic profile and session creation process.
+====
 
 Here is an example that will retrieve all the session and profile properties, as well as the profile's segments and scores
 
@@ -313,11 +319,11 @@ There could be two types of common errors while customizing the above requests:
 * The schema is invalid
 * The event is invalid
 
-While first submitting the schema during its creation, Apache Unomi will validate it is syntaxically correct (JSON) 
+While first submitting the schema during its creation, Apache Unomi will validate it is syntactically correct (JSON) 
 but will not perform any further validation. Since the schema will be processed for the first time when events are submitted, 
 errors might be noticeable at that time. 
 
-Those errors are usually self-explanatory, such as this one pointing to an incorrect lcoation for the "firstName" keyword:
+Those errors are usually self-explanatory, such as this one pointing to an incorrect location for the "firstName" keyword:
 [source]
 ----
 09:35:56.573 WARN [qtp1421852915-83] Unknown keyword firstName - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword
@@ -449,7 +455,7 @@ on the server and potentially this could affect performance.
 
 ==== Getting / updating consents
 
-You can find information on how to retrieve or create/update consents in the <<Consent API>> section.
+You can find information on how to retrieve or create/update consents in the <<_consent_api,Consent API>> section.
 
 ==== How to send a login event to Unomi
 
@@ -589,7 +595,7 @@ Upon merge:
 ===== Decision Guide for Profile Merging
 
 [plantuml]
-....
+----
 @startuml
 title When to Use Profile Merges
 
@@ -623,7 +629,7 @@ endif
 MergeProfilesOnPropertyAction;
 stop
 @enduml
-....
+----
 
 ===== Troubleshooting Common Issues
 

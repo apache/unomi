@@ -77,4 +77,4 @@ and the `withData` specifies whether the data associated with the profile must b
 
 === Related
 
-You might also be interested in the <<Consent API>> section that describe how to manage profile consents.
+You might also be interested in the <<_consent_api,Consent API>> section that describe how to manage profile consents.

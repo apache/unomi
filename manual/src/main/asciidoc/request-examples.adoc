@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_request_examples]]
 === Request examples
 
 ==== Prerequisites
@@ -27,8 +28,7 @@ curl -X POST http://localhost:8181/cxs/tenants \
 --user karaf:karaf \
 -H "Content-Type: application/json" \
 -d '{
-    "itemId": "mytenant",
-    "scope": "system",
+    "requestedId": "mytenant",
     "properties": {
         "name": "My Company",
         "description": "My tenant description"
@@ -36,9 +36,33 @@ curl -X POST http://localhost:8181/cxs/tenants \
 }'
 ----
 
+The response will include the created tenant with automatically generated API keys:
+
+[source,json]
+----
+{
+    "itemId": "mytenant",
+    "name": "My Company",
+    "description": "My tenant description",
+    "apiKeys": [
+        {
+            "type": "PUBLIC",
+            "key": "public-key-abc123...",
+            "created": "2024-01-01T00:00:00Z"
+        },
+        {
+            "type": "PRIVATE",
+            "key": "private-key-xyz789...",
+            "created": "2024-01-01T00:00:00Z"
+        }
+    ]
+}
+----
+
 After creating the tenant, you will need to use these credentials in the examples:
 - Tenant ID: `mytenant`
-- Private API Key: Get this from the response of the tenant creation request
+- Private API Key: Extract the `key` value from the API key with `type: "PRIVATE"` in the response
+- Public API Key: Extract the `key` value from the API key with `type: "PUBLIC"` in the response
 
 ===== 2. Create a scope
 
@@ -165,6 +189,19 @@ This will retrieve a JavaScript script that contains a `cxs` object that contain
 profile, segments, scores as well as functions that makes it easier to perform further requests (such as collecting
 events using the cxs.collectEvents() function).
 
+[NOTE]
+====
+When you make a request to the `context.js` or `context.json` endpoints, Apache Unomi automatically:
+
+* Creates or loads a visitor profile (from cookie, parameter, or creates a new one)
+* Creates or loads a visitor session (if `sessionId` is provided)
+* Processes any events provided in the request (which automatically triggers rule execution)
+* Resolves personalization (if requested)
+* Sets a cookie with the profile ID in the response
+
+For detailed information about how profile tracking, session management, event processing, and rule execution work, see the <<_how_profile_tracking_works,How profile tracking works>> section.
+====
+
 ==== Retrieving a context as a JSON object.
 
 If you prefer to retrieve a pure JSON object, you can simply use a request formed like this:
@@ -173,6 +210,8 @@ If you prefer to retrieve a pure JSON object, you can simply use a request forme
 ----
 curl http://localhost:8181/cxs/context.json?sessionId=1234
 ----
+
+The same automatic profile and session creation behavior applies to `context.json` requests. See <<_how_profile_tracking_works,How profile tracking works>> for complete details.
 
 ==== Accessing profile properties in a context
 

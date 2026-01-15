@@ -12,7 +12,8 @@
 // limitations under the License.
 //
 
-== Migrating from Elasticsearch to OpenSearch
+[[_migrating_from_elasticsearch_to_opensearch]]
+==== Migrating from Elasticsearch to OpenSearch
 :toc: macro
 :toclevels: 4
 :toc-title: Table of contents
@@ -20,11 +21,11 @@
 
 toc::[]
 
-== Overview
+===== Overview
 
 This guide describes how to migrate your Apache Unomi data from Elasticsearch to OpenSearch. The migration process involves using the OpenSearch Replication Tool, which is designed to handle large-scale migrations efficiently while maintaining data consistency.
 
-== Prerequisites
+===== Prerequisites
 
 Before starting the migration, ensure you have:
 
@@ -34,13 +35,13 @@ Before starting the migration, ensure you have:
 * Java 11 or later installed
 * Network connectivity between source and target clusters
 
-== Migration Options
+===== Migration Options
 
-=== Option 1: OpenSearch Replication Tool (Recommended)
+====== Option 1: OpenSearch Replication Tool (Recommended)
 
 The OpenSearch Replication Tool is the recommended approach for production environments, especially for large datasets.
 
-==== Installation
+====== Installation
 
 [source,bash]
 ----
@@ -49,7 +50,7 @@ cd opensearch-migrations/replication-tool
 ./gradlew build
 ----
 
-==== Configuration
+====== Configuration
 
 Create a configuration file `config.yml`:
 
@@ -72,7 +73,7 @@ indices:
   - name: "session-*"         # Unomi session indices
 ----
 
-==== Running the Migration
+====== Running the Migration
 
 [source,bash]
 ----
@@ -81,11 +82,11 @@ indices:
 
 The tool provides progress updates and ensures data consistency during the migration.
 
-=== Option 2: Logstash Pipeline
+====== Option 2: Logstash Pipeline
 
 For smaller deployments or when more control over the migration process is needed, you can use Logstash.
 
-==== Logstash Configuration
+====== Logstash Configuration
 
 Create a file named `logstash-migration.conf`:
 
@@ -114,14 +115,14 @@ output {
 }
 ----
 
-==== Running Logstash Migration
+====== Running Logstash Migration
 
 [source,bash]
 ----
 logstash -f logstash-migration.conf
 ----
 
-== Post-Migration Steps
+===== Post-Migration Steps
 
 1. Verify Data Integrity
 +
@@ -158,9 +159,9 @@ org.apache.unomi.opensearch.password=admin
 ./bin/start
 ----
 
-== Troubleshooting
+===== Troubleshooting
 
-=== Common Issues
+====== Common Issues
 
 1. Connection Timeouts
 * Increase the timeout settings in your configuration
@@ -174,7 +175,7 @@ org.apache.unomi.opensearch.password=admin
 * Verify index patterns in configuration
 * Check source cluster health
 
-=== Monitoring Progress
+====== Monitoring Progress
 
 The OpenSearch Replication Tool provides progress information during migration:
 
@@ -183,7 +184,7 @@ The OpenSearch Replication Tool provides progress information during migration:
 * Current transfer rate
 * Estimated completion time
 
-== Best Practices
+===== Best Practices
 
 1. *Testing*
 * Always test the migration process in a non-production environment first
@@ -203,7 +204,7 @@ The OpenSearch Replication Tool provides progress information during migration:
 * Verify index mappings and settings
 * Test Unomi functionality with migrated data
 
-== Support
+===== Support
 
 For additional support:
 

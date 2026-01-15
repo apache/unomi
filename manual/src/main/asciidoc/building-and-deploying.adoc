@@ -12,11 +12,12 @@
 // limitations under the License.
 //
 
+[[_building]]
 === Building
 
 Apache Unomi 3.x provides a convenient `build.sh` script that simplifies the build process with
 enhanced error handling, preflight validation, and deployment options. See the
-<<Using the build.sh script>> section below for details. Alternatively, you can build using Maven
+<<_using_the_build_script,Using the build.sh script>> section below for details. Alternatively, you can build using Maven
 directly as described in this section.
 
 ==== Initial Setup
@@ -71,6 +72,7 @@ TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
 +
 . The distributions will be available under "package/target" directory.
 
+[[_using_the_build_script]]
 ==== Using the build.sh script
 
 Apache Unomi 3.x provides a unified `build.sh` script that simplifies the build, deployment, and execution process.

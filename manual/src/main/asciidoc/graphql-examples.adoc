@@ -249,5 +249,5 @@ The response will show the result of the operation:
 
 ==== Where to go from here
 
-* You can find more <<Useful Apache Unomi URLs,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
+* You can find more <<_useful_apache_unomi_urls,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
 * Read https://graphql.org/learn/[GraphQL documentation] to learn more about GraphQL syntax.

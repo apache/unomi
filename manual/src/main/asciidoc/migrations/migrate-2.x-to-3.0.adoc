@@ -261,11 +261,11 @@ When using Docker, you can specify the search engine backend using the distribut
 - **For OpenSearch**: `UNOMI_DISTRIBUTION=unomi-distribution-opensearch`
 - **For custom configurations**: `UNOMI_DISTRIBUTION=your-custom-distribution-name`
 
-==== Migrating from Elasticsearch to OpenSearch
+==== Elasticsearch to OpenSearch Migration
 
 Apache Unomi 3.1 introduces official support for OpenSearch as an alternative to Elasticsearch. If you want to migrate from Elasticsearch to OpenSearch, you can use the dedicated migration guide located in the 3.0 → 3.1 migration section.
 
-For detailed instructions on migrating your data from Elasticsearch to OpenSearch, please refer to the <<Migrating from Elasticsearch to OpenSearch,Elasticsearch to OpenSearch migration guide>>.
+For detailed instructions on migrating your data from Elasticsearch to OpenSearch, please refer to the <<_migrating_from_elasticsearch_to_opensearch,Elasticsearch to OpenSearch migration guide>>.
 
 ==== Migration Checklist
 
@@ -293,4 +293,4 @@ Before upgrading to Apache Unomi 3.0, complete the following checklist:
 
 ==== Other Breaking Changes
 
-For information about other breaking changes in Apache Unomi 3.0, please refer to the <<What's new in Apache Unomi 3.0,What's new>> section of the documentation.
+For information about other breaking changes in Apache Unomi 3.0, please refer to the <<_whats_new,What's new>> section of the documentation.

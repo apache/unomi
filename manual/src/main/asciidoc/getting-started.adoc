@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_getting_started_with_unomi]]
 === Getting started with Unomi
 
 We will first get you up and running with an example. We will then lift the corner of the cover somewhat and explain
@@ -21,6 +22,7 @@ in greater details what just happened.
 This document assumes working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example.
 Additionally, you will require a working Java 17 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 17 or greater.
 
+[[_jdk_compatibility]]
 ===== JDK compatibility
 
 Starting with Java 9, Oracle made some big changes to the Java platform releases. This is why Apache Unomi is focused on
@@ -50,8 +52,8 @@ Note for OpenSearch users:
 
 ===== Start Unomi
 
-Start Unomi according to the <<Five Minutes QuickStart,quick start with docker>> or by compiling using the
-<<Building,building instructions>>. Once you have Karaf running, you should wait until you see the following messages on the Karaf console:
+Start Unomi according to the <<_five_minutes_quickstart,quick start with docker>> or by compiling using the
+<<_building,building instructions>>. Once you have Karaf running, you should wait until you see the following messages on the Karaf console:
 
 [source]
 ----
@@ -72,5 +74,5 @@ This indicates that all the Unomi services are started and ready to react to req
 3. View the introduction page: `http://localhost:8181`
 
 Also now that your service is up and running you can go look at the
-<<Request examples,request examples>> to learn basic
+<<_request_examples,request examples>> to learn basic
 requests you can do once your server is up and running.

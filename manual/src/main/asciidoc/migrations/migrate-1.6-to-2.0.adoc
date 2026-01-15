@@ -29,7 +29,7 @@ Doing so will display any errors when processing events (such as JSON Schema val
 
 ==== Data Model changes
 
-There has been changes to Unomi Data model, please make sure to review those in the <<_whats_new_in_apache_unomi_2_0,What's new in Unomi 2>> section of the user manual.
+There has been changes to Unomi Data model, please make sure to review those in the <<_whats_new,What's new>> section of the user manual.
 
 ==== Create JSON schemas
 
@@ -52,7 +52,7 @@ Once the debug logs are active, you will see detailed error messages if your eve
 
 Note that it is currently not possible to modify or surcharge an existing system-deployed JSON schema via the REST API. It is however possible to deploy new schemas and manage them through the REST API on the `/cxs/jsonSchema` endpoint.
 If you are currently using custom properties on an Apache Unomi-provided event type,
-you will need to either change to use a new custom eventType and create the corresponding schema or to create a Unomi schema extension. You can find more details in the <<JSON schemas,JSON Schema>> section of this documentation.
+you will need to either change to use a new custom eventType and create the corresponding schema or to create a Unomi schema extension. You can find more details in the <<_json_schemas,JSON Schema>> section of this documentation.
 
 You can use, as a source of inspiration for creating new schemas, Apache Unomi 2.0 schema located at:
  https://github.com/apache/unomi/tree/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas[extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas].

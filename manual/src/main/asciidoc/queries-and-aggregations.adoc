@@ -28,7 +28,7 @@ Here's an example of a query:
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/query/profile/count \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -80,7 +80,7 @@ Here's an example request that uses the `sum` and `avg` metrics:
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/query/session/profile.properties.nbOfVisits/sum/avg \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -139,7 +139,7 @@ Here's an example of a request to retrieve a histogram of by day of all the sess
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/query/session/timeStamp \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -205,7 +205,7 @@ below:
 [source,shell script]
 ----
 curl -X POST http://localhost:8181/cxs/query/profile/properties.birthDate \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -284,7 +284,7 @@ Here's an example of a using numeric range to regroup profiles by number of visi
 [source,shell script]
 ----
 curl -X POST http://localhost:8181/cxs/query/profile/properties.nbOfVisits \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -362,7 +362,7 @@ To start a scroll query, use the search endpoint with the following parameters:
 ----
 # Initial scroll query
 curl -X POST http://localhost:8181/cxs/profiles/search \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -394,7 +394,7 @@ To retrieve subsequent batches, only the scroll identifier and validity are need
 ----
 # Retrieve next batch
 curl -X POST http://localhost:8181/cxs/profiles/search \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {

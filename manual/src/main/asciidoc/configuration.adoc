@@ -961,7 +961,7 @@ by this action.
 When a profile merge is triggered, the following process takes place:
 
 [plantuml]
-....
+----
 @startuml
 title Apache Unomi Profile Merge Workflow
 
@@ -1010,14 +1010,14 @@ deactivate Action
 Event --> User: Event processed
 deactivate Event
 @enduml
-....
+----
 
 ==== Before and after a profile merge
 
 This diagram illustrates the state of profiles before and after a merge:
 
 [plantuml]
-....
+----
 @startuml
 title Before and After Profile Merge
 
@@ -1060,7 +1060,7 @@ package "After Merge" {
 PA ..> MP : becomes
 PB ..> AL : becomes alias for Master
 @enduml
-....
+----
 
 Starting from Unomi 2:
 
@@ -1100,7 +1100,7 @@ IMPORTANT: Never trigger profile merges from unauthenticated operations such as 
 The following diagram highlights key security considerations:
 
 [plantuml]
-....
+----
 @startuml
 title Profile Merge Security Considerations
 
@@ -1134,7 +1134,7 @@ endif
 :Proceed with Profile Merge;
 stop
 @enduml
-....
+----
 
 Key security recommendations:
 

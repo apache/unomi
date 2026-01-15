@@ -12,9 +12,9 @@
 // limitations under the License.
 //
 
-= Apache Unomi 2.x - Documentation
+= Apache Unomi 3.x - Documentation
 Apache Software Foundation
-:doctype: article
+:doctype: book
 :toc: left
 :toclevels: 3
 :toc-position: left
@@ -24,22 +24,12 @@ Apache Software Foundation
 
 image::asf_logo_url.png[pdfwidth=35%,align=center]
 
+include::foreword.adoc[]
+
+[[_whats_new]]
 == What's new
 
 include::whats-new.adoc[]
-
-== Architecture Overview
-
-include::architecture.adoc[]
-
-=== Data Structures
-include::data-structures.adoc[]
-
-=== Event Processing Architecture
-include::event-processing.adoc[]
-
-=== Security Architecture
-include::security.adoc[]
 
 == Discover Unomi
 
@@ -55,27 +45,27 @@ include::recipes.adoc[]
 
 include::request-examples.adoc[]
 
+[[_configuration]]
 == Configuration
 
 include::configuration.adoc[]
 
+[[_json_schemas]]
 == JSON schemas
 
 include::jsonSchema/json-schema.adoc[]
 
+[[_graphql_api]]
 == GraphQL API
 
 include::graphql.adoc[]
 
 include::graphql-examples.adoc[]
 
+[[_migrations]]
 == Migrations
 
 include::migrations/migrations.adoc[]
-
-include::migrations/migrate-1.4-to-1.5.adoc[leveloffset=+1]
-
-include::migrations/migrate-elasticsearch-to-opensearch.adoc[leveloffset=+1]
 
 == Queries and aggregations
 
@@ -99,6 +89,19 @@ include::clustering.adoc[]
 
 == Reference
 
+=== Architecture Overview
+
+include::architecture.adoc[]
+
+==== Data Structures
+include::data-structures.adoc[]
+
+==== Event Processing Architecture
+include::event-processing.adoc[]
+
+==== Security Architecture
+include::security.adoc[]
+
 include::useful-unomi-urls.adoc[]
 
 include::how-profile-tracking-works.adoc[]
@@ -106,6 +109,8 @@ include::how-profile-tracking-works.adoc[]
 include::context-request-flow.adoc[]
 
 include::datamodel.adoc[]
+
+include::property-types.adoc[]
 
 include::builtin-event-types.adoc[]
 
@@ -119,6 +124,9 @@ include::past-event-conditions.adoc[]
 
 include::web-tracker.adoc[]
 
+include::javascript-tracker-guide.adoc[]
+
+[[_integration_samples]]
 == Integration samples
 
 include::samples/samples.adoc[]
@@ -144,5 +152,3 @@ include::shell-commands.adoc[]
 include::writing-plugins.adoc[]
 
 include::patches.adoc[]
-
-include::migrate-es7-to-es9.adoc[]

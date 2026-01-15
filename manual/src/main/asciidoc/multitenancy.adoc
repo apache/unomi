@@ -45,10 +45,12 @@ X-Unomi-Api-Key: <PUBLIC_KEY>
 === Private API Key
 Used for administrative operations and sensitive endpoints. Requires Basic Authentication using tenant ID and private key.
 
-[source,http]
+[source,bash]
 ----
-Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>
+--user "TENANT_ID:PRIVATE_KEY"
 ----
+
+NOTE: curl automatically handles Base64 encoding when using the `--user` option, so you don't need to manually encode the credentials.
 
 == Getting Started
 
@@ -59,16 +61,18 @@ To create a new tenant, use the Tenant API endpoint:
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/tenants \
+  --user karaf:karaf \
   -H "Content-Type: application/json" \
-  -H "Authorization: Basic <ADMIN_CREDENTIALS>" \
   -d '{
-    "itemId": "my-tenant",
-    "name": "My Organization",
-    "description": "My organization description"
+    "requestedId": "my-tenant",
+    "properties": {
+      "name": "My Organization",
+      "description": "My organization description"
+    }
   }'
 ----
 
-The response includes the tenant's API keys:
+The response includes the tenant with automatically generated API keys:
 
 [source,json]
 ----
@@ -76,10 +80,22 @@ The response includes the tenant's API keys:
   "itemId": "my-tenant",
   "name": "My Organization",
   "description": "My organization description",
-  "publicKey": "abc123...",
-  "privateKey": "xyz789..."
+  "apiKeys": [
+    {
+      "type": "PUBLIC",
+      "key": "abc123...",
+      "created": "2024-01-01T00:00:00Z"
+    },
+    {
+      "type": "PRIVATE",
+      "key": "xyz789...",
+      "created": "2024-01-01T00:00:00Z"
+    }
+  ]
 }
 ----
+
+NOTE: Both public and private API keys are automatically generated when creating a tenant. Extract the `key` value from the appropriate API key object in the `apiKeys` array.
 
 === Making Your First API Call
 
@@ -104,8 +120,8 @@ curl http://localhost:8181/cxs/context.json \
 
 [source,bash]
 ----
-curl http://localhost:8181/cxs/profiles \
-  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>" \
+curl -X GET http://localhost:8181/cxs/profiles \
+  --user "TENANT_ID:PRIVATE_KEY" \
   -H "Content-Type: application/json"
 ----
 
@@ -344,8 +360,9 @@ securityService.executeAsSystemSubject(() -> {
 
 [source,bash]
 ----
-curl http://localhost:8181/cxs/tenants \
-  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+curl -X GET http://localhost:8181/cxs/tenants \
+  --user karaf:karaf \
+  -H "Content-Type: application/json"
 ----
 
 === Updating a Tenant
@@ -353,7 +370,7 @@ curl http://localhost:8181/cxs/tenants \
 [source,bash]
 ----
 curl -X PUT http://localhost:8181/cxs/tenants/my-tenant \
-  -H "Authorization: Basic <ADMIN_CREDENTIALS>" \
+  --user karaf:karaf \
   -H "Content-Type: application/json" \
   -d '{
     "displayName": "Updated Organization Name",
@@ -365,16 +382,24 @@ curl -X PUT http://localhost:8181/cxs/tenants/my-tenant \
 
 [source,bash]
 ----
-curl -X POST http://localhost:8181/cxs/tenants/my-tenant/keys \
-  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+curl -X POST http://localhost:8181/cxs/tenants/my-tenant/apikeys \
+  --user karaf:karaf \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "PUBLIC",
+    "validityDays": 30
+  }'
 ----
+
+NOTE: You can specify `type` as `PUBLIC` or `PRIVATE`, and optionally set `validityDays` for key expiration. If omitted, both keys will be regenerated.
 
 === Deleting a Tenant
 
 [source,bash]
 ----
 curl -X DELETE http://localhost:8181/cxs/tenants/my-tenant \
-  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+  --user karaf:karaf \
+  -H "Content-Type: application/json"
 ----
 
 == GraphQL Support
@@ -383,8 +408,8 @@ GraphQL endpoints support both public and private authentication methods:
 
 [source,bash]
 ----
-curl http://localhost:8181/graphql \
-  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>" \
+curl -X POST http://localhost:8181/graphql \
+  --user "TENANT_ID:PRIVATE_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "{ profiles { edges { node { id } } } }"
@@ -402,7 +427,7 @@ When a tenant accesses the GraphQL API:
 3. The schema only includes property types defined for that tenant
 4. Changes to a tenant's property types are automatically reflected in their schema
 
-For complete details on the GraphQL multi-tenancy implementation, refer to the <<GraphQL API>> section of the documentation.
+For complete details on the GraphQL multi-tenancy implementation, refer to the <<_graphql_api,GraphQL API>> section of the documentation.
 
 == Monitoring and Management
 
@@ -412,8 +437,9 @@ Track tenant API usage:
 
 [source,bash]
 ----
-curl http://localhost:8181/cxs/tenants/my-tenant/apiCalls \
-  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+curl -X GET http://localhost:8181/cxs/tenants/my-tenant/apiCalls \
+  --user karaf:karaf \
+  -H "Content-Type: application/json"
 ----
 
 === Data Migration
@@ -423,7 +449,8 @@ Migrate data between tenants:
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/tenants/source-tenant/migrate/target-tenant \
-  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+  --user karaf:karaf \
+  -H "Content-Type: application/json"
 ----
 
 == Best Practices
@@ -483,12 +510,20 @@ To migrate existing data to use multi-tenancy:
 ----
 # Step 1: Create new tenant
 curl -X POST http://localhost:8181/cxs/tenants \
-  -H "Authorization: Basic <ADMIN_CREDENTIALS>" \
-  -d '{"id": "new-tenant"}'
+  --user karaf:karaf \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestedId": "new-tenant",
+    "properties": {
+      "name": "New Tenant",
+      "description": "Migrated tenant"
+    }
+  }'
 
 # Step 2: Migrate data
 curl -X POST http://localhost:8181/cxs/tenants/migration/default/new-tenant \
-  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+  --user karaf:karaf \
+  -H "Content-Type: application/json"
 ----
 
 === Verification
@@ -498,8 +533,9 @@ After migration, verify data integrity:
 [source,bash]
 ----
 # Check profile count
-curl http://localhost:8181/cxs/tenants/new-tenant/profiles/count \
-  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+curl -X GET http://localhost:8181/cxs/tenants/new-tenant/profiles/count \
+  --user karaf:karaf \
+  -H "Content-Type: application/json"
 ----
 
 == Working with Events and Rules
@@ -510,9 +546,9 @@ First, create a JSON schema for your custom event type and deploy it using the J
 
 [source,bash]
 ----
-curl --location --request POST 'http://localhost:8181/cxs/jsonSchema' \
--u 'karaf:karaf' \
---header 'Content-Type: application/json' \
+curl -X POST http://localhost:8181/cxs/jsonSchema \
+  --user "TENANT_ID:PRIVATE_KEY" \
+  -H "Content-Type: application/json" \
 --data-raw '{
     "$id": "https://unomi.apache.org/schemas/json/events/purchaseCompleted/1-0-0",
     "$schema": "https://json-schema.org/draft/2019-09/schema",
@@ -572,17 +608,20 @@ You can verify your schema has been deployed by listing all available schemas:
 
 [source,bash]
 ----
-curl -u karaf:karaf http://localhost:8181/cxs/jsonSchema
+curl -X GET http://localhost:8181/cxs/jsonSchema \
+  --user "TENANT_ID:PRIVATE_KEY" \
+  -H "Content-Type: application/json"
 ----
+
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (`karaf:karaf`).
 
 You can also validate events against your schema using the validation endpoint:
 
 [source,bash]
 ----
-curl --request POST \
-  --url http://localhost:8181/cxs/jsonSchema/validateEvent \
-  --user karaf:karaf \
-  --header 'Content-Type: application/json' \
+curl -X POST http://localhost:8181/cxs/jsonSchema/validateEvent \
+  --user "TENANT_ID:PRIVATE_KEY" \
+  -H "Content-Type: application/json" \
   --data '{
     "eventType": "purchaseCompleted",
     "scope": "myapp",
@@ -644,7 +683,7 @@ Create a rule to update profile properties based on purchase events:
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/rules \
-  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>" \
+  --user "TENANT_ID:PRIVATE_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "metadata": {
@@ -720,8 +759,9 @@ curl -X POST http://localhost:8181/cxs/context.json \
 2. Verify profile properties were updated:
 [source,bash]
 ----
-curl http://localhost:8181/cxs/profiles/profile-456 \
-  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>"
+curl -X GET http://localhost:8181/cxs/profiles/profile-456 \
+  --user "TENANT_ID:PRIVATE_KEY" \
+  -H "Content-Type: application/json"
 ----
 
 Expected response will show updated properties:
@@ -746,7 +786,7 @@ Create a segment for customers with high total revenue:
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/segments \
-  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>" \
+  --user "TENANT_ID:PRIVATE_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "metadata": {
@@ -772,7 +812,7 @@ Create a rule to track days between purchases:
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/rules \
-  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>" \
+  --user "TENANT_ID:PRIVATE_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "metadata": {

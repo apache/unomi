@@ -12,6 +12,7 @@
 // limitations under the License.
 //
 
+[[_extend_an_existing_schema]]
 === Extend an existing schema
 
 ==== When a extension is needed?

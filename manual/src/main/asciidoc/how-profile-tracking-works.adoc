@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_how_profile_tracking_works]]
 === How profile tracking works
 
 In this section you will learn how Apache Unomi keeps track of visitors.

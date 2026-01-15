@@ -79,7 +79,7 @@
                             <outputDirectory>${doc.output.html}</outputDirectory>
                             <preserveDirectories>true</preserveDirectories>
                             <backend>html5</backend>
-                            <doctype>article</doctype>
+                            <doctype>book</doctype>
                             <attributes>
                                 <toc />
                                 <linkcss>true</linkcss>

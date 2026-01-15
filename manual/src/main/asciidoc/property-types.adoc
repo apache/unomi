@@ -1,0 +1,1561 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_property_types]]
+== Property Types
+
+Property types define the structure and metadata for properties that can be used in profiles and sessions within Apache Unomi. They specify the data type, display hints (ranges, constraints), default values, and other metadata that help inform UIs and enable rich querying capabilities.
+
+IMPORTANT: Property types are primarily designed for **UI purposes** - they inform user interfaces about what properties should be editable, how they should be displayed, and what constraints apply. Property types are **dynamically created and updated** at runtime and do not enforce strict validation on the server side. For actual data validation, Apache Unomi uses <<_json_schemas,JSON Schemas>>, which are used exclusively for validating events sent through public endpoints.
+
+==== Quick Reference: Property Types vs JSON Schemas
+
+|===
+| Aspect | Property Types | JSON Schemas
+
+| **Primary Purpose** | UI metadata and display hints | Server-side validation
+
+| **Used For Objects** | Profiles (editing), Sessions (editing) | Events (validation only)
+
+| **Storage** | Stored as PropertyType items, accessible via REST API | Stored in Elasticsearch/OpenSearch
+
+| **Dynamic Creation** | Yes, can be created/updated at runtime via REST API | Yes, can be added via API but primarily for events
+
+| **Validation** | No server-side validation (informational only) | Yes, enforces strict validation
+
+| **Event Support** | Not applicable - property types are for profiles and sessions only | Required for all events sent through public endpoints
+
+| **Accessibility** | Accessible via `/cxs/profiles/properties/targets/{target}` REST API | Accessible via JSON schema API
+
+|===
+
+=== Overview
+
+Property types serve as **informational schemas** for properties, primarily used by UIs to:
+
+* The data type (string, integer, date, boolean, etc.)
+* Whether the property can have multiple values
+* Default values
+* Validation constraints (ranges, date ranges, IP ranges) - primarily for UI hints
+* Which object types the property applies to (profiles or sessions)
+* How properties should be merged when profiles are combined
+* Whether the property is protected (read-only)
+* Display metadata (names, descriptions, tags, ranks) for UI organization
+
+=== Property Type Targets
+
+Property types are organized by their `target`, which indicates which type of object the property applies to:
+
+* `profiles` or `profile` - Properties for Profile objects (primary use case: editing profile data in UIs)
+* `sessions` or `session` - Properties for Session objects (primary use case: editing session data in UIs)
+
+The target is typically determined automatically from the file path when property types are loaded from JSON files:
+
+* Files in `/META-INF/cxs/properties/profiles/...` → target = `"profiles"`
+* Files in `/META-INF/cxs/properties/sessions/...` → target = `"sessions"`
+
+NOTE: Property types are only used for profiles and sessions. Events are immutable records and should not be edited through property type-based UIs. Event validation is handled by JSON schemas, not property types.
+
+=== Property Type Structure
+
+A property type is defined using the following structure:
+
+==== Structure Definition
+
+Inherits all the fields from: <<MetadataItem>>
+
+|===
+| *Field name* | *Type* | *Description*
+
+| target | String | The type of object this property type applies to (e.g., "profiles", "sessions"). Determined automatically from file path if not explicitly set. The target is extracted from the directory name immediately following "properties" in the file path (e.g., `META-INF/cxs/properties/profiles/...` → `"profiles"`).
+
+| type / valueTypeId | String | The identifier of the value type constraining values for properties using this PropertyType (e.g., "string", "integer", "date", "boolean", "set").
+
+| defaultValue | String | The default value that properties using this PropertyType will use if no value is specified explicitly.
+
+| multivalued | Boolean | Whether properties using this property type are multi-valued (a vector of values as opposed to a scalar value).
+
+| protected / protekted | Boolean | Whether properties with this type are marked as protected. Protected properties can be displayed but their value cannot be changed. Note: In JSON files, use `"protected"` (the Java field name is `protekted`).
+
+| rank | Double | The rank of this PropertyType for ordering purposes. Used to control the display order of properties in UIs.
+
+| mergeStrategy | String | The identifier of the PropertyMergeStrategyType to be used when profiles with properties using this PropertyType are being merged.
+
+| dateRanges | List<DateRange> | Optional list of date ranges that can be used for UI categorization and hints. Note: These are informational for UIs, not enforced server-side validation.
+
+| numericRanges | List<NumericRange> | Optional list of numeric ranges that can be used for UI categorization and hints (e.g., age groups). Note: These are informational for UIs, not enforced server-side validation.
+
+| ipRanges | List<IpRange> | Optional list of IP ranges that can be used for UI categorization and hints. Note: These are informational for UIs, not enforced server-side validation.
+
+| automaticMappingsFrom | Set<String> | Set of property names from which properties of this type would be automatically initialized from (legacy feature).
+
+| childPropertyTypes | Set<PropertyType> | For nested/complex properties, this contains the child property types that define the structure.
+
+|===
+
+==== Metadata Fields
+
+Property types inherit from MetadataItem, which provides:
+
+|===
+| *Field name* | *Type* | *Description*
+
+| id | String | Unique identifier for the property type (usually matches the property name).
+
+| name | String | Display name for the property type.
+
+| description | String | Description of what the property represents.
+
+| scope | String | The scope for the property type.
+
+| tags | Set<String> | User-editable tags for categorization.
+
+| systemTags | Set<String> | System-reserved tags for categorization (e.g., "profileProperties", "sessionProperties", "personalIdentifierProperties").
+
+| enabled | Boolean | Whether the property type is enabled.
+
+| hidden | Boolean | Whether the property type should be hidden in UIs.
+
+| readOnly | Boolean | Whether the property type definition can be edited.
+
+|===
+
+=== Value Types
+
+Property types use value types to define the primitive data type. Common value types include:
+
+* `string` - Text values
+* `integer` - Whole numbers
+* `long` - Large integers
+* `float` - Floating point numbers
+* `date` - Date and time values
+* `boolean` - True/false values
+* `set` - Collections of values (for multi-valued or nested properties)
+* `email` - Email addresses
+* `geoPoint` - Geographic coordinates
+
+=== Examples
+
+==== Profile Property Type Example
+
+This example shows a profile property type for storing a person's age with numeric ranges:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "age",
+    "name": "Age",
+    "systemTags": [
+      "properties",
+      "profileProperties",
+      "personalProfileProperties"
+    ]
+  },
+  "type": "integer",
+  "defaultValue": "",
+  "numericRanges": [
+    {"key": "*_10", "to": 10},
+    {"key": "10_20", "from": 10, "to": 20},
+    {"key": "20_30", "from": 20, "to": 30},
+    {"key": "30_40", "from": 30, "to": 40},
+    {"key": "40_50", "from": 40, "to": 50},
+    {"key": "50_*", "from": 50}
+  ],
+  "automaticMappingsFrom": [],
+  "rank": "501.0"
+}
+----
+
+==== Session Property Type Example
+
+This example shows a session property type for storing geographic information:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "sessionCity",
+    "name": "City",
+    "systemTags": [
+      "properties",
+      "sessionProperties",
+      "geographicSessionProperties"
+    ]
+  },
+  "type": "string",
+  "defaultValue": "",
+  "automaticMappingsFrom": [],
+  "rank": "3.0"
+}
+----
+
+==== Simple Profile Property Type Example
+
+This example shows a basic profile property type for storing a first name:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "firstName",
+    "name": "First name",
+    "systemTags": [
+      "properties",
+      "profileProperties",
+      "basicProfileProperties",
+      "personalIdentifierProperties"
+    ]
+  },
+  "type": "string",
+  "defaultValue": "",
+  "automaticMappingsFrom": [
+    "j:firstName"
+  ],
+  "rank": "101.0"
+}
+----
+
+=== Dynamic Creation and Management
+
+Property types are designed to be **dynamically created and updated at runtime**. This makes them ideal for scenarios where property definitions need to change without code deployments or server restarts.
+
+==== Key Characteristics
+
+* **Runtime Creation**: Property types can be created, updated, and deleted via REST API or GraphQL without restarting the server
+* **No Code Deployment Required**: Changes to property types take effect immediately
+* **UI-Driven**: Primarily used to inform UIs about property structure and constraints
+* **Flexible**: Can be modified to adapt to changing business requirements
+* **Multi-tenant**: Property types can be scoped to specific tenants
+
+==== Use Cases for Dynamic Property Types
+
+* **Custom Fields**: Allow users to define custom profile or session properties through a UI
+* **A/B Testing**: Quickly add or modify property definitions for testing
+* **Configuration-Driven UIs**: Build forms and property editors that adapt to property type definitions
+* **Integration Flexibility**: Add properties for new integrations without code changes
+* **Business Rule Changes**: Update property constraints and metadata as business rules evolve
+
+=== Creating Property Types
+
+Property types can be created in several ways:
+
+==== Via JSON Files in Plugins
+
+The most common way is to include property type definitions as JSON files in your plugin bundle:
+
+1. Create JSON files in your plugin's resources directory:
+   * Profile properties: `META-INF/cxs/properties/profiles/...`
+   * Session properties: `META-INF/cxs/properties/sessions/...`
+
+2. The target is automatically determined from the directory structure:
+   * Files in `properties/profiles/` → target = `"profiles"`
+   * Files in `properties/sessions/` → target = `"sessions"`
+
+3. Subdirectories can be used for organization (e.g., `profiles/personal/`, `profiles/contact/`)
+
+==== Via REST API
+
+Property types can be created or updated using the REST API:
+
+[source,http]
+----
+POST /cxs/profiles/properties
+Content-Type: application/json
+
+{
+  "metadata": {
+    "id": "customProperty",
+    "name": "Custom Property",
+    "systemTags": ["properties", "profileProperties"]
+  },
+  "type": "string",
+  "defaultValue": "",
+  "target": "profiles",
+  "rank": "100.0"
+}
+----
+
+==== Via GraphQL API
+
+Property types can also be managed through the GraphQL API using property type mutations and queries.
+
+=== Querying Property Types
+
+==== Get All Property Types by Target
+
+Retrieve all property types for a specific target:
+
+[source,http]
+----
+GET /cxs/profiles/properties/targets/profiles
+----
+
+Response:
+[source,json]
+----
+[
+  {
+    "metadata": {
+      "id": "firstName",
+      "name": "First name",
+      ...
+    },
+    "type": "string",
+    ...
+  },
+  ...
+]
+----
+
+==== Get All Property Types
+
+Retrieve all property types grouped by target:
+
+[source,http]
+----
+GET /cxs/profiles/properties
+----
+
+Response:
+[source,json]
+----
+{
+  "profiles": [...],
+  "sessions": [...]
+  // Note: Event property types are NOT included here as they are not stored as PropertyType items
+}
+----
+
+==== Get Property Type by ID
+
+Retrieve a specific property type:
+
+[source,http]
+----
+GET /cxs/profiles/properties/firstName
+----
+
+==== Get Property Types by Tag
+
+Retrieve property types with specific tags:
+
+[source,http]
+----
+GET /cxs/profiles/properties/tags/profileProperties,personalProfileProperties
+----
+
+==== Get Property Types by System Tag
+
+Retrieve property types with specific system tags:
+
+[source,http]
+----
+GET /cxs/profiles/properties/systemTags/profileProperties
+----
+
+=== Property Type Features
+
+==== Multi-valued Properties
+
+Set `multivalued` to `true` to allow a property to contain multiple values:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "interests",
+    "name": "Interests"
+  },
+  "type": "string",
+  "multivalued": true,
+  "rank": "200.0"
+}
+----
+
+==== Protected Properties
+
+Set `protected` to `true` to make a property read-only (note: use `"protected"` in JSON, not `"protekted"`):
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "systemId",
+    "name": "System ID"
+  },
+  "type": "string",
+  "protected": true,
+  "rank": "1.0"
+}
+----
+
+==== Numeric Ranges
+
+Define ranges for numeric properties to enable categorization:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "income",
+    "name": "Income"
+  },
+  "type": "integer",
+  "numericRanges": [
+    {"key": "low", "to": 30000},
+    {"key": "medium", "from": 30000, "to": 100000},
+    {"key": "high", "from": 100000}
+  ]
+}
+----
+
+==== Date Ranges
+
+Define ranges for date properties:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "registrationDate",
+    "name": "Registration Date"
+  },
+  "type": "date",
+  "dateRanges": [
+    {"key": "recent", "from": "2024-01-01"},
+    {"key": "old", "to": "2023-12-31"}
+  ]
+}
+----
+
+==== Merge Strategies
+
+Specify how properties should be merged when profiles are combined:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "lastLoginDate",
+    "name": "Last Login Date"
+  },
+  "type": "date",
+  "mergeStrategy": "mostRecentMergeStrategy",
+  "rank": "300.0"
+}
+----
+
+Common merge strategies include:
+* `defaultMergeStrategy` - Default merge behavior (typically uses the first non-null value)
+* `mostRecentMergeStrategy` - Use the most recent value (for dates and timestamps)
+* `oldestMergeStrategy` - Use the oldest value (for dates and timestamps)
+* `addMergeStrategy` - Add values together (for numeric types)
+* `nonEmptyMergeStrategy` - Prefer non-empty values
+
+NOTE: The merge strategy identifier in property type JSON files should match the `id` field from the merge strategy definition JSON files located in the `META-INF/cxs/mergers/` directory (this is a file system path within plugin bundles, not an API endpoint).
+
+==== Nested Properties
+
+For complex objects, use `childPropertyTypes` to define nested structures:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "address",
+    "name": "Address"
+  },
+  "type": "set",
+  "childPropertyTypes": [
+    {
+      "metadata": {
+        "id": "street",
+        "name": "Street"
+      },
+      "type": "string"
+    },
+    {
+      "metadata": {
+        "id": "city",
+        "name": "City"
+      },
+      "type": "string"
+    },
+    {
+      "metadata": {
+        "id": "zipCode",
+        "name": "Zip Code"
+      },
+      "type": "string"
+    }
+  ]
+}
+----
+
+=== Tags and System Tags
+
+Property types support two types of tags for categorization: `tags` and `systemTags`. Understanding the difference between them is important for organizing and filtering property types in UIs.
+
+==== Tags vs System Tags
+
+**Tags** (`tags` field):
+* User-editable tags that can be modified through UIs
+* Intended for custom categorization and organization
+* Can be added, removed, or changed by end users
+* Perfect for creating custom groupings for UI display
+* Example use cases: grouping properties by department, project, or custom business logic
+
+**System Tags** (`systemTags` field):
+* Reserved tags typically populated through JSON descriptors
+* Not meant to be modified by end users
+* Used for system-level categorization and filtering
+* Help classify properties for internal system logic
+* Example: `profileProperties`, `sessionProperties`, `personalIdentifierProperties`
+
+==== Using Tags to Group Properties in UIs
+
+Tags provide a flexible way to organize property types for display and editing in user interfaces. Here's how you can leverage tags:
+
+===== UI Grouping Strategy
+
+1. **Create Custom Tags**: Assign custom tags to property types based on how you want to group them in your UI
+2. **Query by Tags**: Use the REST API to retrieve property types filtered by specific tags
+3. **Display in Groups**: Organize properties in tabs, sections, or accordions based on their tags
+
+===== Example: Grouping Properties by Department
+
+Suppose you want to group profile properties by department in your UI:
+
+[source,json]
+----
+// Marketing properties
+{
+  "metadata": {
+    "id": "marketingSource",
+    "name": "Marketing Source",
+    "tags": ["marketing", "acquisition"]
+  },
+  "type": "string"
+}
+
+// Sales properties
+{
+  "metadata": {
+    "id": "salesRep",
+    "name": "Sales Representative",
+    "tags": ["sales", "account-management"]
+  },
+  "type": "string"
+}
+
+// Support properties
+{
+  "metadata": {
+    "id": "supportTier",
+    "name": "Support Tier",
+    "tags": ["support", "customer-service"]
+  },
+  "type": "string"
+}
+----
+
+Then in your UI, you can fetch and display properties grouped by tag:
+
+[source,http]
+----
+# Get all marketing properties
+GET /cxs/profiles/properties/tags/marketing
+
+# Get all sales properties
+GET /cxs/profiles/properties/tags/sales
+
+# Get all support properties
+GET /cxs/profiles/properties/tags/support
+----
+
+===== Example: Multi-Tag Filtering
+
+Properties can have multiple tags, allowing for flexible filtering:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "vipCustomer",
+    "name": "VIP Customer",
+    "tags": ["customer-tier", "priority", "billing"]
+  },
+  "type": "boolean"
+}
+----
+
+You can query by multiple tags (comma-separated):
+
+[source,http]
+----
+# Get properties with any of these tags
+GET /cxs/profiles/properties/tags/customer-tier,priority,billing
+----
+
+==== Creating and Assigning Tags
+
+===== Creating Tags
+
+Tags don't need to be pre-registered. Simply assign a tag string to a property type, and it becomes available for filtering. Tags are created implicitly when first used.
+
+===== Assigning Tags via JSON Files
+
+When defining property types in JSON files, include tags in the metadata:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "customProperty",
+    "name": "Custom Property",
+    "tags": ["my-custom-tag", "another-tag"],
+    "systemTags": ["properties", "profileProperties"]
+  },
+  "type": "string",
+  "rank": "100.0"
+}
+----
+
+===== Assigning Tags via REST API
+
+You can add or modify tags when creating or updating a property type:
+
+[source,http]
+----
+POST /cxs/profiles/properties
+Content-Type: application/json
+
+{
+  "metadata": {
+    "id": "newProperty",
+    "name": "New Property",
+    "tags": ["custom-group", "editable"],
+    "systemTags": ["properties", "profileProperties"]
+  },
+  "type": "string",
+  "target": "profiles"
+}
+----
+
+===== Updating Tags on Existing Property Types
+
+To add tags to an existing property type, retrieve it, modify the tags, and save it:
+
+[source,http]
+----
+# 1. Get the existing property type
+GET /cxs/profiles/properties/existingProperty
+
+# 2. Update it with new tags
+POST /cxs/profiles/properties
+Content-Type: application/json
+
+{
+  "metadata": {
+    "id": "existingProperty",
+    "name": "Existing Property",
+    "tags": ["existing-tag", "new-tag", "another-tag"],
+    "systemTags": ["properties", "profileProperties"]
+  },
+  "type": "string"
+}
+----
+
+===== Assigning Tags via GraphQL
+
+Tags can also be managed through the GraphQL API when creating or updating property types.
+
+==== Tag-Based UI Organization Examples
+
+===== Example 1: Tabbed Interface
+
+Organize properties into tabs based on tags:
+
+[source,typescript]
+----
+// Fetch properties grouped by tags
+const marketingProps: PropertyType[] = await fetch('/cxs/profiles/properties/tags/marketing')
+  .then(res => res.json());
+const salesProps: PropertyType[] = await fetch('/cxs/profiles/properties/tags/sales')
+  .then(res => res.json());
+const supportProps: PropertyType[] = await fetch('/cxs/profiles/properties/tags/support')
+  .then(res => res.json());
+
+// Display in tabs (pseudo-rendering - in real UI framework, this would be JSX/TSX)
+console.log('Tabs:');
+console.log('  Tab: Marketing');
+console.log('    PropertyEditor with', marketingProps.length, 'properties');
+console.log('  Tab: Sales');
+console.log('    PropertyEditor with', salesProps.length, 'properties');
+console.log('  Tab: Support');
+console.log('    PropertyEditor with', supportProps.length, 'properties');
+----
+
+===== Example 2: Accordion Sections
+
+Group properties in collapsible sections:
+
+[source,typescript]
+----
+const allProps: PropertyType[] = await fetch('/cxs/profiles/properties/targets/profiles')
+  .then(res => res.json());
+
+// Group properties by tag
+function groupByTag(propertyTypes: PropertyType[]): Record<string, PropertyType[]> {
+  const grouped: Record<string, PropertyType[]> = {};
+  for (const pt of propertyTypes) {
+    const tags = pt.metadata.tags || [];
+    for (const tag of tags) {
+      if (!grouped[tag]) {
+        grouped[tag] = [];
+      }
+      grouped[tag].push(pt);
+    }
+  }
+  return grouped;
+}
+
+const grouped = groupByTag(allProps);
+
+// Display in accordion (pseudo-rendering - in real UI framework, this would be JSX/TSX)
+console.log('Accordion:');
+for (const [tag, properties] of Object.entries(grouped)) {
+  console.log(`  AccordionItem: ${tag}`);
+  console.log(`    PropertyEditor with ${properties.length} properties`);
+}
+----
+
+===== Example 3: Filterable List
+
+Allow users to filter properties by tag:
+
+[source,typescript]
+----
+let selectedTag: string | null = null;
+
+const allProps: PropertyType[] = await fetch('/cxs/profiles/properties/targets/profiles')
+  .then(res => res.json());
+
+// Extract unique tags
+function extractUniqueTags(propertyTypes: PropertyType[]): string[] {
+  const tags: string[] = [];
+  for (const pt of propertyTypes) {
+    const propertyTags = pt.metadata.tags || [];
+    for (const tag of propertyTags) {
+      if (!tags.includes(tag)) {
+        tags.push(tag);
+      }
+    }
+  }
+  return tags;
+}
+
+const uniqueTags = extractUniqueTags(allProps);
+
+// Filter properties based on selected tag
+const filteredProps: PropertyType[] = selectedTag
+  ? await fetch(`/cxs/profiles/properties/tags/${selectedTag}`).then(res => res.json())
+  : allProps;
+
+// Display (pseudo-rendering - in real UI framework, this would be JSX/TSX)
+console.log('Select dropdown:');
+console.log('  Option: All Properties');
+for (const tag of uniqueTags) {
+  console.log(`  Option: ${tag}`);
+}
+
+console.log(`PropertyList with ${filteredProps.length} properties`);
+----
+
+==== Best Practices for Tags
+
+1. **Use Descriptive Tag Names**: Choose clear, meaningful tag names (e.g., `marketing`, `sales`, `support` rather than `m`, `s`, `sup`)
+
+2. **Create Hierarchical Tags**: Use dot notation for hierarchical organization (e.g., `department.marketing`, `department.sales`)
+
+3. **Use Consistent Tagging**: Establish a tagging convention and apply it consistently across all property types
+
+4. **Combine Tags and System Tags**: Use system tags for system-level categorization and tags for UI-level organization
+
+5. **Document Tag Conventions**: Maintain documentation about your tagging conventions so team members use tags consistently
+
+6. **Avoid Over-Tagging**: Don't assign too many tags to a single property type - 2-4 tags is usually sufficient
+
+7. **Use Tags for Permissions**: Consider using tags to control which properties are visible or editable by different user roles
+
+=== System Tags
+
+System tags are used to categorize property types. Common system tags include:
+
+* `properties` - General property tag
+* `profileProperties` - Properties for profiles
+* `sessionProperties` - Properties for sessions
+* `basicProfileProperties` - Basic profile information
+* `personalProfileProperties` - Personal information
+* `contactProfileProperties` - Contact information
+* `workProfileProperties` - Work-related information
+* `socialProfileProperties` - Social media identifiers
+* `systemProfileProperties` - System-managed properties (automatically maintained by Unomi)
+* `leadProfileProperties` - Lead management properties
+* `personalIdentifierProperties` - Properties that identify individuals (may be subject to privacy regulations)
+* `geographicSessionProperties` - Geographic session information
+* `technicalSessionProperties` - Technical session information
+
+=== Validation and Property Types
+
+IMPORTANT: Property types provide **informational metadata** for UIs but do **not enforce server-side validation**. The ranges, types, and constraints defined in property types are hints for UI components, not strict validation rules.
+
+==== What Property Types Do
+
+* **Inform UIs**: Tell user interfaces what properties exist, their types, and how to display them
+* **Provide Hints**: Give UI components information about expected data formats and constraints
+* **Enable Dynamic Forms**: Allow UIs to generate forms and property editors automatically
+* **Organize Display**: Help organize properties in UIs using tags, ranks, and categories
+
+==== What Property Types Don't Do
+
+* **Server-Side Validation**: Property types do not validate data on the server
+* **Enforce Constraints**: Ranges and constraints are informational, not enforced
+* **Prevent Invalid Data**: Invalid data can still be stored if not validated elsewhere
+* **Type Safety**: Property types don't guarantee type safety at the storage level
+
+==== When Validation Happens
+
+* **JSON Schemas**: Used exclusively for server-side validation of events sent through `/context.json` and `/eventcollector` endpoints
+* **Property Types**: Provide no server-side validation - they are informational only
+* **UI Validation**: Implement client-side validation in your UI based on property type hints (recommended for profiles and sessions)
+* **Application Logic**: Add validation in your application code if needed for profiles and sessions
+* **Database Constraints**: Use database-level constraints if your persistence layer supports them
+
+==== Best Practice: Property Types for Profiles/Sessions, JSON Schemas for Events
+
+Property types and JSON schemas serve different purposes for different objects:
+
+**For Profiles and Sessions:**
+* Use property types to build UIs for editing profile/session properties
+* Implement client-side validation in your UI based on property type hints
+* Property types provide no server-side validation - data is stored as-is
+
+**For Events:**
+* Use JSON schemas to validate events sent through `/context.json` or `/eventcollector`
+* Event property types are not accessible via REST API (they're generated internally)
+* To understand event structure, query actual events or use JSON schemas
+
+[plantuml]
+----
+@startuml
+skinparam rectangle {
+    BackgroundColor #E8F4F8
+    BorderColor #4A90A4
+}
+
+rectangle "Profiles/Sessions Workflow" {
+    rectangle "Property Type\n(UI hints)" as PT
+    rectangle "UI Form\n(with client validation)" as UI
+    rectangle "Profile/Session Update\n(No server validation)" as Update
+    
+    PT --> UI
+    UI --> Update
+}
+
+rectangle "Events Workflow" {
+    rectangle "JSON Schema\n(validation)" as Schema
+    rectangle "Event sent via\n/context.json\nor /eventcollector" as Event
+    rectangle "Server validates\nvia JSON Schema" as Validate
+    rectangle "Event stored\nif valid" as Store
+    
+    Schema --> Event
+    Event --> Validate
+    Validate --> Store
+}
+@enduml
+----
+
+=== Best Practices
+
+1. **Use descriptive names**: Property type IDs should be clear and descriptive (e.g., `firstName` rather than `fn`).
+
+2. **Set appropriate ranks**: Use the `rank` field to control display order in UIs. Lower numbers appear first.
+
+3. **Use system tags**: Apply appropriate system tags to help categorize and filter property types.
+
+4. **Organize with subdirectories**: Use subdirectories in your plugin structure to organize related property types.
+
+5. **Define ranges for categorization**: Use numeric ranges, date ranges, or IP ranges to enable automatic categorization of values.
+
+6. **Mark sensitive properties**: Use `personalIdentifierProperties` system tag for properties that identify individuals.
+
+7. **Set merge strategies**: Define appropriate merge strategies for properties that may need to be merged when profiles are combined.
+
+8. **Use appropriate value types**: Choose the correct value type (string, integer, date, etc.) for your data.
+
+=== Built-in Property Types
+
+Apache Unomi comes with a comprehensive set of built-in property types that cover common use cases. These are organized by category and target type.
+
+==== Built-in Profile Property Types
+
+===== Basic Profile Properties
+
+These properties store basic identifying information about profiles:
+
+* `firstName` (string) - First name of the profile
+* `lastName` (string) - Last name of the profile
+* `gender` (string) - Gender
+* `nationality` (string) - Nationality
+
+All basic profile properties are tagged with `basicProfileProperties`. `firstName` and `lastName` are also tagged with `personalIdentifierProperties`.
+
+===== Personal Profile Properties
+
+These properties store personal information:
+
+* `age` (integer) - Age with numeric ranges (0-10, 10-20, 20-30, 30-40, 40-50, 50+)
+* `birthDate` (date) - Birth date with date ranges
+* `kids` (integer) - Number of children
+* `maritalStatus` (string) - Marital status
+
+All personal profile properties are tagged with `personalProfileProperties`.
+
+===== Contact Profile Properties
+
+These properties store contact information:
+
+* `email` (email) - Email address
+* `phoneNumber` (string) - Phone number
+* `address` (string) - Street address
+* `city` (string) - City
+* `zipCode` (string) - Zip/postal code
+* `countryName` (string) - Country name
+
+All contact profile properties are tagged with `contactProfileProperties`. Email, address, and phoneNumber are also tagged with `personalIdentifierProperties`.
+
+===== Work Profile Properties
+
+These properties store work-related information:
+
+* `company` (string) - Company name
+* `jobTitle` (string) - Job title
+* `income` (integer) - Income
+
+All work profile properties are tagged with `workProfileProperties`.
+
+===== Social Profile Properties
+
+These properties store social media identifiers:
+
+* `facebookId` (string) - Facebook ID
+* `twitterId` (string) - Twitter ID
+* `linkedInId` (string) - LinkedIn ID
+* `googleId` (string) - Google ID
+
+All social profile properties are tagged with `socialProfileProperties`.
+
+===== System Profile Properties
+
+These properties are automatically managed by Unomi and are typically protected (read-only):
+
+* `firstVisit` (date) - Date of first visit (protected, uses `oldestMergeStrategy`)
+* `lastVisit` (date) - Date of last visit (protected, uses `mostRecentMergeStrategy`)
+* `previousVisit` (date) - Date of previous visit (protected, uses `mostRecentMergeStrategy`)
+* `nbOfVisits` (integer) - Number of visits with ranges (protected, uses `addMergeStrategy`)
+* `totalNbOfVisits` (integer) - Total number of visits (protected, uses `addMergeStrategy`)
+
+All system profile properties are tagged with `systemProfileProperties`.
+
+===== Lead Profile Properties
+
+* `leadAssignedTo` (string) - Person assigned to the lead
+
+All lead profile properties are tagged with `leadProfileProperties`.
+
+==== Built-in Session Property Types
+
+===== Geographic Session Properties
+
+These properties store geographic information about the session:
+
+* `sessionCity` (string) - City where the session occurred
+* `sessionCountryName` (string) - Country name
+* `sessionCountryCode` (string) - Country code
+* `sessionAdminSubDiv1` (string) - First-level administrative subdivision (e.g., state, province)
+* `sessionAdminSubDiv2` (string) - Second-level administrative subdivision (e.g., county)
+* `latitude` (string) - Latitude coordinate
+* `longitude` (string) - Longitude coordinate
+
+All geographic session properties are tagged with `geographicSessionProperties`.
+
+===== Technical Session Properties
+
+These properties store technical information about the session:
+
+* `deviceCategory` (string) - Device category (e.g., desktop, mobile, tablet)
+* `operatingSystemName` (string) - Operating system name
+* `operatingSystemFamily` (string) - Operating system family
+* `userAgentName` (string) - User agent name (browser name)
+* `userAgentVersion` (string) - User agent version (browser version)
+* `pageReferringURL` (string) - URL of the referring page
+
+All technical session properties are tagged with `technicalSessionProperties`.
+
+==== Property Type Organization
+
+Built-in property types are organized in the following directory structure:
+
+[source]
+----
+META-INF/cxs/properties/
+  profiles/
+    basic/          # Basic identifying information
+    personal/       # Personal information
+    contact/        # Contact information
+    work/           # Work-related information
+    social/         # Social media identifiers
+    system/         # System-managed properties
+    lead/           # Lead management
+  sessions/
+    geographic/     # Geographic information
+    technical/      # Technical information
+----
+
+The directory structure helps organize property types, and the target is automatically determined from the parent directory (`profiles` or `sessions`).
+
+==== Viewing Built-in Property Types
+
+You can view all built-in property types using the REST API:
+
+[source,http]
+----
+# Get all profile property types
+GET /cxs/profiles/properties/targets/profiles
+
+# Get all session property types
+GET /cxs/profiles/properties/targets/sessions
+
+# Get property types by system tag
+GET /cxs/profiles/properties/systemTags/profileProperties
+GET /cxs/profiles/properties/systemTags/sessionProperties
+----
+
+=== Property Types vs JSON Schemas
+
+Property types and JSON schemas serve complementary but distinct roles in Apache Unomi:
+
+==== Property Types: UI-Focused Metadata
+
+Property types are:
+* **Primarily for UIs**: Inform user interfaces about property structure, display names, types, and constraints
+* **Dynamically managed**: Can be created, updated, and deleted at runtime via REST API or GraphQL
+* **Informational**: Provide metadata about properties but don't enforce strict server-side validation
+* **Flexible**: Allow UIs to adapt to changing property definitions without code changes
+* **Target-specific**: Organized by target (profiles and sessions)
+
+Use property types when you need to:
+* Build dynamic forms and property editors in UIs
+* Display property information to users
+* Organize properties by tags or categories
+* Control property visibility and editability in interfaces
+* Provide hints about data types and constraints to UI components
+
+==== JSON Schemas: Server-Side Validation
+
+JSON schemas are:
+* **For validation**: Enforce strict data validation on the server side
+* **Event-only**: Used exclusively to validate events sent through public endpoints (`/context.json` and `/eventcollector`)
+* **Standard-based**: Use the JSON Schema standard for validation
+* **Persistent**: Stored in Elasticsearch/OpenSearch and loaded at startup
+* **Required for events**: Each event type must have an associated JSON schema with target `"events"`
+
+NOTE: While JSON schemas technically support targets like "profiles", "sessions", "rules", and "segments", in practice they are **only used for event validation**. The validation code only processes schemas with target `"events"` when validating incoming requests through the public endpoints.
+
+Use JSON schemas when you need to:
+* Validate incoming events from external sources
+* Ensure event data integrity and type safety
+* Enforce business rules and constraints on events
+* Validate event structures before processing
+
+==== How They Work Together
+
+Property types and JSON schemas complement each other:
+
+[plantuml]
+----
+@startuml
+skinparam rectangle {
+    BackgroundColor #E8F4F8
+    BorderColor #4A90A4
+}
+
+skinparam note {
+    BackgroundColor #FFF9E6
+    BorderColor #D4A574
+}
+
+rectangle "Property Types" as PT {
+    note right
+        • UI metadata (names, descriptions, types)
+        • Display hints (ranks, tags, protected flags)
+        • Dynamic and editable at runtime
+        • Used by GraphQL to generate schema
+    end note
+}
+
+rectangle "User Interface" as UI {
+    note right
+        • Dynamic forms based on property types
+        • Property editors with type hints
+        • Grouped displays using tags
+    end note
+}
+
+rectangle "JSON Schemas" as JSON {
+    note right
+        • Server-side validation for EVENTS ONLY
+        • Event type checking and constraints
+        • Event structure validation
+        • Event data integrity enforcement
+        • Used when events sent via /context.json
+          or /eventcollector endpoints
+    end note
+}
+
+PT -->|"UI Generation"| UI
+UI -->|"Data Submission"| JSON
+@enduml
+----
+
+**Example Workflow:**
+
+1. **Property Type Definition**: A property type defines `email` as a string with description "Email address" for profiles
+2. **UI Generation**: The UI uses the property type to render an email input field with appropriate validation hints for profile editing
+3. **User Input**: User enters an email address in the UI
+4. **Data Storage**: Data is stored in the profile (property types don't validate, but UI can implement client-side validation)
+5. **Event Validation (separate)**: When events are sent through `/context.json` or `/eventcollector`, JSON schemas validate the event structure (not profile properties)
+
+==== When to Use Each
+
+**Use Property Types for:**
+* Building dynamic property editors
+* Organizing properties in UIs (tabs, sections, filters)
+* Providing type hints to form builders
+* Controlling property visibility and editability
+* GraphQL schema generation
+
+**Use JSON Schemas for:**
+* Validating incoming events from external sources (the only actual use case)
+* Enforcing event data type constraints
+* Validating complex nested event structures
+* Ensuring event data integrity on the server
+
+**Use Both When:**
+* You want UI hints for profiles/sessions (property types) AND need to validate events (JSON schemas)
+* Building UIs that display profile/session data (property types) while also handling event validation (JSON schemas)
+
+=== Property Types for Events
+
+Property types are **not used for events**. Events are immutable records of user interactions and should not be edited through property type-based UIs.
+
+If you need to understand event structure for display purposes:
+* Query actual events to see their structure
+* Use JSON schemas (with target `"events"`) to understand the expected structure of events
+* JSON schemas define the validation rules for events sent through public endpoints
+
+Event validation is performed by JSON schemas (with target `"events"`) when events are sent through the public endpoints (`/context.json` and `/eventcollector`).
+
+=== Building UIs with Property Types
+
+Property types are designed to enable dynamic UI generation. Here's how to use them effectively:
+
+==== Step 1: Fetch Property Types
+
+Retrieve property types for your target (profiles or sessions):
+
+[source]
+----
+# Fetch all profile property types
+GET /cxs/profiles/properties/targets/profiles
+
+# Fetch session property types
+GET /cxs/profiles/properties/targets/sessions
+
+# Fetch by tag for grouping
+GET /cxs/profiles/properties/tags/marketing
+----
+
+TypeScript example:
+
+[source,typescript]
+----
+// Fetch property types from REST API
+const propertyTypes: PropertyType[] = await fetch('/cxs/profiles/properties/targets/profiles')
+  .then(res => res.json());
+
+// Or fetch by tag
+const marketingProps: PropertyType[] = await fetch('/cxs/profiles/properties/tags/marketing')
+  .then(res => res.json());
+----
+
+==== Step 2: Generate Form Fields
+
+Use property type metadata to generate appropriate form fields:
+
+[source,typescript]
+----
+interface FormField {
+  id: string;
+  name: string;
+  description?: string;
+  inputType: string;
+  multivalued: boolean;
+  defaultValue: string;
+  readOnly: boolean;
+  tags: string[];
+}
+
+function generateFormField(propertyType: PropertyType): FormField {
+  // Extract property type information
+  const id = propertyType.metadata.id;
+  const name = propertyType.metadata.name;
+  const description = propertyType.metadata.description;
+  const valueType = propertyType.type;
+  const isMultivalued = propertyType.multivalued || false;
+  const defaultValue = propertyType.defaultValue || '';
+  const isProtected = propertyType.protected || false;
+  
+  // Determine input type based on value type
+  let inputType: string;
+  if (valueType === 'integer' || valueType === 'long') {
+    inputType = 'number';
+  } else if (valueType === 'date') {
+    inputType = 'date';
+  } else if (valueType === 'boolean') {
+    inputType = 'checkbox';
+  } else if (valueType === 'email') {
+    inputType = 'email';
+  } else {
+    inputType = 'text';
+  }
+  
+  // Return field configuration
+  return {
+    id,
+    name,
+    description,
+    inputType,
+    multivalued: isMultivalued,
+    defaultValue,
+    readOnly: isProtected,
+    tags: propertyType.metadata.tags || []
+  };
+}
+
+// Generate form fields for all property types
+const formFields: FormField[] = propertyTypes.map(generateFormField);
+----
+
+==== Step 3: Render Dynamic Forms
+
+Use the generated fields to render your form:
+
+[source,typescript]
+----
+interface PropertyFormProps {
+  propertyTypes: PropertyType[];
+  onSubmit: (values: Record<string, any>) => void;
+}
+
+function renderPropertyForm({ propertyTypes, onSubmit }: PropertyFormProps): void {
+  // Initialize form values
+  const values: Record<string, any> = {};
+  
+  // Generate form fields
+  const fields: FormField[] = propertyTypes.map(generateFormField);
+  
+  // Group fields by tags
+  const groupedFields: Record<string, FormField[]> = {};
+  for (const field of fields) {
+    const tag = field.tags[0] || 'other';
+    if (!groupedFields[tag]) {
+      groupedFields[tag] = [];
+    }
+    groupedFields[tag].push(field);
+  }
+  
+  // Render form (pseudo-rendering logic)
+  for (const [tag, tagFields] of Object.entries(groupedFields)) {
+    // Render fieldset with legend
+    console.log(`Fieldset: ${tag}`);
+    
+    for (const field of tagFields) {
+      // Render label
+      console.log(`Label: ${field.name}`);
+      
+      if (field.description) {
+        // Render help-text
+        console.log(`Help: ${field.description}`);
+      }
+      
+      if (field.multivalued) {
+        // Render multi-value-input
+        const currentValue = values[field.id] || [];
+        // onChange handler would update values[field.id] = newValue
+        console.log(`Multi-value input: ${field.inputType}`, currentValue);
+      } else {
+        // Render single input
+        const currentValue = values[field.id] ?? field.defaultValue;
+        // onChange handler would update values[field.id] = newValue
+        console.log(`Input: ${field.inputType}`, currentValue, `readOnly: ${field.readOnly}`);
+      }
+    }
+  }
+  
+  // Render submit button
+  console.log('Submit button: Save');
+}
+----
+
+==== Step 4: Handle Numeric Ranges
+
+For properties with numeric ranges, you can provide range-based inputs:
+
+[source,typescript]
+----
+interface NumericRange {
+  key: string;
+  from?: number;
+  to?: number;
+}
+
+function renderNumericRangeInput(
+  propertyType: PropertyType,
+  value: string,
+  onChange: (value: string) => void
+): void {
+  const numericRanges = propertyType.numericRanges;
+  
+  if (numericRanges && numericRanges.length > 0) {
+    // Render as select dropdown with range options
+    console.log('Select dropdown:');
+    console.log('  Option: Select range');
+    
+    for (const range of numericRanges) {
+      const label = formatRange(range);
+      console.log(`  Option: ${label} (value: ${range.key})`);
+    }
+  } else {
+    // Fallback to regular number input
+    console.log(`Number input: ${value}`);
+  }
+}
+
+function formatRange(range: NumericRange): string {
+  if (range.from !== undefined && range.to !== undefined) {
+    return `${range.from} - ${range.to}`;
+  } else if (range.from !== undefined) {
+    return `${range.from}+`;
+  } else if (range.to !== undefined) {
+    return `up to ${range.to}`;
+  } else {
+    return range.key;
+  }
+}
+----
+
+==== Step 5: Sort by Rank
+
+Use the `rank` field to control display order:
+
+[source,typescript]
+----
+// Sort property types by rank (lower numbers first)
+function sortByRank(propertyTypes: PropertyType[]): PropertyType[] {
+  return [...propertyTypes].sort((a, b) => {
+    const rankA = a.rank ?? 999;  // Default rank for items without rank
+    const rankB = b.rank ?? 999;
+    return rankA - rankB;
+  });
+}
+
+const sortedPropertyTypes: PropertyType[] = sortByRank(propertyTypes);
+----
+
+==== Complete Example: Dynamic Property Editor
+
+Here's a complete example of a dynamic property editor:
+
+[source,typescript]
+----
+interface PropertyType {
+  metadata: {
+    id: string;
+    name: string;
+    description?: string;
+    tags?: string[];
+    systemTags?: string[];
+  };
+  type: string;
+  defaultValue?: string;
+  multivalued?: boolean;
+  protected?: boolean;
+  rank?: number;
+  numericRanges?: NumericRange[];
+}
+
+interface DynamicPropertyEditorState {
+  propertyTypes: PropertyType[];
+  values: Record<string, any>;
+  selectedTag: string | null;
+}
+
+async function createDynamicPropertyEditor(
+  target: string,
+  onSave: (values: Record<string, any>) => void
+): Promise<DynamicPropertyEditorState> {
+  // Initialize state
+  let propertyTypes: PropertyType[] = [];
+  const values: Record<string, any> = {};
+  let selectedTag: string | null = null;
+  
+  // Fetch property types from REST API
+  propertyTypes = await fetch(`/cxs/profiles/properties/targets/${target}`)
+    .then(res => res.json());
+  
+  // Initialize values with defaults
+  for (const propertyType of propertyTypes) {
+    if (propertyType.defaultValue != null) {
+      values[propertyType.metadata.id] = propertyType.defaultValue;
+    }
+  }
+  
+  // Get unique tags for filtering
+  const tags: string[] = [];
+  for (const propertyType of propertyTypes) {
+    const propertyTags = propertyType.metadata.tags || [];
+    for (const tag of propertyTags) {
+      if (!tags.includes(tag)) {
+        tags.push(tag);
+      }
+    }
+  }
+  
+  // Filter property types by selected tag
+  let filteredTypes = propertyTypes;
+  if (selectedTag != null) {
+    filteredTypes = propertyTypes.filter(pt => 
+      (pt.metadata.tags || []).includes(selectedTag!)
+    );
+  }
+  
+  // Sort by rank
+  const sortedTypes = sortByRank(filteredTypes);
+  
+  // Render form (pseudo-rendering - in real UI framework, this would be JSX/TSX)
+  console.log('Rendering form...');
+  
+  // Tag filter dropdown
+  if (tags.length > 0) {
+    console.log('Tag filter dropdown:', selectedTag);
+    console.log('  Option: All properties');
+    for (const tag of tags) {
+      console.log(`  Option: ${tag}`);
+    }
+  }
+  
+  // Property fields
+  for (const propertyType of sortedTypes) {
+    const fieldId = propertyType.metadata.id;
+    const fieldValue = values[fieldId] ?? propertyType.defaultValue ?? '';
+    
+    console.log(`Field: ${propertyType.metadata.name} (${fieldId})`);
+    
+    if (propertyType.metadata.description) {
+      console.log(`  Description: ${propertyType.metadata.description}`);
+    }
+    
+    if (propertyType.protected) {
+      console.log(`  Input: text, value: ${fieldValue}, readOnly: true`);
+    } else {
+      propertyInput(propertyType, fieldValue, (newValue) => {
+        values[fieldId] = newValue;
+      });
+    }
+  }
+  
+  // Submit button
+  console.log('Submit button: Save Properties');
+  
+  return { propertyTypes, values, selectedTag };
+}
+
+function propertyInput(
+  propertyType: PropertyType,
+  value: any,
+  onChange: (value: any) => void
+): void {
+  // Handle numeric ranges
+  if (propertyType.numericRanges && propertyType.numericRanges.length > 0) {
+    console.log('  Select dropdown with numeric ranges');
+    console.log('    Option: Select...');
+    for (const range of propertyType.numericRanges) {
+      console.log(`    Option: ${formatRange(range)} (value: ${range.key})`);
+    }
+    return;
+  }
+  
+  // Handle multivalued properties
+  if (propertyType.multivalued) {
+    const valueList: any[] = Array.isArray(value) ? value : (value ? [value] : []);
+    console.log('  Multi-value input container:');
+    for (let index = 0; index < valueList.length; index++) {
+      const val = valueList[index];
+      const inputType = getInputType(propertyType.type);
+      console.log(`    Input[${index}]: ${inputType}, value: ${val}`);
+      // onChange would update valueList[index] = newVal, then call onChange(valueList)
+    }
+    console.log('    Button: Add Value');
+    return;
+  }
+  
+  // Regular single-value input
+  const inputType = getInputType(propertyType.type);
+  console.log(`  Input: ${inputType}, value: ${value}`);
+}
+
+function getInputType(valueType: string): string {
+  if (valueType === 'integer' || valueType === 'long') {
+    return 'number';
+  } else if (valueType === 'date') {
+    return 'date';
+  } else if (valueType === 'boolean') {
+    return 'checkbox';
+  } else if (valueType === 'email') {
+    return 'email';
+  } else {
+    return 'text';
+  }
+}
+----
+
+=== Related Topics
+
+* <<_data_model_overview,Data Model Overview>> - Learn about the overall data model
+* <<_writing_plugins,Writing Plugins>> - Learn how to create plugins with property types
+* <<_json_schemas,JSON Schemas>> - Learn about JSON schema support in Unomi
+* <<_graphql_api,GraphQL API>> - Learn about GraphQL property type operations

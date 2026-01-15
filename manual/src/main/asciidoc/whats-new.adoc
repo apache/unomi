@@ -25,7 +25,7 @@ The documentation of the client can be found here: https://www.elastic.co/docs/r
 
 ===  Elasticsearch 7 data migration
 
-A procedure to migrate your data from Elasticsearch 7 to Elasticsearch 9 can be found in the <<Migrate from Elasticsearch 7 to Elasticsearch 9>> section
+A procedure to migrate your data from Elasticsearch 7 to Elasticsearch 9 can be found in the <<_migrate_from_elasticsearch_7_to_elasticsearch_9,Migrate from Elasticsearch 7 to Elasticsearch 9>> section
 
 === Karaf upgrade
 
@@ -49,7 +49,7 @@ Users can choose between ElasticSearch and OpenSearch through various configurat
 2. Using Maven profiles during build
 3. Using Docker environment variables
 
-For detailed configuration instructions, see the <<Configuration,configuration section>>.
+For detailed configuration instructions, see the <<_configuration,configuration section>>.
 
 ===== Security Considerations
 
@@ -65,4 +65,4 @@ For users wanting to migrate from ElasticSearch to OpenSearch:
 - All existing features, including the flattened field type, are supported
 - Existing queries and aggregations work seamlessly with both backends
 
-For detailed migration instructions, refer to the <<Migrations,migration guide>>.
+For detailed migration instructions, refer to the <<_migrations,migration guide>>.

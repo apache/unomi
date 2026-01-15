@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-=== Core Data Structures Overview
+==== Core Data Structures Overview
 
 ==== Base Types
 
@@ -255,7 +255,7 @@ All these entities inherit from `MetadataItem` which provides:
 - Read-only protection
 - Version tracking
 
-=== Detailed Structure Definitions
+==== Detailed Structure Definitions
 
 The following sections provide detailed diagrams for each major component:
 

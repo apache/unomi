@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-=== Security Architecture
+==== Security Architecture
 
 [plantuml]
 ----
@@ -79,4 +79,4 @@ end note
 @enduml
 ----
 
-=== Overview 
+===== Overview 

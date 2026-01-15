@@ -28,6 +28,8 @@ include::migrate-elasticsearch-to-opensearch.adoc[]
 
 include::migrate-2.x-to-3.0.adoc[]
 
+include::migrate-es7-to-es9.adoc[]
+
 === From version 1.6 to 2.0
 
 include::migrate-1.6-to-2.0.adoc[]

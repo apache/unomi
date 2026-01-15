@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_consent_api]]
 === Consent API
 
 Starting with Apache Unomi 1.3, a new API for consent management is now available. This API

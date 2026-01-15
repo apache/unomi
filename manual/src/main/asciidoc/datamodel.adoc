@@ -12,6 +12,7 @@
 // limitations under the License.
 //
 
+[[_data_model_overview]]
 === Data Model Overview
 
 Apache Unomi gathers information about users actions, information that is processed and stored by Unomi services.
@@ -222,7 +223,7 @@ Inherits all the fields from: <<Item>>
 
 Event types are completely open, and any new event type will be accepted by Apache Unomi.
 
-Apache Unomi also comes with an extensive list of <<Built-in Event types,built-in event types>> you can find in the reference section of this manual.
+Apache Unomi also comes with an extensive list of <<_builtin_event_types,built-in event types>> you can find in the reference section of this manual.
 
 === Profile
 
@@ -612,6 +613,7 @@ The visitor’s location is also resolve based on the IP address that was used t
 }
 ----
 
+[[_segment]]
 === Segment
 
 Segments are used to group profiles together, and are based on conditions that are executed on profiles to determine
@@ -730,7 +732,7 @@ The result of a condition is always a boolean value of true or false.
 Apache Unomi provides quite a lot of built-in condition types, including boolean types that make it possible to compose conditions using operators such as `and`, `or` or `not`.
 Composition is an essential element of building more complex conditions.
 
-For a more complete list of available condition types, see the <<Built-in condition types>> reference section.
+For a more complete list of available condition types, see the <<_builtin_condition_types,Built-in condition types>> reference section.
 
 ==== Structure definition
 
@@ -875,7 +877,7 @@ calling web hooks, setting profile properties, extracting data from the incoming
 an IP address),  or even pulling and/or pushing data to third-party systems such as a CRM server.
 
 Apache Unomi also comes with built-in action types.
-You may find the list of built-in action types in the <<Built-in action types>> section.
+You may find the list of built-in action types in the <<_builtin_action_types,Built-in action types>> section.
 
 ==== Structure definition
 

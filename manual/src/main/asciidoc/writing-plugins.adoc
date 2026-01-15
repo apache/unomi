@@ -248,9 +248,11 @@ A strategy to resolve how to merge properties when merging profile together.
 
 ==== PropertyType
 
-Definition for a profile or session property, specifying how possible values are constrained, if the value is
+Definition for a profile, session, or event property, specifying how possible values are constrained, if the value is
 multi-valued (a vector of values as opposed to a scalar value). `PropertyType`s can also be categorized using
 systemTags or file system structure, using sub-directories to organize definition files.
+
+For detailed information about property types, see <<_property_types,Property Types>>.
 
 ==== Rule
 
@@ -283,8 +285,8 @@ Definition for values that can be assigned to properties ("primitive" types).
 === Custom plugins
 
 Apache Unomi is a pluggeable server that may be extended in many ways. This document assumes you are familiar with the
-<<Data Model Overview,Apache Unomi Data Model>> . This document is mostly a reference document on the different things that may
-be used inside an extension. If you are looking for complete samples, please see the <<Samples,samples page>>.
+<<_data_model_overview,Apache Unomi Data Model>> . This document is mostly a reference document on the different things that may
+be used inside an extension. If you are looking for complete samples, please see the <<_samples,samples page>>.
 
 ==== Creating a plugin
 
@@ -347,7 +349,7 @@ When you deploy a custom bundle with a custom definition (see "Predefined xxx" c
 definition will automatically be deployed at your bundle start event *if it does not exist*.
 After that if you redeploy the same bundle, the definition will not be redeployed, but you can redeploy it manually
 using the command `unomi:deploy-definition &lt;bundleId&gt; &lt;fileName&gt;` If you need to modify an existing
-definition when deploying the module, see <<Migration patches>>.
+definition when deploying the module, see <<_migration_patches,Migration patches>>.
 
 ==== Predefined segments
 
@@ -1005,6 +1007,7 @@ my-custom-plugin/
      - For OpenSearch: `feature:install my-custom-plugin-opensearch`
    - Document dependencies and requirements clearly
 
+[[_custom_distribution_feature]]
 ==== Custom Distribution Feature
 
 For production deployments, you can create a custom distribution's feature file to automatically include your plugin features in the startup configuration. This approach ensures your plugin is automatically deployed when Apache Unomi starts.
@@ -1058,8 +1061,9 @@ For production deployments, you can create a custom distribution's feature file 
 - **Production ready**: No manual feature installation required
 - **Version control**: Configuration can be versioned and managed with your deployment
 
-**Note**: For more detailed information about custom distributions, including environment-specific examples, see the <<Custom Distribution Feature,Configuration>> section of the documentation.
+**Note**: For more detailed information about custom distributions, including environment-specific examples, see the <<_custom_distribution_feature,Custom Distribution Feature>> section or the <<_configuration,Configuration>> section of the documentation.
 
++
 6. **Migration from Legacy Implementations**
    - **DO NOT** use legacy mappings for custom query builders
    - Rename existing query builders to follow new naming conventions

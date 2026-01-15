@@ -12,6 +12,7 @@
 // limitations under the License.
 //
 
+[[_five_minutes_quickstart]]
 === Quick start with Docker
 
 Begin by creating a `docker-compose.yml` file. You can choose between ElasticSearch or OpenSearch:
@@ -99,7 +100,7 @@ Try accessing https://localhost:9443/cxs/cluster with username/password: karaf/k
 
 ==== Option 1: Using ElasticSearch
 
-1) Install JDK 17 and make sure you set the JAVA_HOME variable (see our <<JDK compatibility,Getting Started>> guide for more information on JDK compatibility)
+1) Install JDK 17 and make sure you set the JAVA_HOME variable (see our <<_jdk_compatibility,Getting Started>> guide for more information on JDK compatibility)
 
 2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-9-2-1 (please *make sure* you use the proper version : 9.2.1)
 
@@ -148,14 +149,51 @@ which determines which set of features and bundles are installed and started. A 
 
 9) Try accessing https://localhost:9443/cxs/cluster with username/password: `karaf/karaf` . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
 
-10) Request your first context by simply accessing : http://localhost:8181/cxs/context.js?sessionId=1234
+10) Create a tenant that will own all your data:
 
-11) If something goes wrong, you should check the logs in `./data/log/karaf.log`. If you get errors on the search engine,
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/tenants \
+  --user karaf:karaf \
+  -H "Content-Type: application/json" \
+  -d '{
+    "requestedId": "default",
+    "properties": {
+      "name": "Default Tenant",
+      "description": "Default tenant for quick start"
+    }
+  }'
+----
+
+Save the API keys from the response - you'll need them for API calls.
+
+11) Request your first context:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+  -H "Content-Type: application/json" \
+  -H "X-Unomi-Api-Key: <YOUR_PUBLIC_API_KEY>" \
+  -d '{
+    "source": {
+      "itemId": "homepage",
+      "itemType": "page",
+      "scope": "default"
+    }
+  }'
+----
+
+Or access it directly in a browser (requires API key in header):
+`http://localhost:8181/cxs/context.js?sessionId=1234`
+
+NOTE: For the context request to work, you'll need to include the public API key from step 10 in the request header: `X-Unomi-Api-Key: <YOUR_PUBLIC_API_KEY>`
+
+12) If something goes wrong, you should check the logs in `./data/log/karaf.log`. If you get errors on the search engine,
 make sure you are using the proper version.
 
 Next steps:
 
-- Trying our integration <<Samples,samples page>>
+- Trying our integration <<_samples,samples page>>
 
 Note: When using OpenSearch, make sure to:
 - Set up proper SSL certificates or disable SSL verification for development

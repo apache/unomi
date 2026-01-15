@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_builtin_action_types]]
 === Built-in action types
 
 Unomi comes with quite a lot of built-in action types. Instead of detailing them one by one you will find here an overview of
