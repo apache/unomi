@@ -19,7 +19,7 @@ Property types define the structure and metadata for properties that can be used
 
 IMPORTANT: Property types are primarily designed for **UI purposes** - they inform user interfaces about what properties should be editable, how they should be displayed, and what constraints apply. Property types are **dynamically created and updated** at runtime and do not enforce strict validation on the server side. For actual data validation, Apache Unomi uses <<_json_schemas,JSON Schemas>>, which are used exclusively for validating events sent through public endpoints.
 
-==== Quick Reference: Property Types vs JSON Schemas
+=== Quick Reference: Property Types vs JSON Schemas
 
 |===
 | Aspect | Property Types | JSON Schemas
@@ -1103,41 +1103,33 @@ skinparam rectangle {
     BorderColor #4A90A4
 }
 
-skinparam note {
-    BackgroundColor #FFF9E6
-    BorderColor #D4A574
-}
+rectangle "Property Types" as PT
+note right of PT
+  • UI metadata (names, descriptions, types)
+  • Display hints (ranks, tags, protected flags)
+  • Dynamic and editable at runtime
+  • Used by GraphQL to generate schema
+end note
 
-rectangle "Property Types" as PT {
-    note right
-        • UI metadata (names, descriptions, types)
-        • Display hints (ranks, tags, protected flags)
-        • Dynamic and editable at runtime
-        • Used by GraphQL to generate schema
-    end note
-}
+rectangle "User Interface" as UI
+note right of UI
+  • Dynamic forms based on property types
+  • Property editors with type hints
+  • Grouped displays using tags
+end note
 
-rectangle "User Interface" as UI {
-    note right
-        • Dynamic forms based on property types
-        • Property editors with type hints
-        • Grouped displays using tags
-    end note
-}
+rectangle "JSON Schemas" as JSON
+note right of JSON
+  • Server-side validation for EVENTS ONLY
+  • Event type checking and constraints
+  • Event structure validation
+  • Event data integrity enforcement
+  • Used when events sent via /context.json
+    or /eventcollector endpoints
+end note
 
-rectangle "JSON Schemas" as JSON {
-    note right
-        • Server-side validation for EVENTS ONLY
-        • Event type checking and constraints
-        • Event structure validation
-        • Event data integrity enforcement
-        • Used when events sent via /context.json
-          or /eventcollector endpoints
-    end note
-}
-
-PT -->|"UI Generation"| UI
-UI -->|"Data Submission"| JSON
+PT --> UI : UI Generation
+UI --> JSON : Data Submission
 @enduml
 ----
 
