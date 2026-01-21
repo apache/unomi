@@ -1,0 +1,9 @@
+{
+  "itemId": "test-goal-from-file",
+  "metadata": {
+    "name": "Test Goal from File",
+    "description": "A test goal created from JSON file",
+    "scope": "systemscope"
+  },
+  "enabled": true
+}

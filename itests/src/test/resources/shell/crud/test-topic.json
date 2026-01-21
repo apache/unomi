@@ -1,0 +1,9 @@
+{
+  "itemId": "test-topic-from-file",
+  "metadata": {
+    "id": "test-topic-from-file",
+    "name": "Test Topic from File",
+    "description": "A test topic created from JSON file",
+    "scope": "systemscope"
+  }
+}

@@ -162,6 +162,7 @@ public abstract class BaseIT extends KarafTestSupport {
     protected EventService eventService;
     protected BundleWatcher bundleWatcher;
     protected GroovyActionsService groovyActionsService;
+    protected GoalsService goalsService;
     protected SegmentService segmentService;
     protected SchemaService schemaService;
     protected ScopeService scopeService;
@@ -257,6 +258,7 @@ public abstract class BaseIT extends KarafTestSupport {
         privacyService = getOsgiService(PrivacyService.class, 600000);
         eventService = getOsgiService(EventService.class, 600000);
         groovyActionsService = getOsgiService(GroovyActionsService.class, 600000);
+        goalsService = getOsgiService(GoalsService.class, 600000);
         segmentService = getOsgiService(SegmentService.class, 600000);
         schemaService = getOsgiService(SchemaService.class, 600000);
         scopeService = getOsgiService(ScopeService.class, 600000);
@@ -931,6 +933,7 @@ public abstract class BaseIT extends KarafTestSupport {
         eventService = getService(EventService.class);
         bundleWatcher = getService(BundleWatcher.class);
         groovyActionsService = getService(GroovyActionsService.class);
+        goalsService = getService(GoalsService.class);
         schemaService = getService(SchemaService.class);
         scopeService = getService(ScopeService.class);
         patchService = getService(PatchService.class);

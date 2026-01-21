@@ -1,0 +1,14 @@
+{
+  "itemId": "test-rule-from-file",
+  "metadata": {
+    "id": "test-rule-from-file",
+    "name": "Test Rule from File",
+    "description": "A test rule created from JSON file",
+    "scope": "systemscope",
+    "enabled": true
+  },
+  "condition": {
+    "type": "matchAllCondition"
+  },
+  "actions": []
+}

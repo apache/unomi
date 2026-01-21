@@ -1,0 +1,12 @@
+{
+  "itemId": "test-segment-from-file",
+  "metadata": {
+    "id": "test-segment-from-file",
+    "name": "Test Segment from File",
+    "description": "A test segment created from JSON file",
+    "scope": "systemscope"
+  },
+  "condition": {
+    "type": "matchAllCondition"
+  }
+}

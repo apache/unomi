@@ -1,0 +1,19 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/test/test-schema-from-file",
+  "self": {
+    "target": "events",
+    "name": "Test Schema from File"
+  },
+  "type": "object",
+  "properties": {
+    "testProperty": {
+      "type": "string",
+      "description": "A test property"
+    },
+    "testNumber": {
+      "type": "number",
+      "description": "A test number property"
+    }
+  },
+  "required": ["testProperty"]
+}
