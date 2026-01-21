@@ -207,6 +207,7 @@
     <feature name="unomi-shell-dev-commands" description="Apache Unomi :: Shell Dev Commands" version="${project.version}">
         <feature>unomi-services</feature>
         <bundle start="false">mvn:org.apache.unomi/shell-dev-commands/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-shell-commands/${project.version}</bundle>
     </feature>
 
     <feature name="unomi-wab" description="Apache Unomi :: WAB" version="${project.version}">

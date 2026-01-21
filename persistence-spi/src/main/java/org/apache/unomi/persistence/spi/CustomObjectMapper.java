@@ -36,6 +36,16 @@ import org.apache.unomi.api.goals.Goal;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.Patch;
+import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.api.ClusterNode;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.rules.RuleStatistics;
+import org.apache.unomi.api.Scope;
+import org.apache.unomi.api.PersonaSession;
+import org.apache.unomi.api.lists.UserList;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -95,6 +105,16 @@ public class CustomObjectMapper extends ObjectMapper {
         builtinItemTypeClasses.put(ActionType.ITEM_TYPE, ActionType.class);
         builtinItemTypeClasses.put(Topic.ITEM_TYPE, Topic.class);
         builtinItemTypeClasses.put(ProfileAlias.ITEM_TYPE, ProfileAlias.class);
+        builtinItemTypeClasses.put(ApiKey.ITEM_TYPE, ApiKey.class);
+        builtinItemTypeClasses.put(Tenant.ITEM_TYPE, Tenant.class);
+        builtinItemTypeClasses.put(Patch.ITEM_TYPE, Patch.class);
+        builtinItemTypeClasses.put(PropertyType.ITEM_TYPE, PropertyType.class);
+        builtinItemTypeClasses.put(ClusterNode.ITEM_TYPE, ClusterNode.class);
+        builtinItemTypeClasses.put(ScheduledTask.ITEM_TYPE, ScheduledTask.class);
+        builtinItemTypeClasses.put(RuleStatistics.ITEM_TYPE, RuleStatistics.class);
+        builtinItemTypeClasses.put(Scope.ITEM_TYPE, Scope.class);
+        builtinItemTypeClasses.put(PersonaSession.ITEM_TYPE, PersonaSession.class);
+        builtinItemTypeClasses.put(UserList.ITEM_TYPE, UserList.class);
         for (Map.Entry<String, Class<? extends Item>> entry : builtinItemTypeClasses.entrySet()) {
             propertyTypedObjectDeserializer.registerMapping("itemType=" + entry.getKey(), entry.getValue());
             itemDeserializer.registerMapping(entry.getKey(), entry.getValue());
