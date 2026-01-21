@@ -53,15 +53,14 @@ public class PersonaCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[] {
             "Identifier",
             "First Name",
             "Last Name",
             "Email",
             "Description",
-            "Last Updated",
-            "Tenant"
+            "Last Updated"
         };
     }
 
@@ -79,8 +78,7 @@ public class PersonaCrudCommand extends BaseCrudCommand {
             (String) persona.getProperty("lastName"),
             (String) persona.getProperty("email"),
             (String) persona.getProperty("description"),
-            persona.getSystemProperties().get("lastUpdated").toString(),
-            persona.getTenantId()
+            persona.getSystemProperties().get("lastUpdated").toString()
         };
     }
 

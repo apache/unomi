@@ -19,35 +19,43 @@ package org.apache.unomi.shell.dev.commands;
 import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.console.Session;
-import org.apache.karaf.shell.support.table.ShellTable;
-import org.apache.unomi.persistence.spi.PersistenceService;
 
-import java.io.IOException;
 import java.io.PrintStream;
 
 /**
- * Base class for Unomi shell commands
+ * Base class for simple shell commands that provides common functionality
+ * for accessing Session and console output.
  */
-public abstract class BaseCommand implements Action {
-    protected static final int DEFAULT_ENTRIES = 100;
+public abstract class BaseSimpleCommand implements Action {
 
     @Reference
-    protected PersistenceService persistenceService;
+    protected Session session;
 
-    protected ShellTable buildTable() {
-        ShellTable table = new ShellTable();
-        table.column("ID");
-        table.column("Name");
-        table.column("Description");
-        return table;
+    /**
+     * Get the console PrintStream from the session.
+     * 
+     * @return the console PrintStream
+     */
+    protected PrintStream getConsole() {
+        return session.getConsole();
     }
 
-    protected void printTable(ShellTable table, Session session) {
-        table.print(session.getConsole());
+    /**
+     * Print a message to the console.
+     * 
+     * @param message the message to print
+     */
+    protected void println(String message) {
+        getConsole().println(message);
     }
 
-    protected boolean confirm(Session session, String message) throws IOException {
-        String response = session.readLine(message + " (y/n): ", null);
-        return response != null && response.toLowerCase().startsWith("y");
+    /**
+     * Print a formatted message to the console.
+     * 
+     * @param format the format string
+     * @param args the arguments
+     */
+    protected void printf(String format, Object... args) {
+        getConsole().printf(format, args);
     }
 }

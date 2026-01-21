@@ -22,6 +22,8 @@ import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.karaf.shell.support.table.Row;
 import org.apache.karaf.shell.support.table.ShellTable;
+
+import java.io.PrintStream;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.common.DataTable;
 
@@ -62,9 +64,10 @@ public abstract class ListCommandSupport implements Action {
         DataTable dataTable = buildDataTable();
 
         String[] headers = getHeaders();
+        PrintStream console = session.getConsole();
 
         if (csv) {
-            System.out.println(dataTable.toCSV(headers));
+            console.println(dataTable.toCSV(headers));
             return null;
         }
 
@@ -81,7 +84,7 @@ public abstract class ListCommandSupport implements Action {
             row.addContent(rowData);
         }
 
-        shellTable.print(System.out);
+        shellTable.print(console);
         return null;
     }
 

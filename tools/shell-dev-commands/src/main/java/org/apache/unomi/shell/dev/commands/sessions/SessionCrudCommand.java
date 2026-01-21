@@ -51,7 +51,7 @@ public class SessionCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[]{"ID", "Profile ID", "Scope", "Time Stamp", "Last Event", "Duration", "Size"};
     }
 

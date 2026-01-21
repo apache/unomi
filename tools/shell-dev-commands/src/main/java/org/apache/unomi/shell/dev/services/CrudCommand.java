@@ -42,9 +42,11 @@ import java.util.Map;
  *
  * Example usage in shell:
  * unomi:crud create rule --file rule.json
- * unomi:crud read rule rule_id
- * unomi:crud update rule rule_id --file updated_rule.json
- * unomi:crud delete rule rule_id
+ * unomi:crud create rule -d={"itemId":"rule_id","enabled":true}
+ * unomi:crud read rule -i rule_id
+ * unomi:crud update rule -i rule_id --file updated_rule.json
+ * unomi:crud update rule -i rule_id -d={"itemId":"rule_id","enabled":false}
+ * unomi:crud delete rule -i rule_id
  * unomi:crud list rule [--csv]
  * unomi:crud help rule
  */

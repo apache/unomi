@@ -22,6 +22,7 @@ import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.karaf.shell.api.console.Session;
+
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService.CacheStatistics;
@@ -29,17 +30,15 @@ import org.apache.unomi.api.services.cache.MultiTypeCacheService.CacheStatistics
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.shell.dev.commands.TenantContextHelper;
 
+import java.io.PrintStream;
 import java.io.Serializable;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Service
 @Command(scope = "unomi", name = "cache", description = "Cache management commands")
-public class CacheCommands implements Action {
-
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+public class CacheCommands extends BaseSimpleCommand {
 
     @Reference
     private MultiTypeCacheService cacheService;
@@ -49,9 +48,6 @@ public class CacheCommands implements Action {
 
     @Reference
     private ExecutionContextManager executionContextManager;
-
-    @Reference
-    private Session session;
 
     @Option(name = "--stats", description = "Display cache statistics", required = false)
     private boolean showStats = false;
@@ -89,7 +85,7 @@ public class CacheCommands implements Action {
     @Override
     public Object execute() throws Exception {
         if (cacheService == null) {
-            System.out.println("Cache service not available");
+            println("Cache service not available");
             return null;
         }
 
@@ -135,7 +131,7 @@ public class CacheCommands implements Action {
 
     private void viewCacheEntry() {
         if (type == null) {
-            System.out.println("Please specify a type to view the entry");
+            println("Please specify a type to view the entry");
             return;
         }
 
@@ -145,23 +141,23 @@ public class CacheCommands implements Action {
 
             Serializable entry = typeCache.get(entryId);
             if (entry != null) {
-                System.out.println("Cache entry found:");
-                System.out.println("  Tenant: " + tenantId);
-                System.out.println("  Type: " + type);
-                System.out.println("  ID: " + entryId);
-                System.out.println("  Value: " + entry);
+                println("Cache entry found:");
+                println("  Tenant: " + tenantId);
+                println("  Type: " + type);
+                println("  ID: " + entryId);
+                println("  Value: " + entry);
                 // Add any additional entry details you want to display
             } else {
-                System.out.println("No cache entry found for ID: " + entryId);
+                println("No cache entry found for ID: " + entryId);
             }
         } catch (ClassNotFoundException e) {
-            System.out.println("Invalid type specified: " + type);
+            println("Invalid type specified: " + type);
         }
     }
 
     private void removeCacheEntry() {
         if (type == null) {
-            System.out.println("Please specify a type to remove the entry");
+            println("Please specify a type to remove the entry");
             return;
         }
 
@@ -172,57 +168,59 @@ public class CacheCommands implements Action {
             Map<String, ? extends Serializable> typeCache = cacheService.getTenantCache(tenantId, typeClass);
             if (typeCache.containsKey(entryId)) {
                 cacheService.remove(type, entryId, tenantId, typeClass);
-                System.out.println("Successfully removed cache entry:");
-                System.out.println("  Tenant: " + tenantId);
-                System.out.println("  Type: " + type);
-                System.out.println("  ID: " + entryId);
+                println("Successfully removed cache entry:");
+                println("  Tenant: " + tenantId);
+                println("  Type: " + type);
+                println("  ID: " + entryId);
             } else {
-                System.out.println("No cache entry found for ID: " + entryId);
+                println("No cache entry found for ID: " + entryId);
             }
         } catch (ClassNotFoundException e) {
-            System.out.println("Invalid type specified: " + type);
+            println("Invalid type specified: " + type);
         }
     }
 
     private void clearCache() {
         if (tenantId != null) {
             cacheService.clear(tenantId);
-            System.out.println("Cache cleared for tenant: " + tenantId);
+            println("Cache cleared for tenant: " + tenantId);
         } else {
-            System.out.println("Please specify a tenant ID to clear cache");
+            println("Please specify a tenant ID to clear cache");
         }
     }
 
     private void inspectCache() {
-        System.out.println("Cache contents for tenant: " + tenantId);
-        System.out.println("Timestamp: " + DATE_FORMAT.format(new Date()));
-        System.out.println("---");
+        PrintStream console = getConsole();
+        
+        println("Cache contents for tenant: " + tenantId);
+        println("Timestamp: " + CommandUtils.formatDate(new Date()));
+        println("---");
 
         if (type != null) {
             try {
                 // This is a simplified example - you would need proper type resolution
                 Class<? extends Serializable> typeClass = (Class<? extends Serializable>) Class.forName(type);
                 Map<String, ? extends Serializable> typeCache = cacheService.getTenantCache(tenantId, typeClass);
-                System.out.println("Entries for type " + type + ": " + typeCache.size());
+                console.println("Entries for type " + type + ": " + typeCache.size());
                 if (detailed && !typeCache.isEmpty()) {
-                    typeCache.forEach((key, value) -> System.out.println("  " + key + " -> " + value));
+                    typeCache.forEach((key, value) -> console.println("  " + key + " -> " + value));
                 }
             } catch (ClassNotFoundException e) {
-                System.out.println("Invalid type specified: " + type);
+                console.println("Invalid type specified: " + type);
             }
         } else {
-            System.out.println("Please specify a type to inspect");
+            console.println("Please specify a type to inspect");
         }
     }
 
     private void watchStatistics() {
-        System.out.println("Watching cache statistics (refresh every " + watchInterval + " seconds)");
-        System.out.println("Press Ctrl+C to stop");
+        println("Watching cache statistics (refresh every " + watchInterval + " seconds)");
+        println("Press Ctrl+C to stop");
 
         while (true) {
             try {
                 clearScreen();
-                System.out.println("Cache Statistics - " + DATE_FORMAT.format(new Date()));
+                println("Cache Statistics - " + CommandUtils.formatDate(new Date()));
                 displayStatistics();
                 TimeUnit.SECONDS.sleep(watchInterval);
             } catch (InterruptedException e) {
@@ -239,41 +237,41 @@ public class CacheCommands implements Action {
         if (type != null) {
             TypeStatistics typeStats = allStats.get(type);
             if (typeStats == null) {
-                System.out.println("No statistics available for type: " + type);
+                println("No statistics available for type: " + type);
                 return;
             }
             printTypeStats(type, typeStats);
         } else {
             for (Map.Entry<String, TypeStatistics> entry : allStats.entrySet()) {
                 printTypeStats(entry.getKey(), entry.getValue());
-                System.out.println("---");
+                println("---");
             }
         }
 
         if (reset) {
             stats.reset();
-            System.out.println("Statistics have been reset");
+            println("Statistics have been reset");
         }
     }
 
     private void printTypeStats(String type, TypeStatistics stats) {
-        System.out.println("Statistics for type: " + type);
-        System.out.println("  Hits: " + stats.getHits());
-        System.out.println("  Misses: " + stats.getMisses());
-        System.out.println("  Updates: " + stats.getUpdates());
-        System.out.println("  Validation Failures: " + stats.getValidationFailures());
-        System.out.println("  Indexing Errors: " + stats.getIndexingErrors());
+        println("Statistics for type: " + type);
+        println("  Hits: " + stats.getHits());
+        println("  Misses: " + stats.getMisses());
+        println("  Updates: " + stats.getUpdates());
+        println("  Validation Failures: " + stats.getValidationFailures());
+        println("  Indexing Errors: " + stats.getIndexingErrors());
 
         long total = stats.getHits() + stats.getMisses();
         if (total > 0) {
             double hitRatio = (double) stats.getHits() / total * 100;
             double missRatio = (double) stats.getMisses() / total * 100;
-            System.out.printf("  Hit Ratio: %.2f%%\n", hitRatio);
-            System.out.printf("  Miss Ratio: %.2f%%\n", missRatio);
+            printf("  Hit Ratio: %.2f%%\n", hitRatio);
+            printf("  Miss Ratio: %.2f%%\n", missRatio);
 
             if (detailed) {
-                System.out.printf("  Efficiency Score: %.2f\n", calculateEfficiencyScore(stats));
-                System.out.printf("  Error Rate: %.2f%%\n",
+                printf("  Efficiency Score: %.2f\n", calculateEfficiencyScore(stats));
+                printf("  Error Rate: %.2f%%\n",
                     (double)(stats.getValidationFailures() + stats.getIndexingErrors()) / total * 100);
             }
         }
@@ -292,7 +290,8 @@ public class CacheCommands implements Action {
     }
 
     private void clearScreen() {
-        System.out.print("\033[H\033[2J");
-        System.out.flush();
+        PrintStream console = getConsole();
+        console.print("\033[H\033[2J");
+        console.flush();
     }
 }

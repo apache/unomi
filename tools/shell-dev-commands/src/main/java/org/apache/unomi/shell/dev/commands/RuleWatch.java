@@ -25,7 +25,6 @@ import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.RuleListenerService;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -62,12 +61,12 @@ public class RuleWatch extends TailCommandSupport {
 
     @Override
     public Object getListener() {
-        return new RuleWatchListener(session.getConsole());
+        return new RuleWatchListener(getConsole());
     }
 
     class RuleWatchListener implements RuleListenerService {
 
-        PrintStream out;
+        private final PrintStream out;
 
         public RuleWatchListener(PrintStream out) {
             this.out = out;
@@ -77,7 +76,6 @@ public class RuleWatch extends TailCommandSupport {
         public void onEvaluate(Rule rule, Event event) {
             populateRuleInfo(rule, event, "EVALUATE");
         }
-
 
         @Override
         public void onAlreadyRaised(AlreadyRaisedFor alreadyRaisedFor, Rule rule, Event event) {
@@ -93,15 +91,7 @@ public class RuleWatch extends TailCommandSupport {
             if (!ArrayUtils.contains(ruleIds, rule.getItemId())) {
                 return;
             }
-            List<String> ruleExecutionInfo = new ArrayList<>();
-            ruleExecutionInfo.add(status);
-            ruleExecutionInfo.add(rule.getItemId());
-            ruleExecutionInfo.add(rule.getMetadata().getName());
-            ruleExecutionInfo.add(event.getEventType());
-            ruleExecutionInfo.add(event.getSessionId());
-            ruleExecutionInfo.add(event.getProfileId());
-            ruleExecutionInfo.add(event.getTimeStamp().toString());
-            ruleExecutionInfo.add(event.getScope());
+            List<String> ruleExecutionInfo = TailCommandUtils.extractRuleExecutionInfoWithStatus(rule, event, status);
             outputLine(out, ruleExecutionInfo);
         }
 

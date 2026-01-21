@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.shell.dev.commands;
 
-import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
@@ -36,20 +35,20 @@ import java.util.Map;
  */
 @Command(scope = "unomi", name = "list-invalid-objects", description = "Lists all invalid objects (rules, segments, goals, campaigns, scoring) that have unresolved condition types, action types, or other validation issues")
 @Service
-public class ListInvalidObjects implements Action {
+public class ListInvalidObjects extends BaseSimpleCommand {
 
     @Reference
     DefinitionsService definitionsService;
 
     public Object execute() throws Exception {
         if (definitionsService == null) {
-            System.out.println("DefinitionsService is not available.");
+            println("DefinitionsService is not available.");
             return null;
         }
 
         TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
         if (typeResolutionService == null) {
-            System.out.println("TypeResolutionService is not available.");
+            println("TypeResolutionService is not available.");
             return null;
         }
 
@@ -57,13 +56,13 @@ public class ListInvalidObjects implements Action {
         int totalCount = typeResolutionService.getTotalInvalidObjectCount();
 
         if (totalCount == 0) {
-            System.out.println("No invalid objects found.");
+            println("No invalid objects found.");
             return null;
         }
 
-        System.out.println("Invalid Objects Summary:");
-        System.out.println("Total invalid objects: " + totalCount);
-        System.out.println();
+        println("Invalid Objects Summary:");
+        println("Total invalid objects: " + totalCount);
+        println("");
 
         // Create a table to display invalid objects with reasons
         ShellTable table = new ShellTable();
@@ -91,11 +90,11 @@ public class ListInvalidObjects implements Action {
             }
         }
 
-        table.print(System.out);
-        System.out.println();
-        System.out.println("Object type counts:");
+        table.print(getConsole());
+        println("");
+        println("Object type counts:");
         for (String objectType : sortedTypes) {
-            System.out.println("  " + objectType + ": " + allInvalidObjects.get(objectType).size());
+            println("  " + objectType + ": " + allInvalidObjects.get(objectType).size());
         }
 
         return null;

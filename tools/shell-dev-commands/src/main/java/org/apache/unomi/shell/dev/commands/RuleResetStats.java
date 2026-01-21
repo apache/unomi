@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.shell.dev.commands;
 
-import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
@@ -24,7 +23,7 @@ import org.apache.unomi.api.services.RulesService;
 
 @Command(scope = "unomi", name = "rule-reset-stats", description = "This command will reset the rule statistics")
 @Service
-public class RuleResetStats implements Action {
+public class RuleResetStats extends BaseSimpleCommand {
 
     @Reference
     RulesService rulesService;
@@ -32,7 +31,7 @@ public class RuleResetStats implements Action {
     @Override
     public Object execute() throws Exception {
         rulesService.resetAllRuleStatistics();
-        System.out.println("Rule statistics successfully reset.");
+        println("Rule statistics successfully reset.");
         return null;
     }
 }

@@ -19,7 +19,6 @@ package org.apache.unomi.shell.dev.commands;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
-import org.apache.karaf.shell.api.console.Session;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 
@@ -28,14 +27,11 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 
-public abstract class TailCommandSupport implements Action {
+public abstract class TailCommandSupport extends BaseSimpleCommand {
 
     public abstract int[] getColumnSizes();
 
     public abstract String[] getColumnHeaders();
-
-    @Reference
-    Session session;
 
     @Reference
     BundleContext bundleContext;
@@ -79,7 +75,7 @@ public abstract class TailCommandSupport implements Action {
 
     public Object execute() throws Exception {
         // Do not use System.out as it may write to the wrong console depending on the thread that calls our log handler
-        PrintStream out = session.getConsole();
+        PrintStream out = getConsole();
         out.flush();
         outputHeaders(out);
 

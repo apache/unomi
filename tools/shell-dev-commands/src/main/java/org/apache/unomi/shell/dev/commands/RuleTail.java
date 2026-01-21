@@ -23,7 +23,6 @@ import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.RuleListenerService;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -56,12 +55,12 @@ public class RuleTail extends TailCommandSupport {
 
     @Override
     public Object getListener() {
-        return new TailRuleListener(session.getConsole());
+        return new TailRuleListener(getConsole());
     }
 
     class TailRuleListener implements RuleListenerService {
 
-        PrintStream out;
+        private final PrintStream out;
 
         public TailRuleListener(PrintStream out) {
             this.out = out;
@@ -79,14 +78,7 @@ public class RuleTail extends TailCommandSupport {
 
         @Override
         public void onExecuteActions(Rule rule, Event event) {
-            List<String> ruleExecutionInfo = new ArrayList<>();
-            ruleExecutionInfo.add(rule.getItemId());
-            ruleExecutionInfo.add(rule.getMetadata().getName());
-            ruleExecutionInfo.add(event.getEventType());
-            ruleExecutionInfo.add(event.getSessionId());
-            ruleExecutionInfo.add(event.getProfileId());
-            ruleExecutionInfo.add(event.getTimeStamp().toString());
-            ruleExecutionInfo.add(event.getScope());
+            List<String> ruleExecutionInfo = TailCommandUtils.extractRuleExecutionInfo(rule, event);
             outputLine(out, ruleExecutionInfo);
         }
     }

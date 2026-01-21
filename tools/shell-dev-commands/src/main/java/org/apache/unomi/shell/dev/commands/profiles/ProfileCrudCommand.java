@@ -67,8 +67,8 @@ public class ProfileCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
-        return prependTenantIdHeader(TABLE_HEADERS);
+    protected String[] getHeadersWithoutTenant() {
+        return TABLE_HEADERS;
     }
 
     @Override

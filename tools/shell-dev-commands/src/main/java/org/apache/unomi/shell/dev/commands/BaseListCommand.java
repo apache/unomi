@@ -18,6 +18,7 @@ package org.apache.unomi.shell.dev.commands;
 
 import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.console.Session;
 import org.apache.karaf.shell.support.table.ShellTable;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
@@ -32,6 +33,9 @@ public abstract class BaseListCommand<T extends Item> extends BaseCommand {
 
     @Reference
     protected DefinitionsService definitionsService;
+
+    @Reference
+    protected Session session;
 
     @Option(name = "--max-entries", description = "Maximum number of entries to display", required = false)
     protected int maxEntries = DEFAULT_ENTRIES;
@@ -59,7 +63,7 @@ public abstract class BaseListCommand<T extends Item> extends BaseCommand {
         for (T item : items.getList()) {
             printItem(table, item);
         }
-        printTable(table);
+        printTable(table, session);
 
         return null;
     }

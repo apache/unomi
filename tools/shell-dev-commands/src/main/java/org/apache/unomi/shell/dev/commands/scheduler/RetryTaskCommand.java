@@ -16,20 +16,14 @@
  */
 package org.apache.unomi.shell.dev.commands.scheduler;
 
-import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.Option;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.services.SchedulerService;
 
 @Command(scope = "unomi", name = "task-retry", description = "Retries a failed task")
 @Service
-public class RetryTaskCommand implements Action {
-
-    @Reference
-    private SchedulerService schedulerService;
+public class RetryTaskCommand extends BaseSchedulerCommand {
 
     @Argument(index = 0, name = "taskId", description = "The ID of the task to retry", required = true)
     private String taskId;
@@ -40,7 +34,7 @@ public class RetryTaskCommand implements Action {
     @Override
     public Object execute() throws Exception {
         schedulerService.retryTask(taskId, resetFailureCount);
-        System.out.println("Task " + taskId + " has been queued for retry" + 
+        println("Task " + taskId + " has been queued for retry" + 
             (resetFailureCount ? " with reset failure count." : "."));
         return null;
     }

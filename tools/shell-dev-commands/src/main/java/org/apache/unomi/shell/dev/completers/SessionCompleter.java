@@ -28,6 +28,7 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ProfileService;
 
+import java.io.PrintStream;
 import java.util.List;
 
 @Service
@@ -61,7 +62,9 @@ public class SessionCompleter implements Completer {
                 delegate.getStrings().add(s.getItemId());
             }
         } catch (Exception e) {
-            System.out.println("Error getting sessions: " + e.getMessage());
+            // Note: Printing during completion can interfere with completion, but using console for consistency
+            PrintStream console = session.getConsole();
+            console.println("Error: Error getting sessions: " + e.getMessage());
         }
 
         return delegate.complete(session, commandLine, candidates);

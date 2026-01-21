@@ -57,8 +57,8 @@ public class RuleCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
-        return prependTenantIdHeader(new String[] {
+    protected String[] getHeadersWithoutTenant() {
+        return new String[] {
             "Activated",
             "Hidden",
             "Read-only",
@@ -70,7 +70,7 @@ public class RuleCrudCommand extends BaseCrudCommand {
             "Executions",
             "Conditions [ms]",
             "Actions [ms]"
-        });
+        };
     }
 
     @Override

@@ -51,8 +51,8 @@ public class PropertyTypeCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
-        return prependTenantIdHeader(new String[] {
+    protected String[] getHeadersWithoutTenant() {
+        return new String[] {
             "Identifier",
             "Name",
             "Description",
@@ -66,7 +66,7 @@ public class PropertyTypeCrudCommand extends BaseCrudCommand {
             "Scope",
             "Tags",
             "System Tags"
-        });
+        };
     }
 
     @Override

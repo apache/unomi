@@ -52,7 +52,7 @@ public class RuleStatisticsCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[]{"ID", "Executions", "Local Executions", "Conditions Time", "Local Conditions Time", "Actions Time", "Local Actions Time", "Last Sync"};
     }
 

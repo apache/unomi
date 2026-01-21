@@ -57,8 +57,8 @@ public class SegmentCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
-        return prependTenantIdHeader(new String[] {
+    protected String[] getHeadersWithoutTenant() {
+        return new String[] {
             "Activated",
             "Hidden",
             "Read-only",
@@ -67,7 +67,7 @@ public class SegmentCrudCommand extends BaseCrudCommand {
             "Name",
             "Tags",
             "System tags"
-        });
+        };
     }
 
     @Override

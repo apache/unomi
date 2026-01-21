@@ -17,9 +17,15 @@
 package org.apache.unomi.shell.dev.commands.tenants;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.karaf.shell.support.table.ShellTable;
+
+import java.io.PrintStream;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.tenants.*;
+import org.apache.unomi.common.DataTable;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.shell.dev.services.BaseCrudCommand;
 import org.apache.unomi.shell.dev.services.CrudCommand;
@@ -49,8 +55,74 @@ public class TenantCrudCommand extends BaseCrudCommand {
     }
 
     @Override
+    protected String[] getHeadersWithoutTenant() {
+        return new String[]{"ID", "Name", "Description", "Status", "Created", "Modified"};
+    }
+
+    /**
+     * Override to skip the tenant column since we're listing tenants themselves.
+     * The tenant ID would be the same as the ID column, making it redundant.
+     */
+    @Override
     public String[] getHeaders() {
-        return prependTenantIdHeader(new String[]{"ID", "Name", "Description", "Status", "Created", "Modified"});
+        return getHeadersWithoutTenant();
+    }
+
+    /**
+     * Override to skip prepending tenant ID to rows since we're listing tenants themselves.
+     */
+    @Override
+    protected DataTable buildDataTable() {
+        Query query = new Query();
+        query.setLimit(maxEntries);
+        Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+        query.setCondition(matchAllCondition);
+        query.setSortby(getSortBy());
+
+        PartialList<?> items = getItems(query);
+        if (items.getList().size() != items.getTotalSize()) {
+            PrintStream console = getConsole();
+            console.println("WARNING : Only the first " + items.getPageSize() + " items have been retrieved, there are " + items.getTotalSize() + " items registered in total. Use the maxEntries parameter to retrieve more items");
+        }
+
+        DataTable dataTable = new DataTable();
+        for (Object item : items.getList()) {
+            Comparable[] rowData = buildRow(item);
+            dataTable.addRow(rowData);
+        }
+
+        return dataTable;
+    }
+
+    /**
+     * Override to skip prepending tenant ID to rows since we're listing tenants themselves.
+     */
+    @Override
+    public void buildRows(ShellTable table, int maxEntries) {
+        Query query = new Query();
+        query.setLimit(maxEntries);
+        PrintStream console = getConsole();
+        if (definitionsService == null) {
+            console.println("Error: No definitions service available, unable to build rows");
+            return;
+        }
+        ConditionType matchAllConditionType = definitionsService.getConditionType("matchAllCondition");
+        if (matchAllConditionType == null) {
+            console.println("Error: No matchAllCondition available, unable to build rows");
+        }
+        Condition matchAllCondition = new Condition(matchAllConditionType);
+        query.setCondition(matchAllCondition);
+        query.setSortby(getSortBy());
+
+        PartialList<?> items = getItems(query);
+        if (items.getList().size() != items.getTotalSize()) {
+            console.println("WARNING : Only the first " + items.getPageSize() + " items have been retrieved, there are " + items.getTotalSize() + " items registered in total. Use the maxEntries parameter to retrieve more items");
+        }
+
+        for (Object item : items.getList()) {
+            Comparable[] rowData = buildRow(item);
+            table.addRow().addContent(rowData);
+        }
     }
 
     @Override

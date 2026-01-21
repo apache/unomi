@@ -53,7 +53,7 @@ public class EventCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[] {
             "Identifier",
             "Event Type",

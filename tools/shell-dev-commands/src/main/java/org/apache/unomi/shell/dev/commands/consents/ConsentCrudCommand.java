@@ -56,7 +56,7 @@ public class ConsentCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[]{"Profile ID", "Scope", "Type", "Status", "Status Date", "Revoke Date"};
     }
 

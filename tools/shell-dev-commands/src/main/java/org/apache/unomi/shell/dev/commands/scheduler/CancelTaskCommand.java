@@ -16,19 +16,13 @@
  */
 package org.apache.unomi.shell.dev.commands.scheduler;
 
-import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.services.SchedulerService;
 
 @Command(scope = "unomi", name = "task-cancel", description = "Cancels a scheduled task")
 @Service
-public class CancelTaskCommand implements Action {
-
-    @Reference
-    private SchedulerService schedulerService;
+public class CancelTaskCommand extends BaseSchedulerCommand {
 
     @Argument(index = 0, name = "taskId", description = "The ID of the task to cancel", required = true)
     private String taskId;
@@ -36,7 +30,7 @@ public class CancelTaskCommand implements Action {
     @Override
     public Object execute() throws Exception {
         schedulerService.cancelTask(taskId);
-        System.out.println("Task " + taskId + " has been cancelled successfully.");
+        println("Task " + taskId + " has been cancelled successfully.");
         return null;
     }
 } 

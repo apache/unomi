@@ -16,28 +16,23 @@
  */
 package org.apache.unomi.shell.dev.commands.tenants;
 
-import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.karaf.shell.api.console.Session;
+import org.apache.unomi.shell.dev.commands.BaseSimpleCommand;
 import org.apache.unomi.shell.dev.commands.TenantContextHelper;
 
 @Command(scope = "unomi", name = "tenant-get", description = "Get the current tenant ID for this shell session")
 @Service
-public class TenantGetCurrentCommand implements Action {
-
-    @Reference
-    private Session session;
+public class TenantGetCurrentCommand extends BaseSimpleCommand {
 
     @Override
     public Object execute() throws Exception {
         // Retrieve tenant ID from the Karaf shell session
         String tenantId = TenantContextHelper.getTenantId(session);
         if (tenantId != null) {
-            System.out.println("Current tenant ID: " + tenantId);
+            println("Current tenant ID: " + tenantId);
         } else {
-            System.out.println("No current tenant set");
+            println("No current tenant set");
         }
         return null;
     }

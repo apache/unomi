@@ -28,6 +28,7 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 
+import java.io.PrintStream;
 import java.util.List;
 
 /**
@@ -68,7 +69,9 @@ public abstract class BaseCompleter<T extends Item> implements Completer {
             return delegate.complete(session, commandLine, candidates);
         } catch (Exception e) {
             // Log error but don't fail completion
-            System.err.println("Error completing items: " + e.getMessage());
+            // Note: Printing during completion can interfere with completion, but using console for consistency
+            PrintStream console = session.getConsole();
+            console.println("Error: Error completing items: " + e.getMessage());
             return -1;
         }
     }

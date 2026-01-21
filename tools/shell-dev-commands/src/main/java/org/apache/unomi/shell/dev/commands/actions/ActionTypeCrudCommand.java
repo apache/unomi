@@ -52,7 +52,7 @@ public class ActionTypeCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[] {
             "Identifier",
             "Name",

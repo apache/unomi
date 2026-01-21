@@ -48,12 +48,11 @@ public class TopicCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[] {
             "Identifier",
             "Name",
-            "Scope",
-            "Tenant"
+            "Scope"
         };
     }
 
@@ -68,8 +67,7 @@ public class TopicCrudCommand extends BaseCrudCommand {
         return new String[] {
             topic.getItemId(),
             topic.getName(),
-            topic.getScope(),
-            topic.getTenantId()
+            topic.getScope()
         };
     }
 

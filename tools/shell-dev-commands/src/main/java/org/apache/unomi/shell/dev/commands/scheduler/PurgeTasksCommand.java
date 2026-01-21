@@ -16,13 +16,9 @@
  */
 package org.apache.unomi.shell.dev.commands.scheduler;
 
-import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.Option;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.karaf.shell.api.console.Session;
-import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.tasks.ScheduledTask;
 
 import java.util.Calendar;
@@ -30,13 +26,7 @@ import java.util.Date;
 
 @Command(scope = "unomi", name = "task-purge", description = "Purges old completed tasks")
 @Service
-public class PurgeTasksCommand implements Action {
-
-    @Reference
-    private SchedulerService schedulerService;
-
-    @Reference
-    private Session session;
+public class PurgeTasksCommand extends BaseSchedulerCommand {
 
     @Option(name = "-d", aliases = "--days", description = "Number of days to keep completed tasks (default: 7)", required = false)
     private int daysToKeep = 7;
@@ -52,7 +42,7 @@ public class PurgeTasksCommand implements Action {
                 null
             );
             if (!"y".equalsIgnoreCase(response != null ? response.trim() : "n")) {
-                System.out.println("Operation cancelled.");
+                println("Operation cancelled.");
                 return null;
             }
         }
@@ -87,7 +77,7 @@ public class PurgeTasksCommand implements Action {
             offset += batchSize;
         }
 
-        System.out.println("Successfully purged " + purgedCount + " completed tasks older than " + daysToKeep + " days.");
+        println("Successfully purged " + purgedCount + " completed tasks older than " + daysToKeep + " days.");
         return null;
     }
 } 

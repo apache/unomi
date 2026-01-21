@@ -21,7 +21,10 @@ import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.console.Session;
+
+import java.io.PrintStream;
 import org.apache.unomi.api.services.*;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.jline.reader.LineReader;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -33,7 +36,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-public abstract class DeploymentCommandSupport implements Action {
+public abstract class DeploymentCommandSupport extends BaseSimpleCommand {
 
     public static final String ALL_OPTION_LABEL = "* (All)";
     @Reference
@@ -57,8 +60,6 @@ public abstract class DeploymentCommandSupport implements Action {
     @Reference
     BundleContext bundleContext;
 
-    @Reference
-    Session session;
 
     public static final String CONDITION_DEFINITION_TYPE = "conditions";
     public static final String ACTION_DEFINITION_TYPE = "actions";
@@ -102,6 +103,74 @@ public abstract class DeploymentCommandSupport implements Action {
 
     public abstract void processDefinition(String definitionType, URL definitionURL);
 
+    /**
+     * Process definition by type. Override in subclasses to provide specific implementation.
+     * 
+     * @param definitionType the type of definition
+     * @param definitionURL the URL of the definition
+     * @param console the console for output
+     * @return true if successful, false otherwise
+     * @throws IOException if there's an error reading the definition
+     */
+    protected boolean processDefinitionByType(String definitionType, URL definitionURL, PrintStream console) throws IOException {
+        return false;
+    }
+
+    /**
+     * Read a definition object from a URL using CustomObjectMapper.
+     * 
+     * @param definitionURL the URL to read from
+     * @param clazz the class of the object to read
+     * @param <T> the type of the object
+     * @return the read object
+     * @throws IOException if there's an error reading the definition
+     */
+    protected <T> T readDefinition(URL definitionURL, Class<T> clazz) throws IOException {
+        return CustomObjectMapper.getObjectMapper().readValue(definitionURL, clazz);
+    }
+
+    /**
+     * Handle errors that occur during definition processing.
+     * 
+     * @param definitionURL the URL of the definition that caused the error
+     * @param operation the operation being performed (e.g., "saving", "removing")
+     * @param e the exception that occurred
+     */
+    protected void handleDefinitionError(URL definitionURL, String operation, IOException e) {
+        PrintStream console = getConsole();
+        console.println("Error while " + operation + " definition " + definitionURL);
+        console.println(e.getMessage());
+    }
+
+    /**
+     * Internal method to process a definition. Handles common logic like resolving definition type.
+     * 
+     * @param definitionType the type of definition
+     * @param definitionURL the URL of the definition
+     * @param console the console for output
+     * @param successMessage the message to display on success
+     * @throws IOException if there's an error processing the definition
+     */
+    protected void processDefinitionInternal(String definitionType, URL definitionURL, PrintStream console, String successMessage) throws IOException {
+        if (ALL_OPTION_LABEL.equals(definitionType)) {
+            String definitionURLString = definitionURL.toString();
+            for (String possibleDefinitionType : definitionTypes) {
+                if (definitionURLString.contains(getDefinitionTypePath(possibleDefinitionType))) {
+                    definitionType = possibleDefinitionType;
+                    break;
+                }
+            }
+            if (ALL_OPTION_LABEL.equals(definitionType)) {
+                console.println("Couldn't resolve definition type for definition URL " + definitionURL);
+                return;
+            }
+        }
+        boolean successful = processDefinitionByType(definitionType, definitionURL, console);
+        if (successful) {
+            console.println(successMessage + " : " + definitionURL.getFile());
+        }
+    }
+
     public Object execute() throws Exception {
         List<Bundle> bundlesToUpdate;
         if ("*".equals(definitionType)) {
@@ -137,7 +206,7 @@ public abstract class DeploymentCommandSupport implements Action {
             Bundle bundle = bundleContext.getBundle(bundleIdentifier);
 
             if (bundle == null) {
-                System.out.println("Couldn't find a bundle with id: " + bundleIdentifier);
+                println("Couldn't find a bundle with id: " + bundleIdentifier);
                 return null;
             }
 
@@ -149,7 +218,7 @@ public abstract class DeploymentCommandSupport implements Action {
             possibleDefinitionNames.add(ALL_OPTION_LABEL);
 
             if (possibleDefinitionNames.isEmpty()) {
-                System.out.println("Couldn't find definitions in bundle : " + bundlesToUpdate);
+                println("Couldn't find definitions in bundle : " + bundlesToUpdate);
                 return null;
             }
 
@@ -159,14 +228,14 @@ public abstract class DeploymentCommandSupport implements Action {
         }
 
         if (!definitionTypes.contains(definitionType) && !ALL_OPTION_LABEL.equals(definitionType)) {
-            System.out.println("Invalid type '" + definitionType + "' , allowed values : " +definitionTypes);
+            println("Invalid type '" + definitionType + "' , allowed values : " +definitionTypes);
             return null;
         }
 
         String definitionTypePath = getDefinitionTypePath(definitionType);
         List<URL> definitionTypeURLs = bundlesToUpdate.stream().flatMap(b->b.findEntries(definitionTypePath, "*.json", true) != null ? Collections.list(b.findEntries(definitionTypePath, "*.json", true)).stream() : Stream.empty()).collect(Collectors.toList());
         if (definitionTypeURLs.isEmpty()) {
-            System.out.println("Couldn't find definitions in bundle with id: " + bundleIdentifier + " and definition path: " + definitionTypePath);
+            println("Couldn't find definitions in bundle with id: " + bundleIdentifier + " and definition path: " + definitionTypePath);
             return null;
         }
 
@@ -194,7 +263,7 @@ public abstract class DeploymentCommandSupport implements Action {
                 URL url = optionalURL.get();
                 processDefinition(definitionType, url);
             } else {
-                System.out.println("Couldn't find file " + fileName);
+                println("Couldn't find file " + fileName);
                 return null;
             }
         }

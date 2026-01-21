@@ -52,14 +52,13 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[] {
             "Identifier",
             "Name",
             "Description",
             "Key Type",
-            "Key",
-            "Tenant"
+            "Key"
         };
     }
 
@@ -91,8 +90,7 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
             apiKey.getName(),
             apiKey.getDescription(),
             apiKey.getKeyType().toString(),
-            apiKey.getKey(),
-            apiKey.getTenantId()
+            apiKey.getKey()
         };
     }
 

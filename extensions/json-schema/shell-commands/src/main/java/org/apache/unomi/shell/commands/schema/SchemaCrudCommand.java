@@ -139,7 +139,7 @@ public class SchemaCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[] {
             "ID",
             "Target",

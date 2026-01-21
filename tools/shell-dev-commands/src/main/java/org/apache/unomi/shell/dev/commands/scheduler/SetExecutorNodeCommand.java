@@ -16,19 +16,13 @@
  */
 package org.apache.unomi.shell.dev.commands.scheduler;
 
-import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.services.SchedulerService;
 
 @Command(scope = "unomi", name = "task-executor", description = "Shows or changes task executor status for this node")
 @Service
-public class SetExecutorNodeCommand implements Action {
-
-    @Reference
-    private SchedulerService schedulerService;
+public class SetExecutorNodeCommand extends BaseSchedulerCommand {
 
     @Argument(index = 0, name = "enable", description = "Enable (true) or disable (false) task execution", required = false)
     private String enable;
@@ -37,9 +31,9 @@ public class SetExecutorNodeCommand implements Action {
     public Object execute() throws Exception {
         if (enable == null) {
             // Just show current status
-            System.out.println("Task executor status: " + 
+            println("Task executor status: " + 
                 (schedulerService.isExecutorNode() ? "ENABLED" : "DISABLED"));
-            System.out.println("Node ID: " + schedulerService.getNodeId());
+            println("Node ID: " + schedulerService.getNodeId());
             return null;
         }
 
@@ -47,7 +41,7 @@ public class SetExecutorNodeCommand implements Action {
         // Note: This assumes there's a setExecutorNode method. If not available, we'll need to modify the service.
         // schedulerService.setExecutorNode(shouldEnable);
         
-        System.out.println("Task executor has been " + (shouldEnable ? "ENABLED" : "DISABLED") + 
+        println("Task executor has been " + (shouldEnable ? "ENABLED" : "DISABLED") + 
             " for node " + schedulerService.getNodeId());
         return null;
     }

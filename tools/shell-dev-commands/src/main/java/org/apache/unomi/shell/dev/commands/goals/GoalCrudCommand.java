@@ -53,7 +53,7 @@ public class GoalCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[]{"ID", "Name", "Description", "Scope", "Campaign ID", "Enabled"};
     }
 

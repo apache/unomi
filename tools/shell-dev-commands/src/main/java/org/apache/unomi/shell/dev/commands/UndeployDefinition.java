@@ -28,9 +28,9 @@ import org.apache.unomi.api.goals.Goal;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.URL;
 
 @Command(scope = "unomi", name = "undeploy-definition", description = "This will undeploy definitions contained in bundles")
@@ -39,72 +39,58 @@ public class UndeployDefinition extends DeploymentCommandSupport {
 
     public void processDefinition(String definitionType, URL definitionURL) {
         try {
-            if (ALL_OPTION_LABEL.equals(definitionType)) {
-                String definitionURLString = definitionURL.toString();
-                for (String possibleDefinitionType : definitionTypes) {
-                    if (definitionURLString.contains(getDefinitionTypePath(possibleDefinitionType))) {
-                        definitionType = possibleDefinitionType;
-                        break;
-                    }
-                }
-                if (ALL_OPTION_LABEL.equals(definitionType)) {
-                    System.out.println("Couldn't resolve definition type for definition URL " + definitionURL);
-                    return;
-                }
-            }
-            boolean successful = true;
-            switch (definitionType) {
-                case CONDITION_DEFINITION_TYPE:
-                    ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(definitionURL, ConditionType.class);
-                    definitionsService.removeActionType(conditionType.getItemId());
-                    break;
-                case ACTION_DEFINITION_TYPE:
-                    ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(definitionURL, ActionType.class);
-                    definitionsService.removeActionType(actionType.getItemId());
-                    break;
-                case GOAL_DEFINITION_TYPE:
-                    Goal goal = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Goal.class);
-                    goalsService.removeGoal(goal.getItemId());
-                    break;
-                case CAMPAIGN_DEFINITION_TYPE:
-                    Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Campaign.class);
-                    goalsService.removeCampaign(campaign.getItemId());
-                    break;
-                case PERSONA_DEFINITION_TYPE:
-                    PersonaWithSessions persona = CustomObjectMapper.getObjectMapper().readValue(definitionURL, PersonaWithSessions.class);
-                    profileService.delete(persona.getPersona().getItemId(), true);
-                    break;
-                case PROPERTY_DEFINITION_TYPE:
-                    PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(definitionURL, PropertyType.class);
-                    profileService.deletePropertyType(propertyType.getItemId());
-                    break;
-                case RULE_DEFINITION_TYPE:
-                    Rule rule = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Rule.class);
-                    rulesService.removeRule(rule.getItemId());
-                    break;
-                case SEGMENT_DEFINITION_TYPE:
-                    Segment segment = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Segment.class);
-                    segmentService.removeSegmentDefinition(segment.getItemId(), false);
-                    break;
-                case SCORING_DEFINITION_TYPE:
-                    Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Scoring.class);
-                    segmentService.removeScoringDefinition(scoring.getItemId(), false);
-                    break;
-                case PATCH_DEFINITION_TYPE:
-                    Patch patch = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Patch.class);
-                    // patchService.patch(patch);
-                    break;
-                default:
-                    System.out.println("Unrecognized definition type: " + definitionType);
-                    successful = false;
-                    break;
-            }
-            if (successful) {
-                System.out.println("Predefined definition unregistered : " + definitionURL.getFile());
-            }
+            processDefinitionInternal(definitionType, definitionURL, getConsole(), "Predefined definition unregistered");
         } catch (IOException e) {
-            System.out.println("Error while removing definition " + definitionURL);
-            System.out.println(e.getMessage());
+            handleDefinitionError(definitionURL, "removing", e);
+        }
+    }
+
+    @Override
+    protected boolean processDefinitionByType(String definitionType, URL definitionURL, PrintStream console) throws IOException {
+        switch (definitionType) {
+            case CONDITION_DEFINITION_TYPE:
+                ConditionType conditionType = readDefinition(definitionURL, ConditionType.class);
+                definitionsService.removeActionType(conditionType.getItemId());
+                return true;
+            case ACTION_DEFINITION_TYPE:
+                ActionType actionType = readDefinition(definitionURL, ActionType.class);
+                definitionsService.removeActionType(actionType.getItemId());
+                return true;
+            case GOAL_DEFINITION_TYPE:
+                Goal goal = readDefinition(definitionURL, Goal.class);
+                goalsService.removeGoal(goal.getItemId());
+                return true;
+            case CAMPAIGN_DEFINITION_TYPE:
+                Campaign campaign = readDefinition(definitionURL, Campaign.class);
+                goalsService.removeCampaign(campaign.getItemId());
+                return true;
+            case PERSONA_DEFINITION_TYPE:
+                PersonaWithSessions persona = readDefinition(definitionURL, PersonaWithSessions.class);
+                profileService.delete(persona.getPersona().getItemId(), true);
+                return true;
+            case PROPERTY_DEFINITION_TYPE:
+                PropertyType propertyType = readDefinition(definitionURL, PropertyType.class);
+                profileService.deletePropertyType(propertyType.getItemId());
+                return true;
+            case RULE_DEFINITION_TYPE:
+                Rule rule = readDefinition(definitionURL, Rule.class);
+                rulesService.removeRule(rule.getItemId());
+                return true;
+            case SEGMENT_DEFINITION_TYPE:
+                Segment segment = readDefinition(definitionURL, Segment.class);
+                segmentService.removeSegmentDefinition(segment.getItemId(), false);
+                return true;
+            case SCORING_DEFINITION_TYPE:
+                Scoring scoring = readDefinition(definitionURL, Scoring.class);
+                segmentService.removeScoringDefinition(scoring.getItemId(), false);
+                return true;
+            case PATCH_DEFINITION_TYPE:
+                Patch patch = readDefinition(definitionURL, Patch.class);
+                // patchService.patch(patch);
+                return true;
+            default:
+                console.println("Unrecognized definition type: " + definitionType);
+                return false;
         }
     }
 

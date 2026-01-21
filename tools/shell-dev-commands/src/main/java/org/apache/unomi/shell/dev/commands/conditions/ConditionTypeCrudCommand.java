@@ -46,7 +46,7 @@ public class ConditionTypeCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[] {
             "Activated",
             "Hidden",

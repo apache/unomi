@@ -52,7 +52,7 @@ public class ProfileAliasCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public String[] getHeaders() {
+    protected String[] getHeadersWithoutTenant() {
         return new String[]{"ID", "Profile ID", "Client ID", "Created", "Modified"};
     }
 

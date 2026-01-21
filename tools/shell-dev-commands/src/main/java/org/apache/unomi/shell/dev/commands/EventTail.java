@@ -24,7 +24,6 @@ import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.List;
 
 @Command(scope = "unomi", name = "event-tail", description = "This will tail all the events coming into the Apache Unomi Context Server")
@@ -57,12 +56,12 @@ public class EventTail extends TailCommandSupport  {
 
     @Override
     public Object getListener() {
-        return new TailEventListener(session.getConsole());
+        return new TailEventListener(getConsole());
     }
 
     class TailEventListener implements EventListenerService {
 
-        PrintStream out;
+        private final PrintStream out;
 
         public TailEventListener(PrintStream out) {
             this.out = out;
@@ -78,14 +77,7 @@ public class EventTail extends TailCommandSupport  {
             if (!event.isPersistent() && !withInternal) {
                 return EventService.NO_CHANGE;
             }
-            List<String> eventInfo = new ArrayList<>();
-            eventInfo.add(event.getItemId());
-            eventInfo.add(event.getEventType());
-            eventInfo.add(event.getSessionId());
-            eventInfo.add(event.getProfileId());
-            eventInfo.add(event.getTimeStamp().toString());
-            eventInfo.add(event.getScope());
-            eventInfo.add(Boolean.toString(event.isPersistent()));
+            List<String> eventInfo = TailCommandUtils.extractEventInfo(event);
             outputLine(out, eventInfo);
             return EventService.NO_CHANGE;
         }

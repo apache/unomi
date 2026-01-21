@@ -16,23 +16,17 @@
  */
 package org.apache.unomi.shell.dev.commands.scheduler;
 
-import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.shell.dev.commands.CommandUtils;
 
-import java.text.SimpleDateFormat;
 import java.util.Map;
 
 @Command(scope = "unomi", name = "task-show", description = "Shows detailed information about a task")
 @Service
-public class ShowTaskCommand implements Action {
-
-    @Reference
-    private SchedulerService schedulerService;
+public class ShowTaskCommand extends BaseSchedulerCommand {
 
     @Argument(index = 0, name = "taskId", description = "The ID of the task to show", required = true)
     private String taskId;
@@ -41,56 +35,50 @@ public class ShowTaskCommand implements Action {
     public Object execute() throws Exception {
         ScheduledTask task = schedulerService.getTask(taskId);
         if (task == null) {
-            System.err.println("Task not found: " + taskId);
+            println("Task not found: " + taskId);
             return null;
         }
 
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
         // Print basic information
-        System.out.println("Task Details");
-        System.out.println("-----------");
-        System.out.println("ID: " + task.getItemId());
-        System.out.println("Type: " + task.getTaskType());
-        System.out.println("Status: " + task.getStatus());
-        System.out.println("Persistent: " + task.isPersistent());
-        System.out.println("Parallel Execution: " + task.isAllowParallelExecution());
-        System.out.println("Fixed Rate: " + task.isFixedRate());
-        System.out.println("One Shot: " + task.isOneShot());
+        println("Task Details");
+        println("-----------");
+        println("ID: " + task.getItemId());
+        println("Type: " + task.getTaskType());
+        println("Status: " + task.getStatus());
+        println("Persistent: " + task.isPersistent());
+        println("Parallel Execution: " + task.isAllowParallelExecution());
+        println("Fixed Rate: " + task.isFixedRate());
+        println("One Shot: " + task.isOneShot());
 
         // Print timing information
-        if (task.getNextScheduledExecution() != null) {
-            System.out.println("Next Run: " + dateFormat.format(task.getNextScheduledExecution()));
-        }
-        if (task.getLastExecutionDate() != null) {
-            System.out.println("Last Run: " + dateFormat.format(task.getLastExecutionDate()));
-        }
-        System.out.println("Initial Delay: " + task.getInitialDelay() + " " + task.getTimeUnit());
-        System.out.println("Period: " + task.getPeriod() + " " + task.getTimeUnit());
+        println("Next Run: " + CommandUtils.formatDate(task.getNextScheduledExecution()));
+        println("Last Run: " + CommandUtils.formatDate(task.getLastExecutionDate()));
+        println("Initial Delay: " + task.getInitialDelay() + " " + task.getTimeUnit());
+        println("Period: " + task.getPeriod() + " " + task.getTimeUnit());
 
         // Print execution information
-        System.out.println("Failure Count: " + task.getFailureCount());
+        println("Failure Count: " + task.getFailureCount());
         if (task.getLastError() != null) {
-            System.out.println("Last Error: " + task.getLastError());
+            println("Last Error: " + task.getLastError());
         }
 
         // Print parameters if any
         Map<String, Object> parameters = task.getParameters();
         if (parameters != null && !parameters.isEmpty()) {
-            System.out.println("\nParameters");
-            System.out.println("----------");
+            println("\nParameters");
+            println("----------");
             for (Map.Entry<String, Object> entry : parameters.entrySet()) {
-                System.out.println(entry.getKey() + ": " + entry.getValue());
+                println(entry.getKey() + ": " + entry.getValue());
             }
         }
 
         // Print checkpoint data if any
         Map<String, Object> checkpointData = task.getCheckpointData();
         if (checkpointData != null && !checkpointData.isEmpty()) {
-            System.out.println("\nCheckpoint Data");
-            System.out.println("--------------");
+            println("\nCheckpoint Data");
+            println("--------------");
             for (Map.Entry<String, Object> entry : checkpointData.entrySet()) {
-                System.out.println(entry.getKey() + ": " + entry.getValue());
+                println(entry.getKey() + ": " + entry.getValue());
             }
         }
 

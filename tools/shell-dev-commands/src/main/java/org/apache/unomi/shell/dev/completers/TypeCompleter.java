@@ -26,6 +26,7 @@ import org.apache.unomi.shell.dev.services.CrudCommand;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
+import java.io.PrintStream;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -53,7 +54,9 @@ public class TypeCompleter implements Completer {
             }
         } catch (Exception e) {
             // Log error but continue
-            System.err.println("Error getting object types: " + e.getMessage());
+            // Note: Printing during completion can interfere with completion, but using console for consistency
+            PrintStream console = session.getConsole();
+            console.println("Error: Error getting object types: " + e.getMessage());
         }
 
         StringsCompleter delegate = new StringsCompleter();

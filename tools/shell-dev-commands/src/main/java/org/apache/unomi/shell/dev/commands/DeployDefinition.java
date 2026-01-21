@@ -28,9 +28,9 @@ import org.apache.unomi.api.goals.Goal;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
 import java.io.IOException;
+import java.io.PrintStream;
 import java.net.URL;
 
 @Command(scope = "unomi", name = "deploy-definition", description = "This will deploy Unomi definitions contained in bundles")
@@ -39,75 +39,99 @@ public class DeployDefinition extends DeploymentCommandSupport {
 
     public void processDefinition(String definitionType, URL definitionURL) {
         try {
-            if (ALL_OPTION_LABEL.equals(definitionType)) {
-                String definitionURLString = definitionURL.toString();
-                for (String possibleDefinitionType : definitionTypes) {
-                    if (definitionURLString.contains(getDefinitionTypePath(possibleDefinitionType))) {
-                        definitionType = possibleDefinitionType;
-                        break;
-                    }
-                }
-                if (ALL_OPTION_LABEL.equals(definitionType)) {
-                    System.out.println("Couldn't resolve definition type for definition URL " + definitionURL);
-                    return;
-                }
-            }
-            boolean successful = true;
-            switch (definitionType) {
-                case CONDITION_DEFINITION_TYPE:
-                    ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(definitionURL, ConditionType.class);
-                    definitionsService.setConditionType(conditionType);
-                    break;
-                case ACTION_DEFINITION_TYPE:
-                    ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(definitionURL, ActionType.class);
-                    definitionsService.setActionType(actionType);
-                    break;
-                case GOAL_DEFINITION_TYPE:
-                    Goal goal = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Goal.class);
-                    goalsService.setGoal(goal);
-                    break;
-                case CAMPAIGN_DEFINITION_TYPE:
-                    Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Campaign.class);
-                    goalsService.setCampaign(campaign);
-                    break;
-                case PERSONA_DEFINITION_TYPE:
-                    PersonaWithSessions persona = CustomObjectMapper.getObjectMapper().readValue(definitionURL, PersonaWithSessions.class);
-                    profileService.savePersonaWithSessions(persona);
-                    break;
-                case PROPERTY_DEFINITION_TYPE:
-                    PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(definitionURL, PropertyType.class);
-                    profileService.setPropertyTypeTarget(definitionURL, propertyType);
-                    profileService.setPropertyType(propertyType);
-                    break;
-                case RULE_DEFINITION_TYPE:
-                    Rule rule = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Rule.class);
-                    rulesService.setRule(rule);
-                    break;
-                case SEGMENT_DEFINITION_TYPE:
-                    Segment segment = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Segment.class);
-                    segmentService.setSegmentDefinition(segment);
-                    break;
-                case SCORING_DEFINITION_TYPE:
-                    Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Scoring.class);
-                    segmentService.setScoringDefinition(scoring);
-                    break;
-                case PATCH_DEFINITION_TYPE:
-                    Patch patch = CustomObjectMapper.getObjectMapper().readValue(definitionURL, Patch.class);
-                    patchService.patch(patch);
-                    break;
-                default:
-                    System.out.println("Unrecognized definition type:" + definitionType);
-                    successful = false;
-                    break;
-            }
-            if (successful) {
-                System.out.println("Predefined definition registered : " + definitionURL.getFile());
-            }
+            processDefinitionInternal(definitionType, definitionURL, getConsole(), "Predefined definition registered");
         } catch (IOException e) {
-            System.out.println("Error while saving definition " + definitionURL);
-            System.out.println(e.getMessage());
+            handleDefinitionError(definitionURL, "saving", e);
         }
     }
 
+    protected void deployConditionType(URL definitionURL) throws IOException {
+        ConditionType conditionType = readDefinition(definitionURL, ConditionType.class);
+        definitionsService.setConditionType(conditionType);
+    }
 
+    protected void deployActionType(URL definitionURL) throws IOException {
+        ActionType actionType = readDefinition(definitionURL, ActionType.class);
+        definitionsService.setActionType(actionType);
+    }
+
+    protected void deployGoal(URL definitionURL) throws IOException {
+        Goal goal = readDefinition(definitionURL, Goal.class);
+        goalsService.setGoal(goal);
+    }
+
+    protected void deployCampaign(URL definitionURL) throws IOException {
+        Campaign campaign = readDefinition(definitionURL, Campaign.class);
+        goalsService.setCampaign(campaign);
+    }
+
+    protected void deployPersona(URL definitionURL) throws IOException {
+        PersonaWithSessions persona = readDefinition(definitionURL, PersonaWithSessions.class);
+        profileService.savePersonaWithSessions(persona);
+    }
+
+    protected void deployPropertyType(URL definitionURL) throws IOException {
+        PropertyType propertyType = readDefinition(definitionURL, PropertyType.class);
+        profileService.setPropertyTypeTarget(definitionURL, propertyType);
+        profileService.setPropertyType(propertyType);
+    }
+
+    protected void deployRule(URL definitionURL) throws IOException {
+        Rule rule = readDefinition(definitionURL, Rule.class);
+        rulesService.setRule(rule);
+    }
+
+    protected void deploySegment(URL definitionURL) throws IOException {
+        Segment segment = readDefinition(definitionURL, Segment.class);
+        segmentService.setSegmentDefinition(segment);
+    }
+
+    protected void deployScoring(URL definitionURL) throws IOException {
+        Scoring scoring = readDefinition(definitionURL, Scoring.class);
+        segmentService.setScoringDefinition(scoring);
+    }
+
+    protected void deployPatch(URL definitionURL) throws IOException {
+        Patch patch = readDefinition(definitionURL, Patch.class);
+        patchService.patch(patch);
+    }
+
+    @Override
+    protected boolean processDefinitionByType(String definitionType, URL definitionURL, PrintStream console) throws IOException {
+        switch (definitionType) {
+            case CONDITION_DEFINITION_TYPE:
+                deployConditionType(definitionURL);
+                return true;
+            case ACTION_DEFINITION_TYPE:
+                deployActionType(definitionURL);
+                return true;
+            case GOAL_DEFINITION_TYPE:
+                deployGoal(definitionURL);
+                return true;
+            case CAMPAIGN_DEFINITION_TYPE:
+                deployCampaign(definitionURL);
+                return true;
+            case PERSONA_DEFINITION_TYPE:
+                deployPersona(definitionURL);
+                return true;
+            case PROPERTY_DEFINITION_TYPE:
+                deployPropertyType(definitionURL);
+                return true;
+            case RULE_DEFINITION_TYPE:
+                deployRule(definitionURL);
+                return true;
+            case SEGMENT_DEFINITION_TYPE:
+                deploySegment(definitionURL);
+                return true;
+            case SCORING_DEFINITION_TYPE:
+                deployScoring(definitionURL);
+                return true;
+            case PATCH_DEFINITION_TYPE:
+                deployPatch(definitionURL);
+                return true;
+            default:
+                console.println("Unrecognized definition type:" + definitionType);
+                return false;
+        }
+    }
 }

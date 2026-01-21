@@ -21,21 +21,21 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.apache.karaf.shell.api.console.Session;
 import org.apache.karaf.shell.support.table.Col;
 import org.apache.karaf.shell.support.table.ShellTable;
+
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.shell.dev.commands.CommandUtils;
 
-import java.text.SimpleDateFormat;
+import java.io.PrintStream;
 import java.util.List;
 
 @Command(scope = "unomi", name = "task-list", description = "Lists scheduled tasks")
 @Service
-public class ListTasksCommand implements Action {
-
-    @Reference
-    private SchedulerService schedulerService;
+public class ListTasksCommand extends BaseSchedulerCommand {
 
     @Option(name = "-s", aliases = "--status", description = "Filter by task status (SCHEDULED, RUNNING, COMPLETED, FAILED, CANCELLED, CRASHED)", required = false)
     private String status;
@@ -48,7 +48,7 @@ public class ListTasksCommand implements Action {
 
     @Override
     public Object execute() throws Exception {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        PrintStream console = getConsole();
         ShellTable table = new ShellTable();
 
         // Configure table columns
@@ -78,7 +78,7 @@ public class ListTasksCommand implements Action {
                     }
                 }
             } catch (IllegalArgumentException e) {
-                System.err.println("Invalid status: " + status);
+                println("Invalid status: " + status);
                 return null;
             }
         } else if (type != null) {
@@ -108,8 +108,8 @@ public class ListTasksCommand implements Action {
                 task.getItemId(),
                 task.getTaskType(),
                 task.getStatus(),
-                task.getNextScheduledExecution() != null ? dateFormat.format(task.getNextScheduledExecution()) : "-",
-                task.getLastExecutionDate() != null ? dateFormat.format(task.getLastExecutionDate()) : "-",
+                CommandUtils.formatDate(task.getNextScheduledExecution()),
+                CommandUtils.formatDate(task.getLastExecutionDate()),
                 task.getFailureCount(),
                 task.getSuccessCount(),
                 totalExecutions,
@@ -117,14 +117,14 @@ public class ListTasksCommand implements Action {
             );
         }
 
-        table.print(System.out);
+        table.print(console);
 
         if (tasks.isEmpty()) {
-            System.out.println("No tasks found.");
+            println("No tasks found.");
         } else {
             int persistentCount = (int) tasks.stream().filter(ScheduledTask::isPersistent).count();
             int memoryCount = tasks.size() - persistentCount;
-            System.out.println("\nShowing " + tasks.size() + " task(s) (" + 
+            println("\nShowing " + tasks.size() + " task(s) (" + 
                 persistentCount + " in storage, " + memoryCount + " in memory)" +
                 (status != null ? " with status " + status : "") +
                 (type != null ? " of type " + type : ""));

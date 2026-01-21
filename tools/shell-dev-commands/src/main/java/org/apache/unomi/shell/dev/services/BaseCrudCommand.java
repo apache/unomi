@@ -19,6 +19,8 @@ package org.apache.unomi.shell.dev.services;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.support.table.ShellTable;
+
+import java.io.PrintStream;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
@@ -65,7 +67,8 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
 
         PartialList<?> items = getItems(query);
         if (items.getList().size() != items.getTotalSize()) {
-            System.out.println("WARNING : Only the first " + items.getPageSize() + " items have been retrieved, there are " + items.getTotalSize() + " items registered in total. Use the maxEntries parameter to retrieve more items");
+            PrintStream console = getConsole();
+            console.println("WARNING : Only the first " + items.getPageSize() + " items have been retrieved, there are " + items.getTotalSize() + " items registered in total. Use the maxEntries parameter to retrieve more items");
         }
 
         DataTable dataTable = new DataTable();
@@ -117,39 +120,46 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
 
     /**
      * Get the column headers for the list output table.
-     * This implementation is used by both ListCommandSupport and CrudCommand.
+     * This implementation automatically prepends "Tenant" as the first column header,
+     * matching how tenantId is automatically prepended to rows in buildDataTable() and buildRows().
+     * Subclasses should implement getHeadersWithoutTenant() to provide their specific headers.
+     * 
+     * Subclasses can override this method to provide custom header handling (e.g., to skip the tenant column
+     * for commands like TenantCrudCommand where it would be redundant).
      *
-     * @return array of column headers
+     * @return array of column headers with "Tenant" as the first element (unless overridden)
      */
     @Override
-    public abstract String[] getHeaders();
-
-    /**
-     * Returns the headers with "TenantId" as the first column.
-     * This method should be used by subclasses to ensure tenant ID is always displayed first.
-     *
-     * @param originalHeaders the original headers from the implementation
-     * @return array of column headers with "TenantId" as the first element
-     */
-    protected String[] prependTenantIdHeader(String[] originalHeaders) {
-        String[] headersWithTenant = new String[originalHeaders.length + 1];
+    public String[] getHeaders() {
+        String[] headersWithoutTenant = getHeadersWithoutTenant();
+        String[] headersWithTenant = new String[headersWithoutTenant.length + 1];
         headersWithTenant[0] = "Tenant";
-        System.arraycopy(originalHeaders, 0, headersWithTenant, 1, originalHeaders.length);
+        System.arraycopy(headersWithoutTenant, 0, headersWithTenant, 1, headersWithoutTenant.length);
         return headersWithTenant;
     }
+
+    /**
+     * Get the column headers for the list output table without the "Tenant" column.
+     * Subclasses must implement this method to provide their specific headers.
+     * The "Tenant" column will be automatically prepended by getHeaders().
+     *
+     * @return array of column headers (without "Tenant")
+     */
+    protected abstract String[] getHeadersWithoutTenant();
 
     @Override
     public void buildRows(ShellTable table, int maxEntries) {
         Query query = new Query();
         query.setLimit(maxEntries);
+        PrintStream console = getConsole();
         if (definitionsService == null) {
-            System.err.println("No definitions service available, unable to build rows");
+            console.println("Error: No definitions service available, unable to build rows");
             LOGGER.error("Definition service is not available, unable to build rows");
             return;
         }
         ConditionType matchAllConditionType = definitionsService.getConditionType("matchAllCondition");
         if (matchAllConditionType == null) {
-            System.err.println("No matchAllCondition available, unable to build rows");
+            console.println("Error: No matchAllCondition available, unable to build rows");
             LOGGER.error("No matchAllCondition available, unable to build rows");
         }
         Condition matchAllCondition = new Condition(matchAllConditionType);
@@ -158,7 +168,7 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
 
         PartialList<?> items = getItems(query);
         if (items.getList().size() != items.getTotalSize()) {
-            System.out.println("WARNING : Only the first " + items.getPageSize() + " items have been retrieved, there are " + items.getTotalSize() + " items registered in total. Use the maxEntries parameter to retrieve more items");
+            console.println("WARNING : Only the first " + items.getPageSize() + " items have been retrieved, there are " + items.getTotalSize() + " items registered in total. Use the maxEntries parameter to retrieve more items");
         }
 
         for (Object item : items.getList()) {
@@ -238,6 +248,20 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
             LOGGER.error("Error completing IDs", e);
             return List.of();
         }
+    }
+
+    /**
+     * Get the console PrintStream, falling back to System.out if session is not available.
+     * This is needed because CrudCommand services retrieved via bundleContext.getService()
+     * may not have session injected (they're not shell command instances).
+     *
+     * @return PrintStream for console output
+     */
+    protected PrintStream getConsole() {
+        if (session != null) {
+            return session.getConsole();
+        }
+        return System.out;
     }
 
     /**

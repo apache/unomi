@@ -18,15 +18,10 @@ package org.apache.unomi.shell.dev.commands;
 
 import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Option;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
-import org.apache.karaf.shell.api.console.Session;
 
 import java.io.IOException;
 
-public abstract class RemoveCommandSupport implements Action {
-
-    @Reference
-    Session session;
+public abstract class RemoveCommandSupport extends BaseSimpleCommand {
 
     @Option(name = "--force", description = "Force deletion without confirmation", required = false, multiValued = false)
     boolean force;
@@ -41,9 +36,9 @@ public abstract class RemoveCommandSupport implements Action {
         // Prompt for confirmation
         if (force || askForConfirmation("Are you sure you want to delete "+getResourceDescription()+" ? (yes/no): ")) {
             result = doRemove();
-            System.out.println("Resource deleted successfully.");
+            println("Resource deleted successfully.");
         } else {
-            System.out.println("Operation cancelled.");
+            println("Operation cancelled.");
         }
         return result;
     }
