@@ -46,15 +46,16 @@ public class IdCompleter implements Completer {
 
     @Override
     public int complete(Session session, CommandLine commandLine, List<String> candidates) {
-        // Get the operation and type from the command line (index 0 = operation, index 1 = type)
+        // Get the operation and type from the command line
+        // args[0] = "crud" (command name), args[1] = operation, args[2] = type, args[3+] = remaining
         String operation = null;
         String type = null;
         String[] args = commandLine.getArguments();
-        if (args.length > 0) {
-            operation = args[0];
-        }
         if (args.length > 1) {
-            type = args[1];
+            operation = args[1];
+        }
+        if (args.length > 2) {
+            type = args[2];
         }
         if (type == null) {
             return -1;
@@ -70,13 +71,26 @@ public class IdCompleter implements Completer {
             }
         }
 
-        // For update operation, check if we're completing the first argument (ID) or second (JSON)
-        // remaining[0] = ID, remaining[1] = JSON
-        // If args.length > 2, we're completing remaining[1] (JSON), so don't complete IDs
-        if (operation != null && "update".equals(operation.toLowerCase()) && args.length > 2) {
+        // Determine which argument we're completing based on args.length
+        // args[0] = "crud" (command name)
+        // args[1] = operation
+        // args[2] = type
+        // args[3+] = remaining (multi-valued)
+        // For read/delete: remaining[0] = ID (complete when args.length == 3, i.e., we're at remaining[0])
+        // For update: remaining[0] = ID, remaining[1] = JSON
+        //   - Complete IDs when args.length == 3 (completing remaining[0], which is the ID)
+        //   - Don't complete IDs when args.length >= 4 (completing remaining[1], which is JSON)
+        
+        // For update operation, if args.length >= 4, we're past the ID argument
+        // and are completing the JSON part, so don't complete IDs
+        if (operation != null && "update".equals(operation.toLowerCase()) && args.length >= 4) {
             // We're past the ID argument, so we're completing JSON - don't complete IDs
             return -1;
         }
+        
+        // For read/delete/update with args.length == 3, we're completing the ID (remaining[0])
+        // The completer is attached to the "remaining" argument, so it will be called
+        // when we're at that position
 
         // Find the CrudCommand for this type
         try {
@@ -88,21 +102,7 @@ public class IdCompleter implements Completer {
                         if (cmd.getObjectType().equals(type)) {
                             // Get the prefix from what the user has typed so far
                             // StringsCompleter will handle the final matching, but we need prefix for server-side filtering
-                            String prefix = "";
-                            String buffer = commandLine.getBuffer();
-                            
-                            if (buffer != null && !buffer.trim().isEmpty()) {
-                                // Get the last word from the buffer (the current value being typed)
-                                String trimmed = buffer.trim();
-                                int lastSpace = trimmed.lastIndexOf(' ');
-                                if (lastSpace >= 0 && lastSpace < trimmed.length() - 1) {
-                                    prefix = trimmed.substring(lastSpace + 1);
-                                    // Skip if it looks like an option
-                                    if (prefix.startsWith("-")) {
-                                        prefix = "";
-                                    }
-                                }
-                            }
+                            String prefix = extractPrefixFromBuffer(commandLine);
                             
                             List<String> completions = cmd.completeId(prefix);
 
@@ -123,5 +123,34 @@ public class IdCompleter implements Completer {
         }
 
         return -1;
+    }
+
+    /**
+     * Extract the prefix from the command line buffer for completion.
+     * This extracts the last word being typed, skipping options that start with '-'.
+     *
+     * @param commandLine the command line
+     * @return the prefix to use for filtering completions, or empty string if none
+     */
+    private String extractPrefixFromBuffer(CommandLine commandLine) {
+        String buffer = commandLine.getBuffer();
+        if (buffer == null || buffer.trim().isEmpty()) {
+            return "";
+        }
+        
+        // Get the last word from the buffer (the current value being typed)
+        String trimmed = buffer.trim();
+        int lastSpace = trimmed.lastIndexOf(' ');
+        if (lastSpace < 0 || lastSpace >= trimmed.length() - 1) {
+            return "";
+        }
+        
+        String prefix = trimmed.substring(lastSpace + 1);
+        // Skip if it looks like an option
+        if (prefix.startsWith("-")) {
+            return "";
+        }
+        
+        return prefix;
     }
 }

@@ -18,6 +18,7 @@ package org.apache.unomi.shell.dev.services;
 
 import org.apache.karaf.shell.support.table.ShellTable;
 
+import java.io.PrintStream;
 import java.util.List;
 import java.util.Map;
 
@@ -191,4 +192,15 @@ public interface CrudCommand {
      * @param maxEntries maximum number of entries to include
      */
     void buildRows(ShellTable table, int maxEntries);
+
+    /**
+     * Generate CSV output directly using commons-csv API.
+     * This method uses the same logic as buildRows() but outputs as CSV.
+     *
+     * @param console console for output
+     * @param headers column headers
+     * @param limit maximum number of entries
+     * @throws Exception if generation fails
+     */
+    void buildCsvOutput(PrintStream console, String[] headers, int limit) throws Exception;
 }

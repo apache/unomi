@@ -16,12 +16,13 @@
  */
 package org.apache.unomi.shell.dev.commands;
 
-import org.apache.karaf.shell.api.action.Action;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.karaf.shell.api.console.Session;
+import org.apache.karaf.shell.support.table.ShellTable;
 
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
@@ -32,7 +33,9 @@ import org.apache.unomi.shell.dev.commands.TenantContextHelper;
 
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -72,6 +75,9 @@ public class CacheCommands extends BaseSimpleCommand {
 
     @Option(name = "--watch", description = "Watch cache statistics (refresh interval in seconds)", required = false)
     private int watchInterval = 0;
+
+    @Option(name = "--csv", description = "Output statistics in CSV format", required = false)
+    private boolean csv = false;
 
     @Option(name = "--id", description = "Specific entry ID to view or remove", required = false)
     private String entryId;
@@ -234,18 +240,20 @@ public class CacheCommands extends BaseSimpleCommand {
         CacheStatistics stats = cacheService.getStatistics();
         Map<String, TypeStatistics> allStats = stats.getAllStats();
 
+        if (allStats.isEmpty()) {
+            println("No cache statistics available");
+            return;
+        }
+
         if (type != null) {
             TypeStatistics typeStats = allStats.get(type);
             if (typeStats == null) {
                 println("No statistics available for type: " + type);
                 return;
             }
-            printTypeStats(type, typeStats);
+            displayStatisticsTable(Map.of(type, typeStats));
         } else {
-            for (Map.Entry<String, TypeStatistics> entry : allStats.entrySet()) {
-                printTypeStats(entry.getKey(), entry.getValue());
-                println("---");
-            }
+            displayStatisticsTable(allStats);
         }
 
         if (reset) {
@@ -254,27 +262,90 @@ public class CacheCommands extends BaseSimpleCommand {
         }
     }
 
-    private void printTypeStats(String type, TypeStatistics stats) {
-        println("Statistics for type: " + type);
-        println("  Hits: " + stats.getHits());
-        println("  Misses: " + stats.getMisses());
-        println("  Updates: " + stats.getUpdates());
-        println("  Validation Failures: " + stats.getValidationFailures());
-        println("  Indexing Errors: " + stats.getIndexingErrors());
+    private void displayStatisticsTable(Map<String, TypeStatistics> allStats) {
+        PrintStream console = getConsole();
+        
+        // Build headers
+        List<String> headers = new ArrayList<>();
+        headers.add("Type");
+        headers.add("Hits");
+        headers.add("Misses");
+        headers.add("Updates");
+        headers.add("Validation Failures");
+        headers.add("Indexing Errors");
+        headers.add("Hit Ratio (%)");
+        headers.add("Miss Ratio (%)");
+        if (detailed) {
+            headers.add("Efficiency Score");
+            headers.add("Error Rate (%)");
+        }
+
+        if (csv) {
+            // Generate CSV output
+            try {
+                CSVFormat csvFormat = CSVFormat.DEFAULT;
+                CSVPrinter printer = csvFormat.print(console);
+                
+                // Print header
+                printer.printRecord(headers.toArray());
+                
+                // Print data rows
+                for (Map.Entry<String, TypeStatistics> entry : allStats.entrySet()) {
+                    List<String> row = buildStatisticsRow(entry.getKey(), entry.getValue());
+                    printer.printRecord(row.toArray());
+                }
+                
+                printer.close();
+            } catch (Exception e) {
+                console.println("Error generating CSV output: " + e.getMessage());
+            }
+        } else {
+            // Generate table output
+            ShellTable table = new ShellTable();
+            for (String header : headers) {
+                table.column(header);
+            }
+            
+            for (Map.Entry<String, TypeStatistics> entry : allStats.entrySet()) {
+                List<String> row = buildStatisticsRow(entry.getKey(), entry.getValue());
+                table.addRow().addContent(row.toArray());
+            }
+            
+            table.print(console);
+        }
+    }
+
+    private List<String> buildStatisticsRow(String type, TypeStatistics stats) {
+        List<String> row = new ArrayList<>();
+        row.add(type);
+        row.add(String.valueOf(stats.getHits()));
+        row.add(String.valueOf(stats.getMisses()));
+        row.add(String.valueOf(stats.getUpdates()));
+        row.add(String.valueOf(stats.getValidationFailures()));
+        row.add(String.valueOf(stats.getIndexingErrors()));
 
         long total = stats.getHits() + stats.getMisses();
         if (total > 0) {
             double hitRatio = (double) stats.getHits() / total * 100;
             double missRatio = (double) stats.getMisses() / total * 100;
-            printf("  Hit Ratio: %.2f%%\n", hitRatio);
-            printf("  Miss Ratio: %.2f%%\n", missRatio);
+            row.add(String.format("%.2f", hitRatio));
+            row.add(String.format("%.2f", missRatio));
 
             if (detailed) {
-                printf("  Efficiency Score: %.2f\n", calculateEfficiencyScore(stats));
-                printf("  Error Rate: %.2f%%\n",
-                    (double)(stats.getValidationFailures() + stats.getIndexingErrors()) / total * 100);
+                row.add(String.format("%.2f", calculateEfficiencyScore(stats)));
+                double errorRate = (double)(stats.getValidationFailures() + stats.getIndexingErrors()) / total * 100;
+                row.add(String.format("%.2f", errorRate));
+            }
+        } else {
+            row.add("0.00");
+            row.add("0.00");
+            if (detailed) {
+                row.add("0.00");
+                row.add("0.00");
             }
         }
+
+        return row;
     }
 
     private double calculateEfficiencyScore(TypeStatistics stats) {

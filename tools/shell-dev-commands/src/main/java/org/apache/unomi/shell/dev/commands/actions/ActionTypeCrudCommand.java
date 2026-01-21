@@ -68,16 +68,7 @@ public class ActionTypeCrudCommand extends BaseCrudCommand {
     @Override
     protected PartialList<?> getItems(Query query) {
         List<ActionType> actionTypes = new ArrayList<>(definitionsService.getAllActionTypes());
-
-        // Apply query limit
-        Integer offset = query.getOffset();
-        Integer limit = query.getLimit();
-        int start = offset == null ? 0 : offset;
-        int size = limit == null ? actionTypes.size() : limit;
-        int end = Math.min(start + size, actionTypes.size());
-
-        List<ActionType> pagedActionTypes = actionTypes.subList(start, end);
-        return new PartialList<>(pagedActionTypes, start, pagedActionTypes.size(), actionTypes.size(), PartialList.Relation.EQUAL);
+        return paginateList(actionTypes, query);
     }
 
     @Override
@@ -146,9 +137,7 @@ public class ActionTypeCrudCommand extends BaseCrudCommand {
 
     @Override
     public List<String> completePropertyNames(String prefix) {
-        return PROPERTY_NAMES.stream()
-                .filter(name -> name.startsWith(prefix))
-                .collect(Collectors.toList());
+        return filterPropertyNames(PROPERTY_NAMES, prefix);
     }
 
     @Override

@@ -70,7 +70,7 @@ public class PropertyTypeCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    public PartialList<?> getItems(Query query) {
+    protected PartialList<?> getItems(Query query) {
         Map<String, Collection<PropertyType>> propertyTypesByTarget = profileService.getTargetPropertyTypes();
         List<PropertyType> propertyTypes = new ArrayList<>();
         
@@ -79,17 +79,7 @@ public class PropertyTypeCrudCommand extends BaseCrudCommand {
             propertyTypes.addAll(typeCollection);
         }
         
-        Integer start = query.getOffset();
-        Integer size = query.getLimit();
-        if (start == null) {
-            start = 0;
-        }
-        if (size == null) {
-            size = 50;
-        }
-        int end = Math.min(start + size, propertyTypes.size());
-        List<PropertyType> pagedPropertyTypes = propertyTypes.subList(start, end);
-        return new PartialList<>(pagedPropertyTypes, start, pagedPropertyTypes.size(), propertyTypes.size(), PartialList.Relation.EQUAL);
+        return paginateList(propertyTypes, query);
     }
 
     @Override
@@ -164,9 +154,7 @@ public class PropertyTypeCrudCommand extends BaseCrudCommand {
 
     @Override
     public List<String> completePropertyNames(String prefix) {
-        return PROPERTY_NAMES.stream()
-                .filter(name -> name.startsWith(prefix))
-                .collect(Collectors.toList());
+        return filterPropertyNames(PROPERTY_NAMES, prefix);
     }
 
     @Override

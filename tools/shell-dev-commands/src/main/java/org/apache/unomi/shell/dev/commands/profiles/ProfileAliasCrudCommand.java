@@ -77,8 +77,8 @@ public class ProfileAliasCrudCommand extends BaseCrudCommand {
     @Override
     public Map<String, Object> read(String id) {
         // Since there's no direct method to get a single alias, we'll need to search for it
-        // We'll use findProfileAliases with a small limit since we know the ID
-        PartialList<ProfileAlias> aliases = profileService.findProfileAliases(null, 0, 1, null);
+        // Search with a reasonable limit to find the alias by ID
+        PartialList<ProfileAlias> aliases = profileService.findProfileAliases(null, 0, 100, null);
         ProfileAlias alias = aliases.getList().stream()
             .filter(a -> a.getItemId().equals(id))
             .findFirst()
@@ -108,13 +108,14 @@ public class ProfileAliasCrudCommand extends BaseCrudCommand {
 
     @Override
     public void update(String id, Map<String, Object> properties) {
-        // First check if the alias exists
-        if (read(id) == null) {
+        // Get the existing alias (check if it exists and get its data in one call)
+        Map<String, Object> aliasData = read(id);
+        if (aliasData == null) {
             return;
         }
 
         // Remove the old alias and add the new one
-        ProfileAlias oldAlias = OBJECT_MAPPER.convertValue(read(id), ProfileAlias.class);
+        ProfileAlias oldAlias = OBJECT_MAPPER.convertValue(aliasData, ProfileAlias.class);
         profileService.removeAliasFromProfile(oldAlias.getProfileID(), oldAlias.getItemId(), oldAlias.getClientID());
 
         ProfileAlias updatedAlias = OBJECT_MAPPER.convertValue(properties, ProfileAlias.class);
@@ -135,9 +136,7 @@ public class ProfileAliasCrudCommand extends BaseCrudCommand {
 
     @Override
     public List<String> completePropertyNames(String prefix) {
-        return PROPERTY_NAMES.stream()
-            .filter(name -> name.startsWith(prefix))
-            .collect(Collectors.toList());
+        return filterPropertyNames(PROPERTY_NAMES, prefix);
     }
 
     @Override

@@ -21,8 +21,6 @@ import org.apache.karaf.shell.support.table.ShellTable;
 
 import java.io.PrintStream;
 import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.tenants.*;
 import org.apache.unomi.common.DataTable;
@@ -31,6 +29,8 @@ import org.apache.unomi.shell.dev.services.BaseCrudCommand;
 import org.apache.unomi.shell.dev.services.CrudCommand;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 @Component(service = CrudCommand.class, immediate = true)
 public class TenantCrudCommand extends BaseCrudCommand {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(TenantCrudCommand.class.getName());
     private static final ObjectMapper OBJECT_MAPPER = new CustomObjectMapper();
     private static final List<String> PROPERTY_NAMES = List.of(
         "itemId", "name", "description", "status", "creationDate", "lastModificationDate", "resourceQuota", "properties", "restrictedEventPermissions", "authorizedIPs"
@@ -73,25 +74,25 @@ public class TenantCrudCommand extends BaseCrudCommand {
      */
     @Override
     protected DataTable buildDataTable() {
-        Query query = new Query();
-        query.setLimit(maxEntries);
-        Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
-        query.setCondition(matchAllCondition);
-        query.setSortby(getSortBy());
+        PrintStream console = getConsole();
+        try {
+            Query query = buildQuery(maxEntries);
+            PartialList<?> items = getItems(query);
+            
+            printPaginationWarning(items, console);
 
-        PartialList<?> items = getItems(query);
-        if (items.getList().size() != items.getTotalSize()) {
-            PrintStream console = getConsole();
-            console.println("WARNING : Only the first " + items.getPageSize() + " items have been retrieved, there are " + items.getTotalSize() + " items registered in total. Use the maxEntries parameter to retrieve more items");
+            DataTable dataTable = new DataTable();
+            for (Object item : items.getList()) {
+                Comparable[] rowData = buildRow(item);
+                dataTable.addRow(rowData);
+            }
+
+            return dataTable;
+        } catch (Exception e) {
+            LOGGER.error("Error building data table", e);
+            console.println("Error: " + e.getMessage());
+            return new DataTable();
         }
-
-        DataTable dataTable = new DataTable();
-        for (Object item : items.getList()) {
-            Comparable[] rowData = buildRow(item);
-            dataTable.addRow(rowData);
-        }
-
-        return dataTable;
     }
 
     /**
@@ -99,29 +100,20 @@ public class TenantCrudCommand extends BaseCrudCommand {
      */
     @Override
     public void buildRows(ShellTable table, int maxEntries) {
-        Query query = new Query();
-        query.setLimit(maxEntries);
         PrintStream console = getConsole();
-        if (definitionsService == null) {
-            console.println("Error: No definitions service available, unable to build rows");
-            return;
-        }
-        ConditionType matchAllConditionType = definitionsService.getConditionType("matchAllCondition");
-        if (matchAllConditionType == null) {
-            console.println("Error: No matchAllCondition available, unable to build rows");
-        }
-        Condition matchAllCondition = new Condition(matchAllConditionType);
-        query.setCondition(matchAllCondition);
-        query.setSortby(getSortBy());
+        try {
+            Query query = buildQuery(maxEntries);
+            PartialList<?> items = getItems(query);
+            
+            printPaginationWarning(items, console);
 
-        PartialList<?> items = getItems(query);
-        if (items.getList().size() != items.getTotalSize()) {
-            console.println("WARNING : Only the first " + items.getPageSize() + " items have been retrieved, there are " + items.getTotalSize() + " items registered in total. Use the maxEntries parameter to retrieve more items");
-        }
-
-        for (Object item : items.getList()) {
-            Comparable[] rowData = buildRow(item);
-            table.addRow().addContent(rowData);
+            for (Object item : items.getList()) {
+                Comparable[] rowData = buildRow(item);
+                table.addRow().addContent(rowData);
+            }
+        } catch (Exception e) {
+            console.println("Error: " + e.getMessage());
+            LOGGER.error("Error building rows", e);
         }
     }
 
@@ -247,9 +239,7 @@ public class TenantCrudCommand extends BaseCrudCommand {
 
     @Override
     public List<String> completePropertyNames(String prefix) {
-        return PROPERTY_NAMES.stream()
-            .filter(name -> name.startsWith(prefix))
-            .collect(Collectors.toList());
+        return filterPropertyNames(PROPERTY_NAMES, prefix);
     }
 
     @Override

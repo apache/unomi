@@ -115,8 +115,6 @@ public class TopicCrudCommand extends BaseCrudCommand {
 
     @Override
     public List<String> completePropertyNames(String prefix) {
-        return PROPERTY_NAMES.stream()
-                .filter(name -> name.startsWith(prefix))
-                .collect(Collectors.toList());
+        return filterPropertyNames(PROPERTY_NAMES, prefix);
     }
 }

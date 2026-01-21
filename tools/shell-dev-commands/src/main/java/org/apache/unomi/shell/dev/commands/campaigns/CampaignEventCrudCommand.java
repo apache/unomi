@@ -108,11 +108,6 @@ public class CampaignEventCrudCommand extends BaseCrudCommand {
 
     @Override
     public void update(String id, Map<String, Object> properties) {
-        // First check if the event exists
-        if (read(id) == null) {
-            return;
-        }
-
         CampaignEvent updatedEvent = OBJECT_MAPPER.convertValue(properties, CampaignEvent.class);
         updatedEvent.setItemId(id);
         goalsService.setCampaignEvent(updatedEvent);
@@ -120,17 +115,12 @@ public class CampaignEventCrudCommand extends BaseCrudCommand {
 
     @Override
     public void delete(String id) {
-        // First check if the event exists
-        if (read(id) != null) {
-            goalsService.removeCampaignEvent(id);
-        }
+        goalsService.removeCampaignEvent(id);
     }
 
     @Override
     public List<String> completePropertyNames(String prefix) {
-        return PROPERTY_NAMES.stream()
-            .filter(name -> name.startsWith(prefix))
-            .collect(Collectors.toList());
+        return filterPropertyNames(PROPERTY_NAMES, prefix);
     }
 
     @Override

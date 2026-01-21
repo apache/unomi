@@ -344,6 +344,25 @@ public class CrudCommandsIT extends ShellCommandsBaseIT {
         Assert.assertTrue("CSV output should have at least one line", lines.length > 0);
     }
 
+    @Test
+    public void testGoalListCsvBeforeList() throws Exception {
+        // Test --csv option before list operation (fix for option parsing issue)
+        String csvOutput = executeCommandAndGetOutput("unomi:crud --csv list goal");
+        // CSV should contain commas and have at least one line
+        Assert.assertTrue("Should output CSV format when --csv is before list", 
+            csvOutput.contains(",") || csvOutput.trim().length() > 0);
+        // CSV should have at least header line
+        String[] lines = csvOutput.split("\n");
+        Assert.assertTrue("CSV output should have at least header line", lines.length > 0);
+        // Verify it's actually CSV (not table format with spaces)
+        if (lines.length > 0) {
+            String firstLine = lines[0];
+            // CSV should have commas, not just spaces
+            Assert.assertTrue("First line should contain commas (CSV format)", 
+                firstLine.contains(",") || firstLine.trim().isEmpty());
+        }
+    }
+
     /**
      * Helper method to test basic CRUD operations for an object type.
      * Reduces code duplication across similar object types.

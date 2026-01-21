@@ -18,6 +18,7 @@ package org.apache.unomi.shell.dev.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.karaf.shell.api.action.*;
 import org.apache.karaf.shell.api.action.lifecycle.Init;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
@@ -48,7 +49,7 @@ public class UnomiCrudCommand implements Action {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UnomiCrudCommand.class.getName());
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = CustomObjectMapper.getObjectMapper();
 
     @Reference
     private BundleContext bundleContext;
@@ -127,15 +128,18 @@ public class UnomiCrudCommand implements Action {
      * Parse list-specific options from the remaining argument list.
      * This implements Option 1: Simple Manual Parsing from the redesign proposal.
      * 
+     * Note: If --csv was already set by Karaf's option parser (when placed before arguments),
+     * we preserve that value. Otherwise, we parse it from the remaining list.
+     * 
      * @param remaining List of remaining tokens after type (e.g., ["--csv", "-n", "50"])
      */
     private void parseListOptions(List<String> remaining) {
-        boolean csv = false;
-        Integer maxEntries = null;
+        // Preserve csv value if already set by Karaf's option parser (when --csv comes before arguments)
+        boolean csv = this.csv;
+        Integer maxEntries = this.maxEntries;
         
         if (remaining == null || remaining.isEmpty()) {
-            this.csv = csv;
-            this.maxEntries = maxEntries;
+            // Keep existing values if already set by Karaf
             return;
         }
         
@@ -396,13 +400,13 @@ public class UnomiCrudCommand implements Action {
      * Find and execute the CrudCommand for the given type.
      * 
      * @param console console for output
-     * @return the result of the operation, or null if no handler found
+     * @return true if a handler was found and executed, false otherwise
      * @throws Exception if the operation fails
      */
-    private Object findAndExecuteCommand(PrintStream console) throws Exception {
+    private boolean findAndExecuteCommand(PrintStream console) throws Exception {
         ServiceReference<?>[] refs = bundleContext.getAllServiceReferences(CrudCommand.class.getName(), null);
         if (refs == null) {
-            return null;
+            return false;
         }
         
         String operationLower = operation.toLowerCase();
@@ -410,13 +414,14 @@ public class UnomiCrudCommand implements Action {
             CrudCommand cmd = (CrudCommand) bundleContext.getService(ref);
             if (cmd.getObjectType().equals(type)) {
                 try {
-                    return executeOperation(cmd, operationLower, console);
+                    executeOperation(cmd, operationLower, console);
+                    return true; // Handler found and executed
                 } finally {
                     bundleContext.ungetService(ref);
                 }
             }
         }
-        return null;
+        return false; // No handler found
     }
 
     @Override
@@ -427,11 +432,11 @@ public class UnomiCrudCommand implements Action {
             return null;
         }
         
-        Object result = findAndExecuteCommand(console);
-        if (result == null) {
+        boolean handlerFound = findAndExecuteCommand(console);
+        if (!handlerFound) {
             console.println("No handler found for object type: " + type);
         }
-        return result;
+        return null;
     }
 
     /**
@@ -541,16 +546,7 @@ public class UnomiCrudCommand implements Action {
         String id = remaining.get(0);
         String jsonOrUrl = remaining.get(1);
         
-        if (StringUtils.isBlank(id)) {
-            console.println("Error: ID is required for update operation");
-            return null;
-        }
-        
-        if (StringUtils.isBlank(jsonOrUrl)) {
-            console.println("Error: JSON string or URL is required for update operation");
-            return null;
-        }
-        
+        // hasMinimumRemainingArgs already ensures both id and jsonOrUrl are non-blank
         Map<String, Object> updateProps = parsePropertiesWithErrorHandling(jsonOrUrl, console);
         if (updateProps == null) {
             return null;
@@ -586,22 +582,27 @@ public class UnomiCrudCommand implements Action {
         // Parse list-specific options from remaining argument
         parseListOptions(remaining);
         
-        ShellTable table = new ShellTable();
-        if (csv) {
-            table.noHeaders().separator(",");
-        }
         String[] headers = cmd.getHeaders();
         if (headers == null || headers.length == 0) {
             console.println("Error: No headers available for " + type);
             return null;
         }
-        for (String header : headers) {
-            table.column(header);
-        }
+        
         // Ensure limit is positive (default to 100 if null or invalid)
         int limit = (maxEntries != null && maxEntries > 0) ? maxEntries : 100;
-        cmd.buildRows(table, limit);
-        table.print(console, !csv);
+        
+        if (csv) {
+            // Generate proper CSV output using Apache Commons CSV
+            cmd.buildCsvOutput(console, headers, limit);
+        } else {
+            // Generate table output
+            ShellTable table = new ShellTable();
+            for (String header : headers) {
+                table.column(header);
+            }
+            cmd.buildRows(table, limit);
+            table.print(console, true);
+        }
         return null;
     }
 }

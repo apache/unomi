@@ -92,11 +92,6 @@ public class SessionCrudCommand extends BaseCrudCommand {
 
     @Override
     public void update(String id, Map<String, Object> properties) {
-        // First check if the session exists
-        if (read(id) == null) {
-            return;
-        }
-
         Session updatedSession = OBJECT_MAPPER.convertValue(properties, Session.class);
         updatedSession.setItemId(id);
         profileService.saveSession(updatedSession);
@@ -104,17 +99,12 @@ public class SessionCrudCommand extends BaseCrudCommand {
 
     @Override
     public void delete(String id) {
-        // First check if the session exists
-        if (read(id) != null) {
-            profileService.deleteSession(id);
-        }
+        profileService.deleteSession(id);
     }
 
     @Override
     public List<String> completePropertyNames(String prefix) {
-        return PROPERTY_NAMES.stream()
-            .filter(name -> name.startsWith(prefix))
-            .collect(Collectors.toList());
+        return filterPropertyNames(PROPERTY_NAMES, prefix);
     }
 
     @Override

@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.shell.dev.services;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.support.table.ShellTable;
@@ -39,6 +41,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Base class for CRUD command implementations that provides common functionality
@@ -59,34 +62,25 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
 
     @Override
     protected DataTable buildDataTable() {
-        Query query = new Query();
-        query.setLimit(maxEntries);
-        Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
-        query.setCondition(matchAllCondition);
-        query.setSortby(getSortBy());
+        PrintStream console = getConsole();
+        try {
+            Query query = buildQuery(maxEntries);
+            PartialList<?> items = getItems(query);
+            
+            printPaginationWarning(items, console);
 
-        PartialList<?> items = getItems(query);
-        if (items.getList().size() != items.getTotalSize()) {
-            PrintStream console = getConsole();
-            console.println("WARNING : Only the first " + items.getPageSize() + " items have been retrieved, there are " + items.getTotalSize() + " items registered in total. Use the maxEntries parameter to retrieve more items");
+            DataTable dataTable = new DataTable();
+            for (Object item : items.getList()) {
+                Comparable[] rowWithTenant = buildRowWithTenant(item);
+                dataTable.addRow(rowWithTenant);
+            }
+
+            return dataTable;
+        } catch (Exception e) {
+            LOGGER.error("Error building data table", e);
+            console.println("Error: " + e.getMessage());
+            return new DataTable();
         }
-
-        DataTable dataTable = new DataTable();
-        for (Object item : items.getList()) {
-            Comparable[] rowData = buildRow(item);
-
-            // Get tenant ID from the item if possible
-            String tenantId = getTenantIdFromItem(item);
-
-            // Create a new array with tenantId as the first element
-            Comparable[] rowWithTenant = new Comparable[rowData.length + 1];
-            rowWithTenant[0] = tenantId;
-            System.arraycopy(rowData, 0, rowWithTenant, 1, rowData.length);
-
-            dataTable.addRow(rowWithTenant);
-        }
-
-        return dataTable;
     }
 
     /**
@@ -147,43 +141,118 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
      */
     protected abstract String[] getHeadersWithoutTenant();
 
-    @Override
-    public void buildRows(ShellTable table, int maxEntries) {
+    /**
+     * Build a query with matchAllCondition and sort criteria.
+     * This is a common helper method used by buildDataTable(), buildRows(), buildCsvOutput(), and completeId().
+     *
+     * @param limit maximum number of entries
+     * @return the configured query
+     * @throws Exception if definitions service is not available or matchAllCondition cannot be found
+     */
+    protected Query buildQuery(int limit) throws Exception {
         Query query = new Query();
-        query.setLimit(maxEntries);
-        PrintStream console = getConsole();
+        query.setLimit(limit);
+        
         if (definitionsService == null) {
-            console.println("Error: No definitions service available, unable to build rows");
-            LOGGER.error("Definition service is not available, unable to build rows");
-            return;
+            throw new Exception("Definitions service is not available");
         }
+        
         ConditionType matchAllConditionType = definitionsService.getConditionType("matchAllCondition");
         if (matchAllConditionType == null) {
-            console.println("Error: No matchAllCondition available, unable to build rows");
-            LOGGER.error("No matchAllCondition available, unable to build rows");
+            throw new Exception("No matchAllCondition available");
         }
+        
         Condition matchAllCondition = new Condition(matchAllConditionType);
         query.setCondition(matchAllCondition);
         query.setSortby(getSortBy());
+        
+        return query;
+    }
 
-        PartialList<?> items = getItems(query);
+    /**
+     * Build a row array with tenant ID prepended as the first element.
+     * This is a common helper method used by buildDataTable(), buildRows(), and buildCsvOutput().
+     *
+     * @param item the item to build a row from
+     * @return array with tenant ID as first element, followed by row data
+     */
+    protected Comparable[] buildRowWithTenant(Object item) {
+        Comparable[] rowData = buildRow(item);
+        String tenantId = getTenantIdFromItem(item);
+        
+        // Create a new array with tenantId as the first element
+        Comparable[] rowWithTenant = new Comparable[rowData.length + 1];
+        rowWithTenant[0] = tenantId;
+        System.arraycopy(rowData, 0, rowWithTenant, 1, rowData.length);
+        
+        return rowWithTenant;
+    }
+
+    /**
+     * Print pagination warning if not all items were retrieved.
+     * This is a common helper method used by buildDataTable() and buildRows().
+     *
+     * @param items the partial list of items
+     * @param console console for output
+     */
+    protected void printPaginationWarning(PartialList<?> items, PrintStream console) {
         if (items.getList().size() != items.getTotalSize()) {
             console.println("WARNING : Only the first " + items.getPageSize() + " items have been retrieved, there are " + items.getTotalSize() + " items registered in total. Use the maxEntries parameter to retrieve more items");
         }
+    }
 
-        for (Object item : items.getList()) {
-            Comparable[] rowData = buildRow(item);
+    @Override
+    public void buildRows(ShellTable table, int maxEntries) {
+        PrintStream console = getConsole();
+        try {
+            Query query = buildQuery(maxEntries);
+            PartialList<?> items = getItems(query);
+            
+            printPaginationWarning(items, console);
 
-            // Get tenant ID from the item if possible
-            String tenantId = getTenantIdFromItem(item);
-
-            // Create a new array with tenantId as the first element
-            Comparable[] rowWithTenant = new Comparable[rowData.length + 1];
-            rowWithTenant[0] = tenantId;
-            System.arraycopy(rowData, 0, rowWithTenant, 1, rowData.length);
-
-            table.addRow().addContent(rowWithTenant);
+            for (Object item : items.getList()) {
+                Comparable[] rowWithTenant = buildRowWithTenant(item);
+                table.addRow().addContent(rowWithTenant);
+            }
+        } catch (Exception e) {
+            console.println("Error: " + e.getMessage());
+            LOGGER.error("Error building rows", e);
         }
+    }
+
+    /**
+     * Generate CSV output directly using commons-csv API.
+     * This method uses the same logic as buildRows() but outputs as CSV.
+     *
+     * @param console console for output
+     * @param headers column headers
+     * @param limit maximum number of entries
+     * @throws Exception if generation fails
+     */
+    public void buildCsvOutput(PrintStream console, String[] headers, int limit) throws Exception {
+        Query query = buildQuery(limit);
+        PartialList<?> items = getItems(query);
+        
+        // Generate CSV directly using commons-csv
+        CSVFormat csvFormat = CSVFormat.DEFAULT;
+        CSVPrinter printer = csvFormat.print(console);
+        
+        // Print header
+        printer.printRecord((Object[]) headers);
+        
+        // Print data rows
+        for (Object item : items.getList()) {
+            Comparable[] rowWithTenant = buildRowWithTenant(item);
+            
+            // Convert to List<String> for CSV printer
+            List<String> row = new ArrayList<>();
+            for (Comparable<?> cell : rowWithTenant) {
+                row.add(cell != null ? cell.toString() : "");
+            }
+            printer.printRecord(row.toArray());
+        }
+        
+        printer.close();
     }
 
     /**
@@ -217,19 +286,9 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
      */
     @Override
     public List<String> completeId(String prefix) {
-        // Create a query with increased limit to provide more completions
-        Query query = new Query();
-        query.setLimit(50); // Higher limit for completions
-
-        if (definitionsService == null) {
-            LOGGER.error("Definition service is not available, unable to complete IDs");
-            return List.of();
-        }
-
         try {
-            Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
-            query.setCondition(matchAllCondition);
-            query.setSortby(getSortBy());
+            // Create a query with increased limit to provide more completions
+            Query query = buildQuery(50); // Higher limit for completions
 
             // Get items using the appropriate service method
             PartialList<?> items = getItems(query);
@@ -262,6 +321,39 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
             return session.getConsole();
         }
         return System.out;
+    }
+
+    /**
+     * Apply pagination to a list of items based on query parameters.
+     * This is a helper method for implementations that need to paginate in-memory lists.
+     *
+     * @param items the full list of items
+     * @param query the query with offset and limit parameters
+     * @param <T> the type of items in the list
+     * @return a PartialList with paginated results
+     */
+    protected <T> PartialList<T> paginateList(List<T> items, Query query) {
+        Integer offset = query.getOffset();
+        Integer limit = query.getLimit();
+        int start = offset == null ? 0 : offset;
+        int size = limit == null ? items.size() : limit;
+        int end = Math.min(start + size, items.size());
+        
+        List<T> pagedItems = items.subList(start, end);
+        return new PartialList<>(pagedItems, start, pagedItems.size(), items.size(), PartialList.Relation.EQUAL);
+    }
+
+    /**
+     * Filter property names by prefix. This is a helper method for completePropertyNames implementations.
+     *
+     * @param propertyNames the list of property names to filter
+     * @param prefix the prefix to filter by
+     * @return filtered list of property names
+     */
+    protected List<String> filterPropertyNames(List<String> propertyNames, String prefix) {
+        return propertyNames.stream()
+                .filter(name -> name.startsWith(prefix))
+                .collect(Collectors.toList());
     }
 
     /**
