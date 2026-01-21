@@ -33,3 +33,4 @@ itests/snapshots_repository/
 prsplit*
 *.diff
 tickets.csv
+.git-staging/
