@@ -28,3 +28,8 @@ dependency_tree.txt
 **/data/persistence/
 itests/snapshots_repository/
 .env.local
+
+# Ignore PR split output and tickets.csv file
+prsplit*
+*.diff
+tickets.csv
