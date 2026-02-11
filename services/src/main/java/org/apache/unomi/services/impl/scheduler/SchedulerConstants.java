@@ -16,29 +16,12 @@
  */
 package org.apache.unomi.services.impl.scheduler;
 
-import org.apache.unomi.api.conditions.ConditionType;
-
 /**
  * Constants used across scheduler implementation classes.
  */
 public final class SchedulerConstants {
     private SchedulerConstants() {
         // Prevent instantiation
-    }
-
-    public static final ConditionType PROPERTY_CONDITION_TYPE = new ConditionType();
-    public static final ConditionType BOOLEAN_CONDITION_TYPE = new ConditionType();
-
-    static {
-        PROPERTY_CONDITION_TYPE.setItemId("propertyCondition");
-        PROPERTY_CONDITION_TYPE.setItemType(ConditionType.ITEM_TYPE);
-        PROPERTY_CONDITION_TYPE.setConditionEvaluator("propertyConditionEvaluator");
-        PROPERTY_CONDITION_TYPE.setQueryBuilder("propertyConditionESQueryBuilder");
-
-        BOOLEAN_CONDITION_TYPE.setItemId("booleanCondition");
-        BOOLEAN_CONDITION_TYPE.setItemType(ConditionType.ITEM_TYPE);
-        BOOLEAN_CONDITION_TYPE.setConditionEvaluator("booleanConditionEvaluator");
-        BOOLEAN_CONDITION_TYPE.setQueryBuilder("booleanConditionESQueryBuilder");
     }
 
     // Task execution constants

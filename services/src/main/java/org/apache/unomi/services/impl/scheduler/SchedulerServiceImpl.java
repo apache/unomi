@@ -26,8 +26,7 @@ import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
+
 import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.*;
@@ -695,7 +694,6 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
-    @PostConstruct
     public void postConstruct() {
         if (bundleContext == null) {
             LOGGER.error("BundleContext is null, cannot initialize service trackers");
@@ -738,7 +736,6 @@ public class SchedulerServiceImpl implements SchedulerService {
         processPendingOperations();
     }
 
-    @PreDestroy
     public void preDestroy() {
         /**
          * Explicit shutdown sequence to handle the Aries Blueprint bug.
@@ -1432,14 +1429,6 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
-    private void initializeTaskPurge() {
-        if (areServicesReady()) {
-            initializeTaskPurgeInternal();
-        } else {
-            queuePendingOperation(OperationType.INITIALIZE_TASK_PURGE, "Initialize task purge");
-        }
-    }
-
     /**
      * Internal method to initialize task purge - called when services are ready
      */
@@ -1556,12 +1545,14 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     @Override
     public ScheduledTask createRecurringTask(String taskType, long period, TimeUnit timeUnit, Runnable runnable, boolean persistent) {
-        return newTask(taskType)
+        SchedulerService.TaskBuilder builder = newTask(taskType)
             .withPeriod(period, timeUnit)
             .withFixedRate()
-            .withSimpleExecutor(runnable)
-            .nonPersistent()
-            .schedule();
+            .withSimpleExecutor(runnable);
+        if (!persistent) {
+            builder = builder.nonPersistent();
+        }
+        return builder.schedule();
     }
 
     @Override

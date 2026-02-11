@@ -518,7 +518,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                     refreshGroovyActions();
                     callback.complete();
                 } catch (Exception e) {
-                    LOGGER.error("Error while reassigning profile data", e);
+                    LOGGER.error("Error while refreshing Groovy actions", e);
                     callback.fail(e.getMessage());
                 }
             }

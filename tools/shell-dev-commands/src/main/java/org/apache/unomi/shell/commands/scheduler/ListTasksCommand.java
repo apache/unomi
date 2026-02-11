@@ -67,31 +67,17 @@ public class ListTasksCommand implements Action {
         if (status != null) {
             try {
                 ScheduledTask.TaskStatus taskStatus = ScheduledTask.TaskStatus.valueOf(status.toUpperCase());
-                // Get persistent tasks
+                // getTasksByStatus already includes both persistent and in-memory tasks
                 PartialList<ScheduledTask> filteredTasks = schedulerService.getTasksByStatus(taskStatus, 0, limit, null);
                 tasks = filteredTasks.getList();
-                // Add memory tasks with matching status
-                List<ScheduledTask> memoryTasks = schedulerService.getMemoryTasks();
-                for (ScheduledTask task : memoryTasks) {
-                    if (task.getStatus() == taskStatus) {
-                        tasks.add(task);
-                    }
-                }
             } catch (IllegalArgumentException e) {
                 System.err.println("Invalid status: " + status);
                 return null;
             }
         } else if (type != null) {
-            // Get persistent tasks
+            // getTasksByType already includes both persistent and in-memory tasks
             PartialList<ScheduledTask> filteredTasks = schedulerService.getTasksByType(type, 0, limit, null);
             tasks = filteredTasks.getList();
-            // Add memory tasks with matching type
-            List<ScheduledTask> memoryTasks = schedulerService.getMemoryTasks();
-            for (ScheduledTask task : memoryTasks) {
-                if (task.getTaskType().equals(type)) {
-                    tasks.add(task);
-                }
-            }
         } else {
             // Get all tasks from both storage and memory
             tasks = schedulerService.getAllTasks();

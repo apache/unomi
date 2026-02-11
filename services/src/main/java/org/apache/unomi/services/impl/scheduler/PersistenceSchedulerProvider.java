@@ -352,7 +352,7 @@ public class PersistenceSchedulerProvider implements SchedulerProvider {
             Condition statusCondition = new Condition(SchedulerProvider.PROPERTY_CONDITION_TYPE);
             statusCondition.setParameter("propertyName", "status");
             statusCondition.setParameter("comparisonOperator", "equals");
-            statusCondition.setParameter("propertyValue", status);
+            statusCondition.setParameter("propertyValue", status.toString());
 
             return persistenceService.query(statusCondition, null, ScheduledTask.class, 0, -1).getList();
         } catch (Exception e) {

@@ -386,7 +386,7 @@ public class SchemaServiceImpl implements SchemaService {
                     refreshJSONSchemas();
                     callback.complete();
                 } catch (Exception e) {
-                    LOGGER.error("Error while refreshing json scehams", e);
+                    LOGGER.error("Error while refreshing json schemas", e);
                     callback.fail(e.getMessage());
                 }
             }
@@ -450,6 +450,10 @@ public class SchemaServiceImpl implements SchemaService {
 
     public void setScopeService(ScopeService scopeService) {
         this.scopeService = scopeService;
+    }
+
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
     }
 
     public void setJsonSchemaRefreshInterval(Integer jsonSchemaRefreshInterval) {

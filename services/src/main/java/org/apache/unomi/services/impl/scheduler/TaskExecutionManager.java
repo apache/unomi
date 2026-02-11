@@ -136,7 +136,7 @@ public class TaskExecutionManager {
     public void scheduleTask(ScheduledTask task, Runnable taskRunner) {
         // Calculate initial execution time if not set
         if (task.getNextScheduledExecution() == null) {
-            if (task.getInitialDelay() > 0) {
+            if (task.getInitialDelay() > 0 && task.getTimeUnit() != null) {
                 // If initial delay is specified, calculate from now
                 long nextExecution = System.currentTimeMillis() +
                     task.getTimeUnit().toMillis(task.getInitialDelay());
@@ -305,8 +305,6 @@ public class TaskExecutionManager {
                         LOGGER.error("Error executing task: " + taskId, e);
                         statusCallback.fail(e.getMessage());
                     }
-                } finally {
-                    updateTaskMetrics(task, startTime);
                 }
             } catch (Exception e) {
                 LOGGER.error("Unexpected error while executing task: " + taskId, e);
@@ -435,25 +433,6 @@ public class TaskExecutionManager {
 
             schedulerService.saveTask(task);
             scheduledTasks.remove(task.getItemId());
-        }
-    }
-
-    /**
-     * Updates task metrics
-     */
-    private void updateTaskMetrics(ScheduledTask task, long startTime) {
-        if (task.getStatus() == ScheduledTask.TaskStatus.COMPLETED) {
-            metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_COMPLETED);
-            long duration = System.currentTimeMillis() - startTime;
-            metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_EXECUTION_TIME, duration);
-        } else if (task.getStatus() == ScheduledTask.TaskStatus.FAILED) {
-            metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_FAILED);
-        } else if (task.getStatus() == ScheduledTask.TaskStatus.CRASHED) {
-            metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_CRASHED);
-        } else if (task.getStatus() == ScheduledTask.TaskStatus.WAITING) {
-            metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_WAITING);
-        } else if (task.getStatus() == ScheduledTask.TaskStatus.RUNNING) {
-            metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_RUNNING);
         }
     }
 

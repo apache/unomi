@@ -539,7 +539,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 .withPeriod(rulesRefreshInterval, TimeUnit.MILLISECONDS)
                 .nonPersistent()
                 .schedule().getItemId();
-        this.refreshRulesTaskId = schedulerService.newTask(REFRESH_RULE_STATS_TASK_TYPE)
+        this.syncRuleStatisticsTaskId = schedulerService.newTask(REFRESH_RULE_STATS_TASK_TYPE)
                 .withPeriod(rulesStatisticsRefreshInterval, TimeUnit.MILLISECONDS)
                 .nonPersistent()
                 .schedule().getItemId();

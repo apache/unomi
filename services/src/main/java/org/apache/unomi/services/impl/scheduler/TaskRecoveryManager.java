@@ -150,7 +150,7 @@ public class TaskRecoveryManager {
             } else {
                 // If task can't be resumed, try to restart it
                 if (shouldRestartTask(task)) {
-                    attemptTaskRestart(task, executor);
+                    attemptTaskRestart(task);
                 }
             }
         }
@@ -200,8 +200,13 @@ public class TaskRecoveryManager {
     /**
      * Attempts to restart a task that can't be resumed
      */
-    private void attemptTaskRestart(ScheduledTask task, TaskExecutor executor) {
+    private void attemptTaskRestart(ScheduledTask task) {
         LOGGER.info("Node {} restarting crashed task: {}", nodeId, task.getItemId());
+        TaskExecutor executor = executorRegistry.getExecutor(task.getTaskType());
+        if (executor == null) {
+            LOGGER.warn("Node {} cannot restart task {} : no executor found for type {}", nodeId, task.getItemId(), task.getTaskType());
+            return;
+        }
         stateManager.resetTaskToScheduled(task);
         if (lockManager.acquireLock(task)) {
             executionManager.executeTask(task, executor);
@@ -281,53 +286,5 @@ public class TaskRecoveryManager {
         return dependencies;
     }
 
-    /**
-     * Update running task to crashed state
-     */
-    private void markAsCrashed(ScheduledTask task) {
-        try {
-            if (task != null) {
-                // Mark the task as crashed so it can be recovered
-                task.setStatus(ScheduledTask.TaskStatus.CRASHED);
-                task.setCurrentStep("CRASHED");
-                if (task.getStatusDetails() == null) {
-                    task.setStatusDetails(new HashMap<>());
-                }
-                task.getStatusDetails().put("crashTime", new Date());
-                task.getStatusDetails().put("crashedNode", task.getLockOwner());
-
-                // Release the lock but preserve the lock owner for reference
-                String lockOwner = task.getLockOwner();
-                lockManager.releaseLock(task);
-                task.getStatusDetails().put("crashedNode", lockOwner);
-
-                if (schedulerService.saveTask(task)) {
-                    LOGGER.info("Task {} marked as crashed (previous lock owner: {})", task.getItemId(), lockOwner);
-                    metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_CRASHED);
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.error("Failed to mark task as crashed: {}", task.getItemId(), e);
-        }
-    }
-
-    /**
-     * Resets a task that has been in running state for too long
-     */
-    private void resetStalledTask(ScheduledTask task) {
-        try {
-            if (task != null) {
-                // Mark the task as failed due to timeout
-                stateManager.updateTaskState(task, ScheduledTask.TaskStatus.FAILED, "Task execution timeout exceeded", nodeId);
-                metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_FAILED);
-
-                if (schedulerService.saveTask(task)) {
-                    LOGGER.info("Stalled task {} reset to FAILED state", task.getItemId());
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.error("Failed to reset stalled task: {}", task.getItemId(), e);
-        }
-    }
 
 }

@@ -55,10 +55,8 @@ public class TaskHistoryManager {
         entry.put("status", "SUCCESS");
         entry.put("nodeId", nodeId);
         entry.put("executionTime", executionTime);
-        
+
         addToHistory(task, entry);
-        metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_COMPLETED);
-        metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_EXECUTION_TIME, executionTime);
     }
 
     /**
@@ -70,9 +68,8 @@ public class TaskHistoryManager {
         entry.put("status", "FAILED");
         entry.put("nodeId", nodeId);
         entry.put("error", error);
-        
+
         addToHistory(task, entry);
-        metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_FAILED);
     }
 
     /**
@@ -83,9 +80,8 @@ public class TaskHistoryManager {
         entry.put("timestamp", new Date());
         entry.put("status", "CRASHED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
-        metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_CRASHED);
     }
 
     /**
@@ -96,29 +92,32 @@ public class TaskHistoryManager {
         entry.put("timestamp", new Date());
         entry.put("status", "CANCELLED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
-        metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_CANCELLED);
     }
 
+    /**
+     * Records task resumption
+     */
     public void recordResume(ScheduledTask task) {
         Map<String, Object> entry = new HashMap<>();
         entry.put("timestamp", new Date());
         entry.put("status", "RESUMED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
-        metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_RESUMED);
     }
 
+    /**
+     * Records task retry
+     */
     public void recordRetry(ScheduledTask task) {
         Map<String, Object> entry = new HashMap<>();
         entry.put("timestamp", new Date());
         entry.put("status", "RETRIED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
-        metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_RETRIED);
     }
 
     private void addToHistory(ScheduledTask task, Map<String, Object> entry) {

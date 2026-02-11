@@ -271,7 +271,7 @@ public class ClusterServiceImpl implements ClusterService {
     private void resetTimers() {
         if (schedulerService != null && clusterNodeStatisticsUpdateTaskId != null) {
             schedulerService.cancelTask(clusterNodeStatisticsUpdateTaskId);
-            clusterStaleNodesCleanupTaskId = null;
+            clusterNodeStatisticsUpdateTaskId = null;
         }
         if (schedulerService != null && clusterStaleNodesCleanupTaskId != null) {
             schedulerService.cancelTask(clusterStaleNodesCleanupTaskId);

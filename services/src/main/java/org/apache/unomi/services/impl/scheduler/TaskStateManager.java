@@ -182,50 +182,6 @@ public class TaskStateManager {
     }
 
     /**
-     * Validates task configuration
-     */
-    public void validateTask(ScheduledTask task, Map<String, ScheduledTask> existingTasks) {
-        if (task.getTaskType() == null || task.getTaskType().trim().isEmpty()) {
-            throw new IllegalArgumentException("Task type cannot be null or empty");
-        }
-
-        if (task.getPeriod() < 0) {
-            throw new IllegalArgumentException("Period cannot be negative");
-        }
-
-        if (task.getTimeUnit() == null && (task.getPeriod() > 0 || task.getInitialDelay() > 0)) {
-            throw new IllegalArgumentException("TimeUnit cannot be null for periodic or delayed tasks");
-        }
-
-        if (task.getPeriod() > 0 && task.isOneShot()) {
-            throw new IllegalArgumentException("One-shot tasks cannot have a period");
-        }
-
-        validateDependencies(task, existingTasks);
-
-        if (task.getMaxRetries() < 0) {
-            throw new IllegalArgumentException("Max retries cannot be negative");
-        }
-
-        if (task.getRetryDelay() < 0) {
-            throw new IllegalArgumentException("Retry delay cannot be negative");
-        }
-    }
-
-    private void validateDependencies(ScheduledTask task, Map<String, ScheduledTask> existingTasks) {
-        if (task.getDependsOn() != null) {
-            for (String dependencyId : task.getDependsOn()) {
-                if (dependencyId == null || dependencyId.trim().isEmpty()) {
-                    throw new IllegalArgumentException("Task dependency ID cannot be null or empty");
-                }
-                if (!existingTasks.containsKey(dependencyId)) {
-                    throw new IllegalArgumentException("Dependent task not found: " + dependencyId);
-                }
-            }
-        }
-    }
-
-    /**
      * Calculates the next execution time for a task
      * @param task The task to calculate next execution for
      * @param isRetry Whether this calculation is for a retry attempt
