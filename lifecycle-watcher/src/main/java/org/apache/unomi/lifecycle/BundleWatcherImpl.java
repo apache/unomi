@@ -51,7 +51,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
     private long matchedRequiredServicesCount = 0;
 
     private BundleContext bundleContext;
-    private boolean startupMessageAlreadyDisplayed = false;
+    private volatile boolean startupMessageAlreadyDisplayed = false;
     private boolean shutdownMessageAlreadyDisplayed = false;
 
     private Integer checkStartupStateRefreshInterval = 60;
@@ -272,7 +272,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
     }
 
     private void destroyScheduler() {
-        scheduledFuture.cancel(true);
+        scheduledFuture.cancel(false);
         scheduledFuture = null;
     }
 
