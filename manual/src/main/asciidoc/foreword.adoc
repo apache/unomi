@@ -1,0 +1,26 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_foreword]]
+== Foreword
+
+This documentation provides a comprehensive guide to Apache Unomi 3.x, a powerful and flexible Customer Data Platform (CDP) that enables organizations to collect, manage, and leverage customer data for personalization and marketing automation.
+
+Apache Unomi is built on open standards and provides a robust foundation for building customer-centric applications. Whether you're implementing personalization, running marketing campaigns, or building customer profiles, this documentation will help you understand and effectively use Apache Unomi's capabilities.
+
+This guide covers everything from getting started with your first installation to advanced topics like plugin development, migration strategies, and integration patterns. We recommend starting with the "Discover Unomi" section if you're new to the platform, and then exploring the specific topics that match your needs.
+
+The Apache Unomi community is committed to providing comprehensive, accurate, and up-to-date documentation. We welcome feedback and contributions to help improve this documentation for all users.
+
+Happy reading!

@@ -12,6 +12,7 @@
 // limitations under the License.
 //
 
+[[_builtin_condition_types]]
 === Built-in condition types
 
 Apache Unomi comes with an extensive collection of built-in condition types. Instead of detailing them one by one you will
@@ -78,13 +79,13 @@ When implementing a new condition type, you need to provide implementations for 
 <!-- OpenSearch Query Builder -->
 <service interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
     <service-properties>
-        <entry key="queryBuilderId" value="booleanConditionOSQueryBuilder"/>
+        <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
     </service-properties>
     <bean class="org.apache.unomi.persistence.opensearch.BooleanConditionOSQueryBuilder"/>
 </service>
 
 <!-- Condition Evaluator (shared between both engines) -->
-<service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
+<service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
     <service-properties>
         <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
     </service-properties>
