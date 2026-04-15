@@ -35,7 +35,7 @@ jobs:
           mvn -U -ntp clean install
       
       - name: Archive documentation
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: unomi-documentation
           path: |
