@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_unomi_web_tracker_reference]]
 === Unomi Web Tracker reference
 
 In this section of the documentation, more details are provided about the web tracker provided by Unomi.
@@ -54,7 +55,7 @@ The first step is to declare a JSON schema for your custom event type. Here's an
 }
 ----
 
-The above example comes from a built-in event type that is already declared in Unomi but that illustrates the structure of a JSON schema. It is not however the objective of this section of the documentation to go into the details of how to declare a JSON schema, instead, we recommend you go to the <<_json_schemas_2,corresponding section>> of the documentation.
+The above example comes from a built-in event type that is already declared in Unomi but that illustrates the structure of a JSON schema. It is not however the objective of this section of the documentation to go into the details of how to declare a JSON schema, instead, we recommend you go to the <<_json_schemas,corresponding section>> of the documentation.
 
 ===== Sending event from tracker
 

@@ -25,6 +25,11 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
         cache: 'maven'
+    - name: Install GraphViz
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y graphviz
+        dot -V
     - name: Build and Unit tests
       run: mvn -U -ntp -e clean install
 

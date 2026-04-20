@@ -12,7 +12,9 @@
 // limitations under the License.
 //
 
-==== Data model and ElasticSearch 7
+==== Migration from Apache Unomi 1.4 to 1.5
+
+===== Data model and ElasticSearch 7
 
 Since Apache Unomi version 1.5.0 we decided to upgrade the supported ElasticSearch version to the 7.4.2.
 
@@ -22,8 +24,7 @@ Previously every items was stored inside the same ElasticSearch index but this i
 
 Since Apache Unomi version 1.5.0 every type of items (see section: link:#_items[Items]) is now stored in a dedicated separated index.
 
-
-==== API changes
+===== API changes
 
 To be able to handle the multiple indices the Persistence API implementation
 (https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/persistence-elasticsearch/core/src/main/java/org/apache/unomi/persistence/elasticsearch/ElasticSearchPersistenceServiceImpl.java[ElasticSearchPersistenceServiceImpl])
@@ -49,7 +50,7 @@ Because of this changes the geonames DB index name is now respecting the index n
 Previously named: `geonames` is now using the index name `context-geonameentry`
 (see: link:#_installing_geonames_database[Documentation about geonames extension]).
 
-==== Migration steps
+===== Migration steps
 
 In order to migrate the data from ElasticSearch 5 to 7, Unomi provides a migration tool that is directly integrated.
 

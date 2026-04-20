@@ -12,11 +12,12 @@
 // limitations under the License.
 //
 
+[[_building]]
 === Building
 
 Apache Unomi 3.x provides a convenient `build.sh` script that simplifies the build process with
 enhanced error handling, preflight validation, and deployment options. See the
-<<Using the build.sh script>> section below for details. Alternatively, you can build using Maven
+<<_using_the_build_script,Using the build.sh script>> section below for details. Alternatively, you can build using Maven
 directly as described in this section.
 
 ==== Initial Setup
@@ -33,6 +34,8 @@ directly as described in this section.
  the MVN_HOME/bin directory.
 
 ==== Building
+
+===== Unix/Linux/macOS
 
 . Get the code: `git clone https://github.com/apache/unomi.git`
 . Change to the top level directory of Apache Unomi source distribution.
@@ -69,6 +72,7 @@ TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
 +
 . The distributions will be available under "package/target" directory.
 
+[[_using_the_build_script]]
 ==== Using the build.sh script
 
 Apache Unomi 3.x provides a unified `build.sh` script that simplifies the build, deployment, and execution process.
@@ -79,8 +83,11 @@ The `build.sh` script offers the following features:
 
 * **Preflight validation**: Automatically checks for required tools (Java, Maven, GraphViz), system resources
   (memory, disk space), Maven settings, and port availability
-* **Flexible build options**: Support for skipping tests, running integration tests, using OpenSearch, debug modes,
+* **Flexible build options**: Support for skipping tests, running integration tests, using OpenSearch, setting Unomi distribution, debug modes,
   and more
+* **Distribution management**: The `--distribution` parameter allows you to specify which Unomi distribution to use (e.g., `unomi-distribution-opensearch`, `unomi-distribution-elasticsearch`).
+  When used with `--use-opensearch`, the distribution is automatically set to `unomi-distribution-opensearch` if not explicitly specified.
+  Conversely, if a distribution containing "opensearch" is specified, OpenSearch is automatically enabled for integration tests.
 * **Deployment helpers**: Automatically copies KAR packages to Karaf deploy directory and purges caches
 * **Enhanced output**: Colorized, structured output with progress indicators (respects `NO_COLOR` environment variable)
 
@@ -105,6 +112,20 @@ Common usage examples:
 [source]
 ----
 ./build.sh --integration-tests --use-opensearch
+----
++
+* Build with a specific Unomi distribution (automatically enables OpenSearch for tests if distribution contains "opensearch"):
++
+[source]
+----
+./build.sh --integration-tests --distribution unomi-distribution-opensearch
+----
++
+* Build with OpenSearch using explicit distribution (both parameters work together):
++
+[source]
+----
+./build.sh --integration-tests --use-opensearch --distribution unomi-distribution-opensearch-graphql
 ----
 +
 * Build in debug mode:
@@ -258,8 +279,6 @@ For more information, see the official documentation:
 
 ==== Installing a Search Engine
 
-==== Installing an ElasticSearch server
-
 Starting with version 1.2, Apache Unomi no longer embeds a search engine server. You will need to install either ElasticSearch or OpenSearch as a standalone service.
 
 ===== Option 1: Using ElasticSearch
@@ -274,7 +293,7 @@ Starting with version 1.2, Apache Unomi no longer embeds a search engine server.
 ----
 cluster.name: contextElasticSearch
 ----
-
++
 4. Launch the server using:
 
 [source]
@@ -318,11 +337,11 @@ services:
 volumes:
   opensearch-data1:
 ----
-
++
 2. Set up your Docker host environment:
    * **macOS & Windows**: In Docker _Preferences_ > _Resources_, set RAM to at least 4 GB
    * **Linux**: Ensure `vm.max_map_count` is set to at least 262144
-
++
 3. Start OpenSearch using:
 [source]
 ----
@@ -419,6 +438,62 @@ Create a new $MY_KARAF_HOME/etc/org.apache.cxf.osgi.cfg file and put the followi
 If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster[http://localhost:8181/cxs/cluster] .
  You should be able to login with karaf / karaf and see basic server information. If not something went wrong during the install.
 
+==== Installing GraphViz for Manual Generation
+
+The manual project uses PlantUML diagrams which require GraphViz to be installed. Here's how to install it:
+
+===== On macOS using Homebrew
+[source]
+----
+brew install graphviz
+----
+
+===== On Linux (Debian/Ubuntu)
+[source]
+----
+sudo apt-get install graphviz
+----
+
+===== On Linux (RHEL/CentOS/Fedora)
+[source]
+----
+sudo dnf install graphviz
+----
+
+===== On Windows
+1. Download the installer from https://graphviz.org/download/
+2. Run the installer
+3. Add the GraphViz bin directory to your PATH
+
+===== Building the Manual
+
+You can build the manual directly from the manual directory:
+
+[source]
+----
+cd manual
+mvn clean install
+----
+
+The build script will automatically detect and configure the GraphViz path. If you need to set it manually, you can:
+
+1. Set it via environment variable:
+[source]
+----
+export GRAPHVIZ_DOT=/path/to/dot
+mvn clean install
+----
++
+2. Or specify it directly to Maven:
+[source]
+----
+mvn clean install -Dgraphviz.dot.path=/path/to/dot
+----
+
+The generated documentation will be available in:
+- HTML: `target/generated-docs/html/latest/`
+- PDF: `target/generated-docs/pdf/latest/`
+
 ==== JDK Selection on Mac OS X
 
 You might need to select the JDK to run the tests in the itests subproject. In order to do so you can list the
@@ -482,11 +557,34 @@ mvn -P integration-tests clean install
 
 ===== Selecting the Search Engine for Integration Tests
 
-By default, integration tests target ElasticSearch. To run them against OpenSearch, set the activation property used by the OpenSearch profile (no additional -P flags are required):
+By default, integration tests target ElasticSearch. To run them against OpenSearch, you can use either:
 
+* **Using the build script** (recommended):
++
+[source]
+----
+./build.sh --integration-tests --use-opensearch
+----
++
+Or specify the distribution directly (automatically enables OpenSearch if distribution contains "opensearch"):
++
+[source]
+----
+./build.sh --integration-tests --distribution unomi-distribution-opensearch
+----
++
+* **Using Maven directly**: Set the activation property used by the OpenSearch profile (no additional -P flags are required):
++
 [source]
 ----
 mvn -P integration-tests -Duse.opensearch=true clean install
+----
++
+You can also set the Unomi distribution system property:
++
+[source]
+----
+mvn -P integration-tests -Dunomi.distribution=unomi-distribution-opensearch clean install
 ----
 
 ==== Testing with an example page
