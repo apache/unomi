@@ -21,14 +21,19 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 
-import java.util.List;
+import java.util.*;
+
+import static org.apache.unomi.api.utils.YamlUtils.circularRef;
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * A set of conditions associated with a value to assign to {@link Profile}s when matching so that the associated users can be scored along that
  * dimension. Each {@link ScoringElement} is evaluated and matching profiles' scores are incremented with the associated value.
  */
-public class Scoring extends MetadataItem {
+public class Scoring extends MetadataItem implements YamlConvertible {
     /**
      * The Scoring ITEM_TYPE.
      *
@@ -69,6 +74,35 @@ public class Scoring extends MetadataItem {
      */
     public void setElements(List<ScoringElement> elements) {
         this.elements = elements;
+    }
+
+    /**
+     * Converts this scoring to a Map structure for YAML output.
+     * Implements YamlConvertible interface with circular reference detection.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @return a Map representation of this scoring
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlMapBuilder.create()
+                .put("elements", "<max depth exceeded>")
+                .build();
+        }
+        if (visited != null && visited.contains(this)) {
+            return circularRef();
+        }
+        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        visitedSet.add(this);
+        try {
+            return YamlMapBuilder.create()
+                .mergeObject(super.toYaml(visitedSet, maxDepth))
+                .putIfNotEmpty("elements", elements != null ? (Collection<?>) toYamlValue(elements, visitedSet, maxDepth - 1) : null)
+                .build();
+        } finally {
+            visitedSet.remove(this);
+        }
     }
 
 }

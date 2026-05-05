@@ -26,7 +26,7 @@ public class RESTParameter {
     private String id;
     private String type;
     private boolean multivalued = false;
-    private String defaultValue = null;
+    private Object defaultValue = null;
 
     public String getId() {
         return id;
@@ -52,11 +52,11 @@ public class RESTParameter {
         this.multivalued = multivalued;
     }
 
-    public String getDefaultValue() {
+    public Object getDefaultValue() {
         return defaultValue;
     }
 
-    public void setDefaultValue(String defaultValue) {
+    public void setDefaultValue(Object defaultValue) {
         this.defaultValue = defaultValue;
     }
 

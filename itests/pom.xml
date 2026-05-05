@@ -32,6 +32,8 @@
         <unomi.search.engine>elasticsearch</unomi.search.engine>
         <use.opensearch>false</use.opensearch>
         <docker.container.name>itests-opensearch</docker.container.name>
+        <!-- Skip caching for this module only -->
+        <maven.build.cache.skip>true</maven.build.cache.skip>
     </properties>
 
     <dependencyManagement>
@@ -43,6 +45,14 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <!-- Override awaitility version for integration tests to use older version compatible with hamcrest 1.3 -->
+            <!-- Awaitility 4.0.0+ requires hamcrest 2.1+, but we need hamcrest 1.3 for OSGi bundle compatibility -->
+            <!-- Using awaitility 3.1.6 which works with hamcrest 1.3 -->
+            <dependency>
+                <groupId>org.awaitility</groupId>
+                <artifactId>awaitility</artifactId>
+                <version>3.1.6</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -53,6 +63,16 @@
             <artifactId>common</artifactId>
             <version>${karaf.version}</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>ch.qos.logback</groupId>
+                    <artifactId>logback-classic</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>ch.qos.logback</groupId>
+                    <artifactId>logback-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <!-- Define the Apache Karaf version to download and use for the test -->
         <!-- We use a released version here to avoid SNAPSHOT resolution -->
@@ -105,7 +125,7 @@
             <groupId>org.apache.servicemix.bundles</groupId>
             <artifactId>org.apache.servicemix.bundles.hamcrest</artifactId>
             <version>1.3_1</version>
-            <scope>runtime</scope>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>

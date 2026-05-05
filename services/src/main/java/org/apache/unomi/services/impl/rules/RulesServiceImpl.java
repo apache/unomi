@@ -450,7 +450,15 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     trackedCondition.getConditionType().getParameters().forEach(parameter -> {
                         try {
                             if (TRACKED_PARAMETER.equals(parameter.getId())) {
-                                Arrays.stream(StringUtils.split(parameter.getDefaultValue(), ",")).forEach(trackedParameter -> {
+                                // Parameter#getDefaultValue is Object; null must not call toString() (NPE) or be passed to split.
+                                Object defaultValue = parameter.getDefaultValue();
+                                if (defaultValue == null) {
+                                    LOGGER.debug(
+                                            "Skipping tracked parameter mapping: parameter id={} has null defaultValue for condition type {}",
+                                            parameter.getId(), trackedCondition.getConditionType().getItemId());
+                                    return;
+                                }
+                                Arrays.stream(StringUtils.split(defaultValue.toString(), ",")).forEach(trackedParameter -> {
                                     String[] param = StringUtils.split(StringUtils.trim(trackedParameter), ":");
                                     trackedParameters.put(StringUtils.trim(param[1]), trackedCondition.getParameter(StringUtils.trim(param[0])));
                                 });

@@ -20,9 +20,14 @@ package org.apache.unomi.api.rules;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.apache.unomi.api.utils.YamlUtils.circularRef;
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * A conditional set of actions to be executed in response to incoming events. Triggering of rules is guarded by a condition: the rule is only triggered if the associated
@@ -34,7 +39,7 @@ import java.util.stream.Collectors;
  * We could also specify a priority for our rule in case it needs to be executed before other ones when similar conditions match. This is accomplished using the
  * {@link #getPriority()} property.
  */
-public class Rule extends MetadataItem {
+public class Rule extends MetadataItem implements YamlConvertible {
 
     /**
      * The Rule ITEM_TYPE.
@@ -196,5 +201,42 @@ public class Rule extends MetadataItem {
      */
     public void setPriority(int priority) {
         this.priority = priority;
+    }
+
+    /**
+     * Converts this rule to a Map structure for YAML output.
+     * Implements YamlConvertible interface with circular reference detection.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @return a Map representation of this rule
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlMapBuilder.create()
+                .put("condition", "<max depth exceeded>")
+                .put("actions", "<max depth exceeded>")
+                .put("priority", priority)
+                .build();
+        }
+        if (visited != null && visited.contains(this)) {
+            return circularRef();
+        }
+        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        visitedSet.add(this);
+        try {
+            return YamlMapBuilder.create()
+                .mergeObject(super.toYaml(visitedSet, maxDepth))
+                .putIfNotNull("condition", condition != null ? toYamlValue(condition, visitedSet, maxDepth - 1) : null)
+                .putIfNotEmpty("actions", actions != null ? (Collection<?>) toYamlValue(actions, visitedSet, maxDepth - 1) : null)
+                .putIfNotEmpty("linkedItems", linkedItems)
+                .putIf("raiseEventOnlyOnceForProfile", true, raiseEventOnlyOnceForProfile)
+                .putIf("raiseEventOnlyOnceForSession", true, raiseEventOnlyOnceForSession)
+                .putIf("raiseEventOnlyOnce", true, raiseEventOnlyOnce)
+                .putIf("priority", priority, priority != 0)
+                .build();
+        } finally {
+            visitedSet.remove(this);
+        }
     }
 }

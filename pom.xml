@@ -80,6 +80,7 @@
         <snakeyaml.version>2.3</snakeyaml.version>
         <opencsv.version>3.10</opencsv.version>
         <log4j.version>2.19.0</log4j.version>
+        <slf4j.version>1.7.36</slf4j.version>
         <lucene.version>9.12.2</lucene.version>
         <failsafe.version>2.4.0</failsafe.version>
         <joda-time.version>2.12.7</joda-time.version>
@@ -102,6 +103,9 @@
         <httpclient-osgi.version>4.5.14</httpclient-osgi.version>
         <httpcore-osgi.version>4.4.16</httpcore-osgi.version>
         <junit.version>4.13.2</junit.version>
+        <junit-jupiter.version>5.8.2</junit-jupiter.version>
+        <mockito.version>4.5.1</mockito.version>
+        <awaitility.version>4.2.0</awaitility.version>
         <kafka-client.version>2.2.1</kafka-client.version>
         <st4.version>4.3.4</st4.version>
         <commons-email.version>1.6.0</commons-email.version>
