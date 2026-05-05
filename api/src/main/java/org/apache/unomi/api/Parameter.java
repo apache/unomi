@@ -17,20 +17,27 @@
 
 package org.apache.unomi.api;
 
+import org.apache.unomi.api.utils.YamlUtils;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+
 import java.io.Serializable;
+import java.util.Map;
+import java.util.Set;
+
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * A representation of a condition parameter, to be used in the segment building UI to either select parameters from a
  * choicelist or to enter a specific value.
  */
-public class Parameter implements Serializable {
+public class Parameter implements Serializable, YamlConvertible {
 
-    private static final long serialVersionUID = 7446061538573517071L;
+    private static final long serialVersionUID = 6019392686888941547L;
 
-    String id;
-    String type;
-    boolean multivalued = false;
-    String defaultValue = null;
+    private String id;
+    private String type;
+    private boolean multivalued;
+    private Object defaultValue;
 
     public Parameter() {
     }
@@ -45,12 +52,24 @@ public class Parameter implements Serializable {
         return id;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public String getType() {
         return type;
     }
 
+    public void setType(String type) {
+        this.type = type;
+    }
+
     public boolean isMultivalued() {
         return multivalued;
+    }
+
+    public void setMultivalued(boolean multivalued) {
+        this.multivalued = multivalued;
     }
 
     /**
@@ -62,11 +81,40 @@ public class Parameter implements Serializable {
         // Avoid errors when deploying old definitions
     }
 
-    public String getDefaultValue() {
+    public Object getDefaultValue() {
         return defaultValue;
     }
 
-    public void setDefaultValue(String defaultValue) {
+    public void setDefaultValue(Object defaultValue) {
         this.defaultValue = defaultValue;
     }
+
+    /**
+     * Converts this parameter to a Map structure for YAML output.
+     * Implements YamlConvertible interface.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @return a Map representation of this parameter
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlUtils.YamlMapBuilder.create()
+                .put("id", id)
+                .put("validation", "<max depth exceeded>")
+                .build();
+        }
+        return YamlUtils.YamlMapBuilder.create()
+            .putIfNotNull("id", id)
+            .putIfNotNull("type", type)
+            .putIf("multivalued", true, multivalued)
+            .putIfNotNull("defaultValue", defaultValue)
+            .build();
+    }
+
+    @Override
+    public String toString() {
+        return YamlUtils.format(toYaml());
+    }
+
 }

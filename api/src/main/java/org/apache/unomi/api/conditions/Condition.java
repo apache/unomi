@@ -17,16 +17,22 @@
 
 package org.apache.unomi.api.conditions;
 
+import org.apache.unomi.api.utils.YamlUtils;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+
+import static org.apache.unomi.api.utils.YamlUtils.circularRef;
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * A set of elements that can be evaluated.
  */
-public class Condition implements Serializable {
+public class Condition implements Serializable, YamlConvertible {
     private static final long serialVersionUID = 7584522402785053206L;
 
     ConditionType conditionType;
@@ -65,7 +71,9 @@ public class Condition implements Serializable {
      */
     public void setConditionType(ConditionType conditionType) {
         this.conditionType = conditionType;
-        this.conditionTypeId = conditionType.getItemId();
+        if (conditionType != null) {
+            this.conditionTypeId = conditionType.getItemId();
+        }
     }
 
     /**
@@ -123,7 +131,7 @@ public class Condition implements Serializable {
      * @return the value of the specified parameter or {@code null} if no such parameter exists
      */
     public Object getParameter(String name) {
-        return parameterValues.get(name);
+        return parameterValues != null ? parameterValues.get(name) : null;
     }
 
     /**
@@ -156,13 +164,96 @@ public class Condition implements Serializable {
         return result;
     }
 
+    /**
+     * Converts this condition to a Map structure for YAML output with depth limiting.
+     * Implements YamlConvertible interface with circular reference detection and depth limiting
+     * to prevent StackOverflowError from extremely deep nested structures.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @param maxDepth maximum recursion depth (prevents StackOverflowError from deep nesting)
+     * @return a Map representation of this condition
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlMapBuilder.create()
+                .put("type", conditionTypeId != null ? conditionTypeId : "Condition")
+                .put("parameterValues", "<max depth exceeded>")
+                .build();
+        }
+        if (visited != null && visited.contains(this)) {
+            return circularRef();
+        }
+        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        visitedSet.add(this);
+        try {
+            YamlMapBuilder builder = YamlMapBuilder.create()
+                .put("type", conditionTypeId != null ? conditionTypeId : "Condition");
+            if (parameterValues != null && !parameterValues.isEmpty()) {
+                builder.put("parameterValues", toYamlValue(parameterValues, visitedSet, maxDepth - 1));
+            }
+            return builder.build();
+        } finally {
+            visitedSet.remove(this);
+        }
+    }
+
+    /**
+     * Creates a deep copy of this condition, including all nested conditions in parameter values.
+     * Recursively copies all nested conditions to avoid sharing references.
+     *
+     * @return a deep copy of this condition
+     */
+    public Condition deepCopy() {
+        Condition copied = new Condition();
+        if (this.conditionType != null) {
+            copied.setConditionType(this.conditionType);
+        } else if (this.conditionTypeId != null) {
+            copied.setConditionTypeId(this.conditionTypeId);
+        }
+
+        // Deep copy parameter values
+        Map<String, Object> copiedParams = new HashMap<>();
+        if (this.parameterValues != null) {
+            for (Map.Entry<String, Object> entry : this.parameterValues.entrySet()) {
+                Object value = entry.getValue();
+                if (value instanceof Condition) {
+                    // Recursively deep copy nested condition
+                    copiedParams.put(entry.getKey(), ((Condition) value).deepCopy());
+                } else if (value instanceof Collection) {
+                    // Deep copy collection - preserve the collection type if possible
+                    Collection<?> collection = (Collection<?>) value;
+                    Collection<Object> copiedCollection;
+                    if (collection instanceof List) {
+                        copiedCollection = new ArrayList<>();
+                    } else {
+                        // Fallback to ArrayList for other collection types
+                        copiedCollection = new ArrayList<>();
+                    }
+                    for (Object item : collection) {
+                        if (item instanceof Condition) {
+                            // Recursively deep copy nested condition
+                            copiedCollection.add(((Condition) item).deepCopy());
+                        } else {
+                            // Not a condition, add as-is (for non-condition values in collections)
+                            copiedCollection.add(item);
+                        }
+                    }
+                    copiedParams.put(entry.getKey(), copiedCollection);
+                } else {
+                    // Primitive or other non-condition value, copy as-is
+                    copiedParams.put(entry.getKey(), value);
+                }
+            }
+        }
+        copied.setParameterValues(copiedParams);
+
+        return copied;
+    }
+
     @Override
     public String toString() {
-        final StringBuilder sb = new StringBuilder("Condition{");
-        sb.append("conditionType=").append(conditionType);
-        sb.append(", conditionTypeId='").append(conditionTypeId).append('\'');
-        sb.append(", parameterValues=").append(parameterValues);
-        sb.append('}');
-        return sb.toString();
+        Map<String, Object> map = toYaml();
+        return YamlUtils.format(map);
     }
 }

@@ -17,13 +17,17 @@
 
 package org.apache.unomi.api;
 
+import org.apache.unomi.api.utils.YamlUtils;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * A context server tracked entity. All tracked entities need to extend this class so as to provide the minimal information the context server needs to be able to track such
@@ -36,10 +40,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * though scopes could span across sites depending on the desired analysis granularity). Scopes allow clients accessing the context server to filter data. The context server
  * defines a built-in scope ({@link Metadata#SYSTEM_SCOPE}) that clients can use to share data across scopes.
  */
-public abstract class Item implements Serializable {
+public abstract class Item implements Serializable, YamlConvertible {
     private static final Logger LOGGER = LoggerFactory.getLogger(Item.class.getName());
 
-    private static final long serialVersionUID = 7446061538573517071L;
+    private static final long serialVersionUID = 1217180125083162915L;
 
     private static final Map<Class,String> itemTypeCache = new ConcurrentHashMap<>();
 
@@ -149,5 +153,55 @@ public abstract class Item implements Serializable {
 
     public void setSystemMetadata(String key, Object value) {
         systemMetadata.put(key, value);
+    }
+
+    /**
+     * Converts this item to a Map structure for YAML output.
+     * Implements YamlConvertible interface with circular reference detection.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @return a Map representation of this item
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlMapBuilder.create()
+                .put("itemId", itemId)
+                .put("itemType", itemType)
+                .put("systemMetadata", "<max depth exceeded>")
+                .build();
+        }
+        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        // Check if already visited - if so, we're being called from a child class via super.toYaml()
+        // OR it's a real circular reference. We can't distinguish, but since child classes
+        // (like Rule, ConditionType, etc.) all check for circular refs before calling super,
+        // if we're already visited here, it's safe to assume it's a super call, not a circular ref.
+        // If Item is directly serialized and encounters itself, the check would happen at the
+        // top level before nested processing, so this should be safe.
+        boolean alreadyVisited = visitedSet.contains(this);
+        if (!alreadyVisited) {
+            // First time seeing this object - add it to track for circular references
+            visitedSet.add(this);
+        }
+        try {
+            return YamlMapBuilder.create()
+                .put("itemId", itemId)  // Always include, even if null, to reflect actual state
+                .put("itemType", itemType)  // Always include, even if null, to reflect actual state
+                .putIfNotNull("scope", scope)
+                .putIfNotNull("version", version)
+                .putIfNotNull("systemMetadata", systemMetadata != null && !systemMetadata.isEmpty() ? toYamlValue(systemMetadata, visitedSet, maxDepth - 1) : null)
+                .build();
+        } finally {
+            // Only remove if we added it (i.e., if it wasn't already visited)
+            if (!alreadyVisited) {
+                visitedSet.remove(this);
+            }
+        }
+    }
+
+    @Override
+    public String toString() {
+        Map<String, Object> map = toYaml();
+        return YamlUtils.format(map);
     }
 }

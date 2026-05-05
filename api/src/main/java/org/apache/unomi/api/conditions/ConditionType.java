@@ -20,10 +20,14 @@ package org.apache.unomi.api.conditions;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Parameter;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 
 import javax.xml.bind.annotation.XmlElement;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+
+import static org.apache.unomi.api.utils.YamlUtils.circularRef;
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * ConditionTypes define new conditions that can be applied to items (for example to decide whether a rule needs to be triggered or if a profile is considered as taking part in a
@@ -31,7 +35,7 @@ import java.util.List;
  * optimized by coding it. They may also be defined as combination of other conditions. A simple condition  could be: “User is male”, while a more generic condition with
  * parameters may test whether a given property has a specific value: “User property x has value y”.
  */
-public class ConditionType extends MetadataItem  {
+public class ConditionType extends MetadataItem implements YamlConvertible {
     public static final String ITEM_TYPE = "conditionType";
 
     private static final long serialVersionUID = -6965481691241954969L;
@@ -141,5 +145,38 @@ public class ConditionType extends MetadataItem  {
     @Override
     public int hashCode() {
         return itemId.hashCode();
+    }
+
+    /**
+     * Converts this condition type to a Map structure for YAML output.
+     * Implements YamlConvertible interface with circular reference detection.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @return a Map representation of this condition type
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlMapBuilder.create()
+                .put("parentCondition", "<max depth exceeded>")
+                .put("parameters", "<max depth exceeded>")
+                .build();
+        }
+        if (visited != null && visited.contains(this)) {
+            return circularRef();
+        }
+        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        visitedSet.add(this);
+        try {
+            return YamlMapBuilder.create()
+                .mergeObject(super.toYaml(visitedSet, maxDepth))
+                .putIfNotNull("conditionEvaluator", conditionEvaluator)
+                .putIfNotNull("queryBuilder", queryBuilder)
+                .putIfNotNull("parentCondition", parentCondition != null ? toYamlValue(parentCondition, visitedSet, maxDepth - 1) : null)
+                .putIfNotEmpty("parameters", parameters != null ? (Collection<?>) toYamlValue(parameters, visitedSet, maxDepth - 1) : null)
+                .build();
+        } finally {
+            visitedSet.remove(this);
+        }
     }
 }
