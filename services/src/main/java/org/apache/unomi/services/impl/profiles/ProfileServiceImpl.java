@@ -1016,6 +1016,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     @Override
+    public void deleteSession(String sessionIdentifier) {
+        persistenceService.remove(sessionIdentifier, Session.class);
+    }
+
+    @Override
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
         ParserHelper.resolveConditionType(definitionsService, condition, "profile " + profile.getItemId() + " matching");
 
