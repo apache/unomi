@@ -49,7 +49,25 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Created by amidani on 04/05/2017.
+ * The main Camel context manager for the Unomi Router component.
+ * This class manages the lifecycle of all import and export routes,
+ * handles route configuration updates, and maintains the Camel context.
+ *
+ * <p>Features:
+ * <ul>
+ *   <li>Initializes and manages the Camel context</li>
+ *   <li>Sets up import and export routes</li>
+ *   <li>Handles route configuration updates</li>
+ *   <li>Manages route lifecycle (start/stop/update)</li>
+ *   <li>Provides monitoring through event notifications</li>
+ *   <li>Supports both Kafka and direct endpoints</li>
+ * </ul>
+ * </p>
+ *
+ * <p>Dependency-injection setters on this class are intended for OSGi/Blueprint wiring and are not part of the
+ * {@link IRouterCamelContext} API surface.</p>
+ *
+ * @since 1.0
  */
 public class RouterCamelContext implements IRouterCamelContext {
 
@@ -79,8 +97,11 @@ public class RouterCamelContext implements IRouterCamelContext {
     private Integer configsRefreshInterval = 1000;
     private ScheduledFuture<?> scheduledFuture;
 
+    /** Event topic fired when a router configuration or route is removed (reserved for integrations). */
     public static String EVENT_ID_REMOVE = "org.apache.unomi.router.event.remove";
+    /** Event topic related to import lifecycle (reserved for integrations). */
     public static String EVENT_ID_IMPORT = "org.apache.unomi.router.event.import";
+    /** Event topic related to export lifecycle (reserved for integrations). */
     public static String EVENT_ID_EXPORT = "org.apache.unomi.router.event.export";
 
     public void setExecHistorySize(String execHistorySize) {
@@ -99,10 +120,17 @@ public class RouterCamelContext implements IRouterCamelContext {
         this.configSharingService = configSharingService;
     }
 
+    /** {@inheritDoc} */
+    @Override
     public void setTracing(boolean tracing) {
-        camelContext.setTracing(true);
+        camelContext.setTracing(tracing);
     }
 
+    /**
+     * Initializes the scheduler, shared config properties, the Camel context, and import/export routes.
+     *
+     * @throws Exception if Camel or service setup fails
+     */
     public void init() throws Exception {
         LOGGER.info("Initialize Camel Context...");
         scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -116,6 +144,11 @@ public class RouterCamelContext implements IRouterCamelContext {
         LOGGER.info("Camel Context initialized successfully.");
     }
 
+    /**
+     * Stops the configuration refresh scheduler and shuts down the Camel context (all routes and components).
+     *
+     * @throws Exception if Camel shutdown fails
+     */
     public void destroy() throws Exception {
         scheduledFuture.cancel(true);
         if (scheduler != null) {
@@ -223,6 +256,8 @@ public class RouterCamelContext implements IRouterCamelContext {
         camelContext.start();
     }
 
+    /** {@inheritDoc} */
+    @Override
     public void killExistingRoute(String routeId, boolean fireEvent) throws Exception {
         //Active routes
         Route route = camelContext.getRoute(routeId);
@@ -234,6 +269,8 @@ public class RouterCamelContext implements IRouterCamelContext {
         }
     }
 
+    /** {@inheritDoc} */
+    @Override
     public void updateProfileImportReaderRoute(String configId, boolean fireEvent) throws Exception {
         killExistingRoute(configId, false);
 
@@ -255,6 +292,8 @@ public class RouterCamelContext implements IRouterCamelContext {
         }
     }
 
+    /** {@inheritDoc} */
+    @Override
     public void updateProfileExportReaderRoute(String configId, boolean fireEvent) throws Exception {
         killExistingRoute(configId, false);
 
@@ -275,6 +314,11 @@ public class RouterCamelContext implements IRouterCamelContext {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>The concrete type is {@link org.apache.camel.CamelContext}; callers may narrow the reference safely.</p>
+     */
+    @Override
     public CamelContext getCamelContext() {
         return camelContext;
     }
