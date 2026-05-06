@@ -22,17 +22,43 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import java.util.List;
 
 /**
- * Created by amidani on 28/06/2017.
+ * A bean that handles the collection of profiles based on segment criteria.
+ * This class provides functionality to extract profiles from Unomi's persistence
+ * layer based on segment membership.
+ *
+ * <p>Features:
+ * <ul>
+ *   <li>Segment-based profile extraction</li>
+ *   <li>Integration with Unomi's persistence service</li>
+ *   <li>Batch profile retrieval capabilities</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class CollectProfileBean {
 
     private PersistenceService persistenceService;
 
+    /**
+     * Returns all profiles that belong to the given segment.
+     * <p>
+     * <strong>Note:</strong> the current implementation may load a large result set into memory; see UNOMI-759.
+     * </p>
+     *
+     * @param segment the segment identifier to match (stored index {@code "segments"})
+     * @return profiles for that segment; may be empty, never {@code null}
+     */
     public List<Profile> extractProfileBySegment(String segment) {
         // TODO: UNOMI-759 avoid loading all profiles in RAM here
         return persistenceService.query("segments", segment,null, Profile.class);
     }
 
+    /**
+     * Sets the persistence service used for profile queries.
+     *
+     * @param persistenceService the Unomi persistence service to use
+     */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }

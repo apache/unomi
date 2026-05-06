@@ -16,15 +16,50 @@
  */
 package org.apache.unomi.router.api;
 
-        import org.apache.unomi.api.Item;
+import org.apache.unomi.api.Item;
 
-        import java.util.ArrayList;
-        import java.util.HashMap;
-        import java.util.List;
-        import java.util.Map;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Created by amidani on 21/06/2017.
+ * Base configuration class for import and export operations in Apache Unomi.
+ * This class serves as the foundation for both ImportConfiguration and ExportConfiguration,
+ * providing common configuration properties and behaviors needed for data transfer operations.
+ *
+ * <p>Key features and responsibilities:
+ * <ul>
+ *   <li>Defines common configuration properties for import/export operations</li>
+ *   <li>Manages separators and delimiters for CSV-like file formats</li>
+ *   <li>Tracks execution status and history</li>
+ *   <li>Handles configuration activation/deactivation</li>
+ * </ul>
+ * </p>
+ *
+ * <p>Usage in Unomi:
+ * <ul>
+ *   <li>Used by ImportExportConfigurationService to manage data transfer configurations</li>
+ *   <li>Consumed by Camel routes to determine how to process data</li>
+ *   <li>Referenced by import/export processors to format data correctly</li>
+ * </ul>
+ * </p>
+ *
+ * <p>Configuration properties include:
+ * <ul>
+ *   <li>name - unique identifier for the configuration</li>
+ *   <li>configType - type of configuration (import/export)</li>
+ *   <li>columnSeparator - character used to separate columns (default: ",")</li>
+ *   <li>lineSeparator - character used to separate lines (default: "\n")</li>
+ *   <li>multiValueSeparator - character used to separate multiple values (default: ";")</li>
+ *   <li>active - whether the configuration is currently active</li>
+ *   <li>status - current status of the configuration</li>
+ *   <li>executions - history of execution attempts</li>
+ * </ul>
+ * </p>
+ *
+ * @see org.apache.unomi.router.api.services.ImportExportConfigurationService
+ * @since 1.0
  */
 public class ImportExportConfiguration extends Item {
 
@@ -53,28 +88,32 @@ public class ImportExportConfiguration extends Item {
     }
 
     /**
-     * Retrieves the name of the import configuration
-     * @return the name of the import configuration
+     * Retrieves the display name of this configuration.
+     *
+     * @return the name of this configuration
      */
     public String getName() { return this.name; }
 
     /**
-     * Sets the name of the import configuration
-     * @param name the name of the import configuration
+     * Sets the display name of this configuration.
+     *
+     * @param name the name of this configuration
      */
     public void setName(String name) {
         this.name = name;
     }
 
     /**
-     * Retrieves the description of the import configuration
-     * @return the description of the import configuration
+     * Retrieves the human-readable description of this configuration.
+     *
+     * @return the description of this configuration
      */
     public String getDescription() { return this.description; }
 
     /**
-     * Sets the description of the import configuration
-     * @param description the description of the import configuration
+     * Sets the human-readable description of this configuration.
+     *
+     * @param description the description of this configuration
      */
     public void setDescription(String description) {
         this.description = description;
@@ -82,14 +121,16 @@ public class ImportExportConfiguration extends Item {
 
 
     /**
-     * Retrieves the config type of the import configuration
-     * @return the config type of the import configuration
+     * Retrieves the configuration type (for example import vs export semantics used by the router).
+     *
+     * @return the config type of this configuration
      */
     public String getConfigType() { return this.configType; }
 
     /**
-     * Sets the config type of the import configuration
-     * @param configType the config type of the import configuration
+     * Sets the configuration type.
+     *
+     * @param configType the config type for this configuration
      */
     public void setConfigType(String configType) {
         this.configType = configType;
@@ -106,45 +147,45 @@ public class ImportExportConfiguration extends Item {
     }
 
     /**
-     * Retrieves a Map of all property name - value pairs for this import configuration.
+     * Retrieves a map of all property name/value pairs for this configuration.
      *
-     * @return a Map of all property name - value pairs for this import configuration
+     * @return a map of all property name/value pairs for this configuration
      */
     public Map<String, Object> getProperties() {
         return properties;
     }
 
     /**
-     * Retrieves the import configuration active flag.
+     * Returns whether this configuration is active (eligible for scheduled or triggered runs).
      *
-     * @return true if the import configuration is active false if not
+     * @return {@code true} if this configuration is active, {@code false} otherwise
      */
     public boolean isActive() {
         return this.active;
     }
 
     /**
-     * Sets the active flag true/false.
+     * Sets whether this configuration is active.
      *
-     * @param active a boolean to set to active or inactive the import configuration
+     * @param active {@code true} to activate, {@code false} to deactivate
      */
     public void setActive(boolean active) {
         this.active = active;
     }
 
     /**
-     * Retrieves the import configuration status for last execution.
+     * Retrieves the status of the last execution for this configuration.
      *
-     * @return status of the last execution
+     * @return status of the last execution, or {@code null} if none
      */
     public String getStatus() {
         return this.status;
     }
 
     /**
-     * Sets status of the last execution.
+     * Sets the status of the last execution for this configuration.
      *
-     * @param status of the last execution
+     * @param status the status of the last execution
      */
     public void setStatus(String status) {
         this.status = status;
@@ -159,11 +200,12 @@ public class ImportExportConfiguration extends Item {
     }
 
     /**
-     * Sets the column separator.
-     * @param columnSeparator property used to specify a line separator. Defaults to ','
+     * Sets the column separator used when reading or writing delimited text (typically CSV).
+     *
+     * @param columnSeparator the column delimiter; defaults to {@code ","} when not overridden
      */
     public void setColumnSeparator(String columnSeparator) {
-        if(this.columnSeparator !=null) {
+        if (columnSeparator != null) {
             this.columnSeparator = columnSeparator;
         }
     }
@@ -187,9 +229,9 @@ public class ImportExportConfiguration extends Item {
     }
 
     /**
-     * Gets the multi value separator.
+     * Returns the separator used between multiple values within a single field.
      *
-     * @return  multiValueSeparator multi value separator
+     * @return the multi-value separator (often {@code ";"})
      */
     public String getMultiValueSeparator() {
         return this.multiValueSeparator;
@@ -206,9 +248,9 @@ public class ImportExportConfiguration extends Item {
     }
 
     /**
-     * Gets the multi value delimiter.
+     * Returns the delimiter wrapping multi-valued fields when serialized.
      *
-     * @return multiValueDelimiter multi value delimiter
+     * @return the multi-value delimiter (may be empty when not used)
      */
     public String getMultiValueDelimiter() {
         return this.multiValueDelimiter;
@@ -225,8 +267,9 @@ public class ImportExportConfiguration extends Item {
     }
 
     /**
-     * Retrieves the executions
-     * @return executions
+     * Returns the history of execution records for this configuration (timestamps, counts, errors, etc.).
+     *
+     * @return the list of execution maps; may be empty
      */
     public List<Map<String, Object>> getExecutions() {
         return this.executions;
@@ -234,8 +277,9 @@ public class ImportExportConfiguration extends Item {
 
 
     /**
-     * Sets the executions
-     * @param executions executions
+     * Replaces the execution history for this configuration.
+     *
+     * @param executions the new execution history list
      */
     public void setExecutions(List<Map<String, Object>> executions) {
         this.executions = executions;
