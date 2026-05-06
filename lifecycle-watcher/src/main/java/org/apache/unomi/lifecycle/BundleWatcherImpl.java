@@ -51,12 +51,15 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
     private long matchedRequiredServicesCount = 0;
 
     private BundleContext bundleContext;
-    private boolean startupMessageAlreadyDisplayed = false;
+    private volatile boolean startupMessageAlreadyDisplayed = false;
     private boolean shutdownMessageAlreadyDisplayed = false;
 
     private Integer checkStartupStateRefreshInterval = 60;
 
     private List<ServerInfo> serverInfos = new ArrayList<>();
+
+    // Lock object to synchronize startup message display
+    private final Object startupMessageLock = new Object();
 
     public void setRequiredBundles(Map<String, Boolean> requiredBundles) {
         this.requiredBundles = new ConcurrentHashMap<>(requiredBundles);
@@ -280,48 +283,48 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
     }
 
     private void destroyScheduler() {
-        scheduledFuture.cancel(true);
+        scheduledFuture.cancel(false);
         scheduledFuture = null;
     }
 
     private void checkStartupComplete() {
+        if (scheduledFuture != null) {
+            destroyScheduler();
+        }
         if (!isStartupComplete()) {
             startScheduler(getBundleCheckTask());
             return;
-        }
-        if (scheduledFuture != null) {
-            destroyScheduler();
-        }
-        if (!allAdditionalBundleStarted()) {
+        } else if (!allAdditionalBundleStarted()) {
             startScheduler(getAdditionalBundleCheckTask());
             return;
         }
-        if (scheduledFuture != null) {
-            destroyScheduler();
-        }
         if (!startupMessageAlreadyDisplayed) {
-            long totalStartupTime = System.currentTimeMillis() - startupTime;
+            synchronized (startupMessageLock) {
+                if (!startupMessageAlreadyDisplayed) {
+                    long totalStartupTime = System.currentTimeMillis() - startupTime;
 
-            List<String> logoLines = serverInfos.get(serverInfos.size() - 1).getLogoLines();
-            if (logoLines != null && !logoLines.isEmpty()) {
-                logoLines.forEach(System.out::println);
+                    List<String> logoLines = serverInfos.get(serverInfos.size() - 1).getLogoLines();
+                    if (logoLines != null && !logoLines.isEmpty()) {
+                        logoLines.forEach(System.out::println);
+                    }
+                    System.out.println("--------------------------------------------------------------------------------------------");
+                    serverInfos.forEach(serverInfo -> {
+                        String versionMessage = MessageFormat.format(" {0} {1} ({2,date,yyyy-MM-dd HH:mm:ssZ} // {3} // {4} // {5}) ",
+                                StringUtils.rightPad(serverInfo.getServerIdentifier(), 12, " "), serverInfo.getServerVersion(),
+                                serverInfo.getServerBuildDate(), serverInfo.getServerTimestamp(), serverInfo.getServerScmBranch(),
+                                serverInfo.getServerBuildNumber());
+                        System.out.println(versionMessage);
+                        LOGGER.info(versionMessage);
+                    });
+                    System.out.println("--------------------------------------------------------------------------------------------");
+                    System.out.println("Server successfully started " + requiredBundles.size() + " bundles and " + requiredServicesFilters.size()
+                            + " required " + "services in " + totalStartupTime + " ms");
+                    LOGGER.info("Server successfully started {} bundles and {} required services in {} ms", requiredBundles.size(),
+                            requiredServicesFilters.size(), totalStartupTime);
+                    startupMessageAlreadyDisplayed = true;
+                    shutdownMessageAlreadyDisplayed = false;
+                }
             }
-            System.out.println("--------------------------------------------------------------------------------------------");
-            serverInfos.forEach(serverInfo -> {
-                String versionMessage = MessageFormat.format(" {0} {1} ({2,date,yyyy-MM-dd HH:mm:ssZ} // {3} // {4} // {5}) ",
-                        StringUtils.rightPad(serverInfo.getServerIdentifier(), 12, " "), serverInfo.getServerVersion(),
-                        serverInfo.getServerBuildDate(), serverInfo.getServerTimestamp(), serverInfo.getServerScmBranch(),
-                        serverInfo.getServerBuildNumber());
-                System.out.println(versionMessage);
-                LOGGER.info(versionMessage);
-            });
-            System.out.println("--------------------------------------------------------------------------------------------");
-            System.out.println("Server successfully started " + requiredBundles.size() + " bundles and " + requiredServicesFilters.size()
-                    + " required " + "services in " + totalStartupTime + " ms");
-            LOGGER.info("Server successfully started {} bundles and {} required services in {} ms", requiredBundles.size(),
-                    requiredServicesFilters.size(), totalStartupTime);
-            startupMessageAlreadyDisplayed = true;
-            shutdownMessageAlreadyDisplayed = false;
         }
     }
 
