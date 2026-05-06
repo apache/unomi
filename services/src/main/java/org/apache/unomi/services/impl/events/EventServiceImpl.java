@@ -336,4 +336,9 @@ public class EventServiceImpl implements EventService {
 
         persistenceService.removeByQuery(profileCondition,Event.class);
     }
+
+    @Override
+    public void deleteEvent(String eventIdentifier) {
+        persistenceService.remove(eventIdentifier, Event.class);
+    }
 }
