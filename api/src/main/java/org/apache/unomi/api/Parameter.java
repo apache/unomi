@@ -116,5 +116,4 @@ public class Parameter implements Serializable, YamlConvertible {
     public String toString() {
         return YamlUtils.format(toYaml());
     }
-
 }

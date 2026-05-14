@@ -1,0 +1,33 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Update legacy queryBuilder IDs to new format
+// This script updates condition types that use legacy *ESQueryBuilder syntax
+// to use the new generic QueryBuilder syntax
+// Uses pattern matching to replace any queryBuilder ending with "ESQueryBuilder" 
+// with "QueryBuilder" (e.g., "propertyConditionESQueryBuilder" → "propertyConditionQueryBuilder")
+if (ctx._source.queryBuilder != null && ctx._source.queryBuilder instanceof String) {
+    def queryBuilder = ctx._source.queryBuilder;
+    
+    // Check if queryBuilder ends with "ESQueryBuilder" and replace with "QueryBuilder"
+    if (queryBuilder.endsWith("ESQueryBuilder")) {
+        // Replace "ESQueryBuilder" suffix with "QueryBuilder"
+        // String.replace() in Painless replaces all occurrences, which is what we want
+        ctx._source.queryBuilder = queryBuilder.replace("ESQueryBuilder", "QueryBuilder");
+    }
+}
+

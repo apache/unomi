@@ -20,6 +20,7 @@ package org.apache.unomi.api.conditions;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Parameter;
+import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
 import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 
@@ -35,7 +36,7 @@ import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
  * optimized by coding it. They may also be defined as combination of other conditions. A simple condition  could be: “User is male”, while a more generic condition with
  * parameters may test whether a given property has a specific value: “User property x has value y”.
  */
-public class ConditionType extends MetadataItem implements YamlConvertible {
+public class ConditionType extends MetadataItem implements PluginType, YamlConvertible {
     public static final String ITEM_TYPE = "conditionType";
 
     private static final long serialVersionUID = -6965481691241954969L;
@@ -43,6 +44,7 @@ public class ConditionType extends MetadataItem implements YamlConvertible {
     private String queryBuilder;
     private Condition parentCondition;
     private List<Parameter> parameters = new ArrayList<Parameter>();
+    private long pluginId;
 
     /**
      * Instantiates a new Condition type.
@@ -147,6 +149,16 @@ public class ConditionType extends MetadataItem implements YamlConvertible {
         return itemId.hashCode();
     }
 
+    @Override
+    public long getPluginId() {
+        return pluginId;
+    }
+
+    @Override
+    public void setPluginId(long pluginId) {
+        this.pluginId = pluginId;
+    }
+
     /**
      * Converts this condition type to a Map structure for YAML output.
      * Implements YamlConvertible interface with circular reference detection.
@@ -160,6 +172,7 @@ public class ConditionType extends MetadataItem implements YamlConvertible {
             return YamlMapBuilder.create()
                 .put("parentCondition", "<max depth exceeded>")
                 .put("parameters", "<max depth exceeded>")
+                .put("pluginId", pluginId)
                 .build();
         }
         if (visited != null && visited.contains(this)) {
@@ -174,6 +187,7 @@ public class ConditionType extends MetadataItem implements YamlConvertible {
                 .putIfNotNull("queryBuilder", queryBuilder)
                 .putIfNotNull("parentCondition", parentCondition != null ? toYamlValue(parentCondition, visitedSet, maxDepth - 1) : null)
                 .putIfNotEmpty("parameters", parameters != null ? (Collection<?>) toYamlValue(parameters, visitedSet, maxDepth - 1) : null)
+                .put("pluginId", pluginId)
                 .build();
         } finally {
             visitedSet.remove(this);

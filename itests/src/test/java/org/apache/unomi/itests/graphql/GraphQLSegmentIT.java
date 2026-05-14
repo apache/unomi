@@ -40,7 +40,7 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
 
     @Test
     public void testCreateThenGetAndDeleteSegment() throws Exception {
-        try (CloseableHttpResponse response = post("graphql/segment/create-or-update-segment.json")) {
+        try (CloseableHttpResponse response = postWithAuthType("graphql/segment/create-or-update-segment.json", AuthType.PRIVATE_KEY)) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
             Assert.assertEquals("testSegment", context.getValue("data.cdp.createOrUpdateSegment.id"));
@@ -50,7 +50,10 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
 
         refreshPersistence(Segment.class);
 
-        try (CloseableHttpResponse response = post("graphql/segment/get-segment.json")) {
+        keepTrying("Failed waiting for segment testSegment after GraphQL create",
+                () -> segmentService.getSegmentDefinition("testSegment"), Objects::nonNull, 1000, 100);
+
+        try (CloseableHttpResponse response = postWithAuthType("graphql/segment/get-segment.json", AuthType.PRIVATE_KEY)) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
             Assert.assertEquals("testSegment", context.getValue("data.cdp.getSegment.id"));
@@ -58,7 +61,7 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
             Assert.assertNotNull(context.getValue("data.cdp.getSegment.filter"));
         }
 
-        try (CloseableHttpResponse response = post("graphql/segment/delete-segment.json")) {
+        try (CloseableHttpResponse response = postWithAuthType("graphql/segment/delete-segment.json", AuthType.PRIVATE_KEY)) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
             Assert.assertTrue(context.getValue("data.cdp.deleteSegment"));
@@ -77,7 +80,7 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
 
         refreshPersistence(Segment.class);
 
-        try (CloseableHttpResponse response = post("graphql/segment/create-segment-with-properties-filter.json")) {
+        try (CloseableHttpResponse response = postWithAuthType("graphql/segment/create-segment-with-properties-filter.json",  AuthType.PRIVATE_KEY)) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
             Assert.assertEquals("simpleSegment", context.getValue("data.cdp.createOrUpdateSegment.id"));

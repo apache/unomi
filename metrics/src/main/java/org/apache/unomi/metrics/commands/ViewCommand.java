@@ -22,12 +22,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.unomi.metrics.Metric;
-import org.apache.unomi.metrics.internal.MetricsObjectMapper;
 
 @Command(scope = "metrics", name = "view", description = "This will display all the data for a single metric ")
 public class ViewCommand extends MetricsCommandSupport{
 
-    @Argument(name = "metricName", description = "The identifier for the metric", required = true)
+    @Argument(index = 0, name = "metricName", description = "The identifier for the metric", required = true, multiValued = false)
     String metricName;
 
     @Override
@@ -41,7 +40,7 @@ public class ViewCommand extends MetricsCommandSupport{
         // the caller values easier to read.
         DefaultPrettyPrinter defaultPrettyPrinter = new DefaultPrettyPrinter();
         defaultPrettyPrinter = defaultPrettyPrinter.withArrayIndenter(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
-        String jsonMetric = MetricsObjectMapper.getInstance().writer(defaultPrettyPrinter).writeValueAsString(metric);
+        String jsonMetric = new ObjectMapper().writer(defaultPrettyPrinter).writeValueAsString(metric);
         System.out.println(jsonMetric);
         return null;
     }

@@ -152,7 +152,9 @@ public class Event extends Item implements TimestampedItem {
         this.eventType = eventType;
         this.profile = profile;
         this.session = session;
-        this.profileId = profile.getItemId();
+        if (profile != null) {
+            this.profileId = profile.getItemId();
+        }
         this.scope = scope;
         this.source = source;
         this.target = target;
@@ -319,6 +321,9 @@ public class Event extends Item implements TimestampedItem {
      * @param value the value of the property
      */
     public void setProperty(String name, Object value) {
+        if (properties == null) {
+            properties = new LinkedHashMap<>();
+        }
         properties.put(name, value);
     }
 

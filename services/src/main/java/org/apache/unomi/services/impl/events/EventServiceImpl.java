@@ -17,41 +17,76 @@
 
 package org.apache.unomi.services.impl.events;
 
-import inet.ipaddr.IPAddress;
-import inet.ipaddr.IPAddressString;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.EventProperty;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.PropertyType;
-import org.apache.unomi.api.Session;
-import org.apache.unomi.api.ValueType;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.EventListenerService;
+import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
-import org.apache.unomi.api.utils.ParserHelper;
+import org.apache.unomi.services.common.security.IPValidationUtils;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EventServiceImpl implements EventService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(EventServiceImpl.class.getName());
-    private static final int MAX_RECURSION_DEPTH = 10;
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventServiceImpl.class);
+    private static final int MAX_RECURSION_DEPTH = 20;
+
+    /**
+     * Simple data class to hold event information for recursion tracking.
+     * Focuses on data relevant to rule condition matching: event type, scope, and key properties.
+     */
+    private static class EventInfo {
+        final String eventType;
+        final String scope;
+        final String propertyKeys;
+
+        EventInfo(Event event) {
+            this.eventType = event.getEventType();
+            this.scope = event.getScope();
+
+            // Collect property keys that might be used in conditions (limit to first 5 to avoid noise)
+            Map<String, Object> properties = event.getProperties();
+            if (properties != null && !properties.isEmpty()) {
+                List<String> keys = new ArrayList<>(properties.keySet());
+                int maxKeys = Math.min(5, keys.size());
+                this.propertyKeys = keys.subList(0, maxKeys).toString();
+            } else {
+                this.propertyKeys = null;
+            }
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder("Event{type=").append(eventType);
+            if (scope != null) {
+                sb.append(", scope=").append(scope);
+            }
+            if (propertyKeys != null) {
+                sb.append(", properties=").append(propertyKeys);
+            }
+            sb.append("}");
+            return sb.toString();
+        }
+    }
+
+    /**
+     * ThreadLocal to track event stack for event processing.
+     * This ensures the full event chain is tracked consistently even when send() is called directly
+     * from actions or other services, preventing infinite recursion and providing detailed
+     * diagnostics when recursion limits are reached.
+     */
+    private static final ThreadLocal<List<EventInfo>> EVENT_STACK = ThreadLocal.withInitial(ArrayList::new);
 
     private List<EventListenerService> eventListeners = new CopyOnWriteArrayList<EventListenerService>();
 
@@ -59,40 +94,13 @@ public class EventServiceImpl implements EventService {
 
     private DefinitionsService definitionsService;
 
+    private TenantService tenantService;
+
     private BundleContext bundleContext;
 
     private Set<String> predefinedEventTypeIds = new LinkedHashSet<String>();
 
     private Set<String> restrictedEventTypeIds = new LinkedHashSet<String>();
-
-    private Map<String, ThirdPartyServer> thirdPartyServers = new HashMap<>();
-
-    public void setThirdPartyConfiguration(Map<String, String> thirdPartyConfiguration) {
-        this.thirdPartyServers = new HashMap<>();
-        for (Map.Entry<String, String> entry : thirdPartyConfiguration.entrySet()) {
-            String[] keys = StringUtils.split(entry.getKey(),'.');
-            if (keys[0].equals("thirdparty")) {
-                if (!thirdPartyServers.containsKey(keys[1])) {
-                    thirdPartyServers.put(keys[1], new ThirdPartyServer(keys[1]));
-                }
-                ThirdPartyServer thirdPartyServer = thirdPartyServers.get(keys[1]);
-                if (keys[2].equals("allowedEvents")) {
-                    HashSet<String> allowedEvents = new HashSet<>(Arrays.asList(StringUtils.split(entry.getValue(), ',')));
-                    restrictedEventTypeIds.addAll(allowedEvents);
-                    thirdPartyServer.setAllowedEvents(allowedEvents);
-                } else if (keys[2].equals("key")) {
-                    thirdPartyServer.setKey(entry.getValue());
-                } else if (keys[2].equals("ipAddresses")) {
-                    Set<IPAddress> ipAddresses = new HashSet<>();
-                    for (String ip : StringUtils.split(entry.getValue(), ',')) {
-                        IPAddress ipAddress = new IPAddressString(ip.trim()).getAddress();
-                        ipAddresses.add(ipAddress);
-                    }
-                    thirdPartyServer.setIpAddresses(ipAddresses);
-                }
-            }
-        }
-    }
 
     public void setPredefinedEventTypeIds(Set<String> predefinedEventTypeIds) {
         this.predefinedEventTypeIds = predefinedEventTypeIds;
@@ -110,49 +118,102 @@ public class EventServiceImpl implements EventService {
         this.definitionsService = definitionsService;
     }
 
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
+    }
+
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
 
-    public boolean isEventAllowed(Event event, String thirdPartyId) {
-        if (restrictedEventTypeIds.contains(event.getEventType())) {
-            return thirdPartyServers.containsKey(thirdPartyId) && thirdPartyServers.get(thirdPartyId).getAllowedEvents().contains(event.getEventType());
+    @Override
+    public boolean isEventAllowedForTenant(Event event, String tenantId, String sourceIP) {
+        if (event == null || tenantId == null) {
+            return false;
         }
+
+        // Get tenant
+        Tenant tenant = tenantService.getTenant(tenantId);
+        if (tenant == null) {
+            return false;
+        }
+
+        // Check tenant-specific restrictions first
+        Set<String> tenantRestrictions = tenant.getRestrictedEventTypes();
+        if (tenantRestrictions != null && !tenantRestrictions.isEmpty()) {
+            // If tenant has defined restrictions, check if this event type is restricted
+            if (tenantRestrictions.contains(event.getEventType())) {
+                // Event is restricted by tenant, proceed to IP check
+                return checkIPAuthorization(tenant, sourceIP);
+            }
+        }
+
+        // If tenant has no restrictions or event not in tenant restrictions,
+        // check global restrictions
+        if (restrictedEventTypeIds.contains(event.getEventType())) {
+            // Event is restricted globally, proceed to IP check
+            return checkIPAuthorization(tenant, sourceIP);
+        }
+
+        // Event is not restricted by either tenant or global settings
         return true;
     }
 
-    public String authenticateThirdPartyServer(String key, String ip) {
-        LOGGER.debug("Authenticating third party server with key: {} and IP: {}", key, ip);
-        if (key != null) {
-            for (Map.Entry<String, ThirdPartyServer> entry : thirdPartyServers.entrySet()) {
-                ThirdPartyServer server = entry.getValue();
-                if (server.getKey().equals(key)) {
-                    IPAddress ipAddress = new IPAddressString(ip).getAddress();
-                    for (IPAddress serverIpAddress : server.getIpAddresses()) {
-                        if (serverIpAddress.contains(ipAddress)) {
-                            return server.getId();
-                        }
-                    }
-                }
-            }
-            LOGGER.warn("Could not authenticate any third party servers for key: {}", key);
-        }
-        return null;
+    private boolean checkIPAuthorization(Tenant tenant, String sourceIP) {
+        Set<String> authorizedIPs = tenant.getAuthorizedIPs();
+        return IPValidationUtils.isIpAuthorized(sourceIP, authorizedIPs);
     }
 
     public int send(Event event) {
-        return send(event, 0);
-    }
+        // Get current event stack from ThreadLocal
+        List<EventInfo> eventStack = EVENT_STACK.get();
 
-    private int send(Event event, int depth) {
-        if (depth > MAX_RECURSION_DEPTH) {
-            LOGGER.warn("Max recursion depth reached");
+        // Check depth before processing (matches original: if (depth > MAX_RECURSION_DEPTH))
+        // Original allowed depths 0-10 (11 calls), blocking at depth 11
+        if (eventStack.size() > MAX_RECURSION_DEPTH) {
+            EventInfo currentEventInfo = new EventInfo(event);
+
+            // Build detailed error message with full event chain
+            StringBuilder errorMsg = new StringBuilder("Max recursion depth reached (depth: ").append(eventStack.size() + 1)
+                    .append(", max: ").append(MAX_RECURSION_DEPTH + 1)
+                    .append("). Current event: ").append(currentEventInfo);
+
+            if (!eventStack.isEmpty()) {
+                errorMsg.append("\nEvent chain (oldest first):");
+                for (int i = 0; i < eventStack.size(); i++) {
+                    errorMsg.append("\n  [").append(i + 1).append("] ").append(eventStack.get(i));
+                }
+                errorMsg.append("\n  [").append(eventStack.size() + 1).append("] ").append(currentEventInfo).append(" <-- BLOCKED");
+            }
+
+            LOGGER.warn(errorMsg.toString());
             return NO_CHANGE;
         }
 
+        // Add current event to stack
+        EventInfo currentEventInfo = new EventInfo(event);
+        eventStack.add(currentEventInfo);
+
+        try {
+            return sendInternal(event);
+        } finally {
+            // Remove current event from stack and cleanup ThreadLocal if empty
+            eventStack.remove(eventStack.size() - 1);
+            if (eventStack.isEmpty()) {
+                EVENT_STACK.remove();
+            }
+        }
+    }
+
+    private int sendInternal(Event event) {
         boolean saveSucceeded = true;
         if (event.isPersistent()) {
-            saveSucceeded = persistenceService.save(event, null, true);
+            try {
+                saveSucceeded = persistenceService.save(event, null, true);
+            } catch (Throwable t) {
+                LOGGER.error("Failed to save event: ", t);
+                return NO_CHANGE;
+            }
         }
 
         int changes;
@@ -179,7 +240,8 @@ public class EventServiceImpl implements EventService {
                     Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
                     profileUpdated.setPersistent(false);
                     profileUpdated.getAttributes().putAll(event.getAttributes());
-                    changes |= send(profileUpdated, depth + 1);
+                    // Depth is automatically tracked via ThreadLocal, no need to pass parameter
+                    changes |= send(profileUpdated);
                     if (session != null && session.getProfileId() != null) {
                         changes |= SESSION_UPDATED;
                         session.setProfile(event.getProfile());
@@ -192,6 +254,75 @@ public class EventServiceImpl implements EventService {
         return changes;
     }
 
+    @Override
+    public List<EventProperty> getEventProperties() {
+        Map<String, Map<String, Object>> mappings = persistenceService.getPropertiesMapping(Event.ITEM_TYPE);
+        List<EventProperty> props = new ArrayList<>(mappings.size());
+        getEventProperties(mappings, props, "");
+        return props;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void getEventProperties(Map<String, Map<String, Object>> mappings, List<EventProperty> props, String prefix) {
+        for (Map.Entry<String, Map<String, Object>> e : mappings.entrySet()) {
+            if (e.getValue().get("properties") != null) {
+                getEventProperties((Map<String, Map<String, Object>>) e.getValue().get("properties"), props, prefix + e.getKey() + ".");
+            } else {
+                props.add(new EventProperty(prefix + e.getKey(), (String) e.getValue().get("type")));
+            }
+        }
+    }
+
+    private List<PropertyType> getEventPropertyTypes() {
+        Map<String, Map<String, Object>> mappings = persistenceService.getPropertiesMapping(Event.ITEM_TYPE);
+        return new ArrayList<>(getEventPropertyTypes(mappings));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Set<PropertyType> getEventPropertyTypes(Map<String, Map<String, Object>> mappings) {
+        Set<PropertyType> properties = new LinkedHashSet<>();
+        for (Map.Entry<String, Map<String, Object>> e : mappings.entrySet()) {
+            Set<PropertyType> childProperties = null;
+            Metadata propertyMetadata = new Metadata(null, e.getKey(), e.getKey(), null);
+            Set<String> systemTags = new HashSet<>();
+            propertyMetadata.setSystemTags(systemTags);
+            PropertyType propertyType = new PropertyType(propertyMetadata);
+            propertyType.setTarget("event");
+            ValueType valueType = null;
+            if (e.getValue().get("properties") != null) {
+                childProperties = getEventPropertyTypes((Map<String, Map<String, Object>>) e.getValue().get("properties"));
+                valueType = definitionsService.getValueType("set");
+                if (childProperties != null && childProperties.size() > 0) {
+                    propertyType.setChildPropertyTypes(childProperties);
+                }
+            } else {
+                valueType = mappingTypeToValueType( (String) e.getValue().get("type"));
+            }
+            propertyType.setValueTypeId(valueType.getId());
+            propertyType.setValueType(valueType);
+            properties.add(propertyType);
+        }
+        return properties;
+    }
+
+    private ValueType mappingTypeToValueType(String mappingType) {
+        if ("text".equals(mappingType)) {
+            return definitionsService.getValueType("string");
+        } else if ("date".equals(mappingType)) {
+            return definitionsService.getValueType("date");
+        } else if ("long".equals(mappingType)) {
+            return definitionsService.getValueType("integer");
+        } else if ("boolean".equals(mappingType)) {
+            return definitionsService.getValueType("boolean");
+        } else if ("set".equals(mappingType)) {
+            return definitionsService.getValueType("set");
+        } else if ("object".equals(mappingType)) {
+            return definitionsService.getValueType("set");
+        } else {
+            return definitionsService.getValueType("unknown");
+        }
+    }
+
     public Set<String> getEventTypeIds() {
         Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);
         Set<String> eventTypeIds = new LinkedHashSet<String>(predefinedEventTypeIds);
@@ -202,7 +333,8 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public PartialList<Event> searchEvents(Condition condition, int offset, int size) {
-        ParserHelper.resolveConditionType(definitionsService, condition, "event search");
+        // Note: Effective condition resolution happens in the query builder dispatcher or condition evaluator dispatcher
+        // For in-memory persistence, the condition evaluator dispatcher will resolve the effective condition
         return persistenceService.query(condition, "timeStamp", Event.class, offset, size);
     }
 
@@ -245,13 +377,14 @@ public class EventServiceImpl implements EventService {
         if (query.getScrollIdentifier() != null) {
             return persistenceService.continueScrollQuery(Event.class, query.getScrollIdentifier(), query.getScrollTimeValidity());
         }
-        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
+        if (query.getCondition() != null) {
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
             } else {
                 return persistenceService.query(query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit(), query.getScrollTimeValidity());
             }
         } else {
+            // No condition - query without condition
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
             } else {
@@ -313,6 +446,14 @@ public class EventServiceImpl implements EventService {
         andCondition.setParameter("subConditions", conditions);
         long size = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
         return size > 0;
+    }
+
+    public void addEventListenerService(EventListenerService eventListenerService) {
+        eventListeners.add(eventListenerService);
+    }
+
+    public void removeEventListenerService(EventListenerService eventListenerService) {
+        eventListeners.remove(eventListenerService);
     }
 
     public void bind(ServiceReference<EventListenerService> serviceReference) {

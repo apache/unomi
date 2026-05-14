@@ -35,6 +35,9 @@ public interface UnomiToGraphQLConverter {
      *  [<type>]! - required array of values <type>
      */
     static GraphQLType convertPropertyType(final String type) {
+        if (type == null) {
+            return null;
+        }
         String normalizedType = type;
         GraphQLType graphQLType;
         boolean isArray = false;
@@ -63,6 +66,7 @@ public interface UnomiToGraphQLConverter {
                 break;
             case "set":
             case "json":
+            case "object":
                 graphQLType = JSONFunction.JSON_SCALAR;
                 break;
             case "geopoint":

@@ -28,7 +28,7 @@ Here's an example of a query:
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/query/profile/count \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -80,7 +80,7 @@ Here's an example request that uses the `sum` and `avg` metrics:
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/query/session/profile.properties.nbOfVisits/sum/avg \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -129,7 +129,7 @@ Aggregations may be of different types. They are listed here below.
 
 ===== Date
 
-Date aggregations make it possible to automatically generate "buckets" by time periods. The format is compatible with both ElasticSearch and OpenSearch. 
+Date aggregations make it possible to automatically generate "buckets" by time periods. The format is compatible with both ElasticSearch and OpenSearch.
 For more information about the format, you can refer to:
 - ElasticSearch documentation: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-aggregations-bucket-datehistogram-aggregation.html
 - OpenSearch documentation: https://opensearch.org/docs/2.11/aggregations/bucket/datehistogram/
@@ -139,7 +139,7 @@ Here's an example of a request to retrieve a histogram of by day of all the sess
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/query/session/timeStamp \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -205,7 +205,7 @@ below:
 [source,shell script]
 ----
 curl -X POST http://localhost:8181/cxs/query/profile/properties.birthDate \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -282,7 +282,7 @@ Here's an example of a using numeric range to regroup profiles by number of visi
 [source,shell script]
 ----
 curl -X POST http://localhost:8181/cxs/query/profile/properties.nbOfVisits \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {

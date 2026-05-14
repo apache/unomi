@@ -17,12 +17,14 @@
 
 package org.apache.unomi.graphql.servlet.auth;
 
-import graphql.language.Definition;
-import graphql.language.Document;
-import graphql.language.Field;
-import graphql.language.Node;
-import graphql.language.OperationDefinition;
+import graphql.language.*;
 import graphql.parser.Parser;
+import org.apache.unomi.api.ExecutionContext;
+import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,26 +42,46 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 
-import static graphql.language.OperationDefinition.Operation.MUTATION;
-import static graphql.language.OperationDefinition.Operation.QUERY;
-import static graphql.language.OperationDefinition.Operation.SUBSCRIPTION;
+import static graphql.language.OperationDefinition.Operation.*;
 import static org.osgi.service.http.HttpContext.AUTHENTICATION_TYPE;
 import static org.osgi.service.http.HttpContext.REMOTE_USER;
 
 public class GraphQLServletSecurityValidator {
 
     private static final Logger LOG = LoggerFactory.getLogger(GraphQLServletSecurityValidator.class);
+    private static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
 
     private final Parser parser;
+    private final TenantService tenantService;
+    private final SecurityService securityService;
+    private final ExecutionContextManager executionContextManager;
 
-    public GraphQLServletSecurityValidator() {
-        parser = new Parser();
+    public GraphQLServletSecurityValidator(TenantService tenantService,
+                                         SecurityService securityService,
+                                         ExecutionContextManager executionContextManager) {
+        this.parser = new Parser();
+        this.tenantService = tenantService;
+        this.securityService = securityService;
+        this.executionContextManager = executionContextManager;
     }
 
     public boolean validate(String query, String operationName, HttpServletRequest req, HttpServletResponse res) throws IOException {
         if (isPublicOperation(query)) {
-            return true;
-        } else if (req.getHeader("Authorization") == null) {
+            // For public operations, check API key
+            String apiKey = req.getHeader("X-Unomi-Api-Key");
+            if (apiKey != null) {
+                Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
+                if (tenant != null) {
+                    // Set the security context for public API key
+                    Subject subject = securityService.createSubject(tenant.getItemId(), false);
+                    securityService.setCurrentSubject(subject);
+                    executionContextManager.setCurrentContext(executionContextManager.createContext(tenant.getItemId()));
+                    return true;
+                }
+            }
+        }
+
+        if (req.getHeader("Authorization") == null) {
             res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
             res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
@@ -74,6 +96,10 @@ public class GraphQLServletSecurityValidator {
     }
 
     private boolean isPublicOperation(String query) {
+        if (query == null) {
+            return false;
+        }
+
         final Document queryDoc = parser.parseDocument(query);
         final Definition<?> def = queryDoc.getDefinitions().get(0);
         if (def instanceof OperationDefinition) {
@@ -113,15 +139,36 @@ public class GraphQLServletSecurityValidator {
         req.setAttribute(AUTHENTICATION_TYPE, HttpServletRequest.BASIC_AUTH);
 
         String authHeader = req.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Basic ")) {
+            return false;
+        }
 
         String usernameAndPassword = new String(Base64.getDecoder().decode(authHeader.substring(6).getBytes()));
         int userNameIndex = usernameAndPassword.indexOf(":");
+        if (userNameIndex == -1) {
+            return false;
+        }
+
         String username = usernameAndPassword.substring(0, userNameIndex);
         String password = usernameAndPassword.substring(userNameIndex + 1);
 
-        LoginContext loginContext;
+        // First try API key authentication
+        if (username.length() > 0) {
+            Tenant tenant = tenantService.getTenantByApiKey(password, ApiKey.ApiKeyType.PRIVATE);
+            if (tenant != null && tenant.getItemId().equals(username)) {
+                req.setAttribute(REMOTE_USER, username);
+                // Set the security context for private API key
+                Subject subject = securityService.createSubject(tenant.getItemId(), true);
+                securityService.setCurrentSubject(subject);
+                executionContextManager.setCurrentContext(executionContextManager.createContext(tenant.getItemId()));
+                return true;
+            }
+        }
+
+        // Fall back to JAAS authentication
         try {
-            loginContext = new LoginContext("karaf", callbacks -> {
+            Subject subject = new Subject();
+            LoginContext loginContext = new LoginContext("karaf", subject, callbacks -> {
                 for (Callback callback : callbacks) {
                     if (callback instanceof NameCallback) {
                         ((NameCallback) callback).setName(username);
@@ -133,14 +180,31 @@ public class GraphQLServletSecurityValidator {
                 }
             });
             loginContext.login();
-            Subject subject = loginContext.getSubject();
-            boolean success = subject != null;
+            Subject loginSubject = loginContext.getSubject();
+            boolean success = loginSubject != null;
             if (success) {
                 req.setAttribute(REMOTE_USER, username);
+                // Set the security context for JAAS authentication
+                securityService.setCurrentSubject(loginSubject);
+
+                // Check for tenant ID header
+                String tenantId = req.getHeader(UNOMI_TENANT_ID_HEADER);
+                if (tenantId != null && !tenantId.trim().isEmpty()) {
+                    // Validate tenant exists
+                    Tenant tenant = tenantService.getTenant(tenantId);
+                    if (tenant != null) {
+                        executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
+                    } else {
+                        LOG.warn("Invalid tenant ID provided in header: {}", tenantId);
+                        executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                    }
+                } else {
+                    executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                }
             }
             return success;
         } catch (LoginException e) {
-            LOG.warn("Login failed", e);
+            LOG.debug("Login failed", e);
             return false;
         }
     }

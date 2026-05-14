@@ -20,6 +20,7 @@ package org.apache.unomi.itests;
 import org.apache.unomi.itests.migration.Migrate16xToCurrentVersionIT;
 import org.apache.unomi.itests.graphql.*;
 import org.apache.unomi.itests.migration.MigrationIT;
+import org.apache.unomi.itests.shell.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite.SuiteClasses;
 
@@ -37,6 +38,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ConditionQueryBuilderIT.class,
         SegmentIT.class,
         ProfileServiceIT.class,
+        PersonaIT.class,
         ProfileImportBasicIT.class,
         ProfileImportSurfersIT.class,
         ProfileImportRankingIT.class,
@@ -51,6 +53,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ModifyConsentIT.class,
         PatchIT.class,
         ContextServletIT.class,
+        SecurityIT.class,
         RuleServiceIT.class,
         PrivacyServiceIT.class,
         GroovyActionsServiceIT.class,
@@ -63,8 +66,17 @@ import org.junit.runners.Suite.SuiteClasses;
         JSONSchemaIT.class,
         GraphQLProfileAliasesIT.class,
         SendEventActionIT.class,
+        ScopeIT.class,
         HealthCheckIT.class,
         LegacyQueryBuilderMappingIT.class,
+        V2CompatibilityModeIT.class,
+        CrudCommandsIT.class,
+        CacheCommandsIT.class,
+        TailCommandsIT.class,
+        SchedulerCommandsIT.class,
+        TenantCommandsIT.class,
+        RuleStatisticsCommandsIT.class,
+        OtherCommandsIT.class
 })
 public class AllITs {
 }

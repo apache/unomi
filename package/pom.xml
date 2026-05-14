@@ -292,18 +292,6 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>process-resources</id>
-                        <goals>
-                            <goal>resources</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-remote-resources-plugin</artifactId>
                 <configuration>
                     <skip>true</skip>
@@ -357,7 +345,9 @@
                         <feature>package</feature>
                         <feature>service</feature>
                         <feature>system</feature>
+                        <feature>http</feature>
                         <feature>war</feature>
+                        <feature>http-whiteboard</feature>
                         <feature>cxf-jaxrs</feature>
                         <feature>aries-blueprint</feature>
                         <feature>shell-compat</feature>
@@ -374,6 +364,8 @@
                         <feature>unomi-groovy-actions</feature>
                         <feature>unomi-web-applications</feature>
                         <feature>unomi-rest-ui</feature>
+                        <feature>unomi-healthcheck</feature>
+                        <feature>cdp-graphql-feature</feature>
                         <feature>unomi-distribution-elasticsearch</feature>
                         <feature>unomi-distribution-opensearch</feature>
                     </installedFeatures>
@@ -408,6 +400,37 @@
                     </fileSets>
                     <failIfNoFiles>false</failIfNoFiles><!-- usually, no file to do checksum: don't consider error -->
                 </configuration>
+            </plugin>
+
+        <!-- Create a dummy JAR just for caching, this is a workaround to avoid Maven Build cache issues -->
+            <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <executions>
+                <execution>
+                <id>create-dummy-jar</id>
+                <phase>package</phase>
+                <goals>
+                    <goal>jar</goal>
+                </goals>
+                <configuration>
+                    <archive>
+                    <manifest>
+                        <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                    </manifest>
+                    </archive>
+                </configuration>
+                </execution>
+            </executions>
+            </plugin>
+
+            <!-- Ensure the dummy jar is NOT deployed -->
+            <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+                <skip>true</skip>
+            </configuration>
             </plugin>
 
         </plugins>

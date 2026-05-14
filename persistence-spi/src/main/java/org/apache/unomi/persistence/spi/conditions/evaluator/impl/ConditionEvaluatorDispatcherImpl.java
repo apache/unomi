@@ -80,6 +80,16 @@ public class ConditionEvaluatorDispatcherImpl
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context) {
+        if (condition == null) {
+            throw new UnsupportedOperationException("Null condition passed for item : " + item);
+        }
+        // If condition type is unresolved (e.g. missing condition type definition), return false gracefully
+        // instead of throwing NullPointerException. This matches the behaviour from unomi-3-dev.
+        if (condition.getConditionType() == null) {
+            LOGGER.debug("Condition type is null for condition typeID={}, returning false gracefully",
+                    condition.getConditionTypeId());
+            return false;
+        }
         String conditionEvaluatorKey = condition.getConditionType().getConditionEvaluator();
         if (condition.getConditionType().getParentCondition() != null) {
             context.putAll(condition.getParameterValues());

@@ -10,7 +10,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// 
+//
 === Recipes
 
 ==== Introduction
@@ -18,12 +18,13 @@
 In this section of the documentation we provide quick recipes focused on helping you achieve a specific result with
 Apache Unomi.
 
+[[_enabling_debug_mode]]
 ==== Enabling debug mode
 
-Although the examples provided in this documentation are correct (they will work "as-is"), 
+Although the examples provided in this documentation are correct (they will work "as-is"),
 you might be tempted to modify them to fit your use case, which might result in errors.
 
-The best approach during development is to enable Apache Unomi debug mode, which will provide 
+The best approach during development is to enable Apache Unomi debug mode, which will provide
 you with more detailed logs about events processing.
 
 The debug mode can be activated via the karaf SSH console (default credentials are karaf/karaf):
@@ -49,7 +50,7 @@ Hit '<ctrl-d>' or type 'logout' to disconnect shell from current session.
 karaf@root()> log:set DEBUG org.apache.unomi.schema.impl.SchemaServiceImpl
 ----
 
-You can then either watch the logs via your preferred logging mechanism (docker logs, log file, ...) or 
+You can then either watch the logs via your preferred logging mechanism (docker logs, log file, ...) or
 simply tail the logs to the terminal you used to enable debug mode.
 
 [source]
@@ -61,8 +62,8 @@ karaf@root()> log:tail
 08:55:28.142 ERROR [qtp1422628821-128] An event was rejected - switch to DEBUG log level for more information
 ----
 
-The example above shows schema validation failure at the `$.source.properties` path. 
-Note that the validation will output one log line for the exact failing path and a log line for its parent, 
+The example above shows schema validation failure at the `$.source.properties` path.
+Note that the validation will output one log line for the exact failing path and a log line for its parent,
 therefore to find the source of a schema validation issue it's best to start from the top.
 
 ==== How to read a profile
@@ -70,12 +71,18 @@ therefore to find the source of a schema validation issue it's best to start fro
 The simplest way to retrieve profile data for the current profile is to simply send a request to the /cxs/context.json
 endpoint. However you will need to send a body along with that request. Here's an example:
 
+[NOTE]
+====
+The `/cxs/context.json` endpoint automatically creates or loads profiles and sessions as needed. See <<_how_profile_tracking_works,How profile tracking works>> for complete details about the automatic profile and session creation process.
+====
+
 Here is an example that will retrieve all the session and profile properties, as well as the profile's segments and scores
 
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 --data-raw '{
     "source": {
         "itemId":"homepage",
@@ -91,7 +98,7 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 
 The `requiredProfileProperties` and `requiredSessionProperties` are properties that take an array of property names
 that should be retrieved. In this case we use the wildcard character '*' to say we want to retrieve all the available
-properties. The structure of the JSON object that you should send is a JSON-serialized version of the 
+properties. The structure of the JSON object that you should send is a JSON-serialized version of the
 http://unomi.apache.org/unomi-api/apidocs/org/apache/unomi/api/ContextRequest.html[ContextRequest] Java class.
 
 Note that it is also possible to access a profile's data through the /cxs/profiles/ endpoint but that really should be
@@ -123,8 +130,8 @@ ones that you might not want to be overriden.
 Instead you can use the following solutions to update profiles:
 
 - (Preferred) Use you own custom event(s) to send data you want to be inserted in a profile, and use rules to map the
-event data to the profile. This is simpler than it sounds, as usually all it requires is setting up a simple rule, 
-defining the corresponding JSON schema and you're ready to update profiles using events. 
+event data to the profile. This is simpler than it sounds, as usually all it requires is setting up a simple rule,
+defining the corresponding JSON schema and you're ready to update profiles using events.
 
 - Use the protected built-in "updateProperties" event. This event is designed to be used for administrative purposes
 only. Again, prefer the custom events solution because as this is a protected event it will require sending the Unomi
@@ -137,7 +144,7 @@ Let's go into more detail about the preferred way to update a profile. Let's con
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/rules \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "metadata": {
@@ -193,7 +200,7 @@ We will start by creating a scope called "example" scope:
 [source]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/scopes' \
--u 'karaf:karaf' \
+--user "TENANT_ID:PRIVATE_KEY" \
 --header 'Content-Type: application/json' \
 --data-raw '{
 "itemId": "example",
@@ -201,12 +208,14 @@ curl --location --request POST 'http://localhost:8181/cxs/scopes' \
 }'
 ----
 
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (`karaf:karaf`).
+
 The next step consist in creating a JSON Schema to validate our event.
 
 [source]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/jsonSchema' \
--u 'karaf:karaf' \
+--user "TENANT_ID:PRIVATE_KEY" \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "$id": "https://unomi.apache.org/schemas/json/events/contactInfoSubmitted/1-0-0",
@@ -260,6 +269,7 @@ Finally, send the `contactInfoSubmitted` event using a request similar to this o
 ----
 curl -X POST http://localhost:8181/cxs/eventcollector \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 --data-raw '{
     "sessionId" : "1234",
     "events":[
@@ -291,7 +301,7 @@ The event we just submitted can be retrieved using the following request:
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/events/search \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "offset" : 0,
@@ -313,9 +323,9 @@ There could be two types of common errors while customizing the above requests:
 * The schema is invalid
 * The event is invalid
 
-While first submitting the schema during its creation, Apache Unomi will validate it is syntaxically correct (JSON) 
-but will not perform any further validation. Since the schema will be processed for the first time when events are submitted, 
-errors might be noticeable at that time. 
+While first submitting the schema during its creation, Apache Unomi will validate it is syntaxically correct (JSON)
+but will not perform any further validation. Since the schema will be processed for the first time when events are submitted,
+errors might be noticeable at that time.
 
 Those errors are usually self-explanatory, such as this one pointing to an incorrect lcoation for the "firstName" keyword:
 [source]
@@ -323,7 +333,7 @@ Those errors are usually self-explanatory, such as this one pointing to an incor
 09:35:56.573 WARN [qtp1421852915-83] Unknown keyword firstName - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword
 ----
 
-If an event is invalid, the logs will contain details about the part of the event that did not validate against the schema. 
+If an event is invalid, the logs will contain details about the part of the event that did not validate against the schema.
 In the example below, an extra property "abcd" was added to the event:
 [source]
 ----
@@ -340,7 +350,7 @@ that looks something like this (and https://unomi.apache.org/rest-api-doc/#17681
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/events/search \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "offset" : 0,
@@ -372,7 +382,7 @@ on the Apache Unomi server.
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/rules \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "metadata": {
@@ -407,7 +417,7 @@ structure. Here's an example of a profile search with a Query object:
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/profiles/search \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "text" : "unomi",
@@ -449,7 +459,7 @@ on the server and potentially this could affect performance.
 
 ==== Getting / updating consents
 
-You can find information on how to retrieve or create/update consents in the <<Consent API>> section.
+You can find information on how to retrieve or create/update consents in the <<_consent_api,Consent API>> section.
 
 ==== How to send a login event to Unomi
 

@@ -16,8 +16,15 @@
  */
 package org.apache.unomi.rest.authentication.impl;
 
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.metatype.annotations.AttributeDefinition;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.regex.Pattern;
@@ -25,18 +32,19 @@ import java.util.regex.Pattern;
 /**
  * Default implementation for the unomi authentication on Rest endpoints
  */
-@Component(service = RestAuthenticationConfig.class)
+@Component(service = { RestAuthenticationConfig.class}, configurationPid = "org.apache.unomi.rest.authentication", immediate = true)
 public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig {
 
-    private static final String GUEST_ROLES = "ROLE_UNOMI_PUBLIC";
-    private static final String ADMIN_ROLES = "ROLE_UNOMI_ADMIN";
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultRestAuthenticationConfig.class);
+    private static final String GUEST_ROLES = UnomiRoles.USER;
+    private static final String ADMIN_ROLES = UnomiRoles.ADMINISTRATOR;
+    private static final String TENANT_ADMIN_ROLES = UnomiRoles.ADMINISTRATOR + " " + UnomiRoles.TENANT_ADMINISTRATOR;
 
     private static final List<Pattern> PUBLIC_PATH_PATTERNS = Arrays.asList(
             Pattern.compile("(GET|POST|OPTIONS) context\\.js(on|)"),
             Pattern.compile("(GET|POST|OPTIONS) eventcollector"),
             Pattern.compile("(GET|OPTIONS) client/.*")
     );
-
 
     private static final Map<String, String> ROLES_MAPPING;
 
@@ -52,8 +60,35 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
         roles.put("org.apache.unomi.rest.endpoints.EventsCollectorEndpoint.options", GUEST_ROLES);
         roles.put("org.apache.unomi.rest.endpoints.ClientEndpoint.getClient", GUEST_ROLES);
         roles.put("org.apache.unomi.rest.endpoints.ClientEndpoint.options", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.getTenants", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.getTenant", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.createTenant", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.updateTenant", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.deleteTenant", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.generateApiKey", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.validateApiKey", ADMIN_ROLES);
         ROLES_MAPPING = Collections.unmodifiableMap(roles);
     }
+
+    private volatile boolean v2CompatibilityModeEnabled = false;
+    private volatile String v2CompatibilityDefaultTenantId = "default";
+
+
+    @Activate
+    @Modified
+    public void modified(Config config) {
+        if (config == null) {
+            LOGGER.warn("Config is null in modified method");
+            return;
+        }
+        boolean v2Mode = config.v2_compatibilitymode_enabled();
+        String defaultTenant = config.v2_compatibilitymode_defaultTenantId();
+        LOGGER.info("Configuration updated - v2CompatibilityModeEnabled: {}, v2CompatibilityDefaultTenantId: {}",
+                    v2Mode, defaultTenant);
+            this.v2CompatibilityModeEnabled = v2Mode;
+            this.v2CompatibilityDefaultTenantId = defaultTenant;
+    }
+
 
     @Override
     public List<Pattern> getPublicPathPatterns() {
@@ -67,6 +102,35 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
 
     @Override
     public String getGlobalRoles() {
-        return ADMIN_ROLES;
+        return TENANT_ADMIN_ROLES;
+    }
+
+    @Override
+    public boolean isV2CompatibilityModeEnabled() {
+        return v2CompatibilityModeEnabled;
+    }
+
+    @Override
+    public String getV2CompatibilityDefaultTenantId() {
+        return v2CompatibilityDefaultTenantId;
+    }
+
+    @ObjectClassDefinition(
+        name = "Unomi REST Authentication Configuration",
+        description = "Configuration for Unomi REST authentication including V2 compatibility mode"
+    )
+    public @interface Config {
+
+        @AttributeDefinition(
+            name = "V2 Compatibility Mode Enabled",
+            description = "Enable V2 compatibility mode to allow V2 clients to use Unomi V3 without API keys"
+        )
+        boolean v2_compatibilitymode_enabled() default false;
+
+        @AttributeDefinition(
+            name = "V2 Compatibility Default Tenant ID",
+            description = "Default tenant ID to use in V2 compatibility mode"
+        )
+        String v2_compatibilitymode_defaultTenantId() default "default";
     }
 }

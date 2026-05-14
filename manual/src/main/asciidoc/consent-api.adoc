@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_consent_api]]
 === Consent API
 
 Starting with Apache Unomi 1.3, a new API for consent management is now available. This API
@@ -35,6 +36,7 @@ you can simply retrieve a profile with the following request:
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d @- <<'EOF'
 {
     "source": {
@@ -126,6 +128,7 @@ You could send it using the following curl request:
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d @- <<'EOF'
 {
     "source":{

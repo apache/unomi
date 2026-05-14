@@ -72,6 +72,11 @@ public class ContextRequest {
     private String clientId;
 
     /**
+     * The public API key for tenant authentication.
+     */
+    private String publicApiKey;
+
+    /**
      * Retrieves the source of the context request.
      *
      * @return the source
@@ -293,5 +298,21 @@ public class ContextRequest {
 
     public void setClientId(String clientId) {
         this.clientId = clientId;
+    }
+
+    /**
+     * Gets the public API key used for tenant authentication.
+     * @return the public API key
+     */
+    public String getPublicApiKey() {
+        return publicApiKey;
+    }
+
+    /**
+     * Sets the public API key used for tenant authentication.
+     * @param publicApiKey the public API key to set
+     */
+    public void setPublicApiKey(String publicApiKey) {
+        this.publicApiKey = publicApiKey;
     }
 }

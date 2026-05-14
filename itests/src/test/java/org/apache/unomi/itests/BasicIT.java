@@ -161,6 +161,15 @@ public class BasicIT extends BaseIT {
 
         refreshPersistence(ConditionType.class);
         Thread.sleep(2000);
+        // Ensure the dynamically registered condition type is visible before creating the rule
+        keepTrying(
+                "loginEventCondition not registered in the required time",
+                () -> definitionsService.getConditionType("loginEventCondition"),
+                Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES
+        );
+
         // Add login rule
         Rule rule = CustomObjectMapper.getObjectMapper().readValue(new File("data/tmp/testLogin.json").toURI().toURL(),
                 Rule.class);
@@ -191,7 +200,7 @@ public class BasicIT extends BaseIT {
                 EMAIL_VISITOR_1, SESSION_ID_3);
         HttpPost requestLoginVisitor1 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestLoginVisitor1.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
-        requestLoginVisitor1.addHeader("X-Unomi-Peer", UNOMI_KEY);
+        requestLoginVisitor1.addHeader("X-Unomi-Api-Key", testPublicKey.getKey());
         requestLoginVisitor1.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestLoginVisitor1),
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponseLoginVisitor1 = executeContextJSONRequest(requestLoginVisitor1, SESSION_ID_3);
@@ -245,7 +254,7 @@ public class BasicIT extends BaseIT {
                 EMAIL_VISITOR_2, SESSION_ID_4);
         HttpPost requestLoginVisitor2 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestLoginVisitor2.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
-        requestLoginVisitor2.addHeader("X-Unomi-Peer", UNOMI_KEY);
+        requestLoginVisitor2.addHeader("X-Unomi-Api-Key", testPublicKey.getKey());
         requestLoginVisitor2.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestLoginVisitor2),
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponseLoginVisitor2 = executeContextJSONRequest(requestLoginVisitor2, SESSION_ID_4);
@@ -274,6 +283,8 @@ public class BasicIT extends BaseIT {
         checkVisitor1ResponseProperties(profileVisitor1.getProperties());
         Profile profileVisitor2 = profileService.load(profileIdVisitor2);
         checkVisitor2ResponseProperties(profileVisitor2.getProperties());
+
+        rulesService.removeRule("testLogin");
 
         LOGGER.info("End test testMultipleLoginOnSameBrowser");
     }

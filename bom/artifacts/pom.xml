@@ -87,7 +87,17 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-json-schema-shell-commands</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-rest</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>log4j-extension</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -127,8 +137,19 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-services-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-services</artifactId>
                 <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-services</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.unomi</groupId>
