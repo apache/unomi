@@ -42,6 +42,13 @@ import java.util.Map;
  */
 public class CrudCommandsIT extends ShellCommandsBaseIT {
 
+    /**
+     * {@code unomi:crud list} can briefly lag behind a successful create/read on slow CI
+     * (definitions cache, persistence, search refresh). Keep waits bounded but generous.
+     */
+    private static final int CRUD_LIST_EVENTUAL_MAX_ATTEMPTS = 30;
+    private static final long CRUD_LIST_EVENTUAL_RETRY_MS = 300L;
+
     private List<String> createdItemIds = new ArrayList<>();
     private List<File> tempFiles = new ArrayList<>();
 
@@ -266,8 +273,8 @@ public class CrudCommandsIT extends ShellCommandsBaseIT {
                     return false;
                 }
             },
-            5, // maxRetries
-            200 // retryDelayMs
+            CRUD_LIST_EVENTUAL_MAX_ATTEMPTS,
+            CRUD_LIST_EVENTUAL_RETRY_MS
         );
         Assert.assertTrue("Goal should be found in table", found);
     }
@@ -444,8 +451,8 @@ public class CrudCommandsIT extends ShellCommandsBaseIT {
                     return false;
                 }
             },
-            5, // maxRetries
-            200 // retryDelayMs
+            CRUD_LIST_EVENTUAL_MAX_ATTEMPTS,
+            CRUD_LIST_EVENTUAL_RETRY_MS
         );
         Assert.assertTrue("Should contain our " + objectType + " ID in the list", foundInList);
 
