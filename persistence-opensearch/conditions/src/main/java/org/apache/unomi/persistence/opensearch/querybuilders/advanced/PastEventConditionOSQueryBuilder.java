@@ -31,6 +31,9 @@ import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder;
 import org.apache.unomi.scripting.ScriptExecutor;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 
 import java.util.*;
@@ -46,6 +49,8 @@ public class PastEventConditionOSQueryBuilder implements ConditionOSQueryBuilder
     private int maximumIdsQueryCount = 5000;
     private int aggregateQueryBucketSize = 5000;
     private boolean pastEventsDisablePartitions = false;
+
+    private final DateTimeFormatter dateTimeFormatter = ISODateTimeFormat.dateTime();
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -233,8 +238,24 @@ public class PastEventConditionOSQueryBuilder implements ConditionOSQueryBuilder
         }
 
         Integer numberOfDays = PropertyHelper.getInteger(condition.getParameter("numberOfDays"));
-        String fromDate = (String) condition.getParameter("fromDate");
-        String toDate = (String) condition.getParameter("toDate");
+        Object fromDateValue = condition.getParameter("fromDate");
+        String fromDate = null;
+        if (fromDateValue != null) {
+            if (fromDateValue instanceof Date) {
+                fromDate = dateTimeFormatter.print(new DateTime(fromDateValue));
+            } else {
+                fromDate = (String) fromDateValue;
+            }
+        }
+        Object toDateValue = condition.getParameter("toDate");
+        String toDate = null;
+        if (toDateValue != null) {
+            if (toDateValue instanceof Date) {
+                toDate = dateTimeFormatter.print(new DateTime(toDateValue));
+            } else {
+                toDate = (String) toDateValue;
+            }
+        }
 
         if (numberOfDays != null) {
             l.add(getTimeStampCondition("greaterThan", "propertyValueDateExpr", "now-" + numberOfDays + "d", definitionsService));

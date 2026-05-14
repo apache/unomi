@@ -237,6 +237,14 @@
                         <configuration>
                             <tasks>
                                 <unzip src="${project.basedir}/src/test/resources/migration/snapshots_repository.zip" dest="${project.build.directory}" />
+                                <!-- Elasticsearch Docker image runs as UID 1000; Maven on Linux CI (e.g. GitHub Actions) often
+                                     owns target/ as another UID, so bind-mounted FS snapshot repos get access_denied
+                                     during repository verification unless the tree is world-writable. Skipped on Windows. -->
+                                <exec executable="chmod" osfamily="unix" failonerror="true">
+                                    <arg value="-R"/>
+                                    <arg value="ugo+rwx"/>
+                                    <arg path="${project.build.directory}/snapshots_repository"/>
+                                </exec>
                             </tasks>
                         </configuration>
                         <goals>
