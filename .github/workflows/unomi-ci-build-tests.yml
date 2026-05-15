@@ -79,8 +79,15 @@ jobs:
             itests/target/exam/**/data/log
             itests/target/elasticsearch0/data
             itests/target/elasticsearch0/logs
+      # Always publish so a later "re-run failed jobs" pass updates the check to green.
+      # Previously `if: failure()` left a stale red "JUnit Test Report" when ITs passed on re-run.
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v3
-        if: failure()
+        if: always()
+        continue-on-error: true
         with:
           report_paths: 'itests/target/failsafe-reports/TEST-*.xml'
+          check_name: 'JUnit Test Report (${{ matrix.search-engine }})'
+          update_check: true
+          fail_on_failure: false
+          require_tests: false
