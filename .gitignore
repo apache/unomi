@@ -1,6 +1,7 @@
 /NOTICE-generated
 .settings
-.vscode
+# IDE settings (local per developer; do not commit)
+.vscode/
 target
 .classpath
 .project
