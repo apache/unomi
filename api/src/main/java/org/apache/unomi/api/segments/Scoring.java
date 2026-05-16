@@ -21,6 +21,7 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.utils.YamlUtils;
 import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
 import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 
@@ -93,7 +94,7 @@ public class Scoring extends MetadataItem implements YamlConvertible {
         if (visited != null && visited.contains(this)) {
             return circularRef();
         }
-        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        final Set<Object> visitedSet = visited != null ? visited : YamlUtils.newIdentityVisitedSet();
         visitedSet.add(this);
         try {
             return YamlMapBuilder.create()
