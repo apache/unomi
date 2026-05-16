@@ -24,14 +24,15 @@ import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
-import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
-
 /**
  * A representation of a condition parameter, to be used in the segment building UI to either select parameters from a
  * choicelist or to enter a specific value.
  */
 public class Parameter implements Serializable, YamlConvertible {
 
+    /**
+     * Java serialization version; Unomi does not rely on Java serialization of this type as a cross-version persistence contract.
+     */
     private static final long serialVersionUID = 6019392686888941547L;
 
     private String id;
@@ -100,8 +101,10 @@ public class Parameter implements Serializable, YamlConvertible {
     public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
         if (maxDepth <= 0) {
             return YamlUtils.YamlMapBuilder.create()
-                .put("id", id)
-                .put("validation", "<max depth exceeded>")
+                .putIfNotNull("id", id)
+                .putIfNotNull("type", type)
+                .putIf("multivalued", true, multivalued)
+                .putIfNotNull("defaultValue", "<max depth exceeded>")
                 .build();
         }
         return YamlUtils.YamlMapBuilder.create()
