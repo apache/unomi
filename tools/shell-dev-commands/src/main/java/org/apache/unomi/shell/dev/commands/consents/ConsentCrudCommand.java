@@ -28,6 +28,7 @@ import org.apache.unomi.shell.dev.services.CrudCommand;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,7 +43,9 @@ import java.util.stream.Collectors;
 public class ConsentCrudCommand extends BaseCrudCommand {
 
     private static final ObjectMapper OBJECT_MAPPER = new CustomObjectMapper();
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+    private static final String CONSENT_DATE_FORMAT_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+    private static final ThreadLocal<DateFormat> DATE_FORMAT = ThreadLocal.withInitial(
+        () -> new SimpleDateFormat(CONSENT_DATE_FORMAT_PATTERN));
     private static final List<String> PROPERTY_NAMES = List.of(
         "profileId", "scope", "typeIdentifier", "status", "statusDate", "revokeDate"
     );
@@ -66,20 +69,21 @@ public class ConsentCrudCommand extends BaseCrudCommand {
         PartialList<Profile> profiles = profileService.search(query, Profile.class);
         List<Map<String, Object>> consents = new ArrayList<>();
 
+        DateFormat dateFormat = DATE_FORMAT.get();
         for (Profile profile : profiles.getList()) {
             Map<String, Object> profileProperties = profile.getProperties();
             if (profileProperties.containsKey("consents")) {
                 @SuppressWarnings("unchecked")
                 Map<String, Consent> profileConsents = (Map<String, Consent>) profileProperties.get("consents");
                 for (Map.Entry<String, Consent> entry : profileConsents.entrySet()) {
-                    Map<String, Object> consentMap = entry.getValue().toMap(DATE_FORMAT);
+                    Map<String, Object> consentMap = entry.getValue().toMap(dateFormat);
                     consentMap.put("profileId", profile.getItemId());
                     consents.add(consentMap);
                 }
             }
         }
 
-        return new PartialList<Map<String, Object>>(consents, profiles.getOffset(), profiles.getPageSize(), profiles.getTotalSize(), PartialList.Relation.EQUAL);
+        return paginateList(consents, query);
     }
 
     @Override
@@ -125,7 +129,7 @@ public class ConsentCrudCommand extends BaseCrudCommand {
             return null;
         }
 
-        Map<String, Object> consentMap = consent.toMap(DATE_FORMAT);
+        Map<String, Object> consentMap = consent.toMap(DATE_FORMAT.get());
         consentMap.put("profileId", profileId);
         return consentMap;
     }
@@ -143,7 +147,7 @@ public class ConsentCrudCommand extends BaseCrudCommand {
         }
 
         try {
-            Consent consent = new Consent(properties, DATE_FORMAT);
+            Consent consent = new Consent(properties, DATE_FORMAT.get());
 
             Map<String, Object> profileProperties = profile.getProperties();
             @SuppressWarnings("unchecked")
@@ -178,7 +182,7 @@ public class ConsentCrudCommand extends BaseCrudCommand {
         }
 
         try {
-            Consent consent = new Consent(properties, DATE_FORMAT);
+            Consent consent = new Consent(properties, DATE_FORMAT.get());
 
             Map<String, Object> profileProperties = profile.getProperties();
             @SuppressWarnings("unchecked")

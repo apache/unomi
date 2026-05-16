@@ -50,7 +50,7 @@ public class UndeployDefinition extends DeploymentCommandSupport {
         switch (definitionType) {
             case CONDITION_DEFINITION_TYPE:
                 ConditionType conditionType = readDefinition(definitionURL, ConditionType.class);
-                definitionsService.removeActionType(conditionType.getItemId());
+                definitionsService.removeConditionType(conditionType.getItemId());
                 return true;
             case ACTION_DEFINITION_TYPE:
                 ActionType actionType = readDefinition(definitionURL, ActionType.class);
