@@ -65,7 +65,7 @@ public class GoalCrudCommand extends BaseCrudCommand {
             .map(metadata -> goalsService.getGoal(metadata.getId()))
             .filter(goal -> goal != null)
             .collect(Collectors.toList());
-        return new PartialList<>(goals, goals.size(), 0, goals.size(), null);
+        return new PartialList<>(goals, query.getOffset(), goals.size(), goals.size(), PartialList.Relation.EQUAL);
     }
 
     @Override
