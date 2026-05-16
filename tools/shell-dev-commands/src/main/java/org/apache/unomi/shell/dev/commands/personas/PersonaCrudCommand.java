@@ -72,13 +72,16 @@ public class PersonaCrudCommand extends BaseCrudCommand {
     @Override
     protected String[] buildRow(Object item) {
         Persona persona = (Persona) item;
+        Object lastUpdated = persona.getSystemProperties() != null
+            ? persona.getSystemProperties().get("lastUpdated")
+            : null;
         return new String[] {
             persona.getItemId(),
             (String) persona.getProperty("firstName"),
             (String) persona.getProperty("lastName"),
             (String) persona.getProperty("email"),
             (String) persona.getProperty("description"),
-            persona.getSystemProperties().get("lastUpdated").toString()
+            lastUpdated != null ? lastUpdated.toString() : ""
         };
     }
 

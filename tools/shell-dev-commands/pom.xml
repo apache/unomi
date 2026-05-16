@@ -92,6 +92,8 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient-osgi</artifactId>
+            <version>${httpclient-osgi.version}</version>
+            <type>bundle</type>
             <scope>provided</scope>
         </dependency>
         <dependency>

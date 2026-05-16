@@ -172,8 +172,8 @@ public class SegmentCrudCommand extends BaseCrudCommand {
         try {
             // If prefix is not empty, use it to filter results
             if (!prefix.isEmpty()) {
-                Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
-                condition.setParameter("operator", "startsWith");
+                Condition condition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+                condition.setParameter("comparisonOperator", "startsWith");
                 condition.setParameter("propertyName", "itemId");
                 condition.setParameter("propertyValue", prefix);
                 query.setCondition(condition);

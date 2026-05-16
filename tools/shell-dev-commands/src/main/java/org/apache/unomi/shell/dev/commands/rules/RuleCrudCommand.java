@@ -21,9 +21,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
+import org.apache.karaf.shell.support.table.ShellTable;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.common.DataTable;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.shell.dev.services.BaseCrudCommand;
 import org.apache.unomi.shell.dev.services.CrudCommand;
@@ -31,6 +33,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +53,9 @@ public class RuleCrudCommand extends BaseCrudCommand {
 
     @Reference
     private RulesService rulesService;
+
+    /** Cached for the duration of a single list/query operation (see {@link #buildQuery}). */
+    private Map<String, RuleStatistics> statisticsSnapshot;
 
     @Override
     public String getObjectType() {
@@ -79,10 +85,42 @@ public class RuleCrudCommand extends BaseCrudCommand {
     }
 
     @Override
+    protected DataTable buildDataTable() {
+        try {
+            statisticsSnapshot = rulesService.getAllRuleStatistics();
+            return super.buildDataTable();
+        } finally {
+            statisticsSnapshot = null;
+        }
+    }
+
+    @Override
+    public void buildRows(ShellTable table, int maxEntries) {
+        try {
+            statisticsSnapshot = rulesService.getAllRuleStatistics();
+            super.buildRows(table, maxEntries);
+        } finally {
+            statisticsSnapshot = null;
+        }
+    }
+
+    @Override
+    public void buildCsvOutput(PrintStream console, String[] headers, int limit) throws Exception {
+        try {
+            statisticsSnapshot = rulesService.getAllRuleStatistics();
+            super.buildCsvOutput(console, headers, limit);
+        } finally {
+            statisticsSnapshot = null;
+        }
+    }
+
+    @Override
     protected Comparable[] buildRow(Object item) {
         Rule rule = (Rule) item;
         String ruleId = rule.getItemId();
-        Map<String,RuleStatistics> allRuleStatistics = rulesService.getAllRuleStatistics();
+        Map<String, RuleStatistics> allRuleStatistics = statisticsSnapshot != null
+            ? statisticsSnapshot
+            : rulesService.getAllRuleStatistics();
 
         ArrayList<Comparable> rowData = new ArrayList<>();
         rowData.add(rule.getMetadata().isEnabled() ? "x" : "");

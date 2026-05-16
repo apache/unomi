@@ -90,23 +90,21 @@ public class RuleStatisticsCrudCommand extends BaseCrudCommand {
 
     @Override
     public String create(Map<String, Object> properties) {
-        // Note: RulesService doesn't provide a direct way to create rule statistics
-        // They are automatically managed by the rules engine
-        return null;
+        throw new UnsupportedOperationException(
+            "Rule statistics are managed automatically by the rules engine and cannot be created via the shell.");
     }
 
     @Override
     public void update(String id, Map<String, Object> properties) {
-        // Note: RulesService doesn't provide a direct way to update rule statistics
-        // They are automatically managed by the rules engine
+        throw new UnsupportedOperationException(
+            "Rule statistics are managed automatically by the rules engine and cannot be updated via the shell.");
     }
 
     @Override
     public void delete(String id) {
-        // Note: RulesService doesn't provide a direct way to delete individual rule statistics
-        // They are automatically managed by the rules engine
-        // You can use resetAllRuleStatistics() to reset all statistics to zero
-        rulesService.resetAllRuleStatistics();
+        throw new UnsupportedOperationException(
+            "Rule statistics cannot be deleted individually via the shell (requested id: " + id
+                + "). Statistics are maintained by the rules engine.");
     }
 
     @Override
@@ -129,7 +127,7 @@ public class RuleStatisticsCrudCommand extends BaseCrudCommand {
             "- localActionsTime: Time spent executing actions on this node since last sync (ms)",
             "- lastSyncDate: Date of the last synchronization with the cluster",
             "",
-            "Note: Use 'unomi:crud rulestats reset' to reset all rule statistics to zero."
+            "Supported operations: list, read, help only (create, update, and delete are not supported)."
         );
     }
 }
