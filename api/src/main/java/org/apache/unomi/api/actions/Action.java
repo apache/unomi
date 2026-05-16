@@ -26,7 +26,6 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -143,7 +142,7 @@ public class Action implements Serializable, YamlConvertible {
         if (visited != null && visited.contains(this)) {
             return circularRef();
         }
-        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        final Set<Object> visitedSet = visited != null ? visited : YamlUtils.newIdentityVisitedSet();
         visitedSet.add(this);
         try {
             YamlMapBuilder builder = YamlMapBuilder.create()

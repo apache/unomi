@@ -20,6 +20,8 @@ package org.apache.unomi.api.utils;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +55,9 @@ public class YamlUtils {
          * This method accepts an optional visited set to detect circular references and a max depth
          * to prevent StackOverflowError from extremely deep nested structures.
          *
-         * @param visited optional set of visited objects to detect circular references (may be null)
+         * @param visited optional set of visited objects to detect circular references (may be null).
+         *                When non-null, use identity semantics (e.g. {@link YamlUtils#newIdentityVisitedSet()})
+         *                so cycles are detected by object identity, not {@code equals}.
          * @param maxDepth maximum recursion depth (prevents StackOverflowError from deep nesting)
          * @return a Map representation of this object
          */
@@ -234,6 +238,17 @@ public class YamlUtils {
             return null;
         }
         return set.stream().map(mapper).sorted().collect(Collectors.toList());
+    }
+
+    /**
+     * Creates an empty {@link Set} suitable for {@link YamlConvertible#toYaml(Set, int)} visited tracking.
+     * The set uses reference identity ({@link IdentityHashMap}), not {@link Object#equals(Object) equals},
+     * so distinct object graphs are not mistaken for cycles when types override equality.
+     *
+     * @return a new modifiable identity-based set
+     */
+    public static Set<Object> newIdentityVisitedSet() {
+        return Collections.newSetFromMap(new IdentityHashMap<>());
     }
 
     /**
