@@ -22,7 +22,6 @@ import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -83,7 +82,7 @@ public abstract class MetadataItem extends Item {
                 .put("metadata", "<max depth exceeded>")
                 .build();
         }
-        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        final Set<Object> visitedSet = visited != null ? visited : YamlUtils.newIdentityVisitedSet();
         // Check if already visited - if so, we're being called from a child class via super.toYaml()
         // In that case, skip the circular reference check and just proceed
         boolean alreadyVisited = visitedSet.contains(this);

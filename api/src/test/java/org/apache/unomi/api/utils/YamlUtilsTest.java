@@ -198,7 +198,7 @@ public class YamlUtilsTest {
             map.put("test", "value");
             return map;
         };
-        Set<Object> visited = new HashSet<>();
+        Set<Object> visited = YamlUtils.newIdentityVisitedSet();
         Object result = YamlUtils.toYamlValue(convertible, visited);
         assertTrue("YamlConvertible should be converted to Map", result instanceof Map);
         Map<?, ?> map = (Map<?, ?>) result;
@@ -208,7 +208,7 @@ public class YamlUtilsTest {
     @Test
     public void testToYamlValueWithList() {
         List<Object> list = Arrays.asList("a", "b", "c");
-        Set<Object> visited = new HashSet<>();
+        Set<Object> visited = YamlUtils.newIdentityVisitedSet();
         Object result = YamlUtils.toYamlValue(list, visited);
         assertTrue("List should remain a List", result instanceof List);
         assertEquals("List should be unchanged", list, result);
@@ -218,7 +218,7 @@ public class YamlUtilsTest {
     public void testToYamlValueWithMap() {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("key", "value");
-        Set<Object> visited = new HashSet<>();
+        Set<Object> visited = YamlUtils.newIdentityVisitedSet();
         Object result = YamlUtils.toYamlValue(map, visited);
         assertTrue("Map should remain a Map", result instanceof Map);
         assertEquals("Map should contain key-value", "value", ((Map<?, ?>) result).get("key"));
@@ -226,14 +226,14 @@ public class YamlUtilsTest {
 
     @Test
     public void testToYamlValueWithNull() {
-        Set<Object> visited = new HashSet<>();
+        Set<Object> visited = YamlUtils.newIdentityVisitedSet();
         Object result = YamlUtils.toYamlValue(null, visited);
         assertNull("Null should return null", result);
     }
 
     @Test
     public void testToYamlValueWithPrimitive() {
-        Set<Object> visited = new HashSet<>();
+        Set<Object> visited = YamlUtils.newIdentityVisitedSet();
         Object result = YamlUtils.toYamlValue(42, visited);
         assertEquals("Primitive should remain unchanged", 42, result);
     }
@@ -446,12 +446,12 @@ public class YamlUtilsTest {
         Condition condition = new Condition();
         condition.setConditionTypeId("testCondition");
         // Nested map containing the rule
+        Map<String, Object> level2 = new HashMap<>();
+        level2.put("rule", rule);
+        Map<String, Object> level1 = new HashMap<>();
+        level1.put("level2", level2);
         Map<String, Object> nestedMap = new HashMap<>();
-        nestedMap.put("level1", new HashMap<String, Object>() {{
-            put("level2", new HashMap<String, Object>() {{
-                put("rule", rule);
-            }});
-        }});
+        nestedMap.put("level1", level1);
         condition.getParameterValues().put("nested", nestedMap);
         rule.setCondition(condition);
         
@@ -459,9 +459,9 @@ public class YamlUtilsTest {
         Map<String, Object> conditionMap = (Map<String, Object>) result.get("condition");
         Map<String, Object> paramValues = (Map<String, Object>) conditionMap.get("parameterValues");
         Map<String, Object> nested = (Map<String, Object>) paramValues.get("nested");
-        Map<String, Object> level1 = (Map<String, Object>) nested.get("level1");
-        Map<String, Object> level2 = (Map<String, Object>) level1.get("level2");
-        Map<String, Object> circularRef = (Map<String, Object>) level2.get("rule");
+        Map<String, Object> nestedLevel1 = (Map<String, Object>) nested.get("level1");
+        Map<String, Object> nestedLevel2 = (Map<String, Object>) nestedLevel1.get("level2");
+        Map<String, Object> circularRef = (Map<String, Object>) nestedLevel2.get("rule");
         
         assertNotNull("Circular reference should be detected in nested map", circularRef);
         assertEquals("Should contain circular reference marker", "circular", circularRef.get("$ref"));
@@ -606,5 +606,124 @@ public class YamlUtilsTest {
         Map<String, Object> rule1CircularRef = (Map<String, Object>) paramValues2.get("otherRule");
         assertNotNull("Circular reference to rule1 should be detected", rule1CircularRef);
         assertEquals("Should contain circular reference marker", "circular", rule1CircularRef.get("$ref"));
+    }
+
+    @Test
+    public void testConditionDeepCopyCopiesNestedConditions() {
+        Condition inner = new Condition();
+        inner.setConditionTypeId("inner");
+        Condition outer = new Condition();
+        outer.setConditionTypeId("outer");
+        outer.getParameterValues().put("c", inner);
+
+        Condition copy = outer.deepCopy();
+        assertNotSame(outer, copy);
+        Condition copyInner = (Condition) copy.getParameterValues().get("c");
+        assertNotSame(inner, copyInner);
+        assertEquals("inner", copyInner.getConditionTypeId());
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void testConditionDeepCopyRejectsCycle() {
+        Condition a = new Condition();
+        a.setConditionTypeId("a");
+        Condition b = new Condition();
+        b.setConditionTypeId("b");
+        a.getParameterValues().put("child", b);
+        b.getParameterValues().put("child", a);
+        a.deepCopy();
+    }
+
+    @Test
+    public void testNewIdentityVisitedSetUsesReferenceIdentity() {
+        Set<Object> visited = YamlUtils.newIdentityVisitedSet();
+        String a = new String("x");
+        String b = new String("x");
+        assertTrue(visited.add(a));
+        assertTrue(visited.add(b));
+        assertEquals("equal strings are distinct objects for identity set", 2, visited.size());
+    }
+
+    @Test
+    public void testYamlMapBuilderMergeObjectNullIsNoOp() {
+        Map<String, Object> map = YamlUtils.YamlMapBuilder.create()
+            .put("k", "v")
+            .mergeObject(null)
+            .build();
+        assertEquals(1, map.size());
+        assertEquals("v", map.get("k"));
+    }
+
+    @Test
+    public void testYamlMapBuilderMergeObjectCopiesEntries() {
+        Map<String, Object> extra = new LinkedHashMap<>();
+        extra.put("a", 1);
+        extra.put("b", 2);
+        Map<String, Object> map = YamlUtils.YamlMapBuilder.create()
+            .put("z", 0)
+            .mergeObject(extra)
+            .build();
+        assertEquals(3, map.size());
+        assertEquals(Integer.valueOf(0), map.get("z"));
+        assertEquals(Integer.valueOf(1), map.get("a"));
+        assertEquals(Integer.valueOf(2), map.get("b"));
+    }
+
+    @Test
+    public void testToYamlValueMaxDepthZeroReturnsPlaceholder() {
+        assertEquals("<max depth exceeded>", YamlUtils.toYamlValue("anything", null, 0));
+    }
+
+    @Test
+    public void testToYamlValueEmptyMapWithDepth() {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> out = (Map<String, Object>) YamlUtils.toYamlValue(Collections.emptyMap(), null, 5);
+        assertNotNull(out);
+        assertTrue(out.isEmpty());
+    }
+
+    @Test
+    public void testToYamlValueSortsMapKeysLexicographically() {
+        Map<String, Object> in = new LinkedHashMap<>();
+        in.put("z", 1);
+        in.put("a", 2);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> out = (Map<String, Object>) YamlUtils.toYamlValue(in, null, 10);
+        assertEquals(Arrays.asList("a", "z"), new ArrayList<>(out.keySet()));
+    }
+
+    @Test
+    public void testToYamlValueNonStringMapKeysBecomeStrings() {
+        Map<Integer, String> in = new HashMap<>();
+        in.put(10, "ten");
+        in.put(2, "two");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> out = (Map<String, Object>) YamlUtils.toYamlValue(in, null, 10);
+        assertTrue(out.keySet().stream().allMatch(k -> k instanceof String));
+        assertEquals("two", out.get("2"));
+        assertEquals("ten", out.get("10"));
+    }
+
+    @Test
+    public void testToYamlValueTwoArgDelegatesToUnboundedDepth() {
+        Condition c = new Condition();
+        c.setConditionTypeId("c");
+        c.getParameterValues().put("n", 1);
+        Object result = YamlUtils.toYamlValue(c, YamlUtils.newIdentityVisitedSet());
+        assertTrue(result instanceof Map);
+    }
+
+    @Test
+    public void testYamlConvertibleDefaultToYamlWithVisitedOnly() {
+        YamlUtils.YamlConvertible convertible = new YamlUtils.YamlConvertible() {
+            @Override
+            public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("depth", maxDepth);
+                return m;
+            }
+        };
+        Map<String, Object> map = convertible.toYaml(null);
+        assertEquals(Integer.valueOf(20), map.get("depth"));
     }
 }

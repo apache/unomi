@@ -24,7 +24,13 @@ import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static org.apache.unomi.api.utils.YamlUtils.circularRef;
 import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
@@ -111,7 +117,7 @@ public class Condition implements Serializable, YamlConvertible {
      * @param parameterValues a Map containing the parameter name - value pairs for this profile
      */
     public void setParameterValues(Map<String, Object> parameterValues) {
-        this.parameterValues = parameterValues;
+        this.parameterValues = parameterValues != null ? parameterValues : new HashMap<>();
     }
 
     /**
@@ -121,7 +127,7 @@ public class Condition implements Serializable, YamlConvertible {
      * @return {@code true} if this condition contains a parameter with the specified name, {@code false} otherwise
      */
     public boolean containsParameter(String name) {
-        return parameterValues.containsKey(name);
+        return parameterValues != null && parameterValues.containsKey(name);
     }
 
     /**
@@ -142,6 +148,9 @@ public class Condition implements Serializable, YamlConvertible {
      * @param value the value of the parameter
      */
     public void setParameter(String name, Object value) {
+        if (parameterValues == null) {
+            parameterValues = new HashMap<>();
+        }
         parameterValues.put(name, value);
     }
 
@@ -184,7 +193,7 @@ public class Condition implements Serializable, YamlConvertible {
         if (visited != null && visited.contains(this)) {
             return circularRef();
         }
-        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        final Set<Object> visitedSet = visited != null ? visited : YamlUtils.newIdentityVisitedSet();
         visitedSet.add(this);
         try {
             YamlMapBuilder builder = YamlMapBuilder.create()
@@ -203,52 +212,58 @@ public class Condition implements Serializable, YamlConvertible {
      * Recursively copies all nested conditions to avoid sharing references.
      *
      * @return a deep copy of this condition
+     * @throws IllegalStateException if the condition graph contains a cycle through nested {@link Condition} values
      */
     public Condition deepCopy() {
-        Condition copied = new Condition();
-        if (this.conditionType != null) {
-            copied.setConditionType(this.conditionType);
-        } else if (this.conditionTypeId != null) {
-            copied.setConditionTypeId(this.conditionTypeId);
-        }
+        return deepCopy(new IdentityHashMap<>());
+    }
 
-        // Deep copy parameter values
-        Map<String, Object> copiedParams = new HashMap<>();
-        if (this.parameterValues != null) {
-            for (Map.Entry<String, Object> entry : this.parameterValues.entrySet()) {
-                Object value = entry.getValue();
-                if (value instanceof Condition) {
-                    // Recursively deep copy nested condition
-                    copiedParams.put(entry.getKey(), ((Condition) value).deepCopy());
-                } else if (value instanceof Collection) {
-                    // Deep copy collection - preserve the collection type if possible
-                    Collection<?> collection = (Collection<?>) value;
-                    Collection<Object> copiedCollection;
-                    if (collection instanceof List) {
-                        copiedCollection = new ArrayList<>();
-                    } else {
-                        // Fallback to ArrayList for other collection types
-                        copiedCollection = new ArrayList<>();
-                    }
-                    for (Object item : collection) {
-                        if (item instanceof Condition) {
-                            // Recursively deep copy nested condition
-                            copiedCollection.add(((Condition) item).deepCopy());
+    private Condition deepCopy(IdentityHashMap<Condition, Boolean> copying) {
+        if (copying.put(this, Boolean.TRUE) != null) {
+            throw new IllegalStateException("Cyclic Condition graph: cannot deepCopy()");
+        }
+        try {
+            Condition copied = new Condition();
+            if (this.conditionType != null) {
+                copied.setConditionType(this.conditionType);
+            } else if (this.conditionTypeId != null) {
+                copied.setConditionTypeId(this.conditionTypeId);
+            }
+
+            // Deep copy parameter values
+            Map<String, Object> copiedParams = new HashMap<>();
+            if (this.parameterValues != null) {
+                for (Map.Entry<String, Object> entry : this.parameterValues.entrySet()) {
+                    Object value = entry.getValue();
+                    if (value instanceof Condition) {
+                        copiedParams.put(entry.getKey(), ((Condition) value).deepCopy(copying));
+                    } else if (value instanceof Collection) {
+                        Collection<?> collection = (Collection<?>) value;
+                        Collection<Object> copiedCollection;
+                        if (collection instanceof List) {
+                            copiedCollection = new ArrayList<>();
                         } else {
-                            // Not a condition, add as-is (for non-condition values in collections)
-                            copiedCollection.add(item);
+                            copiedCollection = new ArrayList<>();
                         }
+                        for (Object item : collection) {
+                            if (item instanceof Condition) {
+                                copiedCollection.add(((Condition) item).deepCopy(copying));
+                            } else {
+                                copiedCollection.add(item);
+                            }
+                        }
+                        copiedParams.put(entry.getKey(), copiedCollection);
+                    } else {
+                        copiedParams.put(entry.getKey(), value);
                     }
-                    copiedParams.put(entry.getKey(), copiedCollection);
-                } else {
-                    // Primitive or other non-condition value, copy as-is
-                    copiedParams.put(entry.getKey(), value);
                 }
             }
-        }
-        copied.setParameterValues(copiedParams);
+            copied.setParameterValues(copiedParams);
 
-        return copied;
+            return copied;
+        } finally {
+            copying.remove(this);
+        }
     }
 
     @Override

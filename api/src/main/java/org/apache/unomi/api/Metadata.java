@@ -22,7 +22,6 @@ import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
 import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
 
 import java.io.Serializable;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -299,7 +298,7 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
         if (visited != null && visited.contains(this)) {
             return circularRef();
         }
-        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        final Set<Object> visitedSet = visited != null ? visited : YamlUtils.newIdentityVisitedSet();
         visitedSet.add(this);
         try {
             return YamlMapBuilder.create()

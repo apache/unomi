@@ -43,6 +43,9 @@ import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 public abstract class Item implements Serializable, YamlConvertible {
     private static final Logger LOGGER = LoggerFactory.getLogger(Item.class.getName());
 
+    /**
+     * Java serialization version; Unomi does not rely on Java serialization of this type as a cross-version persistence contract.
+     */
     private static final long serialVersionUID = 1217180125083162915L;
 
     private static final Map<Class,String> itemTypeCache = new ConcurrentHashMap<>();
@@ -171,7 +174,7 @@ public abstract class Item implements Serializable, YamlConvertible {
                 .put("systemMetadata", "<max depth exceeded>")
                 .build();
         }
-        final Set<Object> visitedSet = visited != null ? visited : new HashSet<>();
+        final Set<Object> visitedSet = visited != null ? visited : YamlUtils.newIdentityVisitedSet();
         // Check if already visited - if so, we're being called from a child class via super.toYaml()
         // OR it's a real circular reference. We can't distinguish, but since child classes
         // (like Rule, ConditionType, etc.) all check for circular refs before calling super,
