@@ -59,8 +59,8 @@ import java.util.concurrent.TimeUnit;
  *   <li>Sets up import and export routes</li>
  *   <li>Handles route configuration updates</li>
  *   <li>Manages route lifecycle (start/stop/update)</li>
- *   <li>Provides monitoring through event notifications</li>
- *   <li>Supports both Kafka and direct endpoints</li>
+ *   <li>Supports Kafka ({@link RouterConstants#CONFIG_TYPE_KAFKA}) and in-process
+ *       {@code direct:} endpoints when configured as {@link RouterConstants#CONFIG_TYPE_NOBROKER}</li>
  * </ul>
  * </p>
  *
@@ -97,7 +97,7 @@ public class RouterCamelContext implements IRouterCamelContext {
     private Integer configsRefreshInterval = 1000;
     private ScheduledFuture<?> scheduledFuture;
 
-    /** Event topic fired when a router configuration or route is removed (reserved for integrations). */
+    /** Reserved event topic identifier for future remove notifications (not published by the current implementation). */
     public static String EVENT_ID_REMOVE = "org.apache.unomi.router.event.remove";
     /** Event topic related to import lifecycle (reserved for integrations). */
     public static String EVENT_ID_IMPORT = "org.apache.unomi.router.event.import";

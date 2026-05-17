@@ -44,10 +44,10 @@ import java.lang.reflect.InvocationTargetException;
  *
  * <p>Implementation considerations:
  * <ul>
- *   <li>Must handle profile merging strategies</li>
+ *   <li>Must handle profile merging strategies defined on {@link ProfileToImport}</li>
  *   <li>Should implement proper error handling</li>
  *   <li>Must maintain data consistency</li>
- *   <li>Should handle property type conversions</li>
+ *   <li>Expects property values already parsed (type conversion is done upstream, e.g. by import processors)</li>
  * </ul>
  * </p>
  *

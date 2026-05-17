@@ -31,7 +31,7 @@ import java.util.List;
  *   <li>Controls which properties should be overwritten during import</li>
  *   <li>Specifies the property used for merging with existing profiles</li>
  *   <li>Handles profile deletion flags</li>
- *   <li>Controls overwrite behavior for existing profiles</li>
+ *   <li>Controls merge vs full-replace behavior for existing profiles (see {@link #isOverwriteExistingProfiles()})</li>
  * </ul>
  * </p>
  *
@@ -100,19 +100,21 @@ public class ProfileToImport extends Profile {
     }
 
     /**
-     * Checks if existing profiles should be overwritten during import.
-     * When true, all properties of existing profiles will be overwritten with imported data.
+     * Indicates whether selective property updates are enabled for existing profiles.
+     * When {@code true} and {@link #getPropertiesToOverwrite()} is non-empty, only the listed properties
+     * are updated on a matching profile. Otherwise the entire properties map is replaced.
      *
-     * @return true if existing profiles should be overwritten, false for selective updates
+     * @return {@code true} to apply selective overwrites when {@code propertiesToOverwrite} is set
      */
     public boolean isOverwriteExistingProfiles() {
         return this.overwriteExistingProfiles;
     }
 
     /**
-     * Sets whether existing profiles should be completely overwritten during import.
+     * Sets whether selective property updates are enabled for existing profiles.
      *
-     * @param overwriteExistingProfiles true to overwrite all properties, false for selective updates
+     * @param overwriteExistingProfiles {@code true} to update only {@link #getPropertiesToOverwrite()}
+     *                                  when that list is non-empty; {@code false} replaces the full properties map
      */
     public void setOverwriteExistingProfiles(boolean overwriteExistingProfiles) {
         this.overwriteExistingProfiles = overwriteExistingProfiles;

@@ -32,7 +32,7 @@ import java.util.*;
  *
  * <p>The processor performs the following operations:
  * <ul>
- *   <li>Collects import statistics (success, failure, ignore counts)</li>
+ *   <li>Collects import statistics persisted on the configuration (success and failure counts, plus error details)</li>
  *   <li>Manages error reporting with configurable limits</li>
  *   <li>Updates import configuration status</li>
  *   <li>Maintains execution history</li>
@@ -61,7 +61,7 @@ public class ImportRouteCompletionProcessor implements Processor {
      * <p>This method:
      * <ul>
      *   <li>Identifies the import configuration (one-shot or recurring)</li>
-     *   <li>Counts successful, failed, and ignored imports</li>
+     *   <li>Counts successful and failed imports (unrecognized line types are skipped and not persisted)</li>
      *   <li>Collects error information up to the configured limit</li>
      *   <li>Updates the import configuration with execution results</li>
      *   <li>Sets the final status based on success/failure counts</li>

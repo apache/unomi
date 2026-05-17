@@ -47,8 +47,10 @@ import java.util.Map;
  *
  * <p>Configuration properties include:
  * <ul>
- *   <li>name - unique identifier for the configuration</li>
- *   <li>configType - type of configuration (import/export)</li>
+ *   <li>itemId - persisted identifier used by router services and routes ({@link Item#getItemId()})</li>
+ *   <li>name - human-readable display name (not used as the route or persistence key)</li>
+ *   <li>configType - scheduling mode ({@link RouterConstants#IMPORT_EXPORT_CONFIG_TYPE_RECURRENT} or
+ *       {@link RouterConstants#IMPORT_EXPORT_CONFIG_TYPE_ONESHOT})</li>
  *   <li>columnSeparator - character used to separate columns (default: ",")</li>
  *   <li>lineSeparator - character used to separate lines (default: "\n")</li>
  *   <li>multiValueSeparator - character used to separate multiple values (default: ";")</li>
@@ -121,16 +123,18 @@ public class ImportExportConfiguration extends Item {
 
 
     /**
-     * Retrieves the configuration type (for example import vs export semantics used by the router).
+     * Returns the scheduling mode for this configuration ({@code recurrent} or {@code oneshot}).
      *
-     * @return the config type of this configuration
+     * @return {@link RouterConstants#IMPORT_EXPORT_CONFIG_TYPE_RECURRENT} or
+     *         {@link RouterConstants#IMPORT_EXPORT_CONFIG_TYPE_ONESHOT}
      */
     public String getConfigType() { return this.configType; }
 
     /**
-     * Sets the configuration type.
+     * Sets the scheduling mode for this configuration.
      *
-     * @param configType the config type for this configuration
+     * @param configType {@link RouterConstants#IMPORT_EXPORT_CONFIG_TYPE_RECURRENT} or
+     *                   {@link RouterConstants#IMPORT_EXPORT_CONFIG_TYPE_ONESHOT}
      */
     public void setConfigType(String configType) {
         this.configType = configType;
@@ -202,10 +206,14 @@ public class ImportExportConfiguration extends Item {
     /**
      * Sets the column separator used when reading or writing delimited text (typically CSV).
      *
-     * @param columnSeparator the column delimiter; defaults to {@code ","} when not overridden
+     * @param columnSeparator the column delimiter; must be exactly one character when non-null
+     * @throws IllegalArgumentException if {@code columnSeparator} is empty or longer than one character
      */
     public void setColumnSeparator(String columnSeparator) {
         if (columnSeparator != null) {
+            if (columnSeparator.length() != 1) {
+                throw new IllegalArgumentException("columnSeparator must be exactly one character");
+            }
             this.columnSeparator = columnSeparator;
         }
     }

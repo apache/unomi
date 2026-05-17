@@ -47,7 +47,7 @@ import java.util.Map;
  *   <li>Line-by-line processing of import data</li>
  *   <li>Error handling and failure reporting</li>
  *   <li>Configuration validation and status updates</li>
- *   <li>Support for both Kafka and direct endpoints</li>
+ *   <li>Support for Kafka and in-process {@code direct:} endpoints ({@link RouterConstants#CONFIG_TYPE_KAFKA} / {@link RouterConstants#CONFIG_TYPE_NOBROKER})</li>
  *   <li>Graceful shutdown handling</li>
  * </ul>
  * </p>
@@ -68,7 +68,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
      * Constructs a new route builder with Kafka configuration.
      *
      * @param kafkaProps map containing Kafka configuration properties
-     * @param configType the type of configuration (kafka/direct)
+     * @param configType {@link RouterConstants#CONFIG_TYPE_KAFKA} or {@link RouterConstants#CONFIG_TYPE_NOBROKER}
      */
     public ProfileImportFromSourceRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);

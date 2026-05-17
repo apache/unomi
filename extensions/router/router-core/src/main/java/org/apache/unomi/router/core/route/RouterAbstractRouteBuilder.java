@@ -30,12 +30,13 @@ import java.util.Map;
 /**
  * Abstract base class for all Unomi router route builders.
  * This class provides common functionality and configuration for both import
- * and export routes, supporting both Kafka and direct endpoint configurations.
+ * and export routes, supporting Kafka ({@link RouterConstants#CONFIG_TYPE_KAFKA}) and in-process
+ * {@code direct:} buffer endpoints when configured as {@link RouterConstants#CONFIG_TYPE_NOBROKER}.
  *
  * <p>Features:
  * <ul>
  *   <li>Common Kafka configuration handling</li>
- *   <li>Endpoint URI generation for both Kafka and direct modes</li>
+ *   <li>Endpoint URI generation for Kafka topics or in-vm {@code direct:} buffers</li>
  *   <li>Shared configuration for JSON data format</li>
  *   <li>Profile service integration</li>
  *   <li>Endpoint security through allowlist</li>
@@ -73,7 +74,7 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
     /** Auto-commit configuration for Kafka */
     protected String kafkaAutoCommit;
 
-    /** Configuration type (kafka/direct) */
+    /** Router transport mode ({@link RouterConstants#CONFIG_TYPE_KAFKA} or {@link RouterConstants#CONFIG_TYPE_NOBROKER}) */
     protected String configType;
 
     /** List of allowed endpoint schemes */
@@ -86,7 +87,7 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
      * Constructs a new route builder with Kafka configuration.
      *
      * @param kafkaProps map containing Kafka configuration properties
-     * @param configType the type of configuration (kafka/direct)
+     * @param configType {@link RouterConstants#CONFIG_TYPE_KAFKA} or {@link RouterConstants#CONFIG_TYPE_NOBROKER}
      */
     public RouterAbstractRouteBuilder(Map<String, String> kafkaProps, String configType) {
         this.kafkaHost = kafkaProps.get("kafkaHost");
