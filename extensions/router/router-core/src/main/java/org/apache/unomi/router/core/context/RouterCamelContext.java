@@ -62,8 +62,8 @@ import java.util.concurrent.TimeUnit;
  *   <li>Sets up import and export routes</li>
  *   <li>Handles route configuration updates</li>
  *   <li>Manages route lifecycle (start/stop/update)</li>
- *   <li>Provides monitoring through event notifications</li>
- *   <li>Supports both Kafka and direct endpoints</li>
+ *   <li>Supports Kafka ({@link RouterConstants#CONFIG_TYPE_KAFKA}) and in-process
+ *       {@code direct:} endpoints when configured as {@link RouterConstants#CONFIG_TYPE_NOBROKER}</li>
  * </ul>
  * </p>
  *
@@ -119,8 +119,10 @@ public class RouterCamelContext implements IRouterCamelContext {
         this.contextManager = contextManager;
     }
 
+    /** {@inheritDoc} */
+    @Override
     public void setTracing(boolean tracing) {
-        camelContext.setTracing(true);
+        camelContext.setTracing(tracing);
     }
 
     public void setSchedulerService(SchedulerService schedulerService) {
@@ -292,6 +294,8 @@ public class RouterCamelContext implements IRouterCamelContext {
         camelContext.start();
     }
 
+    /** {@inheritDoc} */
+    @Override
     public void killExistingRoute(String routeId, boolean fireEvent) throws Exception {
         //Active routes
         Route route = camelContext.getRoute(routeId);
@@ -303,6 +307,8 @@ public class RouterCamelContext implements IRouterCamelContext {
         }
     }
 
+    /** {@inheritDoc} */
+    @Override
     public void updateProfileImportReaderRoute(String configId, boolean fireEvent) throws Exception {
         killExistingRoute(configId, false);
 
@@ -326,6 +332,8 @@ public class RouterCamelContext implements IRouterCamelContext {
         }
     }
 
+    /** {@inheritDoc} */
+    @Override
     public void updateProfileExportReaderRoute(String configId, boolean fireEvent) throws Exception {
         killExistingRoute(configId, false);
 
@@ -347,6 +355,11 @@ public class RouterCamelContext implements IRouterCamelContext {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>The concrete type is {@link org.apache.camel.CamelContext}; callers may narrow the reference safely.</p>
+     */
+    @Override
     public CamelContext getCamelContext() {
         return camelContext;
     }

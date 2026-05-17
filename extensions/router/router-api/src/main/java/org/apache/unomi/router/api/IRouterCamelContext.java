@@ -38,7 +38,6 @@ package org.apache.unomi.router.api;
  * </ul>
  * </p>
  *
- * @see org.apache.unomi.router.core.context.RouterCamelContext
  * @since 1.0
  */
 public interface IRouterCamelContext {
@@ -88,7 +87,9 @@ public interface IRouterCamelContext {
      * The API uses {@link Object} so consumers of this module are not required to depend on Camel at compile time.
      * Callers that ship Camel may cast to {@code org.apache.camel.CamelContext}.
      *
-     * @return the Camel context instance, or {@code null} if not initialized
+     * @return the Camel context instance, or {@code null} if not initialized or not exposed
      */
-    Object getCamelContext();
+    default Object getCamelContext() {
+        return null;
+    }
 }

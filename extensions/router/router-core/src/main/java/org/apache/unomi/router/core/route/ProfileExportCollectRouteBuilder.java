@@ -43,7 +43,7 @@ import java.util.Map;
  *   <li>Support for multiple export configurations</li>
  *   <li>Configurable collection intervals</li>
  *   <li>Security through endpoint allowlist</li>
- *   <li>Support for both Kafka and direct endpoints</li>
+ *   <li>Support for Kafka and in-process {@code direct:} endpoints ({@link RouterConstants#CONFIG_TYPE_KAFKA} / {@link RouterConstants#CONFIG_TYPE_NOBROKER})</li>
  * </ul>
  * </p>
  *
@@ -65,7 +65,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
      * Constructs a new route builder with Kafka configuration.
      *
      * @param kafkaProps map containing Kafka configuration properties
-     * @param configType the type of configuration (kafka/direct)
+     * @param configType {@link RouterConstants#CONFIG_TYPE_KAFKA} or {@link RouterConstants#CONFIG_TYPE_NOBROKER}
      */
     public ProfileExportCollectRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);

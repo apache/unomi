@@ -39,7 +39,7 @@ import java.util.Map;
  *   <li>File-based import processing</li>
  *   <li>Configuration lookup from filename</li>
  *   <li>CSV file processing with error handling</li>
- *   <li>Support for both Kafka and direct endpoints</li>
+ *   <li>Support for Kafka and in-process {@code direct:} endpoints ({@link RouterConstants#CONFIG_TYPE_KAFKA} / {@link RouterConstants#CONFIG_TYPE_NOBROKER})</li>
  *   <li>Automatic file movement after processing</li>
  *   <li>Error reporting and failed file handling</li>
  * </ul>
@@ -61,7 +61,7 @@ public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder
      * Constructs a new route builder with Kafka configuration.
      *
      * @param kafkaProps map containing Kafka configuration properties
-     * @param configType the type of configuration (kafka/direct)
+     * @param configType {@link RouterConstants#CONFIG_TYPE_KAFKA} or {@link RouterConstants#CONFIG_TYPE_NOBROKER}
      */
     public ProfileImportOneShotRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);

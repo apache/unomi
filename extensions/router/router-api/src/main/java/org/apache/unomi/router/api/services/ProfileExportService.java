@@ -62,27 +62,21 @@ public interface ProfileExportService {
 
     /**
      * Extracts profiles belonging to a specified segment and formats them for export.
-     * This method handles the bulk export operation, including:
-     * - Querying profiles based on segment criteria
-     * - Formatting profiles according to export configuration
-     * - Generating the export content
+     * Implementations typically query profiles by segment, build CSV content (including line separators
+     * between rows), append an execution record to the configuration, and persist the updated configuration.
      *
      * @param exportConfiguration the configuration specifying export parameters and format
-     * @return a String containing the formatted export data
+     * @return CSV (or configured delimited) content for the extracted profiles
      */
     String extractProfilesBySegment(ExportConfiguration exportConfiguration);
 
     /**
-     * Converts a single profile to a CSV line format according to the export configuration.
-     * This method handles the formatting of individual profiles, including:
-     * - Property selection and ordering
-     * - Value formatting
-     * - Multi-value handling
-     * - Line separator management
+     * Converts a single profile to one delimited row according to the export configuration mapping.
+     * Does not append line separators; callers or export routes add separators between rows.
      *
      * @param profile the profile to convert
      * @param exportConfiguration the configuration specifying the export format
-     * @return a String containing the CSV-formatted profile data
+     * @return one row of delimited profile data (no trailing line separator)
      */
     String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration);
 

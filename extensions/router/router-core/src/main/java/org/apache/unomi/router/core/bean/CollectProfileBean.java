@@ -31,9 +31,8 @@ import java.util.List;
  *
  * <p>Features:
  * <ul>
- *   <li>Segment-based profile extraction</li>
+ *   <li>Segment-based profile extraction via persistence queries</li>
  *   <li>Integration with Unomi's persistence service</li>
- *   <li>Batch profile retrieval capabilities</li>
  * </ul>
  * </p>
  *

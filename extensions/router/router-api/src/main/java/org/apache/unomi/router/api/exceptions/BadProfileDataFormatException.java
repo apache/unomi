@@ -17,25 +17,23 @@
 package org.apache.unomi.router.api.exceptions;
 
 /**
- * Exception thrown when profile data cannot be properly parsed or formatted during import/export operations.
- * This exception indicates issues with the structure or content of profile data that prevent it from being
- * properly processed by the Unomi router.
+ * Exception thrown when profile import line data cannot be parsed or converted during import processing.
+ * Indicates issues with CSV structure, column mapping, or property value conversion on an import line.
  *
  * <p>Common scenarios where this exception is thrown:
  * <ul>
- *   <li>Invalid CSV format in import files</li>
- *   <li>Missing required profile fields</li>
- *   <li>Incorrect data types for profile properties</li>
+ *   <li>Invalid CSV format or column count mismatch on an import line</li>
+ *   <li>Missing required profile fields in the mapping</li>
+ *   <li>Property value conversion failures (e.g. unsupported type for a mapped field)</li>
  *   <li>Malformed multi-value fields</li>
- *   <li>Invalid date formats</li>
+ *   <li>Empty lines in import files</li>
  * </ul>
  * </p>
  *
  * <p>Usage in Unomi:
  * <ul>
- *   <li>Thrown by profile import processors</li>
- *   <li>Used in data validation steps</li>
- *   <li>Caught by error handling routes</li>
+ *   <li>Thrown by import line processors (e.g. {@code LineSplitProcessor})</li>
+ *   <li>Handled by import route error handlers</li>
  * </ul>
  * </p>
  *

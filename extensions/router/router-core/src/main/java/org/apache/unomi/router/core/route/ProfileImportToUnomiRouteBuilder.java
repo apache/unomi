@@ -36,7 +36,7 @@ import java.util.Map;
  * <ul>
  *   <li>Final processing of imported profiles</li>
  *   <li>Integration with Unomi's storage system</li>
- *   <li>Support for both Kafka and direct endpoints</li>
+ *   <li>Support for Kafka and in-process {@code direct:} endpoints ({@link RouterConstants#CONFIG_TYPE_KAFKA} / {@link RouterConstants#CONFIG_TYPE_NOBROKER})</li>
  *   <li>Import completion handling</li>
  *   <li>Error handling and reporting</li>
  * </ul>
@@ -58,7 +58,7 @@ public class ProfileImportToUnomiRouteBuilder extends RouterAbstractRouteBuilder
      * Constructs a new route builder with Kafka configuration.
      *
      * @param kafkaProps map containing Kafka configuration properties
-     * @param configType the type of configuration (kafka/direct)
+     * @param configType {@link RouterConstants#CONFIG_TYPE_KAFKA} or {@link RouterConstants#CONFIG_TYPE_NOBROKER}
      */
     public ProfileImportToUnomiRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);
