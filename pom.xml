@@ -151,6 +151,7 @@
         <maven-site.plugin.version>3.21.0</maven-site.plugin.version>
         <apache-rat.plugin.version>0.16.1</apache-rat.plugin.version>
         <jgitflow.plugin.version>1.0-m5.1</jgitflow.plugin.version>
+        <docker-maven-plugin.version>0.48.0</docker-maven-plugin.version>
 
         <node.version>v16.20.2</node.version>
         <yarn.version>v1.22.19</yarn.version>
@@ -869,6 +870,11 @@
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
                     <version>${dependency-check.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>io.fabric8</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <version>${docker-maven-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
