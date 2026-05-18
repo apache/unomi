@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.shell.migration.utils;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.RequestConfig;
@@ -157,7 +158,11 @@ public class HttpUtils {
         final int statusCode = response.getStatusLine().getStatusCode();
         HttpEntity entity = response.getEntity();
         if (statusCode >= 400) {
-            throw new HttpRequestException("Couldn't execute " + httpRequestBase + " response: " + ((entity != null) ? EntityUtils.toString(entity) : "n/a"), statusCode);
+            String requestMessage = httpRequestBase.toString();
+            if (httpRequestBase instanceof HttpPost) {
+                requestMessage += " - BODY:[" + IOUtils.toString(((HttpPost) httpRequestBase).getEntity().getContent()) + "]";
+            }
+            throw new HttpRequestException("Couldn't execute request: " + requestMessage + " response: " + ((entity != null) ? EntityUtils.toString(entity) : "n/a"), statusCode);
         }
 
         if (LOGGER.isDebugEnabled()) {

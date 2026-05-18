@@ -16,42 +16,43 @@
   ~ limitations under the License.
   -->
 <features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" name="cdp-graphql-features">
-    <feature name="cdp-graphql-feature" description="Apache Unomi :: GraphQL API :: Karaf Feature" version="${project.version}">
+    <feature name="cdp-graphql-feature" description="Apache Unomi :: GraphQL API :: Karaf Feature"
+             version="${project.version}">
         <feature>unomi-services</feature>
         <feature>unomi-cxs-lists-extension</feature>
         <feature>unomi-rest-api</feature>
         <feature>unomi-cxs-privacy-extension</feature>
+        <!-- Explicit requirement for Jetty packages to ensure Karaf recognizes they're already provided by war/http features -->
+        <requirement>osgi.wiring.package;filter:="(osgi.wiring.package=org.eclipse.jetty.http)"</requirement>
+        <requirement>osgi.wiring.package;filter:="(osgi.wiring.package=org.eclipse.jetty.util)"</requirement>
+        <requirement>osgi.wiring.package;filter:="(osgi.wiring.package=org.eclipse.jetty.io)"</requirement>
+        <!-- com.google.code.findbugs/jsr305 is already provided by unomi-base feature (line 62 of kar/src/main/feature/feature.xml), no need to redeclare -->
         <bundle start="false">wrap:mvn:org.checkerframework/checker-compat-qual/${checker-compat-qual.version}</bundle>
-        <bundle start="false">wrap:mvn:com.google.errorprone/error_prone_annotations/${error_prone_annotations.version}</bundle>
+        <!-- com.google.errorprone/error_prone_annotations is already provided by unomi-elasticsearch-core feature (to satisfy Elasticsearch optional imports before they start), no need to redeclare -->
         <bundle start="false">wrap:mvn:com.google.j2objc/j2objc-annotations/${j2objc-annotations.version}</bundle>
         <bundle start="false">wrap:mvn:org.codehaus.mojo/animal-sniffer-annotations/${animal-sniffer-annotations.version}</bundle>
         <bundle start="false">mvn:commons-fileupload/commons-fileupload/${commons-fileupload.version}</bundle>
-        <bundle start="false">mvn:commons-io/commons-io/${commons-io.version}</bundle>
+        <!-- commons-io is already provided by unomi-base feature (line 46 of kar/src/main/feature/feature.xml), no need to redeclare -->
         <bundle start="false">mvn:org.antlr/antlr4-runtime/${antlr4.version}</bundle>
         <bundle start="false">wrap:mvn:com.graphql-java/java-dataloader/${java-dataloader.version}</bundle>
-        <bundle start="false">mvn:org.reactivestreams/reactive-streams/${reactive-stream.version}</bundle>
+        <!-- org.reactivestreams/reactive-streams is already provided by unomi-services feature (to satisfy Elasticsearch optional imports before they start), no need to redeclare -->
         <bundle start="false">mvn:com.graphql-java/graphql-java/${graphql.java.version}</bundle>
         <bundle start="false">mvn:io.github.graphql-java/graphql-java-annotations/${graphql.java.annotations.version}</bundle>
-        <bundle start="false">mvn:javax.validation/validation-api/${javax-validation.version}</bundle>
+        <!-- javax.validation/validation-api is already provided by unomi-base feature, no need to redeclare -->
         <bundle start="false">wrap:mvn:com.graphql-java/graphql-java-extended-scalars/${graphql.java.extended.scalars.version}</bundle>
         <bundle start="false">wrap:mvn:com.squareup.okhttp3/okhttp/${okhttp.version}</bundle>
         <bundle start="false">wrap:mvn:com.squareup.okio/okio/${okio.version}</bundle>
         <bundle start="false">mvn:io.reactivex.rxjava2/rxjava/${reactivex.version}</bundle>
+        <!-- Jetty base bundles (jetty-util, jetty-io, jetty-http, jetty-server, jetty-security, jetty-servlet, jetty-xml) are already provided by war feature (via http/jetty) in unomi-base, no need to redeclare -->
+        <!-- Jetty WebSocket bundles needed for GraphQL WebSocket support (NOT provided by war feature): -->
         <bundle start="false">mvn:org.eclipse.jetty.websocket/websocket-server/${jetty.version}</bundle>
         <bundle start="false">mvn:org.eclipse.jetty.websocket/websocket-common/${jetty.version}</bundle>
         <bundle start="false">mvn:org.eclipse.jetty.websocket/websocket-api/${jetty.version}</bundle>
-        <bundle start="false">mvn:org.eclipse.jetty.websocket/websocket-client/${jetty.version}</bundle>
         <bundle start="false">mvn:org.eclipse.jetty.websocket/websocket-servlet/${jetty.version}</bundle>
-        <bundle start="false">mvn:org.eclipse.jetty/jetty-util/${jetty.version}</bundle>
-        <bundle start="false">mvn:org.eclipse.jetty/jetty-util-ajax/${jetty.version}</bundle>
-        <bundle start="false">mvn:org.eclipse.jetty/jetty-io/${jetty.version}</bundle>
-        <bundle start="false">mvn:org.eclipse.jetty/jetty-client/${jetty.version}</bundle>
-        <bundle start="false">mvn:org.eclipse.jetty/jetty-xml/${jetty.version}</bundle>
-        <bundle start="false">mvn:org.eclipse.jetty/jetty-servlet/${jetty.version}</bundle>
-        <bundle start="false">mvn:org.eclipse.jetty/jetty-security/${jetty.version}</bundle>
-        <bundle start="false">mvn:org.eclipse.jetty/jetty-server/${jetty.version}</bundle>
-        <bundle start="false">mvn:org.eclipse.jetty/jetty-http/${jetty.version}</bundle>
-        <bundle start="false">mvn:${servlet.spec.groupId}/${servlet.spec.artifactId}/${servlet.spec.version}</bundle>
+        <!-- Client bundle needed by GraphQL WebSocket tests -->
+        <bundle start="false">mvn:org.eclipse.jetty.websocket/websocket-client/${jetty.version}</bundle>
+        <!-- jetty-util-ajax is not used by GraphQL WebSocket implementation -->
+        <!-- ${servlet.spec.groupId}/${servlet.spec.artifactId} (servlet-api) is already provided by war feature (via Pax Web) in unomi-base, no need to redeclare -->
         <bundle start="false">mvn:org.apache.unomi/cdp-graphql-api-impl/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-graphql-ui/${project.version}</bundle>
     </feature>

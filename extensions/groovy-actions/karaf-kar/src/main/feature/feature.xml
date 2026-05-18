@@ -20,6 +20,7 @@
         <details>${project.description}</details>
         <feature>wrap</feature>
         <feature>unomi-services</feature>
+        <configfile finalname="/etc/org.apache.unomi.groovy.actions.cfg">mvn:org.apache.unomi/unomi-groovy-actions-services/${project.version}/cfg/groovyactionscfg</configfile>
         <bundle start="false">mvn:org.apache.unomi/unomi-groovy-actions-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-groovy-actions-rest/${project.version}</bundle>
     </feature>

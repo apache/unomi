@@ -56,6 +56,14 @@ You can run the integration tests along with the build by doing:
     
 from the project's root directory
 
+### Bypassing Maven Build Cache
+
+If you encounter issues with cached builds interfering with test execution, you can bypass the Maven Build Cache by adding the `-Dmaven.build.cache.enabled=false` parameter:
+
+    mvn clean install -P integration-tests -Dmaven.build.cache.enabled=false
+
+This is particularly useful when you want to ensure a completely fresh build and test execution, regardless of previous successful builds.
+
 ### Search Engine Selection
 
 Apache Unomi supports both ElasticSearch and OpenSearch as search engine backends. The integration tests can be configured to run against either engine:
@@ -91,6 +99,29 @@ You can combine both parameters using a comma as a separator, as in the followin
 
     mvn clean install -Dit.karaf.debug=hold:true,port=5006
     
+### Karaf Resolver Debug Logging
+
+To enable debug logging for the Karaf Resolver and Karaf features service during integration tests, you can use the `it.unomi.resolver.debug` system property:
+
+    mvn clean install -P integration-tests -Dit.unomi.resolver.debug=true
+
+Alternatively, you can use the build scripts:
+
+    # Using build.sh (Unix/Linux/macOS)
+    ./build.sh --integration-tests --resolver-debug
+
+    # Using build.ps1 (Windows PowerShell)
+    .\build.ps1 -IntegrationTests -ResolverDebug
+
+This enables DEBUG logging for the following components:
+- `org.osgi.service.resolver` (OSGi resolver)
+- `org.apache.karaf.features` (Karaf features service)
+- `org.apache.karaf.resolver` (Karaf resolver)
+- `org.osgi.framework` (OSGi framework)
+- `org.osgi.service.packageadmin` (Package admin)
+
+This is particularly useful when debugging bundle refresh issues or understanding why bundles are being refreshed during feature installation.
+    
 ## Running a single test
 
 If you want to run a single test or single methods, following the instructions given here:
@@ -99,6 +130,14 @@ https://maven.apache.org/surefire/maven-failsafe-plugin/examples/single-test.htm
 Here's an example:
 
     mvn clean install -Dit.karaf.debug=hold:true -Dit.test=org.apache.unomi.itests.BasicIT
+
+To run a specific test method within a test class, you can use the # symbol followed by the method name:
+
+    mvn clean install -Dit.test=org.apache.unomi.itests.ContextServletIT#testContextEndpointAuthentication
+
+You can also use patterns to run multiple methods that match a pattern:
+
+    mvn clean install -Dit.test=org.apache.unomi.itests.ContextServletIT#test*Authentication*
 
 ## Migration tests
 

@@ -18,6 +18,7 @@
 package org.apache.unomi.persistence.opensearch.querybuilders.core;
 
 import org.apache.commons.lang3.ObjectUtils;
+import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher;
@@ -54,13 +55,13 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
             throw new IllegalArgumentException("Impossible to build OS filter, condition is not valid, comparisonOperator and propertyName properties should be provided");
         }
 
-        String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
+        String expectedValue = ConditionContextHelper.forceFoldToASCII(condition.getParameter("propertyValue"));
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
         Object expectedValueDouble = condition.getParameter("propertyValueDouble");
         Object expectedValueDate = convertDateToISO(condition.getParameter("propertyValueDate"));
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
-        Collection<?> expectedValues = ConditionContextHelper.foldToASCII((Collection<?>) condition.getParameter("propertyValues"));
+        Collection<?> expectedValues = ConditionContextHelper.forceFoldToASCII((Collection<?>) condition.getParameter("propertyValues"));
         Collection<?> expectedValuesInteger = (Collection<?>) condition.getParameter("propertyValuesInteger");
         Collection<?> expectedValuesDouble = (Collection<?>) condition.getParameter("propertyValuesDouble");
         Collection<?> expectedValuesDate = convertDatesToISO((Collection<?>) condition.getParameter("propertyValuesDate"));
@@ -159,8 +160,8 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
 
                 if (centerObj != null && distance != null) {
                     String centerString;
-                    if (centerObj instanceof org.apache.unomi.api.GeoPoint) {
-                        centerString = ((org.apache.unomi.api.GeoPoint) centerObj).asString();
+                    if (centerObj instanceof GeoPoint) {
+                        centerString = ((GeoPoint) centerObj).asString();
                     } else if (centerObj instanceof String) {
                         centerString = (String) centerObj;
                     } else {
@@ -241,7 +242,7 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
         } else if (fieldValue instanceof OffsetDateTime) {
             return fieldValueBuilder.stringValue(convertDateToISO((OffsetDateTime) fieldValue).toString());
         } else {
-            throw new IllegalArgumentException("Impossible to build ES filter, unsupported value type: " + fieldValue.getClass().getName());
+            throw new IllegalArgumentException("Impossible to build OS filter, unsupported value type: " + fieldValue.getClass().getName());
         }
     }
 

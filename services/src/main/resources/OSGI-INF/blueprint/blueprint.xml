@@ -22,290 +22,20 @@
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
            http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0 https://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.3.0.xsd">
 
-    <cm:property-placeholder persistent-id="org.apache.unomi.services"
-                             update-strategy="none" placeholder-prefix="${services.">
-        <cm:default-properties>
-            <cm:property name="profile.purge.interval" value="1"/>
-            <cm:property name="profile.purge.inactiveTime" value="180"/>
-            <cm:property name="profile.purge.existTime" value="-1"/>
-            <cm:property name="monthly.index.purge.existTime" value="12"/>
-            <cm:property name="session.purge.existTime" value="-1"/>
-            <cm:property name="event.purge.existTime" value="-1"/>
-            <cm:property name="segment.update.batchSize" value="1000"/>
-            <cm:property name="profile.forceRefreshOnSave" value="false"/>
-            <cm:property name="definitions.refresh.interval" value="10000"/>
-            <cm:property name="properties.refresh.interval" value="10000"/>
-            <cm:property name="segment.refresh.interval" value="1000"/>
-            <cm:property name="segment.max.retries.update.profile.segment" value="5"/>
-            <cm:property name="segment.retry.update.segment.seconds.delay" value="1"/>
-            <cm:property name="segment.recalculate.period" value="1"/>
-            <cm:property name="segment.batch.update" value="false"/>
-            <cm:property name="segment.send.profile.update.event" value="true"/>
-            <cm:property name="segment.daily.dateexpr.evaluation.hourutc" value="5"/>
-            <cm:property name="rules.refresh.interval" value="1000"/>
-            <cm:property name="rules.statistics.refresh.interval" value="10000"/>
-            <cm:property name="rules.optimizationActivated" value="true"/>
-            <cm:property name="schedules.thread.poolSize" value="5"/>
-            <cm:property name="scopes.refresh.interval" value="1000"/>
-        </cm:default-properties>
-    </cm:property-placeholder>
-
-    <cm:property-placeholder persistent-id="org.apache.unomi.cluster"
-                             update-strategy="reload" placeholder-prefix="${cluster.">
-        <cm:default-properties>
-            <cm:property name="nodeId" value="unomi-node-1"/>
-            <cm:property name="contextserver.publicAddress" value="https://localhost:9443"/>
-            <cm:property name="contextserver.internalAddress" value="http://127.0.0.1:8181"/>
-            <cm:property name="nodeStatisticsUpdateFrequency" value="10000"/>
-        </cm:default-properties>
-    </cm:property-placeholder>
-
-    <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
-                             update-strategy="none" placeholder-prefix="${es.">
-        <cm:default-properties>
-            <cm:property name="aggregateQueryBucketSize" value="5000"/>
-        </cm:default-properties>
-    </cm:property-placeholder>
-
-    <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService" timeout="2000"/>
+    <!-- References -->
+    <reference id="persistenceService"
+               interface="org.apache.unomi.persistence.spi.PersistenceService" timeout="2000"/>
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
     <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
+    <reference id="configAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
     <reference id="bundleWatcher" interface="org.apache.unomi.lifecycle.BundleWatcher"/>
+    <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager" />
+    <reference id="auditService" interface="org.apache.unomi.api.tenants.AuditService" availability="optional"/>
+    <reference id="eventAdmin" interface="org.osgi.service.event.EventAdmin"/>
 
-    <!-- Service definitions -->
-
-    <bean id="schedulerServiceImpl" class="org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="threadPoolSize" value="${services.scheduler.thread.poolSize}"/>
-    </bean>
-    <service id="schedulerService" ref="schedulerServiceImpl">
-        <interfaces>
-            <value>org.apache.unomi.api.services.SchedulerService</value>
-        </interfaces>
-    </service>
-
-    <bean id="definitionsServiceImpl" class="org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="schedulerService" ref="schedulerServiceImpl"/>
-        <property name="definitionsRefreshInterval" value="${services.definitions.refresh.interval}"/>
-    </bean>
-    <service id="definitionsService" ref="definitionsServiceImpl">
-        <interfaces>
-            <value>org.apache.unomi.api.services.DefinitionsService</value>
-            <value>org.osgi.framework.SynchronousBundleListener</value>
-        </interfaces>
-    </service>
-
-    <bean id="eventServiceImpl" class="org.apache.unomi.services.impl.events.EventServiceImpl">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="definitionsService" ref="definitionsServiceImpl"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="predefinedEventTypeIds">
-            <set>
-                <value>view</value>
-                <value>login</value>
-                <value>sessionCreated</value>
-                <value>facebookLogin</value>
-                <value>profileUpdated</value>
-            </set>
-        </property>
-        <property name="restrictedEventTypeIds">
-            <set>
-                <value>sessionCreated</value>
-                <value>sessionReassigned</value>
-                <value>profileUpdated</value>
-                <value>ruleFired</value>
-                <value>updateProperties</value>
-            </set>
-        </property>
-        <property name="thirdPartyConfiguration">
-            <cm:cm-properties persistent-id="org.apache.unomi.thirdparty" update="true"/>
-        </property>
-    </bean>
-    <service id="eventService" ref="eventServiceImpl" interface="org.apache.unomi.api.services.EventService"/>
-
-    <bean id="goalsServiceImpl" class="org.apache.unomi.services.impl.goals.GoalsServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="definitionsService" ref="definitionsServiceImpl"/>
-        <property name="rulesService" ref="rulesServiceImpl"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-    </bean>
-    <service id="goalsService" ref="goalsServiceImpl">
-        <interfaces>
-            <value>org.apache.unomi.api.services.GoalsService</value>
-            <value>org.osgi.framework.SynchronousBundleListener</value>
-        </interfaces>
-    </service>
-
-    <bean id="scopeServiceImpl" class="org.apache.unomi.services.impl.scope.ScopeServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="schedulerService" ref="schedulerServiceImpl"/>
-        <property name="scopesRefreshInterval" value="${services.scopes.refresh.interval}"/>
-    </bean>
-    <service id="scopeService" ref="scopeServiceImpl" interface="org.apache.unomi.api.services.ScopeService"/>
-
-    <bean id="actionExecutorDispatcherImpl"
-          class="org.apache.unomi.services.actions.impl.ActionExecutorDispatcherImpl">
-        <property name="metricsService" ref="metricsService"/>
-        <property name="scriptExecutor" ref="scriptExecutor"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-    </bean>
-
-    <service id="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl">
-        <interfaces>
-            <value>org.apache.unomi.services.actions.ActionExecutorDispatcher</value>
-        </interfaces>
-    </service>
-
-    <bean id="rulesServiceImpl" class="org.apache.unomi.services.impl.rules.RulesServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="definitionsService" ref="definitionsServiceImpl"/>
-        <property name="eventService" ref="eventServiceImpl"/>
-        <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="schedulerService" ref="schedulerServiceImpl"/>
-        <property name="rulesRefreshInterval" value="${services.rules.refresh.interval}"/>
-        <property name="rulesStatisticsRefreshInterval" value="${services.rules.statistics.refresh.interval}"/>
-        <property name="optimizedRulesActivated" value="${services.rules.optimizationActivated}"/>
-    </bean>
-    <service id="rulesService" ref="rulesServiceImpl">
-        <interfaces>
-            <value>org.apache.unomi.api.services.RulesService</value>
-            <value>org.apache.unomi.api.services.EventListenerService</value>
-            <value>org.osgi.framework.SynchronousBundleListener</value>
-            <value>org.osgi.service.cm.ManagedService</value>
-        </interfaces>
-        <service-properties>
-            <entry key="service.pid" value="org.apache.unomi.services"/>
-        </service-properties>
-    </service>
-
-    <bean id="segmentServiceImpl" class="org.apache.unomi.services.impl.segments.SegmentServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="definitionsService" ref="definitionsServiceImpl"/>
-        <property name="eventService" ref="eventServiceImpl"/>
-        <property name="rulesService" ref="rulesServiceImpl"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="taskExecutionPeriod" value="${services.segment.recalculate.period}"/>
-        <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}"/>
-        <property name="schedulerService" ref="schedulerServiceImpl"/>
-        <property name="segmentRefreshInterval" value="${services.segment.refresh.interval}"/>
-        <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
-        <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}"/>
-        <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
-        <property name="maxRetriesForUpdateProfileSegment" value="${services.segment.max.retries.update.profile.segment}"/>
-        <property name="secondsDelayForRetryUpdateProfileSegment" value="${services.segment.retry.update.segment.seconds.delay}"/>
-        <property name="batchSegmentProfileUpdate" value="${services.segment.batch.update}"/>
-        <property name="sendProfileUpdateEventForSegmentUpdate" value="${services.segment.send.profile.update.event}"/>
-        <property name="dailyDateExprEvaluationHourUtc" value="${services.segment.daily.dateexpr.evaluation.hourutc}"/>
-
-    </bean>
-    <service id="segmentService" ref="segmentServiceImpl">
-        <interfaces>
-            <value>org.apache.unomi.api.services.SegmentService</value>
-            <value>org.osgi.framework.SynchronousBundleListener</value>
-        </interfaces>
-    </service>
-
-    <bean id="userListServiceImpl" class="org.apache.unomi.services.impl.lists.UserListServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="definitionsService" ref="definitionsServiceImpl"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-    </bean>
-    <service id="userListService" ref="userListServiceImpl">
-        <interfaces>
-            <value>org.osgi.framework.SynchronousBundleListener</value>
-            <value>org.apache.unomi.api.services.UserListService</value>
-        </interfaces>
-    </service>
-
-    <bean id="profileServiceImpl" class="org.apache.unomi.services.impl.profiles.ProfileServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="definitionsService" ref="definitionsServiceImpl"/>
-        <property name="segmentService" ref="segmentServiceImpl"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="purgeProfileInterval" value="${services.profile.purge.interval}"/>
-        <property name="purgeProfileInactiveTime" value="${services.profile.purge.inactiveTime}"/>
-        <property name="purgeProfileExistTime" value="${services.profile.purge.existTime}"/>
-        <property name="purgeSessionsAndEventsTime" value="${services.monthly.index.purge.existTime}"/>
-        <property name="purgeSessionExistTime" value="${services.session.purge.existTime}"/>
-        <property name="purgeEventExistTime" value="${services.event.purge.existTime}"/>
-        <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}"/>
-        <property name="propertiesRefreshInterval" value="${services.properties.refresh.interval}"/>
-        <property name="schedulerService" ref="schedulerServiceImpl"/>
-    </bean>
-    <service id="profileService" ref="profileServiceImpl">
-        <interfaces>
-            <value>org.apache.unomi.api.services.ProfileService</value>
-            <value>org.osgi.framework.SynchronousBundleListener</value>
-        </interfaces>
-    </service>
-
-    <bean id="queryServiceImpl" class="org.apache.unomi.services.impl.queries.QueryServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="definitionsService" ref="definitionsServiceImpl"/>
-    </bean>
-    <service id="queryService" ref="queryServiceImpl" interface="org.apache.unomi.api.services.QueryService"/>
-
-    <bean id="clusterServiceImpl" class="org.apache.unomi.services.impl.cluster.ClusterServiceImpl"
-          init-method="init" destroy-method="destroy">
-        <property name="persistenceService" ref="persistenceService" />
-        <property name="publicAddress" value="${cluster.contextserver.publicAddress}"/>
-        <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="nodeId" value="${cluster.nodeId}"/>
-        <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
-        <property name="bundleWatcher" ref="bundleWatcher"/>
-        <!-- Wait for UNOMI-878 to be available to activate that
-        <property name="schedulerService" ref="schedulerServiceImpl"/>
-        -->
-    </bean>
-    <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
-
-
-    <bean id="personalizationServiceImpl"
-          class="org.apache.unomi.services.impl.personalization.PersonalizationServiceImpl">
-        <property name="profileService" ref="profileServiceImpl"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-    </bean>
-    <service id="personalizationService" ref="personalizationServiceImpl"
-             interface="org.apache.unomi.api.services.PersonalizationService"/>
-
-    <bean id="patchServiceImpl" class="org.apache.unomi.services.impl.patches.PatchServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-    </bean>
-    <service id="patchService" ref="patchServiceImpl">
-        <interfaces>
-            <value>org.apache.unomi.api.services.PatchService</value>
-        </interfaces>
-    </service>
-
-    <bean id="topicServiceImpl" class="org.apache.unomi.services.impl.topics.TopicServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-    </bean>
-    <service id="topicService" ref="topicServiceImpl">
-        <interfaces>
-            <value>org.apache.unomi.api.services.TopicService</value>
-            <value>org.osgi.framework.SynchronousBundleListener</value>
-        </interfaces>
-    </service>
-
-    <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
+    <!-- Reference Lists -->
     <reference-list id="eventListenerServices"
                     interface="org.apache.unomi.api.services.EventListenerService"
                     availability="optional">
@@ -313,7 +43,6 @@
                 bind-method="bind" unbind-method="unbind" ref="eventServiceImpl"/>
     </reference-list>
 
-    <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="ruleListenerServices"
                     interface="org.apache.unomi.api.services.RuleListenerService"
                     availability="optional">
@@ -342,6 +71,478 @@
                 bind-method="addPersonalizationStrategy" unbind-method="removePersonalizationStrategy"
                 ref="personalizationServiceImpl"/>
     </reference-list>
+
+    <reference-list id="tenantLifecycleListeners"
+                    interface="org.apache.unomi.api.services.TenantLifecycleListener"
+                    availability="optional">
+        <reference-listener ref="tenantServiceImpl"
+                           bind-method="bindListener"
+                           unbind-method="unbindListener"/>
+    </reference-list>
+
+    <!-- Configuration -->
+    <cm:property-placeholder persistent-id="org.apache.unomi.services"
+                             update-strategy="none" placeholder-prefix="${services.">
+        <cm:default-properties>
+            <cm:property name="profile.purge.interval" value="1"/>
+            <cm:property name="profile.purge.inactiveTime" value="180"/>
+            <cm:property name="profile.purge.existTime" value="-1"/>
+            <cm:property name="monthly.index.purge.existTime" value="12"/>
+            <cm:property name="session.purge.existTime" value="-1"/>
+            <cm:property name="event.purge.existTime" value="-1"/>
+            <cm:property name="segment.update.batchSize" value="1000"/>
+            <cm:property name="profile.forceRefreshOnSave" value="false"/>
+            <cm:property name="definitions.refresh.interval" value="10000"/>
+            <cm:property name="properties.refresh.interval" value="10000"/>
+            <cm:property name="segment.refresh.interval" value="1000"/>
+            <cm:property name="segment.max.retries.update.profile.segment" value="5"/>
+            <cm:property name="segment.retry.update.segment.seconds.delay" value="1"/>
+            <cm:property name="segment.recalculate.period" value="1"/>
+            <cm:property name="segment.batch.update" value="false"/>
+            <cm:property name="segment.send.profile.update.event" value="true"/>
+            <cm:property name="segment.daily.dateexpr.evaluation.hourutc" value="5"/>
+            <cm:property name="rules.refresh.interval" value="1000"/>
+            <cm:property name="rules.statistics.refresh.interval" value="10000"/>
+            <cm:property name="rules.optimizationActivated" value="true"/>
+            <cm:property name="scheduler.thread.poolSize" value="5"/>
+            <cm:property name="scheduler.executorNode" value="true" />
+            <cm:property name="scheduler.completedTaskTtlDays" value="30" />
+            <cm:property name="scheduler.nodeId" value="test-scheduler-node" />
+            <cm:property name="scheduler.lockTimeout" value="10000" />
+            <cm:property name="scheduler.purgeTaskEnabled" value="true" />
+            <cm:property name="scopes.refresh.interval" value="1000"/>
+            <cm:property name="goals.refresh.interval" value="5000" />
+            <cm:property name="campaigns.refresh.interval" value="5000" />
+        </cm:default-properties>
+    </cm:property-placeholder>
+
+    <cm:property-placeholder persistent-id="org.apache.unomi.cluster"
+                             update-strategy="reload" placeholder-prefix="${cluster.">
+        <cm:default-properties>
+            <cm:property name="nodeId" value="unomi-node-1"/>
+            <cm:property name="contextserver.publicAddress" value="https://localhost:9443"/>
+            <cm:property name="contextserver.internalAddress" value="http://127.0.0.1:8181"/>
+            <cm:property name="nodeStatisticsUpdateFrequency" value="10000"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+
+    <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
+                             update-strategy="none" placeholder-prefix="${es.">
+        <cm:default-properties>
+            <cm:property name="aggregateQueryBucketSize" value="5000"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+
+    <!-- Beans -->
+    <bean id="multiTypeCacheServiceImpl" class="org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl" />
+
+    <!-- Task Manager Beans -->
+    <bean id="taskExecutorRegistry" class="org.apache.unomi.services.impl.scheduler.TaskExecutorRegistry" />
+
+    <bean id="taskMetricsManager" class="org.apache.unomi.services.impl.scheduler.TaskMetricsManager" />
+
+    <bean id="taskStateManager" class="org.apache.unomi.services.impl.scheduler.TaskStateManager" />
+
+    <bean id="taskValidationManager" class="org.apache.unomi.services.impl.scheduler.TaskValidationManager" />
+
+    <bean id="taskHistoryManager" class="org.apache.unomi.services.impl.scheduler.TaskHistoryManager">
+        <property name="nodeId" value="${services.scheduler.nodeId}"/>
+        <property name="metricsManager" ref="taskMetricsManager"/>
+    </bean>
+
+    <bean id="taskLockManager" class="org.apache.unomi.services.impl.scheduler.TaskLockManager">
+        <property name="nodeId" value="${services.scheduler.nodeId}"/>
+        <property name="lockTimeout" value="${services.scheduler.lockTimeout}"/>
+        <property name="metricsManager" ref="taskMetricsManager"/>
+    </bean>
+
+    <bean id="taskExecutionManager" class="org.apache.unomi.services.impl.scheduler.TaskExecutionManager"
+          init-method="initialize">
+        <property name="nodeId" value="${services.scheduler.nodeId}"/>
+        <property name="threadPoolSize" value="${services.scheduler.thread.poolSize}"/>
+        <property name="stateManager" ref="taskStateManager"/>
+        <property name="lockManager" ref="taskLockManager"/>
+        <property name="metricsManager" ref="taskMetricsManager"/>
+        <property name="historyManager" ref="taskHistoryManager"/>
+        <property name="executorRegistry" ref="taskExecutorRegistry"/>
+    </bean>
+
+    <bean id="taskRecoveryManager" class="org.apache.unomi.services.impl.scheduler.TaskRecoveryManager">
+        <property name="nodeId" value="${services.scheduler.nodeId}"/>
+        <property name="stateManager" ref="taskStateManager"/>
+        <property name="lockManager" ref="taskLockManager"/>
+        <property name="metricsManager" ref="taskMetricsManager"/>
+        <property name="executionManager" ref="taskExecutionManager"/>
+        <property name="executorRegistry" ref="taskExecutorRegistry"/>
+    </bean>
+
+    <!-- Scheduler Provider -->
+    <bean id="persistenceSchedulerProvider" class="org.apache.unomi.services.impl.scheduler.PersistenceSchedulerProvider"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="executorNode" value="${services.scheduler.executorNode}"/>
+        <property name="nodeId" value="${services.scheduler.nodeId}"/>
+        <property name="completedTaskTtlDays" value="${services.scheduler.completedTaskTtlDays}"/>
+        <property name="lockManager" ref="taskLockManager"/>
+    </bean>
+
+    <!-- Register PersistenceSchedulerProvider as an OSGi service -->
+    <service id="persistenceSchedulerProviderService" ref="persistenceSchedulerProvider"
+             interface="org.apache.unomi.services.impl.scheduler.SchedulerProvider"/>
+
+    <!-- Reference to ClusterService for the persistence provider -->
+    <reference id="clusterServiceRef" interface="org.apache.unomi.api.services.ClusterService" availability="optional">
+        <reference-listener ref="persistenceSchedulerProvider"
+                           bind-method="setClusterService"
+                           unbind-method="unsetClusterService"/>
+    </reference>
+
+    <!-- Main Scheduler Service -->
+    <bean id="schedulerServiceImpl" class="org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl"
+        init-method="postConstruct" destroy-method="preDestroy">
+        <property name="threadPoolSize" value="${services.scheduler.thread.poolSize}"/>
+        <property name="executorNode" value="${services.scheduler.executorNode}"/>
+        <property name="completedTaskTtlDays" value="${services.scheduler.completedTaskTtlDays}"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="nodeId" value="${services.scheduler.nodeId}"/>
+        <property name="lockTimeout" value="${services.scheduler.lockTimeout}"/>
+        <property name="purgeTaskEnabled" value="${services.scheduler.purgeTaskEnabled}"/>
+        <!-- Manager dependencies -->
+        <property name="stateManager" ref="taskStateManager"/>
+        <property name="lockManager" ref="taskLockManager"/>
+        <property name="executionManager" ref="taskExecutionManager"/>
+        <property name="recoveryManager" ref="taskRecoveryManager"/>
+        <property name="metricsManager" ref="taskMetricsManager"/>
+        <property name="historyManager" ref="taskHistoryManager"/>
+        <property name="validationManager" ref="taskValidationManager"/>
+        <property name="executorRegistry" ref="taskExecutorRegistry"/>
+    </bean>
+
+    <!-- Optional reference to PersistenceSchedulerProvider with reference-listeners -->
+    <reference id="persistenceSchedulerProviderRef"
+               interface="org.apache.unomi.services.impl.scheduler.SchedulerProvider"
+               availability="optional">
+        <reference-listener ref="schedulerServiceImpl"
+                           bind-method="setPersistenceProvider"
+                           unbind-method="unsetPersistenceProvider"/>
+    </reference>
+
+    <bean id="definitionsServiceImpl" class="org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="definitionsRefreshInterval" value="${services.definitions.refresh.interval}"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
+        <property name="eventAdmin" ref="eventAdmin"/>
+        <property name="auditService" ref="auditService"/>
+    </bean>
+
+    <bean id="eventServiceImpl" class="org.apache.unomi.services.impl.events.EventServiceImpl">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="predefinedEventTypeIds">
+            <set>
+                <value>view</value>
+                <value>login</value>
+                <value>sessionCreated</value>
+                <value>facebookLogin</value>
+                <value>profileUpdated</value>
+            </set>
+        </property>
+        <property name="restrictedEventTypeIds">
+            <set>
+                <value>sessionCreated</value>
+                <value>sessionReassigned</value>
+                <value>profileUpdated</value>
+                <value>ruleFired</value>
+                <value>updateProperties</value>
+            </set>
+        </property>
+        <property name="tenantService" ref="tenantServiceImpl" />
+    </bean>
+
+    <bean id="goalsServiceImpl" class="org.apache.unomi.services.impl.goals.GoalsServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="rulesService" ref="rulesServiceImpl"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
+        <property name="contextManager" ref="executionContextManager"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="goalRefreshInterval" value="${services.goals.refresh.interval}" />
+        <property name="campaignRefreshInterval" value="${services.campaigns.refresh.interval}" />
+        <property name="auditService" ref="auditService"/>
+    </bean>
+
+    <bean id="scopeServiceImpl" class="org.apache.unomi.services.impl.scope.ScopeServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="scopesRefreshInterval" value="${services.scopes.refresh.interval}"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="auditService" ref="auditService"/>
+    </bean>
+
+    <bean id="actionExecutorDispatcherImpl"
+          class="org.apache.unomi.services.actions.impl.ActionExecutorDispatcherImpl">
+        <property name="metricsService" ref="metricsService"/>
+        <property name="scriptExecutor" ref="scriptExecutor"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+    </bean>
+
+    <bean id="rulesServiceImpl" class="org.apache.unomi.services.impl.rules.RulesServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="eventService" ref="eventServiceImpl"/>
+        <property name="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="rulesRefreshInterval" value="${services.rules.refresh.interval}"/>
+        <property name="rulesStatisticsRefreshInterval" value="${services.rules.statistics.refresh.interval}"/>
+        <property name="optimizedRulesActivated" value="${services.rules.optimizationActivated}"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="auditService" ref="auditService"/>
+    </bean>
+
+    <bean id="segmentServiceImpl" class="org.apache.unomi.services.impl.segments.SegmentServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="eventService" ref="eventServiceImpl"/>
+        <property name="rulesService" ref="rulesServiceImpl"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="taskExecutionPeriod" value="${services.segment.recalculate.period}"/>
+        <property name="segmentUpdateBatchSize" value="${services.segment.update.batchSize}"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="segmentRefreshInterval" value="${services.segment.refresh.interval}"/>
+        <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
+        <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}"/>
+        <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
+        <property name="maxRetriesForUpdateProfileSegment" value="${services.segment.max.retries.update.profile.segment}"/>
+        <property name="secondsDelayForRetryUpdateProfileSegment" value="${services.segment.retry.update.segment.seconds.delay}"/>
+        <property name="batchSegmentProfileUpdate" value="${services.segment.batch.update}"/>
+        <property name="sendProfileUpdateEventForSegmentUpdate" value="${services.segment.send.profile.update.event}"/>
+        <property name="dailyDateExprEvaluationHourUtc" value="${services.segment.daily.dateexpr.evaluation.hourutc}"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="auditService" ref="auditService"/>
+    </bean>
+
+    <bean id="userListServiceImpl" class="org.apache.unomi.services.impl.lists.UserListServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+
+    <bean id="profileServiceImpl" class="org.apache.unomi.services.impl.profiles.ProfileServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="segmentService" ref="segmentServiceImpl"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="purgeProfileInterval" value="${services.profile.purge.interval}"/>
+        <property name="purgeProfileInactiveTime" value="${services.profile.purge.inactiveTime}"/>
+        <property name="purgeProfileExistTime" value="${services.profile.purge.existTime}"/>
+        <property name="purgeSessionsAndEventsTime" value="${services.monthly.index.purge.existTime}"/>
+        <property name="purgeSessionExistTime" value="${services.session.purge.existTime}"/>
+        <property name="purgeEventExistTime" value="${services.event.purge.existTime}"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}"/>
+        <property name="propertiesRefreshInterval" value="${services.properties.refresh.interval}"/>
+        <property name="contextManager" ref="executionContextManager"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="auditService" ref="auditService"/>
+    </bean>
+
+    <bean id="queryServiceImpl" class="org.apache.unomi.services.impl.queries.QueryServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+    </bean>
+
+    <bean id="clusterServiceImpl" class="org.apache.unomi.services.impl.cluster.ClusterServiceImpl"
+          init-method="init" destroy-method="destroy">
+        <property name="publicAddress" value="${cluster.contextserver.publicAddress}"/>
+        <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="nodeId" value="${cluster.nodeId}"/>
+        <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
+        <property name="bundleWatcher" ref="bundleWatcher"/>
+    </bean>
+
+    <reference id="schedulerServiceReference" interface="org.apache.unomi.api.services.SchedulerService"
+               availability="optional" timeout="2000">
+        <reference-listener ref="clusterServiceImpl"
+                           bind-method="setSchedulerService"
+                           unbind-method="unsetSchedulerService"/>
+    </reference>
+
+    <bean id="personalizationServiceImpl"
+          class="org.apache.unomi.services.impl.personalization.PersonalizationServiceImpl">
+        <property name="profileService" ref="profileServiceImpl"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+
+    <bean id="patchServiceImpl" class="org.apache.unomi.services.impl.patches.PatchServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="contextManager" ref="executionContextManager"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="auditService" ref="auditService"/>
+    </bean>
+
+    <bean id="topicServiceImpl" class="org.apache.unomi.services.impl.topics.TopicServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+
+    <bean id="configSharingServiceImpl" class="org.apache.unomi.services.impl.configsharing.ConfigSharingServiceImpl"
+          destroy-method="preDestroy">
+        <property name="configProperties">
+            <map>
+                <entry key="internalServerAddress" value="${cluster.contextserver.internalAddress}"/>
+            </map>
+        </property>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+
+    <bean id="tenantServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantServiceImpl">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="executionContextManager" ref="executionContextManager"/>
+    </bean>
+
+    <bean id="tenantMigrationServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantMigrationService">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+    </bean>
+
+    <bean id="tenantMonitoringServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantMonitoringService"
+          init-method="activate" destroy-method="deactivate">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
+    </bean>
+
+    <bean id="tenantQuotaServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantQuotaService"
+          init-method="activate">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
+    </bean>
+
+    <!-- Services -->
+    <service id="multiTypeCacheService" ref="multiTypeCacheServiceImpl" interface="org.apache.unomi.api.services.cache.MultiTypeCacheService" />
+
+    <service id="schedulerService" ref="schedulerServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.SchedulerService</value>
+        </interfaces>
+    </service>
+
+    <service id="definitionsService" ref="definitionsServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.DefinitionsService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.apache.unomi.api.services.TenantLifecycleListener</value>
+        </interfaces>
+    </service>
+
+    <service id="eventService" ref="eventServiceImpl" interface="org.apache.unomi.api.services.EventService"/>
+
+    <service id="goalsService" ref="goalsServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.GoalsService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
+
+    <service id="scopeService" ref="scopeServiceImpl" interface="org.apache.unomi.api.services.ScopeService"/>
+
+    <service id="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl">
+        <interfaces>
+            <value>org.apache.unomi.services.actions.ActionExecutorDispatcher</value>
+        </interfaces>
+    </service>
+
+    <service id="rulesService" ref="rulesServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.RulesService</value>
+            <value>org.apache.unomi.api.services.EventListenerService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.osgi.service.cm.ManagedService</value>
+        </interfaces>
+        <service-properties>
+            <entry key="service.pid" value="org.apache.unomi.services"/>
+        </service-properties>
+    </service>
+
+    <service id="segmentService" ref="segmentServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.SegmentService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
+
+    <service id="userListService" ref="userListServiceImpl">
+        <interfaces>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.apache.unomi.api.services.UserListService</value>
+        </interfaces>
+    </service>
+
+    <service id="profileService" ref="profileServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.ProfileService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
+
+    <service id="queryService" ref="queryServiceImpl" interface="org.apache.unomi.api.services.QueryService"/>
+
+    <service id="personalizationService" ref="personalizationServiceImpl"
+             interface="org.apache.unomi.api.services.PersonalizationService"/>
+
+    <service id="patchService" ref="patchServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.PatchService</value>
+        </interfaces>
+    </service>
+
+    <service id="topicService" ref="topicServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.TopicService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
+
+    <service id="configSharingService" ref="configSharingServiceImpl">
+        <interfaces>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.apache.unomi.api.services.ConfigSharingService</value>
+        </interfaces>
+    </service>
 
     <!-- Property merge strategy executors -->
 
@@ -412,21 +613,33 @@
         </bean>
     </service>
 
-    <bean id="configSharingServiceImpl" class="org.apache.unomi.services.impl.configsharing.ConfigSharingServiceImpl"
-          destroy-method="preDestroy">
-        <property name="configProperties">
-            <map>
-                <entry key="internalServerAddress" value="${cluster.contextserver.internalAddress}"/>
-            </map>
-        </property>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-    </bean>
-
-    <service id="configSharingService" ref="configSharingServiceImpl">
-        <interfaces>
-            <value>org.osgi.framework.SynchronousBundleListener</value>
-            <value>org.apache.unomi.api.services.ConfigSharingService</value>
-        </interfaces>
+    <service id="tenantService" ref="tenantServiceImpl" interface="org.apache.unomi.api.tenants.TenantService">
+        <service-properties>
+            <entry key="service.exported.interfaces" value="org.apache.unomi.api.tenants.TenantService"/>
+        </service-properties>
     </service>
+
+    <service id="tenantMigrationService" ref="tenantMigrationServiceImpl"
+             interface="org.apache.unomi.services.impl.tenants.TenantMigrationService">
+        <service-properties>
+            <entry key="service.exported.interfaces" value="org.apache.unomi.services.impl.tenants.TenantMigrationService"/>
+        </service-properties>
+    </service>
+
+    <service id="tenantMonitoringService" ref="tenantMonitoringServiceImpl"
+             interface="org.apache.unomi.services.impl.tenants.TenantMonitoringService">
+        <service-properties>
+            <entry key="service.exported.interfaces" value="org.apache.unomi.services.impl.tenants.TenantMonitoringService"/>
+        </service-properties>
+    </service>
+
+    <service id="tenantQuotaService" ref="tenantQuotaServiceImpl"
+             interface="org.apache.unomi.services.impl.tenants.TenantQuotaService">
+        <service-properties>
+            <entry key="service.exported.interfaces" value="org.apache.unomi.services.impl.tenants.TenantQuotaService"/>
+        </service-properties>
+    </service>
+
+    <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
 
 </blueprint>

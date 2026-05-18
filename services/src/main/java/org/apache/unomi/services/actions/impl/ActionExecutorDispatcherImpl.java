@@ -21,6 +21,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionDispatcher;
 import org.apache.unomi.api.actions.ActionExecutor;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.metrics.MetricAdapter;
@@ -45,6 +46,7 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
     private final Map<String, ActionDispatcher> actionDispatchers = new ConcurrentHashMap<>();
     private BundleContext bundleContext;
     private ScriptExecutor scriptExecutor;
+    private DefinitionsService definitionsService;
 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
@@ -56,6 +58,10 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
 
     public void setScriptExecutor(ScriptExecutor scriptExecutor) {
         this.scriptExecutor = scriptExecutor;
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
     }
 
     public ActionExecutorDispatcherImpl() {
@@ -82,12 +88,21 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
 
 
     public int execute(Action action, Event event) {
+        if (action == null) {
+            throw new UnsupportedOperationException("Null action passed for event : " + event);
+        }
+        // Defensively resolve the action type if missing (e.g. deserialized actions only have actionTypeId).
+        // This matches the behaviour from unomi-3-dev.
+        if (action.getActionType() == null && definitionsService != null) {
+            ParserHelper.resolveActionType(definitionsService, action);
+        }
         String actionKey = null;
         if (action.getActionType() != null) {
             actionKey = action.getActionType().getActionExecutor();
         }
         if (actionKey == null) {
-            throw new UnsupportedOperationException("No service defined for : " + action.getActionTypeId());
+            LOGGER.warn("Action type or executor is null for actionTypeId={}, action won't execute", action.getActionTypeId());
+            return EventService.NO_CHANGE;
         }
 
         int colonPos = actionKey.indexOf(":");

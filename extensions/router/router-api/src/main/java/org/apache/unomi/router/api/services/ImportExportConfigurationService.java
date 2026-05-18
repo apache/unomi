@@ -94,11 +94,8 @@ public interface ImportExportConfigurationService<T> {
     void delete(String configId);
 
     /**
-     * Consumes pending configuration changes for the Camel router layer.
-     * Implementations typically dequeue IDs whose configurations were updated or removed so that
-     * routes can be refreshed accordingly.
-     *
-     * @return a map from configuration ID to the refresh operation ({@link RouterConstants.CONFIG_CAMEL_REFRESH})
+     * Used by camel route system to get the latest changes on configs and reflect changes on camel routes if necessary
+     * @return map of tenantId to map of configId per operation to be done in camel
      */
-    Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> consumeConfigsToBeRefresh();
+    Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> consumeConfigsToBeRefresh();
 }

@@ -1,0 +1,145 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.unomi.api.tenants;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Service interface for managing multi-tenant functionality in Apache Unomi.
+ * This service provides methods for creating, retrieving, and managing tenants,
+ * as well as handling tenant-specific API keys and tenant context management.
+ * It ensures proper isolation between different tenants' data and configurations.
+ */
+public interface TenantService {
+
+    /**
+     * The ID of the system tenant, which is used for system-wide configurations and data.
+     * The system tenant is special and cannot be removed.
+     */
+    String SYSTEM_TENANT = "system";
+
+    /**
+     * Creates a new tenant in the system with the specified ID and properties.
+     *
+     * @param requestedId the requested ID for the tenant
+     * @param properties additional properties to associate with the tenant
+     * @return the newly created Tenant object
+     * @throws IllegalArgumentException if the requestedId is invalid, already exists, or is a reserved ID
+     */
+    Tenant createTenant(String requestedId, Map<String, Object> properties);
+
+    /**
+     * Generates a new API key for the specified tenant with an optional validity period.
+     *
+     * @param tenantId       the ID of the tenant for which to generate the API key
+     * @param validityPeriod the period (in milliseconds) for which the API key should be valid, null for no expiration
+     * @return the generated ApiKey object containing the key and associated metadata
+     * @throws IllegalArgumentException if tenantId is null or does not exist
+     */
+    ApiKey generateApiKey(String tenantId, Long validityPeriod);
+
+    /**
+     * Retrieves a tenant by its ID.
+     *
+     * @param tenantId the ID of the tenant to retrieve
+     * @return the Tenant object if found, null otherwise
+     */
+    Tenant getTenant(String tenantId);
+
+    /**
+     * Retrieves all tenants registered in the system.
+     * This method provides access to all tenant configurations and metadata,
+     * and should be used with appropriate access controls.
+     *
+     * @return a List of all Tenant objects in the system
+     */
+    List<Tenant> getAllTenants();
+
+    /**
+     * Updates an existing tenant's information.
+     *
+     * @param tenant the tenant with updated information
+     * @throws IllegalArgumentException if tenant is null or does not exist
+     */
+    void saveTenant(Tenant tenant);
+
+    /**
+     * Deletes a tenant and all associated data from the system.
+     *
+     * @param tenantId the ID of the tenant to delete
+     * @throws IllegalArgumentException if tenantId is null or does not exist
+     */
+    void deleteTenant(String tenantId);
+
+    /**
+     * Validates an API key for a given tenant.
+     *
+     * @param tenantId the ID of the tenant
+     * @param key the API key to validate
+     * @return true if the key is valid, false otherwise
+     */
+    boolean validateApiKey(String tenantId, String key);
+
+    /**
+     * Generates a new API key of the specified type for the tenant.
+     *
+     * @param tenantId       the ID of the tenant for which to generate the API key
+     * @param keyType       the type of API key to generate (PUBLIC or PRIVATE)
+     * @param validityPeriod the period (in milliseconds) for which the API key should be valid, null for no expiration
+     * @return the generated ApiKey object containing the key and associated metadata
+     * @throws IllegalArgumentException if tenantId is null or does not exist
+     */
+    ApiKey generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod);
+
+    /**
+     * Validates an API key for a given tenant and checks if it has the required type.
+     *
+     * @param tenantId the ID of the tenant
+     * @param key the API key to validate
+     * @param requiredType the required type of the API key
+     * @return true if the key is valid and matches the required type, false otherwise
+     */
+    boolean validateApiKeyWithType(String tenantId, String key, ApiKey.ApiKeyType requiredType);
+
+    /**
+     * Gets the API key of the specified type for a tenant.
+     *
+     * @param tenantId the ID of the tenant
+     * @param keyType the type of API key to retrieve
+     * @return the API key of the specified type, or null if not found
+     */
+    ApiKey getApiKey(String tenantId, ApiKey.ApiKeyType keyType);
+
+    /**
+     * Retrieves a tenant by its API key.
+     *
+     * @param key the API key to look up
+     * @return the Tenant object if found, null otherwise
+     */
+    Tenant getTenantByApiKey(String key);
+
+    /**
+     * Retrieves a tenant by its API key, ensuring it matches the required type.
+     *
+     * @param key the API key to look up
+     * @param requiredType the required type of the API key (PUBLIC or PRIVATE)
+     * @return the Tenant object if found and key type matches, null otherwise
+     */
+    Tenant getTenantByApiKey(String key, ApiKey.ApiKeyType requiredType);
+
+}

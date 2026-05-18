@@ -63,6 +63,10 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-services-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-services</artifactId>
         </dependency>
         <dependency>
@@ -73,17 +77,15 @@
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-elasticsearch-core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-opensearch-core</artifactId>
+        </dependency>
 
         <!-- plugins -->
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-persistence-opensearch-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-opensearch-conditions</artifactId>
-            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>

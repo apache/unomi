@@ -84,8 +84,10 @@ public class HealthCheckService {
                     new HealthCheckHttpContext(config.get(CONFIG_AUTH_REALM)));
             registered = true;
         } else {
-            httpService.unregister("/health/check");
-            registered = false;
+            if (registered) {
+                httpService.unregister("/health/check");
+                registered = false;
+            }
             LOGGER.info("Healthcheck service is disabled");
         }
     }

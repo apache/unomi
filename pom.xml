@@ -151,7 +151,22 @@
         <maven-site.plugin.version>3.21.0</maven-site.plugin.version>
         <apache-rat.plugin.version>0.16.1</apache-rat.plugin.version>
         <jgitflow.plugin.version>1.0-m5.1</jgitflow.plugin.version>
+        <buildnumber-maven-plugin.version>1.4</buildnumber-maven-plugin.version>
+        <depends-maven-plugin.version>1.4.0</depends-maven-plugin.version>
+        <download-maven-plugin.version>1.3.0</download-maven-plugin.version>
+        <maven-antrun-plugin.version>1.8</maven-antrun-plugin.version>
+        <exec-maven-plugin.version>3.1.0</exec-maven-plugin.version>
+        <maven-remote-resources-plugin.version>3.0.0</maven-remote-resources-plugin.version>
         <docker-maven-plugin.version>0.48.0</docker-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
+        <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
+        <frontend-maven-plugin.version>1.12.1</frontend-maven-plugin.version>
+        <asciidoctor-maven-plugin.version>3.2.0</asciidoctor-maven-plugin.version>
+        <checksum-maven-plugin.version>1.7</checksum-maven-plugin.version>
+        <maven-jar-plugin.version>3.2.2</maven-jar-plugin.version>
+        <maven-checkstyle-plugin.version>2.13</maven-checkstyle-plugin.version>
+        <license-maven-plugin.version>2.0.0</license-maven-plugin.version>
+        <maven-notice-plugin.version>1.0.6</maven-notice-plugin.version>
 
         <node.version>v16.20.2</node.version>
         <yarn.version>v1.22.19</yarn.version>
@@ -393,6 +408,7 @@
         <module>lifecycle-watcher</module>
         <module>persistence-elasticsearch</module>
         <module>persistence-opensearch</module>
+        <module>services-common</module>
         <module>services</module>
         <!-- plugins -->
         <module>plugins</module>
@@ -479,7 +495,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-checkstyle-plugin</artifactId>
-                        <version>2.13</version>
                         <executions>
                             <execution>
                                 <id>verify-style</id>
@@ -537,7 +552,6 @@
                     <plugin>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>license-maven-plugin</artifactId>
-                        <version>2.0.0</version>
                         <configuration>
                             <verbose>false</verbose>
                             <addSvnKeyWords>true</addSvnKeyWords>
@@ -572,7 +586,6 @@
                     <plugin>
                         <groupId>org.apache.rat</groupId>
                         <artifactId>apache-rat-plugin</artifactId>
-                        <version>0.11</version>
                         <executions>
                             <execution>
                                 <phase>verify</phase>
@@ -647,6 +660,10 @@
                                 <exclude>**/*.js.map</exclude>
                                 <!-- Exclude dependency tree generated files -->
                                 <exclude>**/dependency_tree.txt</exclude>
+                                <!-- exclude Cursor IDE files -->
+                                <exclude>.cursor/**</exclude>
+                                <!-- exclude ElasticSearch snapshots repository -->
+                                <exclude>**/snapshots_repository/**/*</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
@@ -660,8 +677,6 @@
                     <plugin>
                         <groupId>org.jasig.maven</groupId>
                         <artifactId>maven-notice-plugin</artifactId>
-                        <!--version>1.0.7-SNAPSHOT</version-->
-                        <version>1.0.6</version>
                         <executions>
                             <execution>
                                 <phase>verify</phase>
@@ -872,9 +887,84 @@
                     <version>${dependency-check.plugin.version}</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>buildnumber-maven-plugin</artifactId>
+                    <version>${buildnumber-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.servicemix.tooling</groupId>
+                    <artifactId>depends-maven-plugin</artifactId>
+                    <version>${depends-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.googlecode.maven-download-plugin</groupId>
+                    <artifactId>download-maven-plugin</artifactId>
+                    <version>${download-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-antrun-plugin</artifactId>
+                    <version>${maven-antrun-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>exec-maven-plugin</artifactId>
+                    <version>${exec-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-remote-resources-plugin</artifactId>
+                    <version>${maven-remote-resources-plugin.version}</version>
+                </plugin>
+                <plugin>
                     <groupId>io.fabric8</groupId>
                     <artifactId>docker-maven-plugin</artifactId>
                     <version>${docker-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.jacoco</groupId>
+                    <artifactId>jacoco-maven-plugin</artifactId>
+                    <version>${jacoco-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>${maven-clean-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.github.eirslett</groupId>
+                    <artifactId>frontend-maven-plugin</artifactId>
+                    <version>${frontend-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.asciidoctor</groupId>
+                    <artifactId>asciidoctor-maven-plugin</artifactId>
+                    <version>${asciidoctor-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>net.nicoulaj.maven.plugins</groupId>
+                    <artifactId>checksum-maven-plugin</artifactId>
+                    <version>${checksum-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>${maven-jar-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-checkstyle-plugin</artifactId>
+                    <version>${maven-checkstyle-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.mycila</groupId>
+                    <artifactId>license-maven-plugin</artifactId>
+                    <version>${license-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.jasig.maven</groupId>
+                    <artifactId>maven-notice-plugin</artifactId>
+                    <version>${maven-notice-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>

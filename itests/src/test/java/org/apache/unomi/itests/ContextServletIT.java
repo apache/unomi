@@ -17,15 +17,31 @@
 
 package org.apache.unomi.itests;
 
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.auth.AuthSchemeProvider;
+import org.apache.http.impl.auth.BasicSchemeFactory;
+import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.impl.client.TargetAuthenticationStrategy;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.itests.TestUtils.RequestResponse;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,7 +68,7 @@ import static org.junit.Assert.*;
 public class ContextServletIT extends BaseIT {
     private final static String CONTEXT_URL = "/cxs/context.json";
 
-    private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
+    private final static String UNOMI_API_KEY_HTTP_HEADER_KEY = "X-Unomi-Api-Key";
     private final static String TEST_EVENT_TYPE = "testEventType";
     private final static String TEST_EVENT_TYPE_SCHEMA = "schemas/events/test-event-type.json";
     private final static String FLOAT_PROPERTY_EVENT_TYPE = "floatPropertyType";
@@ -64,9 +80,8 @@ public class ContextServletIT extends BaseIT {
     private final static String SEGMENT_ID = "test-segment-id";
     private final static int SEGMENT_NUMBER_OF_DAYS = 30;
 
-    private static final int DEFAULT_TRYING_TIMEOUT = 2000;
-    private static final int DEFAULT_TRYING_TRIES = 30;
     public static final String TEST_SCOPE = "test-scope";
+    public static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
 
     private Profile profile;
 
@@ -108,9 +123,10 @@ public class ContextServletIT extends BaseIT {
 
     @After
     public void tearDown() throws InterruptedException {
-        TestUtils.removeAllEvents(definitionsService, persistenceService);
-        TestUtils.removeAllSessions(definitionsService, persistenceService);
-        TestUtils.removeAllProfiles(definitionsService, persistenceService);
+        persistenceService.refresh();
+        TestUtils.removeAllEvents(definitionsService, persistenceService, true, tenantService, executionContextManager);
+        TestUtils.removeAllSessions(definitionsService, persistenceService, true, tenantService, executionContextManager);
+        TestUtils.removeAllProfiles(definitionsService, persistenceService, true, tenantService, executionContextManager);
         profileService.delete(profile.getItemId(), false);
         removeItems(Session.class);
         segmentService.removeSegmentDefinition(SEGMENT_ID, false);
@@ -133,7 +149,7 @@ public class ContextServletIT extends BaseIT {
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
         String scope = TEST_SCOPE;
-        String eventTypeOriginal = "test-event-type-original";
+        String eventTypeOriginal = "testEventType-original";
         Profile profile = new Profile(TEST_PROFILE_ID);
         Session session = new Session(sessionId, profile, new Date(), scope);
         Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
@@ -155,14 +171,18 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(session.getItemId());
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        addPrivateTenantAuth(request, testTenant, testPrivateKey);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, sessionId);
+        TestUtils.executeContextJSONRequest(request, sessionId, -1, false);
 
         event = keepTrying("Event " + eventId + " not updated in the required time", () -> eventService.getEvent(eventId),
                 savedEvent -> Objects.nonNull(savedEvent) && TEST_EVENT_TYPE.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
         assertEquals(2, event.getVersion().longValue());
+    }
+
+    private void addPublicTenantAuth(HttpPost request) {
+        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
     }
 
     @Test
@@ -183,7 +203,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(sessionId);
         contextRequest.setEvents(Collections.singletonList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        addPublicTenantAuth(request);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
 
@@ -201,7 +221,7 @@ public class ContextServletIT extends BaseIT {
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
         String scope = TEST_SCOPE;
-        String eventTypeOriginal = "test-event-type-original";
+        String eventTypeOriginal = "testEventType-original";
         String eventTypeUpdated = TEST_EVENT_TYPE;
         Profile profile = new Profile(TEST_PROFILE_ID);
         Session session = new Session(sessionId, profile, new Date(), scope);
@@ -229,7 +249,7 @@ public class ContextServletIT extends BaseIT {
 
         // Check event type did not changed
         event = shouldBeTrueUntilEnd("Event type should not have changed", () -> eventService.getEvent(eventId),
-                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, 10);
+                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
         assertEquals(1, event.getVersion().longValue());
     }
 
@@ -239,7 +259,7 @@ public class ContextServletIT extends BaseIT {
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
         String scope = TEST_SCOPE;
-        String eventTypeOriginal = "test-event-type-original";
+        String eventTypeOriginal = "testEventType-original";
         String eventTypeUpdated = TEST_EVENT_TYPE;
         Session session = new Session(sessionId, profile, new Date(), scope);
         Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
@@ -261,7 +281,7 @@ public class ContextServletIT extends BaseIT {
 
         // Check event type did not changed
         event = shouldBeTrueUntilEnd("Event type should not have changed", () -> eventService.getEvent(eventId),
-                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, 10);
+                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
 
         assertEquals(1, event.getVersion().longValue());
     }
@@ -275,7 +295,7 @@ public class ContextServletIT extends BaseIT {
         event.setEventType(TEST_EVENT_TYPE);
         event.setScope(scope);
 
-        //Act
+        //Act - Send first event
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setSessionId(sessionId);
         contextRequest.setRequireSegments(true);
@@ -286,13 +306,50 @@ public class ContextServletIT extends BaseIT {
 
         refreshPersistence(Event.class);
 
-        //Add the context-profile-id cookie to the second event
-        request.addHeader("Cookie", cookieHeaderValue);
-        ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
+        // Send second event (segment requires minimumEventCount=2)
+        Event secondEvent = new Event();
+        secondEvent.setEventType(TEST_EVENT_TYPE);
+        secondEvent.setScope(scope);
+        ContextRequest secondContextRequest = new ContextRequest();
+        secondContextRequest.setSessionId(sessionId);
+        secondContextRequest.setRequireSegments(true);
+        secondContextRequest.setEvents(Arrays.asList(secondEvent));
+        HttpPost secondRequest = new HttpPost(getFullUrl(CONTEXT_URL));
+        secondRequest.addHeader("Cookie", cookieHeaderValue);
+        secondRequest.setEntity(new StringEntity(objectMapper.writeValueAsString(secondContextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.executeContextJSONRequest(secondRequest, sessionId);
 
-        //Assert
-        assertEquals(1, response.getProfileSegments().size());
-        assertThat(response.getProfileSegments(), hasItem(SEGMENT_ID));
+        // Wait for profile to be saved with updated past event counts and segments
+        // The SetEventOccurenceCountAction updates pastEvents, then EvaluateProfileSegmentsAction
+        // updates segments, then profile is saved in finalizeEventsRequest
+        refreshPersistence(Event.class, Profile.class);
+
+        //Assert - wait for segment to be added after events are processed
+        // Need to wait for the profile to be saved and segments to be updated
+        ContextResponse finalResponse = keepTrying("Profile should be added to segment after two events",
+                () -> {
+                    try {
+                        HttpPost retryRequest = new HttpPost(getFullUrl(CONTEXT_URL));
+                        retryRequest.addHeader("Cookie", cookieHeaderValue);
+                        ContextRequest retryContextRequest = new ContextRequest();
+                        retryContextRequest.setSessionId(sessionId);
+                        retryContextRequest.setRequireSegments(true);
+                        retryRequest.setEntity(new StringEntity(objectMapper.writeValueAsString(retryContextRequest), ContentType.APPLICATION_JSON));
+                        ContextResponse response = (TestUtils.executeContextJSONRequest(retryRequest, sessionId)).getContextResponse();
+                        // Also refresh to ensure profile is loaded from persistence
+                        refreshPersistence(Profile.class);
+                        return response;
+                    } catch (Exception e) {
+                        return null;
+                    }
+                },
+                retryResponse -> retryResponse != null && retryResponse.getProfileSegments() != null
+                        && retryResponse.getProfileSegments().size() == 1
+                        && retryResponse.getProfileSegments().contains(SEGMENT_ID),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        assertEquals(1, finalResponse.getProfileSegments().size());
+        assertThat(finalResponse.getProfileSegments(), hasItem(SEGMENT_ID));
 
     }
 
@@ -326,7 +383,7 @@ public class ContextServletIT extends BaseIT {
         shouldBeTrueUntilEnd("Profile " + response.getProfileId() + " not found in the required time",
                 () -> profileService.load(response.getProfileId()),
                 (savedProfile) -> Objects.nonNull(savedProfile) && !savedProfile.getSegments().contains(SEGMENT_ID), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
+                DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test
@@ -359,14 +416,14 @@ public class ContextServletIT extends BaseIT {
         shouldBeTrueUntilEnd("Profile " + response.getProfileId() + " not found in the required time",
                 () -> profileService.load(response.getProfileId()),
                 (savedProfile) -> Objects.nonNull(savedProfile) && !savedProfile.getSegments().contains(SEGMENT_ID), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
+                DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test
     public void testCreateEventWithProfileId_Success() throws Exception {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
-        String eventType = "test-event-type";
+        String eventType = TEST_EVENT_TYPE;
         Event event = new Event();
         event.setEventType(eventType);
         event.setItemId(eventId);
@@ -377,7 +434,7 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        addPublicTenantAuth(request);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
 
@@ -404,9 +461,9 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        addPrivateTenantAuth(request, testTenant, testPrivateKey);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
+        TestUtils.executeContextJSONRequest(request, null, -1, false);
 
         //Assert
         event = keepTrying("Event not found", () -> eventService.getEvent(eventId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
@@ -434,13 +491,13 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        addPrivateTenantAuth(request, testTenant, testPrivateKey);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
 
         //Assert
         shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
+                DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test
@@ -461,13 +518,13 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        addPrivateTenantAuth(request, testTenant, testPrivateKey);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
 
         //Assert
         shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
+                DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test
@@ -485,10 +542,10 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(
                 new StringEntity(getValidatedBundleJSON("security/mvel-payload-1.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
+        RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
 
         shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
-                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test
@@ -497,7 +554,7 @@ public class ContextServletIT extends BaseIT {
         Map<String, String> parameters = new HashMap<>();
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
+        RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("Invalid response code", 200, response.getStatusCode());
     }
 
@@ -779,6 +836,66 @@ public class ContextServletIT extends BaseIT {
                 /*  We can see we still have old control group check stored in the session too */ false);
     }
 
+    @Test
+    public void testContextEndpointAuthentication() throws Exception {
+        // Create a tenant for testing
+        Tenant tenant = tenantService.createTenant("TestTenant", Collections.emptyMap());
+        ApiKey publicKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
+        ApiKey privateKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+
+        // Test without any authentication
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID, 401, false);
+        Assert.assertEquals("Unauthenticated request should be rejected", 401, response.getStatusCode());
+
+        // Test with JAAS authentication (should succeed)
+        BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
+
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setAuthenticationEnabled(true)
+                .setTargetPreferredAuthSchemes(Arrays.asList(AuthSchemes.BASIC))
+                .build();
+
+        CloseableHttpClient adminClient = HttpClients.custom()
+                .setDefaultCredentialsProvider(credsProvider)
+                .setDefaultRequestConfig(requestConfig)
+                .build();
+
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        // We need to specify which tenant we want to access since we are using the system administrator.
+        request.addHeader(UNOMI_TENANT_ID_HEADER, TEST_TENANT_ID);
+        CloseableHttpResponse jaasResponse = adminClient.execute(request);
+        Assert.assertEquals("JAAS authenticated request should succeed", 200, jaasResponse.getStatusLine().getStatusCode());
+
+        // Test with public API key (should succeed)
+        contextRequest.setPublicApiKey(publicKey.getKey());
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        Assert.assertEquals("Public API key request should succeed", 200, response.getStatusCode());
+
+        // Test with private API key (should fail for public endpoint)
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(request, tenant, privateKey);
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        Assert.assertEquals("Private API key should be accepted for public endpoint to be able to update events and send restricted events", 200, response.getStatusCode());
+
+        // Cleanup
+        tenantService.deleteTenant(tenant.getItemId());
+    }
+
+    private static void addPrivateTenantAuth(HttpPost request, Tenant tenant, ApiKey privateKey) {
+        request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
+            (tenant.getItemId() + ":" + privateKey.getKey()).getBytes()));
+    }
+
     private void performPersonalizationWithControlGroup(Map<String, String> controlGroupConfig, List<String> expectedVariants,
                                                         boolean expectedControlGroupInfoInPersoResult, boolean expectedControlGroupValueInPersoResult,
                                                         Boolean expectedControlGroupValueInProfile, Boolean expectedControlGroupValueInSession) throws Exception {
@@ -830,7 +947,7 @@ public class ContextServletIT extends BaseIT {
         customPropertyType.setValueTypeId("text");
         profileService.setPropertyType(customPropertyType);
         // New profile with the custom property type
-        Profile profile = new Profile("test-profile-id" + System.currentTimeMillis());
+        Profile profile = new Profile(TEST_PROFILE_ID + System.currentTimeMillis());
         profile.setProperty("customProperty", "concealedValue");
         profileService.save(profile);
 
@@ -846,10 +963,7 @@ public class ContextServletIT extends BaseIT {
         // set the property as concealed
         customPropertyType.getMetadata().getSystemTags().add("concealed");
         profileService.deletePropertyType(customPropertyType.getItemId());
-        persistenceService.refreshIndex(PropertyType.class);
-        Thread.sleep(2000);
         profileService.setPropertyType(customPropertyType);
-
         // Not in all properties
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         assertNull(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"));
@@ -871,6 +985,37 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setRequiredProfileProperties(Arrays.asList("*"));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+    }
+
+    @Test
+    public void testContextRequestWithPublicApiKey() throws Exception {
+        // Create tenant with API keys
+        Tenant tenant = tenantService.createTenant("ContextApiKeyTest", Collections.emptyMap());
+        ApiKey publicKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
+
+        // Create context request with public API key
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+        contextRequest.setPublicApiKey(publicKey.getKey());
+
+        // Send request
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+
+        // Verify response
+        ContextResponse contextResponse = response.getContextResponse();
+        assertNotNull("Context response should not be null", contextResponse);
+
+        // Test with invalid API key
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        contextRequest.setPublicApiKey("invalid-key");
+        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, "invalid-key");
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID, 401, false);
+
+        // Verify error response for invalid key
+        assertEquals("Should receive unauthorized response", 401, response.getStatusCode());
     }
 
     private Boolean getPersistedControlGroupStatus(SystemPropertiesItem systemPropertiesItem, String personalizationId) {

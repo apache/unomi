@@ -123,7 +123,7 @@
                 dataType: 'json',
                 async: false,
                 headers : {
-                    'X-Unomi-Peer' : '670c26d1cc413346c3b2fd9ce65dab41' // this is configured in the etc/org.apache.unomi.thirdparty.cfg
+                    'X-Unomi-Api-Key' : '670c26d1cc413346c3b2fd9ce65dab41' // this is configured in the etc/org.apache.unomi.thirdparty.cfg
                 },
                 success: function (data) {
                     console.log("Unomi response:", data);

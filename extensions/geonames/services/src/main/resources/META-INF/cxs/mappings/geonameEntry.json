@@ -18,6 +18,15 @@
     }
   ],
   "properties": {
+    "creationDate" : {
+      "type" : "date"
+    },
+    "lastModificationDate" : {
+      "type" : "date"
+    },
+    "lastSyncDate" : {
+      "type" : "date"
+    },
     "elevation": {
       "type": "long"
     },

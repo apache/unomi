@@ -25,7 +25,7 @@ import java.util.Map;
  * This enum replaces prior Elasticsearch utilities with a 100% compatible implementation hosted
  * within Unomi, allowing us to remove the dependency while retaining identical behavior in the
  * persistence layer and tests.
- * 
+ *
  * TODO maybe evaluate https://github.com/unitsofmeasurement/indriya instead of this implementation
  * to see if it can be a 100% compatible replacement.
  */

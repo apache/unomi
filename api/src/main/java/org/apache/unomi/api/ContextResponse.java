@@ -20,10 +20,8 @@ package org.apache.unomi.api;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.RulesService;
 
-import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * A context server response resulting from the evaluation of a client's context request. Note that all returned values result of the evaluation of the data provided in the

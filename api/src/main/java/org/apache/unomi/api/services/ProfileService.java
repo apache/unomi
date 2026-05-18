@@ -218,13 +218,6 @@ public interface ProfileService {
     void removeProfileSessions(String profileId);
 
     /**
-     * Deletes the session identified by the given identifier from persistence.
-     *
-     * @param sessionIdentifier the unique identifier for the session
-     */
-    void deleteSession(String sessionIdentifier);
-
-    /**
      * Checks whether the specified profile and/or session satisfy the specified condition.
      *
      * @param condition the condition we're testing against which might or might not have profile- or session-specific sub-conditions
@@ -285,7 +278,7 @@ public interface ProfileService {
      *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
      * @return a {@link PartialList} of sessions for the persona identified by the specified identifier
      */
-    PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy);
+    PartialList<PersonaSession> getPersonaSessions(String personaId, int offset, int size, String sortBy);
 
     /**
      * Save a persona with its sessions.
@@ -450,4 +443,10 @@ public interface ProfileService {
      */
     @Deprecated
     void purgeMonthlyItems(int existsNumberOfMonths);
+
+    /**
+     * Delete a session using its identifier
+     * @param sessionIdentifier the unique identifier for the session
+     */
+    void deleteSession(String sessionIdentifier);
 }

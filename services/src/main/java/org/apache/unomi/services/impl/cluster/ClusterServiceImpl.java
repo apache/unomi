@@ -25,10 +25,12 @@ import org.apache.unomi.api.ServerInfo;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.ClusterService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.osgi.framework.BundleContext;
 
 import java.io.Serializable;
 import java.lang.management.ManagementFactory;
@@ -36,6 +38,7 @@ import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Implementation of the persistence service interface
@@ -48,8 +51,7 @@ public class ClusterServiceImpl implements ClusterService {
 
     private String publicAddress;
     private String internalAddress;
-    //private SchedulerService schedulerService; /* Wait for PR UNOMI-878 to reactivate that code
-    private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
+    private SchedulerService schedulerService;
     private String nodeId;
     private long nodeStartTime;
     private long nodeStatisticsUpdateFrequency = 10000;
@@ -58,13 +60,6 @@ public class ClusterServiceImpl implements ClusterService {
     private volatile List<ClusterNode> cachedClusterNodes = Collections.emptyList();
 
     private BundleWatcher bundleWatcher;
-    private ScheduledFuture<?> updateSystemStatsFuture;
-    private ScheduledFuture<?> cleanupStaleNodesFuture;
-
-    /**
-     * Max time to wait for persistence service (in milliseconds)
-     */
-    private static final long MAX_WAIT_TIME = 60000; // 60 seconds
 
     /**
      * Sets the bundle watcher used to retrieve server information
@@ -77,55 +72,12 @@ public class ClusterServiceImpl implements ClusterService {
     }
 
     /**
-     * Waits for the persistence service to become available.
-     * This method will retry getting the persistence service with exponential backoff
-     * until it's available or until the maximum wait time is reached.
-     *
-     * @throws IllegalStateException if the persistence service is not available after the maximum wait time
-     */
-    private void waitForPersistenceService() {
-        if (shutdownNow) {
-            return;
-        }
-
-        // If persistence service is directly set (e.g., in unit tests), no need to wait
-        if (persistenceService != null) {
-            LOGGER.debug("Persistence service is already available, no need to wait");
-            return;
-        }
-
-        // Try to get the service with retries
-        long startTime = System.currentTimeMillis();
-        long waitTime = 50; // Start with 50ms wait time
-
-        while (System.currentTimeMillis() - startTime < MAX_WAIT_TIME) {
-            if (persistenceService != null) {
-                LOGGER.info("Persistence service is now available");
-                return;
-            }
-
-            try {
-                LOGGER.debug("Waiting for persistence service... ({}ms elapsed)", System.currentTimeMillis() - startTime);
-                Thread.sleep(waitTime);
-                // Exponential backoff with a maximum of 5 seconds
-                waitTime = Math.min(waitTime * 2, 5000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                LOGGER.error("Interrupted while waiting for persistence service", e);
-                break;
-            }
-        }
-
-        throw new IllegalStateException("PersistenceService not available after waiting " + MAX_WAIT_TIME + "ms");
-    }
-
-    /**
-     * For unit tests and backward compatibility - directly sets the persistence service
+     * Sets the persistence service via Blueprint dependency injection
      * @param persistenceService the persistence service to set
      */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
-        LOGGER.info("PersistenceService set directly");
+        LOGGER.info("PersistenceService set via Blueprint dependency injection");
     }
 
     public void setPublicAddress(String publicAddress) {
@@ -140,7 +92,6 @@ public class ClusterServiceImpl implements ClusterService {
         this.nodeStatisticsUpdateFrequency = nodeStatisticsUpdateFrequency;
     }
 
-    /* Wait for PR UNOMI-878 to reactivate that code
     public void setSchedulerService(SchedulerService schedulerService) {
         this.schedulerService = schedulerService;
 
@@ -151,21 +102,18 @@ public class ClusterServiceImpl implements ClusterService {
             initializeScheduledTasks();
         }
     }
-    */
 
-    /* Wait for PR UNOMI-878 to reactivate that code
     /**
      * Unbind method for the scheduler service, called by the OSGi framework when the service is unregistered
      * @param schedulerService The scheduler service being unregistered
      */
-    /*
     public void unsetSchedulerService(SchedulerService schedulerService) {
         if (this.schedulerService == schedulerService) {
-            LOGGER.info("SchedulerService was unset");
+            LOGGER.info("SchedulerService was unbound, cancelling scheduled tasks");
+            cancelScheduledTasks();
             this.schedulerService = null;
         }
     }
-    */
 
     public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
@@ -183,12 +131,11 @@ public class ClusterServiceImpl implements ClusterService {
             throw new IllegalStateException(errorMessage);
         }
 
-        // Wait for persistence service to be available
-        try {
-            waitForPersistenceService();
-        } catch (IllegalStateException e) {
-            LOGGER.error("Failed to initialize cluster service: {}", e.getMessage());
-            return;
+        // Validate that persistence service is available
+        if (persistenceService == null) {
+            String errorMessage = "CRITICAL: PersistenceService is not set. This is a required dependency for cluster operation.";
+            LOGGER.error(errorMessage);
+            throw new IllegalStateException(errorMessage);
         }
 
         nodeStartTime = System.currentTimeMillis();
@@ -196,16 +143,12 @@ public class ClusterServiceImpl implements ClusterService {
         // Register this node in the persistence service
         registerNodeInPersistence();
 
-        /* Wait for PR UNOMI-878 to reactivate that code
-        /*
         // Only initialize scheduled tasks if scheduler service is available
         if (schedulerService != null) {
             initializeScheduledTasks();
         } else {
             LOGGER.warn("SchedulerService not available during ClusterService initialization. Scheduled tasks will not be registered. They will be registered when SchedulerService becomes available.");
         }
-        */
-        initializeScheduledTasks();
 
         LOGGER.info("Cluster service initialized with node ID: {}", nodeId);
     }
@@ -215,12 +158,10 @@ public class ClusterServiceImpl implements ClusterService {
      * This method can be called later if schedulerService wasn't available during init.
      */
     public void initializeScheduledTasks() {
-        /* Wait for PR UNOMI-878 to reactivate that code
         if (schedulerService == null) {
             LOGGER.error("Cannot initialize scheduled tasks: SchedulerService is not set");
             return;
         }
-        */
 
         // Schedule regular updates of the node statistics
         TimerTask statisticsTask = new TimerTask() {
@@ -233,10 +174,7 @@ public class ClusterServiceImpl implements ClusterService {
                 }
             }
         };
-        /* Wait for PR UNOMI-878 to reactivate that code
         schedulerService.createRecurringTask("clusterNodeStatisticsUpdate", nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS, statisticsTask, false);
-        */
-        updateSystemStatsFuture = scheduledExecutorService.scheduleAtFixedRate(statisticsTask, 100, nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS);
 
         // Schedule cleanup of stale nodes
         TimerTask cleanupTask = new TimerTask() {
@@ -249,10 +187,7 @@ public class ClusterServiceImpl implements ClusterService {
                 }
             }
         };
-        /* Wait for PR UNOMI-878 to reactivate that code
         schedulerService.createRecurringTask("clusterStaleNodesCleanup", 60000, TimeUnit.MILLISECONDS, cleanupTask, false);
-        */
-        cleanupStaleNodesFuture = scheduledExecutorService.scheduleAtFixedRate(cleanupTask, 100, 60000, TimeUnit.MILLISECONDS);
 
         LOGGER.info("Cluster service scheduled tasks initialized");
     }
@@ -261,52 +196,82 @@ public class ClusterServiceImpl implements ClusterService {
         LOGGER.info("Cluster service shutting down...");
         shutdownNow = true;
 
-        // Cancel scheduled tasks
-        if (updateSystemStatsFuture != null) {
-            boolean successfullyCancelled = updateSystemStatsFuture.cancel(false);
-            if (!successfullyCancelled) {
-                LOGGER.warn("Failed to cancel scheduled task: clusterNodeStatisticsUpdate");
-            } else {
-                LOGGER.info("Scheduled task: clusterNodeStatisticsUpdate cancelled");
-            }
-        }
-        if (cleanupStaleNodesFuture != null) {
-            boolean successfullyCancelled = cleanupStaleNodesFuture.cancel(false);
-            if (!successfullyCancelled) {
-                LOGGER.warn("Failed to cancel scheduled task: cleanupStaleNodesFuture");
-            } else {
-                LOGGER.info("Scheduled task: cleanupStaleNodesFuture cancelled");
-            }
-        }
-        if (scheduledExecutorService != null) {
-            scheduledExecutorService.shutdownNow();
-            try {
-                boolean successfullyTerminated = scheduledExecutorService.awaitTermination(10, TimeUnit.SECONDS);
-                if (!successfullyTerminated) {
-                    LOGGER.warn("Failed to terminate scheduled tasks after 10 seconds...");
-                } else {
-                    LOGGER.info("Scheduled tasks terminated");
-                }
-            } catch (InterruptedException e) {
-                LOGGER.error("Error waiting for scheduled tasks to terminate", e);
-            }
-        }
+        cancelScheduledTasks();
 
-        // Remove node from persistence service
+        // Remove node from persistence service with timeout to avoid blocking during shutdown
         if (persistenceService != null) {
             try {
-                persistenceService.remove(nodeId, ClusterNode.class);
-                LOGGER.info("Node {} removed from cluster", nodeId);
+                // Use a separate thread with timeout to avoid blocking on OSGi Blueprint proxy
+                ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
+                    Thread t = new Thread(r, "ClusterService-Shutdown");
+                    t.setDaemon(true);
+                    return t;
+                });
+
+                AtomicReference<Exception> exceptionRef = new AtomicReference<>();
+                Future<?> future = executor.submit(() -> {
+                    try {
+                        persistenceService.remove(nodeId, ClusterNode.class);
+                        LOGGER.info("Node {} removed from cluster", nodeId);
+                    } catch (Exception e) {
+                        exceptionRef.set(e);
+                    }
+                });
+
+                try {
+                    // Wait up to 2 seconds for the removal to complete
+                    future.get(2, TimeUnit.SECONDS);
+                } catch (TimeoutException e) {
+                    // Timeout - cancel the operation and continue shutdown
+                    future.cancel(true);
+                    LOGGER.debug("Timeout removing node from cluster during shutdown (this is expected if services are shutting down)");
+                } catch (ExecutionException e) {
+                    // Execution exception - log and continue
+                    Exception cause = exceptionRef.get();
+                    if (cause != null) {
+                        LOGGER.debug("Error removing node from cluster during shutdown (this is expected if services are shutting down): {}", cause.getMessage());
+                    } else {
+                        LOGGER.debug("Error removing node from cluster during shutdown: {}", e.getMessage());
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    future.cancel(true);
+                    LOGGER.debug("Interrupted while removing node from cluster during shutdown");
+                } finally {
+                    executor.shutdownNow();
+                }
             } catch (Exception e) {
-                LOGGER.error("Error removing node from cluster", e);
+                // During shutdown, persistence service may be unavailable - this is expected
+                LOGGER.debug("Error removing node from cluster during shutdown (this is expected if services are shutting down): {}", e.getMessage());
             }
+        } else {
+            LOGGER.debug("Persistence service not available during shutdown, skipping node removal");
         }
 
         // Clear references
         persistenceService = null;
         bundleWatcher = null;
+        schedulerService = null;
 
         LOGGER.info("Cluster service shutdown.");
+    }
+
+    private void cancelScheduledTasks() {
+        // Cancel scheduled tasks
+        if (schedulerService != null) {
+            try {
+                schedulerService.cancelTask("clusterNodeStatisticsUpdate");
+                LOGGER.debug("Cancelled clusterNodeStatisticsUpdate task");
+            } catch (Exception e) {
+                LOGGER.debug("Error cancelling clusterNodeStatisticsUpdate task: {}", e.getMessage());
+            }
+            try {
+                schedulerService.cancelTask("clusterStaleNodesCleanup");
+                LOGGER.debug("Cancelled clusterStaleNodesCleanup task");
+            } catch (Exception e) {
+                LOGGER.debug("Error cancelling clusterStaleNodesCleanup task: {}", e.getMessage());
+            }
+        }
     }
 
     /**
@@ -330,7 +295,7 @@ public class ClusterServiceImpl implements ClusterService {
             ServerInfo serverInfo = bundleWatcher.getServerInfos().get(0);
             clusterNode.setServerInfo(serverInfo);
             LOGGER.info("Added server info to node: version={}, build={}",
-                    serverInfo.getServerVersion(), serverInfo.getServerBuildNumber());
+                serverInfo.getServerVersion(), serverInfo.getServerBuildNumber());
         } else {
             LOGGER.warn("BundleWatcher not available at registration time, server info will not be available");
         }
@@ -417,11 +382,11 @@ public class ClusterServiceImpl implements ClusterService {
                 ServerInfo currentInfo = bundleWatcher.getServerInfos().get(0);
                 // Check if server info needs updating
                 if (node.getServerInfo() == null ||
-                        !currentInfo.getServerVersion().equals(node.getServerInfo().getServerVersion())) {
+                    !currentInfo.getServerVersion().equals(node.getServerInfo().getServerVersion())) {
 
                     node.setServerInfo(currentInfo);
                     LOGGER.info("Updated server info for node {}: version={}, build={}",
-                            nodeId, currentInfo.getServerVersion(), currentInfo.getServerBuildNumber());
+                        nodeId, currentInfo.getServerVersion(), currentInfo.getServerBuildNumber());
                 }
             }
 
@@ -511,10 +476,9 @@ public class ClusterServiceImpl implements ClusterService {
      * Check if a persistence service is available.
      * This can be used to quickly check before performing operations.
      *
-     * @return true if a persistence service is available (either directly set or via tracker)
+     * @return true if a persistence service is available
      */
     public boolean isPersistenceServiceAvailable() {
         return persistenceService != null;
     }
 }
-

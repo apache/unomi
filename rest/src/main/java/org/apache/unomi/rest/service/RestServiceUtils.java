@@ -22,6 +22,7 @@ import org.apache.unomi.utils.EventsRequestContext;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.SecurityContext;
 import java.util.Date;
 import java.util.List;
 
@@ -58,9 +59,10 @@ public interface RestServiceUtils {
      * Execute the list of events using the dedicated eventsRequestContext
      * @param events the list of events to he executed
      * @param eventsRequestContext the current EventsRequestContext
+     * @param securityContext the security context from the JAX-RS environment
      * @return an updated version of the current eventsRequestContext
      */
-    EventsRequestContext performEventsRequest(List<Event> events, EventsRequestContext eventsRequestContext);
+    EventsRequestContext performEventsRequest(List<Event> events, EventsRequestContext eventsRequestContext, SecurityContext securityContext);
 
     /**
      * At the end of an events requests we want to save/update the profile and/or the session depending on the changes

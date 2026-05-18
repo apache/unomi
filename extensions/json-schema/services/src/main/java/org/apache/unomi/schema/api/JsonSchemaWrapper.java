@@ -21,6 +21,7 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.TimestampedItem;
 
 import java.util.Date;
+import java.util.Objects;
 
 /**
  * Object which represents a JSON schema, it's a wrapper because it contains some additional info used by the
@@ -96,5 +97,18 @@ public class JsonSchemaWrapper extends Item implements TimestampedItem {
     @Override
     public Date getTimeStamp() {
         return timeStamp;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof JsonSchemaWrapper)) return false;
+        if (!super.equals(o)) return false;
+        JsonSchemaWrapper that = (JsonSchemaWrapper) o;
+        return Objects.equals(schema, that.schema) && Objects.equals(target, that.target) && Objects.equals(name, that.name) && Objects.equals(extendsSchemaId, that.extendsSchemaId) && Objects.equals(timeStamp, that.timeStamp);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), schema, target, name, extendsSchemaId, timeStamp);
     }
 }
