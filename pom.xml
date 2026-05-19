@@ -662,6 +662,8 @@
                                 <exclude>**/dependency_tree.txt</exclude>
                                 <!-- exclude Cursor IDE files -->
                                 <exclude>.cursor/**</exclude>
+                                <!-- local developer notes (not part of the release) -->
+                                <exclude>**/.local-notes/**</exclude>
                                 <!-- exclude ElasticSearch snapshots repository -->
                                 <exclude>**/snapshots_repository/**/*</exclude>
                             </excludes>
