@@ -129,6 +129,7 @@
         <feature>unomi-services</feature>
         <feature>unomi-cxs-privacy-extension-services</feature>
         <configfile finalname="/etc/org.apache.unomi.schema.cfg">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}/cfg/schemacfg</configfile>
+        <configfile finalname="/etc/org.apache.unomi.rest.authentication.cfg">mvn:org.apache.unomi/unomi-rest/${project.version}/cfg/restauth</configfile>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-rest/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
