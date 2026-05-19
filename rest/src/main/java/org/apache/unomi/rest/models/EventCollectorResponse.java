@@ -17,9 +17,6 @@
 
 package org.apache.unomi.rest.models;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 import java.io.Serializable;
 
 /**
@@ -44,8 +41,7 @@ public class EventCollectorResponse implements Serializable {
      */
     private int updated;
 
-    @JsonCreator
-    public EventCollectorResponse(@JsonProperty("updated") int updated) {
+    public EventCollectorResponse(int updated) {
         this.updated = updated;
     }
 

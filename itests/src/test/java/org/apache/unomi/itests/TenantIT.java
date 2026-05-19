@@ -239,12 +239,12 @@ public class TenantIT extends BaseIT {
         try {
             // Test without any authentication
             String sessionId = "test-session-" + System.currentTimeMillis();
-            try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl("/cxs/context.json?sessionId=" + sessionId)), AuthType.NONE)) {
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl("/context.json?sessionId=" + sessionId)), AuthType.NONE)) {
                 Assert.assertEquals("Unauthenticated public request should be rejected", 401, response.getStatusLine().getStatusCode());
             }
 
             // Test with private API key (should succeed - private keys have higher privileges)
-            HttpGet publicRequest = new HttpGet(getFullUrl("/cxs/context.json?sessionId=" + sessionId));
+            HttpGet publicRequest = new HttpGet(getFullUrl("/context.json?sessionId=" + sessionId));
             publicRequest.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
                 (tenant.getItemId() + ":" + tenant.getPrivateApiKey()).getBytes()));
             try (CloseableHttpResponse response = executeHttpRequest(publicRequest, AuthType.PRIVATE_KEY)) {
@@ -252,7 +252,7 @@ public class TenantIT extends BaseIT {
             }
 
             // Test with valid public API key (should succeed)
-            publicRequest = new HttpGet(getFullUrl("/cxs/context.json?sessionId=" + sessionId));
+            publicRequest = new HttpGet(getFullUrl("/context.json?sessionId=" + sessionId));
             publicRequest.setHeader("X-Unomi-Api-Key", tenant.getPublicApiKey());
             try (CloseableHttpResponse response = executeHttpRequest(publicRequest, AuthType.PUBLIC_KEY)) {
                 Assert.assertEquals("Valid public API key should grant access to public endpoints", 200, response.getStatusLine().getStatusCode());
@@ -583,7 +583,7 @@ public class TenantIT extends BaseIT {
         // Test that context.json is properly detected as a public endpoint
         // This test verifies that the AUTO authentication works correctly
         String sessionId = "test-session-" + System.currentTimeMillis();
-        try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl("/cxs/context.json?sessionId=" + sessionId)), AuthType.AUTO)) {
+        try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl("/context.json?sessionId=" + sessionId)), AuthType.AUTO)) {
             // Should succeed with public key authentication
             Assert.assertEquals("context.json should be accessible with auto-detected public authentication",
                 200, response.getStatusLine().getStatusCode());
