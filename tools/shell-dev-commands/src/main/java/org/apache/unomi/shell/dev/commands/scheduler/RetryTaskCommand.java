@@ -14,27 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.commands;
+package org.apache.unomi.shell.dev.commands.scheduler;
 
-import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
+import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.services.ProfileService;
 
-@Command(scope = "unomi", name = "profile-remove", description = "This command will remove a profile")
+@Command(scope = "unomi", name = "task-retry", description = "Retries a failed task")
 @Service
-public class ProfileRemove implements Action {
+public class RetryTaskCommand extends BaseSchedulerCommand {
 
-    @Reference
-    ProfileService profileService;
+    @Argument(index = 0, name = "taskId", description = "The ID of the task to retry", required = true)
+    private String taskId;
 
-    @Argument(index = 0, name = "profile", description = "The identifier for the profile", required = true, multiValued = false)
-    String profileIdentifier;
+    @Option(name = "-r", aliases = "--reset", description = "Reset failure count before retrying")
+    private boolean resetFailureCount = false;
 
+    @Override
     public Object execute() throws Exception {
-        profileService.delete(profileIdentifier, false);
+        schedulerService.retryTask(taskId, resetFailureCount);
+        println("Task " + taskId + " has been queued for retry" + 
+            (resetFailureCount ? " with reset failure count." : "."));
         return null;
     }
-}
+} 

@@ -14,35 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.commands;
+package org.apache.unomi.shell.dev.commands.scheduler;
 
-import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.rules.Rule;
-import org.apache.unomi.api.services.RulesService;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
-@Command(scope = "unomi", name = "rule-view", description = "This will allows to view a rule in the Apache Unomi Context Server")
+@Command(scope = "unomi", name = "task-cancel", description = "Cancels a scheduled task")
 @Service
-public class RuleView implements Action {
+public class CancelTaskCommand extends BaseSchedulerCommand {
 
-    @Reference
-    RulesService rulesService;
+    @Argument(index = 0, name = "taskId", description = "The ID of the task to cancel", required = true)
+    private String taskId;
 
-    @Argument(index = 0, name = "rule", description = "The identifier for the rule", required = true, multiValued = false)
-    String ruleIdentifier;
-
+    @Override
     public Object execute() throws Exception {
-        Rule rule = rulesService.getRule(ruleIdentifier);
-        if (rule == null) {
-            System.out.println("Couldn't find a rule with id=" + ruleIdentifier);
-            return null;
-        }
-        String jsonRule = CustomObjectMapper.getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(rule);
-        System.out.println(jsonRule);
+        schedulerService.cancelTask(taskId);
+        println("Task " + taskId + " has been cancelled successfully.");
         return null;
     }
-}
+} 

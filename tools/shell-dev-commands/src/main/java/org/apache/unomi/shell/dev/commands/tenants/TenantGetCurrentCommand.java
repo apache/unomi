@@ -14,27 +14,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.commands;
+package org.apache.unomi.shell.dev.commands.tenants;
 
-import org.apache.karaf.shell.api.action.Action;
-import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.shell.dev.commands.BaseSimpleCommand;
+import org.apache.unomi.shell.dev.commands.TenantContextHelper;
 
-@Command(scope = "unomi", name = "rule-remove", description = "This will allows to remove a rule in the Apache Unomi Context Server")
+@Command(scope = "unomi", name = "tenant-get", description = "Get the current tenant ID for this shell session")
 @Service
-public class RuleRemove implements Action {
+public class TenantGetCurrentCommand extends BaseSimpleCommand {
 
-    @Reference
-    RulesService rulesService;
-
-    @Argument(index = 0, name = "rule", description = "The identifier for the rule", required = true, multiValued = false)
-    String ruleIdentifier;
-
+    @Override
     public Object execute() throws Exception {
-        rulesService.removeRule(ruleIdentifier);
+        // Retrieve tenant ID from the Karaf shell session
+        String tenantId = TenantContextHelper.getTenantId(session);
+        if (tenantId != null) {
+            println("Current tenant ID: " + tenantId);
+        } else {
+            println("No current tenant set");
+        }
         return null;
     }
 }
