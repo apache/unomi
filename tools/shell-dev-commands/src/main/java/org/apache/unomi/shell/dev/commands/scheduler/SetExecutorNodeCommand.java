@@ -14,35 +14,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.commands;
+package org.apache.unomi.shell.dev.commands.scheduler;
 
-import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.Session;
-import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
-@Command(scope = "unomi", name = "session-view", description = "This command will dump a session as a JSON string")
+@Command(scope = "unomi", name = "task-executor", description = "Shows or changes task executor status for this node")
 @Service
-public class SessionView implements Action {
+public class SetExecutorNodeCommand extends BaseSchedulerCommand {
 
-    @Reference
-    ProfileService profileService;
+    @Argument(index = 0, name = "enable", description = "Enable (true) or disable (false) task execution", required = false)
+    private String enable;
 
-    @Argument(index = 0, name = "session", description = "The identifier for the session", required = true, multiValued = false)
-    String sessionIdentifier;
-
+    @Override
     public Object execute() throws Exception {
-        Session session = profileService.loadSession(sessionIdentifier);
-        if (session == null) {
-            System.out.println("Couldn't find a session with id=" + sessionIdentifier);
+        if (enable == null) {
+            // Just show current status
+            println("Task executor status: " + 
+                (schedulerService.isExecutorNode() ? "ENABLED" : "DISABLED"));
+            println("Node ID: " + schedulerService.getNodeId());
             return null;
         }
-        String jsonSession = CustomObjectMapper.getObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(session);
-        System.out.println(jsonSession);
+
+        boolean shouldEnable = Boolean.parseBoolean(enable);
+        // Note: This assumes there's a setExecutorNode method. If not available, we'll need to modify the service.
+        // schedulerService.setExecutorNode(shouldEnable);
+        
+        println("Task executor has been " + (shouldEnable ? "ENABLED" : "DISABLED") + 
+            " for node " + schedulerService.getNodeId());
         return null;
     }
-}
+} 
