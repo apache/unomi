@@ -647,6 +647,8 @@
                                 <exclude>**/*.js.map</exclude>
                                 <!-- Exclude dependency tree generated files -->
                                 <exclude>**/dependency_tree.txt</exclude>
+                                <!-- local developer notes (not part of the release) -->
+                                <exclude>**/.local-notes/**</exclude>
                             </excludes>
                         </configuration>
                     </plugin>
