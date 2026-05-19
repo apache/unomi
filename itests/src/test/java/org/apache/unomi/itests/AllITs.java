@@ -38,6 +38,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ConditionQueryBuilderIT.class,
         SegmentIT.class,
         ProfileServiceIT.class,
+        PersonaIT.class,
         ProfileImportBasicIT.class,
         ProfileImportSurfersIT.class,
         ProfileImportRankingIT.class,
@@ -52,6 +53,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ModifyConsentIT.class,
         PatchIT.class,
         ContextServletIT.class,
+        SecurityIT.class,
         RuleServiceIT.class,
         PrivacyServiceIT.class,
         GroovyActionsServiceIT.class,
@@ -75,6 +77,9 @@ import org.junit.runners.Suite.SuiteClasses;
         OtherCommandsIT.class,
         HealthCheckIT.class,
         LegacyQueryBuilderMappingIT.class,
+        TenantIT.class,
+        SchedulerIT.class,
+        EventsCollectorIT.class,
 })
 public class AllITs {
 }
