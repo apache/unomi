@@ -75,11 +75,11 @@ import org.junit.runners.Suite.SuiteClasses;
         TenantCommandsIT.class,
         RuleStatisticsCommandsIT.class,
         OtherCommandsIT.class,
-        HealthCheckIT.class,
         LegacyQueryBuilderMappingIT.class,
         TenantIT.class,
         SchedulerIT.class,
         EventsCollectorIT.class,
+        HealthCheckIT.class
 })
 public class AllITs {
 }
