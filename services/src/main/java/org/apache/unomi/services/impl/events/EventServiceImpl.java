@@ -36,11 +36,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EventServiceImpl implements EventService {
     private static final Logger LOGGER = LoggerFactory.getLogger(EventServiceImpl.class);
     private static final int MAX_RECURSION_DEPTH = 20;
+
+    /** Event-type chains already logged at recursion limit (see {@link #recursionChainKey}). */
+    private static final Set<String> LOGGED_RECURSION_CHAINS = ConcurrentHashMap.newKeySet();
 
     /**
      * Simple data class to hold event information for recursion tracking.
@@ -164,6 +168,28 @@ public class EventServiceImpl implements EventService {
         return IPValidationUtils.isIpAuthorized(sourceIP, authorizedIPs);
     }
 
+    /**
+     * Signature of the in-flight stack for deduplication: consecutive duplicate types are collapsed
+     * (e.g. profileUpdated + 20× ruleFired → {@code profileUpdated>ruleFired}). The blocked event
+     * type is not included — at the limit it alternates (profileUpdated / ruleFired) and would
+     * otherwise defeat deduplication for the same loop.
+     */
+    private static String recursionChainKey(List<EventInfo> eventStack) {
+        StringBuilder key = new StringBuilder();
+        String previous = null;
+        for (EventInfo info : eventStack) {
+            String type = info.eventType != null ? info.eventType : "?";
+            if (!type.equals(previous)) {
+                if (key.length() > 0) {
+                    key.append('>');
+                }
+                key.append(type);
+                previous = type;
+            }
+        }
+        return key.length() > 0 ? key.toString() : "?";
+    }
+
     public int send(Event event) {
         // Get current event stack from ThreadLocal
         List<EventInfo> eventStack = EVENT_STACK.get();
@@ -171,22 +197,21 @@ public class EventServiceImpl implements EventService {
         // Check depth before processing (matches original: if (depth > MAX_RECURSION_DEPTH))
         // Original allowed depths 0-10 (11 calls), blocking at depth 11
         if (eventStack.size() > MAX_RECURSION_DEPTH) {
-            EventInfo currentEventInfo = new EventInfo(event);
-
-            // Build detailed error message with full event chain
-            StringBuilder errorMsg = new StringBuilder("Max recursion depth reached (depth: ").append(eventStack.size() + 1)
-                    .append(", max: ").append(MAX_RECURSION_DEPTH + 1)
-                    .append("). Current event: ").append(currentEventInfo);
-
-            if (!eventStack.isEmpty()) {
-                errorMsg.append("\nEvent chain (oldest first):");
-                for (int i = 0; i < eventStack.size(); i++) {
-                    errorMsg.append("\n  [").append(i + 1).append("] ").append(eventStack.get(i));
+            String chainKey = recursionChainKey(eventStack);
+            if (LOGGED_RECURSION_CHAINS.add(chainKey)) {
+                EventInfo currentEventInfo = new EventInfo(event);
+                StringBuilder errorMsg = new StringBuilder("Max recursion depth reached (depth: ").append(eventStack.size() + 1)
+                        .append(", max: ").append(MAX_RECURSION_DEPTH + 1)
+                        .append("). Current event: ").append(currentEventInfo);
+                if (!eventStack.isEmpty()) {
+                    errorMsg.append("\nEvent chain (oldest first):");
+                    for (int i = 0; i < eventStack.size(); i++) {
+                        errorMsg.append("\n  [").append(i + 1).append("] ").append(eventStack.get(i));
+                    }
+                    errorMsg.append("\n  [").append(eventStack.size() + 1).append("] ").append(currentEventInfo).append(" <-- BLOCKED");
                 }
-                errorMsg.append("\n  [").append(eventStack.size() + 1).append("] ").append(currentEventInfo).append(" <-- BLOCKED");
+                LOGGER.warn(errorMsg.toString());
             }
-
-            LOGGER.warn(errorMsg.toString());
             return NO_CHANGE;
         }
 
