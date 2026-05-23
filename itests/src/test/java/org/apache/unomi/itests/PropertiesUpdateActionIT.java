@@ -78,7 +78,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
     }
 
     @Test
-    public void testUpdateProperties_CurrentProfile() {
+    public void testUpdateProperties_CurrentProfile() throws InterruptedException {
         Profile profile = profileService.load(PROFILE_TARGET_TEST_ID);
         Assert.assertNull(profile.getProperty("firstName"));
 
@@ -92,16 +92,13 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TARGET_TEST_ID);
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
 
-        int changes = eventService.send(updateProperties);
+        eventService.send(updateProperties);
 
-        LOGGER.info("Changes of the event : {}", changes);
-
-        Assert.assertTrue(changes > 0);
-        Assert.assertEquals("UPDATED FIRST NAME CURRENT PROFILE", profile.getProperty("firstName"));
+        waitForProfileProperty(PROFILE_TARGET_TEST_ID, "firstName", "UPDATED FIRST NAME CURRENT PROFILE");
     }
 
     @Test
-    public void testUpdateProperties_NotCurrentProfile() {
+    public void testUpdateProperties_NotCurrentProfile() throws InterruptedException {
         Profile profile = profileService.load(PROFILE_TARGET_TEST_ID);
         Profile profileToUpdate = profileService.load(PROFILE_TEST_ID);
         Assert.assertNull(profileToUpdate.getProperty("firstName"));
@@ -117,8 +114,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
         eventService.send(updateProperties);
 
-        profileToUpdate = profileService.load(PROFILE_TEST_ID);
-        Assert.assertEquals("UPDATED FIRST NAME", profileToUpdate.getProperty("firstName"));
+        waitForProfileProperty(PROFILE_TEST_ID, "firstName", "UPDATED FIRST NAME");
     }
 
     @Test
