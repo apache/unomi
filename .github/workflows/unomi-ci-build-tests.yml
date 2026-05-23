@@ -31,7 +31,7 @@ jobs:
         sudo apt-get install -y graphviz
         dot -V
     - name: Build and Unit tests
-      run: mvn -U -ntp -e clean install
+      run: ./build.sh --ci
 
   integration-tests:
     name: Execute integration tests
@@ -54,16 +54,22 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
           cache: 'maven'
-      - name: Integration tests
+      - name: Install GraphViz
         run: |
-          FLAGS="-Pintegration-tests"
-          if [ "${{ matrix.search-engine }}" = "opensearch" ]; then
-            # Trigger OpenSearch profile activation via property; do not pass any -P profile toggles
-            FLAGS="$FLAGS -Duse.opensearch=true"
-          fi
-          mvn -ntp clean install $FLAGS \
-            -Dopensearch.port=${{ matrix.port }} \
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          dot -V
+      - name: Integration tests
+        env:
+          MAVEN_EXTRA_OPTS: >-
+            -Dopensearch.port=${{ matrix.port }}
             -Delasticsearch.port=${{ matrix.port }}
+        run: |
+          if [ "${{ matrix.search-engine }}" = "opensearch" ]; then
+            ./build.sh --ci --integration-tests --use-opensearch
+          else
+            ./build.sh --ci --integration-tests
+          fi
       - name: Archive code coverage logs
         uses: actions/upload-artifact@v4
         if: false # UNOMI-746 Reactivate if necessary
