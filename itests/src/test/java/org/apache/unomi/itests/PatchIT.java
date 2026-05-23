@@ -49,7 +49,10 @@ public class PatchIT extends BaseIT {
 
             profileService.refresh();
 
-            newCompany = profileService.getPropertyType("company");
+            newCompany = keepTrying("Failed waiting for patched property type",
+                    () -> profileService.getPropertyType("company"),
+                    pt -> pt != null && "foo".equals(pt.getDefaultValue()),
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
             Assert.assertEquals("foo", newCompany.getDefaultValue());
         } finally {
             profileService.setPropertyType(company);
@@ -68,7 +71,10 @@ public class PatchIT extends BaseIT {
 
             profileService.refresh();
 
-            newGender = profileService.getPropertyType("gender");
+            newGender = keepTrying("Failed waiting for patched property type",
+                    () -> profileService.getPropertyType("gender"),
+                    pt -> pt != null && "foo".equals(pt.getDefaultValue()),
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
             Assert.assertEquals("foo", newGender.getDefaultValue());
         } finally {
             profileService.setPropertyType(gender);
@@ -86,8 +92,8 @@ public class PatchIT extends BaseIT {
 
             profileService.refresh();
 
-            PropertyType newIncome = profileService.getPropertyType("income");
-            Assert.assertNull(newIncome);
+            waitForNullValue("Failed waiting for property type removal",
+                    () -> profileService.getPropertyType("income"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         } finally {
             profileService.setPropertyType(income);
         }
@@ -105,7 +111,10 @@ public class PatchIT extends BaseIT {
 
             definitionsService.refresh();
 
-            ConditionType newFormCondition = definitionsService.getConditionType("formEventCondition");
+            ConditionType newFormCondition = keepTrying("Failed waiting for patched condition type",
+                    () -> definitionsService.getConditionType("formEventCondition"),
+                    ct -> ct != null && !ct.getMetadata().getSystemTags().contains("profileTags"),
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
             Assert.assertFalse(newFormCondition.getMetadata().getSystemTags().contains("profileTags"));
         } finally {
             definitionsService.setConditionType(formCondition);
@@ -124,7 +133,10 @@ public class PatchIT extends BaseIT {
 
             definitionsService.refresh();
 
-            ActionType newMailAction = definitionsService.getActionType("sendMailAction");
+            ActionType newMailAction = keepTrying("Failed waiting for patched action type",
+                    () -> definitionsService.getActionType("sendMailAction"),
+                    at -> at != null && !at.getMetadata().getSystemTags().contains("availableToEndUser"),
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
             Assert.assertFalse(newMailAction.getMetadata().getSystemTags().contains("availableToEndUser"));
         } finally {
             definitionsService.setActionType(mailAction);
