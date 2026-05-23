@@ -467,6 +467,14 @@ public abstract class BaseIT extends KarafTestSupport {
         return value;
     }
 
+    protected void waitForProfileProperty(String profileId, String propertyName, Object expected)
+            throws InterruptedException {
+        keepTrying("Profile " + profileId + " property " + propertyName + " not updated",
+                () -> profileService.load(profileId),
+                profile -> profile != null && java.util.Objects.equals(expected, profile.getProperty(propertyName)),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
     protected <T> void waitForNullValue(String failMessage, Supplier<T> call, int timeout, int retries) throws InterruptedException {
         int count = 0;
         while (call.get() != null) {
