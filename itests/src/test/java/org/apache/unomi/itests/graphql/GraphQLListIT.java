@@ -81,9 +81,14 @@ public class GraphQLListIT extends BaseGraphQLIT {
                     () -> {
                         try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
                             return ResponseContext.parse(response.getEntity());
+                        } catch (Exception e) {
+                            return null;
                         }
                     },
                     context -> {
+                        if (context == null) {
+                            return false;
+                        }
                         Integer totalCount = (Integer) context.getValue("data.cdp.findLists.totalCount");
                         if (totalCount == null || totalCount != 1) {
                             return false;
