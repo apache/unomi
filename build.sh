@@ -300,7 +300,7 @@ EOF
         echo -e "  ${CYAN}--it-debug-port PORT${NC}       Set integration test debug port"
         echo -e "  ${CYAN}--it-debug-suspend${NC}         Suspend integration test until debugger connects"
         echo -e "  ${CYAN}--skip-migration-tests${NC}     Skip migration-related tests"
-        echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, no Maven build cache, non-interactive"
+        echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, no Maven cache, Maven -B -ntp, non-interactive"
     else
         cat << "EOF"
      _    _ _____ _      ____
@@ -334,7 +334,7 @@ EOF
         echo "  --it-debug-port PORT      Set integration test debug port"
         echo "  --it-debug-suspend        Suspend integration test until debugger connects"
         echo "  --skip-migration-tests    Skip migration-related tests"
-        echo "  --ci                      CI mode: no Karaf, no Maven build cache, non-interactive"
+        echo "  --ci                      CI mode: no Karaf, no Maven cache, Maven -B -ntp, non-interactive"
     fi
 
     echo
@@ -780,6 +780,11 @@ check_requirements() {
 # Construct Maven command
 MVN_CMD="mvn"
 MVN_OPTS=""
+
+# CI / non-interactive: no download progress UI, batch mode (matches former workflow mvn -ntp)
+if is_non_interactive; then
+    MVN_OPTS="$MVN_OPTS -B -ntp"
+fi
 
 # Add Maven debug option
 if [ "$MAVEN_DEBUG" = true ]; then
