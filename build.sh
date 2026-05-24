@@ -19,15 +19,13 @@
 ################################################################################
 
 set -e  # Exit on error
-trap 'handle_error $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
+# Keep trap arguments small: passing full $BASH_COMMAND can exceed ARG_MAX after a failed mvn invocation.
+trap 'handle_error $? $LINENO' ERR
 
 # Error handling function
 handle_error() {
     local exit_code=$1
     local line_no=$2
-    local bash_lineno=$3
-    local last_command=$4
-    local func_trace=$5
 
     cat << "EOF"
      _____ ____  ____   ___  ____
@@ -38,12 +36,8 @@ handle_error() {
 
 EOF
     echo "Error occurred in:"
-    echo "  Command: $last_command"
     echo "  Line: $line_no"
     echo "  Exit code: $exit_code"
-    if [ ! -z "$func_trace" ]; then
-        echo "  Function trace: $func_trace"
-    fi
     exit $exit_code
 }
 
@@ -930,6 +924,7 @@ if [ "$HAS_COLORS" -eq 1 ]; then
 else
     echo "Running: $MVN_CMD clean $MVN_OPTS"
 fi
+# shellcheck disable=SC2086
 $MVN_CMD clean $MVN_OPTS || {
     print_status "error" "Maven clean failed"
     exit 1
@@ -941,6 +936,7 @@ if [ "$HAS_COLORS" -eq 1 ]; then
 else
     echo "Running: $MVN_CMD install $MVN_OPTS"
 fi
+# shellcheck disable=SC2086
 $MVN_CMD install $MVN_OPTS || {
     print_status "error" "Maven install failed"
     exit 1
