@@ -17,8 +17,16 @@
 #    limitations under the License.
 #
 ################################################################################
-export UNOMI_VERSION=`mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version | grep -Ev '(^\[|Download\w+:)'`
-echo Detected project version=$UNOMI_VERSION
+_mvn_err=$(mktemp)
+export UNOMI_VERSION="$(mvn -B -q -DforceStdout help:evaluate -Dexpression=project.version -DinteractiveMode=false 2>"$_mvn_err")"
+if [ -z "$UNOMI_VERSION" ]; then
+    echo "Failed to detect project version from Maven" >&2
+    cat "$_mvn_err" >&2
+    rm -f "$_mvn_err"
+    exit 1
+fi
+rm -f "$_mvn_err"
+echo "Detected project version=$UNOMI_VERSION"
 export KARAF_VERSION=4.4.8
 # Uncomment the following line if you need Apache Unomi to start automatically at the first start
 # export KARAF_OPTS="-Dunomi.autoStart=true"
