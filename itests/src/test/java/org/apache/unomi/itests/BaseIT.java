@@ -779,6 +779,14 @@ public abstract class BaseIT extends KarafTestSupport {
         return value;
     }
 
+    protected void waitForProfileProperty(String profileId, String propertyName, Object expected)
+            throws InterruptedException {
+        keepTrying("Profile " + profileId + " property " + propertyName + " not updated",
+                () -> profileService.load(profileId),
+                profile -> profile != null && java.util.Objects.equals(expected, profile.getProperty(propertyName)),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
     /**
      * Repeatedly checks if a value becomes null within a specific number of retries.
      * This is useful for testing operations that should result in the removal or

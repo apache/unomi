@@ -222,11 +222,21 @@ print_progress() {
     fi
 }
 
+# Non-interactive when run from CI or when explicitly requested (e.g. GitHub Actions).
+is_non_interactive() {
+    [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ] || [ "${BUILD_NON_INTERACTIVE:-}" = "true" ]
+}
+
 # Function to prompt for continuation
 prompt_continue() {
     local prompt_text="$1"
     if [ -z "$prompt_text" ]; then
         prompt_text="Continue?"
+    fi
+
+    if is_non_interactive; then
+        print_status "info" "Non-interactive mode: continuing ($prompt_text)"
+        return 0
     fi
 
     read -p "$prompt_text (y/N) " -n 1 -r
@@ -296,6 +306,7 @@ EOF
         echo -e "  ${CYAN}--it-debug-port PORT${NC}       Set integration test debug port"
         echo -e "  ${CYAN}--it-debug-suspend${NC}         Suspend integration test until debugger connects"
         echo -e "  ${CYAN}--skip-migration-tests${NC}     Skip migration-related tests"
+        echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, no Maven build cache, non-interactive"
     else
         cat << "EOF"
      _    _ _____ _      ____
@@ -329,6 +340,7 @@ EOF
         echo "  --it-debug-port PORT      Set integration test debug port"
         echo "  --it-debug-suspend        Suspend integration test until debugger connects"
         echo "  --skip-migration-tests    Skip migration-related tests"
+        echo "  --ci                      CI mode: no Karaf, no Maven build cache, non-interactive"
     fi
 
     echo
@@ -458,6 +470,11 @@ while [ "$1" != "" ]; do
             ;;
         --skip-migration-tests)
             SKIP_MIGRATION_TESTS=true
+            ;;
+        --ci)
+            NO_KARAF=true
+            USE_MAVEN_CACHE=false
+            BUILD_NON_INTERACTIVE=true
             ;;
         *)
             echo "Unknown option: $1"
@@ -784,10 +801,14 @@ if [ "$MAVEN_OFFLINE" = true ]; then
     # Warn if purge cache is enabled with offline mode
     if [ "$PURGE_MAVEN_CACHE" = true ]; then
         echo "Warning: Purging Maven cache while in offline mode may cause build failures"
-        read -p "Continue anyway? (y/N) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
+        if is_non_interactive; then
+            print_status "warning" "Non-interactive mode: continuing despite purge + offline"
+        else
+            read -p "Continue anyway? (y/N) " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                exit 1
+            fi
         fi
     fi
 fi
@@ -797,13 +818,22 @@ if [ "$USE_MAVEN_CACHE" = false ]; then
     MVN_OPTS="$MVN_OPTS -Dmaven.build.cache.enabled=false"
 fi
 
+# Extra Maven options (e.g. CI matrix ports: -Delasticsearch.port=9400)
+if [ -n "${MAVEN_EXTRA_OPTS:-}" ]; then
+    MVN_OPTS="$MVN_OPTS $MAVEN_EXTRA_OPTS"
+fi
+
 # Verify Maven settings
 if [ ! -f ~/.m2/settings.xml ]; then
     echo "Warning: Maven settings.xml not found at ~/.m2/settings.xml"
-    read -p "Continue anyway? (y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
+    if is_non_interactive; then
+        print_status "info" "Non-interactive mode: continuing without ~/.m2/settings.xml"
+    else
+        read -p "Continue anyway? (y/N) " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            exit 1
+        fi
     fi
 fi
 
