@@ -38,7 +38,7 @@ public class PatchIT extends BaseIT {
     private Logger LOGGER = LoggerFactory.getLogger(PatchIT.class);
 
     @Test
-    public void testPatch() throws IOException {
+    public void testPatch() throws IOException, InterruptedException {
         PropertyType company = profileService.getPropertyType("company");
 
         try {
@@ -60,7 +60,7 @@ public class PatchIT extends BaseIT {
     }
 
     @Test
-    public void testOverride() throws IOException {
+    public void testOverride() throws IOException, InterruptedException {
         PropertyType gender = profileService.getPropertyType("gender");
 
         try {
