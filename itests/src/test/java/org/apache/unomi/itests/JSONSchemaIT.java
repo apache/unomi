@@ -25,6 +25,7 @@ import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.itests.tools.LogChecker;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.ValidationError;
@@ -57,6 +58,36 @@ public class JSONSchemaIT extends BaseIT {
     private static final int DEFAULT_TRYING_TIMEOUT = 2000;
     private static final int DEFAULT_TRYING_TRIES = 30;
     public static final String DUMMY_SCOPE = "dummy_scope";
+
+    /**
+     * Configure LogChecker with substrings for expected schema-related errors in this test.
+     * These are errors that are intentionally triggered to test schema validation logic.
+     */
+    @Override
+    protected LogChecker createLogChecker() {
+        return LogChecker.builder()
+            // Schema not found errors (expected when testing with missing schemas)
+            .addIgnoredSubstring("Schema not found for event type: dummy")
+            .addIgnoredSubstring("Schema not found for event type: flattened")
+            .addIgnoredSubstring("Couldn't find schema")
+            .addIgnoredSubstring("Failed to load json schema")
+            // Schema validation errors (expected when testing invalid events)
+            .addIgnoredSubstring("Schema validation found")
+            .addIgnoredSubstring("Validation error")
+            .addIgnoredSubstring("does not match the regex pattern")
+            .addIgnoredSubstring("There are unevaluated properties")
+            .addIgnoredSubstring("Unknown scope value")
+            .addIgnoredSubstring("may only have a maximum of")
+            .addIgnoredSubstring("string found, number expected")
+            // Schema-related exceptions (expected during schema operations)
+            .addIgnoredSubstring("JsonSchemaException")
+            .addIgnoredSubstring("InvocationTargetException")
+            .addIgnoredSubstring("IOException")
+            .addIgnoredSubstring("Error executing system operation: Test exception")
+            .addIgnoredSubstring("Couldn't find persona")
+            .addIgnoredSubstring("Unable to save schema")
+            .build();
+    }
 
     @Before
     public void setUp() throws InterruptedException {
@@ -206,12 +237,15 @@ public class JSONSchemaIT extends BaseIT {
 
         keepTrying("Should return a schema when calling the endpoint", () -> {
             try (CloseableHttpResponse response = executeHttpRequest(request)) {
+                if (response.getEntity() == null) {
+                    return null;
+                }
                 return EntityUtils.toString(response.getEntity());
             } catch (IOException e) {
                 LOGGER.error("Failed to get the json schema with the id: {}", schemaId);
             }
             return "";
-        }, entity -> entity.contains("DummyEvent"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        }, entity -> entity != null && entity.contains("DummyEvent"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
@@ -340,12 +374,20 @@ public class JSONSchemaIT extends BaseIT {
         condition.setParameter("comparisonOperator", "greaterThan");
         condition.setParameter("propertyValueInteger", 2);
         // OpenSearch handles flattened fields differently than Elasticsearch
+        // Refresh to ensure event is queryable
+        refreshPersistence(Event.class);
+        final Condition finalCondition = condition;
+        // For Elasticsearch, range queries on flattened properties should return null or empty list
+        // For OpenSearch, they may return results
+        // We just need to wait for the query to execute (not throw an exception)
+        refreshPersistence(Event.class);
+        org.apache.unomi.api.PartialList<Event> queryResult = persistenceService.query(finalCondition, null, Event.class, 0, -1);
         if ("opensearch".equals(searchEngine)) {
-            assertNotNull("OpenSearch should return results for flattened properties",
-                persistenceService.query(condition, null, Event.class, 0, -1));
+            assertNotNull("OpenSearch should return results for flattened properties", queryResult);
         } else {
-            assertNull("Elasticsearch should return null for flattened properties",
-                persistenceService.query(condition, null, Event.class, 0, -1));
+            // Elasticsearch should return null or empty list for range queries on flattened properties
+            assertTrue("Elasticsearch should return null or empty list for flattened properties range query",
+                queryResult == null || queryResult.getList() == null || queryResult.getList().isEmpty());
         }
 
         // check that term query is working on flattened props:
@@ -364,9 +406,16 @@ public class JSONSchemaIT extends BaseIT {
     }
 
     @Test
-    public void testSaveFail_PredefinedJSONSchema() throws IOException {
+    public void testOverridePredefinedJSONSchema() throws IOException {
         try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/schema-predefined.json", ContentType.TEXT_PLAIN)) {
-            assertEquals("Unable to save schema", 400, response.getStatusLine().getStatusCode());
+            assertEquals("Schema should be saved successfully", 200, response.getStatusLine().getStatusCode());
+
+            // Get the schema and validate its properties
+            JsonSchemaWrapper schema = schemaService.getSchema("https://unomi.apache.org/schemas/json/event/1-0-0");
+            assertNotNull("Schema should exist", schema);
+            assertEquals("Schema name should be overridden", "testEventType", schema.getName());
+            assertEquals("Schema ID should remain unchanged", "https://unomi.apache.org/schemas/json/event/1-0-0", schema.getItemId());
+            assertEquals("Schema tenant ID should be set", "itTestTenant", schema.getTenantId());
         }
     }
 

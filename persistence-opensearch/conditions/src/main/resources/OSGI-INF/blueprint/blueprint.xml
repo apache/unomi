@@ -48,6 +48,7 @@
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
+    <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
     <reference id="topicService" interface="org.apache.unomi.api.services.TopicService"/>
 
     <service
@@ -57,6 +58,7 @@
         </service-properties>
         <bean class="org.apache.unomi.persistence.opensearch.querybuilders.advanced.IdsConditionOSQueryBuilder">
             <property name="maximumIdsQueryCount" value="${os.maximumIdsQueryCount}"/>
+            <property name="executionContextManager" ref="executionContextManager"/>
         </bean>
     </service>
 

@@ -17,18 +17,13 @@
   -->
 
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
-           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-
-
-
-
-
-  http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+           http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0 https://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.3.0.xsd">
 
     <cm:property-placeholder persistent-id="org.apache.unomi.persistence.opensearch"
-                             update-strategy="reload" placeholder-prefix="${os.">
+                             update-strategy="none" placeholder-prefix="${os.">
         <cm:default-properties>
             <cm:property name="cluster.name" value="opensearch-cluster"/>
             <cm:property name="openSearchAddresses" value="localhost:9200"/>
@@ -54,7 +49,7 @@
             <cm:property name="rollover.indexMappingTotalFieldsLimit" value="1000"/>
             <cm:property name="rollover.indexMaxDocValueFieldsSearch" value="1000"/>
 
-            <cm:property name="minimalOpenSearchVersion" value="2.1.0" />
+            <cm:property name="minimalOpenSearchVersion" value="3.0.0" />
             <cm:property name="maximalOpenSearchVersion" value="4.0.0" />
 
             <cm:property name="aggregateQueryBucketSize" value="5000" />
@@ -87,7 +82,11 @@
         <interfaces>
             <value>org.apache.unomi.persistence.spi.PersistenceService</value>
             <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.osgi.service.cm.ManagedService</value>
         </interfaces>
+        <service-properties>
+            <entry key="service.pid" value="org.apache.unomi.persistence.opensearch"/>
+        </service-properties>
     </service>
 
     <bean id="conditionOSQueryBuilderDispatcher"
@@ -95,14 +94,14 @@
         <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
-    <reference id="conditionEvaluatorDispatcherImpl" interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher" />
+    <reference id="conditionEvaluatorDispatcher" interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher" />
 
     <bean id="openSearchPersistenceServiceImpl"
           class="org.apache.unomi.persistence.opensearch.OpenSearchPersistenceServiceImpl"
           init-method="start"
           destroy-method="stop">
         <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="conditionEvaluatorDispatcher" ref="conditionEvaluatorDispatcherImpl"/>
+        <property name="conditionEvaluatorDispatcher" ref="conditionEvaluatorDispatcher"/>
         <property name="conditionOSQueryBuilderDispatcher" ref="conditionOSQueryBuilderDispatcher"/>
         <property name="clusterName" value="${os.cluster.name}"/>
         <property name="indexPrefix" value="${os.index.prefix}"/>
@@ -153,6 +152,34 @@
         <property name="minimalClusterState" value="${os.minimalClusterState}" />
     </bean>
 
+    <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
+    <reference-list id="conditionOSQueryBuilders"
+                    interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder"
+                    availability="optional">
+        <reference-listener
+                bind-method="bindConditionOSQueryBuilder" unbind-method="unbindConditionOSQueryBuilder" ref="openSearchPersistenceServiceImpl"/>
+    </reference-list>
+
+    <!-- Transformation Listeners -->
+    <reference-list id="transformationListeners"
+                   interface="org.apache.unomi.api.tenants.TenantTransformationListener"
+                   availability="optional">
+        <reference-listener bind-method="bindTransformationListener"
+                          unbind-method="unbindTransformationListener">
+            <ref component-id="openSearchPersistenceServiceImpl"/>
+        </reference-listener>
+    </reference-list>
+
+    <!-- Execution Context Manager Reference -->
+    <reference id="contextManager"
+               interface="org.apache.unomi.api.services.ExecutionContextManager"
+               availability="optional">
+        <reference-listener bind-method="bindContextManager"
+                            unbind-method="unbindContextManager">
+            <ref component-id="openSearchPersistenceServiceImpl"/>
+        </reference-listener>
+    </reference>
+
     <service
             interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
         <service-properties>
@@ -200,13 +227,5 @@
         </service-properties>
         <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.NestedConditionOSQueryBuilder"/>
     </service>
-
-    <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
-    <reference-list id="conditionOSQueryBuilders"
-                    interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder"
-        availability="optional">
-        <reference-listener
-                bind-method="bindConditionOSQueryBuilder" unbind-method="unbindConditionOSQueryBuilder" ref="openSearchPersistenceServiceImpl"/>
-    </reference-list>
 
 </blueprint>

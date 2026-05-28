@@ -20,40 +20,23 @@ import graphql.GraphQL;
 import graphql.execution.SubscriptionExecutionStrategy;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLSchema;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
-import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
-import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
-import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
-import org.apache.unomi.graphql.providers.GraphQLFieldVisibilityProvider;
-import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
-import org.apache.unomi.graphql.providers.GraphQLProvider;
-import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
-import org.apache.unomi.graphql.providers.GraphQLSubscriptionProvider;
-import org.apache.unomi.graphql.providers.GraphQLTypeFunctionProvider;
-import org.apache.unomi.graphql.types.output.CDPEventInterface;
-import org.apache.unomi.graphql.types.output.CDPPersona;
-import org.apache.unomi.graphql.types.output.CDPProfile;
-import org.apache.unomi.graphql.types.output.CDPProfileInterface;
-import org.apache.unomi.graphql.types.output.CDPPropertyInterface;
+import org.apache.unomi.graphql.providers.*;
+import org.apache.unomi.graphql.types.output.*;
 import org.apache.unomi.schema.api.SchemaService;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Deactivate;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicy;
-import org.osgi.service.component.annotations.ReferencePolicyOption;
+import org.osgi.service.component.annotations.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 @Component(service = GraphQLSchemaUpdater.class)
 public class GraphQLSchemaUpdater {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GraphQLSchemaUpdater.class);
 
     public @interface SchemaConfig {
 
@@ -91,6 +74,8 @@ public class GraphQLSchemaUpdater {
 
     private CDPPropertyInterfaceRegister propertyInterfaceRegister;
 
+    private ExecutionContextManager contextManager;
+
     private ScheduledExecutorService executorService;
 
     private ScheduledFuture<?> updateFuture;
@@ -98,6 +83,9 @@ public class GraphQLSchemaUpdater {
     private boolean isActivated;
 
     private int schemaUpdateDelay;
+
+    // Add tenant schema cache
+    private final ConcurrentMap<String, GraphQL> tenantSchemas = new ConcurrentHashMap<>();
 
     @Activate
     public void activate(final SchemaConfig config) {
@@ -148,6 +136,11 @@ public class GraphQLSchemaUpdater {
     @Reference
     public void setPropertiesInterfaceRegister(CDPPropertyInterfaceRegister propertyInterfaceRegister) {
         this.propertyInterfaceRegister = propertyInterfaceRegister;
+    }
+
+    @Reference
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
@@ -317,13 +310,73 @@ public class GraphQLSchemaUpdater {
     }
 
     private void doUpdateSchema() {
-        final GraphQLSchema graphQLSchema = createGraphQLSchema();
+        try {
+            // Update the default system schema
+            contextManager.executeAsSystem(() -> {
+                final GraphQLSchema graphQLSchema = createGraphQLSchema();
 
-        this.graphQL = GraphQL.newGraphQL(graphQLSchema)
-                .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy())
-                .build();
+                this.graphQL = GraphQL.newGraphQL(graphQLSchema)
+                        .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy())
+                        .build();
+                return null;
+            });
+
+            // Clear tenant schemas cache to force recreation on next request
+            tenantSchemas.clear();
+        } catch (Exception e) {
+            LOGGER.error("Error executing GraphQL schema update as system subject", e);
+        }
     }
 
+    /**
+     * Get the GraphQL instance for a specific tenant
+     * @param tenantId The tenant ID
+     * @return GraphQL instance configured for the tenant
+     */
+    public GraphQL getGraphQLForTenant(String tenantId) {
+        if (tenantId == null) {
+            // Fall back to system schema for null tenant
+            return getGraphQL();
+        }
+
+        return tenantSchemas.computeIfAbsent(tenantId, this::createGraphQLForTenant);
+    }
+
+    /**
+     * Create a tenant-specific GraphQL instance
+     * @param tenantId The tenant ID
+     * @return GraphQL instance for the tenant
+     */
+    private GraphQL createGraphQLForTenant(String tenantId) {
+        try {
+            return contextManager.executeAsTenant(tenantId, () -> {
+                LOGGER.info("Creating GraphQL schema for tenant: {}", tenantId);
+                final GraphQLSchema graphQLSchema = createGraphQLSchemaForTenant(tenantId);
+                return GraphQL.newGraphQL(graphQLSchema)
+                        .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy())
+                        .build();
+            });
+        } catch (Exception e) {
+            LOGGER.error("Error creating GraphQL schema for tenant: " + tenantId, e);
+            // Fall back to system schema if tenant schema creation fails
+            return getGraphQL();
+        }
+    }
+
+    /**
+     * Invalidate the schema for a specific tenant
+     * @param tenantId The tenant ID to invalidate
+     */
+    public void invalidateTenantSchema(String tenantId) {
+        if (tenantId != null) {
+            tenantSchemas.remove(tenantId);
+            LOGGER.debug("Invalidated GraphQL schema for tenant: {}", tenantId);
+        }
+    }
+
+    /**
+     * Get the default GraphQL instance (system tenant)
+     */
     public GraphQL getGraphQL() {
         return graphQL;
     }
@@ -344,6 +397,42 @@ public class GraphQLSchemaUpdater {
 
         final GraphQLSchema schema = schemaProvider.createSchema();
 
+        registerInterfaces(schemaProvider);
+
+        return schema;
+    }
+
+    /**
+     * Create a tenant-specific GraphQL schema
+     * @param tenantId The tenant ID
+     * @return GraphQL schema for the tenant
+     */
+    @SuppressWarnings("unchecked")
+    private GraphQLSchema createGraphQLSchemaForTenant(String tenantId) {
+        final GraphQLSchemaProvider schemaProvider = GraphQLSchemaProvider.create(profileService, schemaService)
+                .typeFunctionProviders(typeFunctionProviders)
+                .extensionsProviders(extensionsProviders)
+                .additionalTypesProviders(additionalTypesProviders)
+                .queryProviders(queryProviders)
+                .mutationProviders(mutationProviders)
+                .subscriptionProviders(subscriptionProviders)
+                .eventPublisher(eventPublisher)
+                .codeRegistryProvider(codeRegistryProvider)
+                .fieldVisibilityProviders(fieldVisibilityProviders)
+                .tenantId(tenantId)  // Pass tenant ID to schema provider
+                .build();
+
+        final GraphQLSchema schema = schemaProvider.createSchemaForTenant(tenantId);
+
+        registerInterfaces(schemaProvider);
+
+        return schema;
+    }
+
+    /**
+     * Register interfaces for the schema provider
+     */
+    private void registerInterfaces(GraphQLSchemaProvider schemaProvider) {
         profilesInterfaceRegister.register(CDPProfile.class);
         profilesInterfaceRegister.register(CDPPersona.class);
 
@@ -362,8 +451,6 @@ public class GraphQLSchemaUpdater {
                 }
             });
         }
-
-        return schema;
     }
 
 }

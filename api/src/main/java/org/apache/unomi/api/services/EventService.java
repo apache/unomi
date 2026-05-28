@@ -61,22 +61,22 @@ public interface EventService {
     int send(Event event);
 
     /**
-     * Check if the sender is allowed to sent the speecified event. Restricted event must be explicitely allowed for a sender.
+     * Check if the tenant is allowed to send the specified event. Restricted events must be explicitly allowed for a tenant.
      *
-     * @param event        event to test
-     * @param thirdPartyId third party id
-     * @return true if the event is allowed
+     * @param event    event to test
+     * @param tenantId the ID of the tenant
+     * @param sourceIP the IP address from which the event was sent (not persisted for privacy)
+     * @return true if the event is allowed for the tenant
      */
-    boolean isEventAllowed(Event event, String thirdPartyId);
+    boolean isEventAllowedForTenant(Event event, String tenantId, String sourceIP);
 
     /**
-     * Get the third party server name, if the request is originated from a known peer
+     * Retrieves the list of available event properties.
      *
-     * @param key the key
-     * @param ip  the ip
-     * @return server name
+     * @return a list of available event properties
+     * @deprecated use event types instead
      */
-    String authenticateThirdPartyServer(String key, String ip);
+    List<EventProperty> getEventProperties();
 
     /**
      * Retrieves the set of known event type identifiers.
@@ -155,8 +155,7 @@ public interface EventService {
     void removeProfileEvents(String profileId);
 
     /**
-     * Deletes the event identified by the given identifier from persistence.
-     *
+     * Delete an event by specifying its event identifier
      * @param eventIdentifier the unique identifier for the event
      */
     void deleteEvent(String eventIdentifier);

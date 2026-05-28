@@ -71,6 +71,11 @@ public class MigrationContext {
 
     private Map<String, MigrationStepState> history = new HashMap<>();
     private Map<String, String> userConfig = new HashMap<>();
+    private Boolean logToLogger = true;
+
+    public void setLogToLogger(Boolean logToLogger) {
+        this.logToLogger = logToLogger;
+    }
 
     /**
      * Try to recover from a previous run

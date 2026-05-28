@@ -125,6 +125,17 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
         }
+        if (scheduler != null) {
+            scheduler.shutdown();
+            try {
+                if (!scheduler.awaitTermination(10, TimeUnit.SECONDS)) {
+                    scheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                scheduler.shutdownNow();
+            }
+            scheduler = null;
+        }
         LOGGER.info("Bundle watcher shutdown.");
     }
 
@@ -397,7 +408,19 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
 
     @Override
     public void addRequiredBundle(String bundleName) {
-        requiredBundlesFromFeatures.put(bundleName, false);
+        // Check if bundle is already active when adding it
+        boolean isActive = false;
+        for (Bundle bundle : bundleContext.getBundles()) {
+            if (bundleName.equals(bundle.getSymbolicName()) && bundle.getState() == Bundle.ACTIVE) {
+                isActive = true;
+                break;
+            }
+        }
+        requiredBundlesFromFeatures.put(bundleName, isActive);
+        // If bundle is already active, check if startup is now complete
+        if (isActive) {
+            checkStartupComplete();
+        }
     }
 
     @Override

@@ -149,7 +149,7 @@ print_section() {
 print_status() {
     local status=$1
     local message=$2
-    
+
     if [ "$HAS_COLORS" -eq 1 ]; then
         case $status in
             "success")
@@ -513,7 +513,7 @@ check_requirements() {
     print_status "info" "Checking required tools..."
     local required_tools=("mvn" "java" "tar" "gzip" "dot")
     local missing_tools=()
-    
+
     echo "Required tools:"
     for tool in "${required_tools[@]}"; do
         if command_exists "$tool"; then
@@ -617,7 +617,7 @@ check_requirements() {
 
     # 3. System Resources Check
     print_status "info" "Checking system resources..."
-    
+
     # Memory check
     if command_exists free; then
         available_memory=$(free -m | awk '/^Mem:/{print $2}')
@@ -661,7 +661,7 @@ check_requirements() {
 
     # 4. Configuration Check
     print_status "info" "Checking configuration..."
-    
+
     # Maven settings check
     if [ ! -f ~/.m2/settings.xml ]; then
         print_status "warning" "✗ Maven settings.xml not found"
@@ -713,7 +713,7 @@ check_requirements() {
 
     # 5. Option Validation
     print_status "info" "Validating options..."
-    
+
     if [ "$SKIP_TESTS" = true ] && [ "$RUN_INTEGRATION_TESTS" = true ]; then
         print_status "error" "Cannot use --skip-tests and --integration-tests together"
         has_errors=true
@@ -847,13 +847,13 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
         echo "Running integration tests with ElasticSearch"
     fi
     MVN_OPTS="$MVN_OPTS -P integration-tests"
-    
+
     # Add single test option if specified
     if [ ! -z "$SINGLE_TEST" ]; then
         MVN_OPTS="$MVN_OPTS -Dit.test=$SINGLE_TEST"
         echo "Running single integration test: $SINGLE_TEST"
     fi
-    
+
     # Add integration test debug options if enabled
     if [ "$IT_DEBUG" = true ]; then
         DEBUG_OPTS="port=$IT_DEBUG_PORT"
@@ -877,7 +877,7 @@ else
         PROFILES="$PROFILES,!integration-tests,!run-tests"
         MVN_OPTS="$MVN_OPTS -DskipTests"
     fi
-    
+
     # Warn if single test was specified but integration tests are not enabled
     if [ ! -z "$SINGLE_TEST" ]; then
         print_status "warning" "Single test specified but integration tests are not enabled. Use --integration-tests to run the test."

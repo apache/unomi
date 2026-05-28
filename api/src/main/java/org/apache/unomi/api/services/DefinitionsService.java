@@ -148,6 +148,20 @@ public interface DefinitionsService {
     ValueType getValueType(String id);
 
     /**
+     * Stores the value type
+     *
+     * @param valueType the value type to store
+     */
+    void setValueType(ValueType valueType);
+
+    /**
+     * Remove the value type
+     *
+     * @param id the value type to remove
+     */
+    void removeValueType(String id);
+
+    /**
      * Retrieves a Map of plugin identifier to a list of plugin types defined by that particular plugin.
      *
      * @return a Map of plugin identifier to a list of plugin types defined by that particular plugin
@@ -163,6 +177,27 @@ public interface DefinitionsService {
     PropertyMergeStrategyType getPropertyMergeStrategyType(String id);
 
     /**
+     * Stores the property merge strategy type
+     *
+     * @param propertyMergeStrategyType the property merge strategy type to store
+     */
+    void setPropertyMergeStrategyType(PropertyMergeStrategyType propertyMergeStrategyType);
+
+    /**
+     * Remove the property merge strategy type
+     *
+     * @param id the property merge strategy type to remove
+     */
+    void removePropertyMergeStrategyType(String id);
+
+    /**
+     * Retrieves all known property merge strategy types.
+     *
+     * @return all known property merge strategy types
+     */
+    Collection<PropertyMergeStrategyType> getAllPropertyMergeStrategyTypes();
+
+    /**
      * Retrieves all conditions of the specified type from the specified root condition.
      *
      * TODO: remove?
@@ -171,7 +206,7 @@ public interface DefinitionsService {
      * @param typeId the identifier of the condition type we want conditions to extract to match
      * @return a set of conditions contained in the specified root condition and matching the specified condition type or an empty set if no such condition exists
      */
-    Set<Condition> extractConditionsByType(Condition rootCondition, String typeId);
+    List<Condition> extractConditionsByType(Condition rootCondition, String typeId);
 
     /**
      * Retrieves a condition matching the specified tag identifier from the specified root condition.

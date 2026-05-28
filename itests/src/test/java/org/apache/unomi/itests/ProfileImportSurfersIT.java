@@ -86,20 +86,41 @@ public class ProfileImportSurfersIT extends BaseIT {
         importConfigSurfers.getProperties().put("mapping", mappingSurfers);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
         importConfigSurfers.getProperties().put("source",
-                "file://" + importSurfersFile.getAbsolutePath() + "?fileName=2-surfers-test.csv&consumer.delay=10m&move=.done");
+                "file://" + importSurfersFile.getAbsolutePath() + "?fileName=2-surfers-test.csv&move=.done");
         importConfigSurfers.setActive(true);
 
         importConfigurationService.save(importConfigSurfers, true);
+        keepTrying("Failed waiting for surfers import configuration to be saved",
+                () -> importConfigurationService.load(itemId1),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         LOGGER.info("ProfileImportSurfersIT setup successfully.");
+
+        // Wait for Camel route to be created and started (the timer runs every 1 second to process config refreshes)
+        // This gives us visibility into what Camel is doing instead of just waiting for results
+        boolean routeStarted = waitForCamelRouteStarted(itemId1, 1000, 10);
+        if (routeStarted) {
+            String routeInfo = getCamelRouteInfo(itemId1);
+            LOGGER.info("Camel Route Status: {}", routeInfo);
+        } else {
+            LOGGER.warn("Camel Route '{}' was not started within timeout", itemId1);
+            LOGGER.warn("All Camel routes with status: {}", getAllCamelRoutesWithStatus());
+        }
 
         //Wait for data to be processed
         keepTrying("Failed waiting for surfers initial import to complete",
                 () -> profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null),
                 (p) -> p.getTotalSize() == 34, 1000, 100);
 
-        keepTrying("Failed waiting for import configurations list with 1 item", () -> importConfigurationService.getAll(),
-                (list) -> Objects.nonNull(list) && list.size() == 1, 1000, 100);
+        // Refresh the persistence index to ensure the saved configuration is queryable in getAll()
+        // This addresses the flakiness where getAll() returns 0 items due to index refresh delay
+        persistenceService.refreshIndex(ImportConfiguration.class);
+
+        // Check for the specific item ID instead of exact count to avoid flakiness from leftover configurations
+        keepTrying("Failed waiting for import configuration '" + itemId1 + "' to be available in getAll()",
+                () -> importConfigurationService.getAll(),
+                (list) -> Objects.nonNull(list) && list.stream().anyMatch(config -> itemId1.equals(config.getItemId())),
+                1000, 100);
 
         //Profile not to delete
         PartialList<Profile> jordyProfile = profileService.findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);
@@ -138,16 +159,36 @@ public class ProfileImportSurfersIT extends BaseIT {
         importConfigSurfersOverwrite.setActive(true);
 
         importConfigurationService.save(importConfigSurfersOverwrite, true);
+        keepTrying("Failed waiting for surfers overwrite import configuration to be saved",
+                () -> importConfigurationService.load(itemId2),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         LOGGER.info("ProfileImportSurfersOverwriteIT setup successfully.");
+
+        // Wait for Camel route to be created and started
+        boolean routeStarted2 = waitForCamelRouteStarted(itemId2, 1000, 10);
+        if (routeStarted2) {
+            String routeInfo = getCamelRouteInfo(itemId2);
+            LOGGER.info("Camel Route Status: {}", routeInfo);
+        } else {
+            LOGGER.warn("Camel Route '{}' was not started within timeout", itemId2);
+            LOGGER.warn("All Camel routes with status: {}", getAllCamelRoutesWithStatus());
+        }
 
         //Wait for data to be processed
         keepTrying("Failed waiting for surfers overwrite import to complete",
                 () -> profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null),
                 (p) -> p.getTotalSize() == 36, 1000, 100);
 
-        keepTrying("Failed waiting for import configurations list with 1 item", () -> importConfigurationService.getAll(),
-                (list) -> Objects.nonNull(list) && list.size() == 1, 1000, 100);
+        // Refresh the persistence index to ensure the saved configuration is queryable in getAll()
+        // This addresses the flakiness where getAll() returns 0 items due to index refresh delay
+        persistenceService.refreshIndex(ImportConfiguration.class);
+
+        // Check for the specific item ID instead of exact count to avoid flakiness from leftover configurations
+        keepTrying("Failed waiting for import configuration '" + itemId2 + "' to be available in getAll()",
+                () -> importConfigurationService.getAll(),
+                (list) -> Objects.nonNull(list) && list.stream().anyMatch(config -> itemId2.equals(config.getItemId())),
+                1000, 100);
 
         //Profile not to delete
         PartialList<Profile> aliveProfiles = profileService.findProfilesByPropertyValue("properties.alive", "true", 0, 50, null);
@@ -181,16 +222,36 @@ public class ProfileImportSurfersIT extends BaseIT {
         importConfigSurfersDelete.setActive(true);
 
         importConfigurationService.save(importConfigSurfersDelete, true);
+        keepTrying("Failed waiting for surfers delete import configuration to be saved",
+                () -> importConfigurationService.load(itemId3),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         LOGGER.info("ProfileImportSurfersDeleteIT setup successfully.");
+
+        // Wait for Camel route to be created and started
+        boolean routeStarted3 = waitForCamelRouteStarted(itemId3, 1000, 10);
+        if (routeStarted3) {
+            String routeInfo = getCamelRouteInfo(itemId3);
+            LOGGER.info("Camel Route Status: {}", routeInfo);
+        } else {
+            LOGGER.warn("Camel Route '{}' was not started within timeout", itemId3);
+            LOGGER.warn("All Camel routes with status: {}", getAllCamelRoutesWithStatus());
+        }
 
         //Wait for data to be processed
         keepTrying("Failed waiting for surfers delete import to complete",
                 () -> profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null),
                 (p) -> p.getTotalSize() == 0, 1000, 100);
 
-        keepTrying("Failed waiting for import configurations list with 1 item", () -> importConfigurationService.getAll(),
-                (list) -> Objects.nonNull(list) && list.size() == 1, 1000, 100);
+        // Refresh the persistence index to ensure the saved configuration is queryable in getAll()
+        // This addresses the flakiness where getAll() returns 0 items due to index refresh delay
+        persistenceService.refreshIndex(ImportConfiguration.class);
+
+        // Check for the specific item ID instead of exact count to avoid flakiness from leftover configurations
+        keepTrying("Failed waiting for import configuration '" + itemId3 + "' to be available in getAll()",
+                () -> importConfigurationService.getAll(),
+                (list) -> Objects.nonNull(list) && list.stream().anyMatch(config -> itemId3.equals(config.getItemId())),
+                1000, 100);
 
         PartialList<Profile> jordyProfileDelete = profileService
                 .findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);

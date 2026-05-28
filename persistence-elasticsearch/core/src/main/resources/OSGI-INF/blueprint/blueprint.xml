@@ -23,7 +23,7 @@
            http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0 https://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.3.0.xsd">
 
     <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
-                             update-strategy="reload" placeholder-prefix="${es.">
+                             update-strategy="none" placeholder-prefix="${es.">
         <cm:default-properties>
             <cm:property name="cluster.name" value="contextElasticSearch"/>
             <cm:property name="elasticSearchAddresses" value="localhost:9200"/>
@@ -40,7 +40,7 @@
             <cm:property name="bulkProcessor.flushInterval" value="5"/>
             <cm:property name="bulkProcessor.backoffPolicy" value="exponential"/>
 
-            <cm:property name="rollover.indices" value=""/>
+            <cm:property name="rollover.indices" value="event,session"/>
             <cm:property name="rollover.maxSize" value="30gb"/>
             <cm:property name="rollover.maxAge" value=""/>
             <cm:property name="rollover.maxDocs" value=""/>
@@ -75,14 +75,16 @@
 
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
-    <reference id="conditionEvaluatorDispatcherService"
-               interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher"/>
 
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
         <interfaces>
             <value>org.apache.unomi.persistence.spi.PersistenceService</value>
             <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.osgi.service.cm.ManagedService</value>
         </interfaces>
+        <service-properties>
+            <entry key="service.pid" value="org.apache.unomi.persistence.elasticsearch"/>
+        </service-properties>
     </service>
 
     <bean id="conditionESQueryBuilderDispatcher"
@@ -90,12 +92,14 @@
         <property name="scriptExecutor" ref="scriptExecutor"/>
     </bean>
 
+    <reference id="conditionEvaluatorDispatcher" interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher" />
+
     <bean id="elasticSearchPersistenceServiceImpl"
           class="org.apache.unomi.persistence.elasticsearch.ElasticSearchPersistenceServiceImpl"
           init-method="start"
           destroy-method="stop">
         <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="conditionEvaluatorDispatcher" ref="conditionEvaluatorDispatcherService"/>
+        <property name="conditionEvaluatorDispatcher" ref="conditionEvaluatorDispatcher"/>
         <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher"/>
         <property name="indexPrefix" value="${es.index.prefix}"/>
         <property name="numberOfShards" value="${es.numberOfShards}"/>
@@ -157,6 +161,26 @@
                 unbind-method="unbindConditionESQueryBuilder"
                 ref="elasticSearchPersistenceServiceImpl"/>
     </reference-list>
+
+    <!-- Transformation Listeners -->
+    <reference-list id="transformationListeners"
+                   interface="org.apache.unomi.api.tenants.TenantTransformationListener"
+                   availability="optional">
+        <reference-listener bind-method="bindTransformationListener"
+                          unbind-method="unbindTransformationListener">
+            <ref component-id="elasticSearchPersistenceServiceImpl"/>
+        </reference-listener>
+    </reference-list>
+
+    <!-- Execution Context Manager Reference -->
+    <reference id="contextManager"
+               interface="org.apache.unomi.api.services.ExecutionContextManager"
+               availability="optional">
+        <reference-listener bind-method="bindContextManager"
+                          unbind-method="unbindContextManager">
+            <ref component-id="elasticSearchPersistenceServiceImpl"/>
+        </reference-listener>
+    </reference>
 
     <service
             interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">

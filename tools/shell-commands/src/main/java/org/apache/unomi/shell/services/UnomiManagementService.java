@@ -60,4 +60,11 @@ public interface UnomiManagementService {
      * @throws Exception if there was an error stopping Unomi's bundles
      */
     void stopUnomi(boolean waitForCompletion) throws Exception;
+
+    /**
+     * This method will get the currently configured distribution
+     * @return the distribution feature name, or null if no distribution is configured
+     * @throws Exception if there was an error retrieving the distribution
+     */
+    String getCurrentDistribution() throws Exception;
 }

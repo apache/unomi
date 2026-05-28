@@ -18,11 +18,17 @@ package org.apache.unomi.rest.service.impl;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.cxf.interceptor.security.RolePrefixSecurityContextImpl;
+import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.apache.unomi.api.*;
+import org.apache.unomi.api.security.TenantPrincipal;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.schema.api.SchemaService;
@@ -33,12 +39,19 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.security.auth.Subject;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.BadRequestException;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
+import java.security.Principal;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Component(service = RestServiceUtils.class)
@@ -47,6 +60,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     private static final String DEFAULT_CLIENT_ID = "defaultClientId";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RestServiceUtilsImpl.class.getName());
+    public static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
 
     @Reference
     private ConfigSharingService configSharingService;
@@ -62,6 +76,9 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
 
     @Reference
     SchemaService schemaService;
+
+    @Reference
+    private TenantService tenantService;
 
     @Override
     public String getProfileIdCookieValue(HttpServletRequest httpServletRequest) {
@@ -145,7 +162,13 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                         // Session user has been switched, profile id in cookie is not up to date
                         // We must reload the profile with the session ID as some properties could be missing from the session profile
                         // #personalIdentifier
-                        eventsRequestContext.setProfile(profileService.load(sessionProfile.getItemId()));
+                        Profile sessionProfileWithId = profileService.load(sessionProfile.getItemId());
+                        if (sessionProfileWithId != null) {
+                            eventsRequestContext.setProfile(sessionProfileWithId);
+                        } else {
+                            LOGGER.warn("Couldn't find profile ID {} referenced from session with ID {}, so we re-create it", sessionProfile.getItemId(), sessionId);
+                            eventsRequestContext.setProfile(createNewProfile(sessionProfile.getItemId(), timestamp));
+                        }
                     }
 
                     // Handle anonymous situation
@@ -165,10 +188,14 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     } else if (!requireAnonymousBrowsing && !anonymousSessionProfile) {
                         // User does not want to browse anonymously, use the real profile. Check that session contains the current profile.
                         sessionProfile = eventsRequestContext.getProfile();
-                        if (!eventsRequestContext.getSession().getProfileId().equals(sessionProfile.getItemId())) {
-                            eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
+                        if (sessionProfile != null) {
+                            if (!eventsRequestContext.getSession().getProfileId().equals(sessionProfile.getItemId())) {
+                                eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
+                            }
+                            eventsRequestContext.getSession().setProfile(sessionProfile);
+                        } else {
+                            LOGGER.warn("Null profile in event request context");
                         }
-                        eventsRequestContext.getSession().setProfile(sessionProfile);
                     }
                 }
             }
@@ -222,10 +249,13 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     }
 
     @Override
-    public EventsRequestContext performEventsRequest(List<Event> events, EventsRequestContext eventsRequestContext) {
+    public EventsRequestContext performEventsRequest(List<Event> events, EventsRequestContext eventsRequestContext, SecurityContext securityContext) {
         List<String> filteredEventTypes = privacyService.getFilteredEventTypes(eventsRequestContext.getProfile());
-        String thirdPartyId = eventService.authenticateThirdPartyServer(eventsRequestContext.getRequest().getHeader("X-Unomi-Peer"),
-                eventsRequestContext.getRequest().getRemoteAddr());
+
+        String tenantId = resolveTenantId(eventsRequestContext.getRequest());
+        if (tenantId == null) {
+            throw new WebApplicationException("Unable to resolve a tenant", Response.Status.UNAUTHORIZED);
+        }
 
         // execute provided events if any
         if (events != null && !(eventsRequestContext.getProfile() instanceof Persona)) {
@@ -236,20 +266,23 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                 eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() + 1);
 
                 if (event.getEventType() != null) {
-                    Event eventToSend = new Event(event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(), event.getSource(),
-                            event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
+                    Event eventToSend = new Event(event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
+                            event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                     eventToSend.setFlattenedProperties(event.getFlattenedProperties());
-                    if (!eventService.isEventAllowed(event, thirdPartyId)) {
-                        LOGGER.warn("Event is not allowed : {}", event.getEventType());
+                    if (!eventService.isEventAllowedForTenant(event, tenantId, eventsRequestContext.getRequest().getRemoteAddr())) {
+                        LOGGER.debug("Tenant is not authorized to send event {} from IP {}", event.getEventType(), eventsRequestContext.getRequest().getRemoteAddr());
+                        //Don't count the event that failed
+                        eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() - 1);
                         continue;
                     }
-                    if (thirdPartyId != null && event.getItemId() != null) {
+                    if (securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR) && event.getItemId() != null) {
                         eventToSend = new Event(event.getItemId(), event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
                                 event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                         eventToSend.setFlattenedProperties(event.getFlattenedProperties());
                     }
                     if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
                         LOGGER.debug("Profile is filtering event type {}", event.getEventType());
+                        eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() - 1);
                         continue;
                     }
                     if (eventsRequestContext.getProfile().isAnonymousProfile()) {
@@ -284,6 +317,23 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         }
 
         return eventsRequestContext;
+    }
+
+    private static String resolveTenantId(HttpServletRequest request) {
+        RolePrefixSecurityContextImpl rolePrefixSecurityContextImpl = (RolePrefixSecurityContextImpl) JAXRSUtils.getCurrentMessage().get(org.apache.cxf.security.SecurityContext.class);
+        Subject subject = rolePrefixSecurityContextImpl.getSubject();
+        Optional<Principal> optTenantPrincipal = subject.getPrincipals().stream().filter(principal -> principal instanceof TenantPrincipal).findFirst();
+        if (optTenantPrincipal.isPresent()) {
+            TenantPrincipal tenantPrincipal = (TenantPrincipal) optTenantPrincipal.get();
+            return tenantPrincipal.getTenantId();
+        }
+        String tenantId = request.getHeader(UNOMI_TENANT_ID_HEADER);
+        if (tenantId == null) {
+            return null;
+        }
+        tenantId = tenantId.trim();
+        tenantId = tenantId.substring(0, Math.min(tenantId.length(), 100)); // basic protection against long string injection.
+        return tenantId;
     }
 
     @Override

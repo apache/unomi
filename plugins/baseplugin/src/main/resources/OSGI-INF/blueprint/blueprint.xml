@@ -52,6 +52,13 @@
     <reference id="topicService" interface="org.apache.unomi.api.services.TopicService"/>
     <reference id="pastEventConditionPersistenceQueryBuilder" interface="org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder"/>
 
+    <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager">
+        <reference-listener ref="mergeProfilesOnPropertyAction" bind-method="bindExecutionContextManager" unbind-method="unbindExecutionContextManager" />
+    </reference>
+    <reference id="securityService" interface="org.apache.unomi.api.security.SecurityService">
+        <reference-listener ref="mergeProfilesOnPropertyAction" bind-method="bindSecurityService" unbind-method="unbindSecurityService" />
+    </reference>
+
     <!-- Condition evaluators -->
     <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
@@ -115,7 +122,6 @@
             <property name="persistenceService" ref="persistenceService"/>
             <property name="pastEventConditionPersistenceQueryBuilder" ref="pastEventConditionPersistenceQueryBuilder"/>
             <property name="scriptExecutor" ref="scriptExecutor"/>
-            <property name="pastEventConditionPersistenceQueryBuilder" ref="pastEventConditionPersistenceQueryBuilder"/>
         </bean>
     </service>
 
@@ -226,19 +232,20 @@
         </bean>
     </service>
 
-    <service interface="org.apache.unomi.api.actions.ActionExecutor">
+    <bean id="mergeProfilesOnPropertyAction" class="org.apache.unomi.plugins.baseplugin.actions.MergeProfilesOnPropertyAction">
+        <property name="profileService" ref="profileService"/>
+        <property name="eventService" ref="eventService"/>
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsService"/>
+        <property name="privacyService" ref="privacyService"/>
+        <property name="schedulerService" ref="schedulerService"/>
+        <property name="maxProfilesInOneMerge" value="${base.maxProfilesInOneMerge}"/>
+    </bean>
+
+    <service interface="org.apache.unomi.api.actions.ActionExecutor" ref="mergeProfilesOnPropertyAction">
         <service-properties>
             <entry key="actionExecutorId" value="mergeProfilesOnProperty"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.MergeProfilesOnPropertyAction">
-            <property name="profileService" ref="profileService"/>
-            <property name="eventService" ref="eventService"/>
-            <property name="persistenceService" ref="persistenceService"/>
-            <property name="definitionsService" ref="definitionsService"/>
-            <property name="privacyService" ref="privacyService"/>
-            <property name="schedulerService" ref="schedulerService"/>
-            <property name="maxProfilesInOneMerge" value="${base.maxProfilesInOneMerge}"/>
-        </bean>
     </service>
 
     <service interface="org.apache.unomi.api.actions.ActionExecutor">

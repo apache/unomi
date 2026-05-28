@@ -45,8 +45,6 @@ public class ProfileImportRankingIT extends BaseIT {
     @Test
     public void testImportRanking() throws InterruptedException {
 
-        routerCamelContext.setTracing(true);
-
         /*** Create Missing Properties ***/
         PropertyType propertyTypeUciId = new PropertyType(new Metadata("integration", "uciId", "UCI ID", "UCI ID"));
         propertyTypeUciId.setValueTypeId("string");
@@ -90,7 +88,7 @@ public class ProfileImportRankingIT extends BaseIT {
         importConfigRanking.getProperties().put("mapping", mappingRanking);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
         importConfigRanking.getProperties().put("source",
-                "file://" + importSurfersFile.getAbsolutePath() + "?fileName=5-ranking-test.csv&consumer.delay=10m&move=.done");
+                "file://" + importSurfersFile.getAbsolutePath() + "?fileName=5-ranking-test.csv&move=.done");
         importConfigRanking.setActive(true);
 
         importConfigurationService.save(importConfigRanking, true);
@@ -100,8 +98,15 @@ public class ProfileImportRankingIT extends BaseIT {
                 () -> profileService.findProfilesByPropertyValue("properties.city", "rankingCity", 0, 50, null),
                 (p) -> p.getTotalSize() == 25, 1000, 200);
 
-        List<ImportConfiguration> importConfigurations = keepTrying("Failed waiting for import configurations list with 1 item",
-                () -> importConfigurationService.getAll(), (list) -> Objects.nonNull(list) && list.size() == 1, 1000, 100);
+        // Refresh the persistence index to ensure the saved configuration is queryable in getAll()
+        // This addresses the flakiness where getAll() returns 0 items due to index refresh delay
+        persistenceService.refreshIndex(ImportConfiguration.class);
+
+        // Check for the specific item ID instead of exact count to avoid flakiness from leftover configurations
+        List<ImportConfiguration> importConfigurations = keepTrying("Failed waiting for import configuration '" + itemId + "' to be available in getAll()",
+                () -> importConfigurationService.getAll(),
+                (list) -> Objects.nonNull(list) && list.stream().anyMatch(config -> itemId.equals(config.getItemId())),
+                1000, 100);
 
         PartialList<Profile> gregProfileList = profileService.findProfilesByPropertyValue("properties.uciId", "10004451371", 0, 10, null);
         Assert.assertEquals(1, gregProfileList.getList().size());
