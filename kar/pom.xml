@@ -143,6 +143,10 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-json-schema-shell-commands</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
             <artifactId>shell-dev-commands</artifactId>
         </dependency>
         <dependency>

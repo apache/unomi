@@ -30,6 +30,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.common.DataTable;
 import org.apache.unomi.shell.dev.commands.ListCommandSupport;
 import org.osgi.service.component.annotations.Reference;
@@ -65,7 +66,7 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
         try {
             Query query = buildQuery(maxEntries);
             PartialList<?> items = getItems(query);
-            
+
             printPaginationWarning(items, console);
 
             DataTable dataTable = new DataTable();
@@ -116,7 +117,7 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
      * This implementation automatically prepends "Tenant" as the first column header,
      * matching how tenantId is automatically prepended to rows in buildDataTable() and buildRows().
      * Subclasses should implement getHeadersWithoutTenant() to provide their specific headers.
-     * 
+     *
      * Subclasses can override this method to provide custom header handling (e.g., to skip the tenant column
      * for commands like TenantCrudCommand where it would be redundant).
      *
@@ -151,20 +152,20 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
     protected Query buildQuery(int limit) throws Exception {
         Query query = new Query();
         query.setLimit(limit);
-        
+
         if (definitionsService == null) {
             throw new Exception("Definitions service is not available");
         }
-        
+
         ConditionType matchAllConditionType = definitionsService.getConditionType("matchAllCondition");
         if (matchAllConditionType == null) {
             throw new Exception("No matchAllCondition available");
         }
-        
+
         Condition matchAllCondition = new Condition(matchAllConditionType);
         query.setCondition(matchAllCondition);
         query.setSortby(getSortBy());
-        
+
         return query;
     }
 
@@ -178,12 +179,12 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
     protected Comparable[] buildRowWithTenant(Object item) {
         Comparable[] rowData = buildRow(item);
         String tenantId = getTenantIdFromItem(item);
-        
+
         // Create a new array with tenantId as the first element
         Comparable[] rowWithTenant = new Comparable[rowData.length + 1];
         rowWithTenant[0] = tenantId;
         System.arraycopy(rowData, 0, rowWithTenant, 1, rowData.length);
-        
+
         return rowWithTenant;
     }
 
@@ -206,7 +207,7 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
         try {
             Query query = buildQuery(maxEntries);
             PartialList<?> items = getItems(query);
-            
+
             printPaginationWarning(items, console);
 
             for (Object item : items.getList()) {
@@ -231,18 +232,18 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
     public void buildCsvOutput(PrintStream console, String[] headers, int limit) throws Exception {
         Query query = buildQuery(limit);
         PartialList<?> items = getItems(query);
-        
+
         // Generate CSV directly using commons-csv
         CSVFormat csvFormat = CSVFormat.DEFAULT;
         CSVPrinter printer = csvFormat.print(console);
-        
+
         // Print header
         printer.printRecord((Object[]) headers);
-        
+
         // Print data rows
         for (Object item : items.getList()) {
             Comparable[] rowWithTenant = buildRowWithTenant(item);
-            
+
             // Convert to List<String> for CSV printer
             List<String> row = new ArrayList<>();
             for (Comparable<?> cell : rowWithTenant) {
@@ -250,7 +251,7 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
             }
             printer.printRecord(row.toArray());
         }
-        
+
         printer.close();
     }
 
@@ -261,7 +262,18 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
      * @return the tenant ID or a default value if it can't be determined
      */
     protected String getTenantIdFromItem(Object item) {
-        // Tenant column reserved for when tenant support is merged (Item#getTenantId, Tenant type, etc.).
+
+        // Handle tenant-specific objects
+        if (item instanceof Tenant) {
+            return ((Tenant) item).getItemId();
+        }
+
+        // Handle Item subclasses that directly have tenantId
+        if (item instanceof Item) {
+            String tenantId = ((Item) item).getTenantId();
+            return tenantId;
+        }
+
         return "n/a";
     }
 
@@ -326,7 +338,7 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
         int start = offset == null ? 0 : offset;
         int size = limit == null ? items.size() : limit;
         int end = Math.min(start + size, items.size());
-        
+
         List<T> pagedItems = items.subList(start, end);
         return new PartialList<>(pagedItems, start, pagedItems.size(), items.size(), PartialList.Relation.EQUAL);
     }
