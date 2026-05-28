@@ -21,9 +21,13 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.lists.UserList;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.Objects;
 
 public class GraphQLListIT extends BaseGraphQLIT {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GraphQLListIT.class);
 
     @Test
     public void testCRUD() throws Exception {
@@ -82,6 +86,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
                         try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
                             return ResponseContext.parse(response.getEntity());
                         } catch (Exception e) {
+                            LOGGER.warn("find-lists poll attempt failed: {}", e.getMessage());
                             return null;
                         }
                     },
