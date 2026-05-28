@@ -97,11 +97,12 @@ public class PropertiesUpdateActionIT extends BaseIT {
         LOGGER.info("Changes of the event : {}", changes);
 
         Assert.assertTrue(changes > 0);
+        // Current profile on the event is updated in memory; do not poll persistence here.
         Assert.assertEquals("UPDATED FIRST NAME CURRENT PROFILE", profile.getProperty("firstName"));
     }
 
     @Test
-    public void testUpdateProperties_NotCurrentProfile() {
+    public void testUpdateProperties_NotCurrentProfile() throws InterruptedException {
         Profile profile = profileService.load(PROFILE_TARGET_TEST_ID);
         Profile profileToUpdate = profileService.load(PROFILE_TEST_ID);
         Assert.assertNull(profileToUpdate.getProperty("firstName"));
@@ -117,8 +118,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
         eventService.send(updateProperties);
 
-        profileToUpdate = profileService.load(PROFILE_TEST_ID);
-        Assert.assertEquals("UPDATED FIRST NAME", profileToUpdate.getProperty("firstName"));
+        waitForProfileProperty(PROFILE_TEST_ID, "firstName", "UPDATED FIRST NAME");
     }
 
     @Test

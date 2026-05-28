@@ -77,15 +77,28 @@ public class GraphQLListIT extends BaseGraphQLIT {
 
             refreshPersistence(UserList.class);
 
-            Thread.sleep(6000);
+            final ResponseContext findListsContext = keepTrying("Failed waiting for profile in list query",
+                    () -> {
+                        try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
+                            return ResponseContext.parse(response.getEntity());
+                        } catch (Exception e) {
+                            return null;
+                        }
+                    },
+                    context -> {
+                        if (context == null) {
+                            return false;
+                        }
+                        Integer totalCount = (Integer) context.getValue("data.cdp.findLists.totalCount");
+                        if (totalCount == null || totalCount != 1) {
+                            return false;
+                        }
+                        Object profileId = context.getValue("data.cdp.findLists.edges[0].node.active.edges[0].node.cdp_profileIDs[0].id");
+                        return profile.getItemId().equals(profileId);
+                    },
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-            try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
-                final ResponseContext context = ResponseContext.parse(response.getEntity());
-
-                Assert.assertEquals(1, ((Integer) context.getValue("data.cdp.findLists.totalCount")).intValue());
-                Assert.assertEquals("testListId", context.getValue("data.cdp.findLists.edges[0].node.id"));
-                Assert.assertEquals(profile.getItemId(), context.getValue("data.cdp.findLists.edges[0].node.active.edges[0].node.cdp_profileIDs[0].id"));
-            }
+            Assert.assertEquals("testListId", findListsContext.getValue("data.cdp.findLists.edges[0].node.id"));
 
             try (CloseableHttpResponse response = post("graphql/list/delete-list.json")) {
                 final ResponseContext context = ResponseContext.parse(response.getEntity());
