@@ -17,12 +17,15 @@
 #    limitations under the License.
 #
 ################################################################################
-# Quiet evaluate: avoid capturing Maven download lines into the environment (breaks CI with ARG_MAX).
-export UNOMI_VERSION="$(mvn -B -q -DforceStdout help:evaluate -Dexpression=project.version -DinteractiveMode=false 2>/dev/null)"
+_mvn_err=$(mktemp)
+export UNOMI_VERSION="$(mvn -B -q -DforceStdout help:evaluate -Dexpression=project.version -DinteractiveMode=false 2>"$_mvn_err")"
 if [ -z "$UNOMI_VERSION" ]; then
     echo "Failed to detect project version from Maven" >&2
+    cat "$_mvn_err" >&2
+    rm -f "$_mvn_err"
     exit 1
 fi
+rm -f "$_mvn_err"
 echo "Detected project version=$UNOMI_VERSION"
 export KARAF_VERSION=4.4.8
 # Uncomment the following line if you need Apache Unomi to start automatically at the first start

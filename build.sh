@@ -19,13 +19,16 @@
 ################################################################################
 
 set -e  # Exit on error
-# Keep trap arguments small: passing full $BASH_COMMAND can exceed ARG_MAX after a failed mvn invocation.
 trap 'handle_error $? $LINENO' ERR
 
 # Error handling function
 handle_error() {
     local exit_code=$1
     local line_no=$2
+    # Read BASH_COMMAND inside the function rather than passing it through the
+    # trap to avoid ARG_MAX limits after a failed mvn invocation; truncate to
+    # keep the output readable.
+    local failed_cmd="${BASH_COMMAND:0:200}"
 
     cat << "EOF"
      _____ ____  ____   ___  ____
@@ -36,6 +39,7 @@ handle_error() {
 
 EOF
     echo "Error occurred in:"
+    echo "  Command: $failed_cmd"
     echo "  Line: $line_no"
     echo "  Exit code: $exit_code"
     exit $exit_code
