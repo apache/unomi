@@ -34,17 +34,15 @@ import java.util.stream.Collectors;
  * Provides utilities for building YAML structures and formatting them via SnakeYaml.
  */
 public class YamlUtils {
-    // SnakeYaml instance with configured options
-    private static final Yaml YAML_INSTANCE;
-    
-    static {
+    // ThreadLocal because SnakeYAML's Yaml is not thread-safe
+    private static final ThreadLocal<Yaml> YAML_INSTANCE = ThreadLocal.withInitial(() -> {
         DumperOptions options = new DumperOptions();
         options.setIndent(2);
         options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
         options.setPrettyFlow(true);
         options.setDefaultScalarStyle(DumperOptions.ScalarStyle.PLAIN);
-        YAML_INSTANCE = new Yaml(options);
-    }
+        return new Yaml(options);
+    });
 
     /**
      * Interface for objects that can convert themselves to YAML Map structures.
@@ -282,11 +280,9 @@ public class YamlUtils {
             return null;
         }
         if (value instanceof YamlConvertible) {
-            // For YamlConvertible, get the Map and then process it as a Map to ensure sorting
-            // Pass maxDepth - 1 to the toYaml method to continue depth limiting
+            // toYaml already decrements depth; pass maxDepth through unchanged for the map-sorting pass
             Map<String, Object> result = ((YamlConvertible) value).toYaml(visited, maxDepth - 1);
-            // Process the result as a Map to ensure it's sorted (this handles both sorting and recursive processing)
-            return toYamlValue(result, visited, maxDepth - 1);
+            return toYamlValue(result, visited, maxDepth);
         }
         if (value instanceof List) {
             return ((List<?>) value).stream()
@@ -318,7 +314,7 @@ public class YamlUtils {
      * @return YAML string representation
      */
     public static String format(Object value) {
-        return YAML_INSTANCE.dump(value);
+        return YAML_INSTANCE.get().dump(value);
     }
 
     /**

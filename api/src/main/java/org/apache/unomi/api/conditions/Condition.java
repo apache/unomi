@@ -28,8 +28,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import static org.apache.unomi.api.utils.YamlUtils.circularRef;
@@ -158,19 +160,14 @@ public class Condition implements Serializable, YamlConvertible {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         Condition condition = (Condition) o;
-
-        if (!conditionTypeId.equals(condition.conditionTypeId)) return false;
-        return parameterValues.equals(condition.parameterValues);
-
+        return Objects.equals(conditionTypeId, condition.conditionTypeId)
+                && Objects.equals(parameterValues, condition.parameterValues);
     }
 
     @Override
     public int hashCode() {
-        int result = conditionTypeId.hashCode();
-        result = 31 * result + parameterValues.hashCode();
-        return result;
+        return Objects.hash(conditionTypeId, parameterValues);
     }
 
     /**
@@ -243,7 +240,7 @@ public class Condition implements Serializable, YamlConvertible {
                         if (collection instanceof List) {
                             copiedCollection = new ArrayList<>();
                         } else {
-                            copiedCollection = new ArrayList<>();
+                            copiedCollection = new LinkedHashSet<>();
                         }
                         for (Object item : collection) {
                             if (item instanceof Condition) {
