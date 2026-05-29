@@ -20,7 +20,6 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.utils.YamlUtils;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -121,7 +120,7 @@ public class ConditionTest {
     }
 
     @Test
-    public void testDeepCopyNestedConditionInSetBecomesArrayList() {
+    public void testDeepCopyNestedConditionInSetPreservesSetType() {
         Condition inner = new Condition();
         inner.setConditionTypeId("inner");
         Condition outer = new Condition();
@@ -132,7 +131,7 @@ public class ConditionTest {
 
         Condition copy = outer.deepCopy();
         Object copiedVal = copy.getParameterValues().get("conds");
-        assertTrue(copiedVal instanceof ArrayList);
+        assertTrue(copiedVal instanceof LinkedHashSet);
         @SuppressWarnings("unchecked")
         Collection<Condition> col = (Collection<Condition>) copiedVal;
         assertEquals(1, col.size());
