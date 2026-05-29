@@ -19,8 +19,6 @@
 ################################################################################
 
 set -e  # Exit on error
-# Truncate $BASH_COMMAND in the trap (where it correctly reflects the failing
-# command) to avoid ARG_MAX limits after a failed mvn invocation.
 trap 'handle_error $? $LINENO "${BASH_COMMAND:0:200}"' ERR
 
 # Error handling function
@@ -265,6 +263,7 @@ IT_DEBUG=false
 IT_DEBUG_PORT=5006
 IT_DEBUG_SUSPEND=false
 SKIP_MIGRATION_TESTS=false
+KEEP_CONTAINER=false
 
 # Enhanced usage function with color support
 usage() {
@@ -303,7 +302,8 @@ EOF
         echo -e "  ${CYAN}--it-debug-port PORT${NC}       Set integration test debug port"
         echo -e "  ${CYAN}--it-debug-suspend${NC}         Suspend integration test until debugger connects"
         echo -e "  ${CYAN}--skip-migration-tests${NC}     Skip migration-related tests"
-        echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, no Maven cache, Maven -B -ntp, non-interactive"
+        echo -e "  ${CYAN}--keep-container${NC}           Keep search engine container running after tests (for post-failure inspection)"
+        echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, no Maven build cache, non-interactive"
     else
         cat << "EOF"
      _    _ _____ _      ____
@@ -337,7 +337,8 @@ EOF
         echo "  --it-debug-port PORT      Set integration test debug port"
         echo "  --it-debug-suspend        Suspend integration test until debugger connects"
         echo "  --skip-migration-tests    Skip migration-related tests"
-        echo "  --ci                      CI mode: no Karaf, no Maven cache, Maven -B -ntp, non-interactive"
+        echo "  --keep-container          Keep search engine container running after tests (for post-failure inspection)"
+        echo "  --ci                      CI mode: no Karaf, no Maven build cache, non-interactive"
     fi
 
     echo
@@ -467,6 +468,9 @@ while [ "$1" != "" ]; do
             ;;
         --skip-migration-tests)
             SKIP_MIGRATION_TESTS=true
+            ;;
+        --keep-container)
+            KEEP_CONTAINER=true
             ;;
         --ci)
             NO_KARAF=true
@@ -784,11 +788,6 @@ check_requirements() {
 MVN_CMD="mvn"
 MVN_OPTS=""
 
-# CI / non-interactive: no download progress UI, batch mode (matches former workflow mvn -ntp)
-if is_non_interactive; then
-    MVN_OPTS="$MVN_OPTS -B -ntp"
-fi
-
 # Add Maven debug option
 if [ "$MAVEN_DEBUG" = true ]; then
     MVN_OPTS="$MVN_OPTS -X"
@@ -874,6 +873,12 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
         MVN_OPTS="$MVN_OPTS -Dit.test.exclude.pattern=**/migration/**/*IT.java"
         echo "Skipping migration tests"
     fi
+
+    # Keep container running after tests if requested
+    if [ "$KEEP_CONTAINER" = true ]; then
+        MVN_OPTS="$MVN_OPTS -Dit.keepContainer=true"
+        echo "Search engine container will be kept running after tests"
+    fi
 else
     if [ "$SKIP_TESTS" = true ]; then
         PROFILES="$PROFILES,!integration-tests,!run-tests"
@@ -932,7 +937,6 @@ if [ "$HAS_COLORS" -eq 1 ]; then
 else
     echo "Running: $MVN_CMD clean $MVN_OPTS"
 fi
-# shellcheck disable=SC2086
 $MVN_CMD clean $MVN_OPTS || {
     print_status "error" "Maven clean failed"
     exit 1
@@ -944,7 +948,6 @@ if [ "$HAS_COLORS" -eq 1 ]; then
 else
     echo "Running: $MVN_CMD install $MVN_OPTS"
 fi
-# shellcheck disable=SC2086
 $MVN_CMD install $MVN_OPTS || {
     print_status "error" "Maven install failed"
     exit 1

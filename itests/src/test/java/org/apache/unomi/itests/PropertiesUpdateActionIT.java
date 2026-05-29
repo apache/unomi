@@ -93,10 +93,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
 
         int changes = eventService.send(updateProperties);
-
-        LOGGER.info("Changes of the event : {}", changes);
-
-        Assert.assertTrue(changes > 0);
+        Assert.assertTrue("eventService.send() reported no changes — action may not have fired", changes > 0);
         // Current profile on the event is updated in memory; do not poll persistence here.
         Assert.assertEquals("UPDATED FIRST NAME CURRENT PROFILE", profile.getProperty("firstName"));
     }
