@@ -78,7 +78,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
     }
 
     @Test
-    public void testUpdateProperties_CurrentProfile() throws InterruptedException {
+    public void testUpdateProperties_CurrentProfile() {
         Profile profile = profileService.load(PROFILE_TARGET_TEST_ID);
         Assert.assertNull(profile.getProperty("firstName"));
 
@@ -92,9 +92,10 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TARGET_TEST_ID);
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
 
-        eventService.send(updateProperties);
-
-        waitForProfileProperty(PROFILE_TARGET_TEST_ID, "firstName", "UPDATED FIRST NAME CURRENT PROFILE");
+        int changes = eventService.send(updateProperties);
+        Assert.assertTrue("eventService.send() reported no changes — action may not have fired", changes > 0);
+        // Current profile on the event is updated in memory; do not poll persistence here.
+        Assert.assertEquals("UPDATED FIRST NAME CURRENT PROFILE", profile.getProperty("firstName"));
     }
 
     @Test

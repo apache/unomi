@@ -19,15 +19,13 @@
 ################################################################################
 
 set -e  # Exit on error
-trap 'handle_error $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
+trap 'handle_error $? $LINENO "${BASH_COMMAND:0:200}"' ERR
 
 # Error handling function
 handle_error() {
     local exit_code=$1
     local line_no=$2
-    local bash_lineno=$3
-    local last_command=$4
-    local func_trace=$5
+    local failed_cmd=$3
 
     cat << "EOF"
      _____ ____  ____   ___  ____
@@ -38,12 +36,9 @@ handle_error() {
 
 EOF
     echo "Error occurred in:"
-    echo "  Command: $last_command"
+    echo "  Command: $failed_cmd"
     echo "  Line: $line_no"
     echo "  Exit code: $exit_code"
-    if [ ! -z "$func_trace" ]; then
-        echo "  Function trace: $func_trace"
-    fi
     exit $exit_code
 }
 
@@ -268,6 +263,7 @@ IT_DEBUG=false
 IT_DEBUG_PORT=5006
 IT_DEBUG_SUSPEND=false
 SKIP_MIGRATION_TESTS=false
+KEEP_CONTAINER=false
 
 # Enhanced usage function with color support
 usage() {
@@ -306,6 +302,7 @@ EOF
         echo -e "  ${CYAN}--it-debug-port PORT${NC}       Set integration test debug port"
         echo -e "  ${CYAN}--it-debug-suspend${NC}         Suspend integration test until debugger connects"
         echo -e "  ${CYAN}--skip-migration-tests${NC}     Skip migration-related tests"
+        echo -e "  ${CYAN}--keep-container${NC}           Keep search engine container running after tests (for post-failure inspection)"
         echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, no Maven build cache, non-interactive"
     else
         cat << "EOF"
@@ -340,6 +337,7 @@ EOF
         echo "  --it-debug-port PORT      Set integration test debug port"
         echo "  --it-debug-suspend        Suspend integration test until debugger connects"
         echo "  --skip-migration-tests    Skip migration-related tests"
+        echo "  --keep-container          Keep search engine container running after tests (for post-failure inspection)"
         echo "  --ci                      CI mode: no Karaf, no Maven build cache, non-interactive"
     fi
 
@@ -470,6 +468,9 @@ while [ "$1" != "" ]; do
             ;;
         --skip-migration-tests)
             SKIP_MIGRATION_TESTS=true
+            ;;
+        --keep-container)
+            KEEP_CONTAINER=true
             ;;
         --ci)
             NO_KARAF=true
@@ -871,6 +872,12 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     if [ "$SKIP_MIGRATION_TESTS" = true ]; then
         MVN_OPTS="$MVN_OPTS -Dit.test.exclude.pattern=**/migration/**/*IT.java"
         echo "Skipping migration tests"
+    fi
+
+    # Keep container running after tests if requested
+    if [ "$KEEP_CONTAINER" = true ]; then
+        MVN_OPTS="$MVN_OPTS -Dit.keepContainer=true"
+        echo "Search engine container will be kept running after tests"
     fi
 else
     if [ "$SKIP_TESTS" = true ]; then
