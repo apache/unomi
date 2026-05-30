@@ -1,0 +1,400 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.unomi.shell.dev.services;
+
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.karaf.shell.api.action.Argument;
+import org.apache.karaf.shell.api.action.Option;
+import org.apache.karaf.shell.support.table.ShellTable;
+
+import java.io.PrintStream;
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.common.DataTable;
+import org.apache.unomi.shell.dev.commands.ListCommandSupport;
+import org.osgi.service.component.annotations.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+/**
+ * Base class for CRUD command implementations that provides common functionality
+ * for listing objects in a tabular format.
+ */
+public abstract class BaseCrudCommand extends ListCommandSupport implements CrudCommand {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(BaseCrudCommand.class.getName());
+
+    @Reference
+    protected volatile DefinitionsService definitionsService;
+
+    @Argument(index = 0, name = "maxEntries", description = "The maximum number of entries to retrieve (defaults to 100)", required = false, multiValued = false)
+    protected int maxEntries = 100;
+
+    @Option(name = "--csv", description = "Output in CSV format", required = false)
+    protected boolean csv;
+
+    @Override
+    protected DataTable buildDataTable() {
+        PrintStream console = getConsole();
+        try {
+            Query query = buildQuery(maxEntries);
+            PartialList<?> items = getItems(query);
+            
+            printPaginationWarning(items, console);
+
+            DataTable dataTable = new DataTable();
+            for (Object item : items.getList()) {
+                Comparable[] rowWithTenant = buildRowWithTenant(item);
+                dataTable.addRow(rowWithTenant);
+            }
+
+            return dataTable;
+        } catch (Exception e) {
+            LOGGER.error("Error building data table", e);
+            console.println("Error: " + e.getMessage());
+            return new DataTable();
+        }
+    }
+
+    /**
+     * Get the sort criteria for the query.
+     * Default implementation sorts by last modification date.
+     * Override to provide different sorting.
+     *
+     * @return sort criteria (e.g., "metadata.lastModified:desc")
+     */
+    protected String getSortBy() {
+        return "metadata.lastModified:desc";
+    }
+
+    /**
+     * Get items using the provided query.
+     * Implementations must override this to use their specific service.
+     *
+     * @param query the query to execute
+     * @return partial list of items
+     */
+    protected abstract PartialList<?> getItems(Query query);
+
+    /**
+     * Build a row for the data table from an item.
+     * Implementations must override this to extract the relevant properties.
+     *
+     * @param item the item to convert to a row
+     * @return array of values for the row
+     */
+    protected abstract Comparable[] buildRow(Object item);
+
+    /**
+     * Get the column headers for the list output table.
+     * This implementation automatically prepends "Tenant" as the first column header,
+     * matching how tenantId is automatically prepended to rows in buildDataTable() and buildRows().
+     * Subclasses should implement getHeadersWithoutTenant() to provide their specific headers.
+     * 
+     * Subclasses can override this method to provide custom header handling (e.g., to skip the tenant column
+     * for commands like TenantCrudCommand where it would be redundant).
+     *
+     * @return array of column headers with "Tenant" as the first element (unless overridden)
+     */
+    @Override
+    public String[] getHeaders() {
+        String[] headersWithoutTenant = getHeadersWithoutTenant();
+        String[] headersWithTenant = new String[headersWithoutTenant.length + 1];
+        headersWithTenant[0] = "Tenant";
+        System.arraycopy(headersWithoutTenant, 0, headersWithTenant, 1, headersWithoutTenant.length);
+        return headersWithTenant;
+    }
+
+    /**
+     * Get the column headers for the list output table without the "Tenant" column.
+     * Subclasses must implement this method to provide their specific headers.
+     * The "Tenant" column will be automatically prepended by getHeaders().
+     *
+     * @return array of column headers (without "Tenant")
+     */
+    protected abstract String[] getHeadersWithoutTenant();
+
+    /**
+     * Build a query with matchAllCondition and sort criteria.
+     * This is a common helper method used by buildDataTable(), buildRows(), buildCsvOutput(), and completeId().
+     *
+     * @param limit maximum number of entries
+     * @return the configured query
+     * @throws Exception if definitions service is not available or matchAllCondition cannot be found
+     */
+    protected Query buildQuery(int limit) throws Exception {
+        Query query = new Query();
+        query.setLimit(limit);
+        
+        if (definitionsService == null) {
+            throw new Exception("Definitions service is not available");
+        }
+        
+        ConditionType matchAllConditionType = definitionsService.getConditionType("matchAllCondition");
+        if (matchAllConditionType == null) {
+            throw new Exception("No matchAllCondition available");
+        }
+        
+        Condition matchAllCondition = new Condition(matchAllConditionType);
+        query.setCondition(matchAllCondition);
+        query.setSortby(getSortBy());
+        
+        return query;
+    }
+
+    /**
+     * Build a row array with tenant ID prepended as the first element.
+     * This is a common helper method used by buildDataTable(), buildRows(), and buildCsvOutput().
+     *
+     * @param item the item to build a row from
+     * @return array with tenant ID as first element, followed by row data
+     */
+    protected Comparable[] buildRowWithTenant(Object item) {
+        Comparable[] rowData = buildRow(item);
+        String tenantId = getTenantIdFromItem(item);
+        
+        // Create a new array with tenantId as the first element
+        Comparable[] rowWithTenant = new Comparable[rowData.length + 1];
+        rowWithTenant[0] = tenantId;
+        System.arraycopy(rowData, 0, rowWithTenant, 1, rowData.length);
+        
+        return rowWithTenant;
+    }
+
+    /**
+     * Print pagination warning if not all items were retrieved.
+     * This is a common helper method used by buildDataTable() and buildRows().
+     *
+     * @param items the partial list of items
+     * @param console console for output
+     */
+    protected void printPaginationWarning(PartialList<?> items, PrintStream console) {
+        if (items.getList().size() != items.getTotalSize()) {
+            console.println("WARNING : Only the first " + items.getPageSize() + " items have been retrieved, there are " + items.getTotalSize() + " items registered in total. Use the maxEntries parameter to retrieve more items");
+        }
+    }
+
+    @Override
+    public void buildRows(ShellTable table, int maxEntries) {
+        PrintStream console = getConsole();
+        try {
+            Query query = buildQuery(maxEntries);
+            PartialList<?> items = getItems(query);
+            
+            printPaginationWarning(items, console);
+
+            for (Object item : items.getList()) {
+                Comparable[] rowWithTenant = buildRowWithTenant(item);
+                table.addRow().addContent(rowWithTenant);
+            }
+        } catch (Exception e) {
+            console.println("Error: " + e.getMessage());
+            LOGGER.error("Error building rows", e);
+        }
+    }
+
+    /**
+     * Generate CSV output directly using commons-csv API.
+     * This method uses the same logic as buildRows() but outputs as CSV.
+     *
+     * @param console console for output
+     * @param headers column headers
+     * @param limit maximum number of entries
+     * @throws Exception if generation fails
+     */
+    public void buildCsvOutput(PrintStream console, String[] headers, int limit) throws Exception {
+        Query query = buildQuery(limit);
+        PartialList<?> items = getItems(query);
+        
+        // Generate CSV directly using commons-csv
+        CSVFormat csvFormat = CSVFormat.DEFAULT;
+        CSVPrinter printer = csvFormat.print(console);
+        
+        // Print header
+        printer.printRecord((Object[]) headers);
+        
+        // Print data rows
+        for (Object item : items.getList()) {
+            Comparable[] rowWithTenant = buildRowWithTenant(item);
+            
+            // Convert to List<String> for CSV printer
+            List<String> row = new ArrayList<>();
+            for (Comparable<?> cell : rowWithTenant) {
+                row.add(cell != null ? cell.toString() : "");
+            }
+            printer.printRecord(row.toArray());
+        }
+        
+        printer.close();
+    }
+
+    /**
+     * Extract the tenant ID from an item.
+     *
+     * @param item the item to extract tenant ID from
+     * @return the tenant ID or a default value if it can't be determined
+     */
+    protected String getTenantIdFromItem(Object item) {
+        // Tenant column reserved for when tenant support is merged (Item#getTenantId, Tenant type, etc.).
+        return "n/a";
+    }
+
+    /**
+     * Default implementation of ID completion for all CRUD commands.
+     * This method fetches a limited number of items and filters their IDs based on the given prefix.
+     *
+     * @param prefix the prefix to filter IDs by
+     * @return a list of matching item IDs
+     */
+    @Override
+    public List<String> completeId(String prefix) {
+        try {
+            // Create a query with increased limit to provide more completions
+            Query query = buildQuery(50); // Higher limit for completions
+
+            // Get items using the appropriate service method
+            PartialList<?> items = getItems(query);
+
+            // Extract IDs from the items
+            List<String> ids = new ArrayList<>();
+            for (Object item : items.getList()) {
+                String id = extractIdFromItem(item);
+                if (id != null && (prefix.isEmpty() || id.startsWith(prefix))) {
+                    ids.add(id);
+                }
+            }
+
+            return ids;
+        } catch (Exception e) {
+            LOGGER.error("Error completing IDs", e);
+            return List.of();
+        }
+    }
+
+    /**
+     * Get the console PrintStream, falling back to System.out if session is not available.
+     * This is needed because CrudCommand services retrieved via bundleContext.getService()
+     * may not have session injected (they're not shell command instances).
+     *
+     * @return PrintStream for console output
+     */
+    protected PrintStream getConsole() {
+        if (session != null) {
+            return session.getConsole();
+        }
+        return System.out;
+    }
+
+    /**
+     * Apply pagination to a list of items based on query parameters.
+     * This is a helper method for implementations that need to paginate in-memory lists.
+     *
+     * @param items the full list of items
+     * @param query the query with offset and limit parameters
+     * @param <T> the type of items in the list
+     * @return a PartialList with paginated results
+     */
+    protected <T> PartialList<T> paginateList(List<T> items, Query query) {
+        Integer offset = query.getOffset();
+        Integer limit = query.getLimit();
+        int start = offset == null ? 0 : offset;
+        int size = limit == null ? items.size() : limit;
+        int end = Math.min(start + size, items.size());
+        
+        List<T> pagedItems = items.subList(start, end);
+        return new PartialList<>(pagedItems, start, pagedItems.size(), items.size(), PartialList.Relation.EQUAL);
+    }
+
+    /**
+     * Filter property names by prefix. This is a helper method for completePropertyNames implementations.
+     *
+     * @param propertyNames the list of property names to filter
+     * @param prefix the prefix to filter by
+     * @return filtered list of property names
+     */
+    protected List<String> filterPropertyNames(List<String> propertyNames, String prefix) {
+        return propertyNames.stream()
+                .filter(name -> name.startsWith(prefix))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Extract the ID from an item. This method attempts to extract the ID using common patterns.
+     * Subclasses can override this method to provide specialized ID extraction for specific item types.
+     *
+     * @param item the item to extract the ID from
+     * @return the extracted ID, or null if it couldn't be extracted
+     */
+    protected String extractIdFromItem(Object item) {
+        // Handle Item subclasses
+        if (item instanceof Item) {
+            return ((Item) item).getItemId();
+        }
+
+        // Handle Metadata objects
+        if (item instanceof Metadata) {
+            return ((Metadata) item).getId();
+        }
+
+        // Try reflection as a fallback
+        try {
+            // Try common getter method names for ID
+            for (String methodName : new String[]{"getId", "getItemId", "getIdentifier", "getKey", "getName"}) {
+                try {
+                    Method method = item.getClass().getMethod(methodName);
+                    Object result = method.invoke(item);
+                    if (result != null) {
+                        return result.toString();
+                    }
+                } catch (NoSuchMethodException e) {
+                    // Method doesn't exist, try the next one
+                }
+            }
+
+            // Try direct field access as a last resort
+            for (String fieldName : new String[]{"id", "itemId", "identifier", "key", "name"}) {
+                try {
+                    Field field = item.getClass().getDeclaredField(fieldName);
+                    field.setAccessible(true);
+                    Object value = field.get(item);
+                    if (value != null) {
+                        return value.toString();
+                    }
+                } catch (NoSuchFieldException e) {
+                    // Field doesn't exist, try the next one
+                }
+            }
+        } catch (Exception e) {
+            // Ignore reflection errors
+        }
+
+        // If all else fails, use toString and hope it's meaningful
+        return item.toString();
+    }
+}

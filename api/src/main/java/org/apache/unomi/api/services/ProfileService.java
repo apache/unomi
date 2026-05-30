@@ -218,6 +218,13 @@ public interface ProfileService {
     void removeProfileSessions(String profileId);
 
     /**
+     * Deletes the session identified by the given identifier from persistence.
+     *
+     * @param sessionIdentifier the unique identifier for the session
+     */
+    void deleteSession(String sessionIdentifier);
+
+    /**
      * Checks whether the specified profile and/or session satisfy the specified condition.
      *
      * @param condition the condition we're testing against which might or might not have profile- or session-specific sub-conditions
