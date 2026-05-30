@@ -25,7 +25,9 @@ trap 'handle_error $? $LINENO "${BASH_COMMAND:0:200}"' ERR
 handle_error() {
     local exit_code=$1
     local line_no=$2
-    local failed_cmd=$3
+    local bash_lineno=$3
+    local last_command=$4
+    local func_trace=$5
 
     cat << "EOF"
      _____ ____  ____   ___  ____
@@ -36,9 +38,12 @@ handle_error() {
 
 EOF
     echo "Error occurred in:"
-    echo "  Command: $failed_cmd"
+    echo "  Command: $last_command"
     echo "  Line: $line_no"
     echo "  Exit code: $exit_code"
+    if [ ! -z "$func_trace" ]; then
+        echo "  Function trace: $func_trace"
+    fi
     exit $exit_code
 }
 

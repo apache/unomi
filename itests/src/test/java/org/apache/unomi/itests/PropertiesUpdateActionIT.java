@@ -94,7 +94,8 @@ public class PropertiesUpdateActionIT extends BaseIT {
 
         int changes = eventService.send(updateProperties);
         Assert.assertTrue("eventService.send() reported no changes — action may not have fired", changes > 0);
-        // Current profile on the event is updated in memory; do not poll persistence here.
+        // UpdatePropertiesAction updates event.getProfile() in-memory for the current-profile path;
+        // persistence is not guaranteed synchronous here so we assert the in-memory state directly.
         Assert.assertEquals("UPDATED FIRST NAME CURRENT PROFILE", profile.getProperty("firstName"));
     }
 
