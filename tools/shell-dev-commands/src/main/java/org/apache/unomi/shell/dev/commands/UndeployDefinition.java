@@ -18,7 +18,6 @@ package org.apache.unomi.shell.dev.commands;
 
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.Patch;
 import org.apache.unomi.api.PersonaWithSessions;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.actions.ActionType;
@@ -85,9 +84,8 @@ public class UndeployDefinition extends DeploymentCommandSupport {
                 segmentService.removeScoringDefinition(scoring.getItemId(), false);
                 return true;
             case PATCH_DEFINITION_TYPE:
-                Patch patch = readDefinition(definitionURL, Patch.class);
-                // patchService.patch(patch);
-                return true;
+                console.println("Patch undeployment is not supported.");
+                return false;
             default:
                 console.println("Unrecognized definition type: " + definitionType);
                 return false;

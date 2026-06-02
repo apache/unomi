@@ -196,11 +196,17 @@ public abstract class DeploymentCommandSupport extends BaseSimpleCommand {
 
             String bundleAnswer = askUserWithAuthorizedAnswer(session, "Which bundle ?" + getValuesWithNumber(bundleSymbolicNames) + "\n",
                     IntStream.range(1,bundleSymbolicNames.size()+1).mapToObj(Integer::toString).collect(Collectors.toList()));
-            String selectedBundle = bundleSymbolicNames.get(new Integer(bundleAnswer)-1);
-            if (selectedBundle.equals(ALL_OPTION_LABEL)) {
-                bundlesToUpdate = bundles;
-            } else {
-                bundlesToUpdate = Collections.singletonList(bundles.get(new Integer(bundleAnswer) - 1));
+            try {
+                int bundleIndex = Integer.parseInt(bundleAnswer) - 1;
+                String selectedBundle = bundleSymbolicNames.get(bundleIndex);
+                if (selectedBundle.equals(ALL_OPTION_LABEL)) {
+                    bundlesToUpdate = bundles;
+                } else {
+                    bundlesToUpdate = Collections.singletonList(bundles.get(bundleIndex));
+                }
+            } catch (NumberFormatException e) {
+                println("Invalid selection: " + bundleAnswer);
+                return null;
             }
         } else {
             Bundle bundle = bundleContext.getBundle(bundleIdentifier);
@@ -215,16 +221,22 @@ public abstract class DeploymentCommandSupport extends BaseSimpleCommand {
 
         if (definitionType == null) {
             List<String> possibleDefinitionNames = definitionTypes.stream().filter((t) -> bundlesToUpdate.stream().anyMatch(b->b.findEntries(getDefinitionTypePath(t), "*.json", true) != null)).collect(Collectors.toList());
-            possibleDefinitionNames.add(ALL_OPTION_LABEL);
 
             if (possibleDefinitionNames.isEmpty()) {
                 println("Couldn't find definitions in bundle : " + bundlesToUpdate);
                 return null;
             }
 
+            possibleDefinitionNames.add(ALL_OPTION_LABEL);
+
             String definitionTypeAnswer = askUserWithAuthorizedAnswer(session, "Which kind of definition do you want to load?" + getValuesWithNumber(possibleDefinitionNames) + "\n",
                     IntStream.range(1,possibleDefinitionNames.size()+1).mapToObj(Integer::toString).collect(Collectors.toList()));
-            definitionType = possibleDefinitionNames.get(new Integer(definitionTypeAnswer)-1);
+            try {
+                definitionType = possibleDefinitionNames.get(Integer.parseInt(definitionTypeAnswer) - 1);
+            } catch (NumberFormatException e) {
+                println("Invalid selection: " + definitionTypeAnswer);
+                return null;
+            }
         }
 
         if (!definitionTypes.contains(definitionType) && !ALL_OPTION_LABEL.equals(definitionType)) {
@@ -244,7 +256,12 @@ public abstract class DeploymentCommandSupport extends BaseSimpleCommand {
             definitionTypeFileNames.add(ALL_OPTION_LABEL);
             String fileNameAnswer = askUserWithAuthorizedAnswer(session, "Which file do you want to load ?" + getValuesWithNumber(definitionTypeFileNames) + "\n",
                     IntStream.range(1,definitionTypeFileNames.size()+1).mapToObj(Integer::toString).collect(Collectors.toList()));
-            fileName = definitionTypeFileNames.get(new Integer(fileNameAnswer)-1);
+            try {
+                fileName = definitionTypeFileNames.get(Integer.parseInt(fileNameAnswer) - 1);
+            } catch (NumberFormatException e) {
+                println("Invalid selection: " + fileNameAnswer);
+                return null;
+            }
         }
         if (ALL_OPTION_LABEL.equals(fileName)) {
             for (URL url : definitionTypeURLs) {

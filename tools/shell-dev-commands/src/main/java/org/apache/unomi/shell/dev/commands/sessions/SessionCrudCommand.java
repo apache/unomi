@@ -29,7 +29,6 @@ import org.osgi.service.component.annotations.Reference;
 
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * A command to perform CRUD operations on sessions

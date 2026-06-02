@@ -78,7 +78,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
     }
 
     @Test
-    public void testUpdateProperties_CurrentProfile() throws InterruptedException {
+    public void testUpdateProperties_CurrentProfile() {
         Profile profile = profileService.load(PROFILE_TARGET_TEST_ID);
         Assert.assertNull(profile.getProperty("firstName"));
 

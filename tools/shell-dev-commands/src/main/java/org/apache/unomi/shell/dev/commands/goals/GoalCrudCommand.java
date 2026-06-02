@@ -65,6 +65,8 @@ public class GoalCrudCommand extends BaseCrudCommand {
             .map(metadata -> goalsService.getGoal(metadata.getId()))
             .filter(goal -> goal != null)
             .collect(Collectors.toList());
+        // getGoalMetadatas returns Set<Metadata> with no totalSize information; we cannot distinguish
+        // "hit limit" from "exactly that many items exist", so we report goals.size() as totalSize.
         return new PartialList<>(goals, query.getOffset(), goals.size(), goals.size(), PartialList.Relation.EQUAL);
     }
 
@@ -101,7 +103,7 @@ public class GoalCrudCommand extends BaseCrudCommand {
     public void update(String id, Map<String, Object> properties) {
         Goal existingGoal = goalsService.getGoal(id);
         if (existingGoal == null) {
-            return;
+            throw new IllegalArgumentException("Goal not found with ID: " + id);
         }
 
         Goal updatedGoal = OBJECT_MAPPER.convertValue(properties, Goal.class);

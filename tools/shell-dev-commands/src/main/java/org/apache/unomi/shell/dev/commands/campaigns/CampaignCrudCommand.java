@@ -107,7 +107,7 @@ public class CampaignCrudCommand extends BaseCrudCommand {
     public void update(String id, Map<String, Object> properties) {
         Campaign existingCampaign = goalsService.getCampaign(id);
         if (existingCampaign == null) {
-            return;
+            throw new IllegalArgumentException("Campaign not found with ID: " + id);
         }
 
         Campaign updatedCampaign = OBJECT_MAPPER.convertValue(properties, Campaign.class);

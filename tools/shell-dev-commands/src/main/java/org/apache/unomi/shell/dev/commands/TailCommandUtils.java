@@ -43,7 +43,7 @@ public final class TailCommandUtils {
         eventInfo.add(event.getEventType());
         eventInfo.add(event.getSessionId());
         eventInfo.add(event.getProfileId());
-        eventInfo.add(event.getTimeStamp().toString());
+        eventInfo.add(event.getTimeStamp() != null ? event.getTimeStamp().toString() : "-");
         eventInfo.add(event.getScope());
         eventInfo.add(Boolean.toString(event.isPersistent()));
         return eventInfo;
@@ -51,7 +51,7 @@ public final class TailCommandUtils {
 
     /**
      * Extract rule execution information into a list of strings for display.
-     * 
+     *
      * @param rule the rule to extract information from
      * @param event the event associated with the rule execution
      * @return list of rule execution information strings
@@ -63,14 +63,14 @@ public final class TailCommandUtils {
         ruleExecutionInfo.add(event.getEventType());
         ruleExecutionInfo.add(event.getSessionId());
         ruleExecutionInfo.add(event.getProfileId());
-        ruleExecutionInfo.add(event.getTimeStamp().toString());
+        ruleExecutionInfo.add(event.getTimeStamp() != null ? event.getTimeStamp().toString() : "-");
         ruleExecutionInfo.add(event.getScope());
         return ruleExecutionInfo;
     }
 
     /**
      * Extract rule execution information with status into a list of strings for display.
-     * 
+     *
      * @param rule the rule to extract information from
      * @param event the event associated with the rule execution
      * @param status the status of the rule execution (e.g., "EVALUATE", "EXECUTE", "AR ...")
@@ -84,7 +84,7 @@ public final class TailCommandUtils {
         ruleExecutionInfo.add(event.getEventType());
         ruleExecutionInfo.add(event.getSessionId());
         ruleExecutionInfo.add(event.getProfileId());
-        ruleExecutionInfo.add(event.getTimeStamp().toString());
+        ruleExecutionInfo.add(event.getTimeStamp() != null ? event.getTimeStamp().toString() : "-");
         ruleExecutionInfo.add(event.getScope());
         return ruleExecutionInfo;
     }

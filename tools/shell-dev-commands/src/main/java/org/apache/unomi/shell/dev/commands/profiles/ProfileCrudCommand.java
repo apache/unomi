@@ -98,8 +98,11 @@ public class ProfileCrudCommand extends BaseCrudCommand {
 
     @Override
     public String create(Map<String, Object> properties) {
-        Profile profile = new Profile();
-        profile.setProperties(properties);
+        String itemId = (String) properties.get("itemId");
+        Profile profile = itemId != null ? new Profile(itemId) : new Profile();
+        Map<String, Object> profileProps = new java.util.HashMap<>(properties);
+        profileProps.remove("itemId");
+        profile.setProperties(profileProps);
         profileService.save(profile);
         return profile.getItemId();
     }

@@ -251,7 +251,7 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
             printer.printRecord(row.toArray());
         }
         
-        printer.close();
+        printer.flush();
     }
 
     /**
@@ -394,7 +394,6 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
             // Ignore reflection errors
         }
 
-        // If all else fails, use toString and hope it's meaningful
-        return item.toString();
+        return null;
     }
 }

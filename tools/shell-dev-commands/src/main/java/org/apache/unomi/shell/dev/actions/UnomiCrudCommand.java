@@ -412,16 +412,17 @@ public class UnomiCrudCommand implements Action {
         String operationLower = operation.toLowerCase();
         for (ServiceReference<?> ref : refs) {
             CrudCommand cmd = (CrudCommand) bundleContext.getService(ref);
-            if (cmd.getObjectType().equals(type)) {
-                try {
+            if (cmd == null) continue;
+            try {
+                if (cmd.getObjectType().equals(type)) {
                     executeOperation(cmd, operationLower, console);
-                    return true; // Handler found and executed
-                } finally {
-                    bundleContext.ungetService(ref);
+                    return true;
                 }
+            } finally {
+                bundleContext.ungetService(ref);
             }
         }
-        return false; // No handler found
+        return false;
     }
 
     @Override

@@ -219,6 +219,8 @@ public interface ProfileService {
 
     /**
      * Deletes the session identified by the given identifier from persistence.
+     * Note: events belonging to this session are NOT removed; they remain in persistence
+     * with a dangling sessionId reference.
      *
      * @param sessionIdentifier the unique identifier for the session
      */
