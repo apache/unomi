@@ -19,7 +19,9 @@ package org.apache.unomi.graphql.utils;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Date;
+import java.util.Map;
 
 public final class DateUtils {
 
@@ -49,6 +51,28 @@ public final class DateUtils {
         }
 
         return new Date(offsetDateTime.toInstant().toEpochMilli());
+    }
+
+    @SuppressWarnings("unchecked")
+    public static OffsetDateTime offsetDateTimeFromMap(final Map<String, Object> parameterValues) {
+        if (parameterValues == null) {
+            return null;
+        }
+
+        final Map<String, Object> offsetAsMap = (Map<String, Object>) parameterValues.get("offset");
+
+        final ZoneOffset zoneOffset = ZoneOffset.of(offsetAsMap.get("id").toString());
+
+        return OffsetDateTime.of(
+                (int) parameterValues.get("year"),
+                (int) parameterValues.get("monthValue"),
+                (int) parameterValues.get("dayOfMonth"),
+                (int) parameterValues.get("hour"),
+                (int) parameterValues.get("minute"),
+                (int) parameterValues.get("second"),
+                (int) parameterValues.get("nano"),
+                zoneOffset);
+
     }
 
 }

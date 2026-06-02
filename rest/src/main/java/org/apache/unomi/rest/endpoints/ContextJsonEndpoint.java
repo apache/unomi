@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
@@ -44,6 +45,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -95,9 +97,11 @@ public class ContextJsonEndpoint {
     public Response contextJSAsPost(ContextRequest contextRequest,
             @QueryParam("personaId") String personaId,
             @QueryParam("sessionId") String sessionId,
-            @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
-            @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
-        return contextJSAsGet(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
+            @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("invalidateProfile") boolean invalidateProfile,
+            @QueryParam("invalidateSession") boolean invalidateSession,
+            @Context SecurityContext securityContext) throws JsonProcessingException {
+        return contextJSAsGet(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession, securityContext);
     }
 
     @GET
@@ -106,10 +110,12 @@ public class ContextJsonEndpoint {
     public Response contextJSAsGet(@QueryParam("payload") ContextRequest contextRequest,
             @QueryParam("personaId") String personaId,
             @QueryParam("sessionId") String sessionId,
-            @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
-            @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
+            @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("invalidateProfile") boolean invalidateProfile,
+            @QueryParam("invalidateSession") boolean invalidateSession,
+            @Context SecurityContext securityContext) throws JsonProcessingException {
         ContextResponse contextResponse = contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile,
-                invalidateSession);
+                invalidateSession, securityContext);
         String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(contextResponse);
         StringBuilder responseAsString = new StringBuilder();
         responseAsString.append("window.digitalData = window.digitalData || {};\n").append("var cxs = ").append(contextAsJSONString)
@@ -123,9 +129,11 @@ public class ContextJsonEndpoint {
     public ContextResponse contextJSONAsGet(@QueryParam("payload") ContextRequest contextRequest,
             @QueryParam("personaId") String personaId,
             @QueryParam("sessionId") String sessionId,
-            @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
-            @QueryParam("invalidateSession") boolean invalidateSession) {
-        return contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
+            @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("invalidateProfile") boolean invalidateProfile,
+            @QueryParam("invalidateSession") boolean invalidateSession,
+            @Context SecurityContext securityContext) {
+        return contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession, securityContext);
     }
 
     @POST
@@ -136,58 +144,64 @@ public class ContextJsonEndpoint {
                                              @QueryParam("sessionId") String sessionId,
                                              @QueryParam("timestamp") Long timestampAsLong,
                                              @QueryParam("invalidateProfile") boolean invalidateProfile,
-                                             @QueryParam("invalidateSession") boolean invalidateSession) {
+                                             @QueryParam("invalidateSession") boolean invalidateSession,
+                                             @Context SecurityContext securityContext) {
 
-        // Schema validation
-        ObjectNode paramsAsJson = JsonNodeFactory.instance.objectNode();
-        paramsAsJson.put("personaId", personaId);
-        paramsAsJson.put("sessionId", sessionId);
-        if (!schemaService.isValid(paramsAsJson.toString(), "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
-            throw new InvalidRequestException("Invalid parameter", "Invalid received data");
+        try {
+            // Schema validation
+            ObjectNode paramsAsJson = JsonNodeFactory.instance.objectNode();
+            paramsAsJson.put("personaId", personaId);
+            paramsAsJson.put("sessionId", sessionId);
+            if (!schemaService.isValid(paramsAsJson.toString(), "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
+                throw new InvalidRequestException("Invalid parameter", "Invalid received data");
+            }
+
+            // Generate timestamp
+            Date timestamp = new Date();
+            if (timestampAsLong != null) {
+                timestamp = new Date(timestampAsLong);
+            }
+
+            // init ids
+            String profileId = null;
+            String scope = null;
+            if (contextRequest != null) {
+                scope = contextRequest.getSource() != null ? contextRequest.getSource().getScope() : scope;
+                sessionId = contextRequest.getSessionId() != null ? contextRequest.getSessionId() : sessionId;
+                profileId = contextRequest.getProfileId();
+            }
+
+            // build public context, profile + session creation/anonymous etc ...
+            EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId,
+                    personaId, invalidateProfile, invalidateSession, request, response, timestamp);
+
+            // Build response
+            ContextResponse contextResponse = new ContextResponse();
+            if (contextRequest != null) {
+                eventsRequestContext = processContextRequest(contextRequest, contextResponse, eventsRequestContext, securityContext);
+            }
+
+            // finalize request, save profile and session if necessary and return profileId cookie in response
+            restServiceUtils.finalizeEventsRequest(eventsRequestContext, false);
+
+            contextResponse.setProfileId(eventsRequestContext.getProfile().getItemId());
+            if (eventsRequestContext.getSession() != null) {
+                contextResponse.setSessionId(eventsRequestContext.getSession().getItemId());
+            } else if (sessionId != null) {
+                contextResponse.setSessionId(sessionId);
+            }
+
+            return contextResponse;
+        } finally {
+            // @todo placeholder for tracing integration
         }
-
-        // Generate timestamp
-        Date timestamp = new Date();
-        if (timestampAsLong != null) {
-            timestamp = new Date(timestampAsLong);
-        }
-
-        // init ids
-        String profileId = null;
-        String scope = null;
-        if (contextRequest != null) {
-            scope = contextRequest.getSource() != null ? contextRequest.getSource().getScope() : scope;
-            sessionId = contextRequest.getSessionId() != null ? contextRequest.getSessionId() : sessionId;
-            profileId = contextRequest.getProfileId();
-        }
-
-        // build public context, profile + session creation/anonymous etc ...
-        EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId,
-                personaId, invalidateProfile, invalidateSession, request, response, timestamp);
-
-        // Build response
-        ContextResponse contextResponse = new ContextResponse();
-        if (contextRequest != null) {
-            eventsRequestContext = processContextRequest(contextRequest, contextResponse, eventsRequestContext);
-        }
-
-        // finalize request, save profile and session if necessary and return profileId cookie in response
-        restServiceUtils.finalizeEventsRequest(eventsRequestContext, false);
-
-        contextResponse.setProfileId(eventsRequestContext.getProfile().getItemId());
-        if (eventsRequestContext.getSession() != null) {
-            contextResponse.setSessionId(eventsRequestContext.getSession().getItemId());
-        } else if (sessionId != null) {
-            contextResponse.setSessionId(sessionId);
-        }
-        return contextResponse;
     }
 
-    private EventsRequestContext processContextRequest(ContextRequest contextRequest, ContextResponse data, EventsRequestContext eventsRequestContext) {
+    private EventsRequestContext processContextRequest(ContextRequest contextRequest, ContextResponse data, EventsRequestContext eventsRequestContext, SecurityContext securityContext) {
 
         processOverrides(contextRequest, eventsRequestContext.getProfile(), eventsRequestContext.getSession());
 
-        eventsRequestContext = restServiceUtils.performEventsRequest(contextRequest.getEvents(), eventsRequestContext);
+        eventsRequestContext = restServiceUtils.performEventsRequest(contextRequest.getEvents(), eventsRequestContext, securityContext);
         data.setProcessedEvents(eventsRequestContext.getProcessedItems());
 
         List<PersonalizationService.PersonalizedContent> filterNodes = contextRequest.getFilters();

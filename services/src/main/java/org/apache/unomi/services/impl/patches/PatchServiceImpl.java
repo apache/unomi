@@ -21,99 +21,34 @@ import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Patch;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.PatchService;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.persistence.spi.PersistenceService;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.SynchronousBundleListener;
+import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URL;
 import java.util.*;
 
-public class PatchServiceImpl implements PatchService, SynchronousBundleListener {
+public class PatchServiceImpl extends AbstractMultiTypeCachingService implements PatchService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PatchServiceImpl.class.getName());
 
-    private BundleContext bundleContext;
-
-    private PersistenceService persistenceService;
-
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
-
     public void postConstruct() {
         LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
-
-        processBundleStartup(bundleContext);
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                processBundleStartup(bundle.getBundleContext());
-            }
-        }
-        bundleContext.addBundleListener(this);
+        super.postConstruct();
         LOGGER.info("Patch service initialized.");
     }
 
     public void preDestroy() {
-        bundleContext.removeBundleListener(this);
+        super.preDestroy();
         LOGGER.info("Patch service shutdown.");
     }
 
     @Override
-    public void bundleChanged(BundleEvent event) {
-        if (event.getType() == BundleEvent.STARTED) {
-            processBundleStartup(event.getBundle().getBundleContext());
-        }
-    }
-
-    private void processBundleStartup(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-        loadPredefinedPatches(bundleContext);
-    }
-
-    private void loadPredefinedPatches(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-
-        // First apply patches on existing items
-        Enumeration<URL> urls = bundleContext.getBundle().findEntries("META-INF/cxs/patches", "*.json", true);
-        if (urls != null) {
-            List<URL> resources = Collections.list(urls);
-            resources.sort(new Comparator<URL>() {
-                @Override public int compare(URL o1, URL o2) {
-                    return o1.getFile().compareTo(o2.getFile());
-                }
-            });
-
-            for (URL patchUrl : resources) {
-                try {
-                    Patch patch = CustomObjectMapper.getObjectMapper().readValue(patchUrl, Patch.class);
-                    if (persistenceService.load(patch.getItemId(), Patch.class) == null) {
-                        patch(patch);
-                    }
-                } catch (IOException e) {
-                    LOGGER.error("Error while loading patch {}", patchUrl, e);
-                }
-            }
-        }
-    }
-
-    @Override
     public Patch load(String id) {
-        return persistenceService.load(id, Patch.class);
+        return getItem(id, Patch.class);
     }
 
     public Item patch(Patch patch) {
@@ -123,7 +58,7 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
             throw new IllegalArgumentException("Must specify valid type");
         }
 
-        Item item = persistenceService.load(patch.getPatchedItemId(), type);
+        Item item = getItem(patch.getPatchedItemId(), type);
 
         if (item != null && patch.getOperation() != null) {
             LOGGER.info("Applying patch {}", patch.getItemId());
@@ -131,7 +66,7 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
             switch (patch.getOperation()) {
                 case "override":
                     item = CustomObjectMapper.getObjectMapper().convertValue(patch.getData(), type);
-                    persistenceService.save(item);
+                    saveItem(item, Item::getItemId, patch.getPatchedItemType());
                     break;
                 case "patch":
                     JsonNode node = CustomObjectMapper.getObjectMapper().valueToTree(item);
@@ -139,22 +74,39 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
                     try {
                         JsonNode converted = jsonPatch.apply(node);
                         item = CustomObjectMapper.getObjectMapper().convertValue(converted, type);
-                        persistenceService.save(item);
+                        saveItem(item, Item::getItemId, patch.getPatchedItemType());
                     } catch (JsonPatchException e) {
                         LOGGER.error("Cannot apply patch",e);
                     }
                     break;
                 case "remove":
-                    persistenceService.remove(patch.getPatchedItemId(), type);
+                    removeItem(patch.getPatchedItemId(), type, patch.getPatchedItemType());
                     break;
             }
 
         }
 
         patch.setLastApplication(new Date());
-        persistenceService.save(patch);
+        saveItem(patch, Patch::getItemId, Patch.ITEM_TYPE);
 
         return item;
+    }
+
+    @Override
+    protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
+        Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+        configs.add(CacheableTypeConfig.builder(Patch.class, Patch.ITEM_TYPE, "patches")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(false)
+            .withIdExtractor(patch -> patch.getItemId())
+            .withUrlComparator((url1, url2) -> url1.getFile().compareTo(url2.getFile()))
+            .withPostProcessor(patch -> {
+                if (persistenceService.load(patch.getItemId(), Patch.class) == null) {
+                    patch(patch);
+                }
+            })
+            .build());
+        return configs;
     }
 
 }

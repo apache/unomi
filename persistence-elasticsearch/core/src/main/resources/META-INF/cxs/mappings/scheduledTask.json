@@ -1,0 +1,85 @@
+{
+  "dynamic_templates": [
+    {
+      "all": {
+        "match": "*",
+        "match_mapping_type": "string",
+        "mapping": {
+          "type": "text",
+          "analyzer": "folding",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "creationDate" : {
+      "type" : "date"
+    },
+    "lastModificationDate" : {
+      "type" : "date"
+    },
+    "lastSyncDate" : {
+      "type" : "date"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "persistent": {
+      "type": "boolean"
+    },
+    "initialDelay": {
+      "type": "long"
+    },
+    "period": {
+      "type": "long"
+    },
+    "fixedRate": {
+      "type": "boolean"
+    },
+    "oneShot": {
+      "type": "boolean"
+    },
+    "allowParallelExecution": {
+      "type": "boolean"
+    },
+    "runOnAllNodes": {
+      "type": "boolean"
+    },
+    "maxRetries": {
+      "type": "integer"
+    },
+    "retryDelay": {
+      "type": "long"
+    },
+    "failureCount": {
+      "type": "integer"
+    },
+    "statusDetails": {
+      "type": "object",
+      "enabled": false
+    },
+    "checkpointData": {
+      "type": "object",
+      "enabled": false
+    },
+    "parameters": {
+      "type": "object",
+      "enabled": false
+    },
+    "lockDate": {
+      "type": "date"
+    },
+    "lastExecutionDate": {
+      "type": "date"
+    },
+    "nextScheduledExecution": {
+      "type": "date"
+    }
+  }
+}

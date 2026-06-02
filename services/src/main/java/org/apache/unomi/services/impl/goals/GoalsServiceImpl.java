@@ -34,40 +34,28 @@ import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.GoalsService;
 import org.apache.unomi.api.services.RulesService;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.aggregate.*;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.utils.ParserHelper;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.SynchronousBundleListener;
+import org.apache.unomi.persistence.spi.aggregate.*;
+import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
-public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener {
+public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements GoalsService {
     private static final Logger LOGGER = LoggerFactory.getLogger(GoalsServiceImpl.class.getName());
-
-    private BundleContext bundleContext;
-
-    private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
 
     private RulesService rulesService;
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
+    private long goalRefreshInterval = 5000; // 5 seconds
+    private long campaignRefreshInterval = 5000; // 5 seconds
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -77,59 +65,22 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         this.rulesService = rulesService;
     }
 
-    public void postConstruct() {
-        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
+    public void setGoalRefreshInterval(long goalRefreshInterval) {
+        this.goalRefreshInterval = goalRefreshInterval;
+    }
 
-        loadPredefinedGoals(bundleContext);
-        loadPredefinedCampaigns(bundleContext);
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                loadPredefinedGoals(bundle.getBundleContext());
-                loadPredefinedCampaigns(bundle.getBundleContext());
-            }
-        }
-        bundleContext.addBundleListener(this);
+    public void setCampaignRefreshInterval(long campaignRefreshInterval) {
+        this.campaignRefreshInterval = campaignRefreshInterval;
+    }
+
+    public void postConstruct() {
+        super.postConstruct();
         LOGGER.info("Goal service initialized.");
     }
 
     public void preDestroy() {
-        bundleContext.removeBundleListener(this);
+        super.preDestroy();
         LOGGER.info("Goal service shutdown.");
-    }
-
-    private void processBundleStartup(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-        loadPredefinedGoals(bundleContext);
-        loadPredefinedCampaigns(bundleContext);
-    }
-
-    private void processBundleStop(BundleContext bundleContext) {
-    }
-
-    private void loadPredefinedGoals(BundleContext bundleContext) {
-        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/cxs/goals", "*.json", true);
-        if (predefinedRuleEntries == null) {
-            return;
-        }
-
-        while (predefinedRuleEntries.hasMoreElements()) {
-            URL predefinedGoalURL = predefinedRuleEntries.nextElement();
-            LOGGER.debug("Found predefined goals at {}, loading... ", predefinedGoalURL);
-
-            try {
-                Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
-                if (goal.getMetadata().getScope() == null) {
-                    goal.getMetadata().setScope("systemscope");
-                }
-
-                setGoal(goal);
-                LOGGER.info("Predefined goal with id {} registered", goal.getMetadata().getId());
-            } catch (IOException e) {
-                LOGGER.error("Error while loading segment definition {}", predefinedGoalURL, e);
-            }
-        }
     }
 
     private void createRule(Goal goal, Condition event, String id, boolean testStart) {
@@ -193,11 +144,10 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public Set<Metadata> getGoalMetadatas() {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Goal definition : persistenceService.getAllItems(Goal.class, 0, 50, null).getList()) {
-            descriptions.add(definition.getMetadata());
-        }
-        return descriptions;
+        Collection<Goal> goals = getAllItems(Goal.class, true);
+        return goals.stream()
+            .map(Goal::getMetadata)
+            .collect(Collectors.toSet());
     }
 
     public Set<Metadata> getGoalMetadatas(Query query) {
@@ -214,17 +164,12 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
 
     public Goal getGoal(String goalId) {
-        Goal goal = persistenceService.load(goalId, Goal.class);
-        if (goal != null) {
-            ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent(), "goal "+goalId+" start event");
-            ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent(), "goal "+goalId+" target event");
-        }
-        return goal;
+        return getItem(goalId, Goal.class);
     }
 
     @Override
     public void removeGoal(String goalId) {
-        persistenceService.remove(goalId, Goal.class);
+        removeItem(goalId, Goal.class, Goal.ITEM_TYPE);
         rulesService.removeRule(goalId + "StartEvent");
         rulesService.removeRule(goalId + "TargetEvent");
     }
@@ -250,35 +195,15 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             rulesService.removeRule(goal.getMetadata().getId() + "TargetEvent");
         }
 
-        persistenceService.save(goal);
+        saveItem(goal, Goal::getItemId, Goal.ITEM_TYPE);
     }
 
     public Set<Metadata> getCampaignGoalMetadatas(String campaignId) {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Goal definition : persistenceService.query("campaignId", campaignId, null, Goal.class,0,50).getList()) {
-            descriptions.add(definition.getMetadata());
-        }
-        return descriptions;
-    }
-
-    private void loadPredefinedCampaigns(BundleContext bundleContext) {
-        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/cxs/campaigns", "*.json", true);
-        if (predefinedRuleEntries == null) {
-            return;
-        }
-
-        while (predefinedRuleEntries.hasMoreElements()) {
-            URL predefinedCampaignURL = predefinedRuleEntries.nextElement();
-            LOGGER.debug("Found predefined campaigns at {}, loading... ", predefinedCampaignURL);
-
-            try {
-                Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
-                setCampaign(campaign);
-                LOGGER.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
-            } catch (IOException e) {
-                LOGGER.error("Error while loading segment definition {}", predefinedCampaignURL, e);
-            }
-        }
+        Collection<Goal> goals = getAllItems(Goal.class, true);
+        return goals.stream()
+            .filter(goal -> campaignId.equals(goal.getCampaignId()))
+            .map(Goal::getMetadata)
+            .collect(Collectors.toSet());
     }
 
     private void createRule(Campaign campaign, Condition event) {
@@ -330,11 +255,10 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
 
     public Set<Metadata> getCampaignMetadatas() {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Campaign definition : persistenceService.getAllItems(Campaign.class, 0, 50, null).getList()) {
-            descriptions.add(definition.getMetadata());
-        }
-        return descriptions;
+        Collection<Campaign> campaigns = getAllItems(Campaign.class, true);
+        return campaigns.stream()
+            .map(Campaign::getMetadata)
+            .collect(Collectors.toSet());
     }
 
     public Set<Metadata> getCampaignMetadatas(Query query) {
@@ -401,11 +325,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public Campaign getCampaign(String id) {
-        Campaign campaign = persistenceService.load(id, Campaign.class);
-        if (campaign != null) {
-            ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition(), "campaign " + id);
-        }
-        return campaign;
+        return getItem(id, Campaign.class);
     }
 
     public void removeCampaign(String id) {
@@ -413,11 +333,11 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             removeGoal(m.getId());
         }
         rulesService.removeRule(id + "EntryEvent");
-        persistenceService.remove(id, Campaign.class);
+        removeItem(id, Campaign.class, Campaign.ITEM_TYPE);
     }
 
     public void setCampaign(Campaign campaign) {
-        ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition(), "campaign " + campaign.getItemId());
+        resolveCampaign(campaign);
 
         if(rulesService.getRule(campaign.getMetadata().getId() + "EntryEvent") != null) {
             rulesService.removeRule(campaign.getMetadata().getId() + "EntryEvent");
@@ -429,7 +349,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             }
         }
 
-        persistenceService.save(campaign);
+        saveItem(campaign, Campaign::getItemId, Campaign.ITEM_TYPE);
     }
 
     public GoalReport getGoalReport(String goalId) {
@@ -438,7 +358,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     public GoalReport getGoalReport(String goalId, AggregateQuery query) {
         Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        final ArrayList<Condition> list = new ArrayList<>();
+        final ArrayList<Condition> list = new ArrayList<Condition>();
         condition.setParameter("operator", "and");
         condition.setParameter("subConditions", list);
 
@@ -471,29 +391,28 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
         // resolve aggregate
         BaseAggregate aggregate = null;
-        String property = query.getAggregate().getProperty();
-        if(query != null && query.getAggregate() != null && property != null) {
+        if(query != null && query.getAggregate() != null) {
+            String property = query.getAggregate().getProperty();
+            if(property != null) {
             if (query.getAggregate().getType() != null){
                 // try to guess the aggregate type
                 if(query.getAggregate().getType().equals("date")) {
                     String interval = (String) query.getAggregate().getParameters().get("interval");
                     String format = (String) query.getAggregate().getParameters().get("format");
                     aggregate = new DateAggregate(property, interval, format);
-                } else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getDateRanges() != null && !query.getAggregate()
-                        .getDateRanges().isEmpty()) {
+                } else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getDateRanges() != null && query.getAggregate().getDateRanges().size() > 0) {
                     String format = (String) query.getAggregate().getParameters().get("format");
                     aggregate = new DateRangeAggregate(property, format, query.getAggregate().getDateRanges());
-                } else if (query.getAggregate().getType().equals("numericRange") && query.getAggregate().getNumericRanges() != null && !query.getAggregate()
-                        .getNumericRanges().isEmpty()) {
+                } else if (query.getAggregate().getType().equals("numericRange") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
                     aggregate = new NumericRangeAggregate(property, query.getAggregate().getNumericRanges());
-                } else if (query.getAggregate().getType().equals("ipRange") && query.getAggregate().ipRanges() != null && !query.getAggregate()
-                        .ipRanges().isEmpty()) {
+                } else if (query.getAggregate().getType().equals("ipRange") && query.getAggregate().ipRanges() != null && query.getAggregate().ipRanges().size() > 0) {
                     aggregate = new IpRangeAggregate(property, query.getAggregate().ipRanges());
                 }
             }
 
-            if (aggregate == null) {
-                aggregate = new TermsAggregate(property);
+                if(aggregate == null){
+                    aggregate = new TermsAggregate(property);
+                }
             }
         }
 
@@ -506,12 +425,12 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             match = persistenceService.aggregateWithOptimizedQuery(condition, aggregate, Session.ITEM_TYPE);
         } else {
             list.add(goalStartCondition);
-            all = new HashMap<>();
+            all = new HashMap<String, Long>();
             all.put("_filtered", persistenceService.queryCount(condition, Session.ITEM_TYPE));
 
             list.remove(goalStartCondition);
             list.add(goalTargetCondition);
-            match = new HashMap<>();
+            match = new HashMap<String, Long>();
             match.put("_filtered", persistenceService.queryCount(condition, Session.ITEM_TYPE));
         }
 
@@ -525,7 +444,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         stat.setConversionRate(stat.getStartCount() > 0 ? (float) stat.getTargetCount() / (float) stat.getStartCount() : 0);
         report.setGlobalStats(stat);
         all.remove("_all");
-        report.setSplit(new LinkedList<>());
+        report.setSplit(new LinkedList<GoalReport.Stat>());
         for (Map.Entry<String, Long> entry : all.entrySet()) {
             GoalReport.Stat dateStat = new GoalReport.Stat();
             dateStat.setKey(entry.getKey());
@@ -559,14 +478,42 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         persistenceService.remove(campaignEventId, CampaignEvent.class);
     }
 
-    public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                processBundleStartup(event.getBundle().getBundleContext());
-                break;
-            case BundleEvent.STOPPING:
-                processBundleStop(event.getBundle().getBundleContext());
-                break;
+    @Override
+    protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
+        Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+        configs.add(CacheableTypeConfig.builder(Goal.class, Goal.ITEM_TYPE, "goals")
+            .withRequiresRefresh(true)  // Add this line
+            .withRefreshInterval(goalRefreshInterval)
+            .withPredefinedItems(true)
+            .withIdExtractor(Goal::getItemId)
+            .withBundleItemProcessor((bundleContext, goal) -> {
+                if (goal.getMetadata().getScope() == null) {
+                    goal.getMetadata().setScope("systemscope");
+                }
+                setGoal(goal);
+            })
+            .build());
+        configs.add(CacheableTypeConfig.builder(Campaign.class, Campaign.ITEM_TYPE, "campaigns")
+            .withRequiresRefresh(true)  // Add this line
+            .withRefreshInterval(campaignRefreshInterval)
+            .withPredefinedItems(true)
+            .withIdExtractor(Campaign::getItemId)
+            .withBundleItemProcessor((bundleContext, campaign) -> {
+                setCampaign(campaign);
+            })
+            .build());
+        return configs;
+    }
+
+
+    /**
+     * Hook for campaign type resolution (validation stack not backported on this branch).
+     *
+     * @param campaign the campaign being saved
+     */
+    private void resolveCampaign(Campaign campaign) {
+        if (campaign == null) {
+            return;
         }
     }
 

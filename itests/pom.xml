@@ -26,7 +26,6 @@
     <artifactId>unomi-itests</artifactId>
     <name>Apache Unomi :: Integration Tests</name>
     <description>Apache Unomi Context Server integration tests</description>
-    <packaging>jar</packaging>
 
     <properties>
         <unomi.search.engine>elasticsearch</unomi.search.engine>
@@ -166,6 +165,28 @@
             <groupId>org.apache.groovy</groupId>
             <artifactId>groovy</artifactId>
             <version>${groovy.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-rest</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>log4j-extension</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Camel APIs for test visibility (provided scope - available at runtime via OSGi bundles) -->
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-core</artifactId>
+            <version>2.23.1</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

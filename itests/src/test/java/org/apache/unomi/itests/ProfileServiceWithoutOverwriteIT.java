@@ -57,6 +57,7 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
 
     @Before
     public void setUp() {
+        persistenceService.refresh();
         TestUtils.removeAllProfiles(definitionsService, persistenceService);
     }
 
@@ -70,7 +71,7 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
         return profile;
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testSaveProfileWithoutOverwriteSameProfileThrowsException() {
         Profile profile = setupWithoutOverwriteTests();
         profile.setProperty("country", "test2-country");

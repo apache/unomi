@@ -86,12 +86,20 @@ public class PatchIT extends BaseIT {
         PropertyType income = profileService.getPropertyType("income");
 
         try {
-            Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch3.json"), Patch.class);
+            // We need to execute as system to remove a system property type
+            executionContextManager.executeAsSystem(() -> {
+                Patch patch = null;
+                try {
+                    patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch3.json"), Patch.class);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
 
-            patchService.patch(patch);
+                patchService.patch(patch);
 
-            profileService.refresh();
+                profileService.refresh();
 
+            });
             waitForNullValue("Failed waiting for property type removal",
                     () -> profileService.getPropertyType("income"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         } finally {
@@ -124,6 +132,9 @@ public class PatchIT extends BaseIT {
     @Test
     public void testPatchOnActionType() throws IOException, InterruptedException {
         ActionType mailAction = definitionsService.getActionType("sendMailAction");
+        Assert.assertNotNull("sendMailAction should exist", mailAction);
+        Assert.assertNotNull("ActionType metadata should not be null", mailAction.getMetadata());
+        Assert.assertNotNull("ActionType systemTags should not be null", mailAction.getMetadata().getSystemTags());
         Assert.assertTrue(mailAction.getMetadata().getSystemTags().contains("availableToEndUser"));
 
         try {

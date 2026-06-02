@@ -18,6 +18,15 @@
     }
   ],
   "properties": {
+    "creationDate" : {
+      "type" : "date"
+    },
+    "lastModificationDate" : {
+      "type" : "date"
+    },
+    "lastSyncDate" : {
+      "type" : "date"
+    },
     "cost": {
       "type": "double"
     },
@@ -108,6 +117,10 @@
           "enabled": false
         }
       }
+    },
+    "parameters": {
+      "type": "object",
+      "enabled": false
     },
     "elements": {
       "properties": {

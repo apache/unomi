@@ -26,11 +26,7 @@ import org.apache.unomi.graphql.schema.ComparisonConditionTranslator;
 import org.apache.unomi.graphql.schema.PropertyNameTranslator;
 import org.apache.unomi.graphql.schema.PropertyValueTypeHelper;
 import org.apache.unomi.graphql.services.ServiceManager;
-import org.apache.unomi.graphql.types.input.CDPInterestFilterInput;
-import org.apache.unomi.graphql.types.input.CDPProfileEventsFilterInput;
-import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
-import org.apache.unomi.graphql.types.input.CDPProfilePropertiesFilterInput;
-import org.apache.unomi.graphql.types.input.CDPSegmentFilterInput;
+import org.apache.unomi.graphql.types.input.*;
 import org.apache.unomi.graphql.utils.ConditionBuilder;
 import org.apache.unomi.graphql.utils.StringUtils;
 
@@ -154,7 +150,7 @@ public class ProfileConditionFactory extends ConditionFactory {
     }
 
     private Condition buildConditionInterestValue(Double interestValue, String operator) {
-        return integerPropertyCondition("properties.interests.value", operator, interestValue);
+        return numberPropertyCondition("properties.interests.value", operator, interestValue);
     }
 
     private Condition interestFilterInputCondition(final CDPInterestFilterInput filterInput) {

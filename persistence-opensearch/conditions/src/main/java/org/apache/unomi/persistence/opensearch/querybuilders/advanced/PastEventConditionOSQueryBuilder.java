@@ -26,10 +26,14 @@ import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder;
 import org.apache.unomi.scripting.ScriptExecutor;
+import org.joda.time.DateTime;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 
 import java.util.*;
@@ -45,6 +49,8 @@ public class PastEventConditionOSQueryBuilder implements ConditionOSQueryBuilder
     private int maximumIdsQueryCount = 5000;
     private int aggregateQueryBucketSize = 5000;
     private boolean pastEventsDisablePartitions = false;
+
+    private final DateTimeFormatter dateTimeFormatter = ISODateTimeFormat.dateTime();
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -77,8 +83,10 @@ public class PastEventConditionOSQueryBuilder implements ConditionOSQueryBuilder
     @Override
     public Query buildQuery(Condition condition, Map<String, Object> context, ConditionOSQueryBuilderDispatcher dispatcher) {
         boolean eventsOccurred = getStrategyFromOperator((String) condition.getParameter("operator"));
-        int minimumEventCount = !eventsOccurred || condition.getParameter("minimumEventCount") == null ? 1 : (Integer) condition.getParameter("minimumEventCount");
-        int maximumEventCount = !eventsOccurred || condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
+        Integer minimumEventCountObj = PropertyHelper.getInteger(condition.getParameter("minimumEventCount"));
+        int minimumEventCount = !eventsOccurred || minimumEventCountObj == null ? 1 : minimumEventCountObj;
+        Integer maximumEventCountObj = PropertyHelper.getInteger(condition.getParameter("maximumEventCount"));
+        int maximumEventCount = !eventsOccurred || maximumEventCountObj == null ? Integer.MAX_VALUE : maximumEventCountObj;
         String generatedPropertyKey = (String) condition.getParameter("generatedPropertyKey");
 
         if (generatedPropertyKey != null && generatedPropertyKey.equals(segmentService.getGeneratedPropertyKey((Condition) condition.getParameter("eventCondition"), condition))) {
@@ -97,8 +105,10 @@ public class PastEventConditionOSQueryBuilder implements ConditionOSQueryBuilder
     @Override
     public long count(Condition condition, Map<String, Object> context, ConditionOSQueryBuilderDispatcher dispatcher) {
         boolean eventsOccurred = getStrategyFromOperator((String) condition.getParameter("operator"));
-        int minimumEventCount = !eventsOccurred || condition.getParameter("minimumEventCount") == null ? 1 : (Integer) condition.getParameter("minimumEventCount");
-        int maximumEventCount = !eventsOccurred || condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
+        Integer minimumEventCountObj = PropertyHelper.getInteger(condition.getParameter("minimumEventCount"));
+        int minimumEventCount = !eventsOccurred || minimumEventCountObj == null ? 1 : minimumEventCountObj;
+        Integer maximumEventCountObj = PropertyHelper.getInteger(condition.getParameter("maximumEventCount"));
+        int maximumEventCount = !eventsOccurred || maximumEventCountObj == null ? Integer.MAX_VALUE : maximumEventCountObj;
         String generatedPropertyKey = (String) condition.getParameter("generatedPropertyKey");
 
         if (generatedPropertyKey != null && generatedPropertyKey.equals(segmentService.getGeneratedPropertyKey((Condition) condition.getParameter("eventCondition"), condition))) {
@@ -227,9 +237,25 @@ public class PastEventConditionOSQueryBuilder implements ConditionOSQueryBuilder
             l.add(profileCondition);
         }
 
-        Integer numberOfDays = (Integer) condition.getParameter("numberOfDays");
-        String fromDate = (String) condition.getParameter("fromDate");
-        String toDate = (String) condition.getParameter("toDate");
+        Integer numberOfDays = PropertyHelper.getInteger(condition.getParameter("numberOfDays"));
+        Object fromDateValue = condition.getParameter("fromDate");
+        String fromDate = null;
+        if (fromDateValue != null) {
+            if (fromDateValue instanceof Date) {
+                fromDate = dateTimeFormatter.print(new DateTime(fromDateValue));
+            } else {
+                fromDate = (String) fromDateValue;
+            }
+        }
+        Object toDateValue = condition.getParameter("toDate");
+        String toDate = null;
+        if (toDateValue != null) {
+            if (toDateValue instanceof Date) {
+                toDate = dateTimeFormatter.print(new DateTime(toDateValue));
+            } else {
+                toDate = (String) toDateValue;
+            }
+        }
 
         if (numberOfDays != null) {
             l.add(getTimeStampCondition("greaterThan", "propertyValueDateExpr", "now-" + numberOfDays + "d", definitionsService));

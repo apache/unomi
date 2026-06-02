@@ -16,85 +16,63 @@
  */
 package org.apache.unomi.services.impl.scope;
 
-import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Scope;
-import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
-import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
+import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Set;
 
-public class ScopeServiceImpl implements ScopeService {
+public class ScopeServiceImpl extends AbstractMultiTypeCachingService implements ScopeService {
 
-    private PersistenceService persistenceService;
-
-    private SchedulerService schedulerService;
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScopeServiceImpl.class.getName());
 
     private Integer scopesRefreshInterval = 1000;
 
-    private ConcurrentMap<String, Scope> scopes = new ConcurrentHashMap<>();
-
-    private ScheduledFuture<?> scheduledFuture;
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
+    @Override
+    public List<Scope> getScopes() {
+        return new ArrayList<>(getAllItems(Scope.class, true));
     }
 
-    public void setSchedulerService(SchedulerService schedulerService) {
-        this.schedulerService = schedulerService;
+    @Override
+    public void save(Scope scope) {
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        if (currentTenant == null) {
+            throw new IllegalStateException("Cannot save scope: no tenant specified");
+        }
+        scope.setTenantId(currentTenant);
+        saveItem(scope, Scope::getItemId, Scope.ITEM_TYPE);
+    }
+
+    @Override
+    public boolean delete(String id) {
+        removeItem(id, Scope.class, Scope.ITEM_TYPE);
+        return true;
+    }
+
+    @Override
+    public Scope getScope(String id) {
+        return getItem(id, Scope.class);
     }
 
     public void setScopesRefreshInterval(Integer scopesRefreshInterval) {
         this.scopesRefreshInterval = scopesRefreshInterval;
     }
 
-    public void postConstruct() {
-        initializeTimers();
-    }
-
-    public void preDestroy() {
-        scheduledFuture.cancel(true);
-    }
-
     @Override
-    public List<Scope> getScopes() {
-        return new ArrayList<>(scopes.values());
-    }
-
-    @Override
-    public void save(Scope scope) {
-        persistenceService.save(scope);
-    }
-
-    @Override
-    public boolean delete(String id) {
-        return persistenceService.remove(id, Scope.class);
-    }
-
-    @Override
-    public Scope getScope(String id) {
-        return scopes.get(id);
-    }
-
-    private void initializeTimers() {
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                refreshScopes();
-            }
-        };
-        scheduledFuture = schedulerService.getScheduleExecutorService()
-                .scheduleWithFixedDelay(task, 0, scopesRefreshInterval, TimeUnit.MILLISECONDS);
-    }
-
-    private void refreshScopes() {
-        scopes = persistenceService.getAllItems(Scope.class).stream().collect(Collectors.toConcurrentMap(Item::getItemId, scope -> scope));
+    protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
+        Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+        configs.add(CacheableTypeConfig.builder(Scope.class, Scope.ITEM_TYPE, null)
+            .withPredefinedItems(false)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(scopesRefreshInterval)
+            .withIdExtractor(Scope::getItemId)
+            .build());
+        return configs;
     }
 }
