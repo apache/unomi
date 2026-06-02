@@ -17,18 +17,55 @@
 package org.apache.unomi.router.api.exceptions;
 
 /**
- * Created by amidani on 13/06/2017.
+ * Exception thrown when profile import line data cannot be parsed or converted during import processing.
+ * Indicates issues with CSV structure, column mapping, or property value conversion on an import line.
+ *
+ * <p>Common scenarios where this exception is thrown:
+ * <ul>
+ *   <li>Invalid CSV format or column count mismatch on an import line</li>
+ *   <li>Missing required profile fields in the mapping</li>
+ *   <li>Property value conversion failures (e.g. unsupported type for a mapped field)</li>
+ *   <li>Malformed multi-value fields</li>
+ *   <li>Empty lines in import files</li>
+ * </ul>
+ * </p>
+ *
+ * <p>Usage in Unomi:
+ * <ul>
+ *   <li>Thrown by import line processors (e.g. {@code LineSplitProcessor})</li>
+ *   <li>Handled by import route error handlers</li>
+ * </ul>
+ * </p>
+ *
+ * @see org.apache.unomi.router.api.ProfileToImport
+ * @since 1.0
  */
 public class BadProfileDataFormatException extends Exception {
 
+    /**
+     * Constructs a new exception with {@code null} as its detail message.
+     * The cause is not initialized.
+     */
     public BadProfileDataFormatException() {
         super();
     }
 
+    /**
+     * Constructs a new exception with the specified detail message.
+     * The cause is not initialized.
+     *
+     * @param message the detail message describing the cause of the exception
+     */
     public BadProfileDataFormatException(String message) {
         super(message);
     }
 
+    /**
+     * Constructs a new exception with the specified detail message and cause.
+     *
+     * @param message the detail message describing the cause of the exception
+     * @param cause the underlying cause of the exception
+     */
     public BadProfileDataFormatException(String message, Throwable cause) {
         super(message, cause);
     }
