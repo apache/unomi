@@ -81,9 +81,14 @@ public class GraphQLListIT extends BaseGraphQLIT {
                     () -> {
                         try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
                             return ResponseContext.parse(response.getEntity());
+                        } catch (Exception e) {
+                            return null;
                         }
                     },
                     context -> {
+                        if (context == null) {
+                            return false;
+                        }
                         Integer totalCount = (Integer) context.getValue("data.cdp.findLists.totalCount");
                         if (totalCount == null || totalCount != 1) {
                             return false;
@@ -98,7 +103,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
             try (CloseableHttpResponse response = post("graphql/list/delete-list.json")) {
                 final ResponseContext context = ResponseContext.parse(response.getEntity());
 
-                Assert.assertTrue("testListId", context.getValue("data.cdp.deleteList"));
+                Assert.assertTrue("deleteList should return true", Boolean.TRUE.equals(context.getValue("data.cdp.deleteList")));
             }
         } finally {
             if (persistedProfile != null) {

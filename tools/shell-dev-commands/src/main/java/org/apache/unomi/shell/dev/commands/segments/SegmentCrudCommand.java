@@ -168,7 +168,7 @@ public class SegmentCrudCommand extends BaseCrudCommand {
         // Create a query to find segments that match the prefix
         Query query = new Query();
         query.setLimit(20); // Reasonable limit for auto-completion
-        
+
         try {
             // If prefix is not empty, use it to filter results
             if (!prefix.isEmpty()) {
@@ -182,7 +182,7 @@ public class SegmentCrudCommand extends BaseCrudCommand {
                 Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
                 query.setCondition(matchAllCondition);
             }
-            
+
             // Execute the query and extract segment IDs
             PartialList<Metadata> metadatas = segmentService.getSegmentMetadatas(query);
             return metadatas.getList().stream()

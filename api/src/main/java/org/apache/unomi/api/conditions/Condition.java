@@ -28,8 +28,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import static org.apache.unomi.api.utils.YamlUtils.circularRef;
@@ -158,19 +160,107 @@ public class Condition implements Serializable, YamlConvertible {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-
         Condition condition = (Condition) o;
-
-        if (!conditionTypeId.equals(condition.conditionTypeId)) return false;
-        return parameterValues.equals(condition.parameterValues);
-
+        return Objects.equals(conditionTypeId, condition.conditionTypeId)
+                && Objects.equals(parameterValues, condition.parameterValues);
     }
 
     @Override
     public int hashCode() {
-        int result = conditionTypeId.hashCode();
-        result = 31 * result + parameterValues.hashCode();
-        return result;
+        return Objects.hash(conditionTypeId, parameterValues);
+    }
+
+    /**
+     * Converts this condition to a Map structure for YAML output with depth limiting.
+     * Implements YamlConvertible interface with circular reference detection and depth limiting
+     * to prevent StackOverflowError from extremely deep nested structures.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @param maxDepth maximum recursion depth (prevents StackOverflowError from deep nesting)
+     * @return a Map representation of this condition
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlMapBuilder.create()
+                .put("type", conditionTypeId != null ? conditionTypeId : "Condition")
+                .put("parameterValues", "<max depth exceeded>")
+                .build();
+        }
+        if (visited != null && visited.contains(this)) {
+            return circularRef();
+        }
+        final Set<Object> visitedSet = visited != null ? visited : YamlUtils.newIdentityVisitedSet();
+        visitedSet.add(this);
+        try {
+            YamlMapBuilder builder = YamlMapBuilder.create()
+                .put("type", conditionTypeId != null ? conditionTypeId : "Condition");
+            if (parameterValues != null && !parameterValues.isEmpty()) {
+                builder.put("parameterValues", toYamlValue(parameterValues, visitedSet, maxDepth - 1));
+            }
+            return builder.build();
+        } finally {
+            visitedSet.remove(this);
+        }
+    }
+
+    /**
+     * Creates a deep copy of this condition, including all nested conditions in parameter values.
+     * Recursively copies all nested conditions to avoid sharing references.
+     *
+     * @return a deep copy of this condition
+     * @throws IllegalStateException if the condition graph contains a cycle through nested {@link Condition} values
+     */
+    public Condition deepCopy() {
+        return deepCopy(new IdentityHashMap<>());
+    }
+
+    private Condition deepCopy(IdentityHashMap<Condition, Boolean> copying) {
+        if (copying.put(this, Boolean.TRUE) != null) {
+            throw new IllegalStateException("Cyclic Condition graph: cannot deepCopy()");
+        }
+        try {
+            Condition copied = new Condition();
+            if (this.conditionType != null) {
+                copied.setConditionType(this.conditionType);
+            } else if (this.conditionTypeId != null) {
+                copied.setConditionTypeId(this.conditionTypeId);
+            }
+
+            // Deep copy parameter values
+            Map<String, Object> copiedParams = new HashMap<>();
+            if (this.parameterValues != null) {
+                for (Map.Entry<String, Object> entry : this.parameterValues.entrySet()) {
+                    Object value = entry.getValue();
+                    if (value instanceof Condition) {
+                        copiedParams.put(entry.getKey(), ((Condition) value).deepCopy(copying));
+                    } else if (value instanceof Collection) {
+                        Collection<?> collection = (Collection<?>) value;
+                        Collection<Object> copiedCollection;
+                        if (collection instanceof List) {
+                            copiedCollection = new ArrayList<>();
+                        } else {
+                            copiedCollection = new LinkedHashSet<>();
+                        }
+                        for (Object item : collection) {
+                            if (item instanceof Condition) {
+                                copiedCollection.add(((Condition) item).deepCopy(copying));
+                            } else {
+                                copiedCollection.add(item);
+                            }
+                        }
+                        copiedParams.put(entry.getKey(), copiedCollection);
+                    } else {
+                        copiedParams.put(entry.getKey(), value);
+                    }
+                }
+            }
+            copied.setParameterValues(copiedParams);
+
+            return copied;
+        } finally {
+            copying.remove(this);
+        }
     }
 
     /**

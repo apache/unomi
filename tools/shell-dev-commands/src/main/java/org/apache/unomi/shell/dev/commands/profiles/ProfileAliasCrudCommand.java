@@ -76,18 +76,22 @@ public class ProfileAliasCrudCommand extends BaseCrudCommand {
 
     @Override
     public Map<String, Object> read(String id) {
-        // Since there's no direct method to get a single alias, we'll need to search for it
-        // Search with a reasonable limit to find the alias by ID
-        PartialList<ProfileAlias> aliases = profileService.findProfileAliases(null, 0, 100, null);
-        ProfileAlias alias = aliases.getList().stream()
-            .filter(a -> a.getItemId().equals(id))
-            .findFirst()
-            .orElse(null);
-
-        if (alias == null) {
-            return null;
+        int offset = 0;
+        final int pageSize = 200;
+        while (true) {
+            PartialList<ProfileAlias> page = profileService.findProfileAliases(null, offset, pageSize, null);
+            ProfileAlias alias = page.getList().stream()
+                .filter(a -> a.getItemId().equals(id))
+                .findFirst()
+                .orElse(null);
+            if (alias != null) {
+                return OBJECT_MAPPER.convertValue(alias, Map.class);
+            }
+            if (offset + page.getList().size() >= page.getTotalSize()) {
+                return null;
+            }
+            offset += pageSize;
         }
-        return OBJECT_MAPPER.convertValue(alias, Map.class);
     }
 
     @Override

@@ -28,7 +28,6 @@ import org.apache.unomi.shell.dev.services.CrudCommand;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -79,24 +78,29 @@ public class CampaignEventCrudCommand extends BaseCrudCommand {
 
     @Override
     public Map<String, Object> read(String id) {
-        // There's no direct method to get a single campaign event, so we need to query for it
-        Query query = new Query();
-        Condition condition = new Condition();
-        condition.setConditionType(definitionsService.getConditionType("matchAllCondition"));
-        condition.setParameter("operator", "and");
-        condition.setParameter("subConditions", new ArrayList<>());
-        query.setCondition(condition);
+        int offset = 0;
+        final int pageSize = 200;
+        while (true) {
+            Query query = new Query();
+            Condition condition = new Condition();
+            condition.setConditionType(definitionsService.getConditionType("matchAllCondition"));
+            query.setCondition(condition);
+            query.setOffset(offset);
+            query.setLimit(pageSize);
 
-        PartialList<CampaignEvent> events = goalsService.getEvents(query);
-        CampaignEvent event = events.getList().stream()
-            .filter(e -> e.getItemId().equals(id))
-            .findFirst()
-            .orElse(null);
-
-        if (event == null) {
-            return null;
+            PartialList<CampaignEvent> events = goalsService.getEvents(query);
+            CampaignEvent event = events.getList().stream()
+                .filter(e -> e.getItemId().equals(id))
+                .findFirst()
+                .orElse(null);
+            if (event != null) {
+                return OBJECT_MAPPER.convertValue(event, Map.class);
+            }
+            if (offset + events.getList().size() >= events.getTotalSize()) {
+                return null;
+            }
+            offset += pageSize;
         }
-        return OBJECT_MAPPER.convertValue(event, Map.class);
     }
 
     @Override

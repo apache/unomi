@@ -34,8 +34,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-
 /**
  * A command to perform CRUD operations on consents
  */
@@ -65,8 +63,17 @@ public class ConsentCrudCommand extends BaseCrudCommand {
 
     @Override
     protected PartialList<?> getItems(Query query) {
-        // Since consents are stored within profiles, we need to get all profiles and extract their consents
-        PartialList<Profile> profiles = profileService.search(query, Profile.class);
+        // Consents are embedded in profiles. We fetch consentLimit*20 profiles from offset 0,
+        // then paginate the extracted consent list with the original query parameters.
+        // LIMITATION: always starts from profile offset 0, so consents on profiles outside
+        // the first consentLimit*20 results may not appear for high-offset pages.
+        int consentLimit = query.getLimit() > 0 ? query.getLimit() : 100;
+        Query profileQuery = new Query();
+        profileQuery.setLimit(consentLimit * 20);
+        profileQuery.setOffset(0);
+        profileQuery.setSortby(query.getSortby());
+        profileQuery.setCondition(query.getCondition());
+        PartialList<Profile> profiles = profileService.search(profileQuery, Profile.class);
         List<Map<String, Object>> consents = new ArrayList<>();
 
         DateFormat dateFormat = DATE_FORMAT.get();
@@ -195,7 +202,7 @@ public class ConsentCrudCommand extends BaseCrudCommand {
 
             profileService.save(profile);
         } catch (Exception e) {
-            // Handle error
+            throw new IllegalArgumentException("Failed to update consent: " + e.getMessage(), e);
         }
     }
 

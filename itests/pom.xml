@@ -34,6 +34,8 @@
         <docker.container.name>itests-opensearch</docker.container.name>
         <!-- Skip caching for this module only -->
         <maven.build.cache.skip>true</maven.build.cache.skip>
+        <!-- Set to true to keep the search engine container running after tests (useful for post-failure inspection) -->
+        <it.keepContainer>false</it.keepContainer>
     </properties>
 
     <dependencyManagement>
@@ -240,6 +242,7 @@
             <id>elasticsearch</id>
             <properties>
                 <elasticsearch.port>9400</elasticsearch.port>
+                <elasticsearch.heap>4g</elasticsearch.heap>
             </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>
@@ -293,7 +296,7 @@
                                         </ports>
                                         <env>
                                             <discovery.type>single-node</discovery.type>
-                                            <ES_JAVA_OPTS>-Xms8g -Xmx8g -Dcluster.default.index.settings.number_of_replicas=0</ES_JAVA_OPTS>
+                                            <ES_JAVA_OPTS>-Xms${elasticsearch.heap} -Xmx${elasticsearch.heap}</ES_JAVA_OPTS>
                                             <xpack.security.enabled>false</xpack.security.enabled>
                                             <xpack.ml.enabled>false</xpack.ml.enabled>
                                             <path.repo>/tmp/snapshots_repository</path.repo>
@@ -318,13 +321,16 @@
                             </images>
                         </configuration>
                         <executions>
-                            <!-- Force remove existing container before starting -->
+                            <!-- Force remove existing container before starting; ignore failure if no container exists yet -->
                             <execution>
                                 <id>remove-existing-container</id>
                                 <phase>pre-integration-test</phase>
+                                <configuration>
+                                    <ignoreRunningContainers>true</ignoreRunningContainers>
+                                </configuration>
                                 <goals>
-                                    <goal>stop</goal> <!-- Stops the container if running -->
-                                    <goal>remove</goal> <!-- Removes the container -->
+                                    <goal>stop</goal>
+                                    <goal>remove</goal>
                                 </goals>
                             </execution>
 
@@ -341,6 +347,9 @@
                             <execution>
                                 <id>stop-elasticsearch</id>
                                 <phase>post-integration-test</phase>
+                                <configuration>
+                                    <skip>${it.keepContainer}</skip>
+                                </configuration>
                                 <goals>
                                     <goal>stop</goal>
                                 </goals>
@@ -407,7 +416,7 @@
                                         </ports>
                                         <env>
                                             <discovery.type>single-node</discovery.type>
-                                            <OPENSEARCH_JAVA_OPTS>-Xms4g -Xmx4g -Dcluster.default.index.settings.number_of_replicas=0</OPENSEARCH_JAVA_OPTS>
+                                            <OPENSEARCH_JAVA_OPTS>-Xms4g -Xmx4g</OPENSEARCH_JAVA_OPTS>
                                             <path.repo>/tmp/snapshots_repository</path.repo>
                                             <plugins.security.disabled>true</plugins.security.disabled>
                                             <OPENSEARCH_INITIAL_ADMIN_PASSWORD>Unomi.1ntegrat10n.Tests</OPENSEARCH_INITIAL_ADMIN_PASSWORD>
@@ -431,13 +440,16 @@
                             </images>
                         </configuration>
                         <executions>
-                            <!-- Force remove existing container before starting -->
+                            <!-- Force remove existing container before starting; ignore failure if no container exists yet -->
                             <execution>
                                 <id>remove-existing-container</id>
                                 <phase>pre-integration-test</phase>
+                                <configuration>
+                                    <ignoreRunningContainers>true</ignoreRunningContainers>
+                                </configuration>
                                 <goals>
-                                    <goal>stop</goal> <!-- Stops the container if running -->
-                                    <goal>remove</goal> <!-- Removes the container -->
+                                    <goal>stop</goal>
+                                    <goal>remove</goal>
                                 </goals>
                             </execution>
 
@@ -450,6 +462,16 @@
                                 <configuration>
                                     <showLogs>true</showLogs>
                                 </configuration>
+                            </execution>
+                            <execution>
+                                <id>stop-opensearch</id>
+                                <phase>post-integration-test</phase>
+                                <configuration>
+                                    <skip>${it.keepContainer}</skip>
+                                </configuration>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
                             </execution>
                         </executions>
                     </plugin>
