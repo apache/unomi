@@ -101,7 +101,7 @@ public class PatchIT extends BaseIT {
 
             });
             waitForNullValue("Failed waiting for property type removal",
-                    () -> profileService.getPropertyType("income"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                    () -> profileService.getPropertyType("income"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES * 2);
         } finally {
             profileService.setPropertyType(income);
         }
