@@ -667,6 +667,15 @@ public abstract class BaseIT extends KarafTestSupport {
             LOGGER.warn("Unable to set jacoco agent as {} was not found", agentFile);
         }
 
+        // Allow overriding the Karaf JVM heap via -Dit.karaf.heap (e.g. 4g)
+        String karafHeap = System.getProperty("it.karaf.heap", "");
+        if (!karafHeap.isEmpty()) {
+            LOGGER.info("Setting Karaf JVM heap to: {}", karafHeap);
+            System.out.println("Setting Karaf JVM heap to: " + karafHeap);
+            karafOptions.add(new VMOption("-Xms" + karafHeap));
+            karafOptions.add(new VMOption("-Xmx" + karafHeap));
+        }
+
         String customLogging = System.getProperty("it.karaf.customLogging");
         if (customLogging != null) {
             String[] customLoggingParts = customLogging.split(":");
@@ -761,10 +770,16 @@ public abstract class BaseIT extends KarafTestSupport {
      */
     protected <T> T keepTrying(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries)
             throws InterruptedException {
+        if (timeout < 0) {
+            throw new IllegalArgumentException("timeout must be non-negative, got: " + timeout);
+        }
+        if (retries < 0) {
+            throw new IllegalArgumentException("retries must be non-negative, got: " + retries);
+        }
         int count = 0;
         T value = null;
         T lastValue = null;
-        while (value == null || !predicate.test(value)) {
+        do {
             if (count++ > retries) {
                 String detailedMessage = failMessage;
                 if (lastValue != null) {
@@ -775,7 +790,7 @@ public abstract class BaseIT extends KarafTestSupport {
             Thread.sleep(timeout);
             value = call.get();
             lastValue = value;
-        }
+        } while (!predicate.test(value));
         return value;
     }
 
@@ -801,41 +816,44 @@ public abstract class BaseIT extends KarafTestSupport {
      * @throws AssertionError       If the maximum number of retries is reached without the value becoming null
      */
     protected <T> void waitForNullValue(String failMessage, Supplier<T> call, int timeout, int retries) throws InterruptedException {
-        int count = 0;
-        while (call.get() != null) {
-            if (count++ > retries) {
-                Assert.fail(failMessage);
-            }
-            Thread.sleep(timeout);
-        }
+        keepTrying(failMessage, call, value -> value == null, timeout, retries);
     }
 
     /**
      * Verifies that a condition remains true for the entire duration of the test period.
      * This is useful for testing stability of a state or ensuring that a condition doesn't
-     * revert back to false after initially becoming true.
+     * revert back to false after initially becoming true. The method will call the supplier
+     * and check the predicate (retries + 1) times with a delay between each attempt.
      *
      * @param <T>         The type of the value being checked
      * @param failMessage The message to include in the AssertionError if the condition becomes false
      * @param call        A supplier function that returns the value to be tested
      * @param predicate   A predicate that tests the value and should return true for the entire test period
      * @param timeout     The time in milliseconds to wait between validation attempts
-     * @param retries     The number of times to check the condition (defines the total test period)
+     * @param retries     The number of times to retry after the initial check (total checks = retries + 1)
      * @return The final value after all checks have passed
      * @throws InterruptedException If the thread is interrupted while sleeping between checks
      * @throws AssertionError       If the condition becomes false at any point during the test period
      */
     protected <T> T shouldBeTrueUntilEnd(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries)
             throws InterruptedException {
+        if (timeout < 0) {
+            throw new IllegalArgumentException("timeout must be non-negative, got: " + timeout);
+        }
+        if (retries < 0) {
+            throw new IllegalArgumentException("retries must be non-negative, got: " + retries);
+        }
         int count = 0;
-        T value = null;
-        while (count <= retries) {
-            count++;
+        T value = call.get();
+        if (!predicate.test(value)) {
+            Assert.fail(failMessage + " (on initial check, value: " + value + ")");
+        }
+        while (count++ < retries) {
+            Thread.sleep(timeout);
             value = call.get();
             if (!predicate.test(value)) {
-                Assert.fail(failMessage);
+                Assert.fail(failMessage + " (after " + count + " retries, value: " + value + ")");
             }
-            Thread.sleep(timeout);
         }
         return value;
     }

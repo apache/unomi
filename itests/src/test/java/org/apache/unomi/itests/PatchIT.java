@@ -95,13 +95,29 @@ public class PatchIT extends BaseIT {
                     throw new RuntimeException(e);
                 }
 
-                patchService.patch(patch);
+                Object patchResult = patchService.patch(patch);
+                LOGGER.info("testRemove: patch applied, result={}", patchResult);
 
                 profileService.refresh();
 
+                // Poll with refresh on every attempt — nudges the unified cache each cycle.
+                // Logs each result to diagnose whether the type reappears from bundle resources.
+                try {
+                    keepTrying("Failed waiting for property type removal",
+                            () -> {
+                                profileService.refresh();
+                                PropertyType current = profileService.getPropertyType("income");
+                                LOGGER.info("testRemove: poll — income={}", current == null
+                                        ? "null (REMOVED OK)"
+                                        : "still present, defaultValue=" + current.getDefaultValue());
+                                return current;
+                            },
+                            value -> value == null,
+                            DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES * 2);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException("Interrupted while trying to wait for property removal", e);
+                }
             });
-            waitForNullValue("Failed waiting for property type removal",
-                    () -> profileService.getPropertyType("income"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES * 2);
         } finally {
             profileService.setPropertyType(income);
         }

@@ -39,6 +39,8 @@ import java.util.HashSet;
  */
 public class ScheduledTask extends Item implements Serializable {
 
+    private static final long serialVersionUID = 1L;
+
     public static final String ITEM_TYPE = "scheduledTask";
 
     /**

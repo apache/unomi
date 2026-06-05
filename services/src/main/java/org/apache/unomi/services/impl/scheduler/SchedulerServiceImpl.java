@@ -64,7 +64,6 @@ import java.util.stream.Collectors;
  * - Operations are executed once all required services are available
  * - Supports different operation types with appropriate handling
  *
- * @author dgaillard
  */
 public class SchedulerServiceImpl implements SchedulerService {
     private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerServiceImpl.class.getName());

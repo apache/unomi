@@ -264,6 +264,7 @@
             <properties>
                 <elasticsearch.port>9400</elasticsearch.port>
                 <elasticsearch.heap>4g</elasticsearch.heap>
+                <karaf.heap>2g</karaf.heap>
             </properties>
             <activation>
                 <activeByDefault>true</activeByDefault>
@@ -285,6 +286,7 @@
                                 <my.system.property>foo</my.system.property>
                                 <unomi.search.engine>elasticsearch</unomi.search.engine>
                                 <elasticsearch.port>${elasticsearch.port}</elasticsearch.port>
+                                <it.karaf.heap>${karaf.heap}</it.karaf.heap>
                             </systemPropertyVariables>
                         </configuration>
                         <executions>
@@ -383,6 +385,8 @@
         <profile>
             <id>opensearch</id>
             <properties>
+                <opensearch.heap>4g</opensearch.heap>
+                <karaf.heap>2g</karaf.heap>
                 <opensearch.port>9401</opensearch.port>
             </properties>
             <activation>
@@ -437,7 +441,7 @@
                                         </ports>
                                         <env>
                                             <discovery.type>single-node</discovery.type>
-                                            <OPENSEARCH_JAVA_OPTS>-Xms4g -Xmx4g</OPENSEARCH_JAVA_OPTS>
+                                            <OPENSEARCH_JAVA_OPTS>-Xms${opensearch.heap} -Xmx${opensearch.heap}</OPENSEARCH_JAVA_OPTS>
                                             <path.repo>/tmp/snapshots_repository</path.repo>
                                             <plugins.security.disabled>true</plugins.security.disabled>
                                             <OPENSEARCH_INITIAL_ADMIN_PASSWORD>Unomi.1ntegrat10n.Tests</OPENSEARCH_INITIAL_ADMIN_PASSWORD>

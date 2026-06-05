@@ -32,7 +32,7 @@ import java.util.Set;
  */
 public interface SecurityService {
     /** The system tenant identifier used for system-wide operations */
-    String SYSTEM_TENANT = "SYSTEM_TENANT";
+    String SYSTEM_TENANT = "system";
 
     /**
      * Retrieves the current subject from the security context. The subject is determined in the following order:

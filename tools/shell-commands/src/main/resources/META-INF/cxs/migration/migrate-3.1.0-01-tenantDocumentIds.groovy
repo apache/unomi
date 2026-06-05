@@ -144,7 +144,7 @@ context.performMigrationStep("3.1.0-get-all-indices", () -> {
         }
 
         // Execute reindex
-        MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexName, newIndexSettings, updateScript, params, context, "3.1.0-${itemType}-update")
+        MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexName, newIndexSettings, updateScript, params, context, "3.1.0-${indexName}-update")
     }
     
     // Configure aliases for rollover indices after all reindexing is complete

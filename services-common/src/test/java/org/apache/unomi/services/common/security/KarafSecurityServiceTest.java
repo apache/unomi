@@ -208,14 +208,30 @@ public class KarafSecurityServiceTest {
     public void testHasTenantAccess() {
         String testTenantId = "testTenant";
 
+        // Regular user — no tenant principal at all
         Subject regularSubject = createTestSubject("user", UnomiRoles.USER);
         securityService.setCurrentSubject(regularSubject);
         assertFalse("Regular user should not have tenant access",
             securityService.hasTenantAccess(testTenantId));
 
-        Subject tenantAdminSubject = createTestSubject("tenantAdmin", UnomiRoles.TENANT_ADMINISTRATOR);
+        // Tenant admin for a DIFFERENT tenant — must be denied
+        Subject otherTenantAdmin = createTestSubjectWithTenant("otherAdmin", "otherTenant",
+            UnomiRoles.TENANT_ADMINISTRATOR);
+        securityService.setCurrentSubject(otherTenantAdmin);
+        assertFalse("Tenant admin for a different tenant should not have access",
+            securityService.hasTenantAccess(testTenantId));
+
+        // Tenant admin for the CORRECT tenant — must be granted
+        Subject tenantAdminSubject = createTestSubjectWithTenant("tenantAdmin", testTenantId,
+            UnomiRoles.TENANT_ADMINISTRATOR);
         securityService.setCurrentSubject(tenantAdminSubject);
-        assertTrue("Tenant admin should have tenant access",
+        assertTrue("Tenant admin for the correct tenant should have access",
+            securityService.hasTenantAccess(testTenantId));
+
+        // System ADMINISTRATOR — granted access to any tenant
+        Subject adminSubject = createTestSubject("admin", UnomiRoles.ADMINISTRATOR);
+        securityService.setCurrentSubject(adminSubject);
+        assertTrue("System admin should have access to any tenant",
             securityService.hasTenantAccess(testTenantId));
     }
 
@@ -287,7 +303,23 @@ public class KarafSecurityServiceTest {
 
     @Test
     public void testIsOperatingOnSystemTenant() {
-        assertFalse("Should return false by default", securityService.isOperatingOnSystemTenant());
+        // No subject set — no subject means system context by convention
+        assertTrue("Should return true when no subject is set (system context)",
+            securityService.isOperatingOnSystemTenant());
+
+        // Non-system tenant subject
+        Subject tenantSubject = createTestSubjectWithTenant("user", "myTenant",
+            UnomiRoles.TENANT_ADMINISTRATOR);
+        securityService.setCurrentSubject(tenantSubject);
+        assertFalse("Should return false for a non-system tenant subject",
+            securityService.isOperatingOnSystemTenant());
+
+        // Explicit system tenant principal
+        Subject systemSubject = createTestSubjectWithTenant("systemUser",
+            KarafSecurityService.SYSTEM_TENANT, UnomiRoles.ADMINISTRATOR);
+        securityService.setCurrentSubject(systemSubject);
+        assertTrue("Should return true for system tenant subject",
+            securityService.isOperatingOnSystemTenant());
     }
 
     @Test
@@ -346,6 +378,16 @@ public class KarafSecurityServiceTest {
         securityService.setConfiguration(null);
         Set<String> nullConfigPermissions = securityService.getPermissionsForRole(UnomiRoles.ADMINISTRATOR);
         assertTrue("Null config should return empty permissions", nullConfigPermissions.isEmpty());
+    }
+
+    private Subject createTestSubjectWithTenant(String username, String tenantId, String... roles) {
+        Subject subject = new Subject();
+        subject.getPrincipals().add(new UserPrincipal(username));
+        subject.getPrincipals().add(new TenantPrincipal(tenantId));
+        for (String role : roles) {
+            subject.getPrincipals().add(new RolePrincipal(role));
+        }
+        return subject;
     }
 
     private Subject createTestSubject(String username, String... roles) {

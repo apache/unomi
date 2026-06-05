@@ -261,6 +261,9 @@ MAVEN_OFFLINE=false
 KARAF_DEBUG_PORT=5005
 KARAF_DEBUG_SUSPEND=n
 USE_OPENSEARCH=false
+SEARCH_HEAP=""
+KARAF_HEAP=""
+MAVEN_QUIET=false
 NO_KARAF=false
 AUTO_START=""
 SINGLE_TEST=""
@@ -292,6 +295,7 @@ EOF
         echo -e "  ${CYAN}-i, --integration-tests${NC}    Run integration tests"
         echo -e "  ${CYAN}-d, --deploy${NC}               Deploy after build"
         echo -e "  ${CYAN}-X, --maven-debug${NC}          Enable Maven debug output"
+        echo -e "  ${CYAN}--maven-quiet${NC}              Disable Maven download progress (quiet mode)"
         echo -e "  ${CYAN}-o, --offline${NC}              Run Maven in offline mode"
         echo -e "  ${CYAN}--debug${NC}                    Run Karaf in debug mode"
         echo -e "  ${CYAN}--debug-port PORT${NC}          Set debug port (default: 5005)"
@@ -327,6 +331,7 @@ EOF
         echo "  -i, --integration-tests    Run integration tests"
         echo "  -d, --deploy               Deploy after build"
         echo "  -X, --maven-debug         Enable Maven debug output"
+        echo "  --maven-quiet              Disable Maven download progress (quiet mode)"
         echo "  -o, --offline             Run Maven in offline mode"
         echo "  --debug                    Run Karaf in debug mode"
         echo "  --debug-port PORT          Set debug port (default: 5005)"
@@ -411,6 +416,9 @@ while [ "$1" != "" ]; do
         -X | --maven-debug)
             MAVEN_DEBUG=true
             ;;
+        --maven-quiet)
+            MAVEN_QUIET=true
+            ;;
         -o | --offline)
             MAVEN_OFFLINE=true
             ;;
@@ -445,6 +453,14 @@ while [ "$1" != "" ]; do
             ;;
         --use-opensearch)
             USE_OPENSEARCH=true
+            ;;
+        --search-heap)
+            shift
+            SEARCH_HEAP=$1
+            ;;
+        --karaf-heap)
+            shift
+            KARAF_HEAP=$1
             ;;
         --no-karaf)
             NO_KARAF=true
@@ -481,6 +497,7 @@ while [ "$1" != "" ]; do
             NO_KARAF=true
             USE_MAVEN_CACHE=false
             BUILD_NON_INTERACTIVE=true
+            MAVEN_QUIET=true
             ;;
         *)
             echo "Unknown option: $1"
@@ -824,6 +841,12 @@ if [ "$USE_MAVEN_CACHE" = false ]; then
     MVN_OPTS="$MVN_OPTS -Dmaven.build.cache.enabled=false"
 fi
 
+# Add Maven quiet mode (suppress download progress)
+if [ "$MAVEN_QUIET" = true ]; then
+    MVN_OPTS="$MVN_OPTS -ntp"
+    echo "Maven quiet mode enabled (download progress suppressed)"
+fi
+
 # Extra Maven options (e.g. CI matrix ports: -Delasticsearch.port=9400)
 if [ -n "${MAVEN_EXTRA_OPTS:-}" ]; then
     MVN_OPTS="$MVN_OPTS $MAVEN_EXTRA_OPTS"
@@ -853,6 +876,21 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
         echo "Running integration tests with ElasticSearch"
     fi
     MVN_OPTS="$MVN_OPTS -P integration-tests"
+
+    # Pass custom heap sizes to the search engine container and Karaf JVM
+    if [ -n "$SEARCH_HEAP" ]; then
+        if [ "$USE_OPENSEARCH" = true ]; then
+            MVN_OPTS="$MVN_OPTS -Dopensearch.heap=$SEARCH_HEAP"
+            echo "OpenSearch heap set to $SEARCH_HEAP"
+        else
+            MVN_OPTS="$MVN_OPTS -Delasticsearch.heap=$SEARCH_HEAP"
+            echo "Elasticsearch heap set to $SEARCH_HEAP"
+        fi
+    fi
+    if [ -n "$KARAF_HEAP" ]; then
+        MVN_OPTS="$MVN_OPTS -Dit.karaf.heap=$KARAF_HEAP"
+        echo "Karaf heap set to $KARAF_HEAP"
+    fi
 
     # Add single test option if specified
     if [ ! -z "$SINGLE_TEST" ]; then

@@ -177,10 +177,11 @@ public class KarafSecurityService implements SecurityService {
 
     @Override
     public boolean hasTenantAccess(String tenantId) {
-        if (hasRole(UnomiRoles.TENANT_ADMINISTRATOR)) {
+        if (hasRole(UnomiRoles.ADMINISTRATOR)) {
             return true;
         }
-        return hasSystemAccess();
+        String subjectTenantId = getCurrentSubjectTenantId();
+        return tenantId != null && tenantId.equals(subjectTenantId);
     }
 
     @Override
@@ -260,7 +261,7 @@ public class KarafSecurityService implements SecurityService {
 
     @Override
     public boolean isOperatingOnSystemTenant() {
-        return false;
+        return getCurrentSubjectTenantId().equals(SYSTEM_TENANT);
     }
 
     @Override

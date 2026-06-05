@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.services.common.security;
 
-import org.apache.karaf.jaas.boot.principal.RolePrincipal;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.TenantPrincipal;
@@ -26,7 +25,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.security.auth.Subject;
-import java.security.AccessController;
 import java.security.Principal;
 import java.util.HashSet;
 import java.util.Set;
@@ -106,8 +104,7 @@ public class ExecutionContextManagerImpl implements ExecutionContextManager {
                 securityService.setCurrentSubject(previousSubject);
             } catch (Exception e) {
                 LOGGER.error("Error restoring previous context: {}", e.getMessage(), e);
-                // Still throw the error to ensure it's not silently ignored
-                throw new SecurityException("Failed to restore security context", e);
+                // Do not rethrow — would suppress the original operation exception if both fail together
             }
         }
     }
@@ -150,19 +147,6 @@ public class ExecutionContextManagerImpl implements ExecutionContextManager {
             operation.run();
             return null;
         });
-    }
-
-    private Set<String> getCurrentRoles() {
-        Set<String> roles = new HashSet<>();
-        Subject subject = Subject.getSubject(AccessController.getContext());
-        if (subject != null) {
-            for (Principal principal : subject.getPrincipals()) {
-                if (principal instanceof RolePrincipal) {
-                    roles.add(principal.getName());
-                }
-            }
-        }
-        return roles;
     }
 
     private Set<String> getPermissionsForRoles(Set<String> roles) {

@@ -195,7 +195,8 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         ScheduledTask scheduledTask = schedulerService.newTask(taskName)
                 .nonPersistent()  // Cache reloads should not be persisted
                 .withPeriod(config.getRefreshInterval(), TimeUnit.MILLISECONDS)
-                .withFixedDelay() // Sequential execution
+                .withFixedDelay() // Wait for execution to complete before starting next cycle
+                .disallowParallelExecution() // Prevent overlapping refreshes (scheduled vs manual)
                 .withSimpleExecutor(task)
                 .schedule();
 

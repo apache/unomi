@@ -101,6 +101,9 @@ public class GraphQLServletSecurityValidator {
         }
 
         final Document queryDoc = parser.parseDocument(query);
+        if (queryDoc.getDefinitions().isEmpty()) {
+            return false;
+        }
         final Definition<?> def = queryDoc.getDefinitions().get(0);
         if (def instanceof OperationDefinition) {
             OperationDefinition opDef = (OperationDefinition) def;
@@ -195,8 +198,7 @@ public class GraphQLServletSecurityValidator {
                     if (tenant != null) {
                         executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
                     } else {
-                        LOG.warn("Invalid tenant ID provided in header: {}", tenantId);
-                        executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                        LOG.warn("Invalid tenant ID provided in header: {} — leaving context derived from JAAS login", tenantId);
                     }
                 } else {
                     executionContextManager.setCurrentContext(ExecutionContext.systemContext());
