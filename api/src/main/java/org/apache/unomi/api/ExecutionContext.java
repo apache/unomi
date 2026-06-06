@@ -70,11 +70,13 @@ public class ExecutionContext {
     public void setTenant(String tenantId) {
         tenantStack.push(this.tenantId);
         this.tenantId = tenantId;
+        this.isSystem = SYSTEM_TENANT.equals(tenantId);
     }
-    
+
     public void restorePreviousTenant() {
         if (!tenantStack.isEmpty()) {
             this.tenantId = tenantStack.pop();
+            this.isSystem = SYSTEM_TENANT.equals(this.tenantId);
         }
     }
     

@@ -76,6 +76,9 @@ public class TenantQuotaService {
 
     public boolean checkQuota(String tenantId, String quotaType, long increment) {
         ResourceQuota quota = getTenantQuota(tenantId);
+        if (quota == null) {
+            return true;
+        }
         TenantUsage usage = getUsage(tenantId);
 
         switch (quotaType) {

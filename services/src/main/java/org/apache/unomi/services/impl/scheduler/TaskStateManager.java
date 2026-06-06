@@ -235,7 +235,8 @@ public class TaskStateManager {
 
         // Handle retry case first
         if (isRetry) {
-            long nextExecutionTime = now + task.getTimeUnit().toMillis(task.getRetryDelay());
+            // retryDelay is stored in milliseconds, not in the task's timeUnit
+            long nextExecutionTime = now + task.getRetryDelay();
             task.setNextScheduledExecution(new Date(nextExecutionTime));
             return;
         }

@@ -320,10 +320,8 @@ public class TaskExecutionManager {
                         executor.execute(task, statusCallback);
                     }
                 } catch (Exception e) {
-                    if (e.getMessage() != null && !e.getMessage().equals("Simulated crash")) {
-                        LOGGER.error("Error executing task: " + taskId, e);
-                        statusCallback.fail(e.getMessage());
-                    }
+                    LOGGER.error("Error executing task: " + taskId, e);
+                    statusCallback.fail(e.getMessage());
                 } finally {
                     updateTaskMetrics(task, startTime);
                 }

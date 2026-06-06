@@ -60,7 +60,7 @@ public class AuditServiceImpl implements AuditService {
     @Override
     public List<Item> getModifiedItems(String tenantId, Date since) {
         if (persistenceService == null) {
-
+            return Collections.emptyList();
         }
         Condition condition = new Condition();
         condition.setConditionTypeId("booleanCondition");
