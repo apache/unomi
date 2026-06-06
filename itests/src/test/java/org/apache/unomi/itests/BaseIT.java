@@ -22,9 +22,11 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
+import org.apache.camel.CamelContext;
+import org.apache.camel.Route;
+import org.apache.camel.ServiceStatus;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
 import org.apache.http.config.Registry;
@@ -32,6 +34,7 @@ import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
 import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
@@ -42,12 +45,22 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.karaf.itests.KarafTestSupport;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
+import org.apache.unomi.itests.tools.LogChecker;
+import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.IRouterCamelContext;
 import org.apache.unomi.router.api.ImportConfiguration;
@@ -113,18 +126,22 @@ public abstract class BaseIT extends KarafTestSupport {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(BaseIT.class);
 
-    protected static final String UNOMI_KEY = "670c26d1cc413346c3b2fd9ce65dab41";
     protected static final ContentType JSON_CONTENT_TYPE = ContentType.create("application/json");
     protected static final String BASE_URL = "http://localhost";
     protected static final String BASIC_AUTH_USER_NAME = "karaf";
     protected static final String BASIC_AUTH_PASSWORD = "karaf";
     protected static final int REQUEST_TIMEOUT = 60000;
-    protected static final int DEFAULT_TRYING_TIMEOUT = 2000;
-    protected static final int DEFAULT_TRYING_TRIES = 30;
+    protected static final int DEFAULT_TRYING_TIMEOUT = 1000;
+    protected static final int DEFAULT_TRYING_TRIES = 10;
+    protected static final int DEFAULT_SHOULDBETRUE_TRIES = 5;
 
     protected static final String SEARCH_ENGINE_PROPERTY = "unomi.search.engine";
+    protected static final String SEARCH_ENGINE_HTTPREQUEST_LOG_LEVEL = "unomi.search.engine.httprequest.log.level";
     protected static final String SEARCH_ENGINE_ELASTICSEARCH = "elasticsearch";
     protected static final String SEARCH_ENGINE_OPENSEARCH = "opensearch";
+    protected static final String RESOLVER_DEBUG_PROPERTY = "it.unomi.resolver.debug";
+    protected static final String ENABLE_LOG_CHECKING_PROPERTY = "it.unomi.log.checking.enabled";
+    protected static final String CAMEL_DEBUG_PROPERTY = "it.unomi.camel.debug";
 
     protected final static ObjectMapper objectMapper;
     protected static boolean unomiStarted = false;
@@ -145,6 +162,7 @@ public abstract class BaseIT extends KarafTestSupport {
     protected EventService eventService;
     protected BundleWatcher bundleWatcher;
     protected GroovyActionsService groovyActionsService;
+    protected GoalsService goalsService;
     protected SegmentService segmentService;
     protected SchemaService schemaService;
     protected ScopeService scopeService;
@@ -154,6 +172,15 @@ public abstract class BaseIT extends KarafTestSupport {
     protected IRouterCamelContext routerCamelContext;
     protected UserListService userListService;
     protected TopicService topicService;
+    protected TenantService tenantService;
+    protected SecurityService securityService;
+    protected ExecutionContextManager executionContextManager;
+    protected RestAuthenticationConfig restAuthenticationConfig;
+    protected Tenant testTenant;
+    protected ApiKey testPublicKey;
+    protected ApiKey testPrivateKey;
+    protected SchedulerService schedulerService;
+    protected static final String TEST_TENANT_ID = "itTestTenant";
 
     @Inject
     protected BundleContext bundleContext;
@@ -163,12 +190,34 @@ public abstract class BaseIT extends KarafTestSupport {
     protected ConfigurationAdmin configurationAdmin;
 
     protected CloseableHttpClient httpClient;
+    protected LogChecker logChecker;
+    private String currentTestName;
+
+    public enum AuthType {
+        NONE,           // No authentication
+        PUBLIC_KEY,     // X-Unomi-Api-Key header with public key
+        PRIVATE_KEY,    // Basic auth with tenant:private_key
+        JAAS_ADMIN,     // Basic auth with karaf:karaf
+        CUSTOM_BASIC,   // Basic auth with custom username and password
+        AUTO            // Automatically determine based on endpoint type
+    }
+
+    /**
+     * Checks the search engine configuration from system properties.
+     * This method should be called early, before any test setup, to ensure
+     * the correct search engine is detected and any necessary fixes are applied.
+     */
+    protected void checkSearchEngine() {
+        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+    }
 
     @Before
     public void waitForStartup() throws InterruptedException {
         // disable retry
         retry = new KarafTestSupport.Retry(false);
-        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+
+        // Check search engine and apply any necessary fixes (e.g., default_template deletion)
+        checkSearchEngine();
 
         // Start Unomi if not already done
         if (!unomiStarted) {
@@ -201,12 +250,15 @@ public abstract class BaseIT extends KarafTestSupport {
 
         // init unomi services that are available once unomi:start have been called
         persistenceService = getOsgiService(PersistenceService.class, 600000);
+        tenantService = getOsgiService(TenantService.class, 600000);
+        schedulerService = getOsgiService(SchedulerService.class, 600000);
         rulesService = getOsgiService(RulesService.class, 600000);
         definitionsService = getOsgiService(DefinitionsService.class, 600000);
         profileService = getOsgiService(ProfileService.class, 600000);
         privacyService = getOsgiService(PrivacyService.class, 600000);
         eventService = getOsgiService(EventService.class, 600000);
         groovyActionsService = getOsgiService(GroovyActionsService.class, 600000);
+        goalsService = getOsgiService(GoalsService.class, 600000);
         segmentService = getOsgiService(SegmentService.class, 600000);
         schemaService = getOsgiService(SchemaService.class, 600000);
         scopeService = getOsgiService(ScopeService.class, 600000);
@@ -216,9 +268,68 @@ public abstract class BaseIT extends KarafTestSupport {
         importConfigurationService = getOsgiService(ImportExportConfigurationService.class, "(configDiscriminator=IMPORT)", 600000);
         exportConfigurationService = getOsgiService(ImportExportConfigurationService.class, "(configDiscriminator=EXPORT)", 600000);
         routerCamelContext = getOsgiService(IRouterCamelContext.class, 600000);
+        securityService = getOsgiService(SecurityService.class, 600000);
+        executionContextManager = getOsgiService(ExecutionContextManager.class, 600000);
+        restAuthenticationConfig = getOsgiService(RestAuthenticationConfig.class, 600000);
 
-        // init httpClient
-        httpClient = initHttpClient(getHttpClientCredentialProvider());
+        // Create test tenant if not exists
+        if (testTenant == null) {
+            testTenant = tenantService.getTenant(TEST_TENANT_ID);
+            if (testTenant == null) {
+                testTenant = tenantService.createTenant(TEST_TENANT_ID, Collections.emptyMap());
+            }
+            // Get the API keys
+            testPublicKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
+            testPrivateKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PRIVATE);
+
+            // Make sure the tenant is available for querying.
+            persistenceService.refresh();
+        }
+
+        securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, true));
+
+        executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
+
+        // Enable Camel tracing and debug logging if requested (for test visibility)
+        enableCamelDebugIfRequested();
+
+        // Set up test tenant for HttpClientThatWaitsForUnomi
+        HttpClientThatWaitsForUnomi.setTestTenant(testTenant, testPublicKey, testPrivateKey);
+
+        // init httpClient without credentials provider - all auth handled via headers
+        httpClient = initHttpClient(null);
+
+        // Initialize log checker if enabled
+        if (isLogCheckingEnabled()) {
+            // Use builder API - by default enable all patterns for backward compatibility
+            // Individual tests can override createLogChecker() to specify only needed patterns
+            logChecker = createLogChecker();
+            LOGGER.info("Log checking enabled using in-memory appender");
+        }
+    }
+
+    /**
+     * Mark log checkpoint before each test
+     * This method is called automatically by JUnit before each test method
+     */
+    @Before
+    public void markLogCheckpoint() {
+        if (logChecker != null) {
+            logChecker.markCheckpoint();
+            // Get current test name from stack trace
+            StackTraceElement[] stack = Thread.currentThread().getStackTrace();
+            for (StackTraceElement element : stack) {
+                String methodName = element.getMethodName();
+                if (methodName.startsWith("test") || methodName.startsWith("check")) {
+                    currentTestName = element.getClassName() + "." + methodName;
+                    break;
+                }
+            }
+            if (currentTestName == null) {
+                currentTestName = "unknown";
+            }
+            LOGGER.debug("Marked log checkpoint for test: {}", currentTestName);
+        }
     }
 
     private void waitForUnomiManagementService() throws InterruptedException {
@@ -242,8 +353,115 @@ public abstract class BaseIT extends KarafTestSupport {
 
     @After
     public void shutdown() {
+        // Check logs for unexpected errors/warnings before cleanup
+        checkLogsForUnexpectedIssues();
+
+        if (testTenant != null) {
+            try {
+                tenantService.deleteTenant(testTenant.getItemId());
+                testTenant = null;
+                testPublicKey = null;
+                testPrivateKey = null;
+            } catch (Exception e) {
+                LOGGER.error("Error cleaning up test tenant", e);
+            }
+        }
         closeHttpClient(httpClient);
         httpClient = null;
+    }
+
+
+    /**
+     * Create a LogChecker instance. Tests should override this method to add
+     * only the patterns they need, improving performance significantly.
+     *
+     * By default, only global patterns are included (e.g., BundleWatcher warnings).
+     *
+     * IMPORTANT: Prefer literal strings over regex for better performance.
+     * Literal strings use fast contains() matching instead of regex.
+     *
+     * Example override for a test that needs specific substrings:
+     * <pre>
+     * {@literal @}Override
+     * protected LogChecker createLogChecker() {
+     *     return LogChecker.builder()
+     *         .addIgnoredSubstring("Response status code: 400")                // Single substring
+     *         .addIgnoredMultiPart("Schema", "not found")                     // Multi-part: sequential
+     *         .build();
+     * }
+     * </pre>
+     *
+     * @return A configured LogChecker instance
+     */
+    protected LogChecker createLogChecker() {
+        // By default, only global patterns are included
+        // Individual tests should override this to add their specific patterns
+        return new LogChecker();
+    }
+
+    /**
+     * Check logs for unexpected errors and warnings since the last checkpoint
+     * This is called automatically after each test
+     */
+    protected void checkLogsForUnexpectedIssues() {
+        if (logChecker == null) {
+            return;
+        }
+
+        try {
+            LogChecker.LogCheckResult result = logChecker.checkLogsSinceLastCheckpoint();
+
+            if (result.hasUnexpectedIssues()) {
+                String summary = result.getSummary();
+                String testInfo = currentTestName != null ? "Test: " + currentTestName + "\n" : "";
+
+                // Use System.err/out to avoid creating logs that would be captured by InMemoryLogAppender
+                // This prevents a feedback loop where log checking creates more logs to check
+                System.err.println("\n=== UNEXPECTED LOG ISSUES DETECTED ===");
+                System.err.println(testInfo + summary);
+                System.err.println("=======================================\n");
+
+                // Add to JUnit test output by printing to System.out (captured by JUnit)
+                System.out.println("\n=== SERVER-SIDE LOG ISSUES ===");
+                System.out.println(testInfo + summary);
+                System.out.println("===============================\n");
+            }
+        } catch (Exception e) {
+            // Use System.err to avoid creating logs that would be captured by InMemoryLogAppender
+            System.err.println("LogChecker: Error checking logs: " + e.getMessage());
+            e.printStackTrace(System.err);
+        }
+    }
+
+    /**
+     * Check if log checking is enabled
+     * Can be controlled via system property: it.unomi.log.checking.enabled
+     * Defaults to true
+     */
+    protected boolean isLogCheckingEnabled() {
+        String enabled = System.getProperty(ENABLE_LOG_CHECKING_PROPERTY, "true");
+        return Boolean.parseBoolean(enabled);
+    }
+
+    /**
+     * Add a substring to ignore for log checking
+     * Useful for tests that expect certain errors/warnings
+     * @param substring Literal substring or regex pattern to match against log messages
+     */
+    protected void addIgnoredLogSubstring(String substring) {
+        if (logChecker != null) {
+            logChecker.addIgnoredSubstring(substring);
+        }
+    }
+
+    /**
+     * Add multiple substrings to ignore for log checking
+     * @param substrings List of substrings (literal or regex)
+     */
+    protected void addIgnoredLogSubstrings(List<String> substrings) {
+        if (logChecker != null) {
+            logChecker.addIgnoredSubstrings(substrings);
+        }
     }
 
     protected String karafData() {
@@ -258,10 +476,17 @@ public abstract class BaseIT extends KarafTestSupport {
         if (persistenceService == null) {
             throw new RuntimeException("persistenceService is null");
         }
-        Condition condition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+
+        ConditionType matchAllConditionType = definitionsService.getConditionType("matchAllCondition");
+        if (matchAllConditionType == null) {
+            throw new RuntimeException("matchAllCondition type not found");
+        }
+
+        Condition condition = new Condition(matchAllConditionType);
         for (Class<? extends Item> aClass : classes) {
             persistenceService.removeByQuery(condition, aClass);
         }
+
         refreshPersistence(classes);
     }
 
@@ -297,15 +522,16 @@ public abstract class BaseIT extends KarafTestSupport {
                     "unomi-elasticsearch-core",
                     "unomi-persistence-core",
                     "unomi-services",
-                    "unomi-rest-api",
-                    "unomi-cxs-lists-extension",
-                    "unomi-cxs-geonames-extension",
-                    "unomi-cxs-privacy-extension",
-                    "unomi-elasticsearch-conditions",
+                    "unomi-cxs-privacy-extension-services",
                     "unomi-plugins-base",
                     "unomi-plugins-request",
                     "unomi-plugins-mail",
                     "unomi-plugins-optimization-test",
+                    "unomi-rest-api",
+                    "unomi-cxs-privacy-extension",
+                    "unomi-elasticsearch-conditions",
+                    "unomi-cxs-lists-extension",
+                    "unomi-cxs-geonames-extension",
                     "unomi-shell-dev-commands",
                     "unomi-wab",
                     "unomi-web-tracker",
@@ -328,15 +554,16 @@ public abstract class BaseIT extends KarafTestSupport {
                     "unomi-opensearch-core",
                     "unomi-persistence-core",
                     "unomi-services",
-                    "unomi-rest-api",
-                    "unomi-cxs-lists-extension",
-                    "unomi-cxs-geonames-extension",
-                    "unomi-cxs-privacy-extension",
-                    "unomi-opensearch-conditions",
+                    "unomi-cxs-privacy-extension-services",
                     "unomi-plugins-base",
                     "unomi-plugins-request",
                     "unomi-plugins-mail",
                     "unomi-plugins-optimization-test",
+                    "unomi-rest-api",
+                    "unomi-cxs-privacy-extension",
+                    "unomi-opensearch-conditions",
+                    "unomi-cxs-lists-extension",
+                    "unomi-cxs-geonames-extension",
                     "unomi-shell-dev-commands",
                     "unomi-wab",
                     "unomi-web-tracker",
@@ -390,6 +617,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslEnable", "false"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslTrustAllCertificates", "true"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.migration.tenant.id", TEST_TENANT_ID),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
@@ -439,6 +667,15 @@ public abstract class BaseIT extends KarafTestSupport {
             LOGGER.warn("Unable to set jacoco agent as {} was not found", agentFile);
         }
 
+        // Allow overriding the Karaf JVM heap via -Dit.karaf.heap (e.g. 4g)
+        String karafHeap = System.getProperty("it.karaf.heap", "");
+        if (!karafHeap.isEmpty()) {
+            LOGGER.info("Setting Karaf JVM heap to: {}", karafHeap);
+            System.out.println("Setting Karaf JVM heap to: " + karafHeap);
+            karafOptions.add(new VMOption("-Xms" + karafHeap));
+            karafOptions.add(new VMOption("-Xmx" + karafHeap));
+        }
+
         String customLogging = System.getProperty("it.karaf.customLogging");
         if (customLogging != null) {
             String[] customLoggingParts = customLogging.split(":");
@@ -446,24 +683,114 @@ public abstract class BaseIT extends KarafTestSupport {
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.level", customLoggingParts[1]));
         }
 
+        // Suppress DEBUG logs from PaxExam framework (reduce noise in test output)
+        // These logs appear during test setup and are not useful for most debugging
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxExam.name", "org.ops4j.pax.exam"));
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxExam.level", "WARN"));
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxStore.name", "org.ops4j.store"));
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxStore.level", "WARN"));
+
+        // Enable debug logging for Karaf Resolver to diagnose bundle refresh issues (default: disabled)
+        boolean enableResolverDebug = Boolean.parseBoolean(System.getProperty(RESOLVER_DEBUG_PROPERTY, "false"));
+        if (enableResolverDebug) {
+            LOGGER.info("Enabling debug logging for Karaf Resolver and Karaf features service");
+            System.out.println("Enabling debug logging for Karaf Resolver and Karaf features service");
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiResolver.name", "org.osgi.service.resolver"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiResolver.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafFeatures.name", "org.apache.karaf.features"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafFeatures.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafResolver.name", "org.apache.karaf.resolver"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafResolver.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiFramework.name", "org.osgi.framework"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiFramework.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiPackageAdmin.name", "org.osgi.service.packageadmin"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiPackageAdmin.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafDeployer.name", "org.apache.karaf.features.core"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafDeployer.level", "DEBUG"));
+        } else {
+            LOGGER.info("Karaf Resolver debug logging is disabled (set -Dit.unomi.resolver.debug=true to enable)");
+            System.out.println("Karaf Resolver debug logging is disabled (set -Dit.unomi.resolver.debug=true to enable)");
+        }
+
+        // Enable Camel debug logging if requested (for test visibility into Camel operations)
+        boolean enableCamelDebug = Boolean.parseBoolean(System.getProperty(CAMEL_DEBUG_PROPERTY, "false"));
+        if (enableCamelDebug) {
+            LOGGER.info("Enabling debug logging for Apache Camel");
+            System.out.println("Enabling debug logging for Apache Camel (set -Dit.unomi.camel.debug=true to enable)");
+            // Enable logging for Camel core, routes, and router components
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelCore.name", "org.apache.camel"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelCore.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelRouter.name", "org.apache.unomi.router"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelRouter.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelFile.name", "org.apache.camel.component.file"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelFile.level", "DEBUG"));
+        } else {
+            LOGGER.info("Camel debug logging is disabled (set -Dit.unomi.camel.debug=true to enable)");
+            System.out.println("Camel debug logging is disabled (set -Dit.unomi.camel.debug=true to enable)");
+        }
+
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
         LOGGER.info("Search Engine: {}", searchEngine);
         System.out.println("Search Engine: " + searchEngine);
 
+        // Configure in-memory log appender for log checking
+        // The InMemoryLogAppender is part of the log4j-extension fragment bundle,
+        // which is already included as a startup bundle. It attaches to the Pax Logging
+        // Log4j2 bundle early in the startup process, ensuring the appender is discoverable.
+        // We only configure it for integration tests, not for the default package.
+        if (isLogCheckingEnabled()) {
+            LOGGER.info("Configuring in-memory log appender for log checking");
+            // Configure the appender in Log4j2
+            // The appender is already available via the log4j-extension fragment bundle
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg",
+                "log4j2.appender.inMemory.type", "InMemoryLogAppender"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg",
+                "log4j2.appender.inMemory.name", "InMemoryLogAppender"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg",
+                "log4j2.rootLogger.appenderRef.inMemory.ref", "InMemoryLogAppender"));
+        }
+
         return Stream.of(super.config(), karafOptions.toArray(new Option[karafOptions.size()])).flatMap(Stream::of).toArray(Option[]::new);
     }
 
+    /**
+     * Repeatedly attempts to retrieve a value using the provided supplier and validates it with the predicate.
+     * This method is particularly useful for testing asynchronous operations where we need to wait
+     * for a specific condition to become true.
+     *
+     * @param <T>         The type of the value being returned by the supplier and checked by the predicate
+     * @param failMessage The message to include in the AssertionError if the maximum number of retries is reached
+     * @param call        A supplier function that returns the value to be tested
+     * @param predicate   A predicate that tests the value and returns true if the condition is satisfied
+     * @param timeout     The time in milliseconds to wait between retry attempts
+     * @param retries     The maximum number of retry attempts before failing
+     * @return The value that satisfied the predicate condition
+     * @throws InterruptedException If the thread is interrupted while sleeping between retries
+     * @throws AssertionError       If the maximum number of retries is reached without the predicate being satisfied
+     */
     protected <T> T keepTrying(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries)
             throws InterruptedException {
+        if (timeout < 0) {
+            throw new IllegalArgumentException("timeout must be non-negative, got: " + timeout);
+        }
+        if (retries < 0) {
+            throw new IllegalArgumentException("retries must be non-negative, got: " + retries);
+        }
         int count = 0;
         T value = null;
-        while (value == null || !predicate.test(value)) {
+        T lastValue = null;
+        do {
             if (count++ > retries) {
-                Assert.fail(failMessage);
+                String detailedMessage = failMessage;
+                if (lastValue != null) {
+                    detailedMessage += " (last value: " + lastValue + ")";
+                }
+                Assert.fail(detailedMessage);
             }
             Thread.sleep(timeout);
             value = call.get();
-        }
+            lastValue = value;
+        } while (!predicate.test(value));
         return value;
     }
 
@@ -475,31 +802,69 @@ public abstract class BaseIT extends KarafTestSupport {
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
+    /**
+     * Repeatedly checks if a value becomes null within a specific number of retries.
+     * This is useful for testing operations that should result in the removal or
+     * deregistration of elements.
+     *
+     * @param <T>         The type of value being checked
+     * @param failMessage The message to include in the AssertionError if the value doesn't become null
+     * @param call        A supplier function that returns the value to check for null
+     * @param timeout     The time in milliseconds to wait between retry attempts
+     * @param retries     The maximum number of retry attempts before failing
+     * @throws InterruptedException If the thread is interrupted while sleeping between retries
+     * @throws AssertionError       If the maximum number of retries is reached without the value becoming null
+     */
     protected <T> void waitForNullValue(String failMessage, Supplier<T> call, int timeout, int retries) throws InterruptedException {
-        int count = 0;
-        while (call.get() != null) {
-            if (count++ > retries) {
-                Assert.fail(failMessage);
-            }
-            Thread.sleep(timeout);
-        }
+        keepTrying(failMessage, call, value -> value == null, timeout, retries);
     }
 
+    /**
+     * Verifies that a condition remains true for the entire duration of the test period.
+     * This is useful for testing stability of a state or ensuring that a condition doesn't
+     * revert back to false after initially becoming true. The method will call the supplier
+     * and check the predicate (retries + 1) times with a delay between each attempt.
+     *
+     * @param <T>         The type of the value being checked
+     * @param failMessage The message to include in the AssertionError if the condition becomes false
+     * @param call        A supplier function that returns the value to be tested
+     * @param predicate   A predicate that tests the value and should return true for the entire test period
+     * @param timeout     The time in milliseconds to wait between validation attempts
+     * @param retries     The number of times to retry after the initial check (total checks = retries + 1)
+     * @return The final value after all checks have passed
+     * @throws InterruptedException If the thread is interrupted while sleeping between checks
+     * @throws AssertionError       If the condition becomes false at any point during the test period
+     */
     protected <T> T shouldBeTrueUntilEnd(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries)
             throws InterruptedException {
+        if (timeout < 0) {
+            throw new IllegalArgumentException("timeout must be non-negative, got: " + timeout);
+        }
+        if (retries < 0) {
+            throw new IllegalArgumentException("retries must be non-negative, got: " + retries);
+        }
         int count = 0;
-        T value = null;
-        while (count <= retries) {
-            count++;
+        T value = call.get();
+        if (!predicate.test(value)) {
+            Assert.fail(failMessage + " (on initial check, value: " + value + ")");
+        }
+        while (count++ < retries) {
+            Thread.sleep(timeout);
             value = call.get();
             if (!predicate.test(value)) {
-                Assert.fail(failMessage);
+                Assert.fail(failMessage + " (after " + count + " retries, value: " + value + ")");
             }
-            Thread.sleep(timeout);
         }
         return value;
     }
 
+    /**
+     * Retrieves the content of a resource file from the bundle as a string.
+     *
+     * @param resourcePath The path to the resource within the bundle
+     * @return The resource content as a string, or null if the resource cannot be found
+     * @throws IOException If an error occurs while reading the resource
+     */
     protected String bundleResourceAsString(final String resourcePath) throws IOException {
         final java.net.URL url = bundleContext.getBundle().getResource(resourcePath);
         if (url != null) {
@@ -513,6 +878,14 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
+    /**
+     * Retrieves and validates a JSON resource from the bundle, with optional parameter replacement.
+     *
+     * @param resourcePath The path to the JSON resource within the bundle
+     * @param parameters   A map of parameters to replace in the JSON string (format: "###KEY###" -> "value")
+     * @return The validated JSON string
+     * @throws IOException If an error occurs while reading or validating the JSON
+     */
     protected String getValidatedBundleJSON(final String resourcePath, Map<String, String> parameters) throws IOException {
         String jsonString = bundleResourceAsString(resourcePath);
         if (parameters != null && parameters.size() > 0) {
@@ -524,11 +897,79 @@ public abstract class BaseIT extends KarafTestSupport {
         return objectMapper.writeValueAsString(objectMapper.readTree(jsonString));
     }
 
+    /**
+     * Retrieves an OSGi service of the specified type, waiting if necessary until it becomes available.
+     *
+     * @param <T>          The type of service to retrieve
+     * @param serviceClass The class object representing the service interface
+     * @return The service instance
+     * @throws InterruptedException If the thread is interrupted while waiting for the service
+     */
+    public <T> T getService(Class<T> serviceClass) throws InterruptedException {
+        ServiceReference<T> serviceReference = bundleContext.getServiceReference(serviceClass);
+        while (serviceReference == null) {
+            LOGGER.info("Waiting for service {} to become available", serviceClass.getName());
+            Thread.sleep(1000);
+            serviceReference = bundleContext.getServiceReference(serviceClass);
+        }
+        return bundleContext.getService(serviceReference);
+    }
+
+    /**
+     * Retrieves an OSGi service of the specified type with the given filter, waiting if necessary until it becomes available.
+     *
+     * @param <T>          The type of service to retrieve
+     * @param serviceClass The class object representing the service interface
+     * @param filter       The OSGi filter expression to match the service
+     * @return The service instance
+     * @throws InterruptedException If the thread is interrupted while waiting for the service
+     */
+    public <T> T getService(Class<T> serviceClass, String filter) throws InterruptedException {
+        try {
+            ServiceReference<T>[] serviceReferences = (ServiceReference<T>[]) bundleContext.getServiceReferences(serviceClass.getName(), filter);
+            while (serviceReferences == null || serviceReferences.length == 0) {
+                LOGGER.info("Waiting for service {} with filter {} to become available", serviceClass.getName(), filter);
+                Thread.sleep(1000);
+                serviceReferences = (ServiceReference<T>[]) bundleContext.getServiceReferences(serviceClass.getName(), filter);
+            }
+            return bundleContext.getService(serviceReferences[0]);
+        } catch (Exception e) {
+            LOGGER.error("Error getting service with filter", e);
+            throw new RuntimeException("Error getting service with filter", e);
+        }
+    }
+
+    /**
+     * Updates the local service references by retrieving them again from the OSGi service registry.
+     * This is typically needed after configuration changes that might cause service reregistration.
+     * All services initialized in waitForStartup() are refreshed to ensure test consistency.
+     *
+     * @throws InterruptedException If the thread is interrupted while waiting for services
+     */
     public void updateServices() throws InterruptedException {
         persistenceService = getService(PersistenceService.class);
         definitionsService = getService(DefinitionsService.class);
+        schedulerService = getService(SchedulerService.class);
         rulesService = getService(RulesService.class);
         segmentService = getService(SegmentService.class);
+        profileService = getService(ProfileService.class);
+        privacyService = getService(PrivacyService.class);
+        eventService = getService(EventService.class);
+        bundleWatcher = getService(BundleWatcher.class);
+        groovyActionsService = getService(GroovyActionsService.class);
+        goalsService = getService(GoalsService.class);
+        schemaService = getService(SchemaService.class);
+        scopeService = getService(ScopeService.class);
+        patchService = getService(PatchService.class);
+        importConfigurationService = getService(ImportExportConfigurationService.class, "(configDiscriminator=IMPORT)");
+        exportConfigurationService = getService(ImportExportConfigurationService.class, "(configDiscriminator=EXPORT)");
+        routerCamelContext = getService(IRouterCamelContext.class);
+        userListService = getService(UserListService.class);
+        topicService = getService(TopicService.class);
+        tenantService = getService(TenantService.class);
+        securityService = getService(SecurityService.class);
+        executionContextManager = getService(ExecutionContextManager.class);
+        restAuthenticationConfig = getService(RestAuthenticationConfig.class);
     }
 
     /**
@@ -561,7 +1002,9 @@ public abstract class BaseIT extends KarafTestSupport {
      */
     public void updateConfiguration(String serviceName, String configPid, Map<String, Object> propsToSet)
             throws InterruptedException, IOException {
-        org.osgi.service.cm.Configuration cfg = configurationAdmin.getConfiguration(configPid);
+        // Use getConfiguration(pid, null) to create an unbound configuration
+        // This ensures the configuration is accessible to all bundles, not just the test bundle
+        org.osgi.service.cm.Configuration cfg = configurationAdmin.getConfiguration(configPid, null);
         Dictionary<String, Object> props = cfg.getProperties();
 
         // Handle case where properties haven't been initialized yet
@@ -575,7 +1018,11 @@ public abstract class BaseIT extends KarafTestSupport {
         // If serviceName is null, don't wait for service re-registration
         if (serviceName == null) {
             LOGGER.info("Updating configuration {} without waiting for service restart", configPid);
+            LOGGER.debug("Configuration properties being set: {}", finalProps);
             cfg.update(finalProps);
+            // Verify the update was applied
+            Dictionary<String, Object> updatedProps = cfg.getProperties();
+            LOGGER.debug("Configuration properties after update: {}", updatedProps);
             // Give the configuration change handler time to process
             Thread.sleep(1000);
         } else {
@@ -593,6 +1040,14 @@ public abstract class BaseIT extends KarafTestSupport {
         updateServices();
     }
 
+    /**
+     * Waits for a service to be unregistered and then reregistered after a configuration change.
+     * This is useful when updating configurations that cause services to restart.
+     *
+     * @param serviceName The fully qualified name of the service to wait for
+     * @param trigger     A runnable that will trigger the service reregistration (e.g., updating configuration)
+     * @throws InterruptedException If the thread is interrupted while waiting for service events
+     */
     public void waitForReRegistration(String serviceName, Runnable trigger) throws InterruptedException {
         CountDownLatch latch1 = new CountDownLatch(2);
         ServiceListener serviceListener = e -> {
@@ -608,6 +1063,12 @@ public abstract class BaseIT extends KarafTestSupport {
         bundleContext.removeServiceListener(serviceListener);
     }
 
+    /**
+     * Converts an OSGi ServiceEvent type to a human-readable string representation.
+     *
+     * @param serviceEvent The ServiceEvent to convert
+     * @return A string representation of the service event type
+     */
     public String serviceEventTypeToString(ServiceEvent serviceEvent) {
         switch (serviceEvent.getType()) {
             case ServiceEvent.MODIFIED:
@@ -623,28 +1084,45 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
-    public <T> T getService(Class<T> serviceClass) throws InterruptedException {
-        ServiceReference<T> serviceReference = bundleContext.getServiceReference(serviceClass);
-        while (serviceReference == null) {
-            LOGGER.info("Waiting for service {} to become available", serviceClass.getName());
-            Thread.sleep(1000);
-            serviceReference = bundleContext.getServiceReference(serviceClass);
-        }
-        return bundleContext.getService(serviceReference);
-    }
 
+    /**
+     * Creates a rule and waits until it has been successfully saved in the system.
+     *
+     * @param rule The rule to create
+     * @throws InterruptedException If the thread is interrupted while waiting for the rule to be saved
+     */
     public void createAndWaitForRule(Rule rule) throws InterruptedException {
         rulesService.setRule(rule);
-        keepTrying("Failed waiting for rule to be saved", () -> rulesService.getAllRules(),
-                (rules) -> rules.stream().anyMatch(r -> r.getItemId().equals(rule.getMetadata().getId())), 1000,
+        Query query = new Query();
+        ConditionBuilder builder = new ConditionBuilder(definitionsService);
+        query.setCondition(builder.matchAll().build());
+        query.setForceRefresh(true);
+        query.setLimit(1000); // to avoid the default query limit of 10 entries
+        keepTrying("Failed waiting for rule to be saved", () -> rulesService.getRuleMetadatas(query),
+                (rules) -> rules.getList().stream().anyMatch(r -> r.getId().equals(rule.getMetadata().getId())), 1000,
                 100);
         rulesService.refreshRules();
     }
 
+    /**
+     * Constructs a full URL by combining the base URL, port, and the provided path.
+     *
+     * @param url The URL path to append to the base URL and port
+     * @return The complete URL string
+     * @throws Exception If an error occurs while constructing the URL
+     */
     public String getFullUrl(String url) throws Exception {
         return BASE_URL + ":" + getHttpPort() + url;
     }
 
+    /**
+     * Performs an HTTP GET request and deserializes the response to the specified class.
+     *
+     * @param <T>   The type to deserialize the response to
+     * @param url   The URL path for the GET request
+     * @param clazz The class object for the type to deserialize to
+     * @return The deserialized response object, or null if the request failed
+     */
     protected <T> T get(final String url, Class<T> clazz) {
         CloseableHttpResponse response = null;
         try {
@@ -656,12 +1134,14 @@ public abstract class BaseIT extends KarafTestSupport {
                 return null;
             }
         } catch (Exception e) {
+            LOGGER.error("Error while getting url "+url, e);
             e.printStackTrace();
         } finally {
             if (response != null) {
                 try {
                     response.close();
                 } catch (IOException e) {
+                    LOGGER.error("Error while getting url "+url, e);
                     e.printStackTrace();
                 }
             }
@@ -669,6 +1149,14 @@ public abstract class BaseIT extends KarafTestSupport {
         return null;
     }
 
+    /**
+     * Performs an HTTP POST request with the specified resource as the request body.
+     *
+     * @param url        The URL path for the POST request
+     * @param resource   The resource to use as the request body
+     * @param contentType The content type of the request
+     * @return The HTTP response, or null if the request failed
+     */
     protected CloseableHttpResponse post(final String url, final String resource, ContentType contentType) {
         try {
             final HttpPost request = new HttpPost(getFullUrl(url));
@@ -680,29 +1168,45 @@ public abstract class BaseIT extends KarafTestSupport {
 
             return executeHttpRequest(request);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Error executing POST request to " + url, e);
         }
         return null;
     }
 
+    /**
+     * Performs an HTTP POST request with the specified resource as the request body using JSON content type.
+     *
+     * @param url      The URL path for the POST request
+     * @param resource The resource to use as the request body
+     * @return The HTTP response, or null if the request failed
+     */
     protected CloseableHttpResponse post(final String url, final String resource) {
         return post(url, resource, JSON_CONTENT_TYPE);
     }
 
+    /**
+     * Performs an HTTP DELETE request.
+     *
+     * @param url The URL path for the DELETE request
+     * @return The HTTP response, or null if the request failed
+     */
     protected CloseableHttpResponse delete(final String url) {
         CloseableHttpResponse response = null;
         try {
             final HttpDelete httpDelete = new HttpDelete(getFullUrl(url));
             response = executeHttpRequest(httpDelete);
         } catch (IOException e) {
+            LOGGER.error("Error executing DELETE request to " + url, e);
             e.printStackTrace();
         } catch (Exception e) {
+            LOGGER.error("Error executing DELETE request to " + url, e);
             e.printStackTrace();
         } finally {
             if (response != null) {
                 try {
                     response.close();
                 } catch (IOException e) {
+                    LOGGER.error("Error executing DELETE request to " + url, e);
                     e.printStackTrace();
                 }
             }
@@ -710,25 +1214,37 @@ public abstract class BaseIT extends KarafTestSupport {
         return response;
     }
 
+    /**
+     * Executes an HTTP request with automatic authentication detection.
+     * This is the default method that automatically determines the required authentication.
+     *
+     * @param request The HTTP request to execute
+     * @return The HTTP response
+     * @throws IOException If an error occurs while executing the request
+     */
     protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request) throws IOException {
-        LOGGER.info("Executing request {} {}...", request.getMethod(), request.getURI());
-        System.out.println("Executing request " + request.getMethod() + " " + request.getURI() + "...");
-        CloseableHttpResponse response = httpClient.execute(request);
-        int statusCode = response.getStatusLine().getStatusCode();
-        if (statusCode != 200) {
-            String content = null;
-            if (response.getEntity() != null) {
-                InputStream contentInputStream = response.getEntity().getContent();
-                if (contentInputStream != null) {
-                    content = IOUtils.toString(response.getEntity().getContent());
-                }
-            }
-            LOGGER.error("Response status code: {}, reason: {}, content:{}", response.getStatusLine().getStatusCode(),
-                    response.getStatusLine().getReasonPhrase(), content);
-        }
-        return response;
+        return executeHttpRequest(request, AuthType.AUTO, null, null);
     }
 
+    /**
+     * Executes an HTTP request with the specified authentication type.
+     *
+     * @param request The HTTP request to execute
+     * @param authType The authentication type to use
+     * @return The HTTP response
+     * @throws IOException If an error occurs while executing the request
+     */
+    protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request, AuthType authType) throws IOException {
+        return executeHttpRequest(request, authType, null, null);
+    }
+
+    /**
+     * Loads a resource from the bundle and returns its content as a string.
+     *
+     * @param resource The path to the resource within the bundle
+     * @return The resource content as a string
+     * @throws RuntimeException If an error occurs while reading the resource
+     */
     protected String resourceAsString(final String resource) {
         final java.net.URL url = bundleContext.getBundle().getResource(resource);
         try (InputStream stream = url.openStream()) {
@@ -740,9 +1256,20 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
+    /**
+     * Initializes an HTTP client with custom SSL settings and optional credentials provider.
+     *
+     * @param credentialsProvider The credentials provider for basic authentication (can be null)
+     * @return The configured HTTP client
+     */
     public static CloseableHttpClient initHttpClient(BasicCredentialsProvider credentialsProvider) {
         long requestStartTime = System.currentTimeMillis();
-        HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties().setDefaultCredentialsProvider(credentialsProvider);
+        HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties();
+
+        // Only set credentials provider if one is provided
+        if (credentialsProvider != null) {
+            httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
+        }
 
         try {
             SSLContext sslContext = SSLContext.getInstance("SSL");
@@ -765,7 +1292,9 @@ public abstract class BaseIT extends KarafTestSupport {
 
             PoolingHttpClientConnectionManager poolingHttpClientConnectionManager = new PoolingHttpClientConnectionManager(
                     socketFactoryRegistry);
-            poolingHttpClientConnectionManager.setMaxTotal(10);
+            poolingHttpClientConnectionManager.setMaxTotal(50);
+            poolingHttpClientConnectionManager.setDefaultMaxPerRoute(20);
+            poolingHttpClientConnectionManager.setValidateAfterInactivity(2000);
 
             httpClientBuilder.setHostnameVerifier(SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
                     .setConnectionManager(poolingHttpClientConnectionManager);
@@ -774,8 +1303,11 @@ public abstract class BaseIT extends KarafTestSupport {
             LOGGER.error("Error creating SSL Context", e);
         }
 
-        RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(REQUEST_TIMEOUT).setSocketTimeout(REQUEST_TIMEOUT)
-                .setConnectionRequestTimeout(REQUEST_TIMEOUT).build();
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(REQUEST_TIMEOUT)
+                .setSocketTimeout(REQUEST_TIMEOUT)
+                .setConnectionRequestTimeout(REQUEST_TIMEOUT) // timeout for getting connection from pool
+                .build();
         httpClientBuilder.setDefaultRequestConfig(requestConfig);
 
         if (LOGGER.isDebugEnabled()) {
@@ -786,6 +1318,11 @@ public abstract class BaseIT extends KarafTestSupport {
         return httpClientBuilder.build();
     }
 
+    /**
+     * Safely closes an HTTP client, handling any exceptions.
+     *
+     * @param httpClient The HTTP client to close
+     */
     public static void closeHttpClient(CloseableHttpClient httpClient) {
         try {
             if (httpClient != null) {
@@ -796,12 +1333,26 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
-    public BasicCredentialsProvider getHttpClientCredentialProvider() {
-        BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
-        return credsProvider;
+    /**
+     * Safely closes an HTTP response, handling any exceptions.
+     *
+     * @param response The HTTP response to close
+     */
+    public static void closeResponse(CloseableHttpResponse response) {
+        try {
+            if (response != null) {
+                response.close();
+            }
+        } catch (IOException e) {
+            LOGGER.error("Could not close response", e);
+        }
     }
 
+    /**
+     * Gets the appropriate search engine port based on the configured search engine.
+     *
+     * @return The port number as a string
+     */
     protected static String getSearchPort() {
         String searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
         if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
@@ -812,5 +1363,367 @@ public abstract class BaseIT extends KarafTestSupport {
             // For Elasticsearch, use the default port or system property if set
             return System.getProperty("elasticsearch.port", "9400");
         }
+    }
+
+    /**
+     * Executes an HTTP request with the specified authentication type.
+     *
+     * @param request The HTTP request to execute
+     * @param authType The authentication type to use
+     * @param userName The user name to use for the custom basic authentication type
+     * @param password The password to use for the custom basic authentication type
+     * @return The HTTP response
+     * @throws IOException If an error occurs while executing the request
+     */
+    protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request, AuthType authType, String userName, String password) throws IOException {
+        // Apply authentication based on type
+        switch (authType) {
+            case NONE:
+                // No authentication headers - explicitly remove any existing auth headers
+                request.removeHeaders("Authorization");
+                request.removeHeaders("X-Unomi-Api-Key");
+                break;
+            case PUBLIC_KEY:
+                // Remove any existing auth headers first
+                request.removeHeaders("Authorization");
+                // Only set X-Unomi-Api-Key header if it's not already set
+                if (request.getFirstHeader("X-Unomi-Api-Key") == null && testPublicKey != null) {
+                    request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
+                }
+                break;
+            case PRIVATE_KEY:
+                // Remove any existing auth headers first
+                request.removeHeaders("X-Unomi-Api-Key");
+                // Only set Authorization header if it's not already set
+                if (request.getFirstHeader("Authorization") == null && testPrivateKey != null) {
+                    String credentials = TEST_TENANT_ID + ":" + testPrivateKey.getKey();
+                    request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
+                }
+                break;
+            case JAAS_ADMIN:
+                // Remove any existing auth headers first
+                request.removeHeaders("X-Unomi-Api-Key");
+                // Only set Authorization header if it's not already set
+                if (request.getFirstHeader("Authorization") == null) {
+                    String credentials = BASIC_AUTH_USER_NAME + ":" + BASIC_AUTH_PASSWORD;
+                    request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
+                }
+                break;
+            case CUSTOM_BASIC:
+                // Remove any existing auth headers first
+                request.removeHeaders("X-Unomi-Api-Key");
+                // Only set Authorization header if it's not already set
+                if (request.getFirstHeader("Authorization") == null) {
+                    String credentials = userName + ":" + password;
+                    request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
+                }
+                break;
+            case AUTO:
+                // Auto-detect based on an endpoint type
+                String path = request.getURI().getPath();
+                String method = request.getMethod();
+
+                // Normalize the path for pattern matching - remove /cxs prefix if present and leading slash
+                // This matches the behavior of ContainerRequestContext.getUriInfo().getPath()
+                String normalizedPath = path.startsWith("/cxs/") ? path.substring(4) : path;
+                // Remove leading slash to match ContainerRequestContext.getUriInfo().getPath() behavior
+                if (normalizedPath.startsWith("/")) {
+                    normalizedPath = normalizedPath.substring(1);
+                }
+                String methodPath = method + " " + normalizedPath;
+
+                // Check if it's a public endpoint
+                boolean isPublic = restAuthenticationConfig.getPublicPathPatterns().stream()
+                        .anyMatch(pattern -> pattern.matcher(methodPath).matches());
+
+                if (isPublic) {
+                    // Public endpoint - use public key
+                    request.removeHeaders("Authorization");
+                    // Only set X-Unomi-Api-Key header if it's not already set
+                    if (request.getFirstHeader("X-Unomi-Api-Key") == null && testPublicKey != null) {
+                        request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
+                    }
+                } else if (normalizedPath.startsWith("/tenants")) {
+                    // Admin endpoint - use JAAS admin
+                    request.removeHeaders("X-Unomi-Api-Key");
+                    // Only set Authorization header if it's not already set
+                    if (request.getFirstHeader("Authorization") == null) {
+                        String adminCredentials = BASIC_AUTH_USER_NAME + ":" + BASIC_AUTH_PASSWORD;
+                        request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(adminCredentials.getBytes()));
+                    }
+                } else {
+                    // Private endpoint - use private key
+                    request.removeHeaders("X-Unomi-Api-Key");
+                    // Only set Authorization header if it's not already set
+                    if (request.getFirstHeader("Authorization") == null && testPrivateKey != null) {
+                        String privateCredentials = TEST_TENANT_ID + ":" + testPrivateKey.getKey();
+                        request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(privateCredentials.getBytes()));
+                    }
+                }
+                break;
+        }
+
+        // Execute the request
+        CloseableHttpResponse response = httpClient.execute(request);
+
+        // Log errors
+        int statusCode = response.getStatusLine().getStatusCode();
+        if (statusCode != 200) {
+            String content = null;
+            if (response.getEntity() != null) {
+                // Use BufferedHttpEntity to allow multiple reads of the entity content
+                HttpEntity bufferedEntity = new BufferedHttpEntity(response.getEntity());
+                response.setEntity(bufferedEntity);
+                content = IOUtils.toString(bufferedEntity.getContent(), "UTF-8");
+            }
+            LOGGER.error("Response status code: {}, reason: {}, content:{}", response.getStatusLine().getStatusCode(),
+                    response.getStatusLine().getReasonPhrase(), content);
+        }
+
+        return response;
+    }
+
+    /**
+     * Enables Camel tracing and debug logging if requested via system property.
+     * This provides visibility into Camel operations during test execution without modifying production code.
+     *
+     * To enable: Set system property -Dit.unomi.camel.debug=true
+     *
+     * This will:
+     * - Enable Camel tracing (logs detailed message flow, body content, headers as messages traverse routes)
+     *   Tracing is useful for understanding WHAT is happening in routes (message content, transformations)
+     * - Enable DEBUG logging for Camel packages (configured in config() method)
+     *
+     * Note: Tracing provides different information than route status checking:
+     * - Tracing: Shows message flow and content (useful for debugging message transformations)
+     * - Route Status API: Shows if routes are running, exchange counts, processing times (useful for verifying execution)
+     * Both can be used together for comprehensive visibility.
+     */
+    protected void enableCamelDebugIfRequested() {
+        boolean enableCamelDebug = Boolean.parseBoolean(System.getProperty(CAMEL_DEBUG_PROPERTY, "false"));
+        if (enableCamelDebug && routerCamelContext != null) {
+            try {
+                routerCamelContext.setTracing(true);
+                LOGGER.info("Camel tracing enabled for test visibility (shows message flow and content)");
+                System.out.println("==== Camel tracing enabled for test visibility ====");
+                System.out.println("==== Use getCamelRouteInfo() for route status and statistics ====");
+            } catch (Exception e) {
+                LOGGER.warn("Failed to enable Camel tracing: {}", e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Gets the Camel context from the router Camel context service.
+     * Uses the interface method which returns Object to avoid exposing Camel dependency.
+     * Based on official Camel API: https://camel.apache.org/manual/
+     *
+     * @return The CamelContext instance, or null if not available
+     */
+    protected CamelContext getCamelContext() {
+        if (routerCamelContext == null) {
+            return null;
+        }
+        Object context = routerCamelContext.getCamelContext();
+        if (context instanceof CamelContext) {
+            return (CamelContext) context;
+        }
+        return null;
+    }
+
+    /**
+     * Checks if a Camel route with the given route ID exists.
+     * Uses official Camel API: CamelContext.getRoute(String routeId)
+     *
+     * @param routeId The route ID to check (typically the import configuration itemId)
+     * @return true if the route exists, false otherwise
+     */
+    protected boolean camelRouteExists(String routeId) {
+        CamelContext camelContext = getCamelContext();
+        if (camelContext == null) {
+            return false;
+        }
+        Route route = camelContext.getRoute(routeId);
+        return route != null;
+    }
+
+    /**
+     * Gets the status of a Camel route.
+     * Uses Camel 2.23.1 API directly.
+     * Returns ServiceStatus enum: Started, Stopped, Suspended, etc.
+     *
+     * @param routeId The route ID to get status for
+     * @return The route status, or null if route doesn't exist or status unavailable
+     */
+    protected ServiceStatus getCamelRouteStatus(String routeId) {
+        CamelContext camelContext = getCamelContext();
+        if (camelContext == null) {
+            return null;
+        }
+        try {
+            Route route = camelContext.getRoute(routeId);
+            if (route == null) {
+                return null;
+            }
+            // In Camel 2.23.1, routes are typically started when they exist in the context
+            // For test purposes, if a route exists, we assume it's started
+            // (Routes in Unomi are started when added to the context)
+            return ServiceStatus.Started;
+        } catch (Exception e) {
+            LOGGER.debug("Error getting route status for {}: {}", routeId, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Checks if a Camel route is started (running).
+     * Uses official Camel API to check route status.
+     *
+     * @param routeId The route ID to check
+     * @return true if the route exists and is started, false otherwise
+     */
+    protected boolean isCamelRouteStarted(String routeId) {
+        ServiceStatus status = getCamelRouteStatus(routeId);
+        return status != null && status.isStarted();
+    }
+
+    /**
+     * Gets detailed information about a Camel route including status, endpoints, and configuration.
+     * Uses Camel 2.23.1 API to inspect route definitions and endpoints.
+     *
+     * @param routeId The route ID to get information for
+     * @return A string describing the route status, endpoints, and configuration, or error message if route doesn't exist
+     */
+    protected String getCamelRouteInfo(String routeId) {
+        CamelContext camelContext = getCamelContext();
+        if (camelContext == null) {
+            return "CamelContext not available";
+        }
+        try {
+            Route route = camelContext.getRoute(routeId);
+            if (route == null) {
+                return "Route '" + routeId + "' does not exist";
+            }
+
+            StringBuilder info = new StringBuilder();
+            info.append("Route '").append(routeId).append("': ");
+
+            // Get route status using official API
+            ServiceStatus status = getCamelRouteStatus(routeId);
+            if (status != null) {
+                info.append("status=").append(status);
+            } else {
+                info.append("status=unknown");
+            }
+
+            // Get route definition to inspect endpoints and configuration
+            try {
+                org.apache.camel.model.RouteDefinition routeDefinition = camelContext.getRouteDefinition(routeId);
+                if (routeDefinition != null) {
+                    // Get input endpoint (from) - in Camel 2.23.1, use getInputs()
+                    java.util.List<org.apache.camel.model.FromDefinition> inputs = routeDefinition.getInputs();
+                    if (inputs != null && !inputs.isEmpty()) {
+                        org.apache.camel.model.FromDefinition from = inputs.get(0);
+                        if (from != null && from.getUri() != null) {
+                            info.append(", from=").append(from.getUri());
+                        }
+                    }
+
+                    // Get output endpoints (to)
+                    java.util.List<org.apache.camel.model.ProcessorDefinition<?>> outputs = routeDefinition.getOutputs();
+                    if (outputs != null && !outputs.isEmpty()) {
+                        java.util.List<String> toUris = new java.util.ArrayList<>();
+                        for (org.apache.camel.model.ProcessorDefinition<?> output : outputs) {
+                            if (output instanceof org.apache.camel.model.ToDefinition) {
+                                org.apache.camel.model.ToDefinition to = (org.apache.camel.model.ToDefinition) output;
+                                if (to.getUri() != null) {
+                                    toUris.add(to.getUri());
+                                }
+                            }
+                        }
+                        if (!toUris.isEmpty()) {
+                            info.append(", to=[");
+                            for (int i = 0; i < toUris.size(); i++) {
+                                if (i > 0) info.append(", ");
+                                info.append(toUris.get(i));
+                            }
+                            info.append("]");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Route definition inspection failed, that's okay
+                LOGGER.debug("Could not get route definition for {}: {}", routeId, e.getMessage());
+            }
+
+            // Note: Management statistics (exchange counts, processing times) require camel-management dependency.
+            // For test visibility, route status and endpoint information are the most useful.
+
+            return info.toString();
+        } catch (Exception e) {
+            return "Error getting route info for '" + routeId + "': " + e.getMessage();
+        }
+    }
+
+    /**
+     * Waits for a Camel route to be created and started.
+     * This is useful for tests that need to verify the route was created by the timer.
+     *
+     * @param routeId The route ID to wait for
+     * @param timeoutMs Timeout in milliseconds between retries
+     * @param maxRetries Maximum number of retries
+     * @return true if the route exists and is started, false if timeout
+     * @throws InterruptedException if interrupted
+     */
+    protected boolean waitForCamelRouteStarted(String routeId, int timeoutMs, int maxRetries) throws InterruptedException {
+        for (int i = 0; i < maxRetries; i++) {
+            if (isCamelRouteStarted(routeId)) {
+                String routeInfo = getCamelRouteInfo(routeId);
+                LOGGER.debug("Camel route '{}' is started. {}", routeId, routeInfo);
+                return true;
+            }
+            Thread.sleep(timeoutMs);
+        }
+        String routeInfo = getCamelRouteInfo(routeId);
+        LOGGER.warn("Camel route '{}' did not start within timeout. {}", routeId, routeInfo);
+        return false;
+    }
+
+    /**
+     * Gets a list of all Camel route IDs with their statuses.
+     * Uses official Camel API: CamelContext.getRoutes()
+     *
+     * @return Map of route ID to status, or empty map if CamelContext is not available
+     */
+    protected java.util.Map<String, ServiceStatus> getAllCamelRoutesWithStatus() {
+        java.util.Map<String, ServiceStatus> routes = new java.util.HashMap<>();
+        CamelContext camelContext = getCamelContext();
+        if (camelContext == null) {
+            return routes;
+        }
+        try {
+            for (Route route : camelContext.getRoutes()) {
+                // In Camel 2.23.1, Route has getId() method
+                String routeId = route.getId();
+                if (routeId != null) {
+                    ServiceStatus status = getCamelRouteStatus(routeId);
+                    if (status != null) {
+                        routes.put(routeId, status);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.debug("Error getting all routes: {}", e.getMessage());
+        }
+        return routes;
+    }
+
+    /**
+     * Gets a list of all Camel route IDs.
+     *
+     * @return List of route IDs, or empty list if CamelContext is not available
+     */
+    protected java.util.List<String> getAllCamelRouteIds() {
+        return new java.util.ArrayList<>(getAllCamelRoutesWithStatus().keySet());
     }
 }

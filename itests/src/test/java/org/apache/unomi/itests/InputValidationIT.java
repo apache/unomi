@@ -24,8 +24,11 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Scope;
+import org.apache.unomi.itests.tools.LogChecker;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
-import org.junit.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
@@ -51,6 +54,30 @@ public class InputValidationIT extends BaseIT {
     private final static String ERROR_MESSAGE_REQUEST_SIZE_LIMIT_EXCEEDED = "Request rejected by the server because: Request size exceed the limit";
     private final static String ERROR_MESSAGE_INVALID_DATA_RECEIVED = "Request rejected by the server because: Invalid received data";
     public static final String DUMMY_SCOPE = "dummy_scope";
+
+    /**
+     * Configure LogChecker with substrings for expected validation errors in this test.
+     * These are errors that are intentionally triggered to test validation logic.
+     */
+    @Override
+    protected LogChecker createLogChecker() {
+        return LogChecker.builder()
+            // InvalidRequestExceptionMapper errors (expected when testing invalid requests)
+            .addIgnoredSubstring("InvalidRequestExceptionMapper")
+            .addIgnoredSubstring("Invalid parameter")
+            .addIgnoredSubstring("Invalid Context request object")
+            .addIgnoredSubstring("Invalid events collector object")
+            .addIgnoredSubstring("Invalid profile ID format in cookie")
+            .addIgnoredSubstring("events collector cannot be empty")
+            .addIgnoredSubstring("Unable to deserialize object because")
+            // RequestValidatorInterceptor warnings (expected when testing request size limits)
+            .addIgnoredSubstring("RequestValidatorInterceptor")
+            .addIgnoredSubstring("has thrown exception, unwinding now")
+            .addIgnoredSubstring("exceeding maximum bytes size")
+            .addIgnoredSubstring("Incoming POST request blocked because exceeding maximum bytes size")
+            .addIgnoredSubstring("Response status code: 400")
+            .build();
+    }
 
     @Before
     public void setUp() throws InterruptedException {

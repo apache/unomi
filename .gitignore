@@ -20,4 +20,7 @@ rest/.miredot-offline.json
 itests/src/main
 dependency_tree.txt
 .mvn/.develocity/develocity-workspace-id
+/.cursor/
 /.local-notes/
+itests/snapshots_repository/
+.env.local

@@ -209,8 +209,8 @@ public class ProfileMergeIT extends BaseIT {
         Event event = new Event(TEST_EVENT_TYPE, simpleSession, masterProfile, null, null, eventProfile, new Date());
         eventService.send(event);
 
-        // Session should have been reassign and the previous existing profile for mergeIdentifier: event@domain.com should have been reuse
-        // Session should have been reassign and a new profile should have been created ! (We call this user switch case)
+        // Session should have been reassigned and the previous existing profile for mergeIdentifier: event@domain.com should have been reused
+        // Session should have been reassigned and a new profile should have been created ! (We call this user switch case)
         Assert.assertNotNull(event.getProfile());
         Assert.assertEquals("previousProfileID", event.getProfile().getItemId());
         Assert.assertEquals("previousProfileID", event.getProfileId());
@@ -255,15 +255,35 @@ public class ProfileMergeIT extends BaseIT {
             persistenceService.save(sessionToBeRewritten);
             persistenceService.save(eventToBeRewritten);
         }
+        refreshPersistence(Session.class, Event.class);
+        // Wait for sessions and events to be properly indexed before proceeding
         for (Session session : sessionsToBeRewritten) {
             keepTrying("Wait for session: " + session.getItemId() + " to be indexed",
-                    () -> persistenceService.query("itemId", session.getItemId(), null, Session.class),
-                    (list) -> list.size() == 1, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                    () -> {
+                        try {
+                            refreshPersistence(Session.class);
+                            List<Session> results = persistenceService.query("itemId", session.getItemId(), null, Session.class);
+                            return results != null && results.size() == 1;
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return false;
+                        }
+                    },
+                    (found) -> found, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         }
         for (Event event : eventsToBeRewritten) {
             keepTrying("Wait for event: " + event.getItemId() + " to be indexed",
-                    () -> persistenceService.query("itemId", event.getItemId(), null, Event.class),
-                    (list) -> list.size() == 1, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                    () -> {
+                        try {
+                            refreshPersistence(Event.class);
+                            List<Event> results = persistenceService.query("itemId", event.getItemId(), null, Event.class);
+                            return results != null && results.size() == 1;
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return false;
+                        }
+                    },
+                    (found) -> found, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         }
         keepTrying("Profile with id masterProfileID not found in the required time", () -> profileService.load("masterProfileID"),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
@@ -341,15 +361,35 @@ public class ProfileMergeIT extends BaseIT {
             persistenceService.save(sessionToBeRewritten);
             persistenceService.save(eventToBeRewritten);
         }
+        refreshPersistence(Session.class, Event.class);
+        // Wait for sessions and events to be properly indexed before proceeding
         for (Session session : sessionsToBeRewritten) {
             keepTrying("Wait for session: " + session.getItemId() + " to be indexed",
-                    () -> persistenceService.query("itemId", session.getItemId(), null, Session.class),
-                    (list) -> list.size() == 1, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                    () -> {
+                        try {
+                            refreshPersistence(Session.class);
+                            List<Session> results = persistenceService.query("itemId", session.getItemId(), null, Session.class);
+                            return results != null && results.size() == 1;
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return false;
+                        }
+                    },
+                    (found) -> found, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         }
         for (Event event : eventsToBeRewritten) {
             keepTrying("Wait for event: " + event.getItemId() + " to be indexed",
-                    () -> persistenceService.query("itemId", event.getItemId(), null, Event.class),
-                    (list) -> list.size() == 1, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                    () -> {
+                        try {
+                            refreshPersistence(Event.class);
+                            List<Event> results = persistenceService.query("itemId", event.getItemId(), null, Event.class);
+                            return results != null && results.size() == 1;
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return false;
+                        }
+                    },
+                    (found) -> found, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         }
         keepTrying("Profile with id masterProfileID (should required anonymous browsing) not found in the required time",
                 () -> profileService.load("masterProfileID"),

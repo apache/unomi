@@ -86,14 +86,38 @@ public class PatchIT extends BaseIT {
         PropertyType income = profileService.getPropertyType("income");
 
         try {
-            Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch3.json"), Patch.class);
+            // We need to execute as system to remove a system property type
+            executionContextManager.executeAsSystem(() -> {
+                Patch patch = null;
+                try {
+                    patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch3.json"), Patch.class);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
 
-            patchService.patch(patch);
+                Object patchResult = patchService.patch(patch);
+                LOGGER.info("testRemove: patch applied, result={}", patchResult);
 
-            profileService.refresh();
+                profileService.refresh();
 
-            waitForNullValue("Failed waiting for property type removal",
-                    () -> profileService.getPropertyType("income"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                // Poll with refresh on every attempt — nudges the unified cache each cycle.
+                // Logs each result to diagnose whether the type reappears from bundle resources.
+                try {
+                    keepTrying("Failed waiting for property type removal",
+                            () -> {
+                                profileService.refresh();
+                                PropertyType current = profileService.getPropertyType("income");
+                                LOGGER.info("testRemove: poll — income={}", current == null
+                                        ? "null (REMOVED OK)"
+                                        : "still present, defaultValue=" + current.getDefaultValue());
+                                return current;
+                            },
+                            value -> value == null,
+                            DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES * 2);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException("Interrupted while trying to wait for property removal", e);
+                }
+            });
         } finally {
             profileService.setPropertyType(income);
         }
@@ -124,6 +148,9 @@ public class PatchIT extends BaseIT {
     @Test
     public void testPatchOnActionType() throws IOException, InterruptedException {
         ActionType mailAction = definitionsService.getActionType("sendMailAction");
+        Assert.assertNotNull("sendMailAction should exist", mailAction);
+        Assert.assertNotNull("ActionType metadata should not be null", mailAction.getMetadata());
+        Assert.assertNotNull("ActionType systemTags should not be null", mailAction.getMetadata().getSystemTags());
         Assert.assertTrue(mailAction.getMetadata().getSystemTags().contains("availableToEndUser"));
 
         try {

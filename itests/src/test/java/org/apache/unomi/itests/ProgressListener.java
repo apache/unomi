@@ -21,13 +21,20 @@ import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
 import org.junit.runner.notification.RunListener;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A comprehensive JUnit test run listener that provides enhanced progress reporting
  * with visual elements, timing information, and motivational quotes during test execution.
- * 
+ *
  * <p>This listener extends JUnit's {@link RunListener} to provide real-time feedback
  * about test execution progress. It features:</p>
  * <ul>
@@ -40,11 +47,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li>Motivational quotes displayed at progress milestones</li>
  *   <li>CSV-formatted performance data output</li>
  * </ul>
- * 
+ *
  * <p>The listener automatically detects ANSI color support based on the terminal
  * environment and adjusts output accordingly. When ANSI is not supported,
  * plain text output is used instead.</p>
- * 
+ *
  * <p>Example usage in test configuration:</p>
  * <pre>{@code
  * JUnitCore core = new JUnitCore();
@@ -52,11 +59,11 @@ import java.util.concurrent.atomic.AtomicInteger;
  * core.addListener(listener);
  * core.run(testClasses);
  * }</pre>
- * 
+ *
  * <p>The listener tracks test execution times and maintains a priority queue
  * of the slowest tests, which is reported at the end of the test run along
  * with CSV-formatted data for further analysis.</p>
- * 
+ *
  * @author Apache Unomi
  * @since 3.0.0
  * @see org.junit.runner.notification.RunListener
@@ -99,7 +106,7 @@ public class ProgressListener extends RunListener {
 
         /**
          * Creates a new test time record.
-         * 
+         *
          * @param name the display name of the test
          * @param time the execution time in milliseconds
          */
@@ -117,6 +124,8 @@ public class ProgressListener extends RunListener {
     private final AtomicInteger successfulTests = new AtomicInteger(0);
     /** Thread-safe counter for failed tests */
     private final AtomicInteger failedTests = new AtomicInteger(0);
+    /** Thread-safe list to track failed test names */
+    private final List<String> failedTestNames = Collections.synchronizedList(new ArrayList<>());
     /** Priority queue to track the slowest tests (limited to top 10) */
     private final PriorityQueue<TestTime> slowTests;
     /** Flag indicating whether ANSI color codes are supported in the terminal */
@@ -125,10 +134,12 @@ public class ProgressListener extends RunListener {
     private long startTime = System.currentTimeMillis();
     /** Timestamp when the current individual test started */
     private long startTestTime = System.currentTimeMillis();
+    /** Formatter for human-readable timestamps */
+    private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     /**
      * Creates a new ProgressListener instance.
-     * 
+     *
      * @param totalTests the total number of tests that will be executed
      * @param completedTests a thread-safe counter that tracks the number of completed tests
      *                       (this should be shared with the test runner for accurate progress tracking)
@@ -142,7 +153,7 @@ public class ProgressListener extends RunListener {
 
     /**
      * Determines if the current terminal supports ANSI color codes.
-     * 
+     *
      * @return true if ANSI colors are supported, false otherwise
      */
     private boolean isAnsiSupported() {
@@ -152,7 +163,7 @@ public class ProgressListener extends RunListener {
 
     /**
      * Applies ANSI color codes to text if the terminal supports them.
-     * 
+     *
      * @param text the text to colorize
      * @param color the ANSI color code to apply
      * @return the colorized text if ANSI is supported, otherwise the original text
@@ -165,8 +176,30 @@ public class ProgressListener extends RunListener {
     }
 
     /**
+     * Generates a separator bar of the specified length using the separator character.
+     *
+     * @param length the desired length of the separator bar
+     * @return a string of separator characters of the specified length
+     */
+    private String generateSeparator(int length) {
+        return "━".repeat(Math.max(1, length));
+    }
+
+    /**
+     * Calculates the visual length of a string, excluding ANSI escape codes.
+     *
+     * @param text the text to measure
+     * @return the visual length of the text without ANSI codes
+     */
+    private int getVisualLength(String text) {
+        // Remove ANSI escape sequences (pattern: ESC[ ... m)
+        String withoutAnsi = text.replaceAll("\u001B\\[[0-9;]*m", "");
+        return withoutAnsi.length();
+    }
+
+    /**
      * Called when the test run starts. Displays an ASCII art logo and welcome message.
-     * 
+     *
      * @param description the description of the test run
      */
     @Override
@@ -209,26 +242,43 @@ public class ProgressListener extends RunListener {
 
         // Print the bottom border
         System.out.println(colorize(bottomBorder, CYAN));
+
+        // Display search engine information once at the start
+        String searchEngine = System.getProperty("unomi.search.engine", "elasticsearch");
+        String searchEngineDisplay = capitalizeSearchEngine(searchEngine);
+        System.out.println();
+        System.out.println(colorize("Using search engine: " + searchEngineDisplay, CYAN));
+        System.out.println();
     }
 
     /**
      * Called when an individual test starts. Records the start time for timing calculations.
-     * 
+     *
      * @param description the description of the test that started
      */
     @Override
     public void testStarted(Description description) {
         startTestTime = System.currentTimeMillis();
+        // Print test start boundary with test name
+        String testName = extractTestName(description);
+        String timestamp = formatTimestamp(startTestTime);
+        String message = "▶ START: " + testName + " [" + timestamp + "]";
+        String separator = generateSeparator(message.length());
+        System.out.println(); // Blank line before test
+        System.out.println(colorize(separator, CYAN));
+        System.out.println(colorize(message, GREEN));
+        System.out.println(colorize(separator, CYAN));
     }
 
     /**
      * Called when an individual test finishes successfully. Updates counters and displays progress.
-     * 
+     *
      * @param description the description of the test that finished
      */
     @Override
     public void testFinished(Description description) {
-        long testDuration = System.currentTimeMillis() - startTestTime;
+        long endTestTime = System.currentTimeMillis();
+        long testDuration = endTestTime - startTestTime;
         completedTests.incrementAndGet();
         successfulTests.incrementAndGet(); // Default to success unless a failure is recorded separately.
         slowTests.add(new TestTime(description.getDisplayName(), testDuration));
@@ -236,25 +286,43 @@ public class ProgressListener extends RunListener {
             // Remove the smallest time, keeping only the top 5 longest
             slowTests.poll();
         }
+        // Print test end boundary
+        String testName = extractTestName(description);
+        String durationStr = formatTime(testDuration);
+        String timestamp = formatTimestamp(endTestTime);
+        String message = "✓ END: " + testName + " [" + timestamp + "] (Duration: " + durationStr + ")";
+        String separator = generateSeparator(message.length());
+        System.out.println(colorize(separator, CYAN));
+        System.out.println(colorize(message, GREEN));
+        System.out.println(colorize(separator, CYAN));
+        System.out.println(); // Blank line before progress bar
         displayProgress();
+        System.out.println(); // Blank line after progress bar
     }
 
     /**
      * Called when a test fails. Updates failure counters and displays the failure message.
-     * 
+     *
      * @param failure the failure information
      */
     @Override
     public void testFailure(Failure failure) {
         successfulTests.decrementAndGet(); // Remove the previous success count for this test.
         failedTests.incrementAndGet();
-        System.out.println(colorize("Test failed: " + failure.getDescription(), RED));
+        String testName = extractTestName(failure.getDescription());
+        // Add to failed tests list (thread-safe)
+        failedTestNames.add(testName);
+        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", RED));
+        System.out.println(colorize("✗ FAILED: " + testName, RED));
+        System.out.println(colorize("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", RED));
+        System.out.println(); // Blank line before progress bar
         displayProgress();
+        System.out.println(); // Blank line after progress bar
     }
 
     /**
      * Called when the entire test run finishes. Displays final statistics and performance data.
-     * 
+     *
      * @param result the final result of the test run
      */
     @Override
@@ -299,8 +367,58 @@ public class ProgressListener extends RunListener {
     }
 
     /**
+     * Capitalizes the search engine name for display.
+     * Converts "opensearch" to "OpenSearch" and "elasticsearch" to "Elasticsearch".
+     *
+     * @param searchEngine the search engine name (lowercase)
+     * @return the capitalized search engine name
+     */
+    private String capitalizeSearchEngine(String searchEngine) {
+        if (searchEngine == null || searchEngine.isEmpty()) {
+            return searchEngine;
+        }
+        // Handle special case for "opensearch" -> "OpenSearch"
+        if ("opensearch".equalsIgnoreCase(searchEngine)) {
+            return "OpenSearch";
+        }
+        // Handle "elasticsearch" -> "Elasticsearch"
+        if ("elasticsearch".equalsIgnoreCase(searchEngine)) {
+            return "Elasticsearch";
+        }
+        // Default: capitalize first letter
+        return searchEngine.substring(0, 1).toUpperCase() + searchEngine.substring(1);
+    }
+
+    /**
+     * Extracts a clean test name from the test description.
+     * Formats it as "ClassName: methodName" for better readability.
+     *
+     * @param description the test description
+     * @return a formatted test name string
+     */
+    private String extractTestName(Description description) {
+        String displayName = description.getDisplayName();
+        // The display name is typically in format "methodName(ClassName)"
+        // Extract class name and method name
+        if (displayName.contains("(") && displayName.contains(")")) {
+            int methodEnd = displayName.indexOf('(');
+            int classStart = methodEnd + 1;
+            int classEnd = displayName.indexOf(')');
+            if (methodEnd > 0 && classEnd > classStart) {
+                String methodName = displayName.substring(0, methodEnd);
+                String className = displayName.substring(classStart, classEnd);
+                // Extract simple class name (last part after dot)
+                int lastDot = className.lastIndexOf('.');
+                String simpleClassName = (lastDot >= 0) ? className.substring(lastDot + 1) : className;
+                return simpleClassName + ": " + methodName;
+            }
+        }
+        return displayName;
+    }
+
+    /**
      * Escapes special characters for CSV compatibility.
-     * 
+     *
      * @param value the string value to escape
      * @return the escaped string suitable for CSV output
      */
@@ -312,7 +430,7 @@ public class ProgressListener extends RunListener {
     }
 
     /**
-     * Displays the current progress of the test run including progress bar, 
+     * Displays the current progress of the test run including progress bar,
      * percentage completion, estimated time remaining, and success/failure counts.
      * Also displays motivational quotes at progress milestones.
      */
@@ -329,9 +447,26 @@ public class ProgressListener extends RunListener {
         String progressBar = generateProgressBar(((double) completed / totalTests) * 100);
         String humanReadableTime = formatTime(estimatedRemainingTime);
 
-        System.out.printf("[%s] %sProgress: %s%.2f%%%s (%d/%d tests). Estimated time remaining: %s%s%s. " +
+        // Build the plain message string (without ANSI codes) to calculate its length
+        String progressBarPlain = progressBar.replaceAll("\u001B\\[[0-9;]*m", "");
+        String plainMessage = String.format("[%s] Progress: %.2f%% (%d/%d tests). Estimated time remaining: %s. " +
+                        "Successful: %d, Failed: %d",
+                progressBarPlain,
+                ((double) completed / totalTests) * 100,
+                completed,
+                totalTests,
+                humanReadableTime,
+                successfulTests.get(),
+                failedTests.get());
+
+        // Generate separator to match message length
+        String separator = generateSeparator(plainMessage.length());
+        System.out.println(colorize(separator, CYAN));
+        System.out.printf("%s[%s]%s %sProgress: %s%.2f%%%s (%d/%d tests). Estimated time remaining: %s%s%s. " +
                         "Successful: %s%d%s, Failed: %s%d%s%n",
+                ansiSupported ? CYAN : "",
                 progressBar,
+                ansiSupported ? RESET : "",
                 ansiSupported ? BLUE : "",
                 ansiSupported ? GREEN : "",
                 ((double) completed / totalTests) * 100,
@@ -347,6 +482,19 @@ public class ProgressListener extends RunListener {
                 ansiSupported ? RED : "",
                 failedTests.get(),
                 ansiSupported ? RESET : "");
+        System.out.println(colorize(separator, CYAN));
+
+        // Display failed tests list if any failures occurred
+        if (!failedTestNames.isEmpty()) {
+            System.out.println();
+            System.out.println(colorize("Failed Tests So Far (" + failedTestNames.size() + "):", RED));
+            synchronized (failedTestNames) {
+                for (int i = 0; i < failedTestNames.size(); i++) {
+                    System.out.println(colorize("  " + (i + 1) + ". " + failedTestNames.get(i), RED));
+                }
+            }
+            System.out.println();
+        }
 
         if (completed % Math.max(1, totalTests / 10) == 0 && completed < totalTests) {
             String quote = QUOTES[completed % QUOTES.length];
@@ -355,8 +503,19 @@ public class ProgressListener extends RunListener {
     }
 
     /**
+     * Formats a timestamp in milliseconds into a human-readable date-time string.
+     *
+     * @param timeInMillis the timestamp in milliseconds since epoch
+     * @return a formatted timestamp string (e.g., "2024-01-15 14:30:45")
+     */
+    private String formatTimestamp(long timeInMillis) {
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(timeInMillis), ZoneId.systemDefault())
+                .format(TIMESTAMP_FORMATTER);
+    }
+
+    /**
      * Formats a time duration in milliseconds into a human-readable string.
-     * 
+     *
      * @param timeInMillis the time duration in milliseconds
      * @return a formatted time string (e.g., "1h 23m 45s" or "2m 30s")
      */
@@ -385,7 +544,7 @@ public class ProgressListener extends RunListener {
 
     /**
      * Generates a visual progress bar based on the completion percentage.
-     * 
+     *
      * @param progressPercentage the completion percentage (0.0 to 100.0)
      * @return a string representation of the progress bar with appropriate colors
      */

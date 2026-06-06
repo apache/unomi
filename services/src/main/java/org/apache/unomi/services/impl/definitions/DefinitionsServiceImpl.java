@@ -17,432 +17,386 @@
 
 package org.apache.unomi.services.impl.definitions;
 
+import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
+import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.utils.ConditionBuilder;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.api.utils.ParserHelper;
+import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
 import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.service.event.Event;
+import org.osgi.service.event.EventAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.TimeUnit;
+import java.io.Serializable;
+import java.util.*;
+import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 
-public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBundleListener {
+import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
+
+public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService implements DefinitionsService, TenantLifecycleListener, SynchronousBundleListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
-    private PersistenceService persistenceService;
-    private SchedulerService schedulerService;
-
-    private Map<String, ConditionType> conditionTypeById = new ConcurrentHashMap<>();
-    private Map<String, ActionType> actionTypeById = new ConcurrentHashMap<>();
-    private Map<String, ValueType> valueTypeById = new HashMap<>();
-    private Map<String, Set<ValueType>> valueTypeByTag = new HashMap<>();
-    private Map<Long, List<PluginType>> pluginTypes = new HashMap<>();
-    private Map<String, PropertyMergeStrategyType> propertyMergeStrategyTypeById = new HashMap<>();
+    private volatile boolean isShutdown = false;
+    private volatile boolean initialRefreshComplete = false;
 
     private long definitionsRefreshInterval = 10000;
 
     private ConditionBuilder conditionBuilder;
-    private BundleContext bundleContext;
+
+    private static final int MAX_RECURSIVE_CONDITIONS = 1000; // Prevent stack overflow
+    private static final String BOOLEAN_CONDITION_TYPE = "booleanCondition";
+    private static final String AND_OPERATOR = "and";
+    private static final String SUB_CONDITIONS_PARAM = "subConditions";
+    private static final String OPERATOR_PARAM = "operator";
+
+    private static final long TASK_TIMEOUT_MS = 60000; // 1 minute timeout for tasks
+
+    private EventAdmin eventAdmin;
+
+    // OSGi Event Admin topic constants for type change events
+    private static final String TOPIC_CONDITION_TYPE_ADDED = "org/apache/unomi/definitions/conditionType/ADDED";
+    private static final String TOPIC_CONDITION_TYPE_UPDATED = "org/apache/unomi/definitions/conditionType/UPDATED";
+    private static final String TOPIC_CONDITION_TYPE_REMOVED = "org/apache/unomi/definitions/conditionType/REMOVED";
+    private static final String TOPIC_ACTION_TYPE_ADDED = "org/apache/unomi/definitions/actionType/ADDED";
+    private static final String TOPIC_ACTION_TYPE_UPDATED = "org/apache/unomi/definitions/actionType/UPDATED";
+    private static final String TOPIC_ACTION_TYPE_REMOVED = "org/apache/unomi/definitions/actionType/REMOVED";
+
+    // Event property keys
+    private static final String PROP_TYPE_ID = "typeId";
+    private static final String PROP_TENANT_ID = "tenantId";
+
+    public void setCacheService(MultiTypeCacheService cacheService) {
+        super.setCacheService(cacheService);
+    }
+
+    public void setEventAdmin(EventAdmin eventAdmin) {
+        this.eventAdmin = eventAdmin;
+    }
+
     public DefinitionsServiceImpl() {
+        // Initialize other components
+        conditionBuilder = new ConditionBuilder(this);
     }
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
+    @Override
+    public void postConstruct() {
+        super.postConstruct();
 
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
-
-    public void setSchedulerService(SchedulerService schedulerService) {
-        this.schedulerService = schedulerService;
+        LOGGER.debug("Definitions service initialized.");
     }
 
     public void setDefinitionsRefreshInterval(long definitionsRefreshInterval) {
         this.definitionsRefreshInterval = definitionsRefreshInterval;
     }
 
-    public void postConstruct() {
-        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
-
-        processBundleStartup(bundleContext);
-
-        // process already started bundles
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                processBundleStartup(bundle.getBundleContext());
-            }
+    protected void processBundleStartup(BundleContext bundleContext) {
+        if (bundleContext == null || isShutdown) {
+            return;
         }
 
-        bundleContext.addBundleListener(this);
-        scheduleTypeReloads();
-        conditionBuilder = new ConditionBuilder(this);
-        LOGGER.info("Definitions service initialized.");
+        // Call the base class implementation which will use our bundle processors
+        super.processBundleStartup(bundleContext);
     }
 
-    private void scheduleTypeReloads() {
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                reloadTypes(false);
-            }
-        };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, definitionsRefreshInterval, TimeUnit.MILLISECONDS);
-        LOGGER.info("Scheduled task for condition type loading each 10s");
-    }
-
-    public void reloadTypes(boolean refresh) {
-        try {
-            if (refresh) {
-                persistenceService.refreshIndex(ConditionType.class);
-                persistenceService.refreshIndex(ActionType.class);
-            }
-            loadConditionTypesFromPersistence();
-            loadActionTypesFromPersistence();
-        } catch (Throwable t) {
-            LOGGER.error("Error loading definitions from persistence back-end", t);
-        }
-    }
-
-    private void loadConditionTypesFromPersistence() {
-        try {
-            Map<String, ConditionType> newConditionTypesById = new ConcurrentHashMap<>();
-            for (ConditionType conditionType : getAllConditionTypes()) {
-                newConditionTypesById.put(conditionType.getItemId(), conditionType);
-            }
-            this.conditionTypeById = newConditionTypesById;
-        } catch (Exception e) {
-            LOGGER.error("Error loading condition types from persistence service", e);
-        }
-    }
-
-    private void loadActionTypesFromPersistence() {
-        try {
-            Map<String, ActionType> newActionTypesById = new ConcurrentHashMap<>();
-            for (ActionType actionType : getAllActionTypes()) {
-                newActionTypesById.put(actionType.getItemId(), actionType);
-            }
-            this.actionTypeById = newActionTypesById;
-        } catch (Exception e) {
-            LOGGER.error("Error loading action types from persistence service", e);
-        }
-    }
-
-    private void processBundleStartup(BundleContext bundleContext) {
+    protected void processBundleStop(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;
         }
 
-        pluginTypes.put(bundleContext.getBundle().getBundleId(), new ArrayList<PluginType>());
-
-        loadPredefinedConditionTypes(bundleContext);
-        loadPredefinedActionTypes(bundleContext);
-        loadPredefinedValueTypes(bundleContext);
-        loadPredefinedPropertyMergeStrategies(bundleContext);
-
+        // Call the base class implementation which will handle removing items
+        super.processBundleStop(bundleContext.getBundle());
     }
 
-    private void processBundleStop(BundleContext bundleContext) {
-        if (bundleContext == null) {
+    @Override
+    protected void onBundleStop(Bundle bundle) {
+        if (bundle == null) {
             return;
         }
-        List<PluginType> types = pluginTypes.remove(bundleContext.getBundle().getBundleId());
-        if (types != null) {
-            for (PluginType type : types) {
-                if (type instanceof ValueType) {
-                    ValueType valueType = (ValueType) type;
-                    valueTypeById.remove(valueType.getId());
-                    for (String tag : valueType.getTags()) {
-                        if (valueTypeByTag.containsKey(tag)) {
-                            valueTypeByTag.get(tag).remove(valueType);
+        final long bundleId = bundle.getBundleId();
+
+        // Remove all plugin types contributed by this bundle (system tenant / inherited)
+        // Execute as system to target predefined items
+        contextManager.executeAsSystem(() -> {
+            try {
+                java.util.List<PluginType> types = getTypesByPlugin().get(bundleId);
+                if (types != null) {
+                    for (PluginType type : types) {
+                        if (type instanceof ConditionType) {
+                            removeConditionType(((ConditionType) type).getItemId());
+                        } else if (type instanceof ActionType) {
+                            removeActionType(((ActionType) type).getItemId());
+                        } else if (type instanceof ValueType) {
+                            removeValueType(((ValueType) type).getId());
+                        } else if (type instanceof PropertyMergeStrategyType) {
+                            removePropertyMergeStrategyType(((PropertyMergeStrategyType) type).getId());
                         }
                     }
                 }
+            } catch (Exception e) {
+                LOGGER.warn("Error cleaning up plugin types for bundle {} on stop", bundleId, e);
             }
-        }
+            return null;
+        });
     }
 
+    @Override
     public void preDestroy() {
-        bundleContext.removeBundleListener(this);
+        super.preDestroy();
+        isShutdown = true;
+        if (bundleContext != null) {
+            bundleContext.removeBundleListener(this);
+        }
         LOGGER.info("Definitions service shutdown.");
     }
 
-    private void loadPredefinedConditionTypes(BundleContext bundleContext) {
-        Enumeration<URL> predefinedConditionEntries = bundleContext.getBundle().findEntries("META-INF/cxs/conditions", "*.json", true);
-        if (predefinedConditionEntries == null) {
-            return;
-        }
-
-        while (predefinedConditionEntries.hasMoreElements()) {
-            URL predefinedConditionURL = predefinedConditionEntries.nextElement();
-            LOGGER.debug("Found predefined condition at {}, loading... ", predefinedConditionURL);
-
-            try {
-                ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
-                setConditionType(conditionType);
-                LOGGER.info("Predefined condition type with id {} registered", conditionType.getMetadata().getId());
-            } catch (IOException e) {
-                LOGGER.error("Error while loading condition definition {}", predefinedConditionURL, e);
-            }
-        }
-    }
-
-    private void loadPredefinedActionTypes(BundleContext bundleContext) {
-        Enumeration<URL> predefinedActionsEntries = bundleContext.getBundle().findEntries("META-INF/cxs/actions", "*.json", true);
-        if (predefinedActionsEntries == null) {
-            return;
-        }
-
-        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
-        while (predefinedActionsEntries.hasMoreElements()) {
-            URL predefinedActionURL = predefinedActionsEntries.nextElement();
-            LOGGER.debug("Found predefined action at {}, loading... ", predefinedActionURL);
-
-            try {
-                ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
-                setActionType(actionType);
-                LOGGER.info("Predefined action type with id {} registered", actionType.getMetadata().getId());
-            } catch (Exception e) {
-                LOGGER.error("Error while loading action definition {}", predefinedActionURL, e);
-            }
-        }
-
-    }
-
-    private void loadPredefinedValueTypes(BundleContext bundleContext) {
-        Enumeration<URL> predefinedPropertiesEntries = bundleContext.getBundle().findEntries("META-INF/cxs/values", "*.json", true);
-        if (predefinedPropertiesEntries == null) {
-            return;
-        }
-        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
-        while (predefinedPropertiesEntries.hasMoreElements()) {
-            URL predefinedPropertyURL = predefinedPropertiesEntries.nextElement();
-            LOGGER.debug("Found predefined value type at {}, loading... ", predefinedPropertyURL);
-
-            try {
-                ValueType valueType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, ValueType.class);
-                valueType.setPluginId(bundleContext.getBundle().getBundleId());
-                valueTypeById.put(valueType.getId(), valueType);
-                pluginTypeArrayList.add(valueType);
-                for (String tag : valueType.getTags()) {
-                    if (tag != null) {
-                        valueType.getTags().add(tag);
-                        Set<ValueType> valueTypes = valueTypeByTag.get(tag);
-                        if (valueTypes == null) {
-                            valueTypes = new LinkedHashSet<ValueType>();
-                        }
-                        valueTypes.add(valueType);
-                        valueTypeByTag.put(tag, valueTypes);
-                    } else {
-                        // we found a tag that is not defined, we will define it automatically
-                        LOGGER.warn("Unknown tag {} used in property type definition {}", tag, predefinedPropertyURL);
-                    }
-                }
-            } catch (Exception e) {
-                LOGGER.error("Error while loading property type definition {}", predefinedPropertyURL, e);
-            }
-        }
-
-    }
-
-    public Map<Long, List<PluginType>> getTypesByPlugin() {
-        return pluginTypes;
-    }
-
+    @Override
     public Collection<ConditionType> getAllConditionTypes() {
-        Collection<ConditionType> all = persistenceService.getAllItems(ConditionType.class);
+        Collection<ConditionType> all = getAllItems(ConditionType.class, true);
         for (ConditionType type : all) {
-            if (type != null && type.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
-            }
+            resolveParentCondition(type);
         }
         return all;
     }
 
+    @Override
     public Set<ConditionType> getConditionTypesByTag(String tag) {
-        return getConditionTypesBy("metadata.tags", tag);
+        Set<ConditionType> types = getItemsByTag(ConditionType.class, tag);
+        for (ConditionType type : types) {
+            resolveParentCondition(type);
+        }
+        return types;
     }
 
+    @Override
     public Set<ConditionType> getConditionTypesBySystemTag(String tag) {
-        return getConditionTypesBy("metadata.systemTags", tag);
-    }
-
-    private Set<ConditionType> getConditionTypesBy(String fieldName, String fieldValue) {
-        Set<ConditionType> conditionTypes = new LinkedHashSet<ConditionType>();
-        List<ConditionType> directConditionTypes = persistenceService.query(fieldName, fieldValue,null, ConditionType.class);
-        for (ConditionType type : directConditionTypes) {
-            if (type.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
-            }
+        Set<ConditionType> types = getItemsBySystemTag(ConditionType.class, tag);
+        for (ConditionType type : types) {
+            resolveParentCondition(type);
         }
-        conditionTypes.addAll(directConditionTypes);
-
-        return conditionTypes;
+        return types;
     }
 
+    @Override
     public ConditionType getConditionType(String id) {
-        if (id == null) {
-            return null;
-        }
-        ConditionType type = conditionTypeById.get(id);
-        if (type == null || type.getVersion() == null) {
-            type = persistenceService.load(id, ConditionType.class);
-            if (type != null) {
-                conditionTypeById.put(id, type);
-            }
-        }
+        ConditionType type = getItem(id, ConditionType.class);
+        resolveParentCondition(type);
+        return type;
+    }
+
+    private void resolveParentCondition(ConditionType type) {
         if (type != null && type.getParentCondition() != null) {
             ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
         }
-        return type;
     }
 
-    public void removeConditionType(String id) {
-        persistenceService.remove(id, ConditionType.class);
-        conditionTypeById.remove(id);
-    }
-
+    @Override
     public void setConditionType(ConditionType conditionType) {
-        conditionTypeById.put(conditionType.getMetadata().getId(), conditionType);
-        persistenceService.save(conditionType);
+        String typeId = conditionType.getItemId();
+        String tenantId = conditionType.getTenantId() != null ? conditionType.getTenantId() : SYSTEM_TENANT;
+
+        // Check if this is an update (type already exists) or a new addition
+        boolean isUpdate = getConditionType(typeId) != null;
+
+        saveItem(conditionType, ConditionType::getItemId, ConditionType.ITEM_TYPE);
+
+        // Publish OSGi event to notify other services (e.g., RulesService) about the change
+        publishTypeChangeEvent(isUpdate ? TOPIC_CONDITION_TYPE_UPDATED : TOPIC_CONDITION_TYPE_ADDED, typeId, tenantId);
     }
 
+    @Override
+    public void removeConditionType(String id) {
+        ConditionType existing = getConditionType(id);
+        String tenantId = existing != null && existing.getTenantId() != null ? existing.getTenantId() : SYSTEM_TENANT;
+
+        removeItem(id, ConditionType.class, ConditionType.ITEM_TYPE);
+
+        // Publish OSGi event to notify other services (e.g., RulesService) about the removal
+        publishTypeChangeEvent(TOPIC_CONDITION_TYPE_REMOVED, id, tenantId);
+    }
+
+    @Override
     public Collection<ActionType> getAllActionTypes() {
-        return persistenceService.getAllItems(ActionType.class);
+        return getAllItems(ActionType.class, true);
     }
 
+    @Override
     public Set<ActionType> getActionTypeByTag(String tag) {
-        return getActionTypesBy("metadata.tags", tag);
+        return getItemsByTag(ActionType.class, tag);
     }
 
+    @Override
     public Set<ActionType> getActionTypeBySystemTag(String tag) {
-        return getActionTypesBy("metadata.systemTags", tag);
+        return getItemsBySystemTag(ActionType.class, tag);
     }
 
-    private Set<ActionType> getActionTypesBy(String fieldName, String fieldValue) {
-        Set<ActionType> actionTypes = new LinkedHashSet<ActionType>();
-        List<ActionType> directActionTypes = persistenceService.query(fieldName, fieldValue,null, ActionType.class);
-        actionTypes.addAll(directActionTypes);
-
-        return actionTypes;
-    }
-
+    @Override
     public ActionType getActionType(String id) {
-        ActionType type = actionTypeById.get(id);
-        if (type == null || type.getVersion() == null) {
-            type = persistenceService.load(id, ActionType.class);
-            if (type != null) {
-                actionTypeById.put(id, type);
-            }
-        }
-        return type;
+        return getItem(id, ActionType.class);
     }
 
-    public void removeActionType(String id) {
-        persistenceService.remove(id, ActionType.class);
-        actionTypeById.remove(id);
-    }
-
+    @Override
     public void setActionType(ActionType actionType) {
-        actionTypeById.put(actionType.getMetadata().getId(), actionType);
-        persistenceService.save(actionType);
+        String typeId = actionType.getItemId();
+        String tenantId = actionType.getTenantId() != null ? actionType.getTenantId() : SYSTEM_TENANT;
+
+        // Check if this is an update (type already exists) or a new addition
+        boolean isUpdate = getActionType(typeId) != null;
+
+        saveItem(actionType, ActionType::getItemId, ActionType.ITEM_TYPE);
+
+        // Publish OSGi event to notify other services (e.g., RulesService) about the change
+        publishTypeChangeEvent(isUpdate ? TOPIC_ACTION_TYPE_UPDATED : TOPIC_ACTION_TYPE_ADDED, typeId, tenantId);
     }
 
+    @Override
+    public void removeActionType(String id) {
+        ActionType existing = getActionType(id);
+        String tenantId = existing != null && existing.getTenantId() != null ? existing.getTenantId() : SYSTEM_TENANT;
+
+        removeItem(id, ActionType.class, ActionType.ITEM_TYPE);
+
+        // Publish OSGi event to notify other services (e.g., RulesService) about the removal
+        publishTypeChangeEvent(TOPIC_ACTION_TYPE_REMOVED, id, tenantId);
+    }
+
+    @Override
     public Collection<ValueType> getAllValueTypes() {
-        return valueTypeById.values();
+        return getAllItems(ValueType.class, true);
     }
 
+    @Override
     public Set<ValueType> getValueTypeByTag(String tag) {
-        Set<ValueType> valueTypes = new LinkedHashSet<ValueType>();
-        if (valueTypeByTag.containsKey(tag)) {
-            valueTypes.addAll(valueTypeByTag.get(tag));
-        }
-
-        return valueTypes;
+        return cacheService.getValuesByPredicateWithInheritance(
+            contextManager.getCurrentContext().getTenantId(),
+            ValueType.class,
+            valueType -> valueType.getTags() != null && valueType.getTags().contains(tag)
+        );
     }
 
+    @Override
     public ValueType getValueType(String id) {
-        return valueTypeById.get(id);
+        return getItem(id, ValueType.class);
     }
 
-    public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                processBundleStartup(event.getBundle().getBundleContext());
-                break;
-            case BundleEvent.STOPPING:
-                processBundleStop(event.getBundle().getBundleContext());
-                break;
-        }
-    }
-
-    private void loadPredefinedPropertyMergeStrategies(BundleContext bundleContext) {
-        Enumeration<URL> predefinedPropertyMergeStrategyEntries = bundleContext.getBundle().findEntries("META-INF/cxs/mergers", "*.json", true);
-        if (predefinedPropertyMergeStrategyEntries == null) {
+    @Override
+    public void setValueType(ValueType valueType) {
+        if (valueType.getId() == null) {
             return;
         }
-        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
-        while (predefinedPropertyMergeStrategyEntries.hasMoreElements()) {
-            URL predefinedPropertyMergeStrategyURL = predefinedPropertyMergeStrategyEntries.nextElement();
-            LOGGER.debug("Found predefined property merge strategy type at " + predefinedPropertyMergeStrategyURL + ", loading... ");
-
-            try {
-                PropertyMergeStrategyType propertyMergeStrategyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyMergeStrategyURL, PropertyMergeStrategyType.class);
-                propertyMergeStrategyType.setPluginId(bundleContext.getBundle().getBundleId());
-                propertyMergeStrategyTypeById.put(propertyMergeStrategyType.getId(), propertyMergeStrategyType);
-                pluginTypeArrayList.add(propertyMergeStrategyType);
-            } catch (Exception e) {
-                LOGGER.error("Error while loading property type definition " + predefinedPropertyMergeStrategyURL, e);
-            }
-        }
-
+        cacheService.put(ValueType.class.getSimpleName(), valueType.getId(), contextManager.getCurrentContext().getTenantId(), valueType);
     }
 
+    @Override
+    public void removeValueType(String id) {
+        if (id == null) {
+            return;
+        }
+        ValueType valueType = getValueType(id);
+        if (valueType != null) {
+            cacheService.remove(ValueType.class.getSimpleName(), id, contextManager.getCurrentContext().getTenantId(), ValueType.class);
+        }
+    }
+
+    @Override
     public PropertyMergeStrategyType getPropertyMergeStrategyType(String id) {
-        return propertyMergeStrategyTypeById.get(id);
+        return getItem(id, PropertyMergeStrategyType.class);
     }
 
-    public Set<Condition> extractConditionsByType(Condition rootCondition, String typeId) {
-        if (rootCondition.containsParameter("subConditions")) {
-            @SuppressWarnings("unchecked")
-            List<Condition> subConditions = (List<Condition>) rootCondition.getParameter("subConditions");
-            Set<Condition> matchingConditions = new HashSet<>();
-            for (Condition condition : subConditions) {
-                matchingConditions.addAll(extractConditionsByType(condition, typeId));
-            }
-            return matchingConditions;
-        } else if (rootCondition.getConditionTypeId() != null && rootCondition.getConditionTypeId().equals(typeId)) {
-            return Collections.singleton(rootCondition);
-        } else {
-            return Collections.emptySet();
+    @Override
+    public void setPropertyMergeStrategyType(PropertyMergeStrategyType propertyMergeStrategyType) {
+        if (propertyMergeStrategyType.getId() == null) {
+            return;
         }
+
+        cacheService.put(PropertyMergeStrategyType.class.getSimpleName(), propertyMergeStrategyType.getId(), contextManager.getCurrentContext().getTenantId(), propertyMergeStrategyType);
+    }
+
+    @Override
+    public void removePropertyMergeStrategyType(String id) {
+        if (id == null) {
+            return;
+        }
+        PropertyMergeStrategyType strategyType = getPropertyMergeStrategyType(id);
+        if (strategyType != null) {
+            cacheService.remove(PropertyMergeStrategyType.class.getSimpleName(), id, contextManager.getCurrentContext().getTenantId(), PropertyMergeStrategyType.class);
+        }
+    }
+
+    @Override
+    public Collection<PropertyMergeStrategyType> getAllPropertyMergeStrategyTypes() {
+        return getAllItems(PropertyMergeStrategyType.class, true);
+    }
+
+    @Override
+    public List<Condition> extractConditionsByType(Condition rootCondition, String typeId) {
+        if (rootCondition == null || typeId == null) {
+            return Collections.emptyList();
+        }
+
+        List<Condition> result = new ArrayList<>();
+        extractConditionsRecursively(rootCondition, typeId, result, 0);
+        return result;
+    }
+
+    private void extractConditionsRecursively(Condition condition, String typeId, List<Condition> result, int depth) {
+        if (condition == null || depth > MAX_RECURSIVE_CONDITIONS) {
+            return;
+        }
+
+        // Check if current condition matches the type
+        if (typeId.equals(condition.getConditionTypeId())) {
+            result.add(condition);
+        }
+
+        // Process sub-conditions if they exist
+        List<Condition> subConditions = getSubConditions(condition);
+        if (subConditions != null) {
+            for (Condition subCondition : subConditions) {
+                extractConditionsRecursively(subCondition, typeId, result, depth + 1);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Condition> getSubConditions(Condition condition) {
+        if (condition == null) {
+            return Collections.emptyList();
+        }
+
+        Object subConditionsObj = condition.getParameter(SUB_CONDITIONS_PARAM);
+        if (subConditionsObj == null) {
+            return Collections.emptyList();
+        }
+
+        if (!(subConditionsObj instanceof List<?>)) {
+            LOGGER.warn("Invalid sub-conditions type: expected List but got {}",
+                subConditionsObj.getClass().getName());
+            return Collections.emptyList();
+        }
+
+        List<?> subConditions = (List<?>) subConditionsObj;
+        for (Object obj : subConditions) {
+            if (!(obj instanceof Condition)) {
+                LOGGER.warn("Invalid condition type in list: expected Condition but got {}",
+                    obj != null ? obj.getClass().getName() : "null");
+                return Collections.emptyList();
+            }
+        }
+
+        return (List<Condition>) subConditions;
     }
 
     /**
@@ -476,7 +430,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 }
             }
             throw new IllegalArgumentException();
-        } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getMetadata().getTags().contains(tag)) {
+        } else if (isConditionMatchingTag(rootCondition, tag)) {
             return rootCondition;
         } else {
             return null;
@@ -484,37 +438,99 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     public Condition extractConditionBySystemTag(Condition rootCondition, String systemTag) {
-        if (rootCondition.containsParameter("subConditions")) {
-            @SuppressWarnings("unchecked")
-            List<Condition> subConditions = (List<Condition>) rootCondition.getParameter("subConditions");
-            List<Condition> matchingConditions = new ArrayList<>();
-            for (Condition condition : subConditions) {
-                Condition c = extractConditionBySystemTag(condition, systemTag);
-                if (c != null) {
-                    matchingConditions.add(c);
-                }
-            }
-            if (matchingConditions.size() == 0) {
-                return null;
-            } else if (matchingConditions.equals(subConditions)) {
-                return rootCondition;
-            } else if (rootCondition.getConditionTypeId().equals("booleanCondition") && "and".equals(rootCondition.getParameter("operator"))) {
-                if (matchingConditions.size() == 1) {
-                    return matchingConditions.get(0);
-                } else {
-                    Condition res = new Condition();
-                    res.setConditionType(getConditionType("booleanCondition"));
-                    res.setParameter("operator", "and");
-                    res.setParameter("subConditions", matchingConditions);
-                    return res;
-                }
-            }
-            throw new IllegalArgumentException();
-        } else if (rootCondition.getConditionType() != null && rootCondition.getConditionType().getMetadata().getSystemTags().contains(systemTag)) {
-            return rootCondition;
-        } else {
+        if (rootCondition == null || systemTag == null) {
             return null;
         }
+
+        try {
+            if (rootCondition.containsParameter(SUB_CONDITIONS_PARAM)) {
+                List<Condition> subConditions = getSubConditions(rootCondition);
+                if (subConditions.isEmpty()) {
+                    return null;
+                }
+
+                List<Condition> matchingConditions = new ArrayList<>();
+                for (Condition condition : subConditions) {
+                    Condition c = extractConditionBySystemTag(condition, systemTag);
+                    if (c != null) {
+                        matchingConditions.add(c);
+                    }
+                }
+
+                if (matchingConditions.isEmpty()) {
+                    return null;
+                } else if (matchingConditions.equals(subConditions)) {
+                    return rootCondition;
+                } else if (BOOLEAN_CONDITION_TYPE.equals(rootCondition.getConditionTypeId()) &&
+                        AND_OPERATOR.equals(rootCondition.getParameter(OPERATOR_PARAM))) {
+                    return createBooleanCondition(matchingConditions);
+                }
+                throw new IllegalArgumentException(String.format(
+                        "Cannot extract condition with system tag: %s from condition: %s",
+                        systemTag, rootCondition.getConditionTypeId()));
+            }
+
+            return isConditionMatchingSystemTag(rootCondition, systemTag) ? rootCondition : null;
+        } catch (Exception e) {
+            LOGGER.error("Error extracting condition by system tag: {} from condition: {}",
+                    systemTag, rootCondition.getConditionTypeId(), e);
+            return null;
+        }
+    }
+
+    private boolean isConditionMatchingSystemTag(Condition condition, String systemTag) {
+        ensureConditionTypeResolved(condition);
+        return condition.getConditionType() != null &&
+                condition.getConditionType().getMetadata() != null &&
+                condition.getConditionType().getMetadata().getSystemTags() != null &&
+                condition.getConditionType().getMetadata().getSystemTags().contains(systemTag);
+    }
+
+    private boolean isConditionMatchingTag(Condition condition, String tag) {
+        if (condition == null || tag == null) {
+            return false;
+        }
+        ensureConditionTypeResolved(condition);
+        return condition.getConditionType() != null &&
+                condition.getConditionType().getMetadata() != null &&
+                condition.getConditionType().getMetadata().getTags() != null &&
+                condition.getConditionType().getMetadata().getTags().contains(tag);
+    }
+
+    /**
+     * Best-effort resolution of {@link Condition#getConditionType()} from {@link Condition#getConditionTypeId()}.
+     * This is important for conditions deserialized from JSON that only contain the type id.
+     * We keep it intentionally lightweight (no validation/tracing) as it may be called during extraction.
+     */
+    private void ensureConditionTypeResolved(Condition condition) {
+        if (condition == null) {
+            return;
+        }
+        if (condition.getConditionType() != null) {
+            return;
+        }
+        String typeId = condition.getConditionTypeId();
+        if (typeId == null) {
+            return;
+        }
+        ConditionType resolvedType = getConditionType(typeId);
+        if (resolvedType != null) {
+            condition.setConditionType(resolvedType);
+        }
+    }
+
+    private Condition createBooleanCondition(List<Condition> conditions) {
+        if (conditions == null || conditions.isEmpty()) {
+            return null;
+        }
+        if (conditions.size() == 1) {
+            return conditions.get(0);  // Return single condition directly
+        }
+        Condition res = new Condition();
+        res.setConditionType(getConditionType(BOOLEAN_CONDITION_TYPE));
+        res.setParameter(OPERATOR_PARAM, AND_OPERATOR);
+        res.setParameter(SUB_CONDITIONS_PARAM, new ArrayList<>(conditions));
+        return res;
     }
 
     @Override
@@ -523,8 +539,174 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     @Override
+    public void onTenantRemoved(String tenantId) {
+        if (tenantId == null || SYSTEM_TENANT.equals(tenantId)) {
+            LOGGER.warn("Invalid tenant removal attempt: {}", tenantId);
+            return;
+        }
+
+        try {
+            contextManager.executeAsSystem(() -> {
+                try {
+                    // Clear all caches for this tenant
+                    cacheService.clear(tenantId);
+
+                    // Create a basic property condition type for persistence cleanup
+                    ConditionType propertyConditionType = new ConditionType();
+                    propertyConditionType.setItemId("propertyCondition");
+                    Metadata metadata = new Metadata();
+                    metadata.setId("propertyCondition");
+                    propertyConditionType.setMetadata(metadata);
+                    propertyConditionType.setConditionEvaluator("propertyConditionEvaluator");
+                    propertyConditionType.setQueryBuilder("propertyConditionQueryBuilder");
+
+                    // Create tenant condition
+                    Condition tenantCondition = new Condition(propertyConditionType);
+                    tenantCondition.setParameter("propertyName", "tenantId");
+                    tenantCondition.setParameter("comparisonOperator", "equals");
+                    tenantCondition.setParameter("propertyValue", tenantId);
+
+                    // Remove tenant-specific items from persistence service
+                    persistenceService.removeByQuery(tenantCondition, ConditionType.class);
+                    persistenceService.removeByQuery(tenantCondition, ActionType.class);
+
+                    LOGGER.info("Successfully removed all caches and persistent data for tenant: {}", tenantId);
+                } catch (Exception e) {
+                    LOGGER.error("Error removing data for tenant: {}", tenantId, e);
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.error("Error executing in system context while removing tenant: {}", tenantId, e);
+        }
+    }
+
+    /**
+     * Creates a base builder with common configuration settings
+     * @param type the class of items to cache
+     * @param itemType the type identifier
+     * @param metaInfPath the path in META-INF/cxs for predefined items
+     * @return a builder with common settings applied
+     * @param <T> the type of items to cache
+     */
+    private <T extends Serializable> CacheableTypeConfig.Builder<T> createBaseBuilder(
+            Class<T> type,
+            String itemType,
+            String metaInfPath) {
+        return CacheableTypeConfig.<T>builder(type, itemType, metaInfPath)
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(definitionsRefreshInterval)
+            .withPredefinedItems(true);
+    }
+
+    @Override
+    protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
+        Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+
+        // Action Type configuration with bundle processor
+        BiConsumer<BundleContext, ActionType> actionTypeProcessor = (bundleContext, type) -> {
+            type.setPluginId(bundleContext.getBundle().getBundleId());
+            type.setTenantId(SYSTEM_TENANT);
+            setActionType(type);
+        };
+
+        configs.add(createBaseBuilder(ActionType.class, ActionType.ITEM_TYPE, "actions")
+            .withIdExtractor(ActionType::getItemId)
+            .withBundleItemProcessor(actionTypeProcessor)
+            .build());
+
+        // Value Type configuration with bundle processor
+        BiConsumer<BundleContext, ValueType> valueTypeProcessor = (bundleContext, type) -> {
+            type.setPluginId(bundleContext.getBundle().getBundleId());
+            setValueType(type);
+        };
+
+        configs.add(createBaseBuilder(ValueType.class, ValueType.class.getSimpleName(), "values")
+            .withIdExtractor(ValueType::getId)
+            .withBundleItemProcessor(valueTypeProcessor)
+            .build());
+
+        // PropertyMergeStrategyType configuration with bundle processor
+        BiConsumer<BundleContext, PropertyMergeStrategyType> mergeStrategyProcessor = (bundleContext, type) -> {
+            type.setPluginId(bundleContext.getBundle().getBundleId());
+            cacheService.put(PropertyMergeStrategyType.class.getSimpleName(), type.getId(), SYSTEM_TENANT, type);
+        };
+
+        configs.add(createBaseBuilder(
+                PropertyMergeStrategyType.class,
+                PropertyMergeStrategyType.class.getSimpleName(),
+                "mergers")
+            .withIdExtractor(PropertyMergeStrategyType::getId)
+            .withBundleItemProcessor(mergeStrategyProcessor)
+            .build());
+
+        // Condition Type configuration with bundle processor
+        BiConsumer<BundleContext, ConditionType> conditionTypeProcessor = (bundleContext, type) -> {
+            type.setPluginId(bundleContext.getBundle().getBundleId());
+            type.setTenantId(SYSTEM_TENANT);
+            setConditionType(type);
+        };
+
+        BiConsumer<Map<String, Map<String, ConditionType>>, Map<String, Map<String, ConditionType>>> postRefreshCallback =
+            (oldState, newState) -> {
+                if (!initialRefreshComplete) {
+                    initialRefreshComplete = true;
+                    LOGGER.debug("Initial condition type refresh completed");
+                }
+            };
+
+        configs.add(createBaseBuilder(ConditionType.class, ConditionType.ITEM_TYPE, "conditions")
+            .withIdExtractor(ConditionType::getItemId)
+            .withBundleItemProcessor(conditionTypeProcessor)
+            .withPostRefreshCallback(postRefreshCallback)
+            .build());
+
+        return configs;
+    }
+
+    @Override
     public void refresh() {
-        reloadTypes(true);
+        for (CacheableTypeConfig<?> config : getTypeConfigs()) {
+            refreshTypeCache(config);
+        }
+        if (!initialRefreshComplete) {
+            contextManager.executeAsSystem(() -> {
+                initialRefreshComplete = true;
+                return null;
+            });
+        }
+    }
+
+    /**
+     * Publishes an OSGi Event Admin event for type changes (condition/action types).
+     *
+     * Uses {@link EventAdmin#postEvent(org.osgi.service.event.Event)} for asynchronous delivery.
+     * This ensures that type saving operations are non-blocking and responsive, even when
+     * rule re-evaluation (which may process many rules across multiple tenants) takes time.
+     *
+     * If synchronous delivery is needed (e.g., to ensure rules are immediately available),
+     * use {@link EventAdmin#sendEvent(org.osgi.service.event.Event)} instead.
+     *
+     * @param topic the event topic
+     * @param typeId the type ID that changed
+     * @param tenantId the tenant ID
+     */
+    private void publishTypeChangeEvent(String topic, String typeId, String tenantId) {
+        try {
+            Map<String, Object> properties = new HashMap<>();
+            properties.put(PROP_TYPE_ID, typeId);
+            properties.put(PROP_TENANT_ID, tenantId);
+
+            Event event = new Event(topic, properties);
+            // Use postEvent() for asynchronous delivery (non-blocking)
+            // Use sendEvent() for synchronous delivery (blocking until handlers complete)
+            eventAdmin.postEvent(event);
+
+            LOGGER.debug("Published OSGi event {} for type {} (tenant: {})", topic, typeId, tenantId);
+        } catch (Exception e) {
+            // Log error but continue - event publishing failure should not block type saving
+            LOGGER.warn("Failed to publish OSGi event {} for type {}: {}", topic, typeId, e.getMessage(), e);
+        }
     }
 
     @Override

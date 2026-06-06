@@ -25,10 +25,14 @@ import org.apache.unomi.api.Session;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
+import org.apache.unomi.api.services.ExecutionContextManager;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -43,105 +47,116 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private DefinitionsService definitionsService;
     private PrivacyService privacyService;
     private SchedulerService schedulerService;
+    private ExecutionContextManager executionContextManager;
+    private SecurityService securityService;
     // TODO we can remove this limit after dealing with: UNOMI-776 (50 is completely arbitrary and it's used to bypass the auto-scroll done by the persistence Service)
     private int maxProfilesInOneMerge = 50;
 
     public int execute(Action action, Event event) {
 
-        Profile eventProfile = event.getProfile();
-        final String mergePropName = (String) action.getParameterValues().get("mergeProfilePropertyName");
-        final String mergePropValue = (String) action.getParameterValues().get("mergeProfilePropertyValue");
-        final String clientIdFromEvent = (String) event.getAttributes().get(Event.CLIENT_ID_ATTRIBUTE);
-        final String clientId = clientIdFromEvent != null ? clientIdFromEvent : "defaultClientId";
-        boolean forceEventProfileAsMaster = action.getParameterValues().containsKey("forceEventProfileAsMaster") ? (boolean) action.getParameterValues().get("forceEventProfileAsMaster") : false;
-        final String currentProfileMergeValue = (String) eventProfile.getSystemProperties().get(mergePropName);
+        try {
+            Profile eventProfile = event.getProfile();
+            final String mergePropName = (String) action.getParameterValues().get("mergeProfilePropertyName");
+            final String mergePropValue = (String) action.getParameterValues().get("mergeProfilePropertyValue");
+            final String clientIdFromEvent = (String) event.getAttributes().get(Event.CLIENT_ID_ATTRIBUTE);
+            final String clientId = clientIdFromEvent != null ? clientIdFromEvent : "defaultClientId";
+            boolean forceEventProfileAsMaster = action.getParameterValues().containsKey("forceEventProfileAsMaster") ? (boolean) action.getParameterValues().get("forceEventProfileAsMaster") : false;
+            final String currentProfileMergeValue = (String) eventProfile.getSystemProperties().get(mergePropName);
 
-        if (eventProfile instanceof Persona || eventProfile.isAnonymousProfile() || StringUtils.isEmpty(mergePropName) ||
-                StringUtils.isEmpty(mergePropValue)) {
-            return EventService.NO_CHANGE;
-        }
-
-        final List<Profile> profilesToBeMerge = getProfilesToBeMerge(mergePropName, mergePropValue);
-
-        // Check if the user switched to another profile
-        if (StringUtils.isNotEmpty(currentProfileMergeValue) && !currentProfileMergeValue.equals(mergePropValue)) {
-            reassignCurrentBrowsingData(event, profilesToBeMerge, forceEventProfileAsMaster, mergePropName, mergePropValue);
-            return EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED;
-        }
-
-        // Store merge prop on current profile
-        boolean profileUpdated = false;
-        if (StringUtils.isEmpty(currentProfileMergeValue)) {
-            profileUpdated = true;
-            eventProfile.getSystemProperties().put(mergePropName, mergePropValue);
-        }
-
-        // If not profiles to merge we are done here.
-        if (profilesToBeMerge.isEmpty()) {
-            return profileUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
-        }
-
-        // add current Profile to profiles to be merged
-        if (profilesToBeMerge.stream().noneMatch(p -> StringUtils.equals(p.getItemId(), eventProfile.getItemId()))) {
-            profilesToBeMerge.add(eventProfile);
-        }
-
-        final String eventProfileId = eventProfile.getItemId();
-        final Profile masterProfile = profileService.mergeProfiles(forceEventProfileAsMaster ? eventProfile : profilesToBeMerge.get(0), profilesToBeMerge);
-        final String masterProfileId = masterProfile.getItemId();
-
-        // Profile is still using the same profileId after being merged, no need to rewrite exists data, merge is done
-        if (!forceEventProfileAsMaster && masterProfileId.equals(eventProfileId)) {
-            return profileUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
-        }
-
-        // ProfileID changed we have a lot to do
-        // First check for privacy stuff (inherit from previous profile if necessary)
-        if (privacyService.isRequireAnonymousBrowsing(eventProfile)) {
-            privacyService.setRequireAnonymousBrowsing(masterProfileId, true, event.getScope());
-        }
-        final boolean anonymousBrowsing = privacyService.isRequireAnonymousBrowsing(masterProfileId);
-
-        // Modify current session:
-        if (event.getSession() != null) {
-            event.getSession().setProfile(anonymousBrowsing ? privacyService.getAnonymousProfile(masterProfile) : masterProfile);
-        }
-
-        // Modify current event:
-        event.setProfileId(anonymousBrowsing ? null : masterProfileId);
-        event.setProfile(masterProfile);
-
-        event.getActionPostExecutors().add(() -> {
-            try {
-                // This is the list of profile Ids to be updated in browsing data (events/sessions)
-                List<String> mergedProfileIds = profilesToBeMerge.stream()
-                        .map(Profile::getItemId)
-                        .filter(mergedProfileId -> !StringUtils.equals(mergedProfileId, masterProfileId))
-                        .collect(Collectors.toList());
-
-                // ASYNC: Update browsing data (events/sessions) for merged profiles
-                reassignPersistedBrowsingDatasAsync(anonymousBrowsing, mergedProfileIds, masterProfileId);
-
-                // Save event, as we dynamically changed the profileId of the current event
-                if (event.isPersistent()) {
-                    persistenceService.save(event);
-                }
-
-                // Handle aliases
-                for (String mergedProfileId : mergedProfileIds) {
-                    profileService.addAliasToProfile(masterProfileId, mergedProfileId, clientId);
-                    if (persistenceService.load(mergedProfileId, Profile.class) != null) {
-                        profileService.delete(mergedProfileId, false);
-                    }
-                }
-            } catch (Exception e) {
-                LOGGER.error("unable to execute callback action, profile and session will not be saved", e);
-                return false;
+            if (eventProfile instanceof Persona || eventProfile.isAnonymousProfile() || StringUtils.isEmpty(mergePropName) ||
+                    StringUtils.isEmpty(mergePropValue)) {
+                return EventService.NO_CHANGE;
             }
-            return true;
-        });
 
-        return EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED;
+            final List<Profile> profilesToBeMerge = getProfilesToBeMerge(mergePropName, mergePropValue);
+
+            // Check if the user switched to another profile
+            if (StringUtils.isNotEmpty(currentProfileMergeValue) && !currentProfileMergeValue.equals(mergePropValue)) {
+                reassignCurrentBrowsingData(event, profilesToBeMerge, forceEventProfileAsMaster, mergePropName, mergePropValue);
+                return EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED;
+            }
+
+            // Store merge prop on current profile
+            boolean profileUpdated = false;
+            if (StringUtils.isEmpty(currentProfileMergeValue)) {
+                profileUpdated = true;
+                eventProfile.getSystemProperties().put(mergePropName, mergePropValue);
+            }
+
+            // If not profiles to merge we are done here.
+            if (profilesToBeMerge.isEmpty()) {
+                return profileUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
+            }
+
+            // add current Profile to profiles to be merged
+            if (profilesToBeMerge.stream().noneMatch(p -> StringUtils.equals(p.getItemId(), eventProfile.getItemId()))) {
+                profilesToBeMerge.add(eventProfile);
+            }
+
+            final String eventProfileId = eventProfile.getItemId();
+            final Profile masterProfile = profileService.mergeProfiles(forceEventProfileAsMaster ? eventProfile : profilesToBeMerge.get(0), profilesToBeMerge);
+            final String masterProfileId = masterProfile.getItemId();
+
+            // Profile is still using the same profileId after being merged, no need to rewrite exists data, merge is done
+            if (!forceEventProfileAsMaster && masterProfileId.equals(eventProfileId)) {
+                return profileUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
+            }
+
+            // ProfileID changed we have a lot to do
+            // First check for privacy stuff (inherit from previous profile if necessary)
+            if (privacyService.isRequireAnonymousBrowsing(eventProfile)) {
+                privacyService.setRequireAnonymousBrowsing(masterProfileId, true, event.getScope());
+            }
+            final boolean anonymousBrowsing = privacyService.isRequireAnonymousBrowsing(masterProfileId);
+
+            // Modify current session:
+            if (event.getSession() != null) {
+                event.getSession().setProfile(anonymousBrowsing ? privacyService.getAnonymousProfile(masterProfile) : masterProfile);
+            }
+
+            // Modify current event:
+            event.setProfileId(anonymousBrowsing ? null : masterProfileId);
+            event.setProfile(masterProfile);
+
+            event.getActionPostExecutors().add(() -> {
+                try {
+                    // This is the list of profile Ids to be updated in browsing data (events/sessions)
+                    List<String> mergedProfileIds = profilesToBeMerge.stream()
+                            .map(Profile::getItemId)
+                            .filter(mergedProfileId -> !StringUtils.equals(mergedProfileId, masterProfileId))
+                            .collect(Collectors.toList());
+
+                    // Get current tenant ID from execution context
+                    String currentTenantId = executionContextManager.getCurrentContext() != null ?
+                        executionContextManager.getCurrentContext().getTenantId() : "system";
+
+                    // ASYNC: Update browsing data (events/sessions) for merged profiles
+                    reassignPersistedBrowsingDatasAsync(anonymousBrowsing, mergedProfileIds, masterProfileId, currentTenantId);
+
+                    // Save event, as we dynamically changed the profileId of the current event
+                    if (event.isPersistent()) {
+                        persistenceService.save(event);
+                    }
+
+                    // Handle aliases
+                    for (String mergedProfileId : mergedProfileIds) {
+                        profileService.addAliasToProfile(masterProfileId, mergedProfileId, clientId);
+                        if (persistenceService.load(mergedProfileId, Profile.class) != null) {
+                            profileService.delete(mergedProfileId, false);
+                        }
+                    }
+
+                } catch (Exception e) {
+                    LOGGER.error("unable to execute callback action, profile and session will not be saved", e);
+                    return false;
+                }
+                return true;
+            });
+
+            return EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED;
+        } catch (Exception e) {
+            throw e;
+        }
     }
 
     private List<Profile> getProfilesToBeMerge(String mergeProfilePropertyName, String mergeProfilePropertyValue) {
@@ -153,28 +168,72 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         return persistenceService.query(propertyCondition, "properties.firstVisit", Profile.class, 0, maxProfilesInOneMerge).getList();
     }
 
-    private void reassignPersistedBrowsingDatasAsync(boolean anonymousBrowsing, List<String> mergedProfileIds, String masterProfileId) {
-        schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
+    private void reassignPersistedBrowsingDatasAsync(boolean anonymousBrowsing, List<String> mergedProfileIds, String masterProfileId, String tenantId) {
+        // Register task executor for data reassignment
+        String taskType = "merge-profiles-reassign-data";
+
+        // Create a reusable executor that can handle the parameters
+        TaskExecutor mergeProfilesReassignDataExecutor = new TaskExecutor() {
             @Override
-            public void run() {
-                if (!anonymousBrowsing) {
-                    Condition profileIdsCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-                    profileIdsCondition.setParameter("propertyName","profileId");
-                    profileIdsCondition.setParameter("comparisonOperator","in");
-                    profileIdsCondition.setParameter("propertyValues", mergedProfileIds);
+            public String getTaskType() {
+                return taskType;
+            }
 
-                    String[] scripts = new String[]{"updateProfileId"};
-                    Map<String, Object>[] scriptParams = new Map[]{Collections.singletonMap("profileId", masterProfileId)};
-                    Condition[] conditions = new Condition[]{profileIdsCondition};
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    Map<String, Object> parameters = task.getParameters();
+                    boolean isAnonymousBrowsing = (boolean) parameters.get("anonymousBrowsing");
+                    @SuppressWarnings("unchecked")
+                    List<String> profilesIds = (List<String>) parameters.get("mergedProfileIds");
+                    String masterProfile = (String) parameters.get("masterProfileId");
+                    String tenantId = (String) parameters.get("tenantId");
 
-                    persistenceService.updateWithQueryAndStoredScript(new Class[]{Session.class, Event.class}, scripts, scriptParams, conditions, false);
-                } else {
-                    for (String mergedProfileId : mergedProfileIds) {
-                        privacyService.anonymizeBrowsingData(mergedProfileId);
-                    }
+                    securityService.setCurrentSubject(securityService.createSubject(tenantId, true));
+
+                    // Execute the merge operation in the correct tenant context
+                    executionContextManager.executeAsTenant(tenantId, () -> {
+                        if (!isAnonymousBrowsing) {
+                            Condition profileIdsCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+                            profileIdsCondition.setParameter("propertyName","profileId");
+                            profileIdsCondition.setParameter("comparisonOperator","in");
+                            profileIdsCondition.setParameter("propertyValues", profilesIds);
+
+                            String[] scripts = new String[]{"updateProfileId"};
+                            Map<String, Object>[] scriptParams = new Map[]{Collections.singletonMap("profileId", masterProfile)};
+                            Condition[] conditions = new Condition[]{profileIdsCondition};
+
+                            persistenceService.updateWithQueryAndStoredScript(new Class[]{Session.class, Event.class}, scripts, scriptParams, conditions, false);
+                        } else {
+                            for (String mergedProfileId : profilesIds) {
+                                privacyService.anonymizeBrowsingData(mergedProfileId);
+                            }
+                        }
+                        return null;
+                    });
+
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while reassigning profile data", e);
+                    callback.fail(e.getMessage());
                 }
             }
-        }, 1000, TimeUnit.MILLISECONDS);
+        };
+
+        // Register the executor
+        schedulerService.registerTaskExecutor(mergeProfilesReassignDataExecutor);
+
+        // Create a one-shot task for async data reassignment
+        schedulerService.newTask(taskType)
+            .withParameters(Map.of(
+                "anonymousBrowsing", anonymousBrowsing,
+                "mergedProfileIds", mergedProfileIds,
+                "masterProfileId", masterProfileId,
+                    "tenantId", tenantId
+            ))
+            .withInitialDelay(1000, TimeUnit.MILLISECONDS)
+            .asOneShot()
+            .schedule();
     }
 
     private void reassignCurrentBrowsingData(Event event, List<Profile> existingMergedProfiles, boolean forceEventProfileAsMaster, String mergePropName, String mergePropValue) {
@@ -231,5 +290,21 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
     public void setMaxProfilesInOneMerge(String maxProfilesInOneMerge) {
         this.maxProfilesInOneMerge = Integer.parseInt(maxProfilesInOneMerge);
+    }
+
+    public void bindExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = executionContextManager;
+    }
+
+    public void unbindExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = null;
+    }
+
+    public void bindSecurityService(SecurityService securityService) {
+        this.securityService = securityService;
+    }
+
+    public void unbindSecurityService(SecurityService securityService) {
+        this.securityService = null;
     }
 }

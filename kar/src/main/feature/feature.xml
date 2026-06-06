@@ -29,6 +29,7 @@
         <feature prerequisite="true">config</feature>
         <feature prerequisite="true">scr</feature>
         <feature prerequisite="true">http</feature>
+        <feature prerequisite="true">http-whiteboard</feature>
         <feature prerequisite="true">log</feature>
         <feature version="${cxf.version}" dependency="true">cxf-jaxrs</feature>
         <feature>cxf-features-metrics</feature>
@@ -81,6 +82,13 @@
     <feature name="unomi-elasticsearch-core" description="Apache Unomi :: Persistence :: ElasticSearch :: Core" version="${project.version}">
         <feature>unomi-startup</feature>
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
+        <!-- org.reactivestreams/reactive-streams must be installed BEFORE Elasticsearch persistence bundles start -->
+        <!-- This prevents bundle refreshes when optional imports (org.reactivestreams;resolution:=optional) are satisfied -->
+        <bundle start="false">mvn:org.reactivestreams/reactive-streams/${reactive-stream.version}</bundle>
+        <!-- com.google.errorprone/error_prone_annotations must be installed BEFORE Elasticsearch persistence bundles start -->
+        <!-- This prevents bundle refreshes when optional imports (com.google.errorprone.annotations.concurrent;resolution:=optional) are satisfied -->
+        <bundle start="false">wrap:mvn:com.google.errorprone/error_prone_annotations/${error_prone_annotations.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-services-common/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}</bundle>
         <capability>unomi.persistence;provider:=elasticsearch</capability>
     </feature>
@@ -88,6 +96,13 @@
     <feature name="unomi-opensearch-core" description="Apache Unomi :: Persistence :: OpenSearch :: Core" version="${project.version}">
         <feature>unomi-startup</feature>
         <configfile finalname="/etc/org.apache.unomi.persistence.opensearch.cfg">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}/cfg/opensearchcfg</configfile>
+        <!-- org.reactivestreams/reactive-streams must be installed BEFORE OpenSearch persistence bundles start -->
+        <!-- This prevents bundle refreshes when optional imports (org.reactivestreams;resolution:=optional) are satisfied -->
+        <bundle start="false">mvn:org.reactivestreams/reactive-streams/${reactive-stream.version}</bundle>
+        <!-- com.google.errorprone/error_prone_annotations must be installed BEFORE OpenSearch persistence bundles start -->
+        <!-- This prevents bundle refreshes when optional imports (com.google.errorprone.annotations.concurrent;resolution:=optional) are satisfied -->
+        <bundle start="false">wrap:mvn:com.google.errorprone/error_prone_annotations/${error_prone_annotations.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-services-common/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}</bundle>
         <capability>unomi.persistence;provider:=opensearch</capability>
     </feature>
@@ -105,14 +120,19 @@
         <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
     </feature>
 
+    <feature name="unomi-cxs-privacy-extension-services" description="Apache Unomi :: Privacy Extension :: Services" version="${project.version}">
+        <feature>unomi-services</feature>
+        <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-services/${project.version}</bundle>
+    </feature>
+
     <feature name="unomi-rest-api" description="Apache Unomi :: REST API" version="${project.version}">
         <feature>unomi-services</feature>
+        <feature>unomi-cxs-privacy-extension-services</feature>
         <configfile finalname="/etc/org.apache.unomi.schema.cfg">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}/cfg/schemacfg</configfile>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-rest/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
-        <!-- Ideally this next service should be in the unomi-cxs-privacy-extension feature, but it is currently used by the unomi-rest-api feature directly -->
-        <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-services/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-actions/${project.version}</bundle>
     </feature>
 
     <feature name="unomi-cxs-lists-extension" description="Apache Unomi :: Extensions :: Lists" version="${project.version}">
@@ -130,6 +150,7 @@
     </feature>
 
     <feature name="unomi-cxs-privacy-extension" description="Apache Unomi :: Privacy Extension Services" version="${project.version}">
+        <feature>unomi-cxs-privacy-extension-services</feature>
         <feature>unomi-rest-api</feature>
         <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-rest/${project.version}</bundle>
     </feature>
@@ -138,16 +159,19 @@
         <feature>unomi-elasticsearch-core</feature>
         <feature>unomi-cxs-privacy-extension</feature>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-conditions/${project.version}</bundle>
+        <capability>unomi.persistence.conditions;provider:=elasticsearch</capability>
     </feature>
 
     <feature name="unomi-opensearch-conditions" description="Apache Unomi :: Persistence :: OpenSearch :: Conditions" version="${project.version}">
         <feature>unomi-opensearch-core</feature>
         <feature>unomi-cxs-privacy-extension</feature>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-conditions/${project.version}</bundle>
+        <capability>unomi.persistence.conditions;provider:=opensearch</capability>
     </feature>
 
     <feature name="unomi-plugins-base" description="Apache Unomi :: Plugins :: Base" version="${project.version}">
         <feature>unomi-services</feature>
+        <feature>unomi-cxs-privacy-extension-services</feature>
         <configfile finalname="/etc/org.apache.unomi.plugins.base.cfg">mvn:org.apache.unomi/unomi-plugins-base/${project.version}/cfg/pluginsbasecfg</configfile>
         <bundle start="false">mvn:org.apache.unomi/unomi-plugins-base/${project.version}</bundle>
     </feature>

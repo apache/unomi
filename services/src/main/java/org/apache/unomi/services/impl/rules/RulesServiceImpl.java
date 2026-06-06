@@ -28,55 +28,64 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.*;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.config.ConfigurationUpdateHelper;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
-import org.apache.unomi.api.utils.ParserHelper;
+import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.osgi.framework.*;
 import org.osgi.service.cm.ManagedService;
+import org.osgi.service.event.EventHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URL;
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
-public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener, ManagedService {
+import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
+
+public class RulesServiceImpl extends AbstractMultiTypeCachingService implements RulesService, EventListenerService, ManagedService, EventHandler {
 
     public static final String TRACKED_PARAMETER = "trackedConditionParameters";
     private static final Logger LOGGER = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
 
-    private BundleContext bundleContext;
-
-    private PersistenceService persistenceService;
     private DefinitionsService definitionsService;
     private EventService eventService;
-    private SchedulerService schedulerService;
-
     private ActionExecutorDispatcher actionExecutorDispatcher;
-    private List<Rule> allRules;
-    private final Set<String> invalidRulesId = new HashSet<>();
-
-    private final Map<String, RuleStatistics> allRuleStatistics = new ConcurrentHashMap<>();
 
     private Integer rulesRefreshInterval = 1000;
     private Integer rulesStatisticsRefreshInterval = 10000;
 
-    private final List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<RuleListenerService>();
+    private final List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<>();
 
-    private Map<String, Set<Rule>> rulesByEventType = new HashMap<>();
-    private Boolean optimizedRulesActivated = true;
+    private final Set<String> invalidRulesId = new HashSet<>();
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
+    private final Object cacheLock = new Object();
+    private final Map<String, Map<String, Set<Rule>>> rulesByEventTypeByTenant = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, RuleStatistics>> ruleStatisticsByTenant = new ConcurrentHashMap<>();
+    private volatile Boolean optimizedRulesActivated = true;
 
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
+    private ScheduledTask statisticsRefreshTask;
+    private ServiceRegistration<EventHandler> eventHandlerRegistration;
+
+    /**
+     * ThreadLocal to track event processing context for loop detection.
+     * Note: Depth protection is handled by EventServiceImpl.MAX_RECURSION_DEPTH to avoid duplication.
+     */
+    private static final ThreadLocal<ProcessingContext> PROCESSING_CONTEXT = ThreadLocal.withInitial(ProcessingContext::new);
+
+    /**
+     * Context object that holds event processing state for the current thread.
+     */
+    private static class ProcessingContext {
+        final Set<String> processingEvents = new HashSet<>();
+        final Set<String> reportedLoops = new HashSet<>();
     }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
@@ -85,10 +94,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
-    }
-
-    public void setSchedulerService(SchedulerService schedulerService) {
-        this.schedulerService = schedulerService;
     }
 
     public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
@@ -121,83 +126,178 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         ConfigurationUpdateHelper.processConfigurationUpdates(properties, LOGGER, "Rules service", propertyMappings);
     }
 
+    /**
+     * Creates a base configuration builder with common settings for cacheable types
+     *
+     * @param <T> the type of the cacheable item
+     * @param type the class of the cacheable item
+     * @param itemType the item type identifier
+     * @param metaInfPath the path for predefined items
+     * @return a builder with common settings applied
+     */
+    private <T extends Serializable> CacheableTypeConfig.Builder<T> createBaseBuilder(
+            Class<T> type,
+            String itemType,
+            String metaInfPath) {
+        return CacheableTypeConfig.<T>builder(type, itemType, metaInfPath)
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(rulesRefreshInterval);
+    }
+
+    @Override
+    protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
+        Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+
+        // Configure Rule type
+        configs.add(createBaseBuilder(Rule.class, Rule.ITEM_TYPE, "rules")
+                .withIdExtractor(r -> r.getItemId())
+                .withBundleItemProcessor((bundleContext, rule) -> {
+                    // Bundle item processor is called before post processor when loading predefined types
+                    setRule(rule, true);
+                })
+                .withPostProcessor(rule -> {
+                    // Only ensure rule is resolved (for initial load and updates)
+                    // Re-evaluation of invalid rules happens via OSGi Event Admin when types change
+                    ensureRuleResolved(rule);
+
+                    // Update rule by event type cache (only indexes valid, enabled rules)
+                    String tenantId = rule.getTenantId();
+                    Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tenantId);
+                    updateRulesByEventType(tenantEventTypeRules, rule);
+                })
+                .build());
+
+        return configs;
+    }
+
+    @Override
     public void postConstruct() {
-        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
+        super.postConstruct();
 
-        loadPredefinedRules(bundleContext);
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                loadPredefinedRules(bundle.getBundleContext());
-            }
-        }
+        // Initialize statistics refresh task (separate from rule refresh task)
+        statisticsRefreshTask = schedulerService.newTask("rules-statistics-refresh")
+            .nonPersistent()
+            .withPeriod(rulesStatisticsRefreshInterval, TimeUnit.MILLISECONDS)
+            .withFixedDelay()
+            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> syncRuleStatistics()))
+            .schedule();
 
-        bundleContext.addBundleListener(this);
-
-        initializeTimers();
         LOGGER.info("Rule service initialized.");
     }
 
+    @Override
     public void preDestroy() {
-        bundleContext.removeBundleListener(this);
+        super.preDestroy();
+        if (statisticsRefreshTask != null) {
+            schedulerService.cancelTask(statisticsRefreshTask.getItemId());
+        }
+        if (eventHandlerRegistration != null) {
+            eventHandlerRegistration.unregister();
+        }
         LOGGER.info("Rule service shutdown.");
     }
 
-    private void processBundleStartup(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-        loadPredefinedRules(bundleContext);
+    @Override
+    public void bundleChanged(BundleEvent event) {
+        // Let the parent class handle the basic bundle lifecycle
+        super.bundleChanged(event);
     }
 
-    private void processBundleStop(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
+    @Override
+    protected void processBundleStartup(BundleContext bundleContext) {
+        // Additional processing specific to RulesService
+        super.processBundleStartup(bundleContext);
     }
 
-    private void loadPredefinedRules(BundleContext bundleContext) {
-        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/cxs/rules", "*.json", true);
-        if (predefinedRuleEntries == null) {
-            return;
-        }
+    @Override
+    protected void processBundleStop(Bundle bundle) {
+        // Additional processing specific to RulesService
+        super.processBundleStop(bundle);
+    }
 
-        while (predefinedRuleEntries.hasMoreElements()) {
-            URL predefinedRuleURL = predefinedRuleEntries.nextElement();
-            LOGGER.debug("Found predefined rule at {}, loading... ", predefinedRuleURL);
-
-            try {
-                Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedRuleURL, Rule.class);
-                setRule(rule);
-                LOGGER.info("Predefined rule with id {} registered", rule.getMetadata().getId());
-            } catch (IOException e) {
-                LOGGER.error("Error while loading rule definition {}", predefinedRuleURL, e);
+    public void refreshRules() {
+        try {
+            // Get all tenants and ensure system tenant is included
+            Set<String> tenants = new HashSet<>();
+            for (Tenant tenant : tenantService.getAllTenants()) {
+                tenants.add(tenant.getItemId());
             }
+            tenants.add(SYSTEM_TENANT);
+
+            synchronized (cacheLock) {
+                for (String tenantId : tenants) {
+                    // Set current tenant for querying
+                    contextManager.executeAsTenant(tenantId, () -> {
+                        // Query rules for current tenant
+                        List<Rule> rules = persistenceService.query("tenantId", tenantId, "priority", Rule.class);
+
+                        // Update tenant event type rules cache
+                        Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tenantId);
+                        tenantEventTypeRules.clear();
+
+                        for (Rule rule : rules) {
+                            // Only ensure rule is resolved (for refresh from persistence)
+                            // Re-evaluation of invalid rules happens via OSGi Event Admin when types change
+                            ensureRuleResolved(rule);
+
+                            // Update cache service
+                            cacheService.put(Rule.ITEM_TYPE, rule.getItemId(), tenantId, rule);
+                            // Update event type index
+                            updateRulesByEventType(tenantEventTypeRules, rule);
+                        }
+                    });
+                }
+            }
+        } catch (Throwable t) {
+            LOGGER.error("Error loading rules from persistence back-end", t);
         }
     }
 
     public Set<Rule> getMatchingRules(Event event) {
-        Set<Rule> matchedRules = new LinkedHashSet<Rule>();
+        Set<Rule> matchedRules = new LinkedHashSet<>();
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
 
         Boolean hasEventAlreadyBeenRaised = null;
         Boolean hasEventAlreadyBeenRaisedForSession = null;
         Boolean hasEventAlreadyBeenRaisedForProfile = null;
 
-        Set<Rule> eventTypeRules = new HashSet<>(allRules); // local copy to avoid concurrency issues
+        // Get rules for current tenant and event type
+        Set<Rule> eventTypeRules = new HashSet<>();
+        Map<String, Set<Rule>> tenantRules = getRulesByEventTypeForTenant(currentTenant);
+
         if (optimizedRulesActivated) {
-            eventTypeRules = rulesByEventType.get(event.getEventType());
-            if (eventTypeRules == null) {
-                eventTypeRules = new HashSet<>();
+            Set<Rule> typeRules = tenantRules.get(event.getEventType());
+            if (typeRules != null) {
+                eventTypeRules.addAll(typeRules);
             }
-            eventTypeRules = new HashSet<>(eventTypeRules); // local copy to avoid concurrency issues
-            Set<Rule> allEventRules = rulesByEventType.get("*");
-            if (allEventRules != null && !allEventRules.isEmpty()) {
-                eventTypeRules.addAll(allEventRules); // retrieve rules that should always be evaluated.
+            Set<Rule> allEventRules = tenantRules.get("*");
+            if (allEventRules != null) {
+                eventTypeRules.addAll(allEventRules);
             }
+
+            // If not in system tenant, also get inherited rules
+            if (!SYSTEM_TENANT.equals(currentTenant)) {
+                Map<String, Set<Rule>> systemRules = getRulesByEventTypeForTenant(SYSTEM_TENANT);
+                Set<Rule> systemTypeRules = systemRules.get(event.getEventType());
+                if (systemTypeRules != null) {
+                    eventTypeRules.addAll(systemTypeRules);
+                }
+                Set<Rule> systemAllEventRules = systemRules.get("*");
+                if (systemAllEventRules != null) {
+                    eventTypeRules.addAll(systemAllEventRules);
+                }
+            }
+
             if (eventTypeRules.isEmpty()) {
                 return matchedRules;
             }
+        } else {
+            // Get all rules from current tenant and system tenant if needed
+            eventTypeRules.addAll(getAllItems(Rule.class, true));
         }
 
+        // Rest of the existing matching logic
         for (Rule rule : eventTypeRules) {
             if (!rule.getMetadata().isEnabled()) {
                 continue;
@@ -205,7 +305,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             RuleStatistics ruleStatistics = getLocalRuleStatistics(rule);
             long ruleConditionStartTime = System.currentTimeMillis();
             String scope = rule.getMetadata().getScope();
-            if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
+            if (scope == null) {
+                LOGGER.warn("No scope defined for rule " + rule.getItemId());
+            } else if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
                 Condition eventCondition = definitionsService.extractConditionBySystemTag(rule.getCondition(), "eventCondition");
 
                 if (eventCondition == null) {
@@ -215,7 +317,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
                 fireEvaluate(rule, event);
 
-                if (!persistenceService.testMatch(eventCondition, event)) {
+                boolean matchResult = persistenceService.testMatch(eventCondition, event);
+                if (!matchResult) {
                     updateRuleStatistics(ruleStatistics, ruleConditionStartTime);
                     continue;
                 }
@@ -266,58 +369,29 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     private RuleStatistics getLocalRuleStatistics(Rule rule) {
-        RuleStatistics ruleStatistics = this.allRuleStatistics.get(rule.getItemId());
+        String tenantId = rule.getTenantId();
+        String ruleId = rule.getItemId();
+        Map<String, RuleStatistics> tenantStats = getRuleStatisticsForTenant(tenantId);
+        RuleStatistics ruleStatistics = tenantStats.get(ruleId);
         if (ruleStatistics == null) {
-            ruleStatistics = new RuleStatistics(rule.getItemId());
+            ruleStatistics = new RuleStatistics(ruleId);
+            ruleStatistics.setTenantId(tenantId);
+            tenantStats.put(ruleId, ruleStatistics);
         }
         return ruleStatistics;
     }
 
     private void updateRuleStatistics(RuleStatistics ruleStatistics, long ruleConditionStartTime) {
         long totalRuleConditionTime = System.currentTimeMillis() - ruleConditionStartTime;
-        ruleStatistics.setLocalConditionsTime(ruleStatistics.getLocalConditionsTime() + totalRuleConditionTime);
-        allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
-    }
-
-    public void refreshRules() {
-        try {
-            // we use local variables to make sure we quickly switch the collections since the refresh is called often
-            // we want to avoid concurrency issues with the shared collections
-            List<Rule> newAllRules = queryAllRules();
-            this.rulesByEventType = getRulesByEventType(newAllRules);
-            this.allRules = newAllRules;
-        } catch (Throwable t) {
-            LOGGER.error("Error loading rules from persistence back-end", t);
+        synchronized (ruleStatistics) {
+            ruleStatistics.setLocalConditionsTime(ruleStatistics.getLocalConditionsTime() + totalRuleConditionTime);
+            getRuleStatisticsForTenant(ruleStatistics.getTenantId())
+                .put(ruleStatistics.getItemId(), ruleStatistics);
         }
     }
 
     public List<Rule> getAllRules() {
-        return Collections.unmodifiableList(allRules);
-    }
-
-    private List<Rule> queryAllRules() {
-        List<Rule> rules = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
-        for (Rule rule : rules) {
-            // Check rule integrity
-            boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-            isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
-            // check if rule status has changed
-            if (!isValid) {
-                invalidRulesId.add(rule.getItemId());
-            } else {
-                invalidRulesId.remove(rule.getItemId());
-            }
-        }
-
-        return rules;
-    }
-
-    private Map<String, Set<Rule>> getRulesByEventType(List<Rule> rules) {
-        Map<String, Set<Rule>> newRulesByEventType = new HashMap<>();
-        for (Rule rule : rules) {
-            updateRulesByEventType(newRulesByEventType, rule);
-        }
-        return newRulesByEventType;
+        return new ArrayList<>(getAllItems(Rule.class, true));
     }
 
     public boolean canHandle(Event event) {
@@ -325,11 +399,93 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     public int onEvent(Event event) {
-        Set<Rule> rules = getMatchingRules(event);
+        if (event == null) {
+            return EventService.NO_CHANGE;
+        }
 
+        ProcessingContext context = PROCESSING_CONTEXT.get();
+
+        // Generate proper event key for loop detection
+        String eventKey = generateEventKey(event);
+
+        // Check if this event is already being processed (loop detection)
+        // Note: Depth protection is handled by EventServiceImpl.MAX_RECURSION_DEPTH
+        if (context.processingEvents.contains(eventKey)) {
+            if (context.reportedLoops.contains(eventKey)) {
+                String eventId = event.getItemId() != null ? event.getItemId() : "new";
+                LOGGER.warn("Loop detected again: event {} (type: {}) is already being processed. Skipping to prevent infinite loop.",
+                    eventId, event.getEventType());
+                return EventService.NO_CHANGE;
+            }
+            context.reportedLoops.add(eventKey);
+            logLoopDetected(event);
+            return EventService.NO_CHANGE;
+        }
+
+        // Add event to processing set
+        context.processingEvents.add(eventKey);
+        LOGGER.debug("Processing event {} (type: {})",
+            event.getItemId() != null ? event.getItemId() : "new", event.getEventType());
+        try {
+            return processEvent(event, context);
+        } finally {
+            // Always cleanup (even if exception occurs)
+            context.processingEvents.remove(eventKey);
+
+            // Clean up ThreadLocal if processing is complete
+            if (context.processingEvents.isEmpty()) {
+                LOGGER.debug("Event processing complete, cleaning up ThreadLocal context");
+                PROCESSING_CONTEXT.remove();
+            }
+        }
+    }
+
+    /**
+     * Generates a unique key for an event to track it in the processing chain.
+     * Uses event ID if available, otherwise creates a stable identifier.
+     */
+    private String generateEventKey(Event event) {
+        String eventType = event.getEventType();
+        if (eventType == null) {
+            eventType = "unknown";
+        }
+        String eventId = event.getItemId();
+        if (eventId != null && !eventId.isEmpty()) {
+            return eventType + ":" + eventId;
+        }
+        // Fallback: use event type and identity hash for events without ID
+        return eventType + ":hash:" + System.identityHashCode(event);
+    }
+
+    /**
+     * Logs when a loop is detected with diagnostic information.
+     */
+    private void logLoopDetected(Event event) {
+        String eventId = event.getItemId() != null ? event.getItemId() : "new";
+        String eventType = event.getEventType();
+        String cause = "ruleFired".equals(eventType)
+            ? "Rule(s) matching 'ruleFired' events (likely wildcard '*')"
+            : "Rule(s) matching '" + eventType + "' events send the same event type";
+        String fix = "ruleFired".equals(eventType)
+            ? "Exclude 'ruleFired' from wildcard rules or use specific event types"
+            : "Change rule actions to send different event types or make rules more specific";
+
+        LOGGER.error("Loop detected for event {} (type: {}). {}. Fix: {}.",
+            eventId, eventType, cause, fix);
+    }
+
+    private int processEvent(Event event, ProcessingContext context) {
+        Set<Rule> rules = getMatchingRules(event);
         int changes = EventService.NO_CHANGE;
+
+        String eventId = event.getItemId();
+        if (eventId == null || eventId.isEmpty()) {
+            eventId = "new";
+        }
+
         for (Rule rule : rules) {
             LOGGER.debug("Fired rule {} for {} - {}", rule.getMetadata().getId(), event.getEventType(), event.getItemId());
+
             fireExecuteActions(rule, event);
 
             long actionsStartTime = System.currentTimeMillis();
@@ -337,41 +493,85 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 changes |= actionExecutorDispatcher.execute(action, event);
             }
             long totalActionsTime = System.currentTimeMillis() - actionsStartTime;
-            Event ruleFired = new Event("ruleFired", event.getSession(), event.getProfile(), event.getScope(), event, rule, event.getTimeStamp());
+
+            Event ruleFired = new Event("ruleFired", event.getSession(), event.getProfile(),
+                event.getScope(), event, rule, event.getTimeStamp());
             ruleFired.getAttributes().putAll(event.getAttributes());
             ruleFired.setPersistent(false);
             changes |= eventService.send(ruleFired);
 
             RuleStatistics ruleStatistics = getLocalRuleStatistics(rule);
-            ruleStatistics.setLocalExecutionCount(ruleStatistics.getLocalExecutionCount() + 1);
-            ruleStatistics.setLocalActionsTime(ruleStatistics.getLocalActionsTime() + totalActionsTime);
-            this.allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
+            synchronized (ruleStatistics) {
+                ruleStatistics.setLocalExecutionCount(ruleStatistics.getLocalExecutionCount() + 1);
+                ruleStatistics.setLocalActionsTime(ruleStatistics.getLocalActionsTime() + totalActionsTime);
+                getRuleStatisticsForTenant(rule.getTenantId()).put(ruleStatistics.getItemId(), ruleStatistics);
+            }
         }
         return changes;
     }
 
     @Override
     public RuleStatistics getRuleStatistics(String ruleId) {
-        if (allRuleStatistics.containsKey(ruleId)) {
-            return allRuleStatistics.get(ruleId);
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+
+        // Check current tenant statistics
+        Map<String, RuleStatistics> tenantStats = getRuleStatisticsForTenant(currentTenant);
+        RuleStatistics stats = tenantStats.get(ruleId);
+
+        // If not found and not in system tenant, check system tenant statistics
+        if (stats == null && !SYSTEM_TENANT.equals(currentTenant)) {
+            Map<String, RuleStatistics> systemStats = getRuleStatisticsForTenant(SYSTEM_TENANT);
+            stats = systemStats.get(ruleId);
         }
-        return persistenceService.load(ruleId, RuleStatistics.class);
+
+        // If still not found, try loading from persistence
+        if (stats == null) {
+            stats = loadWithInheritance(ruleId, RuleStatistics.class);
+            if (stats != null) {
+                getRuleStatisticsForTenant(stats.getTenantId()).put(ruleId, stats);
+            }
+        }
+
+        return stats;
     }
 
+    @Override
     public Map<String, RuleStatistics> getAllRuleStatistics() {
-        return allRuleStatistics;
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+
+        Map<String, RuleStatistics> result = new ConcurrentHashMap<>(getRuleStatisticsForTenant(currentTenant));
+
+        // If not in system tenant, also get inherited statistics
+        if (!SYSTEM_TENANT.equals(currentTenant)) {
+            Map<String, RuleStatistics> systemStats = getRuleStatisticsForTenant(SYSTEM_TENANT);
+            result.putAll(systemStats);
+        }
+
+        return result;
     }
 
     @Override
     public void resetAllRuleStatistics() {
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+
         Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+
+        // Remove from persistence
         persistenceService.removeByQuery(matchAllCondition, RuleStatistics.class);
-        allRuleStatistics.clear();
+
+        // Clear tenant cache
+        getRuleStatisticsForTenant(currentTenant).clear();
+
+        // If not in system tenant, also clear system tenant cache
+        if (!SYSTEM_TENANT.equals(currentTenant)) {
+            getRuleStatisticsForTenant(SYSTEM_TENANT).clear();
+        }
     }
 
     public Set<Metadata> getRuleMetadatas() {
-        Set<Metadata> metadatas = new HashSet<Metadata>();
-        for (Rule rule : allRules) {
+        Collection<Rule> rules = getAllItems(Rule.class, true);
+        Set<Metadata> metadatas = new HashSet<>();
+        for (Rule rule : rules) {
             metadatas.add(rule.getMetadata());
         }
         return metadatas;
@@ -401,131 +601,72 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         return new PartialList<>(details, rules.getOffset(), rules.getPageSize(), rules.getTotalSize(), rules.getTotalSizeRelation());
     }
 
+    @Override
     public Rule getRule(String ruleId) {
-        Rule rule = persistenceService.load(ruleId, Rule.class);
-        if (rule != null) {
-            ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-            ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
-        }
-        return rule;
+        return getItem(ruleId, Rule.class);
     }
 
+    @Override
     public void setRule(Rule rule) {
+        setRule(rule, false);
+    }
+
+    protected void setRule(Rule rule, boolean allowInvalidRules) {
+        if (rule == null) {
+            return;
+        }
+
+        String tenantId = contextManager.getCurrentContext().getTenantId();
+
         if (rule.getMetadata().getScope() == null) {
             rule.getMetadata().setScope("systemscope");
         }
-        Condition condition = rule.getCondition();
-        if (condition != null) {
-            if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
-                ParserHelper.resolveConditionType(definitionsService, condition, "rule " + rule.getItemId());
-                ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
-                // Check rule's condition validity, throws an exception if not set properly.
-                definitionsService.extractConditionBySystemTag(condition, "eventCondition");
+
+        if (rule.getTenantId() == null) {
+            rule.setTenantId(tenantId);
+        }
+
+        // Attempt to resolve rule first to update missingPlugins flag
+        // This must happen before checking effectiveAllowInvalidRules
+        if (rule.getCondition() != null) {
+            try {
+                ensureRuleResolved(rule);
+            } catch (Exception e) {
+                // Resolution failure shouldn't prevent rule from being saved
+                // The rule will be marked as invalid and excluded from indexing
+                LOGGER.debug("Failed to resolve rule {} during setRule, will be marked as invalid: {}",
+                    rule.getItemId(), e.getMessage());
             }
         }
-        persistenceService.save(rule);
-    }
 
-    public Set<Condition> getTrackedConditions(Item source) {
-        Set<Condition> trackedConditions = new HashSet<>();
-        for (Rule r : allRules) {
-            if (!r.getMetadata().isEnabled()) {
-                continue;
-            }
-            Condition ruleCondition = r.getCondition();
-            Condition trackedCondition = definitionsService.extractConditionBySystemTag(ruleCondition, "trackedCondition");
-            if (trackedCondition != null) {
-                Condition evalCondition = definitionsService.extractConditionBySystemTag(ruleCondition, "sourceEventCondition");
-                if (evalCondition != null) {
-                    if (persistenceService.testMatch(evalCondition, source)) {
-                        trackedConditions.add(trackedCondition);
-                    }
-                } else if (
-                        trackedCondition.getConditionType() != null &&
-                                trackedCondition.getConditionType().getParameters() != null && !trackedCondition.getConditionType()
-                                .getParameters().isEmpty()
-                ) {
-                    // lookup for track parameters
-                    Map<String, Object> trackedParameters = new HashMap<>();
-                    trackedCondition.getConditionType().getParameters().forEach(parameter -> {
-                        try {
-                            if (TRACKED_PARAMETER.equals(parameter.getId())) {
-                                // Parameter#getDefaultValue is Object; null must not call toString() (NPE) or be passed to split.
-                                Object defaultValue = parameter.getDefaultValue();
-                                if (defaultValue == null) {
-                                    LOGGER.debug(
-                                            "Skipping tracked parameter mapping: parameter id={} has null defaultValue for condition type {}",
-                                            parameter.getId(), trackedCondition.getConditionType().getItemId());
-                                    return;
-                                }
-                                Arrays.stream(StringUtils.split(defaultValue.toString(), ",")).forEach(trackedParameter -> {
-                                    String[] param = StringUtils.split(StringUtils.trim(trackedParameter), ":");
-                                    trackedParameters.put(StringUtils.trim(param[1]), trackedCondition.getParameter(StringUtils.trim(param[0])));
-                                });
-                            }
-                        } catch (Exception e) {
-                            LOGGER.warn("Unable to parse tracked parameter from {} for condition type {}", parameter, trackedCondition.getConditionType().getItemId());
-                        }
-                    });
-                    if (!trackedParameters.isEmpty()) {
-                        evalCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-                        evalCondition.setParameter("operator", "and");
-                        ArrayList<Condition> conditions = new ArrayList<>();
-                        trackedParameters.forEach((key, value) -> {
-                            Condition propCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-                            propCondition.setParameter("comparisonOperator", "equals");
-                            propCondition.setParameter("propertyName", key);
-                            propCondition.setParameter("propertyValue", value);
-                            conditions.add(propCondition);
-                        });
-                        evalCondition.setParameter("subConditions", conditions);
-                        if (persistenceService.testMatch(evalCondition, source)) {
-                            trackedConditions.add(trackedCondition);
-                        }
+        // If missingPlugins is true, treat as if allowInvalidRules is true
+        boolean effectiveAllowInvalidRules = allowInvalidRules || (rule.getMetadata() != null && rule.getMetadata().isMissingPlugins());
+
+        Condition condition = rule.getCondition();
+        if (condition != null) {
+            // Only validate eventCondition for enabled rules (disabled rules don't need to be executable)
+            if (rule.getMetadata().isEnabled()) {
+                try {
+                    // Check rule's condition validity, throws an exception if not set properly.
+                    definitionsService.extractConditionBySystemTag(condition, "eventCondition");
+                } catch (Exception e) {
+                    if (!effectiveAllowInvalidRules) {
+                        throw e;
                     } else {
-                        trackedConditions.add(trackedCondition);
+                        LOGGER.warn("Invalid rule condition for rule {} : ", rule, e);
                     }
                 }
             }
         }
-        return trackedConditions;
+
+        // Save the rule using the parent class method
+        saveItem(rule, Rule::getItemId, Rule.ITEM_TYPE);
+        Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tenantId);
+        updateRulesByEventType(tenantEventTypeRules, rule);
     }
 
     public void removeRule(String ruleId) {
-        persistenceService.remove(ruleId, Rule.class);
-    }
-
-    private void initializeTimers() {
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                refreshRules();
-            }
-        };
-        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, rulesRefreshInterval, TimeUnit.MILLISECONDS);
-
-        TimerTask statisticsTask = new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    syncRuleStatistics();
-                } catch (Throwable t) {
-                    LOGGER.error("Error synching rule statistics between memory and persistence back-end", t);
-                }
-            }
-        };
-        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(statisticsTask, 0, rulesStatisticsRefreshInterval, TimeUnit.MILLISECONDS);
-    }
-
-    public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                processBundleStartup(event.getBundle().getBundleContext());
-                break;
-            case BundleEvent.STOPPING:
-                processBundleStop(event.getBundle().getBundleContext());
-                break;
-        }
+        removeItem(ruleId, Rule.class, Rule.ITEM_TYPE);
     }
 
     private void syncRuleStatistics() {
@@ -534,55 +675,66 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         for (RuleStatistics ruleStatistics : allPersistedRuleStatisticsList) {
             allPersistedRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
         }
-        // first we iterate over the rules we have in memory
-        for (RuleStatistics ruleStatistics : allRuleStatistics.values()) {
+
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+
+        Map<String, RuleStatistics> tenantStats = getRuleStatisticsForTenant(currentTenant);
+
+        // Sync tenant statistics
+        for (RuleStatistics ruleStatistics : tenantStats.values()) {
             boolean mustPersist = false;
             if (allPersistedRuleStatistics.containsKey(ruleStatistics.getItemId())) {
-                // we must sync with the data coming from the persistence service.
                 RuleStatistics persistedRuleStatistics = allPersistedRuleStatistics.get(ruleStatistics.getItemId());
-                ruleStatistics.setExecutionCount(persistedRuleStatistics.getExecutionCount() + ruleStatistics.getLocalExecutionCount());
-                if (ruleStatistics.getLocalExecutionCount() > 0) {
-                    ruleStatistics.setLocalExecutionCount(0);
-                    mustPersist = true;
+                synchronized (ruleStatistics) {
+                    ruleStatistics.setExecutionCount(persistedRuleStatistics.getExecutionCount() + ruleStatistics.getLocalExecutionCount());
+                    if (ruleStatistics.getLocalExecutionCount() > 0) {
+                        ruleStatistics.setLocalExecutionCount(0);
+                        mustPersist = true;
+                    }
+                    ruleStatistics.setConditionsTime(persistedRuleStatistics.getConditionsTime() + ruleStatistics.getLocalConditionsTime());
+                    if (ruleStatistics.getLocalConditionsTime() > 0) {
+                        ruleStatistics.setLocalConditionsTime(0);
+                        mustPersist = true;
+                    }
+                    ruleStatistics.setActionsTime(persistedRuleStatistics.getActionsTime() + ruleStatistics.getLocalActionsTime());
+                    if (ruleStatistics.getLocalActionsTime() > 0) {
+                        ruleStatistics.setLocalActionsTime(0);
+                        mustPersist = true;
+                    }
+                    ruleStatistics.setLastSyncDate(new Date());
                 }
-                ruleStatistics.setConditionsTime(persistedRuleStatistics.getConditionsTime() + ruleStatistics.getLocalConditionsTime());
-                if (ruleStatistics.getLocalConditionsTime() > 0) {
-                    ruleStatistics.setLocalConditionsTime(0);
-                    mustPersist = true;
-                }
-                ruleStatistics.setActionsTime(persistedRuleStatistics.getActionsTime() + ruleStatistics.getLocalActionsTime());
-                if (ruleStatistics.getLocalActionsTime() > 0) {
-                    ruleStatistics.setLocalActionsTime(0);
-                    mustPersist = true;
-                }
-                ruleStatistics.setLastSyncDate(new Date());
             } else {
-                ruleStatistics.setExecutionCount(ruleStatistics.getExecutionCount() + ruleStatistics.getLocalExecutionCount());
-                if (ruleStatistics.getLocalExecutionCount() > 0) {
-                    ruleStatistics.setLocalExecutionCount(0);
-                    mustPersist = true;
+                synchronized (ruleStatistics) {
+                    ruleStatistics.setExecutionCount(ruleStatistics.getExecutionCount() + ruleStatistics.getLocalExecutionCount());
+                    if (ruleStatistics.getLocalExecutionCount() > 0) {
+                        ruleStatistics.setLocalExecutionCount(0);
+                        mustPersist = true;
+                    }
+                    ruleStatistics.setConditionsTime(ruleStatistics.getConditionsTime() + ruleStatistics.getLocalConditionsTime());
+                    if (ruleStatistics.getLocalConditionsTime() > 0) {
+                        ruleStatistics.setLocalConditionsTime(0);
+                        mustPersist = true;
+                    }
+                    ruleStatistics.setActionsTime(ruleStatistics.getActionsTime() + ruleStatistics.getLocalActionsTime());
+                    if (ruleStatistics.getLocalActionsTime() > 0) {
+                        ruleStatistics.setLocalActionsTime(0);
+                        mustPersist = true;
+                    }
+                    ruleStatistics.setLastSyncDate(new Date());
                 }
-                ruleStatistics.setConditionsTime(ruleStatistics.getConditionsTime() + ruleStatistics.getLocalConditionsTime());
-                if (ruleStatistics.getLocalConditionsTime() > 0) {
-                    ruleStatistics.setLocalConditionsTime(0);
-                    mustPersist = true;
-                }
-                ruleStatistics.setActionsTime(ruleStatistics.getActionsTime() + ruleStatistics.getLocalActionsTime());
-                if (ruleStatistics.getLocalActionsTime() > 0) {
-                    ruleStatistics.setLocalActionsTime(0);
-                    mustPersist = true;
-                }
-                ruleStatistics.setLastSyncDate(new Date());
             }
-            allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
             if (mustPersist) {
                 persistenceService.save(ruleStatistics, null, true);
             }
         }
-        // now let's iterate over the rules coming from the persistence service, as we may have new ones.
-        for (RuleStatistics ruleStatistics : allPersistedRuleStatistics.values()) {
-            if (!allRuleStatistics.containsKey(ruleStatistics.getItemId())) {
-                allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
+
+        // Also sync system tenant statistics if needed
+        if (!SYSTEM_TENANT.equals(currentTenant)) {
+            Map<String, RuleStatistics> systemStats = getRuleStatisticsForTenant(SYSTEM_TENANT);
+            for (RuleStatistics ruleStatistics : systemStats.values()) {
+                if (!tenantStats.containsKey(ruleStatistics.getItemId())) {
+                    tenantStats.put(ruleStatistics.getItemId(), ruleStatistics);
+                }
             }
         }
     }
@@ -617,19 +769,405 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         }
     }
 
-    private void updateRulesByEventType(Map<String, Set<Rule>> rulesByEventType, Rule rule) {
-        Set<String> eventTypeIds = ParserHelper.resolveConditionEventTypes(rule.getCondition());
-        if (eventTypeIds.isEmpty()) {
-            // if we couldn't resolve an event type, we always execute the conditions, these conditions might lead to performance issues though.
-            eventTypeIds.add("*");
+    /**
+     * Checks if a rule should be excluded from event type indexing.
+     * Rules are excluded if they are disabled, have missing plugins, or are marked as invalid.
+     *
+     * Note: This method assumes ensureRuleResolved() has been called first to ensure
+     * the rule's resolution status is up-to-date. The flags checked here are set by
+     * resolveRule() which is called by ensureRuleResolved().
+     *
+     * @param rule the rule to check
+     * @return true if the rule should be excluded, false otherwise
+     */
+    private boolean shouldExcludeRuleFromEventTypeIndex(Rule rule) {
+        if (rule == null) {
+            return true;
         }
+
+        // Exclude disabled rules
+        if (rule.getMetadata() == null || !rule.getMetadata().isEnabled()) {
+            return true;
+        }
+
+        // Check if rule has missing plugins or is invalid (set by resolveRule)
+        boolean hasMissingPlugins = rule.getMetadata().isMissingPlugins();
+
+        if (hasMissingPlugins) {
+            String ruleName = getRuleName(rule);
+            String ruleId = rule.getItemId();
+            String reason = hasMissingPlugins ? "missing plugins" : "invalid rule";
+            LOGGER.debug("Excluding rule '{}' (id: {}) from event type index due to: {}", ruleName, ruleId, reason);
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Gets a human-readable name for a rule, falling back to "unnamed" if not available.
+     *
+     * @param rule the rule
+     * @return the rule name or "unnamed"
+     */
+    private String getRuleName(Rule rule) {
+        return rule.getMetadata() != null && rule.getMetadata().getName() != null
+            ? rule.getMetadata().getName()
+            : "unnamed";
+    }
+
+    /**
+     * Removes a rule from all event type sets in the given map.
+     * This is used when a rule should be excluded from indexing.
+     * Uses copy of keys to avoid synchronization during iteration.
+     *
+     * @param rulesByEventType the map of event types to rule sets (ConcurrentHashMap)
+     * @param rule the rule to remove
+     */
+    private void removeRuleFromEventTypeIndex(Map<String, Set<Rule>> rulesByEventType, Rule rule) {
+        // Copy keys to avoid concurrent modification during iteration
+        // Since rulesByEventType is a ConcurrentHashMap, we can safely iterate over a copy of keys
+        Set<String> eventTypeIds = new HashSet<>(rulesByEventType.keySet());
         for (String eventTypeId : eventTypeIds) {
             Set<Rule> rules = rulesByEventType.get(eventTypeId);
-            if (rules == null) {
-                rules = new HashSet<>();
+            if (rules != null) {
+                rules.remove(rule);
             }
-            rules.add(rule);
-            rulesByEventType.put(eventTypeId, rules);
         }
+    }
+
+    /**
+     * Resolves event types from a rule's condition and logs warnings for wildcard usage.
+     * Only logs warnings for enabled rules that are actually being indexed.
+     *
+     * This method relies on ensureRuleResolvedForIndexing() having been called first, which will
+     * mark the rule as invalid/missingPlugins if there are unresolved condition types.
+     * If eventTypeIds is empty and the rule has unresolved types, this indicates the
+     * rule should be excluded rather than defaulting to wildcard.
+     *
+     * @param rule the rule (should have been resolved via ensureRuleResolvedForIndexing() first)
+     * @return the set of event type IDs, which may include "*" for wildcard matching, or empty set if condition has unresolved types
+     */
+    private Set<String> resolveEventTypesWithWarnings(Rule rule) {
+        Set<String> eventTypeIds = ParserHelper.resolveConditionEventTypes(rule.getCondition());
+        boolean hasWildcard = eventTypeIds.contains("*");
+        boolean defaultingToWildcard = false;
+
+        // Before defaulting to wildcard when eventTypeIds is empty, check if rule has unresolved types
+        // This relies on ensureRuleResolvedForIndexing() having been called, which marks the rule appropriately
+        // We check for unresolved types by looking at the rule's resolution status (missingPlugins or invalid)
+        // This avoids duplicating the resolution logic - we rely on ensureRuleResolvedForIndexing / ParserHelper
+        if (eventTypeIds.isEmpty()) {
+            // Check if rule has unresolved types by checking resolution status
+            // Note: shouldExcludeRuleFromEventTypeIndex() also checks disabled, so we need to check specifically
+            boolean hasMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
+            boolean hasUnresolvedTypes = hasMissingPlugins;
+
+            if (hasUnresolvedTypes) {
+                // Rule has unresolved types - return empty set to exclude rule
+                String ruleName = getRuleName(rule);
+                String ruleId = rule.getItemId();
+                LOGGER.debug("Rule '{}' (id: {}) has unresolved condition types - excluding from event type index instead of defaulting to wildcard",
+                    ruleName, ruleId);
+                return Collections.emptySet();
+            }
+            // No unresolved types - safe to default to wildcard
+            eventTypeIds = Collections.singleton("*");
+            defaultingToWildcard = true;
+        }
+
+        // Only log warning for enabled rules that are actually being indexed
+        // Disabled rules or invalid rules won't be indexed, so no need to warn
+        if ((hasWildcard || defaultingToWildcard) &&
+            rule.getMetadata() != null &&
+            rule.getMetadata().isEnabled() &&
+            !shouldExcludeRuleFromEventTypeIndex(rule)) {
+            String ruleName = getRuleName(rule);
+            String ruleId = rule.getItemId();
+            String reason = defaultingToWildcard
+                ? "no eventTypeCondition found in rule condition"
+                : "rule condition contains negated eventTypeCondition or wildcard";
+            LOGGER.debug("Rule '{}' (id: {}) uses wildcard event type matching (*). This can cause event loops if the rule triggers events that match its own conditions. Reason: {}. Consider using specific event types instead.",
+                ruleName, ruleId, reason);
+        }
+
+        return eventTypeIds;
+    }
+
+    /**
+     * Adds a rule to the appropriate event type sets in the index.
+     * Uses copy-and-swap pattern to avoid synchronization on the map.
+     *
+     * @param rulesByEventType the map of event types to rule sets (ConcurrentHashMap)
+     * @param rule the rule to add
+     * @param eventTypeIds the set of event type IDs to index the rule under
+     */
+    private void addRuleToEventTypeIndex(Map<String, Set<Rule>> rulesByEventType, Rule rule, Set<String> eventTypeIds) {
+        // First remove the rule from all existing event type sets to handle updates
+        // Copy keys to avoid concurrent modification during iteration
+        Set<String> existingEventTypes = new HashSet<>(rulesByEventType.keySet());
+        for (String eventTypeId : existingEventTypes) {
+            Set<Rule> rules = rulesByEventType.get(eventTypeId);
+            if (rules != null) {
+                rules.remove(rule);
+            }
+        }
+
+        // Then add the rule to the appropriate event type sets
+        // Since rulesByEventType is a ConcurrentHashMap, computeIfAbsent is thread-safe
+        for (String eventTypeId : eventTypeIds) {
+            Set<Rule> rules = rulesByEventType.computeIfAbsent(eventTypeId,
+                k -> ConcurrentHashMap.newKeySet());
+            rules.add(rule);
+        }
+    }
+
+    /**
+     * Ensures a rule is resolved (conditions and actions). This is idempotent - if the rule
+     * is already resolved, it returns immediately. If the rule was previously invalid or
+     * had missing plugins, it attempts to resolve it again (useful when new types are deployed).
+     *
+     * @param rule the rule to ensure is resolved
+     * @return true if the rule is now valid, false if it's still invalid
+     */
+    private boolean ensureRuleResolved(Rule rule) {
+        if (rule == null) {
+            return false;
+        }
+        boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+        isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
+        if (!isValid) {
+            invalidRulesId.add(rule.getItemId());
+        } else {
+            invalidRulesId.remove(rule.getItemId());
+        }
+        return isValid;
+    }
+
+    /**
+     * Ensures a rule is resolved for indexing purposes. This always attempts resolution
+     * to detect unresolved types, even if the rule wasn't previously marked as invalid.
+     * This is safe for indexing because it doesn't affect validation behavior.
+     *
+     * @param rule the rule to ensure is resolved
+     * @return true if the rule is now valid, false if it's still invalid
+     */
+    private boolean ensureRuleResolvedForIndexing(Rule rule) {
+        return ensureRuleResolved(rule);
+    }
+
+    /**
+     * Re-evaluates rule resolution and saves the rule if it becomes valid.
+     * This is called when rules are refreshed, allowing rules that were marked as invalid
+     * to be re-evaluated when new types are deployed.
+     *
+     * @param rule the rule to re-evaluate
+     * @return true if the rule was resolved (or was already valid), false if still invalid
+     */
+    private boolean reEvaluateRuleResolution(Rule rule) {
+        if (rule == null) {
+            return false;
+        }
+
+        boolean wasInvalid = invalidRulesId.contains(rule.getItemId());
+        boolean hadMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
+
+        // Ensure rule is resolved (idempotent - only resolves if needed)
+        boolean resolved = ensureRuleResolved(rule);
+
+        // Only log and save if rule transitioned from invalid to valid
+        if (resolved && (wasInvalid || hadMissingPlugins)) {
+            // Rule is now resolved - save it to update the missingPlugins flag in persistence
+            try {
+                // Ensure we're in the correct tenant context before saving
+                String ruleTenantId = rule.getTenantId();
+                String currentTenantId = contextManager.getCurrentContext().getTenantId();
+
+                if (ruleTenantId != null && !ruleTenantId.equals(currentTenantId)) {
+                    // Need to switch tenant context
+                    contextManager.executeAsTenant(ruleTenantId, () -> {
+                        saveItem(rule, Rule::getItemId, Rule.ITEM_TYPE);
+                        return null;
+                    });
+                } else {
+                    // Already in correct tenant context (or rule has no tenant)
+                    saveItem(rule, Rule::getItemId, Rule.ITEM_TYPE);
+                }
+
+                String ruleName = getRuleName(rule);
+                String ruleId = rule.getItemId();
+                LOGGER.debug("Rule '{}' (id: {}) is now valid - previously missing condition/action types have been deployed",
+                    ruleName, ruleId);
+            } catch (Exception e) {
+                LOGGER.warn("Failed to save rule {} after successful re-resolution", rule.getItemId(), e);
+            }
+        }
+
+        return resolved;
+    }
+
+    private void updateRulesByEventType(Map<String, Set<Rule>> rulesByEventType, Rule rule) {
+        // Ensure rule is resolved for indexing purposes (always attempts resolution to detect unresolved types)
+        // This is safe for indexing - it doesn't affect validation behavior in setRule()
+        ensureRuleResolvedForIndexing(rule);
+
+        // Check if rule should be excluded from event type indexing (disabled, invalid, or missing plugins)
+        if (shouldExcludeRuleFromEventTypeIndex(rule)) {
+            removeRuleFromEventTypeIndex(rulesByEventType, rule);
+            return;
+        }
+
+        // Resolve event types and add rule to index
+        // Note: resolveEventTypesWithWarnings will check for unresolved types and return empty set
+        // if found, which will effectively exclude the rule from indexing
+        Set<String> eventTypeIds = resolveEventTypesWithWarnings(rule);
+
+        // If eventTypeIds is empty (due to unresolved types), exclude the rule
+        if (eventTypeIds.isEmpty()) {
+            removeRuleFromEventTypeIndex(rulesByEventType, rule);
+            return;
+        }
+
+        addRuleToEventTypeIndex(rulesByEventType, rule, eventTypeIds);
+    }
+
+    private Map<String, Set<Rule>> getRulesByEventTypeForTenant(String tenantId) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("Tenant ID cannot be null");
+        }
+        synchronized (cacheLock) {
+            return rulesByEventTypeByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
+        }
+    }
+
+    private Map<String, RuleStatistics> getRuleStatisticsForTenant(String tenantId) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("Tenant ID cannot be null");
+        }
+        synchronized (cacheLock) {
+            return ruleStatisticsByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
+        }
+    }
+
+    public Set<Condition> getTrackedConditions(Item source) {
+        Set<Condition> trackedConditions = new HashSet<>();
+        Collection<Rule> rules = getAllItems(Rule.class, true);
+
+        for (Rule r : rules) {
+            if (!r.getMetadata().isEnabled()) {
+                continue;
+            }
+            Condition ruleCondition = r.getCondition();
+            Condition trackedCondition = definitionsService.extractConditionBySystemTag(ruleCondition, "trackedCondition");
+            if (trackedCondition != null) {
+                Condition evalCondition = definitionsService.extractConditionBySystemTag(ruleCondition, "sourceEventCondition");
+                if (evalCondition != null) {
+                    if (persistenceService.testMatch(evalCondition, source)) {
+                        trackedConditions.add(trackedCondition);
+                    }
+                } else if (
+                        trackedCondition.getConditionType() != null &&
+                            trackedCondition.getConditionType().getParameters() != null && !trackedCondition.getConditionType()
+                            .getParameters().isEmpty()
+                    ) {
+                        // lookup for track parameters
+                        Map<String, Object> trackedParameters = new HashMap<>();
+                        trackedCondition.getConditionType().getParameters().forEach(parameter -> {
+                            try {
+                                if (TRACKED_PARAMETER.equals(parameter.getId())) {
+                                    Arrays.stream(StringUtils.split(parameter.getDefaultValue().toString(), ",")).forEach(trackedParameter -> {
+                                        String[] param = StringUtils.split(StringUtils.trim(trackedParameter), ":");
+                                        trackedParameters.put(StringUtils.trim(param[1]), trackedCondition.getParameter(StringUtils.trim(param[0])));
+                                    });
+                                }
+                            } catch (Exception e) {
+                                LOGGER.warn("Unable to parse tracked parameter from {} for condition type {}", parameter, trackedCondition.getConditionType().getItemId());
+                            }
+                        });
+                        if (!trackedParameters.isEmpty()) {
+                            evalCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+                            evalCondition.setParameter("operator", "and");
+                            ArrayList<Condition> conditions = new ArrayList<>();
+                            trackedParameters.forEach((key, value) -> {
+                                Condition propCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+                                propCondition.setParameter("comparisonOperator", "equals");
+                                propCondition.setParameter("propertyName", key);
+                                propCondition.setParameter("propertyValue", value);
+                                conditions.add(propCondition);
+                            });
+                            evalCondition.setParameter("subConditions", conditions);
+                            if (persistenceService.testMatch(evalCondition, source)) {
+                                trackedConditions.add(trackedCondition);
+                            }
+                        } else {
+                            trackedConditions.add(trackedCondition);
+                        }
+                }
+            }
+        }
+        return trackedConditions;
+    }
+
+    /**
+     * Handles OSGi Event Admin events for condition/action type changes.
+     * This method is called when condition types or action types are added, updated, or removed.
+     * It triggers re-evaluation of all invalid rules to check if they can now be resolved.
+     *
+     * @param event the OSGi event containing type change information
+     */
+    @Override
+    public void handleEvent(org.osgi.service.event.Event event) {
+        String topic = event.getTopic();
+        String typeId = (String) event.getProperty("typeId");
+        String tenantId = (String) event.getProperty("tenantId");
+
+        if (typeId == null) {
+            LOGGER.warn("Received type change event without typeId: {}", topic);
+            return;
+        }
+
+        LOGGER.debug("Received type change event: {} for type {} (tenant: {})", topic, typeId, tenantId);
+
+        // Re-evaluate all invalid rules across all tenants
+        // This works in cluster environments because events are published when types are saved to persistence
+        contextManager.executeAsSystem(() -> {
+            try {
+                // Get all tenants
+                Set<String> tenants = new HashSet<>();
+                for (Tenant tenant : tenantService.getAllTenants()) {
+                    tenants.add(tenant.getItemId());
+                }
+                tenants.add(SYSTEM_TENANT);
+
+                for (String tId : tenants) {
+                    contextManager.executeAsTenant(tId, () -> {
+                        // Get all rules for this tenant
+                        List<Rule> rules = persistenceService.query("tenantId", tId, "priority", Rule.class);
+
+                        for (Rule rule : rules) {
+                            boolean hadMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
+
+                            if (hadMissingPlugins) {
+                                // Re-evaluate this rule
+                                boolean resolved = reEvaluateRuleResolution(rule);
+
+                                if (resolved) {
+                                    // Rule is now resolved - update cache and event type index
+                                    cacheService.put(Rule.ITEM_TYPE, rule.getItemId(), tId, rule);
+                                    Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tId);
+                                    updateRulesByEventType(tenantEventTypeRules, rule);
+                                }
+                            }
+                        }
+                        return null;
+                    });
+                }
+
+                LOGGER.debug("Re-evaluated rules after type change: {} (type: {})", typeId, topic);
+            } catch (Exception e) {
+                LOGGER.error("Error re-evaluating rules after type change event: {}", topic, e);
+            }
+            return null;
+        });
     }
 }
