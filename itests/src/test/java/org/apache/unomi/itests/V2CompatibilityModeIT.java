@@ -227,14 +227,13 @@ public class V2CompatibilityModeIT extends BaseIT {
                 .setTargetPreferredAuthSchemes(Arrays.asList(AuthSchemes.BASIC))
                 .build();
 
-        CloseableHttpClient adminClient = HttpClients.custom()
+        try (CloseableHttpClient adminClient = HttpClients.custom()
                 .setDefaultCredentialsProvider(credsProvider)
                 .setDefaultRequestConfig(requestConfig)
                 .build();
-
-        CloseableHttpResponse jaasResponse = adminClient.execute(request);
-        assertEquals("V3-style request with JAAS auth should work in V3 mode", 200, jaasResponse.getStatusLine().getStatusCode());
-        adminClient.close();
+             CloseableHttpResponse jaasResponse = adminClient.execute(request)) {
+            assertEquals("V3-style request with JAAS auth should work in V3 mode", 200, jaasResponse.getStatusLine().getStatusCode());
+        }
     }
 
     /**
@@ -259,7 +258,7 @@ public class V2CompatibilityModeIT extends BaseIT {
         response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V2-style request with X-Unomi-Peer should work in V2 compatibility mode", 200, response.getStatusCode());
 
-        // Test V3-style request with public API key - should be rejected in V2 mode
+        // Test V3-style request with public API key - in V2 mode, V3 API keys are ignored (request succeeds but no events processed)
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(UNOMI_API_KEY_HEADER, testPublicKey.getKey());
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
@@ -267,7 +266,7 @@ public class V2CompatibilityModeIT extends BaseIT {
         assertEquals("V3-style request with public API key should return 200 in V2 compatibility mode", 200, response.getStatusCode());
         assertEquals("V3-style request with public API key should have 0 processed events in V2 mode", 0, response.getContextResponse().getProcessedEvents());
 
-        // Test V3-style request with private API key - should be rejected in V2 mode
+        // Test V3-style request with private API key - in V2 mode, V3 API keys are ignored (request succeeds but no events processed)
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPrivateTenantAuth(request, testTenant, testPrivateKey);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
@@ -286,14 +285,13 @@ public class V2CompatibilityModeIT extends BaseIT {
                 .setTargetPreferredAuthSchemes(Arrays.asList(AuthSchemes.BASIC))
                 .build();
 
-        CloseableHttpClient adminClient = HttpClients.custom()
+        try (CloseableHttpClient adminClient = HttpClients.custom()
                 .setDefaultCredentialsProvider(credsProvider)
                 .setDefaultRequestConfig(requestConfig)
                 .build();
-
-        CloseableHttpResponse jaasResponse = adminClient.execute(getRequest);
-        assertEquals("Private endpoint with JAAS auth should work in V2 compatibility mode", 200, jaasResponse.getStatusLine().getStatusCode());
-        adminClient.close();
+             CloseableHttpResponse jaasResponse = adminClient.execute(getRequest)) {
+            assertEquals("Private endpoint with JAAS auth should work in V2 compatibility mode", 200, jaasResponse.getStatusLine().getStatusCode());
+        }
     }
 
     @Test

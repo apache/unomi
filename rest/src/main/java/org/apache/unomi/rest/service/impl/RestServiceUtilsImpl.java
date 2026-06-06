@@ -423,12 +423,17 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         // Validate the third-party provider using the V2 configuration
         if (!v2ThirdPartyConfigService.validateProviderByKey(thirdPartyKey, event.getEventType(), sourceIP)) {
             LOGGER.debug("V2 compatibility mode: Protected event {} rejected - invalid third-party provider key: {} from IP: {}",
-                        event.getEventType(), thirdPartyKey, sourceIP);
+                        event.getEventType(), maskSecret(thirdPartyKey), sourceIP);
             return false;
         }
 
         LOGGER.debug("V2 compatibility mode: Protected event {} allowed for provider key: {} from IP: {}",
-                    event.getEventType(), thirdPartyKey, sourceIP);
+                    event.getEventType(), maskSecret(thirdPartyKey), sourceIP);
         return true;
+    }
+
+    private static String maskSecret(String secret) {
+        if (secret == null || secret.length() <= 4) return "****";
+        return secret.substring(0, 4) + "****";
     }
 }

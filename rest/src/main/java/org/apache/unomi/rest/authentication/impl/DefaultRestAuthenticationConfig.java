@@ -16,12 +16,14 @@
  */
 package org.apache.unomi.rest.authentication.impl;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
-import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
+import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +35,7 @@ import java.util.regex.Pattern;
  * Default implementation for the unomi authentication on Rest endpoints
  */
 @Component(service = { RestAuthenticationConfig.class}, configurationPid = "org.apache.unomi.rest.authentication", immediate = true)
+@Designate(ocd = DefaultRestAuthenticationConfig.Config.class)
 public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultRestAuthenticationConfig.class);
@@ -83,10 +86,17 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
         }
         boolean v2Mode = config.v2_compatibilitymode_enabled();
         String defaultTenant = config.v2_compatibilitymode_defaultTenantId();
+        if (defaultTenant != null) {
+            defaultTenant = defaultTenant.trim();
+        }
+        if (StringUtils.isBlank(defaultTenant)) {
+            LOGGER.warn("v2CompatibilityDefaultTenantId is blank, falling back to 'default'");
+            defaultTenant = "default";
+        }
         LOGGER.info("Configuration updated - v2CompatibilityModeEnabled: {}, v2CompatibilityDefaultTenantId: {}",
                     v2Mode, defaultTenant);
-            this.v2CompatibilityModeEnabled = v2Mode;
-            this.v2CompatibilityDefaultTenantId = defaultTenant;
+        this.v2CompatibilityModeEnabled = v2Mode;
+        this.v2CompatibilityDefaultTenantId = defaultTenant;
     }
 
 

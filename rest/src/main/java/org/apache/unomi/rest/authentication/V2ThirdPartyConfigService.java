@@ -87,42 +87,34 @@ public class V2ThirdPartyConfigService {
     @Modified
     public void modified(Map<String, Object> properties) {
         Map<String, ProviderConfig> newProviders = new HashMap<>();
-        
+
         if (properties != null) {
-            // Parse all provider configurations dynamically
+            // Phase 1: collect raw property values per provider, order-independent
+            Map<String, Map<String, String>> rawProviders = new HashMap<>();
             for (Map.Entry<String, Object> entry : properties.entrySet()) {
-                String key = entry.getKey();
+                String propKey = entry.getKey();
                 String value = entry.getValue() != null ? entry.getValue().toString() : "";
-                
+
                 // Look for provider configuration patterns: thirdparty.{providerName}.{property}
-                if (key.startsWith("thirdparty.") && key.contains(".")) {
-                    String[] parts = key.split("\\.");
+                if (propKey.startsWith("thirdparty.") && propKey.contains(".")) {
+                    String[] parts = propKey.split("\\.");
                     if (parts.length >= 3) {
                         String providerName = parts[1];
                         String property = parts[2];
-                        
-                        ProviderConfig existingConfig = newProviders.get(providerName);
-                        String configKey = existingConfig != null ? existingConfig.getKey() : "";
-                        Set<String> configIpAddresses = existingConfig != null ? existingConfig.getIpAddresses() : new HashSet<>();
-                        Set<String> configAllowedEvents = existingConfig != null ? existingConfig.getAllowedEvents() : new HashSet<>();
-                        
-                        switch (property) {
-                            case "key":
-                                configKey = value;
-                                break;
-                            case "ipAddresses":
-                                configIpAddresses = parseCommaSeparatedList(value);
-                                break;
-                            case "allowedEvents":
-                                configAllowedEvents = parseCommaSeparatedList(value);
-                                break;
-                        }
-                        
-                        // Only add provider if it has a key (required for authentication)
-                        if (StringUtils.isNotBlank(configKey)) {
-                            newProviders.put(providerName, new ProviderConfig(configKey, configIpAddresses, configAllowedEvents));
-                        }
+                        rawProviders.computeIfAbsent(providerName, k -> new HashMap<>()).put(property, value);
                     }
+                }
+            }
+
+            // Phase 2: build ProviderConfig objects — only for providers that have a key
+            for (Map.Entry<String, Map<String, String>> entry : rawProviders.entrySet()) {
+                String providerName = entry.getKey();
+                Map<String, String> props = entry.getValue();
+                String configKey = props.get("key");
+                if (StringUtils.isNotBlank(configKey)) {
+                    Set<String> configIpAddresses = parseCommaSeparatedList(props.getOrDefault("ipAddresses", ""));
+                    Set<String> configAllowedEvents = parseCommaSeparatedList(props.getOrDefault("allowedEvents", ""));
+                    newProviders.put(providerName, new ProviderConfig(configKey, configIpAddresses, configAllowedEvents));
                 }
             }
         }
@@ -201,18 +193,18 @@ public class V2ThirdPartyConfigService {
         }
         
         if (config == null) {
-            LOGGER.debug("V2 compatibility mode: Unknown provider key: {}", providerKey);
+            LOGGER.debug("V2 compatibility mode: Unknown provider key: {}", maskSecret(providerKey));
             return false;
         }
-        
+
         if (!config.getAllowedEvents().contains(eventType)) {
-            LOGGER.debug("V2 compatibility mode: Event type {} not allowed for provider {} (key: {})", eventType, foundProviderId, providerKey);
+            LOGGER.debug("V2 compatibility mode: Event type {} not allowed for provider {} (key: {})", eventType, foundProviderId, maskSecret(providerKey));
             return false;
         }
-        
+
         boolean ipAuthorized = IPValidationUtils.isIpAuthorized(sourceIP, config.getIpAddresses());
         if (!ipAuthorized) {
-            LOGGER.debug("V2 compatibility mode: IP {} not authorized for provider {} (key: {})", sourceIP, foundProviderId, providerKey);
+            LOGGER.debug("V2 compatibility mode: IP {} not authorized for provider {} (key: {})", sourceIP, foundProviderId, maskSecret(providerKey));
         }
         
         return ipAuthorized;
@@ -239,6 +231,11 @@ public class V2ThirdPartyConfigService {
         return providers.containsKey(providerId);
     }
     
+    private static String maskSecret(String secret) {
+        if (secret == null || secret.length() <= 4) return "****";
+        return secret.substring(0, 4) + "****";
+    }
+
     private Set<String> parseCommaSeparatedList(String value) {
         if (StringUtils.isBlank(value)) {
             return new HashSet<>();

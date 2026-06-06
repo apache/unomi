@@ -41,6 +41,8 @@ import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.PreMatching;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+
 import java.io.IOException;
 import java.util.Base64;
 import java.util.Collections;
@@ -257,7 +259,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         // For public paths, allow access without authentication (like V2)
         if (isPublicPath(requestContext)) {
             String defaultTenantId = restAuthenticationConfig.getV2CompatibilityDefaultTenantId();
-            if (defaultTenantId != null) {
+            if (StringUtils.isNotBlank(defaultTenantId)) {
                 // Create a guest subject for public endpoints
                 Subject subject = securityService.createSubject(defaultTenantId, false);
 
@@ -288,7 +290,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
                     // In V2 compatibility mode, use the default tenant for all operations
                     String defaultTenantId = restAuthenticationConfig.getV2CompatibilityDefaultTenantId();
-                    if (defaultTenantId != null) {
+                    if (StringUtils.isNotBlank(defaultTenantId)) {
                         executionContextManager.setCurrentContext(executionContextManager.createContext(defaultTenantId));
                     } else {
                         executionContextManager.setCurrentContext(ExecutionContext.systemContext());
