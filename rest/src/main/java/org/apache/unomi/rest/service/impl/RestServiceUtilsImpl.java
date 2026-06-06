@@ -31,6 +31,7 @@ import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.rest.authentication.V2ThirdPartyConfigService;
+import org.apache.unomi.services.common.security.SecurityUtils;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.schema.api.SchemaService;
@@ -423,17 +424,13 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         // Validate the third-party provider using the V2 configuration
         if (!v2ThirdPartyConfigService.validateProviderByKey(thirdPartyKey, event.getEventType(), sourceIP)) {
             LOGGER.debug("V2 compatibility mode: Protected event {} rejected - invalid third-party provider key: {} from IP: {}",
-                        event.getEventType(), maskSecret(thirdPartyKey), sourceIP);
+                        event.getEventType(), SecurityUtils.maskSecret(thirdPartyKey), sourceIP);
             return false;
         }
 
         LOGGER.debug("V2 compatibility mode: Protected event {} allowed for provider key: {} from IP: {}",
-                    event.getEventType(), maskSecret(thirdPartyKey), sourceIP);
+                    event.getEventType(), SecurityUtils.maskSecret(thirdPartyKey), sourceIP);
         return true;
     }
 
-    private static String maskSecret(String secret) {
-        if (secret == null || secret.length() <= 4) return "****";
-        return secret.substring(0, 4) + "****";
-    }
 }

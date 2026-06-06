@@ -19,6 +19,7 @@ package org.apache.unomi.rest.authentication;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.services.common.security.IPValidationUtils;
+import org.apache.unomi.services.common.security.SecurityUtils;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Modified;
@@ -193,18 +194,18 @@ public class V2ThirdPartyConfigService {
         }
         
         if (config == null) {
-            LOGGER.debug("V2 compatibility mode: Unknown provider key: {}", maskSecret(providerKey));
+            LOGGER.debug("V2 compatibility mode: Unknown provider key: {}", SecurityUtils.maskSecret(providerKey));
             return false;
         }
 
         if (!config.getAllowedEvents().contains(eventType)) {
-            LOGGER.debug("V2 compatibility mode: Event type {} not allowed for provider {} (key: {})", eventType, foundProviderId, maskSecret(providerKey));
+            LOGGER.debug("V2 compatibility mode: Event type {} not allowed for provider {} (key: {})", eventType, foundProviderId, SecurityUtils.maskSecret(providerKey));
             return false;
         }
 
         boolean ipAuthorized = IPValidationUtils.isIpAuthorized(sourceIP, config.getIpAddresses());
         if (!ipAuthorized) {
-            LOGGER.debug("V2 compatibility mode: IP {} not authorized for provider {} (key: {})", sourceIP, foundProviderId, maskSecret(providerKey));
+            LOGGER.debug("V2 compatibility mode: IP {} not authorized for provider {} (key: {})", sourceIP, foundProviderId, SecurityUtils.maskSecret(providerKey));
         }
         
         return ipAuthorized;
@@ -231,11 +232,6 @@ public class V2ThirdPartyConfigService {
         return providers.containsKey(providerId);
     }
     
-    private static String maskSecret(String secret) {
-        if (secret == null || secret.length() <= 4) return "****";
-        return secret.substring(0, 4) + "****";
-    }
-
     private Set<String> parseCommaSeparatedList(String value) {
         if (StringUtils.isBlank(value)) {
             return new HashSet<>();
