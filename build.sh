@@ -407,6 +407,9 @@ EOF
     exit 1
 }
 
+# Preserve the original invocation for IT run tracing (archive-it-run.sh reads this).
+BUILD_SCRIPT_INVOCATION=("$0" "$@")
+
 # Parse command line arguments
 while [ "$1" != "" ]; do
     case $1 in
@@ -974,6 +977,52 @@ start_timer
 total_steps=2
 current_step=0
 
+write_it_run_trace_start() {
+    local trace_file="$DIRNAME/itests/target/it-run-trace.properties"
+    local invocation
+    mkdir -p "$(dirname "$trace_file")"
+    invocation="$(printf '%q ' "${BUILD_SCRIPT_INVOCATION[@]}")"
+    {
+        echo "# IT run trace (written by build.sh after clean, before install)"
+        echo "trace.phase=started"
+        echo "trace.started=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo "build.invocation=$invocation"
+        echo "maven.clean.command=$MVN_CMD clean $MVN_OPTS"
+        echo "maven.install.command=$MVN_CMD install $MVN_OPTS"
+        echo "use.opensearch=$USE_OPENSEARCH"
+        echo "search.engine=$([ "$USE_OPENSEARCH" = true ] && echo opensearch || echo elasticsearch)"
+        echo "search.heap=${SEARCH_HEAP:-}"
+        echo "karaf.heap=${KARAF_HEAP:-}"
+        echo "single.test=${SINGLE_TEST:-}"
+        echo "it.debug=$IT_DEBUG"
+        echo "it.debug.port=${IT_DEBUG_PORT:-}"
+        echo "it.debug.suspend=$IT_DEBUG_SUSPEND"
+        echo "skip.migration.tests=$SKIP_MIGRATION_TESTS"
+        echo "it.keep.container=$KEEP_CONTAINER"
+        echo "maven.debug=$MAVEN_DEBUG"
+        echo "maven.offline=$MAVEN_OFFLINE"
+        echo "maven.quiet=$MAVEN_QUIET"
+        echo "maven.opts=${MAVEN_OPTS:-}"
+        echo "maven.extra.opts=${MAVEN_EXTRA_OPTS:-}"
+        echo "profiles=${PROFILES:-}"
+        echo "host=$(hostname 2>/dev/null || echo unknown)"
+        echo "uname=$(uname -a 2>/dev/null || echo unknown)"
+    } > "$trace_file"
+}
+
+finalize_it_run_trace() {
+    local exit_code="$1"
+    local trace_file="$DIRNAME/itests/target/it-run-trace.properties"
+    if [ ! -f "$trace_file" ]; then
+        return
+    fi
+    {
+        echo "trace.phase=completed"
+        echo "trace.completed=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+        echo "maven.exit.code=$exit_code"
+    } >> "$trace_file"
+}
+
 print_progress $((++current_step)) $total_steps "Cleaning previous build..."
 if [ "$HAS_COLORS" -eq 1 ]; then
     echo -e "${GRAY}Running: $MVN_CMD clean $MVN_OPTS${NC}"
@@ -985,16 +1034,25 @@ $MVN_CMD clean $MVN_OPTS || {
     exit 1
 }
 
+if [ "$RUN_INTEGRATION_TESTS" = true ]; then
+    write_it_run_trace_start
+fi
+
 print_progress $((++current_step)) $total_steps "Compiling and installing artifacts..."
 if [ "$HAS_COLORS" -eq 1 ]; then
     echo -e "${GRAY}Running: $MVN_CMD install $MVN_OPTS${NC}"
 else
     echo "Running: $MVN_CMD install $MVN_OPTS"
 fi
-$MVN_CMD install $MVN_OPTS || {
+INSTALL_EXIT=0
+$MVN_CMD install $MVN_OPTS || INSTALL_EXIT=$?
+if [ "$RUN_INTEGRATION_TESTS" = true ]; then
+    finalize_it_run_trace "$INSTALL_EXIT"
+fi
+if [ "$INSTALL_EXIT" -ne 0 ]; then
     print_status "error" "Maven install failed"
     exit 1
-}
+fi
 
 print_status "success" "Build completed in $(get_elapsed_time)"
 
