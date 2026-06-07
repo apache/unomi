@@ -1,3 +1,21 @@
+################################################################################
+#
+#    Licensed to the Apache Software Foundation (ASF) under one or more
+#    contributor license agreements.  See the NOTICE file distributed with
+#    this work for additional information regarding copyright ownership.
+#    The ASF licenses this file to You under the Apache License, Version 2.0
+#    (the "License"); you may not use this file except in compliance with
+#    the License.  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+#
+################################################################################
 # Presentation layer for IT run tooling (sourced, not executed directly).
 
 UI_USE_COLOR=0
@@ -38,10 +56,7 @@ ui__line() {
     local plain_label="${6:-}"
 
     if ui__color_enabled; then
-        $color_fn
-        printf '%s%s ' "$indent" "$glyph"
-        ui__reset
-        printf '%s\n' "$message" >&"$stream"
+        { $color_fn; printf '%s%s ' "$indent" "$glyph"; ui__reset; printf '%s\n' "$message"; } >&"$stream"
     elif [ "$stream" -eq 2 ]; then
         printf '%s: %s\n' "$plain_label" "$message" >&2
     else
@@ -56,12 +71,10 @@ ui__glyph_status() {
 
     if ui__color_enabled; then
         if [ "$ok" -eq 0 ]; then
-            ui__grn; printf '  ✔ '; ui__reset
+            { ui__grn; printf '  ✔ '; ui__reset; echo "$message"; } >&"$stream"
         else
-            ui__red; printf '  ✖ '; ui__reset
-            message="$message (failed)"
+            { ui__red; printf '  ✖ '; ui__reset; echo "$message (failed)"; } >&"$stream"
         fi
-        echo "$message" >&"$stream"
     elif [ "$ok" -ne 0 ]; then
         echo "ERROR: $message" >&"$stream"
     fi

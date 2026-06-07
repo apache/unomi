@@ -1,6 +1,23 @@
 #!/bin/bash
 ################################################################################
 #
+#    Licensed to the Apache Software Foundation (ASF) under one or more
+#    contributor license agreements.  See the NOTICE file distributed with
+#    this work for additional information regarding copyright ownership.
+#    The ASF licenses this file to You under the Apache License, Version 2.0
+#    (the "License"); you may not use this file except in compliance with
+#    the License.  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+#
+################################################################################
+#
 # Compare two or more IT run captures to classify systematic vs flaky failures.
 #
 # Usage:
@@ -14,8 +31,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=it-run-bootstrap.sh disable=SC1091
-source "$SCRIPT_DIR/it-run-bootstrap.sh"
+# shellcheck source=lib/it-run-bootstrap.sh disable=SC1091
+source "$SCRIPT_DIR/lib/it-run-bootstrap.sh"
 
 OUTPUT=""
 LAST_N=0
@@ -43,6 +60,7 @@ parse_args() {
             --last)
                 shift
                 [ $# -gt 0 ] || usage
+                [[ "$1" =~ ^[0-9]+$ ]] || { echo "ERROR: --last requires a positive integer" >&2; usage; }
                 LAST_N="$1"
                 ;;
             --quiet) QUIET=true ;;

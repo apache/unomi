@@ -57,8 +57,9 @@ find_karaf_dir() {
     local latest_dir=""
 
     while IFS= read -r dir; do
-        local stat_output=$(get_file_mtime "$dir")
-        local mtime=$(echo "$stat_output" | cut -d' ' -f1)
+        local stat_output mtime
+        stat_output=$(get_file_mtime "$dir") || continue
+        mtime=$(echo "$stat_output" | cut -d' ' -f1)
 
         if (( mtime > latest_time )); then
             latest_time=$mtime
@@ -75,10 +76,8 @@ find_karaf_dir() {
 
 # Function to find the latest Karaf log file
 find_karaf_log() {
-    local karaf_dir=$(find_karaf_dir)
-    if [ $? -ne 0 ]; then
-        return 1
-    fi
+    local karaf_dir
+    karaf_dir=$(find_karaf_dir) || return 1
     local log_file="$karaf_dir/data/log/karaf.log"
     if [ ! -f "$log_file" ]; then
         echo "Error: Karaf log file not found at $log_file" >&2
@@ -89,10 +88,8 @@ find_karaf_log() {
 
 # Function to find the Karaf executable
 find_karaf_exec() {
-    local karaf_dir=$(find_karaf_dir)
-    if [ $? -ne 0 ]; then
-        return 1
-    fi
+    local karaf_dir
+    karaf_dir=$(find_karaf_dir) || return 1
     local karaf_exec="$karaf_dir/bin/karaf"
     if [ ! -f "$karaf_exec" ]; then
         echo "Error: Karaf executable not found at $karaf_exec" >&2
@@ -103,13 +100,12 @@ find_karaf_exec() {
 
 # Function to check if Karaf is running
 is_karaf_running() {
-    local karaf_dir=$(find_karaf_dir)
-    if [ $? -ne 0 ]; then
-        return 1
-    fi
+    local karaf_dir
+    karaf_dir=$(find_karaf_dir) || return 1
     local pid_file="$karaf_dir/data/karaf.pid"
     if [ -f "$pid_file" ]; then
-        local pid=$(cat "$pid_file")
+        local pid
+        pid=$(cat "$pid_file")
         if ps -p "$pid" > /dev/null; then
             return 0
         fi
@@ -127,7 +123,7 @@ DESCRIPTION
     convenient commands for viewing logs and navigating directories.
 
 USAGE
-    $(basename $0) COMMAND [ARGS]
+    $(basename "$0") COMMAND [ARGS]
 
 COMMANDS
     start, s    Start the Karaf instance
@@ -162,15 +158,15 @@ COMMANDS
     help, h     Show this help message
 
 EXAMPLES
-    $(basename $0) start        # Start Karaf instance
-    $(basename $0) debug        # Start Karaf in debug mode
-    $(basename $0) console      # Start Karaf with direct console access
-    $(basename $0) stop         # Stop Karaf instance
-    $(basename $0) log          # View complete log with less
-    $(basename $0) tail         # Watch log updates in real-time
-    $(basename $0) grep ERROR   # Find all ERROR messages in log
-    $(basename $0) dir          # Show path to latest test instance
-    $(basename $0) pushd        # Jump to test instance directory
+    $(basename "$0") start        # Start Karaf instance
+    $(basename "$0") debug        # Start Karaf in debug mode
+    $(basename "$0") console      # Start Karaf with direct console access
+    $(basename "$0") stop         # Stop Karaf instance
+    $(basename "$0") log          # View complete log with less
+    $(basename "$0") tail         # Watch log updates in real-time
+    $(basename "$0") grep ERROR   # Find all ERROR messages in log
+    $(basename "$0") dir          # Show path to latest test instance
+    $(basename "$0") pushd        # Jump to test instance directory
 
 TIPS
     - The script automatically finds the most recent test instance

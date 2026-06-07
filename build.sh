@@ -1044,8 +1044,8 @@ if [ "$HAS_COLORS" -eq 1 ]; then
 else
     echo "Running: $MVN_CMD install $MVN_OPTS"
 fi
-$MVN_CMD install $MVN_OPTS
-INSTALL_EXIT=$?
+INSTALL_EXIT=0
+$MVN_CMD install $MVN_OPTS || INSTALL_EXIT=$?
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     finalize_it_run_trace "$INSTALL_EXIT"
 fi

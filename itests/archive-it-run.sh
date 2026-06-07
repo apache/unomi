@@ -60,12 +60,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-# shellcheck source=it-run-bootstrap.sh disable=SC1091
-source "$SCRIPT_DIR/it-run-bootstrap.sh"
-# shellcheck source=it-run-karaf-lib.sh disable=SC1091
-source "$SCRIPT_DIR/it-run-karaf-lib.sh"
-# shellcheck source=it-run-context-lib.sh disable=SC1091
-source "$SCRIPT_DIR/it-run-context-lib.sh"
+# shellcheck source=lib/it-run-bootstrap.sh disable=SC1091
+source "$SCRIPT_DIR/lib/it-run-bootstrap.sh"
+# shellcheck source=lib/it-run-karaf.sh disable=SC1091
+source "$SCRIPT_DIR/lib/it-run-karaf.sh"
+# shellcheck source=lib/it-run-context.sh disable=SC1091
+source "$SCRIPT_DIR/lib/it-run-context.sh"
 
 # --- configuration -----------------------------------------------------------
 

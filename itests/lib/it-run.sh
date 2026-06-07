@@ -1,3 +1,21 @@
+################################################################################
+#
+#    Licensed to the Apache Software Foundation (ASF) under one or more
+#    contributor license agreements.  See the NOTICE file distributed with
+#    this work for additional information regarding copyright ownership.
+#    The ASF licenses this file to You under the Apache License, Version 2.0
+#    (the "License"); you may not use this file except in compliance with
+#    the License.  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+#
+################################################################################
 # Shared helpers for IT run scripts (sourced, not executed).
 
 IT_SCRIPT_DIR=""
@@ -97,7 +115,7 @@ it_read_properties_field() {
         echo ""
         return
     fi
-    grep -m1 "^${field}=" "$file" 2>/dev/null | cut -d= -f2-
+    grep -m1 "^${field//./\\.}=" "$file" 2>/dev/null | cut -d= -f2-
 }
 
 it_read_run_summary_field() {
@@ -243,7 +261,16 @@ it_summarize_run_dir() {
 }
 
 it_hash_lines() {
-    shasum -a 256 2>/dev/null | awk '{print $1}'
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 | awk '{print $1}'
+    elif command -v sha256sum >/dev/null 2>&1; then
+        sha256sum | awk '{print $1}'
+    elif command -v openssl >/dev/null 2>&1; then
+        openssl dgst -sha256 | awk '{print $NF}'
+    else
+        echo "ERROR: no SHA-256 tool found (shasum, sha256sum, or openssl required)" >&2
+        return 1
+    fi
 }
 
 it_git_head() {
@@ -418,7 +445,7 @@ it_update_runs_index() {
     mkdir -p "$IT_ARCHIVES_DIR"
     index="$IT_ARCHIVES_DIR/$IT_RUNS_INDEX"
     {
-        echo -e "run_id\tcaptured_utc\tgit_commit\tsearch_engine\tkaraf_heap\tsearch_heap\ttests_failures\ttests_errors\tfailed_tests_count\toperator_note\trun_path"
+        printf 'run_id\tcaptured_utc\tgit_commit\tsearch_engine\tkaraf_heap\tsearch_heap\ttests_failures\ttests_errors\tfailed_tests_count\toperator_note\trun_path\n'
         for run_dir in "$IT_ARCHIVES_DIR"/$IT_RUN_DIR_GLOB; do
             [ -d "$run_dir" ] || continue
             [ -f "$run_dir/$IT_RUN_SUMMARY" ] || continue
@@ -435,7 +462,9 @@ it_update_runs_index() {
             errors="$(it_read_run_summary_field "$run_dir" tests.errors)"
             failed_count="$(it_read_run_summary_field "$run_dir" failed.tests.count)"
             note="$(it_sanitize_index_field "$(it_read_run_summary_field "$run_dir" operator.note)")"
-            echo -e "${run_id}\t${captured}\t${git_commit}\t${engine}\t${karaf_heap}\t${search_heap}\t${failures}\t${errors}\t${failed_count}\t${note}\t${run_dir}"
+            printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+                "$run_id" "$captured" "$git_commit" "$engine" "$karaf_heap" "$search_heap" \
+                "$failures" "$errors" "$failed_count" "$note" "$run_dir"
         done
     } > "$index"
     ui_detail "Updated $index"
