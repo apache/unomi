@@ -18,6 +18,8 @@
 #
 ################################################################################
 
+set -euo pipefail
+
 # ASCII art and version
 print_header() {
     cat << "EOF"
@@ -184,47 +186,39 @@ case "${1:-help}" in
             echo "Error: Karaf is already running" >&2
             exit 1
         fi
-        karaf_exec=$(find_karaf_exec)
-        if [ $? -eq 0 ]; then
-            echo "Starting Karaf..."
-            "$karaf_exec" start
-            echo "Karaf started. Use 'tail' command to follow the logs."
-        fi
+        karaf_exec=$(find_karaf_exec) || exit 1
+        echo "Starting Karaf..."
+        "$karaf_exec" start
+        echo "Karaf started. Use 'tail' command to follow the logs."
         ;;
     console|c)
         if is_karaf_running; then
             echo "Error: Karaf is already running" >&2
             exit 1
         fi
-        karaf_exec=$(find_karaf_exec)
-        if [ $? -eq 0 ]; then
-            echo "Starting Karaf in console mode..."
-            exec "$karaf_exec"
-        fi
+        karaf_exec=$(find_karaf_exec) || exit 1
+        echo "Starting Karaf in console mode..."
+        exec "$karaf_exec"
         ;;
     debug|d)
         if is_karaf_running; then
             echo "Error: Karaf is already running" >&2
             exit 1
         fi
-        karaf_exec=$(find_karaf_exec)
-        if [ $? -eq 0 ]; then
-            echo "Starting Karaf in debug mode (port 5005)..."
-            KARAF_DEBUG=true "$karaf_exec" debug
-            echo "Karaf started in debug mode. Connect debugger to port 5005."
-        fi
+        karaf_exec=$(find_karaf_exec) || exit 1
+        echo "Starting Karaf in debug mode (port 5005)..."
+        KARAF_DEBUG=true "$karaf_exec" debug
+        echo "Karaf started in debug mode. Connect debugger to port 5005."
         ;;
     stop|x)
         if ! is_karaf_running; then
             echo "Error: Karaf is not running" >&2
             exit 1
         fi
-        karaf_exec=$(find_karaf_exec)
-        if [ $? -eq 0 ]; then
-            echo "Stopping Karaf..."
-            "$karaf_exec" stop
-            echo "Karaf stopped."
-        fi
+        karaf_exec=$(find_karaf_exec) || exit 1
+        echo "Stopping Karaf..."
+        "$karaf_exec" stop
+        echo "Karaf stopped."
         ;;
     log|l)
         log_file=$(find_karaf_log)

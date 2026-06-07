@@ -200,31 +200,24 @@ karaf_strip_ansi() {
 }
 
 karaf_is_trigger_line() {
-    local stripped
-    stripped="$(karaf_strip_ansi "$1")"
-    [[ "$stripped" =~ $KARAF_TRIGGER_RE ]] && return 0
-    [[ "$stripped" =~ ^[a-zA-Z0-9_.$]+(\.[a-zA-Z0-9_$]+)*(Exception|Error): ]] && return 0
+    [[ "$1" =~ $KARAF_TRIGGER_RE ]] && return 0
+    [[ "$1" =~ ^[a-zA-Z0-9_.$]+(\.[a-zA-Z0-9_$]+)*(Exception|Error): ]] && return 0
     return 1
 }
 
 karaf_is_globally_ignored_line() {
-    local stripped
-    stripped="$(karaf_strip_ansi "$1")"
     # LogChecker fast path: BundleWatcher startup warnings are expected churn.
-    if [[ "$stripped" =~ \|[^|]*WARN[^|]*\|[^|]*BundleWatcher ]]; then
-        return 0
-    fi
-    if [[ "$stripped" == *"Old style feature file without namespace"* ]]; then
-        return 0
-    fi
+    [[ "$1" =~ \|[^|]*WARN[^|]*\|[^|]*BundleWatcher ]] && return 0
+    [[ "$1" == *"Old style feature file without namespace"* ]] && return 0
     return 1
 }
 
 karaf_line_is_actionable_trigger() {
-    local line="$1"
-    karaf_is_trigger_line "$line" || return 1
-    karaf_is_globally_ignored_line "$line" && return 1
-    line_matches_expected_pattern "$(karaf_strip_ansi "$line")" && return 1
+    local stripped
+    stripped="$(karaf_strip_ansi "$1")"
+    karaf_is_trigger_line "$stripped" || return 1
+    karaf_is_globally_ignored_line "$stripped" && return 1
+    line_matches_expected_pattern "$stripped" && return 1
     return 0
 }
 
@@ -713,10 +706,11 @@ process_karaf_log_dir() {
         return
     fi
 
-    ui_spinner_run "Building exception index..." \
+    run_karaf_triage_step \
+        "Building exception index..." \
+        "$base_dir/$KARAF_EXCEPTION_INDEX" \
+        "Added recurring exception/error index from $segment_summary under $log_dir" \
         write_karaf_exception_index "$merged_tmp" "$index_path"
-    register_staged_file "$base_dir/$KARAF_EXCEPTION_INDEX" \
-        "Added recurring exception/error index from $segment_summary under $log_dir"
 
     if ! run_karaf_triage_step \
         "Filtering expected hardening noise..." \
