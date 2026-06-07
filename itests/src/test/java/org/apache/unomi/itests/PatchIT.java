@@ -21,6 +21,7 @@ import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import java.util.Objects;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -147,7 +148,9 @@ public class PatchIT extends BaseIT {
 
     @Test
     public void testPatchOnActionType() throws IOException, InterruptedException {
-        ActionType mailAction = definitionsService.getActionType("sendMailAction");
+        ActionType mailAction = keepTrying("sendMailAction should exist",
+                () -> definitionsService.getActionType("sendMailAction"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         Assert.assertNotNull("sendMailAction should exist", mailAction);
         Assert.assertNotNull("ActionType metadata should not be null", mailAction.getMetadata());
         Assert.assertNotNull("ActionType systemTags should not be null", mailAction.getMetadata().getSystemTags());

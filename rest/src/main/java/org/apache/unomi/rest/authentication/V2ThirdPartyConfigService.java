@@ -120,8 +120,14 @@ public class V2ThirdPartyConfigService {
             }
         }
         
-        // Set default provider1 if no providers configured
         if (newProviders.isEmpty()) {
+            // The fallback key below is the well-known Unomi V2 default key, publicly documented
+            // in Apache Unomi changelogs and issue trackers. It provides no confidentiality on its own
+            // and is restricted to localhost only as a partial mitigation.
+            // Configure org.apache.unomi.thirdparty.cfg with a custom key before production use.
+            LOGGER.warn("V2 compatibility mode: no third-party providers configured in org.apache.unomi.thirdparty.cfg — " +
+                        "falling back to the well-known default key restricted to localhost. " +
+                        "Configure a custom provider key before using V2 compatibility mode in production.");
             newProviders.put("provider1", new ProviderConfig(
                 "670c26d1cc413346c3b2fd9ce65dab41",
                 new HashSet<>(Arrays.asList("127.0.0.1", "::1")),

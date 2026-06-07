@@ -34,6 +34,7 @@ import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.itests.TestUtils.RequestResponse;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
+import org.apache.unomi.rest.authentication.V2ThirdPartyConfigService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -64,17 +65,21 @@ public class V2CompatibilityModeIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(V2CompatibilityModeIT.class);
     private final static String CONTEXT_URL = "/cxs/context.json";
     private static final String TEST_SCOPE = "testScope";
-    private final static String TEST_SESSION_ID = "v2-compat-test-session-" + System.currentTimeMillis();
-    private final static String TEST_PROFILE_ID = "v2-compat-test-profile-" + System.currentTimeMillis();
+    private String TEST_SESSION_ID;
+    private String TEST_PROFILE_ID;
     private final static String UNOMI_API_KEY_HEADER = "X-Unomi-Api-Key";
     private final static String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
     private final static String UNOMI_PEER_HEADER = "X-Unomi-Peer";
 
     private boolean originalV2Mode;
     private String originalDefaultTenantId;
+    private V2ThirdPartyConfigService v2ThirdPartyConfigService;
 
     @Before
     public void setUp() throws InterruptedException, IOException {
+        TEST_SESSION_ID = "v2-compat-test-session-" + UUID.randomUUID();
+        TEST_PROFILE_ID = "v2-compat-test-profile-" + UUID.randomUUID();
+        v2ThirdPartyConfigService = getService(V2ThirdPartyConfigService.class);
 
         TestUtils.createScope(TEST_SCOPE, "Test scope", scopeService);
         keepTrying("Scope "+ TEST_SCOPE +" not found in the required time", () -> scopeService.getScope(TEST_SCOPE),
@@ -420,6 +425,76 @@ public class V2CompatibilityModeIT extends BaseIT {
         assertEquals("V2-style request should still work after service update", 200, response.getStatusCode());
     }
 
+    @Test
+    public void testV2CompatibilityProtectedEventNegativeCases() throws Exception {
+        LOGGER.info("Testing V2 compatibility mode - protected event negative cases");
+
+        updateConfiguration(null, "org.apache.unomi.rest.authentication", "v2.compatibilitymode.enabled", true);
+        keepTrying("V2 compatibility mode not enabled in the required time",
+                () -> restAuthenticationConfig.isV2CompatibilityModeEnabled(),
+                enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        Event loginEvent = new Event();
+        loginEvent.setEventType("login");
+        loginEvent.setScope(TEST_SCOPE);
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+        contextRequest.setEvents(Arrays.asList(loginEvent));
+        String requestBody = objectMapper.writeValueAsString(contextRequest);
+
+        // Case 1: protected event with an unknown provider key → rejected (0 processed events)
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.addHeader(UNOMI_PEER_HEADER, "unknownkey000000000000000000000000");
+        request.setEntity(new StringEntity(requestBody, ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        assertEquals("Protected event with unknown provider key should return 200", 200, response.getStatusCode());
+        assertEquals("Protected event with unknown provider key should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
+
+        try {
+            // Case 2: valid key but source IP not in provider's allowed list.
+            // Configure a provider whose IP allowlist only contains a non-loopback address so
+            // the test client (connecting from loopback) is rejected.
+            String testProviderKey = "testproviderip0000000000000000000";
+            Map<String, Object> wrongIpConfig = new HashMap<>();
+            wrongIpConfig.put("thirdparty.testprovider.key", testProviderKey);
+            wrongIpConfig.put("thirdparty.testprovider.ipAddresses", "10.0.0.1");
+            wrongIpConfig.put("thirdparty.testprovider.allowedEvents", "login,updateProperties");
+            updateConfiguration(null, "org.apache.unomi.thirdparty", wrongIpConfig);
+            keepTrying("Third-party wrong-IP config not applied",
+                    () -> v2ThirdPartyConfigService.getProviderKey("testprovider"),
+                    testProviderKey::equals, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+            request = new HttpPost(getFullUrl(CONTEXT_URL));
+            request.addHeader(UNOMI_PEER_HEADER, testProviderKey);
+            request.setEntity(new StringEntity(requestBody, ContentType.APPLICATION_JSON));
+            response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+            assertEquals("Protected event with valid key but wrong source IP should return 200", 200, response.getStatusCode());
+            assertEquals("Protected event with valid key but wrong source IP should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
+
+            // Case 3: valid key but event type (login) not in provider's allowedEvents.
+            // Configure a provider that only allows updateProperties, not login.
+            String limitedKey = "testproviderlimited000000000000000";
+            Map<String, Object> limitedEventsConfig = new HashMap<>();
+            limitedEventsConfig.put("thirdparty.limitedprovider.key", limitedKey);
+            limitedEventsConfig.put("thirdparty.limitedprovider.ipAddresses", "127.0.0.1,::1");
+            limitedEventsConfig.put("thirdparty.limitedprovider.allowedEvents", "updateProperties");
+            updateConfiguration(null, "org.apache.unomi.thirdparty", limitedEventsConfig);
+            keepTrying("Third-party limited-events config not applied",
+                    () -> v2ThirdPartyConfigService.isValidProvider("limitedprovider"),
+                    valid -> valid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+            request = new HttpPost(getFullUrl(CONTEXT_URL));
+            request.addHeader(UNOMI_PEER_HEADER, limitedKey);
+            request.setEntity(new StringEntity(requestBody, ContentType.APPLICATION_JSON));
+            response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+            assertEquals("Protected login event with key that only allows updateProperties should return 200", 200, response.getStatusCode());
+            assertEquals("Protected login event with key that only allows updateProperties should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
+        } finally {
+            // Restore thirdparty config to defaults by deleting the test entries
+            configurationAdmin.getConfiguration("org.apache.unomi.thirdparty", null).delete();
+        }
+    }
+
     private static void addPrivateTenantAuth(HttpPost request, Tenant tenant, ApiKey privateKey) {
         request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
             (tenant.getItemId() + ":" + privateKey.getKey()).getBytes()));
@@ -429,5 +504,6 @@ public class V2CompatibilityModeIT extends BaseIT {
     public void updateServices() throws InterruptedException {
         super.updateServices();
         restAuthenticationConfig = getService(RestAuthenticationConfig.class);
+        v2ThirdPartyConfigService = getService(V2ThirdPartyConfigService.class);
     }
 }
