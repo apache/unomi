@@ -15,170 +15,390 @@
   ~ limitations under the License.
   -->
 
-Apache Unomi Integration tests
+Apache Unomi Integration Tests
 =================================
 
-## Information
-You will likely run into situation where you need to wait for the execution of your test.  
-To do so please avoid long Thread.sleep(10000) it tend to make the test unstable, prefer a shorter sleep that you will repeat.  
-e.g:  
+## Overview
+
+The integration tests verify Apache Unomi end-to-end: REST and GraphQL APIs, profile
+resolution, segmentation, rules, event processing, JSON schema validation, authentication,
+and data migration.
+
+**How they work**
+
+- **[Pax Exam](https://ops4j1.jira.com/wiki/spaces/PAXEXAM4/overview)** provisions and
+  starts a real Karaf/OSGi container with all Unomi bundles installed.
+- **Docker** starts a real Elasticsearch or OpenSearch instance (managed by the
+  `docker-maven-plugin`).
+- **Maven Failsafe** runs a single entry point — `AllITs` — which aggregates all test
+  classes. Each test class extends `BaseIT`, which handles Karaf startup, OSGi service
+  injection, and common test utilities.
+
+A full IT run typically takes 20–30 minutes. The Karaf instance is created fresh for each
+run under `itests/target/exam/` with a UUID directory name.
+
+**Available tools in this directory**
+
+| Script | Purpose |
+|--------|---------|
+| `build.sh` (project root) | Recommended way to run and configure IT runs |
+| `kt.sh` | Live Karaf inspection during a run (log, tail, grep, debug) |
+| `archive-it-run.sh` | Capture IT run artifacts before the next build wipes them |
+| `compare-it-runs.sh` | Diff multiple captures to classify flaky vs systematic failures |
+| `jacoco-report.sh` | Generate a JaCoCo coverage report after a run |
+
+---
+
+## Writing Integration Tests
+
+### Class structure
+
+Every IT class must extend `BaseIT` and carry two Pax Exam annotations:
+
 ```java
-boolean isDone = false;
-while (!isDone) {
-    importConfiguration = importConfigurationService.load(itemId);
-    if (importConfiguration != null && importConfiguration.getStatus() != null) {
-        isDone = importConfiguration.getStatus().equals(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS);
+@RunWith(PaxExam.class)
+@ExamReactorStrategy(PerSuite.class)   // one Karaf container shared across the whole suite
+public class MyFeatureIT extends BaseIT {
+
+    @Before
+    public void setUp() throws InterruptedException {
+        // create scopes, load fixtures, etc.
     }
-    Thread.sleep(1000);
+
+    @After
+    public void tearDown() {
+        // delete everything your test created
+    }
+
+    @Test
+    public void testSomething() throws Exception {
+        // ...
+    }
 }
 ```
 
-**NEVER** create dependencies between your test, even in the same class, the execution order is not guaranteed therefore you may not 
-have what you expect and it could work fine on your machine but not on others.  
+`BaseIT.waitForStartup()` runs before your `@Before` and handles Karaf startup, service
+injection, and log-checker initialisation. Do not call it yourself.
 
-If possible clean what your test created at the end of its execution or at the very least make sure to use unique IDs  
+### Available services
 
-When you need a service from Unomi to execute your test, you can add it to the BaseIT code:  
+`BaseIT` injects all core Unomi services as protected fields. The most commonly used:
+
+| Field | Service |
+|-------|---------|
+| `profileService` | Load, save, and query profiles |
+| `eventService` | Send and query events |
+| `segmentService` | Evaluate and manage segments |
+| `rulesService` | Create, update, and refresh rules |
+| `definitionsService` | Condition and action type definitions |
+| `persistenceService` | Low-level index refresh and direct queries |
+| `schemaService` | JSON schema registration and validation |
+| `scopeService` | Scope lifecycle |
+| `privacyService` | Anonymisation and deletion |
+
+For any service not listed, use `getOsgiService(MyService.class, 60000)`.
+
+### Polling helpers
+
+Never use raw `Thread.sleep`. Use the polling helpers from `BaseIT`:
+
 ```java
-@Before
-public void waitForStartup() throws InterruptedException {
-    // ...
-    // init unomi services that are available once unomi:start have been called
-    persistenceService=getOsgiService(PersistenceService.class, 600000);
+// Wait until a condition becomes true — fails after retries
+Profile p = keepTrying("Profile not found",
+    () -> profileService.load(profileId),
+    Objects::nonNull,
+    DEFAULT_TRYING_TIMEOUT,   // 1000 ms between attempts
+    DEFAULT_TRYING_TRIES);    // 10 retries max
+
+// Wait until something is deleted / returns null
+waitForNullValue("Profile still exists",
+    () -> profileService.load(profileId),
+    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+// Assert a condition stays true throughout the period (stability check)
+shouldBeTrueUntilEnd("Segment membership changed unexpectedly",
+    () -> segmentService.isProfileInSegment(profile, segmentId),
+    result -> result,
+    DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);  // 5 retries
+
+// Convenience: wait for a specific profile property value
+waitForProfileProperty(profileId, "email", "test@example.org");
+```
+
+### HTTP helpers
+
+`BaseIT` provides thin wrappers around Apache HttpClient, pre-configured with auth:
+
+```java
+// GET — deserialises JSON response directly
+Profile profile = get("/cxs/profiles/" + profileId, Profile.class);
+
+// POST — body is a classpath resource path (under src/test/resources)
+CloseableHttpResponse resp = post("/cxs/profiles/search", "queries/profile-search.json");
+
+// POST with explicit content type
+CloseableHttpResponse resp = post("/cxs/eventcollector", "events/view.json", JSON_CONTENT_TYPE);
+
+// DELETE
+CloseableHttpResponse resp = delete("/cxs/profiles/" + profileId);
+
+// Full URL construction (port is wired automatically)
+String url = getFullUrl("/cxs/profiles/" + profileId);
+```
+
+### Resource helpers
+
+Place JSON fixtures under `src/test/resources/` and load them with:
+
+```java
+String json = resourceAsString("events/view-event.json");         // from bundle resources
+String json = bundleResourceAsString("events/view-event.json");   // from OSGi bundle
+```
+
+### Log checking
+
+After each test, `BaseIT` scans Karaf logs for unexpected ERROR/WARN lines. If your test
+intentionally triggers errors (e.g. sending invalid input), suppress the expected noise:
+
+```java
+// Override in your class to declare expected patterns
+@Override
+protected LogChecker createLogChecker() {
+    return LogChecker.builder()
+        .addIgnoredSubstring("Response status code: 400")
+        .addIgnoredMultiPart("Schema", "not found")
+        .build();
 }
-``` 
-This will ensure the service is available before starting the test.
-## Running integration tests
 
-You can run the integration tests along with the build by doing:
+// Or add patterns dynamically inside a test method
+addIgnoredLogSubstring("invalid input for test");
+```
 
-    mvn clean install -P integration-tests
-    
-from the project's root directory
+### Best practices
 
-### Bypassing Maven Build Cache
+- **Use unique IDs.** Prefix profile IDs, session IDs, and scope names with your test
+  class name or a UUID to avoid collisions with other tests running in the same suite.
+- **Never depend on another test.** Execution order is not guaranteed, even within the
+  same class. Each test must create its own state.
+- **Always clean up.** Delete what your test created in `@After`. At minimum use unique
+  IDs so leftover data does not affect other tests.
+- **Force index refresh when needed.** After writes, call
+  `persistenceService.refresh()` or use `query.setForceRefresh(true)` before asserting
+  on persistence-backed data.
+- **Register your class in `AllITs`.** New test classes must be added to
+  `AllITs.java` to be picked up by the Failsafe runner.
 
-If you encounter issues with cached builds interfering with test execution, you can bypass the Maven Build Cache by adding the `-Dmaven.build.cache.enabled=false` parameter:
+---
 
-    mvn clean install -P integration-tests -Dmaven.build.cache.enabled=false
+## Running Integration Tests
 
-This is particularly useful when you want to ensure a completely fresh build and test execution, regardless of previous successful builds.
-
-### Search Engine Selection
-
-Apache Unomi supports both ElasticSearch and OpenSearch as search engine backends. The integration tests can be configured to run against either engine:
+The recommended way is through `build.sh` from the project root:
 
 ```bash
-# Run with ElasticSearch (default)
+# Run with Elasticsearch (default)
+./build.sh --integration-tests
+
+# Run with OpenSearch
+./build.sh --integration-tests --use-opensearch
+
+# Run a single test class
+./build.sh --integration-tests --single-test org.apache.unomi.itests.BasicIT
+
+# Run a specific test method
+./build.sh --integration-tests --single-test org.apache.unomi.itests.ContextServletIT#testContextEndpointAuthentication
+```
+
+You can also invoke Maven directly from the project root:
+
+```bash
+# Run with Elasticsearch (default)
 mvn clean install -P integration-tests
 
 # Run with OpenSearch
-# Activate via property only. Do not pass -P opensearch or !elasticsearch;
-# the property alone handles activation/deactivation.
+# Use the property only — do not pass -P opensearch or !elasticsearch
 mvn clean install -P integration-tests -Duse.opensearch=true
+
+# Run a single test class
+mvn clean install -P integration-tests -Dit.test=org.apache.unomi.itests.BasicIT
+
+# Run a specific test method
+mvn clean install -P integration-tests -Dit.test=org.apache.unomi.itests.ContextServletIT#testContextEndpointAuthentication
+
+# Run all methods matching a pattern
+mvn clean install -P integration-tests -Dit.test=org.apache.unomi.itests.ContextServletIT#test*Authentication*
 ```
 
-## Debugging integration tests
+See the [Maven Failsafe plugin docs](https://maven.apache.org/surefire/maven-failsafe-plugin/examples/single-test.html) for more filtering options.
 
-If you want to run the tests with a debugger, you can use the `it.karaf.debug` system property.
-Here's an example:
+### Bypassing the Maven Build Cache
 
-    cd itests
-    mvn clean install -Dit.karaf.debug=hold:true
-    
-The `hold:true` will tell the JVM to pause for you to connect a debugger. You can simply connect a remote debugger on $
-port 5006 to debug the integration tests.
+If a cached build is interfering with test execution, use `--purge-maven-cache` to wipe
+the local Maven cache before building:
 
-Here are the parameters supported by the `it.karaf.debug` property:
+```bash
+./build.sh --integration-tests --purge-maven-cache
+```
 
-    hold:true - forces a wait for a remote debugger to connect 
-    hold:false - continues even with no remote debugger connected
-    port:XXXX allows to configure the binding port to XXXX
-    
-You can combine both parameters using a comma as a separator, as in the following example:
+This removes `~/.m2/build-cache`, `~/.m2/dependency-cache`, and
+`~/.m2/dependency-cache_v2`. It cannot be combined with `--offline`.
 
-    mvn clean install -Dit.karaf.debug=hold:true,port=5006
-    
-### Karaf Resolver Debug Logging
+---
 
-To enable debug logging for the Karaf Resolver and Karaf features service during integration tests, you can use the `it.unomi.resolver.debug` system property:
+## Debugging Integration Tests
 
-    mvn clean install -P integration-tests -Dit.unomi.resolver.debug=true
+### Attaching a remote debugger to the test JVM
 
-Alternatively, you can use the build scripts:
+Use `--it-debug` to enable remote debugging of the test code running inside Karaf.
+Add `--it-debug-suspend` to pause Karaf until your debugger connects:
 
-    # Using build.sh (Unix/Linux/macOS)
-    ./build.sh --integration-tests --resolver-debug
+```bash
+# Via build.sh — pause until debugger connects (port 5006)
+./build.sh --integration-tests --it-debug --it-debug-suspend
 
-    # Using build.ps1 (Windows PowerShell)
-    .\build.ps1 -IntegrationTests -ResolverDebug
+# Custom port
+./build.sh --integration-tests --it-debug --it-debug-suspend --it-debug-port 5008
 
-This enables DEBUG logging for the following components:
-- `org.osgi.service.resolver` (OSGi resolver)
-- `org.apache.karaf.features` (Karaf features service)
-- `org.apache.karaf.resolver` (Karaf resolver)
-- `org.osgi.framework` (OSGi framework)
-- `org.osgi.service.packageadmin` (Package admin)
+# Via Maven (from project root)
+mvn clean install -P integration-tests -Dit.karaf.debug=hold:true,port=5006
+```
 
-This is particularly useful when debugging bundle refresh issues or understanding why bundles are being refreshed during feature installation.
-    
-## Running a single test
+Connect your IDE remote debugger to `localhost:5006` (or whichever port you chose).
 
-If you want to run a single test or single methods, following the instructions given here:
-https://maven.apache.org/surefire/maven-failsafe-plugin/examples/single-test.html
+Supported `it.karaf.debug` parameters (comma-separated):
 
-Here's an example:
+| Parameter    | `build.sh` equivalent   | Description                             |
+|--------------|-------------------------|-----------------------------------------|
+| `hold:true`  | `--it-debug-suspend`    | Pause until a debugger connects         |
+| `hold:false` | `--it-debug` (default)  | Enable debug without pausing            |
+| `port:XXXX`  | `--it-debug-port XXXX`  | Change the debug port (default: 5006)   |
 
-    mvn clean install -Dit.karaf.debug=hold:true -Dit.test=org.apache.unomi.itests.BasicIT
+### Karaf Resolver debug logging
 
-To run a specific test method within a test class, you can use the # symbol followed by the method name:
+To diagnose bundle refresh or feature installation issues:
 
-    mvn clean install -Dit.test=org.apache.unomi.itests.ContextServletIT#testContextEndpointAuthentication
+```bash
+# Via build.sh
+./build.sh --integration-tests --resolver-debug
 
-You can also use patterns to run multiple methods that match a pattern:
+# Via Maven
+mvn clean install -P integration-tests -Dit.unomi.resolver.debug=true
+```
 
-    mvn clean install -Dit.test=org.apache.unomi.itests.ContextServletIT#test*Authentication*
+This enables DEBUG logging for `org.osgi.service.resolver`, `org.apache.karaf.features`,
+`org.apache.karaf.resolver`, `org.osgi.framework`, and `org.osgi.service.packageadmin`.
 
-## Migration tests
+### Live Karaf inspection with `kt.sh`
 
-Migration can now be tested, by reusing an ElasticSearch snapshot. 
-The snapshot should be from a Unomi version where you want to start the migration from.
+During a running test, the Karaf instance lives under `target/exam/` with a UUID directory
+name. `kt.sh` locates it automatically and gives you convenient shortcuts:
 
-The snapshot is copied to the /target folder using a maven ant plugin:
+```bash
+cd itests
+./kt.sh tail          # follow the log in real time
+./kt.sh grep ERROR    # search for errors
+./kt.sh log           # open the full log in less
+./kt.sh dir           # print the path to the Karaf directory
+./kt.sh pushd         # cd into the Karaf directory (use popd to return)
+./kt.sh start         # start the Karaf instance
+./kt.sh debug         # start Karaf in debug mode (port 5005)
+./kt.sh console       # start Karaf in foreground console mode
+./kt.sh stop          # stop the running Karaf instance
+```
 
-    <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>1.8</version>
-        <executions>
-            <execution>
-                <phase>generate-resources</phase>
-                <configuration>
-                <tasks>
-                    <unzip src="${project.basedir}/src/test/resources/migration/snapshots_repository.zip" dest="${project.build.directory}" />
-                </tasks>
-                </configuration>
-                <goals>
-                    <goal>run</goal>
-                </goals>
-            </execution>
-        </executions>
-    </plugin>
+All commands have single-letter aliases (`t`, `g`, `l`, `i`, `p`, `s`, `d`, `c`, `x`).
+Run `./kt.sh help` for the full list.
 
-Also the ElasticSearch maven plugin is configured to allow this snapshot repository using conf:
+---
 
-    <path.repo>${project.build.directory}/snapshots_repository</path.repo>
+## Analyzing IT Run Failures
 
-Now that migration accept configuration file we can provide it, this allows to avoid the migration process to prompt questions (in BaseIT configuration):
+### Build trace
 
-    replaceConfigurationFile("etc/org.apache.unomi.migration.cfg", new File("src/test/resources/migration/org.apache.unomi.migration.cfg")),
+When you run integration tests via `build.sh`, a file is written to
+`itests/target/it-run-trace.properties` capturing the exact Maven command, search engine,
+heap sizes, flags, and timestamps. This lets you reproduce a reported failure precisely.
 
-The config should contain all the required prop for the migration you want to do, example:
+### Capturing a run for post-mortem analysis
 
-    esAddress = http://localhost:9400
-    httpClient.trustAllCertificates = true
-    indexPrefix = context
+After a test run, call `archive-it-run.sh` to snapshot the artifacts before the next build
+wipes `itests/target/`:
 
-Then in the first Test of the suite you can restore the Snapshot and run the migration cmd, like this:
+```bash
+cd itests
+./archive-it-run.sh
+./archive-it-run.sh -m "Heavy swap, 2 failures in GraphQLListIT"   # with an operator note
+./archive-it-run.sh --full-karaf                                    # include complete Karaf log
+```
+
+Each capture is saved under `itests/archives/it-run-YYYYMMDD-HHMMSS/` and includes:
+
+- Failsafe and surefire reports
+- Karaf log tail and a filtered error/warning extract (unexpected errors only)
+- Engine logs (Elasticsearch / OpenSearch)
+- Build trace and run context
+- A `test-results.tsv` with one row per test (for cross-run comparison)
+
+The archive also strips out expected Karaf noise — errors that tests deliberately trigger
+(bad schemas, auth probes, invalid input) — so only genuine unexpected errors stand out.
+
+The `itests/archives/` directory is gitignored.
+
+### Comparing runs to distinguish flaky vs systematic failures
+
+Once you have two or more captures, use `compare-it-runs.sh` to diff them:
+
+```bash
+cd itests
+./compare-it-runs.sh --last 3
+./compare-it-runs.sh archives/it-run-20260601-120000 archives/it-run-20260602-120000
+```
+
+Each test is classified as consistently failing, consistently passing, or flaky across the
+selected runs.
+
+---
+
+## Coverage Report
+
+To generate a JaCoCo coverage report after running integration tests:
+
+```bash
+cd itests
+./jacoco-report.sh
+```
+
+The report is generated under `itests/target/site/jacoco/`.
+
+---
+
+## Migration Tests
+
+Migration can be tested by restoring an Elasticsearch snapshot from an older Unomi version
+and running the migration command.
+
+The snapshot is unpacked by Maven during the build (via `maven-antrun-plugin`) and
+Elasticsearch is configured to allow the snapshot repository:
+
+```xml
+<path.repo>${project.build.directory}/snapshots_repository</path.repo>
+```
+
+Provide a migration config file to avoid interactive prompts (in `BaseIT`):
+
+```java
+replaceConfigurationFile("etc/org.apache.unomi.migration.cfg",
+    new File("src/test/resources/migration/org.apache.unomi.migration.cfg"))
+```
+
+Example config:
+
+```properties
+esAddress = http://localhost:9400
+httpClient.trustAllCertificates = true
+indexPrefix = context
+```
+
+Restore the snapshot and trigger migration in the first test of the suite:
 
 ```java
 public class Migrate16xTo200IT extends BaseIT {
@@ -186,132 +406,136 @@ public class Migrate16xTo200IT extends BaseIT {
     @Override
     @Before
     public void waitForStartup() throws InterruptedException {
-
-        // Restore snapshot from 1.6.x
         try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(true)) {
             // Create snapshot repo
-            HttpUtils.executePutRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/", resourceAsString("migration/create_snapshots_repository.json"), null);
-            // Get snapshot, insure it exists
-            String snapshot = HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_3", null);
+            HttpUtils.executePutRequest(httpClient,
+                "http://localhost:9400/_snapshot/snapshots_repository/",
+                resourceAsString("migration/create_snapshots_repository.json"), null);
+            // Verify snapshot exists
+            String snapshot = HttpUtils.executeGetRequest(httpClient,
+                "http://localhost:9400/_snapshot/snapshots_repository/snapshot_3", null);
             if (snapshot == null || !snapshot.contains("snapshot_3")) {
                 throw new RuntimeException("Unable to retrieve 1.6.x snapshot for ES restore");
             }
             // Restore the snapshot
-            HttpUtils.executePostRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_3/_restore?wait_for_completion=true", "{}", null);
+            HttpUtils.executePostRequest(httpClient,
+                "http://localhost:9400/_snapshot/snapshots_repository/snapshot_3/_restore?wait_for_completion=true",
+                "{}", null);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-        // Do migrate the data set
         executeCommand("unomi:migrate 1.6.0 true");
-        // Call super for starting Unomi and wait for the complete startup
         super.waitForStartup();
     }
 
     @After
     public void cleanup() throws InterruptedException {
-        // Do some cleanup for next tests
+        // clean up data created by this test
     }
 
     @Test
     public void checkMigratedData() throws Exception {
-        // call Unomi services to check the migrated data is correct.
+        // call Unomi services to verify the migrated data is correct
     }
 }
-``` 
+```
 
-### How to update a migration test ElasticSearch Snapshot ?
+### Updating a migration snapshot
 
-In the following example we want to modify the snapshot: `snapshot_3`.
-This snapshot has been done on Unomi 1.6.x using ElasticSearch 7.11.0. 
-So we will set up locally those servers in the exact same versions.
-(For now just download them and do not start them yet.)
+To modify an existing snapshot (e.g. `snapshot_3`, taken on Unomi 1.6.x / Elasticsearch 7.11.0):
 
-To ease the migration, you can run the docker image of ElasticSearch 7.11.0 with the following command:
+1. Start Elasticsearch 7.11.0 with the snapshot repository path configured:
 
-    docker run -p 9200:9200 -e path.repo="/tmp/snapshots_repository"  -e discovery.type=single-node docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+    **Docker (recommended):**
+    ```bash
+    docker run -p 9200:9200 \
+      -e path.repo="/tmp/snapshots_repository" \
+      -e discovery.type=single-node \
+      docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+    ```
 
-Note that the path.repo is set to `/tmp/snapshots_repository` so you can use this path to store the snapshot repository.
-
-First we need to extract the zip of the snapshot repository from the test resources:
-
-    /src/test/resources/migration/snapshots_repository.zip
-    
->    If you use docker, you can copy the zip file to the docker container using the following command:
->    docker cp src/test/resources/migration/snapshots_repository.zip <container_id>:/tmp/snapshots_repository.zip
-
-Then unzip it to the path you want to use as snapshot repository.
-
-In my case I unzip it to:
-
-    /servers/elasticsearch-7.11.0/
-
->   For docker unzip in the `/tmp` folder.
-
-So I have the following folders structure:
-
-    /servers/elasticsearch-7.11.0/snapshots_repository/snapshots
-
-Now we need to configure our ElasticSearch server to allow this path as repo, edit the `elasticsearch.yml` to add this:
-
+    **Local install:** edit `elasticsearch.yml` and add:
+    ```yaml
     path:
-        repo:
-            - /servers/elasticsearch-7.11.0/snapshots_repository
+      repo:
+        - /path/to/snapshots_repository
+    ```
 
-> This step is not required for docker.
+2. Extract and copy the snapshot zip:
 
-Start ElasticSearch server.
-Now we have to add the snapshot repository, do the following request on your ElasticSearch instance:
+    **Docker:**
+    ```bash
+    docker cp src/test/resources/migration/snapshots_repository.zip \
+      <container_id>:/tmp/snapshots_repository.zip
+    # then inside the container:
+    unzip /tmp/snapshots_repository.zip -d /tmp
+    ```
 
+    **Local install:** unzip `src/test/resources/migration/snapshots_repository.zip`
+    to your configured `path.repo` directory.
+
+3. Register the snapshot repository:
+
+    ```
     PUT /_snapshot/snapshots_repository/
-    {
-        "type": "fs",
-        "settings": {
-            "location": "snapshots"
-        }
-    }
+    { "type": "fs", "settings": { "location": "snapshots" } }
+    ```
 
-Now we need to restore the snapshot we want to modify, 
-but first let's try to see if the snapshot with the id `snapshot_3` correctly exists:
+4. Verify and restore the snapshot:
 
-    GET /_snapshot/snapshots_repository/snapshot_3
-
-If the snapshot exists we can restore it:
-
+    ```
+    GET  /_snapshot/snapshots_repository/snapshot_3
     POST /_snapshot/snapshots_repository/snapshot_3/_restore?wait_for_completion=true
     {}
+    ```
 
-At the end of the previous request ElasticSearch should be ready and our Unomi snapshot is restored to version `1.6.x`.
-Now make sure your Unomi server is correctly configured to connect to your running ElasticSearch, then start the Unomi server.
-In my case it's Unomi version 1.6.0.
+5. Configure Unomi to connect to your running Elasticsearch instance, then start the
+   matching Unomi version. Once it is up, add or modify the data you want captured in
+   the new snapshot:
+   - create new events
+   - create profiles with new properties to be migrated
+   - create rules, segments, etc.
 
-Once Unomi started you can perform all the operations you want to be able to add the required data to the next snapshot, like:
-- creating new events
-- creating new profiles with new data to be migrated
-- create rules/segments etc ...
-- anything you want to be part of the new snapshot.
+   **Important:** add to the existing data — do not remove existing items, as they are
+   likely relied upon by current migration tests.
 
-(NOTE: that it is important to add new data to the existing snapshot, but try to not removing things, 
-they are probably used by the actual migration tests already.)
+6. Delete and recreate the snapshot (check the Elasticsearch logs to confirm it completes):
 
-Once you data updated we need to recreate the snapshot, first we delete the old snapshot:
-
+    ```
     DELETE /_snapshot/snapshots_repository/snapshot_3
-
-Then we recreate it:
-
-    PUT /_snapshot/snapshots_repository/snapshot_3
-
-Once the process finished (check the ElasticSearch logs to see that the snapshot is correctly created), 
-we need to remove the snapshot repository from our local ElasticSearch
-
+    PUT    /_snapshot/snapshots_repository/snapshot_3
     DELETE /_snapshot/snapshots_repository
+    ```
 
-And the final step is, zipping the new version of the snapshot repository and replace it in the test resources:
+7. Zip and replace in test resources:
 
-    zip -r snapshots_repository.zip /servers/elasticsearch-7.11.0/snapshots_repository
-    cp /servers/elasticsearch-7.11.0/snapshots_repository.zip src/test/resources/migration/snapshots_repository.zip
+    **Docker:**
+    ```bash
+    # inside the container
+    zip -r /tmp/snapshots_repository.zip /tmp/snapshots_repository
+    # copy back to host
+    docker cp <container_id>:/tmp/snapshots_repository.zip \
+      src/test/resources/migration/snapshots_repository.zip
+    ```
 
-> In case you are using docker, do zip in the container and use `docker cp` to get the zip file from the docker container.
+    **Local install:**
+    ```bash
+    zip -r snapshots_repository.zip /path/to/snapshots_repository
+    cp snapshots_repository.zip src/test/resources/migration/snapshots_repository.zip
+    ```
 
-Now you can modify the migration test class to test that your added data in 1.6.x is correctly migrated in 2.0.0
+8. Update the migration test class to verify that the data you added in step 5 is
+   correctly migrated.
+
+---
+
+## Known Issues
+
+**OpenSearch `QueryGroupTask` warnings**
+
+OpenSearch test logs contain lines like:
+
+    opensearch> [WARN][o.o.w.QueryGroupTask] QueryGroup _id can't be null ...
+
+This is a known bug in OpenSearch 2.18 with no functional impact.
+Tracked at: https://github.com/opensearch-project/OpenSearch/issues/16874

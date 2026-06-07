@@ -23,4 +23,5 @@ dependency_tree.txt
 /.cursor/
 /.local-notes/
 itests/snapshots_repository/
+itests/archives/
 .env.local
