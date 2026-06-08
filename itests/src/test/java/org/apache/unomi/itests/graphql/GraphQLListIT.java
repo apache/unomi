@@ -76,6 +76,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
             }
 
             refreshPersistence(UserList.class);
+            refreshPersistence(Profile.class);
 
             final ResponseContext findListsContext = keepTrying("Failed waiting for profile in list query",
                     () -> {

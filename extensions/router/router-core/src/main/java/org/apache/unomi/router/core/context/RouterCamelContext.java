@@ -67,9 +67,6 @@ import java.util.concurrent.TimeUnit;
  * </ul>
  * </p>
  *
- * <p>Dependency-injection setters on this class are intended for OSGi/Blueprint wiring and are not part of the
- * {@link IRouterCamelContext} API surface.</p>
- *
  * @since 1.0
  */
 public class RouterCamelContext implements IRouterCamelContext {
@@ -144,11 +141,6 @@ public class RouterCamelContext implements IRouterCamelContext {
         LOGGER.info("Camel Context initialized successfully.");
     }
 
-    /**
-     * Stops the configuration refresh scheduler and shuts down the Camel context (all routes and components).
-     *
-     * @throws Exception if Camel shutdown fails
-     */
     public void destroy() throws Exception {
         if (scheduledTask != null) {
             schedulerService.cancelTask(scheduledTask.getItemId());

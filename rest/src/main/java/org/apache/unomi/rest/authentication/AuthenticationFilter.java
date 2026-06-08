@@ -25,6 +25,7 @@ import org.apache.karaf.jaas.boot.principal.RolePrincipal;
 import org.apache.karaf.jaas.boot.principal.UserPrincipal;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.security.TenantPrincipal;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.ApiKey;
@@ -41,6 +42,8 @@ import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.PreMatching;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
+import org.apache.commons.lang3.StringUtils;
+
 import java.io.IOException;
 import java.util.Base64;
 import java.util.Collections;
@@ -106,6 +109,12 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     public void filter(ContainerRequestContext requestContext) throws IOException {
         try {
             String path = requestContext.getUriInfo().getPath();
+
+            // Check if V2 compatibility mode is enabled
+            if (restAuthenticationConfig.isV2CompatibilityModeEnabled()) {
+                handleV2CompatibilityMode(requestContext, path);
+                return;
+            }
 
             // Tenant endpoints require JAAS authentication only
             if (path.startsWith("tenants")) {
@@ -237,6 +246,87 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             logger.error("Error during authentication", e);
             unauthorized(requestContext);
         }
+    }
+
+    /**
+     * Handle authentication in V2 compatibility mode.
+     * In this mode:
+     * - Public endpoints (like /context.json) require no authentication (like V2)
+     * - Protected events require IP + X-Unomi-Peer (like V2)
+     * - Private endpoints require system administrator authentication (like V2)
+     * - A default tenant is automatically used for all operations
+     */
+    private void handleV2CompatibilityMode(ContainerRequestContext requestContext, String path) throws IOException {
+        // For public paths, allow access without authentication (like V2)
+        if (isPublicPath(requestContext)) {
+            String defaultTenantId = restAuthenticationConfig.getV2CompatibilityDefaultTenantId();
+            if (StringUtils.isNotBlank(defaultTenantId)) {
+                Tenant defaultTenant = tenantService.getTenant(defaultTenantId);
+                if (defaultTenant == null) {
+                    logger.error("V2 compatibility mode: configured default tenant '{}' does not exist", defaultTenantId);
+                    unauthorized(requestContext);
+                    return;
+                }
+                // Create a guest subject for public endpoints
+                Subject subject = securityService.createSubject(defaultTenantId, false);
+
+                // Set CXF security context
+                JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
+                    new RolePrefixSecurityContextImpl(subject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
+
+                // Set the security service subject
+                securityService.setCurrentSubject(subject);
+
+                // Set the execution context for the default tenant
+                executionContextManager.setCurrentContext(executionContextManager.createContext(defaultTenantId));
+                return;
+            } else {
+                logger.warn("V2 compatibility mode: public path request denied because v2CompatibilityDefaultTenantId is not configured");
+                unauthorized(requestContext);
+                return;
+            }
+        }
+
+        // For private endpoints, require system administrator authentication (like V2)
+        String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
+        if (authHeader != null && authHeader.startsWith(BASIC_AUTH_PREFIX)) {
+            try {
+                jaasAuthenticationFilter.filter(requestContext);
+                // JAASAuthenticationFilter handles credential failures internally (calls abortWith + returns normally).
+                // A null security context here means auth was rejected or an unexpected state occurred — deny either way.
+                SecurityContext securityContext = JAXRSUtils.getCurrentMessage().get(SecurityContext.class);
+                if (securityContext == null) {
+                    logger.debug("V2 compatibility mode: no security context after JAAS filter, denying access");
+                    unauthorized(requestContext);
+                    return;
+                }
+                Subject jaasSubject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
+
+                // Build a merged subject that combines the JAAS principals with a TenantPrincipal
+                // for the default tenant, so that resolveTenantId() can find it downstream.
+                String defaultTenantId = restAuthenticationConfig.getV2CompatibilityDefaultTenantId();
+                Subject mergedSubject = new Subject();
+                mergedSubject.getPrincipals().addAll(jaasSubject.getPrincipals());
+                if (StringUtils.isNotBlank(defaultTenantId)) {
+                    mergedSubject.getPrincipals().add(new TenantPrincipal(defaultTenantId));
+                    executionContextManager.setCurrentContext(executionContextManager.createContext(defaultTenantId));
+                } else {
+                    executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                }
+                JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
+                    new RolePrefixSecurityContextImpl(mergedSubject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
+                securityService.setCurrentSubject(mergedSubject);
+                return;
+            } catch (Exception e) {
+                // Only fires for unexpected exceptions — credential failures are handled inside JAASAuthenticationFilter.
+                logger.debug("V2 compatibility mode: unexpected exception during JAAS processing", e);
+            }
+        } else {
+            logger.debug("V2 compatibility mode: Missing Basic Auth header for private endpoint");
+        }
+
+        // If we get here, no valid authentication was provided
+        unauthorized(requestContext);
     }
 
     private String[] extractBasicAuthCredentials(String authHeader) {
