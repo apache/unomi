@@ -22,7 +22,10 @@ import org.apache.karaf.shell.support.table.ShellTable;
 import java.io.PrintStream;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.api.tenants.*;
+import org.apache.unomi.api.tenants.ResourceQuota;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.api.tenants.TenantStatus;
 import org.apache.unomi.common.DataTable;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.shell.dev.services.BaseCrudCommand;
@@ -169,16 +172,8 @@ public class TenantCrudCommand extends BaseCrudCommand {
         }
 
         try {
-            // Create the tenant
+            // createTenant already generates both API keys and saves the tenant
             Tenant tenant = tenantService.createTenant(id, properties);
-
-            // Generate API keys with no expiration
-            ApiKey publicKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
-            ApiKey privateKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
-
-            // Save the tenant with the new API keys
-            tenantService.saveTenant(tenant);
-
             return tenant.getItemId();
         } catch (Exception e) {
             return null;
@@ -225,7 +220,8 @@ public class TenantCrudCommand extends BaseCrudCommand {
             tenant.setLastModificationDate(new Date());
             tenantService.saveTenant(tenant);
         } catch (Exception e) {
-            // Handle error
+            LOGGER.error("Error updating tenant {}", id, e);
+            throw new RuntimeException("Failed to update tenant: " + e.getMessage(), e);
         }
     }
 

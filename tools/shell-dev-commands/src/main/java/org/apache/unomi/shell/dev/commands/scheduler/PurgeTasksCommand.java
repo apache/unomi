@@ -63,18 +63,21 @@ public class PurgeTasksCommand extends BaseSchedulerCommand {
                 break;
             }
 
-            // Cancel old completed tasks
+            int keptCount = 0;
             for (ScheduledTask task : tasks.getList()) {
                 if (task.getLastExecutionDate() != null && task.getLastExecutionDate().before(cutoffDate)) {
-                    schedulerService.cancelTask(task.getItemId());
+                    schedulerService.deleteTask(task.getItemId());
                     purgedCount++;
+                } else {
+                    keptCount++;
                 }
             }
 
             if (tasks.getList().size() < batchSize) {
                 break;
             }
-            offset += batchSize;
+            // Advance only past tasks we kept; deleted tasks shift the index so advancing by batchSize would skip them
+            offset += keptCount;
         }
 
         println("Successfully purged " + purgedCount + " completed tasks older than " + daysToKeep + " days.");

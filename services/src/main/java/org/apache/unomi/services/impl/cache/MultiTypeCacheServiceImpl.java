@@ -213,6 +213,17 @@ public class MultiTypeCacheServiceImpl implements MultiTypeCacheService {
     }
 
     @Override
+    public <T extends Serializable> void remove(String id, String tenantId, Class<T> typeClass) {
+        if (id == null || tenantId == null || typeClass == null) {
+            return;
+        }
+        CacheableTypeConfig<T> config = (CacheableTypeConfig<T>) typeConfigs.get(typeClass);
+        if (config != null) {
+            remove(config.getItemType(), id, tenantId, typeClass);
+        }
+    }
+
+    @Override
     public void clear(String tenantId) {
         if (tenantId != null) {
             cache.remove(tenantId);

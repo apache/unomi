@@ -264,6 +264,19 @@ public class PersistenceSchedulerProvider implements SchedulerProvider {
     }
 
     @Override
+    public void deleteTask(String taskId) {
+        if (taskId == null) {
+            return;
+        }
+        try {
+            persistenceService.remove(taskId, ScheduledTask.class);
+            LOGGER.debug("Deleted task {} from persistence", taskId);
+        } catch (Exception e) {
+            LOGGER.error("Error deleting task {} from persistence", taskId, e);
+        }
+    }
+
+    @Override
     public boolean saveTask(ScheduledTask task) {
         if (task == null) {
             return false;

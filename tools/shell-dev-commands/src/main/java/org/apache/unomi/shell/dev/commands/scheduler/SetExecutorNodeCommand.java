@@ -37,12 +37,9 @@ public class SetExecutorNodeCommand extends BaseSchedulerCommand {
             return null;
         }
 
-        boolean shouldEnable = Boolean.parseBoolean(enable);
-        // Note: This assumes there's a setExecutorNode method. If not available, we'll need to modify the service.
-        // schedulerService.setExecutorNode(shouldEnable);
-        
-        println("Task executor has been " + (shouldEnable ? "ENABLED" : "DISABLED") + 
-            " for node " + schedulerService.getNodeId());
+        println("Changing executor participation is not yet implemented in SchedulerService.");
+        println("Current status: " + (schedulerService.isExecutorNode() ? "ENABLED" : "DISABLED") +
+            " (node: " + schedulerService.getNodeId() + ")");
         return null;
     }
 } 

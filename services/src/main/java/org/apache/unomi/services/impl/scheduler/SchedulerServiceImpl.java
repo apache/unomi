@@ -1110,6 +1110,21 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
+    @Override
+    public void deleteTask(String taskId) {
+        if (taskId == null || shutdownNow) {
+            return;
+        }
+        // Cancel any in-flight execution before removing the record; no-op for COMPLETED/CANCELLED tasks
+        if (areServicesReady()) {
+            cancelTaskInternal(taskId);
+        }
+        nonPersistentTasks.remove(taskId);
+        if (persistenceProvider != null) {
+            persistenceProvider.deleteTask(taskId);
+        }
+    }
+
     /**
      * Internal method to cancel a task - called when services are ready
      * @param taskId The task ID to cancel

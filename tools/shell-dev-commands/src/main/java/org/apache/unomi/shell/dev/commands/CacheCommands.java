@@ -173,7 +173,8 @@ public class CacheCommands extends BaseSimpleCommand {
             // First check if the entry exists
             Map<String, ? extends Serializable> typeCache = cacheService.getTenantCache(tenantId, typeClass);
             if (typeCache.containsKey(entryId)) {
-                cacheService.remove(type, entryId, tenantId, typeClass);
+                // Use the class-based overload so itemType is resolved from the registered config
+                cacheService.remove(entryId, tenantId, typeClass);
                 println("Successfully removed cache entry:");
                 println("  Tenant: " + tenantId);
                 println("  Type: " + type);

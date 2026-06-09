@@ -93,6 +93,14 @@ public interface SchedulerService {
     void cancelTask(String taskId);
 
     /**
+     * Permanently deletes a task from storage.
+     * Unlike cancelTask, this removes the record entirely.
+     *
+     * @param taskId the task ID to delete
+     */
+    void deleteTask(String taskId);
+
+    /**
      * Gets all tasks from both storage and memory.
      * This provides a complete view of all tasks in the system,
      * both persistent and in-memory.

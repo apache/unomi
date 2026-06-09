@@ -154,6 +154,16 @@ public interface MultiTypeCacheService {
     <T extends Serializable> void remove(String itemType, String id, String tenantId, Class<T> typeClass);
 
     /**
+     * Removes a value from the cache, resolving the itemType internally from the registered type config.
+     *
+     * @param id the item identifier
+     * @param tenantId the tenant identifier
+     * @param typeClass the class of the type to remove (used to look up the registered itemType)
+     * @param <T> the type to remove
+     */
+    <T extends Serializable> void remove(String id, String tenantId, Class<T> typeClass);
+
+    /**
      * Clears all cached values for a tenant.
      *
      * @param tenantId the tenant identifier

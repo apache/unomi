@@ -40,7 +40,7 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
 
     private static final ObjectMapper OBJECT_MAPPER = new CustomObjectMapper();
     private static final List<String> PROPERTY_NAMES = List.of(
-        "itemId", "name", "description", "keyType", "key", "tenantId"
+        "itemId", "name", "description", "keyType", "key", "tenantId", "validityPeriod"
     );
 
     @Reference
@@ -67,6 +67,8 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
         List<ApiKey> allApiKeys = new ArrayList<>();
         for (Tenant tenant : tenantService.getAllTenants()) {
             if (tenant.getApiKeys() != null) {
+                // Set tenantId so BaseCrudCommand can populate the Tenant column
+                tenant.getApiKeys().forEach(k -> k.setTenantId(tenant.getItemId()));
                 allApiKeys.addAll(tenant.getApiKeys());
             }
         }
@@ -102,16 +104,24 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
         }
 
         ApiKeyType keyType = ApiKeyType.valueOf((String) properties.get("keyType"));
-        Long validityPeriod = properties.containsKey("validityPeriod") ?
-            Long.valueOf((String) properties.get("validityPeriod")) : null;
+        Object vpRaw = properties.get("validityPeriod");
+        Long validityPeriod = vpRaw == null ? null
+                : (vpRaw instanceof Number ? ((Number) vpRaw).longValue() : Long.parseLong(vpRaw.toString()));
 
         ApiKey apiKey = tenantService.generateApiKeyWithType(tenantId, keyType, validityPeriod);
-        if (apiKey != null) {
-            apiKey.setName((String) properties.get("name"));
-            apiKey.setDescription((String) properties.get("description"));
-
-            // Update the tenant with the new API key metadata
-            Tenant tenant = tenantService.getTenant(tenantId);
+        if (apiKey == null) {
+            throw new IllegalStateException("Failed to generate API key for tenant: " + tenantId);
+        }
+        // Reload the tenant to get the freshly persisted key, update name/description, then save
+        Tenant tenant = tenantService.getTenant(tenantId);
+        if (tenant != null && tenant.getApiKeys() != null) {
+            tenant.getApiKeys().stream()
+                .filter(k -> k.getItemId().equals(apiKey.getItemId()))
+                .findFirst()
+                .ifPresent(k -> {
+                    k.setName((String) properties.get("name"));
+                    k.setDescription((String) properties.get("description"));
+                });
             tenantService.saveTenant(tenant);
         }
         return apiKey.getItemId();
