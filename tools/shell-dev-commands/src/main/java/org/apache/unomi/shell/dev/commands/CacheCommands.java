@@ -108,8 +108,18 @@ public class CacheCommands extends BaseSimpleCommand {
             return null;
         }
 
+        if (view) {
+            println("Please specify --id when using --view");
+            return null;
+        }
+
         if (remove && entryId != null) {
             removeCacheEntry();
+            return null;
+        }
+
+        if (remove) {
+            println("Please specify --id when using --remove");
             return null;
         }
 
@@ -152,12 +162,13 @@ public class CacheCommands extends BaseSimpleCommand {
                 println("  Type: " + type);
                 println("  ID: " + entryId);
                 println("  Value: " + entry);
-                // Add any additional entry details you want to display
             } else {
                 println("No cache entry found for ID: " + entryId);
             }
         } catch (ClassNotFoundException e) {
             println("Invalid type specified: " + type);
+        } catch (Exception e) {
+            println("Error accessing cache entry: " + e);
         }
     }
 
@@ -184,6 +195,8 @@ public class CacheCommands extends BaseSimpleCommand {
             }
         } catch (ClassNotFoundException e) {
             println("Invalid type specified: " + type);
+        } catch (Exception e) {
+            println("Error removing cache entry: " + e);
         }
     }
 
@@ -198,14 +211,13 @@ public class CacheCommands extends BaseSimpleCommand {
 
     private void inspectCache() {
         PrintStream console = getConsole();
-        
+
         println("Cache contents for tenant: " + tenantId);
         println("Timestamp: " + CommandUtils.formatDate(new Date()));
         println("---");
 
         if (type != null) {
             try {
-                // This is a simplified example - you would need proper type resolution
                 Class<? extends Serializable> typeClass = (Class<? extends Serializable>) Class.forName(type);
                 Map<String, ? extends Serializable> typeCache = cacheService.getTenantCache(tenantId, typeClass);
                 console.println("Entries for type " + type + ": " + typeCache.size());
@@ -265,7 +277,7 @@ public class CacheCommands extends BaseSimpleCommand {
 
     private void displayStatisticsTable(Map<String, TypeStatistics> allStats) {
         PrintStream console = getConsole();
-        
+
         // Build headers
         List<String> headers = new ArrayList<>();
         headers.add("Type");
@@ -286,19 +298,19 @@ public class CacheCommands extends BaseSimpleCommand {
             try {
                 CSVFormat csvFormat = CSVFormat.DEFAULT;
                 CSVPrinter printer = csvFormat.print(console);
-                
+
                 // Print header
                 printer.printRecord(headers.toArray());
-                
+
                 // Print data rows
                 for (Map.Entry<String, TypeStatistics> entry : allStats.entrySet()) {
                     List<String> row = buildStatisticsRow(entry.getKey(), entry.getValue());
                     printer.printRecord(row.toArray());
                 }
-                
+
                 printer.close();
             } catch (Exception e) {
-                console.println("Error generating CSV output: " + e.getMessage());
+                console.println("Error generating CSV output: " + e);
             }
         } else {
             // Generate table output
@@ -306,12 +318,12 @@ public class CacheCommands extends BaseSimpleCommand {
             for (String header : headers) {
                 table.column(header);
             }
-            
+
             for (Map.Entry<String, TypeStatistics> entry : allStats.entrySet()) {
                 List<String> row = buildStatisticsRow(entry.getKey(), entry.getValue());
                 table.addRow().addContent(row.toArray());
             }
-            
+
             table.print(console);
         }
     }

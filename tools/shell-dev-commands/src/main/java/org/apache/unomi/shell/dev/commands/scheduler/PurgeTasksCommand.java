@@ -66,8 +66,12 @@ public class PurgeTasksCommand extends BaseSchedulerCommand {
             int keptCount = 0;
             for (ScheduledTask task : tasks.getList()) {
                 if (task.getLastExecutionDate() != null && task.getLastExecutionDate().before(cutoffDate)) {
-                    schedulerService.deleteTask(task.getItemId());
-                    purgedCount++;
+                    try {
+                        schedulerService.deleteTask(task.getItemId());
+                        purgedCount++;
+                    } catch (Exception e) {
+                        println("Warning: failed to delete task " + task.getItemId() + ": " + e);
+                    }
                 } else {
                     keptCount++;
                 }

@@ -31,6 +31,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -74,10 +75,8 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
         }
 
         // Apply query limit
-        Integer offset = query.getOffset();
-        Integer limit = query.getLimit();
-        int start = offset == null ? 0 : offset;
-        int size = limit == null ? allApiKeys.size() : limit;
+        int start = query.getOffset();
+        int size = query.getLimit();
         int end = Math.min(start + size, allApiKeys.size());
 
         List<ApiKey> pagedApiKeys = allApiKeys.subList(start, end);
@@ -112,33 +111,34 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
         if (apiKey == null) {
             throw new IllegalStateException("Failed to generate API key for tenant: " + tenantId);
         }
-        // Reload the tenant to get the freshly persisted key, update name/description, then save
-        Tenant tenant = tenantService.getTenant(tenantId);
-        if (tenant != null && tenant.getApiKeys() != null) {
-            tenant.getApiKeys().stream()
-                .filter(k -> k.getItemId().equals(apiKey.getItemId()))
-                .findFirst()
-                .ifPresent(k -> {
-                    k.setName((String) properties.get("name"));
-                    k.setDescription((String) properties.get("description"));
-                });
-            tenantService.saveTenant(tenant);
+        String name = (String) properties.get("name");
+        String description = (String) properties.get("description");
+        if (StringUtils.isNotBlank(name) || StringUtils.isNotBlank(description)) {
+            // getTenant uses ES GET-by-ID (immediately consistent after generateApiKeyWithType's save).
+            Tenant tenant = tenantService.getTenant(tenantId);
+            if (tenant != null && tenant.getApiKeys() != null) {
+                tenant.getApiKeys().stream()
+                    .filter(k -> k.getItemId().equals(apiKey.getItemId()))
+                    .findFirst()
+                    .ifPresent(k -> {
+                        if (StringUtils.isNotBlank(name)) k.setName(name);
+                        if (StringUtils.isNotBlank(description)) k.setDescription(description);
+                    });
+                tenantService.saveTenant(tenant);
+            }
         }
         return apiKey.getItemId();
     }
 
     @Override
     public Map<String, Object> read(String id) {
-        for (Tenant tenant : tenantService.getAllTenants()) {
-            if (tenant.getApiKeys() != null) {
-                for (ApiKey apiKey : tenant.getApiKeys()) {
-                    if (apiKey.getItemId().equals(id)) {
-                        return OBJECT_MAPPER.convertValue(apiKey, Map.class);
-                    }
-                }
-            }
-        }
-        return null;
+        return tenantService.getAllTenants().stream()
+            .filter(t -> t.getApiKeys() != null)
+            .flatMap(t -> t.getApiKeys().stream())
+            .filter(k -> k.getItemId().equals(id))
+            .findFirst()
+            .map(k -> OBJECT_MAPPER.convertValue(k, Map.class))
+            .orElse(null);
     }
 
     @Override
@@ -202,7 +202,7 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
     @Override
     public List<String> completePropertyValue(String propertyName, String prefix) {
         if ("keyType".equals(propertyName)) {
-            return List.of(ApiKeyType.values()).stream()
+            return Arrays.stream(ApiKeyType.values())
                     .map(Enum::name)
                     .filter(name -> name.startsWith(prefix.toUpperCase()))
                     .collect(Collectors.toList());

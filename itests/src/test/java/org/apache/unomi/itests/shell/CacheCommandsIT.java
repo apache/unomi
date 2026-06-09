@@ -121,10 +121,25 @@ public class CacheCommandsIT extends ShellCommandsBaseIT {
         if (output.contains("Type") && output.contains("Hits")) {
             validateTableHeaders(output, new String[]{"Type", "Hits", "Misses"});
             // If profile type is in the table, it should be in a data row
-            if (tableContainsValue(output, "profile")) {
-                Assert.assertTrue("Should show profile type in table", true);
-            }
+            Assert.assertTrue("Should show profile type in filtered table", tableContainsValue(output, "profile"));
         }
+    }
+
+    @Test
+    public void testCacheRemove() throws Exception {
+        // Test --remove without --id: should ask for type or id
+        String noIdOutput = executeCommandAndGetOutput("unomi:cache --remove --tenant " + TEST_TENANT_ID);
+        assertContainsAny(noIdOutput, new String[]{"Please specify", "No cache entry", "Invalid type"},
+            "Should require id and type for remove");
+
+        // Test --remove with non-existent entry (FQCN type, no such cached item)
+        String output = executeCommandAndGetOutput(
+            "unomi:cache --remove --id non-existent-id --type org.apache.unomi.api.Profile --tenant " + TEST_TENANT_ID);
+        assertContainsAny(output, new String[]{
+            "No cache entry found for ID:",
+            "Invalid type specified:",
+            "Please specify"
+        }, "Should indicate entry not found or type unregistered");
     }
 
     @Test

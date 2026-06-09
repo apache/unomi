@@ -66,9 +66,7 @@ public class RuleStatisticsCommandsIT extends ShellCommandsBaseIT {
         
         // If table is shown, verify structure
         if (output.contains("ID") && output.contains("Executions")) {
-            List<List<String>> rows = extractTableRows(output);
-            // Should have table structure
-            Assert.assertTrue("Should have table structure", rows.size() >= 0);
+            validateTableHeaders(output, new String[]{"ID", "Executions"});
         }
     }
 
@@ -126,8 +124,6 @@ public class RuleStatisticsCommandsIT extends ShellCommandsBaseIT {
         // If table is shown, verify structure
         if (statsOutput.contains("ID") && statsOutput.contains("Executions")) {
             validateTableHeaders(statsOutput, new String[]{"ID", "Executions"});
-            List<List<String>> rows = extractTableRows(statsOutput);
-            Assert.assertTrue("Statistics table should be present", rows.size() >= 0);
         }
     }
 }

@@ -54,8 +54,6 @@ public abstract class ShellCommandsBaseIT extends BaseIT {
 
     /**
      * Execute a shell command and capture its output as a string.
-     * Temporarily disables InMemoryLogAppender during execution to prevent StackOverflow
-     * caused by recursive output capture in Karaf shell streams.
      *
      * @param command the command to execute
      * @return the command output

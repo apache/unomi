@@ -155,6 +155,7 @@ public interface MultiTypeCacheService {
 
     /**
      * Removes a value from the cache, resolving the itemType internally from the registered type config.
+     * Silently no-ops if {@code typeClass} has no registered configuration.
      *
      * @param id the item identifier
      * @param tenantId the tenant identifier

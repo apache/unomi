@@ -55,10 +55,14 @@ public class SchemaCrudCommand extends BaseCrudCommand {
 
     @Override
     public String create(Map<String, Object> properties) {
+        Object id = properties.get("$id");
+        if (id == null) {
+            throw new IllegalArgumentException("$id is required");
+        }
         try {
             String schema = OBJECT_MAPPER.writeValueAsString(properties);
             schemaService.saveSchema(schema);
-            return properties.get("$id").toString();
+            return id.toString();
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error processing JSON schema", e);
         }
@@ -131,7 +135,7 @@ public class SchemaCrudCommand extends BaseCrudCommand {
                     .filter(type -> type.startsWith(prefix))
                     .collect(Collectors.toList());
         } else if ("self.extends".equals(propertyName)) {
-            return new ArrayList<>(schemaService.getInstalledJsonSchemaIds()).stream()
+            return schemaService.getInstalledJsonSchemaIds().stream()
                     .filter(id -> id.startsWith(prefix))
                     .collect(Collectors.toList());
         }
@@ -150,18 +154,14 @@ public class SchemaCrudCommand extends BaseCrudCommand {
 
     @Override
     protected PartialList<?> getItems(Query query) {
-        List<JsonSchemaWrapper> schemas = new ArrayList<>();
-        Set<String> schemaIds = schemaService.getInstalledJsonSchemaIds();
-        for (String schemaId : schemaIds) {
-            JsonSchemaWrapper schema = schemaService.getSchema(schemaId);
-            if (schema != null) {
-                schemas.add(schema);
-            }
-        }
+        List<JsonSchemaWrapper> schemas = schemaService.getInstalledJsonSchemaIds().stream()
+            .map(schemaService::getSchema)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
         int totalSize = schemas.size();
-        int start = 0;
-        int end = Math.min(query.getLimit(), totalSize);
-        return new PartialList<JsonSchemaWrapper>(schemas.subList(start, end), start, end, totalSize, PartialList.Relation.EQUAL);
+        int start = query.getOffset();
+        int end = Math.min(start + query.getLimit(), totalSize);
+        return new PartialList<JsonSchemaWrapper>(schemas.subList(start, end), start, end - start, totalSize, PartialList.Relation.EQUAL);
     }
 
     @Override
