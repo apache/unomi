@@ -76,12 +76,17 @@ public class GraphQLListIT extends BaseGraphQLIT {
             }
 
             refreshPersistence(UserList.class);
-            refreshPersistence(Profile.class);
 
+            // Profile.class refresh is deferred into the retry loop: addProfileToList processes
+            // list membership via an async rule-engine event, so the profile write may not be
+            // visible yet when we first reach this point.
             final ResponseContext findListsContext = keepTrying("Failed waiting for profile in list query",
                     () -> {
-                        try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
-                            return ResponseContext.parse(response.getEntity());
+                        try {
+                            refreshPersistence(Profile.class);
+                            try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
+                                return ResponseContext.parse(response.getEntity());
+                            }
                         } catch (Exception e) {
                             return null;
                         }

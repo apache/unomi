@@ -87,6 +87,11 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-json-schema-shell-commands</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-rest</artifactId>
                 <version>${project.version}</version>
             </dependency>

@@ -59,6 +59,12 @@ public interface SchedulerProvider {
     void purgeOldTasks();
 
     /**
+     * Permanently removes a task record from storage.
+     * @param taskId the task ID to remove
+     */
+    void deleteTask(String taskId);
+
+    /**
      * Saves a task to the persistence service if it's persistent.
      * @param task The task to save
      * @return true if the task was successfully saved, false otherwise
