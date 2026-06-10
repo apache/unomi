@@ -16,34 +16,41 @@
  */
 package org.apache.unomi.rest.exception;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
-import java.util.HashMap;
-
 @Provider
-@Component(service=ExceptionMapper.class)
-public class RuntimeExceptionMapper implements ExceptionMapper<RuntimeException> {
+@Component(service = ExceptionMapper.class)
+public class RuntimeExceptionMapper extends AbstractRestExceptionMapper implements ExceptionMapper<RuntimeException> {
+
     private static final Logger LOGGER = LoggerFactory.getLogger(RuntimeExceptionMapper.class.getName());
 
     @Override
     public Response toResponse(RuntimeException exception) {
-        HashMap<String, Object> body = new HashMap<>();
-        body.put("errorMessage", "internalServerError");
-        LOGGER.error(
-                "Internal server error {}: {} in {} (Set RuntimeExceptionMapper in debug to get the full stacktrace)",
-                exception.getMessage(),
-                exception,
-                ArrayUtils.isEmpty(exception.getStackTrace()) ? "Stack not available" : exception.getStackTrace()[0]
-        );
-        LOGGER.debug("{}", exception.getMessage(), exception);
-        return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header("Content-Type", MediaType.APPLICATION_JSON).entity(body).build();
+        String requestContext = buildRequestContext();
+        Throwable rootCause = getRootCause(exception);
+        String rootCauseClassName = LogSanitizer.className(rootCause != null ? rootCause.getClass().getSimpleName() : "Unknown");
+        String rootCauseMessage = LogSanitizer.forLogging(rootCause != null && rootCause.getMessage() != null
+                ? rootCause.getMessage()
+                : (exception.getMessage() != null ? exception.getMessage() : ""));
+
+        // For client errors (like deserialization), log at WARN level. For true server errors, log at ERROR level.
+        if (isJsonDeserializationError(rootCause)) {
+            LOGGER.warn(
+                    "Bad request on {} - Root cause: {} - {} (Set RuntimeExceptionMapper to debug to get the full stacktrace)",
+                    requestContext, rootCauseClassName, rootCauseMessage);
+        } else {
+            LOGGER.error(
+                    "Internal server error on {} - Root cause: {} - {} (Set RuntimeExceptionMapper in debug to get the full stacktrace)",
+                    requestContext, rootCauseClassName, rootCauseMessage, exception);
+        }
+        LOGGER.debug("Full exception details for request: {}", requestContext, exception);
+
+        return internalServerErrorResponse();
     }
 }
