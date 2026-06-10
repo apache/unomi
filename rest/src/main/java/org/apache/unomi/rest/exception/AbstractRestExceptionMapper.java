@@ -73,11 +73,12 @@ public abstract class AbstractRestExceptionMapper {
         if (throwable == null) {
             return null;
         }
-        Throwable cause = throwable.getCause();
-        if (cause == null || cause == throwable) {
-            return throwable;
+        Throwable current = throwable;
+        java.util.Set<Throwable> visited = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+        while (current.getCause() != null && current.getCause() != current && visited.add(current)) {
+            current = current.getCause();
         }
-        return getRootCause(cause);
+        return current;
     }
 
     /**
