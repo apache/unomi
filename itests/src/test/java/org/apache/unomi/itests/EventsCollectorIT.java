@@ -24,9 +24,6 @@ import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.tenants.ApiKey;
-import org.apache.unomi.api.tenants.Tenant;
-import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.rest.models.EventCollectorResponse;
@@ -39,9 +36,7 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
-import javax.inject.Inject;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Objects;
 
 @RunWith(PaxExam.class)
@@ -52,12 +47,6 @@ public class EventsCollectorIT extends BaseIT {
     private final static String TEST_PROFILE_ID = "test-profile-id";
     private final static String TEST_SESSION_ID = "test-session-id";
     private final static String TEST_SCOPE = "testScope";
-    private final static String TEST_TENANT_ID = "test-tenant";
-    private final static String TEST_TENANT_NAME = "Test Tenant";
-    private final static String TEST_TENANT_DESCRIPTION = "Test tenant for events collector";
-    private final static String CONTENT_TYPE_HEADER = "Content-Type";
-    private final static String APPLICATION_JSON = "application/json";
-
     private Profile profile;
 
     @Before
@@ -119,21 +108,23 @@ public class EventsCollectorIT extends BaseIT {
         request.setEntity(new StringEntity(requestBody, ContentType.APPLICATION_JSON));
 
         // Execute request and verify response
-        CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request, 200);
-        String responseContent = EntityUtils.toString(response.getEntity());
-        EventCollectorResponse eventResponse = objectMapper.readValue(responseContent, EventCollectorResponse.class);
-        Assert.assertNotNull("Event collector response should not be null", eventResponse);
+        try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request, 200)) {
+            String responseContent = EntityUtils.toString(response.getEntity());
+            EventCollectorResponse eventResponse = objectMapper.readValue(responseContent, EventCollectorResponse.class);
+            Assert.assertNotNull("Event collector response should not be null", eventResponse);
 
-        // Check that the response indicates the session and profile were updated
-        int expectedFlags = EventService.PROFILE_UPDATED | EventService.SESSION_UPDATED;
-        Assert.assertEquals("Response should indicate that the session and profile were updated",
-            expectedFlags, eventResponse.getUpdated());
+            // Check that the response indicates the session and profile were updated
+            int expectedFlags = EventService.PROFILE_UPDATED | EventService.SESSION_UPDATED;
+            Assert.assertEquals("Response should indicate that the session and profile were updated",
+                expectedFlags, eventResponse.getUpdated());
+        }
 
-        // Test with invalid API key
-        request.removeHeaders("X-Unomi-Api-Key"); // We need to do this since we are reusing the request object since the last call added auth to it.
+        // Test with invalid API key — remove auth set by the previous request, clear tenant context
+        request.removeHeaders("X-Unomi-Api-Key");
         HttpClientThatWaitsForUnomi.setTestTenant(null, null, null);
-        response = HttpClientThatWaitsForUnomi.doRequest(request, 401);
-        Assert.assertEquals("Request with invalid API key should return 401", 401, response.getStatusLine().getStatusCode());
+        try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request, 401)) {
+            Assert.assertEquals("Request with invalid API key should return 401", 401, response.getStatusLine().getStatusCode());
+        }
     }
 
 }

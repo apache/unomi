@@ -17,9 +17,9 @@
 package org.apache.unomi.itests;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
 import org.junit.After;
@@ -29,13 +29,10 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
 
-import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.Assert.*;
 
@@ -76,7 +73,6 @@ public class SchedulerIT extends BaseIT {
 
     @After
     public void tearDown() {
-        // Clean up test task
         if (testTaskId != null) {
             try {
                 schedulerService.cancelTask(testTaskId);
@@ -119,8 +115,9 @@ public class SchedulerIT extends BaseIT {
 
     @Test
     public void testCancelTask() throws Exception {
-        CloseableHttpResponse response = delete("/cxs/tasks/" + testTaskId);
-        assertEquals("Response should be No Content", 204, response.getStatusLine().getStatusCode());
+        try (CloseableHttpResponse response = executeHttpRequest(new HttpDelete(getFullUrl("/cxs/tasks/" + testTaskId)))) {
+            assertEquals("Response should be No Content", 204, response.getStatusLine().getStatusCode());
+        }
 
         // Verify task is cancelled
         ScheduledTask task = schedulerService.getTask(testTaskId);
@@ -129,28 +126,25 @@ public class SchedulerIT extends BaseIT {
 
     @Test
     public void testRetryTask() throws Exception {
-        // First make the task fail
-        TestTaskExecutor.shouldFail.set(true);
-        try {
-            Thread.sleep(1500); // Wait for task to execute and fail
-        } catch (InterruptedException e) {
-            // Ignore
+        // Drive the task to FAILED state directly — the test node may not be the scheduler
+        // executor node, so we cannot rely on the executor running organically
+        ScheduledTask task = schedulerService.getTask(testTaskId);
+        task.setStatus(ScheduledTask.TaskStatus.FAILED);
+        task.setLastError("forced failure for test");
+        task.setFailureCount(1);
+        schedulerService.saveTask(task);
+
+        try (CloseableHttpResponse response = post("/cxs/tasks/" + testTaskId + "/retry?resetFailureCount=true", null)) {
+            assertEquals("Response should be OK", 200, response.getStatusLine().getStatusCode());
+            String responseBody = EntityUtils.toString(response.getEntity());
+            ScheduledTask retried = objectMapper.readValue(responseBody, ScheduledTask.class);
+            assertNotNull("Task should not be null", retried);
+            assertEquals("Task should be scheduled", ScheduledTask.TaskStatus.SCHEDULED, retried.getStatus());
+            assertEquals("Failure count should be reset", 0, retried.getFailureCount());
         }
-
-        // Now retry the task
-        CloseableHttpResponse response = post("/cxs/tasks/" + testTaskId + "/retry?resetFailureCount=true", null);
-        assertEquals("Response should be OK", 200, response.getStatusLine().getStatusCode());
-
-        String responseBody = EntityUtils.toString(response.getEntity());
-        ScheduledTask task = objectMapper.readValue(responseBody, ScheduledTask.class);
-        assertNotNull("Task should not be null", task);
-        assertEquals("Task should be scheduled", ScheduledTask.TaskStatus.SCHEDULED, task.getStatus());
-        assertEquals("Failure count should be reset", 0, task.getFailureCount());
     }
 
     private static class TestTaskExecutor implements TaskExecutor {
-        static final AtomicBoolean shouldFail = new AtomicBoolean(false);
-
         @Override
         public String getTaskType() {
             return TEST_TASK_TYPE;
@@ -158,9 +152,6 @@ public class SchedulerIT extends BaseIT {
 
         @Override
         public void execute(ScheduledTask task, TaskStatusCallback callback) throws Exception {
-            if (shouldFail.get()) {
-                throw new Exception("Test failure");
-            }
             callback.complete();
         }
     }

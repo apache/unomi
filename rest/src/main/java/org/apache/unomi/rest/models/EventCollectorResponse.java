@@ -41,6 +41,9 @@ public class EventCollectorResponse implements Serializable {
      */
     private int updated;
 
+    public EventCollectorResponse() {
+    }
+
     public EventCollectorResponse(int updated) {
         this.updated = updated;
     }

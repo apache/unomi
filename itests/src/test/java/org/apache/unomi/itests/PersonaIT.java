@@ -37,6 +37,8 @@ import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.unomi.api.Session;
+
 import java.util.Objects;
 
 /**
@@ -65,9 +67,8 @@ public class PersonaIT extends BaseIT {
         String checkEndpoint = PERSONA_BY_ID_ENDPOINT.replace("{personaId}", "endpoint-check");
         keepTrying("Couldn't find persona endpoint", () -> {
             try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl(checkEndpoint)), AuthType.JAAS_ADMIN)) {
-                // Endpoint exists if we get 200 (persona exists), 204 (no content - persona not found), or 404 (not found)
                 int statusCode = response.getStatusLine().getStatusCode();
-                return (statusCode == 200 || statusCode == 204 || statusCode == 404) ? response : null;
+                return (statusCode == 200 || statusCode == 204 || statusCode == 404) ? Boolean.TRUE : null;
             } catch (Exception e) {
                 return null;
             }
@@ -76,7 +77,11 @@ public class PersonaIT extends BaseIT {
 
     @After
     public void tearDown() {
-        // Clean up: delete the test persona
+        try {
+            persistenceService.remove(TEST_SESSION_ID, Session.class);
+        } catch (Exception e) {
+            LOGGER.warn("Failed to clean up test session: {}", e.getMessage());
+        }
         try {
             profileService.delete(TEST_PERSONA_ID, true);
         } catch (Exception e) {
@@ -133,7 +138,7 @@ public class PersonaIT extends BaseIT {
             },
             Objects::nonNull,
             DEFAULT_TRYING_TIMEOUT,
-            DEFAULT_TRYING_TRIES * 2 // Give more time for indexing
+            DEFAULT_TRYING_TRIES * 2 // sessions are indexed asynchronously after persona creation; double retries avoid flakiness
         );
 
         Assert.assertNotNull("Persona sessions should be retrievable", sessions);

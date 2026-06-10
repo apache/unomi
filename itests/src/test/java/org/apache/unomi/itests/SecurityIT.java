@@ -16,19 +16,10 @@
  */
 package org.apache.unomi.itests;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.ExecutionContext;
-import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ExecutionContextManager;
-import org.apache.unomi.api.services.PersonalizationService;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -36,8 +27,6 @@ import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
 import javax.security.auth.Subject;
-import java.io.File;
-import java.io.IOException;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -45,15 +34,6 @@ import static org.junit.Assert.*;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class SecurityIT extends BaseIT {
-
-    private static final String SESSION_ID = "vuln-session-id";
-
-    private ObjectMapper objectMapper;
-
-    @Before
-    public void setUp() {
-        objectMapper = CustomObjectMapper.getObjectMapper();
-    }
 
     @Test
     public void testSystemOperationsAndContext() throws Exception {
@@ -96,10 +76,6 @@ public class SecurityIT extends BaseIT {
             assertEquals("Context should be restored after error",
                 regularContext.getTenantId(), postErrorContext.getTenantId());
         }
-    }
-
-    private TestUtils.RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
-        return TestUtils.executeContextJSONRequest(request, sessionId);
     }
 
 }
