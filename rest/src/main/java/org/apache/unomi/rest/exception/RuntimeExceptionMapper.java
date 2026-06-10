@@ -46,8 +46,8 @@ public class RuntimeExceptionMapper extends AbstractRestExceptionMapper implemen
                     requestContext, rootCauseClassName, rootCauseMessage);
         } else {
             LOGGER.error(
-                    "Internal server error on {} - Root cause: {} - {} (Set RuntimeExceptionMapper in debug to get the full stacktrace)",
-                    requestContext, rootCauseClassName, rootCauseMessage, exception);
+                    "Internal server error on {} - Root cause: {} - {} (Set RuntimeExceptionMapper to debug to get the full stacktrace)",
+                    requestContext, rootCauseClassName, rootCauseMessage);
         }
         LOGGER.debug("Full exception details for request: {}", requestContext, exception);
 
