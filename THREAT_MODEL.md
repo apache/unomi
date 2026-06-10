@@ -18,7 +18,7 @@ limitations under the License.
 
 ## §1 Header
 
-- **Project:** Apache Unomi (`apache/unomi`), `master` / 2.x line, against which this draft was written. This model covers the **apache/unomi** server; `unomi-tracker` (browser tracking client) and `unomi-site` (website) are in the engagement scope but are treated here as satellites (see §2/§3).
+- **Project:** Apache Unomi (`apache/unomi`), `master` branch, against which this draft was written. This model covers the **apache/unomi** server; `unomi-tracker` (browser tracking client) and `unomi-site` (website) are in the engagement scope but are treated here as satellites (see §2/§3).
 - **Date:** 2026-06-02. **Status:** draft — for Apache Unomi PMC review. **Author:** ASF Security team (drafted via the Scovetta threat-model rubric), for PMC ratification.
 - **Version binding:** versioned with the project; a report against version *N* is triaged against the model as it stood at *N*.
 - **Reporting cross-reference:** §8-property violations → report privately per ASF process (`security@apache.org` → `private@unomi.apache.org`); §3/§9 findings are closed citing this document.
