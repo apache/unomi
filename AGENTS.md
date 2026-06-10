@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 -->
 
-# Agent Guide for unomi
+# Agent Guide for Apache Unomi
 
 This file is read by automated agents (security scanners, code
 analyzers, AI assistants) operating on this repository.
