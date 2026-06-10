@@ -44,11 +44,6 @@ public class EventCollectorResponse implements Serializable {
     public EventCollectorResponse() {
     }
 
-    /**
-     * Creates a new EventCollectorResponse with the specified update flags.
-     *
-     * @param updated The bitwise combination of EventService flags indicating what was updated
-     */
     public EventCollectorResponse(int updated) {
         this.updated = updated;
     }
