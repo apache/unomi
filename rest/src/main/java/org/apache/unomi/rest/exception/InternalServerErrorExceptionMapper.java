@@ -53,7 +53,7 @@ public class InternalServerErrorExceptionMapper extends AbstractRestExceptionMap
 
         // Genuine server error -> 500 with detailed context.
         LOGGER.error("{} (Set InternalServerErrorExceptionMapper to debug to get the full stacktrace)",
-                buildServerErrorDetails(requestContext, exception, rootCause), exception);
+                buildServerErrorDetails(requestContext, exception, rootCause));
         LOGGER.debug("Full exception details for request: {}", requestContext, exception);
 
         return internalServerErrorResponse();
