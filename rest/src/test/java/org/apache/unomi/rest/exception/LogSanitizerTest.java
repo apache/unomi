@@ -18,7 +18,13 @@ package org.apache.unomi.rest.exception;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -72,6 +78,47 @@ class LogSanitizerTest {
         assertEquals("com.example.Foo$Bar", LogSanitizer.className("com.example.Foo$Bar"));
         assertEquals("bad_name_", LogSanitizer.className("bad name!"));
         assertEquals("Unknown", LogSanitizer.className(null));
+    }
+
+    @Test
+    void queryString_handlesNullAndTruncatesLongValues() {
+        assertEquals("", LogSanitizer.queryString(null));
+        assertEquals("a=1", LogSanitizer.queryString("a=1"));
+        String longQs = repeat("a=b&", 60); // > MAX_QUERY_STRING_LENGTH (200)
+        String sanitized = LogSanitizer.queryString(longQs);
+        assertTrue(sanitized.endsWith("...[truncated]"), "Long query string should be truncated: " + sanitized);
+        assertTrue(sanitized.length() < longQs.length());
+    }
+
+    @Test
+    void queryParameters_rendersKeyValuePairsAndTruncates() {
+        Map<String, List<String>> params = new LinkedHashMap<>();
+        params.put("q", Collections.singletonList("hello"));
+        params.put("page", Collections.singletonList("2"));
+        assertEquals("q=hello&page=2", LogSanitizer.queryParameters(params));
+
+        // Exactly at the limit: 10 params — no truncation marker expected
+        Map<String, List<String>> atLimit = new LinkedHashMap<>();
+        for (int i = 0; i < 10; i++) atLimit.put("k" + i, Collections.singletonList("v" + i));
+        String atLimitResult = LogSanitizer.queryParameters(atLimit);
+        assertFalse(atLimitResult.contains("...[more params]"), "Should not truncate at exactly 10 params");
+        assertEquals(9, countOccurrences(atLimitResult, '&'), "9 separators expected for 10 params");
+
+        // 11 params — truncation marker must follow a separator cleanly
+        Map<String, List<String>> overLimit = new LinkedHashMap<>(atLimit);
+        overLimit.put("k10", Collections.singletonList("v10"));
+        String overLimitResult = LogSanitizer.queryParameters(overLimit);
+        assertTrue(overLimitResult.endsWith("...[more params]"), "Should end with truncation marker: " + overLimitResult);
+        assertFalse(overLimitResult.contains("&...[more params]"),
+                "Separator must not immediately precede truncation marker: " + overLimitResult);
+    }
+
+    private static int countOccurrences(String s, char c) {
+        int count = 0;
+        for (int i = 0; i < s.length(); i++) {
+            if (s.charAt(i) == c) count++;
+        }
+        return count;
     }
 
     private static String repeat(String s, int times) {

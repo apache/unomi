@@ -126,12 +126,12 @@ final class LogSanitizer {
         StringBuilder sb = new StringBuilder();
         int paramCount = 0;
         for (Map.Entry<String, List<String>> entry : queryParams.entrySet()) {
-            if (paramCount > 0) {
-                sb.append("&");
-            }
             if (paramCount >= MAX_QUERY_PARAMS) {
                 sb.append("...[more params]");
                 break;
+            }
+            if (paramCount > 0) {
+                sb.append("&");
             }
             sb.append(url(entry.getKey())).append("=");
             if (entry.getValue() != null && !entry.getValue().isEmpty()) {
