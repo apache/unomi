@@ -25,7 +25,6 @@ import org.slf4j.LoggerFactory;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -81,7 +80,7 @@ public class DateUtils {
             return Date.from(((ZonedDateTime) value).toInstant());
         }
         if (value instanceof LocalDateTime) {
-            return Date.from(((LocalDateTime) value).atZone(ZoneId.systemDefault()).toInstant());
+            return Date.from(((LocalDateTime) value).atZone(ZoneOffset.UTC).toInstant());
         } else {
             JavaDateFormatter formatter = new JavaDateFormatter("strict_date_optional_time||epoch_millis");
             DateMathParser dateMathParser = new DateMathParser(formatter, DateTimeFormatter.ISO_DATE_TIME);

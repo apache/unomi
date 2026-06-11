@@ -36,7 +36,6 @@ public class MultiTypeCacheServiceImplTest {
 
     private MultiTypeCacheServiceImpl cacheService;
 
-    // Test plugin type implementation
     private static class TestSerializable implements Serializable {
         private String id;
 
@@ -44,6 +43,17 @@ public class MultiTypeCacheServiceImplTest {
             this.id = id;
         }
 
+        public String getId() {
+            return id;
+        }
+    }
+
+    private static class OtherTestSerializable implements Serializable {
+        private String id;
+
+        public OtherTestSerializable(String id) {
+            this.id = id;
+        }
 
         public String getId() {
             return id;
@@ -419,7 +429,8 @@ public class MultiTypeCacheServiceImplTest {
 
     @Test
     public void testMultipleTypeConfigurations() {
-        // First configuration
+        // typeConfigs is keyed by Java class, so two different Java types can coexist independently.
+        // Using the same Java class for two configs would overwrite the first (tested in testOverrideTypeConfiguration).
         CacheableTypeConfig<TestSerializable> config1 = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
@@ -429,32 +440,40 @@ public class MultiTypeCacheServiceImplTest {
             .withRefreshInterval(1000L)
             .withIdExtractor(TestSerializable::getId)
             .build();
-        
-        // Second configuration with different type
-        CacheableTypeConfig<TestSerializable> config2 = CacheableTypeConfig.<TestSerializable>builder(
-            TestSerializable.class,
+
+        CacheableTypeConfig<OtherTestSerializable> config2 = CacheableTypeConfig.<OtherTestSerializable>builder(
+            OtherTestSerializable.class,
             "other-type",
-            "/test/path")
+            "/other/path")
             .withInheritFromSystemTenant(true)
             .withRequiresRefresh(true)
             .withRefreshInterval(1000L)
-            .withIdExtractor(TestSerializable::getId)
+            .withIdExtractor(OtherTestSerializable::getId)
             .build();
+
         cacheService.registerType(config1);
         cacheService.registerType(config2);
 
-        // Put values of different types
+        // Put values using the correct registered type names
         TestSerializable value1 = new TestSerializable("value1");
-        TestSerializable value2 = new TestSerializable("value2");
-        cacheService.put("type1", "id1", TEST_TENANT, value1);
-        cacheService.put("type2", "id2", TEST_TENANT, value2);
+        OtherTestSerializable value2 = new OtherTestSerializable("value2");
+        cacheService.put(TEST_TYPE, "id1", TEST_TENANT, value1);
+        cacheService.put("other-type", "id2", TEST_TENANT, value2);
 
-        // Verify values are cached separately
-        Map<String, TestSerializable> cache1 = cacheService.getTenantCache(TEST_TENANT, TestSerializable.class);
-        Map<String, TestSerializable> cache2 = cacheService.getTenantCache(TEST_TENANT, TestSerializable.class);
+        // Each type's values are retrievable and isolated from the other type
+        TestSerializable retrieved1 = cacheService.getWithInheritance("id1", TEST_TENANT, TestSerializable.class);
+        OtherTestSerializable retrieved2 = cacheService.getWithInheritance("id2", TEST_TENANT, OtherTestSerializable.class);
 
-        assertNotNull(cache1, "Cache for type1 should exist");
-        assertNotNull(cache2, "Cache for type2 should exist");
+        assertNotNull(retrieved1, "TestSerializable value should be cached");
+        assertEquals("value1", retrieved1.getId(), "TestSerializable value should match");
+        assertNotNull(retrieved2, "OtherTestSerializable value should be cached");
+        assertEquals("value2", retrieved2.getId(), "OtherTestSerializable value should match");
+
+        // id2 is not accessible via TestSerializable, and id1 is not accessible via OtherTestSerializable
+        assertNull(cacheService.getWithInheritance("id2", TEST_TENANT, TestSerializable.class),
+            "id2 should not be accessible via TestSerializable");
+        assertNull(cacheService.getWithInheritance("id1", TEST_TENANT, OtherTestSerializable.class),
+            "id1 should not be accessible via OtherTestSerializable");
     }
 
     @Test
