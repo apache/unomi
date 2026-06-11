@@ -19,7 +19,7 @@ limitations under the License.
 ## Reporting a Vulnerability
 
 `apache/unomi` follows the [Apache Software Foundation security process](https://www.apache.org/security/). Please report suspected
-vulnerabilities privately to `security@apache.org`; do not open public
+vulnerabilities privately to `security@apache.org` (the ASF security team routes Unomi reports to the project's private list, `private@unomi.apache.org`); do not open public
 GitHub issues or pull requests for security reports.
 
 ## Threat Model

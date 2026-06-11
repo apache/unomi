@@ -30,7 +30,7 @@ limitations under the License.
 
 - **Primary use:** an operator-deployed **context server** that ingests visitor events over the network and serves profile/segmentation data to web properties and back-office tools. *(documented — manual)*
 - **Caller roles** (network service — the role splits):
-  - **public web client** — a browser running `unomi-tracker`, hitting the **public context endpoint** (`/context.json`-style) **unauthenticated**, from the open internet. The highest-value untrusted surface. *(inferred — confirm the public-endpoint exposure model)*
+  - **public web client** — a browser running `unomi-tracker`, hitting the **public context endpoint** (`/context.json` and `/eventcollector` — `EventsCollectorServlet`) **unauthenticated**, from the open internet. The highest-value untrusted surface. *(inferred — confirm the public-endpoint exposure model)*
   - **integrator / API client** — calls the REST / GraphQL APIs, authenticated; may author conditions, rules, segments, scopes. **Trusted to its credential's authority.** *(inferred)*
   - **operator/admin** — controls config, the Karaf container, plugins, and the Elasticsearch/OpenSearch backend. **Trusted.** *(inferred)*
   - **cluster peer** — another Unomi node. *(inferred)*
@@ -39,7 +39,7 @@ limitations under the License.
 
 | Family | Entry point | Touches outside process | In model? |
 | --- | --- | --- | --- |
-| Public context ingestion | `/context.json` / event collector (`wab`, `rest`) | network (public listen) | **In — primary boundary** *(inferred)* |
+| Public context ingestion | `/context.json` + `/eventcollector` (`EventsCollectorServlet`, `wab`) | network (public listen) | **In — primary boundary** *(inferred)* |
 | Rule / condition / segment engine + scripting | `services`, `scripting` (MVEL/OGNL expression eval) | evaluates expressions | **In — historically the RCE surface (§11)** *(documented: CVEs)* |
 | JSON-Schema event validation | schema validation of incoming events | — | **In — the input-validation defense** *(documented: manual `jsonSchema`)* |
 | Admin REST + GraphQL APIs | `rest`, `graphql` | network (authenticated) | **In** *(documented: modules)* |
@@ -177,12 +177,13 @@ Per-surface trust table *(all inferred unless noted):*
 
 **Wave 2 — the public boundary & its defenses:**
 4. Is **JSON-Schema validation** of incoming events on by default, and does it reject non-conforming/unknown events? Is it the intended primary input defense at the public boundary? → §8.
-5. What exactly restricts the **public** surface from reaching OGNL/MVEL expression evaluation today (the post-CVE allow-list / protected-events / third-party-key mechanism) — and is it on by default? → §4/§5a/§8.
+5. What exactly restricts the **public** surface from reaching OGNL/MVEL expression evaluation today (the post-CVE allow-list / protected-events / third-party-key mechanism — the `ThirdPartyServer` server-id / key / IP allow-list / allowed-event-types config in `configuration.adoc`) — and is it on by default? → §4/§5a/§8.
 6. Are there bounds on public event size / batch / rate, or is flood protection the operator's (WAF/rate-limit) concern? → §8/§11a.
 
 **Wave 3 — expressions, scopes, backend:**
 7. Confirm that OGNL/MVEL expression power is **by-design for trusted admin-authored** conditions and is **not** a sandbox — so a finding is `VALID` only when *public/untrusted* input reaches it. → §9/§11a.
 8. What is the profile/**scope** isolation model — can an authenticated API client read/modify data outside its scope, and is that boundary something Unomi enforces or the integrator's concern? → §8.
+8a. **Tenant isolation (UNOMI-139):** can an API client with credentials for tenant A read or modify tenant B's profiles, segments, or rules — and is that boundary enforced by Unomi (`TenantService` / `SecurityService.getTenantEncryptionKey`) or delegated to the integrator? → §8/§10. *(maintainer-flagged — sergehuber)*
 9. Is the Elasticsearch/OpenSearch backend assumed trusted/secured-by-operator (so backend-exposure reports are out-of-model)? → §3/§9.
 
 **Wave 4 — meta & non-findings:**
