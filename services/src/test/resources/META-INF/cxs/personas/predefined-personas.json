@@ -1,0 +1,16 @@
+{
+    "persona": {
+        "itemId": "testPersona",
+        "itemType": "persona",
+        "version": null,
+        "properties": {
+            "firstName": "Test",
+            "lastName": "Persona",
+            "age": 30
+        },
+        "systemProperties": {
+            "systemTags": ["predefinedPersona"]
+        }
+    },
+    "sessions": []
+}

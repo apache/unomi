@@ -23,7 +23,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
@@ -66,6 +70,18 @@ public class DateUtils {
         }
         if (value instanceof Date) {
             return (Date) value;
+        }
+        if (value instanceof Instant) {
+            return Date.from((Instant) value);
+        }
+        if (value instanceof OffsetDateTime) {
+            return Date.from(((OffsetDateTime) value).toInstant());
+        }
+        if (value instanceof ZonedDateTime) {
+            return Date.from(((ZonedDateTime) value).toInstant());
+        }
+        if (value instanceof LocalDateTime) {
+            return Date.from(((LocalDateTime) value).atZone(ZoneId.systemDefault()).toInstant());
         } else {
             JavaDateFormatter formatter = new JavaDateFormatter("strict_date_optional_time||epoch_millis");
             DateMathParser dateMathParser = new DateMathParser(formatter, DateTimeFormatter.ISO_DATE_TIME);
