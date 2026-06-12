@@ -38,7 +38,6 @@ import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 
 import java.io.Serializable;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -89,8 +88,11 @@ public class ClusterServiceImplTest {
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
 
-        // Set up persistence service
-        persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
+        // Set up persistence service — no refresh-delay simulation: cluster tests verify
+        // cluster logic, not persistence refresh semantics (tested in InMemoryPersistenceServiceImplTest).
+        persistenceService = new InMemoryPersistenceServiceImpl(
+                executionContextManager, conditionEvaluatorDispatcher,
+                System.getProperty("java.io.tmpdir"), false, false, false, false, 0L);
 
         // Create cluster service using TestHelper
         clusterService = TestHelper.createClusterService(persistenceService, TEST_NODE_ID, PUBLIC_ADDRESS, INTERNAL_ADDRESS, bundleContext);
@@ -263,44 +265,16 @@ public class ClusterServiceImplTest {
         // Refresh persistence to ensure nodes are available for querying (handles refresh delay)
         persistenceService.refresh();
 
-        // Ensure nodes are queryable
-        List<ClusterNode> queryableNodes = TestHelper.retryQueryUntilAvailable(
-            () -> persistenceService.getAllItems(ClusterNode.class, 0, -1, null).getList(),
-            2
-        );
-
-        // Manually refresh the cache by directly querying all nodes and setting the cache via reflection
-        // This ensures the cache is populated immediately rather than waiting for the scheduled task
+        // Force a cache refresh: updateSystemStats() queries persistence and populates
+        // cachedClusterNodes. The scheduled task runs every 10 s, so we invoke it directly.
         try {
-            Field cachedClusterNodesField = ClusterServiceImpl.class.getDeclaredField("cachedClusterNodes");
-            cachedClusterNodesField.setAccessible(true);
-            cachedClusterNodesField.set(clusterService, queryableNodes);
-        } catch (Exception e) {
-            // If reflection fails, try calling updateSystemStats() instead
-            try {
-                Method updateSystemStatsMethod = ClusterServiceImpl.class.getDeclaredMethod("updateSystemStats");
-                updateSystemStatsMethod.setAccessible(true);
-                updateSystemStatsMethod.invoke(clusterService);
-            } catch (Exception e2) {
-                // If both fail, fall back to waiting for the scheduled task
-                List<ClusterNode> result = null;
-                long deadline = System.currentTimeMillis() + 5000;
-                do {
-                    result = clusterService.getClusterNodes();
-                    if (result != null && result.size() >= 2) {
-                        break;
-                    }
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        break;
-                    }
-                } while (System.currentTimeMillis() < deadline);
-            }
+            Method updateSystemStats = ClusterServiceImpl.class.getDeclaredMethod("updateSystemStats");
+            updateSystemStats.setAccessible(true);
+            updateSystemStats.invoke(clusterService);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException("Failed to invoke updateSystemStats via reflection", e);
         }
 
-        // Get the result from cache
         List<ClusterNode> result = clusterService.getClusterNodes();
 
         // Verify
@@ -312,32 +286,22 @@ public class ClusterServiceImplTest {
 
     @Test
     public void testUpdateSystemStats() {
-        // Setup - initialize the service to create the node
+        // Setup - initialize the service to create the node (this also records an initial heartbeat)
         clusterService.init();
 
-        // Get the initial node state
+        // Get the initial heartbeat timestamp recorded at init time
         ClusterNode initialNode = persistenceService.load(TEST_NODE_ID, ClusterNode.class);
+        assertNotNull(initialNode, "Node should be registered after init");
         long initialHeartbeat = initialNode.getLastHeartbeat();
 
-        // Wait a bit to ensure timestamps will be different
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            // Ignore
-        }
+        // Wait for the scheduler's statistics update task to run and write a newer heartbeat.
+        // The task runs on the configured nodeStatisticsUpdateFrequency; retryUntil polls until
+        // the persisted heartbeat is strictly greater than the one captured at init.
+        ClusterNode updatedNode = TestHelper.retryUntil(
+            () -> persistenceService.load(TEST_NODE_ID, ClusterNode.class),
+            node -> node != null && node.getLastHeartbeat() > initialHeartbeat
+        );
 
-        // Simulate the statistics update task running
-        // We need to access the private method via reflection
-        try {
-            Method updateStatsMethod = ClusterServiceImpl.class.getDeclaredMethod("updateSystemStats");
-            updateStatsMethod.setAccessible(true);
-            updateStatsMethod.invoke(clusterService);
-        } catch (Exception e) {
-            fail("Failed to invoke updateSystemStats method: " + e.getMessage());
-        }
-
-        // Verify node was updated
-        ClusterNode updatedNode = persistenceService.load(TEST_NODE_ID, ClusterNode.class);
         assertNotNull(updatedNode);
         assertTrue(updatedNode.getLastHeartbeat() > initialHeartbeat,
             "Heartbeat should be updated: initial=" + initialHeartbeat + ", updated=" + updatedNode.getLastHeartbeat());
@@ -395,15 +359,15 @@ public class ClusterServiceImplTest {
         );
         assertNotNull(freshNodeBeforeCleanup, "Fresh node should exist before cleanup, nodeId=fresh-node");
 
-        // Simulate the cleanup task running
-        // We need to access the private method via reflection
-        try {
+        // Trigger the cleanup by running the scheduled task's logic directly.
+        // The cleanup scheduled task runs every 60 s (hardcoded) which is impractical in a unit test;
+        // we therefore invoke the private method synchronously to observe the same end-to-end
+        // persistence behaviour (query by lastHeartbeat, remove stale, keep fresh) without the wait.
+        assertDoesNotThrow(() -> {
             Method cleanupMethod = ClusterServiceImpl.class.getDeclaredMethod("cleanupStaleNodes");
             cleanupMethod.setAccessible(true);
             cleanupMethod.invoke(clusterService);
-        } catch (Exception e) {
-            fail("Failed to invoke cleanupStaleNodes method: " + e.getMessage());
-        }
+        }, "cleanupStaleNodes should run without throwing");
 
         // Verify stale node was removed but fresh node remains
         assertNull(persistenceService.load("stale-node", ClusterNode.class), "Stale node should be removed");

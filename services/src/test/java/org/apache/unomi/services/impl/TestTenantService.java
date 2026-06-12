@@ -45,6 +45,10 @@ public class TestTenantService implements TenantService {
         currentTenantId.set(tenantId);
     }
 
+    public void clearCurrentTenantId() {
+        currentTenantId.remove();
+    }
+
     @Override
     public List<Tenant> getAllTenants() {
         return new ArrayList<>(tenants.values());

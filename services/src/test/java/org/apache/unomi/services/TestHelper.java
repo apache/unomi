@@ -385,8 +385,8 @@ public class TestHelper {
 
 
     /**
-     * Creates a cluster service instance for testing purposes.
-     * Initializes a new ClusterServiceImpl with the specified persistence service and node ID.
+     * Creates and wires a new ClusterServiceImpl with the specified persistence service and node ID.
+     * Callers must invoke postConstruct() themselves if initialization behaviour is needed.
      *
      * NOTE: Due to circular dependency between ClusterService and SchedulerService,
      * when using both services together:
@@ -405,8 +405,8 @@ public class TestHelper {
 
 
     /**
-     * Creates a cluster service instance for testing purposes with custom addresses and bundle context.
-     * Initializes a new ClusterServiceImpl with the specified persistence service, node ID, addresses, and bundle context.
+     * Creates and wires a new ClusterServiceImpl with custom addresses and bundle context.
+     * Callers must invoke postConstruct() themselves if initialization behaviour is needed.
      *
      * NOTE: Due to circular dependency between ClusterService and SchedulerService,
      * when using both services together:
@@ -619,7 +619,7 @@ public class TestHelper {
                     return;
                 }
             } catch (IOException e) {
-                LOGGER.warn("Error deleting default storage directory, will retry: {}", e.getMessage());
+                LOGGER.warn("Error deleting default storage directory, will retry", e);
             }
             // Use shorter sleep time (100ms instead of 1000ms) for faster retries
             // This significantly speeds up test execution when cleanup is needed
@@ -717,7 +717,7 @@ public class TestHelper {
                 Thread.sleep(retryDelay);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                break;
+                throw new RuntimeException("Retry interrupted", e);
             }
 
             result = querySupplier.get();
@@ -781,7 +781,8 @@ public class TestHelper {
             String... tenantIds) throws Exception {
 
         // Stop scheduler service
-        if (schedulerService != null && schedulerService instanceof SchedulerServiceImpl) {
+        if (schedulerService instanceof SchedulerServiceImpl) {
+            // instanceof already handles null; preDestroy shuts down threads cleanly
             ((SchedulerServiceImpl) schedulerService).preDestroy();
         }
 
@@ -795,29 +796,28 @@ public class TestHelper {
         }
 
         // Clear persistence service data if possible
-        if (persistenceService != null && persistenceService instanceof InMemoryPersistenceServiceImpl) {
-            ((InMemoryPersistenceServiceImpl) persistenceService).purge((Date)null);
+        if (persistenceService instanceof InMemoryPersistenceServiceImpl) {
+            // purge(null) purges all items — used to reset test state between test methods
+            ((InMemoryPersistenceServiceImpl) persistenceService).purge((Date) null);
         }
 
         // Reset tenant context
-        if (tenantService != null && tenantService instanceof TestTenantService) {
-            ((TestTenantService) tenantService).setCurrentTenantId(null);
+        if (tenantService instanceof TestTenantService) {
+            // clearCurrentTenantId() removes the ThreadLocal entry rather than setting it to null
+            ((TestTenantService) tenantService).clearCurrentTenantId();
         }
     }
 
     /**
-     * Helper method that nulls out service references to help with garbage collection.
-     * Pass the objects you want to null out and they will be collected by the garbage collector.
-     * This is a no-op method beyond accepting references, but it's organized to be clear
-     * and document the intention of discarding object references.
+     * This method is a no-op. It exists as a documentation reminder to null out references
+     * in the calling code after the call. Java is pass-by-value, so passing references here
+     * cannot null out the caller's variables.
      *
-     * @param objects The objects to be nulled out
+     * @param objects The objects whose references the caller should null out after this call
      */
     public static void cleanupReferences(Object... objects) {
-        // This method doesn't actually need to do anything - by passing the objects as
-        // parameters, the calling code is setting those instance variables to null,
-        // which is the intended effect. This method is simply a cleaner way to organize
-        // the nulling of multiple references.
+        // No-op. The caller is responsible for setting its own instance variables to null.
+        // This method exists solely as a visible reminder to do so.
     }
 
     /**

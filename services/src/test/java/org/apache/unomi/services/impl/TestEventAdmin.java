@@ -327,6 +327,10 @@ public class TestEventAdmin implements EventAdmin {
                 return true;
             }
 
+            if ("**".equals(filter)) {
+                return true;
+            }
+
             // Support wildcard pattern: "org/apache/unomi/**"
             // Matches all topics starting with the prefix (including the prefix itself)
             if (filter.endsWith("/**")) {

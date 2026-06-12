@@ -31,7 +31,8 @@ import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
 import org.osgi.framework.BundleContext;
 
 import java.lang.reflect.Method;
-import java.text.SimpleDateFormat;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -43,17 +44,14 @@ import java.util.stream.Collectors;
 public class TestConditionEvaluators {
 
     private static Map<String, ConditionType> conditionTypes = new ConcurrentHashMap<>();
-    private static final SimpleDateFormat ISO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-    private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
+    private static final DateTimeFormatter ISO_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter YEAR_MONTH_DAY_FORMAT =
+            DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
     private static EventService eventService;
     private static BundleContext bundleContext;
     private static TestRequestTracer tracer = new TestRequestTracer(false);
     private static Map<String, ConditionEvaluator> evaluators = new HashMap<>();
-
-    static {
-        ISO_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
-        yearMonthDayDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-    }
 
     public static void setEventService(EventService service) {
         eventService = service;
@@ -84,9 +82,15 @@ public class TestConditionEvaluators {
         return (condition, item, context, dispatcher) -> {
             tracer.startOperation("boolean", "Evaluating boolean condition with operator: " + condition.getParameter("operator"), condition);
             String operator = (String) condition.getParameter("operator");
-            List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+            Object subConditionsParam = condition.getParameter("subConditions");
+            if (!(subConditionsParam instanceof List)) {
+                tracer.endOperation(true, "No subconditions found, returning true");
+                return true;
+            }
+            @SuppressWarnings("unchecked")
+            List<Condition> subConditions = (List<Condition>) subConditionsParam;
 
-            if (subConditions == null || subConditions.isEmpty()) {
+            if (subConditions.isEmpty()) {
                 tracer.endOperation(true, "No subconditions found, returning true");
                 return true;
             }
@@ -368,8 +372,13 @@ public class TestConditionEvaluators {
     private static boolean evaluateDateCondition(Object actualValue, Object expectedValueDate,
                                                Object expectedValueDateExpr, String operator) {
         Object expectedDate = expectedValueDate == null ? expectedValueDateExpr : expectedValueDate;
-        boolean isSameDay = yearMonthDayDateFormat.format(getDate(actualValue))
-                .equals(yearMonthDayDateFormat.format(getDate(expectedDate)));
+        Date actualDateVal = getDate(actualValue);
+        Date expectedDateVal = getDate(expectedDate);
+        if (actualDateVal == null || expectedDateVal == null) {
+            return false;
+        }
+        boolean isSameDay = YEAR_MONTH_DAY_FORMAT.format(actualDateVal.toInstant())
+                .equals(YEAR_MONTH_DAY_FORMAT.format(expectedDateVal.toInstant()));
         return operator.equals("isDay") ? isSameDay : !isSameDay;
     }
 
@@ -421,7 +430,7 @@ public class TestConditionEvaluators {
         switch (operator) {
             case "in": return actual.stream().anyMatch(expected::contains);
             case "inContains": return actual.stream().anyMatch(a ->
-                expected.stream().anyMatch(b -> ((String) a).contains((String) b)));
+                (a instanceof String) && expected.stream().anyMatch(b -> (b instanceof String) && ((String) a).contains((String) b)));
             case "notIn": return actual.stream().noneMatch(expected::contains);
             case "all": return expected.stream().allMatch(actual::contains);
             case "hasNoneOf": return Collections.disjoint(actual, expected);
@@ -522,8 +531,13 @@ public class TestConditionEvaluators {
                 String key = (String) parameters.get("generatedPropertyKey");
                 tracer.trace(condition, "Using generated property key: " + key);
 
-                List<Map<String, Object>> pastEvents = (ArrayList<Map<String, Object>>) profile.getSystemProperties().get("pastEvents");
-                if (pastEvents != null) {
+                Object pastEventsObj = profile.getSystemProperties().get("pastEvents");
+                if (!(pastEventsObj instanceof List)) {
+                    tracer.trace(condition, "No pastEvents found in profile system properties");
+                    count = 0;
+                } else {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> pastEvents = (List<Map<String, Object>>) pastEventsObj;
                     tracer.trace(condition, "Found pastEvents in profile system properties");
                     Number l = (Number) pastEvents
                             .stream()
@@ -532,9 +546,6 @@ public class TestConditionEvaluators {
                             .map(pastEvent -> pastEvent.get("count")).orElse(0L);
                     count = l.longValue();
                     tracer.trace(condition, "Found count=" + count + " for key=" + key);
-                } else {
-                    tracer.trace(condition, "No pastEvents found in profile system properties");
-                    count = 0;
                 }
             } else {
                 tracer.trace(condition, "No generatedPropertyKey found, querying events directly");
@@ -875,7 +886,7 @@ public class TestConditionEvaluators {
     }
 
     public static Map<String, ConditionType> getConditionTypes() {
-        return conditionTypes;
+        return Collections.unmodifiableMap(conditionTypes);
     }
 
     public static ConditionType getConditionType(String conditionTypeId) {

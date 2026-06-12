@@ -37,6 +37,9 @@ import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -3795,10 +3798,16 @@ public class InMemoryPersistenceServiceImplTest {
 
         @Test
         void shouldHandleNullArgumentsGracefully() {
-            // Test purge with null date
+            // purge(null) is a full reset: save an item, call purge(null), verify the item is gone
+            TestMetadataItem survivorItem = new TestMetadataItem();
+            survivorItem.setItemId("purge-null-test");
+            persistenceService.save(survivorItem);
+            persistenceService.refresh();
             assertDoesNotThrow(() -> persistenceService.purge((Date) null));
+            assertNull(persistenceService.load("purge-null-test", TestMetadataItem.class),
+                "purge(null) should purge all items (used for test isolation reset)");
 
-            // Test purge with null scope
+            // Test purge with null scope — also a no-op
             assertDoesNotThrow(() -> persistenceService.purge((String) null));
 
             // Test refresh index with null class
@@ -4736,9 +4745,10 @@ public class InMemoryPersistenceServiceImplTest {
             // when - shutdown
             serviceWithDelay.shutdown();
 
-            // then - should not throw exception and thread should be stopped
-            // (we can't directly verify thread state, but shutdown should complete without error)
-            assertTrue(true, "Shutdown should complete without error");
+            // then - shutdown should complete without error, and calling it a second time
+            // must be idempotent (no exception, no deadlock), which is the primary observable
+            // contract for a shutdown method in a test harness
+            assertDoesNotThrow(() -> serviceWithDelay.shutdown(), "Second shutdown call should be idempotent");
         }
 
         @Test
@@ -6540,42 +6550,64 @@ public class InMemoryPersistenceServiceImplTest {
             InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher);
 
-            // Create a listener that throws an exception
-            TenantTransformationListener errorListener =
-                    new TenantTransformationListener() {
-                        @Override
-                        public Item transformItem(Item item, String tenantId) {
-                            throw new RuntimeException("Transformation error");
-                        }
+            // Capture WARN logs from InMemoryPersistenceServiceImpl so the intentional
+            // RuntimeException stack traces don't pollute the test output, while still
+            // asserting that errors are actually logged (not silently swallowed).
+            ch.qos.logback.classic.Logger implLogger = (ch.qos.logback.classic.Logger)
+                    LoggerFactory.getLogger(InMemoryPersistenceServiceImpl.class);
+            ListAppender<ILoggingEvent> appender = new ListAppender<>();
+            appender.start();
+            implLogger.addAppender(appender);
+            // Prevent events from propagating to the root appender so stack traces
+            // from intentional errors don't pollute the test output.
+            implLogger.setAdditive(false);
 
-                        @Override
-                        public boolean isTransformationEnabled() {
-                            return true;
-                        }
+            try {
+                TenantTransformationListener errorListener =
+                        new TenantTransformationListener() {
+                            @Override
+                            public Item transformItem(Item item, String tenantId) {
+                                throw new RuntimeException("Transformation error");
+                            }
 
-                        @Override
-                        public Item reverseTransformItem(Item item, String tenantId) {
-                            throw new RuntimeException("Reverse transformation error");
-                        }
+                            @Override
+                            public boolean isTransformationEnabled() {
+                                return true;
+                            }
 
-                        @Override
-                        public String getTransformationType() {
-                            return "error";
-                        }
-                    };
+                            @Override
+                            public Item reverseTransformItem(Item item, String tenantId) {
+                                throw new RuntimeException("Reverse transformation error");
+                            }
 
-            service.addTransformationListener(errorListener);
+                            @Override
+                            public String getTransformationType() {
+                                return "error";
+                            }
+                        };
 
-            TestMetadataItem item = new TestMetadataItem();
-            item.setItemId("item1");
-            item.setName("original");
+                service.addTransformationListener(errorListener);
 
-            // Should not throw exception, but log error
-            assertDoesNotThrow(() -> service.save(item), "Should handle transformation errors gracefully");
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item1");
+                item.setName("original");
 
-            // Item should still be saved
-            TestMetadataItem loaded = service.load("item1", TestMetadataItem.class);
-            assertNotNull(loaded, "Item should still be saved despite transformation error");
+                assertDoesNotThrow(() -> service.save(item), "Should handle transformation errors gracefully");
+
+                // Item should still be saved despite the transformation error
+                TestMetadataItem loaded = service.load("item1", TestMetadataItem.class);
+                assertNotNull(loaded, "Item should still be saved despite transformation error");
+
+                // Both errors must have been logged as WARN (not silently swallowed)
+                long warnCount = appender.list.stream()
+                        .filter(e -> e.getLevel() == Level.WARN)
+                        .count();
+                assertTrue(warnCount >= 2,
+                        "Expected WARN for transform + reverse-transform errors, got " + warnCount);
+            } finally {
+                implLogger.detachAppender(appender);
+                implLogger.setAdditive(true);
+            }
         }
 
         @Test

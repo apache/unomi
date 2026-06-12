@@ -79,6 +79,8 @@ public class DateUtils {
         if (value instanceof ZonedDateTime) {
             return Date.from(((ZonedDateTime) value).toInstant());
         }
+        // LocalDateTime carries no timezone; treat as UTC per Unomi's server-side convention.
+        // Callers that need a specific zone should use ZonedDateTime or OffsetDateTime instead.
         if (value instanceof LocalDateTime) {
             return Date.from(((LocalDateTime) value).atZone(ZoneOffset.UTC).toInstant());
         } else {

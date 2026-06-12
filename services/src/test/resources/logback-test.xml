@@ -1,0 +1,21 @@
+<configuration>
+    <!--
+        Logback configuration for unit tests.
+
+        Default log level: INFO (suppresses DEBUG noise from in-memory sort errors, etc.)
+        Override per run: -DTEST_LOG_LEVEL=DEBUG (or WARN, ERROR, TRACE)
+
+        Example from build.sh:
+            mvn test -pl services -DTEST_LOG_LEVEL=DEBUG
+    -->
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="${TEST_LOG_LEVEL:-INFO}">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>

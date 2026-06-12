@@ -287,7 +287,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                     .forEach(this::loadItemFromFile);
             }
         } catch (IOException e) {
-            LOGGER.error("Failed to load persisted items from {}", storageRootPath, e);
+            throw new RuntimeException("Failed to load persisted items from " + storageRootPath, e);
         }
     }
 
@@ -304,7 +304,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 refreshedIndexes.add(indexName);
             }
         } catch (IOException e) {
-            LOGGER.error("Failed to load item from file: {}", filePath, e);
+            throw new RuntimeException("Failed to load item from file: " + filePath, e);
         }
     }
 
@@ -482,11 +482,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             throw new IllegalStateException("ConditionEvaluatorDispatcher is not set");
         }
         try {
-            conditionEvaluatorDispatcher.eval(condition, item);
+            return conditionEvaluatorDispatcher.eval(condition, item);
         } catch (Exception e) {
             return false;
         }
-        return true;
     }
 
     private <T extends Item> String getKey(String itemId, String index) {
@@ -700,8 +699,6 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                     // Default behavior: wait for automatic refresh
                     long refreshTime = System.currentTimeMillis() + refreshIntervalMs;
                     pendingRefreshItems.put(key, refreshTime);
-                    // Remove from refreshed indexes set if it was previously refreshed
-                    refreshedIndexes.remove(indexName);
                     break;
             }
         }
@@ -837,19 +834,15 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             return true; // If refresh delay is disabled, all items are immediately available
         }
 
-        // If the index has been explicitly refreshed, all items in it are available
-        if (refreshedIndexes.contains(indexName)) {
-            return true;
-        }
-
-        // Check if this specific item has passed its refresh time
+        // Per-item pending state takes priority: a FALSE-policy save after a TRUE save on the
+        // same index must still defer visibility for that specific item.
         Long refreshTime = pendingRefreshItems.get(itemKey);
-        if (refreshTime == null) {
-            // Item is not in pending list, so it's available (e.g., loaded from file)
-            return true;
+        if (refreshTime != null) {
+            return System.currentTimeMillis() >= refreshTime;
         }
 
-        return System.currentTimeMillis() >= refreshTime;
+        // Item not explicitly deferred: available (index-refreshed, loaded from file, etc.)
+        return true;
     }
 
     private String getIndexName(Item item) {
@@ -965,7 +958,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         for (String fieldValue : fieldValues) {
             results.addAll(query(fieldName, fieldValue, sortBy, clazz));
         }
-        return sortItems(results, sortBy);
+        // deduplicate while preserving order
+        return new ArrayList<>(new LinkedHashSet<>(results));
     }
 
     @Override
@@ -1085,9 +1079,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             Map<String, Object> propertyMap = objectMapper.readValue(jsonString, Map.class);
             fieldProperties.put(property.getItemId(), propertyMap);
         } catch (IOException e) {
-            LOGGER.error("Error converting PropertyType to Map", e);
-            // Fallback to simple conversion if JSON conversion fails
-            fieldProperties.put(property.getItemId(), Collections.emptyMap());
+            throw new RuntimeException("Failed to convert PropertyType " + property.getItemId() + " to mapping", e);
         }
     }
 
@@ -1138,6 +1130,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     @Override
     public void purge(Date date) {
         if (date == null) {
+            LOGGER.debug("Purging all items from all tenants (full reset)");
+            itemsById.clear();
+            pendingRefreshItems.clear();
+            refreshedIndexes.clear();
             return;
         }
 
@@ -1517,7 +1513,6 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                         // Default behavior: wait for automatic refresh
                         long refreshTime = System.currentTimeMillis() + refreshIntervalMs;
                         pendingRefreshItems.put(key, refreshTime);
-                        refreshedIndexes.remove(indexName);
                         break;
                 }
             }
@@ -1582,13 +1577,15 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             success = executeEvaluateScoringPlanElementScript(item, scriptParams);
         }
 
-        // Log warning if script wasn't matched
+        // Throw for unrecognized scripts so callers notice missing handlers early
         if (!success) {
             String sanitizedScript = script.replaceAll("[\\r\\n]", "").substring(0, Math.min(script.length(), 100));
-            LOGGER.warn("No matching script handler found for script: {}", sanitizedScript);
+            throw new UnsupportedOperationException(
+                "No in-memory script handler for script: " + sanitizedScript +
+                ". Add a handler in updateWithScript() or use a supported script name.");
         }
 
-        return success;
+        return true;
     }
 
     private boolean executeResetScoringPlanScript(Item item, Map<String, Object> params) {
@@ -2766,32 +2763,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
      * @param <T> the item type
      * @return the transformed item (or original if no transformations applied)
      */
-    @SuppressWarnings("unchecked")
     private <T extends Item> T handleItemTransformation(T item) {
-        if (item != null) {
-            String tenantId = item.getTenantId();
-            if (tenantId != null && !transformationListeners.isEmpty()) {
-                // Sort listeners by priority (higher priority first)
-                List<TenantTransformationListener> sortedListeners = new ArrayList<>(transformationListeners);
-                sortedListeners.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
-
-                for (TenantTransformationListener listener : sortedListeners) {
-                    if (listener.isTransformationEnabled()) {
-                        try {
-                            Item transformedItem = listener.transformItem(item, tenantId);
-                            if (transformedItem != null) {
-                                item = (T) transformedItem;
-                            }
-                        } catch (Exception e) {
-                            // Log error but continue with other listeners since transformation is optional
-                            LOGGER.warn("Error during item transformation for tenant {} with listener {}: {}",
-                                tenantId, listener.getTransformationType(), e.getMessage());
-                        }
-                    }
-                }
-            }
-        }
-        return item;
+        return applyTransformations(item,
+            (listener, i) -> listener.transformItem(i, i.getTenantId()),
+            "item transformation");
     }
 
     /**
@@ -2802,26 +2777,42 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
      * @param <T> the item type
      * @return the reverse transformed item (or original if no transformations applied)
      */
-    @SuppressWarnings("unchecked")
     private <T extends Item> T handleItemReverseTransformation(T item) {
+        return applyTransformations(item,
+            (listener, i) -> listener.reverseTransformItem(i, i.getTenantId()),
+            "item reverse transformation");
+    }
+
+    /**
+     * Shared helper that walks the sorted listener list and applies a transformation function.
+     *
+     * @param item      the item to transform
+     * @param transform BiFunction receiving (listener, currentItem) and returning the (possibly new) item
+     * @param logLabel  short label used in the warning log when a listener throws
+     * @param <T>       the item type
+     * @return the (possibly transformed) item
+     */
+    @SuppressWarnings("unchecked")
+    private <T extends Item> T applyTransformations(T item,
+            java.util.function.BiFunction<TenantTransformationListener, T, Item> transform,
+            String logLabel) {
         if (item != null) {
             String tenantId = item.getTenantId();
             if (tenantId != null && !transformationListeners.isEmpty()) {
-                // Sort listeners by priority (higher priority first) for reverse transformation
                 List<TenantTransformationListener> sortedListeners = new ArrayList<>(transformationListeners);
                 sortedListeners.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
 
                 for (TenantTransformationListener listener : sortedListeners) {
                     if (listener.isTransformationEnabled()) {
                         try {
-                            Item transformedItem = listener.reverseTransformItem(item, tenantId);
+                            Item transformedItem = transform.apply(listener, item);
                             if (transformedItem != null) {
                                 item = (T) transformedItem;
                             }
                         } catch (Exception e) {
                             // Log error but continue with other listeners since transformation is optional
-                            LOGGER.warn("Error during item reverse transformation for tenant {} with listener {}: {}",
-                                tenantId, listener.getTransformationType(), e.getMessage());
+                            LOGGER.warn("Error during {} for tenant {} with listener {}",
+                                logLabel, tenantId, listener.getTransformationType(), e);
                         }
                     }
                 }

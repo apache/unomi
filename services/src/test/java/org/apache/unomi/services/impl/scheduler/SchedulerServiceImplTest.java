@@ -178,8 +178,16 @@ public class SchedulerServiceImplTest {
                         LOGGER.warn("Error cancelling task {} during teardown: {}", task.getItemId(), e.getMessage());
                     }
                 }
-                // Small delay to allow task cancellations to complete
-                Thread.sleep(100);
+                // Wait for running tasks to stop before shutdown
+                try {
+                    TestHelper.retryUntil(
+                        () -> schedulerService.getAllTasks().stream()
+                            .noneMatch(t -> t.getStatus() == ScheduledTask.TaskStatus.RUNNING),
+                        done -> done
+                    );
+                } catch (Exception e) {
+                    LOGGER.debug("Timeout waiting for tasks to stop during teardown, proceeding with preDestroy");
+                }
 
                 schedulerService.preDestroy();
                 schedulerService = null;
@@ -248,6 +256,7 @@ public class SchedulerServiceImplTest {
         CountDownLatch executionLatch = new CountDownLatch(3);
         AtomicInteger executionCount = new AtomicInteger(0);
         AtomicLong lastExecutionTime = new AtomicLong(0);
+        AtomicReference<Throwable> workerError = new AtomicReference<>();
         long period = 100;
 
         ScheduledTask task = schedulerService.newTask("fixed-delay-test")
@@ -257,7 +266,11 @@ public class SchedulerServiceImplTest {
                 long now = System.currentTimeMillis();
                 if (lastExecutionTime.get() > 0) {
                     long delay = now - lastExecutionTime.get();
-                    assertTrue(delay >= period, "Delay should be at least the period");
+                    try {
+                        assertTrue(delay >= period, "Delay should be at least the period");
+                    } catch (AssertionError e) {
+                        workerError.set(e);
+                    }
                 }
                 lastExecutionTime.set(now);
                 executionCount.incrementAndGet();
@@ -272,6 +285,9 @@ public class SchedulerServiceImplTest {
 
         assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute three times");
         assertEquals(3, executionCount.get(), "Task should execute exactly three times");
+        if (workerError.get() != null) {
+            throw new AssertionError("Assertion failed in worker thread", workerError.get());
+        }
     }
 
     // Task state transition tests
@@ -518,8 +534,6 @@ public class SchedulerServiceImplTest {
                 .disallowParallelExecution()
                 .schedule();
 
-            // Wait for task to be picked up by checkTasks and refresh to ensure it's available
-            Thread.sleep(1500);
             // Refresh persistence to ensure task updates are available (handles refresh delay)
             persistenceService.refresh();
             // Retry until task has lock owner (handles refresh delay for updates)
@@ -1037,7 +1051,10 @@ public class SchedulerServiceImplTest {
                 .schedule();
 
             // Wait for completion
-            Thread.sleep(100);
+            TestHelper.retryUntil(
+                () -> schedulerService.getTask(task.getItemId()),
+                t -> t != null && t.getStatus() == ScheduledTask.TaskStatus.COMPLETED
+            );
 
             // Verify task completion
             ScheduledTask completedTask = schedulerService.getTask(task.getItemId());
@@ -1051,7 +1068,10 @@ public class SchedulerServiceImplTest {
         schedulerService.purgeOldTasks();
 
         // Wait for purge to complete
-        Thread.sleep(100);
+        TestHelper.retryUntil(
+            () -> schedulerService.getAllTasks(),
+            tasks -> tasks.isEmpty()
+        );
 
         // Verify purged tasks
         List<ScheduledTask> remainingTasks = schedulerService.getAllTasks();
@@ -1187,10 +1207,13 @@ public class SchedulerServiceImplTest {
         // Cancel the task
         schedulerService.cancelTask(task.getItemId());
 
-        Thread.sleep(TEST_SLEEP*3); // give some time to cancel the thread
-        // Allow task to complete if not cancelled
+        // Wait for cancellation to be reflected in task status
+        TestHelper.retryUntil(
+            () -> schedulerService.getTask(task.getItemId()),
+            t -> t != null && t.getStatus() == ScheduledTask.TaskStatus.CANCELLED
+        );
+        // Allow any blocked task executor thread to unblock and finish
         cancelLatch.countDown();
-        Thread.sleep(TEST_SLEEP);
 
         ScheduledTask cancelledTask = schedulerService.getTask(task.getItemId());
         assertEquals(
@@ -1315,7 +1338,7 @@ public class SchedulerServiceImplTest {
                 node2.simulateCrash();
             }
 
-            // Wait for recovery
+            // Wait for lock to expire: TEST_LOCK_TIMEOUT plus buffer for the surviving node to detect it
             Thread.sleep(TEST_LOCK_TIMEOUT * 2);
 
             // Trigger recovery on surviving node
@@ -1624,15 +1647,13 @@ public class SchedulerServiceImplTest {
             // Attempt immediate re-execution (potential lock stealing)
             node1.recoverCrashedTasks();
             node2.recoverCrashedTasks();
-            Thread.sleep(100);
 
-            // Verify lock wasn't stolen
+            // After recovery, the task may have completed and released its lock.
+            // Only assert lock ownership if the lock is still held.
             ScheduledTask lockedTask = persistenceService.load(task.getItemId(), ScheduledTask.class);
+            assertNotNull(lockedTask, "Task should exist");
             if (lockedTask.getLockOwner() != null) {
-                assertEquals(
-                    originalOwner,
-                    lockedTask.getLockOwner(),
-                    "Lock should not be stolen");
+                assertEquals(originalOwner, lockedTask.getLockOwner(), "Lock should not be stolen");
             }
         } finally {
             node1.preDestroy();
