@@ -47,6 +47,21 @@ import java.util.Map;
 public interface ConditionEvaluatorDispatcher {
 
     /**
+     * Adds a new evaluator to the dispatcher.
+     *
+     * @param name      the name of the evaluator
+     * @param evaluator the evaluator to add
+     */
+    void addEvaluator(String name, ConditionEvaluator evaluator);
+
+    /**
+     * Removes an evaluator from the dispatcher.
+     *
+     * @param name the name of the evaluator to remove
+     */
+    void removeEvaluator(String name);
+
+    /**
      * Evaluates the provided {@link Condition} on the given {@link Item} using an empty context.
      * This is a convenience overload equivalent to calling
      * {@link #eval(Condition, Item, Map)} with an empty map.

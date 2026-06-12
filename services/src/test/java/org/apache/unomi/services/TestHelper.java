@@ -1,0 +1,838 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.unomi.services;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.actions.ActionType;
+import org.apache.unomi.api.security.SecurityServiceConfiguration;
+import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.cache.MultiTypeCacheService;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
+import org.apache.unomi.api.tenants.AuditService;
+import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.impl.ConditionEvaluatorDispatcherImpl;
+import org.apache.unomi.services.common.security.AuditServiceImpl;
+import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
+import org.apache.unomi.services.common.security.KarafSecurityService;
+import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.cluster.ClusterServiceImpl;
+import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
+import org.apache.unomi.services.impl.scheduler.*;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.service.event.EventAdmin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+public class TestHelper {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TestHelper.class);
+    private static final int MAX_RETRIES = 20;
+    private static final long RETRY_DELAY_MS = 100;
+
+    /**
+     * Creates a security service instance for testing purposes.
+     * Initializes a new KarafSecurityService with audit service and default configuration.
+     *
+     * @return A configured KarafSecurityService instance
+     */
+    public static KarafSecurityService createSecurityService() {
+        KarafSecurityService securityService = new KarafSecurityService();
+        AuditService auditService = new AuditServiceImpl();
+        securityService.setTenantAuditService(auditService);
+        securityService.setConfiguration(new SecurityServiceConfiguration());
+        securityService.init();
+        return securityService;
+    }
+
+    /**
+     * Creates an execution context manager for testing purposes.
+     * Sets up an ExecutionContextManagerImpl with the provided security service.
+     *
+     * @param securityService The security service to use in the context manager
+     * @return A configured ExecutionContextManagerImpl instance
+     */
+    public static ExecutionContextManagerImpl createExecutionContextManager(KarafSecurityService securityService) {
+        ExecutionContextManagerImpl executionContextManager = new ExecutionContextManagerImpl();
+        executionContextManager.setSecurityService(securityService);
+        return executionContextManager;
+    }
+
+    public static DefinitionsServiceImpl createDefinitionService(
+        PersistenceService persistenceService,
+        BundleContext bundleContext,
+        SchedulerService schedulerService,
+        MultiTypeCacheService multiTypeCacheService,
+        ExecutionContextManager executionContextManager,
+        TenantService tenantService
+    ) {
+        TestEventAdmin eventAdmin = new TestEventAdmin();
+        return createDefinitionService(persistenceService, bundleContext, schedulerService,
+            multiTypeCacheService, executionContextManager, tenantService, eventAdmin);
+    }
+
+    public static DefinitionsServiceImpl createDefinitionService(
+        PersistenceService persistenceService,
+        BundleContext bundleContext,
+        SchedulerService schedulerService,
+        MultiTypeCacheService multiTypeCacheService,
+        ExecutionContextManager executionContextManager,
+        TenantService tenantService,
+        EventAdmin eventAdmin
+    ) {
+        DefinitionsServiceImpl definitionsService = new DefinitionsServiceImpl();
+        definitionsService.setPersistenceService(persistenceService);
+        definitionsService.setBundleContext(bundleContext);
+        definitionsService.setSchedulerService(schedulerService);
+        definitionsService.setCacheService(multiTypeCacheService);
+        definitionsService.setContextManager(executionContextManager);
+        definitionsService.setTenantService(tenantService);
+        definitionsService.setEventAdmin(eventAdmin);
+
+        definitionsService.postConstruct();
+        return definitionsService;
+    }
+
+    /**
+     * Creates a DefinitionsServiceImpl with a TestEventAdmin and returns both.
+     * This allows tests to register EventHandlers with the TestEventAdmin.
+     *
+     * @param persistenceService the persistence service
+     * @param bundleContext the bundle context
+     * @param schedulerService the scheduler service
+     * @param multiTypeCacheService the cache service
+     * @param executionContextManager the execution context manager
+     * @param tenantService the tenant service
+     * @return a pair containing the DefinitionsServiceImpl and the TestEventAdmin
+     */
+    public static java.util.Map.Entry<DefinitionsServiceImpl, org.apache.unomi.services.impl.TestEventAdmin> createDefinitionServiceWithEventAdmin(
+        PersistenceService persistenceService,
+        BundleContext bundleContext,
+        SchedulerService schedulerService,
+        MultiTypeCacheService multiTypeCacheService,
+        ExecutionContextManager executionContextManager,
+        TenantService tenantService
+    ) {
+        TestEventAdmin eventAdmin = new TestEventAdmin();
+        DefinitionsServiceImpl definitionsService = createDefinitionService(
+            persistenceService, bundleContext, schedulerService,
+            multiTypeCacheService, executionContextManager, tenantService,
+            eventAdmin
+        );
+        return new AbstractMap.SimpleEntry<>(definitionsService, eventAdmin);
+    }
+
+
+    /**
+     * Creates a scheduler service instance for testing purposes with ClusterService support.
+     *
+     * @param nodeId The unique identifier for this node
+     * @param persistenceService The persistence service to use
+     * @param executionContextManager The execution context manager to use
+     * @param bundleContext The bundle context to use
+     * @param clusterService The cluster service to use (can be null)
+     * @param lockTimeout The lock timeout to use (in milliseconds)
+     * @param executorNode Whether this node is an executor node
+     * @param construct Whether to call postConstruct on the service
+     * @param completedTaskTtlDays The TTL for completed tasks (in days)
+     * @return A configured SchedulerServiceImpl instance
+     */
+    public static SchedulerServiceImpl createSchedulerService(
+            String nodeId,
+            PersistenceService persistenceService,
+            ExecutionContextManager executionContextManager,
+            BundleContext bundleContext,
+            ClusterService clusterService,
+            long lockTimeout,
+            boolean executorNode,
+            boolean construct,
+            long completedTaskTtlDays) {
+
+        // Instantiate and wire task manager beans as in blueprint.xml
+
+        // Task Metrics Manager
+        TaskMetricsManager taskMetricsManager = new TaskMetricsManager();
+
+        // Task State Manager
+        TaskStateManager taskStateManager = new TaskStateManager();
+
+        // Task Executor Registry
+        TaskExecutorRegistry taskExecutorRegistry = new TaskExecutorRegistry();
+
+        // Task History Manager
+        TaskHistoryManager taskHistoryManager = new TaskHistoryManager();
+        taskHistoryManager.setNodeId(nodeId);
+        taskHistoryManager.setMetricsManager(taskMetricsManager);
+
+        // Task Lock Manager
+        TaskLockManager taskLockManager = new TaskLockManager();
+        taskLockManager.setNodeId(nodeId);
+        taskLockManager.setLockTimeout(lockTimeout > 0 ? lockTimeout : 10000L);
+        taskLockManager.setMetricsManager(taskMetricsManager);
+
+        // Task Execution Manager
+        TaskExecutionManager taskExecutionManager = new TaskExecutionManager();
+        taskExecutionManager.setNodeId(nodeId);
+        taskExecutionManager.setThreadPoolSize(4);
+        taskExecutionManager.setStateManager(taskStateManager);
+        taskExecutionManager.setLockManager(taskLockManager);
+        taskExecutionManager.setMetricsManager(taskMetricsManager);
+        taskExecutionManager.setHistoryManager(taskHistoryManager);
+        taskExecutionManager.setExecutorRegistry(taskExecutorRegistry);
+        taskExecutionManager.initialize(); // Initialize after all dependencies are set
+
+        // Task Recovery Manager
+        TaskRecoveryManager taskRecoveryManager = new TaskRecoveryManager();
+        taskRecoveryManager.setNodeId(nodeId);
+        taskRecoveryManager.setStateManager(taskStateManager);
+        taskRecoveryManager.setLockManager(taskLockManager);
+        taskRecoveryManager.setMetricsManager(taskMetricsManager);
+        taskRecoveryManager.setExecutionManager(taskExecutionManager);
+        taskRecoveryManager.setExecutorRegistry(taskExecutorRegistry);
+
+        // Task Validation Manager
+        TaskValidationManager taskValidationManager = new TaskValidationManager();
+
+        PersistenceSchedulerProvider persistenceSchedulerProvider = new PersistenceSchedulerProvider();
+        persistenceSchedulerProvider.setPersistenceService(persistenceService);
+        persistenceSchedulerProvider.setExecutorNode(executorNode);
+        persistenceSchedulerProvider.setNodeId(nodeId);
+        persistenceSchedulerProvider.setLockManager(taskLockManager);
+        persistenceSchedulerProvider.setClusterService(clusterService);
+        persistenceSchedulerProvider.setCompletedTaskTtlDays(completedTaskTtlDays);
+
+        SchedulerServiceImpl schedulerService = new SchedulerServiceImpl();
+        schedulerService.setMetricsManager(taskMetricsManager);
+        schedulerService.setStateManager(taskStateManager);
+        schedulerService.setExecutorRegistry(taskExecutorRegistry);
+        schedulerService.setHistoryManager(taskHistoryManager);
+        schedulerService.setLockManager(taskLockManager);
+        schedulerService.setExecutionManager(taskExecutionManager);
+        schedulerService.setRecoveryManager(taskRecoveryManager);
+        schedulerService.setValidationManager(taskValidationManager);
+        schedulerService.setBundleContext(bundleContext);
+        schedulerService.setThreadPoolSize(4); // Ensure enough threads for parallel execution
+        schedulerService.setExecutorNode(executorNode);
+        schedulerService.setNodeId(nodeId);
+        schedulerService.setPurgeTaskEnabled(false);
+        if (lockTimeout > 0) {
+            schedulerService.setLockTimeout(lockTimeout); // Set a default lock timeout for tests
+        }
+
+        // Set the persistence provider on the scheduler service (optional dependency)
+        if (persistenceSchedulerProvider != null) {
+            schedulerService.setPersistenceProvider(persistenceSchedulerProvider);
+        }
+
+        // Set the schedulerService on all managers that need it
+        taskLockManager.setSchedulerService(schedulerService);
+        taskExecutionManager.setSchedulerService(schedulerService);
+        taskRecoveryManager.setSchedulerService(schedulerService);
+
+        if (construct) {
+            schedulerService.postConstruct();
+        }
+        return schedulerService;
+    }
+
+    /**
+     * Creates a scheduler service instance for testing purposes with ClusterService support.
+     * Uses default TTL of 30 days for completed tasks.
+     *
+     * @param nodeId The unique identifier for this node
+     * @param persistenceService The persistence service to use
+     * @param executionContextManager The execution context manager to use
+     * @param bundleContext The bundle context to use
+     * @param clusterService The cluster service to use (can be null)
+     * @param lockTimeout The lock timeout to use (in milliseconds)
+     * @param executorNode Whether this node is an executor node
+     * @param construct Whether to call postConstruct on the service
+     * @return A configured SchedulerServiceImpl instance
+     */
+    public static SchedulerServiceImpl createSchedulerService(
+            String nodeId,
+            PersistenceService persistenceService,
+            ExecutionContextManager executionContextManager,
+            BundleContext bundleContext,
+            ClusterService clusterService,
+            long lockTimeout,
+            boolean executorNode,
+            boolean construct) {
+        return createSchedulerService(nodeId, persistenceService, executionContextManager, bundleContext, clusterService, lockTimeout, executorNode, construct, 30);
+    }
+
+    /**
+     * Creates a scheduler service instance without a PersistenceSchedulerProvider for testing optional dependency scenarios.
+     *
+     * @param nodeId The unique identifier for this node
+     * @param persistenceService The persistence service to use
+     * @param executionContextManager The execution context manager to use
+     * @param bundleContext The bundle context to use
+     * @param clusterService The cluster service to use (can be null)
+     * @param lockTimeout The lock timeout to use (in milliseconds)
+     * @param executorNode Whether this node is an executor node
+     * @param construct Whether to call postConstruct on the service
+     * @return A configured SchedulerServiceImpl instance without persistence provider
+     */
+    public static SchedulerServiceImpl createSchedulerServiceWithoutPersistenceProvider(
+            String nodeId,
+            PersistenceService persistenceService,
+            ExecutionContextManager executionContextManager,
+            BundleContext bundleContext,
+            ClusterService clusterService,
+            long lockTimeout,
+            boolean executorNode,
+            boolean construct) {
+
+        // Create all required managers
+        TaskStateManager taskStateManager = new TaskStateManager();
+        TaskLockManager taskLockManager = new TaskLockManager();
+        TaskExecutionManager taskExecutionManager = new TaskExecutionManager();
+        TaskRecoveryManager taskRecoveryManager = new TaskRecoveryManager();
+        TaskMetricsManager taskMetricsManager = new TaskMetricsManager();
+        TaskHistoryManager taskHistoryManager = new TaskHistoryManager();
+        TaskValidationManager taskValidationManager = new TaskValidationManager();
+        TaskExecutorRegistry taskExecutorRegistry = new TaskExecutorRegistry();
+
+        // Configure managers
+        taskLockManager.setNodeId(nodeId);
+        taskLockManager.setLockTimeout(lockTimeout > 0 ? lockTimeout : 10000);
+        taskLockManager.setMetricsManager(taskMetricsManager);
+
+        taskHistoryManager.setNodeId(nodeId);
+        taskHistoryManager.setMetricsManager(taskMetricsManager);
+
+        taskExecutionManager.setNodeId(nodeId);
+        taskExecutionManager.setThreadPoolSize(4);
+        taskExecutionManager.setStateManager(taskStateManager);
+        taskExecutionManager.setLockManager(taskLockManager);
+        taskExecutionManager.setMetricsManager(taskMetricsManager);
+        taskExecutionManager.setHistoryManager(taskHistoryManager);
+        taskExecutionManager.setExecutorRegistry(taskExecutorRegistry);
+        taskExecutionManager.initialize();
+
+        taskRecoveryManager.setNodeId(nodeId);
+        taskRecoveryManager.setStateManager(taskStateManager);
+        taskRecoveryManager.setLockManager(taskLockManager);
+        taskRecoveryManager.setMetricsManager(taskMetricsManager);
+        taskRecoveryManager.setExecutionManager(taskExecutionManager);
+        taskRecoveryManager.setExecutorRegistry(taskExecutorRegistry);
+
+        // Create scheduler service
+        SchedulerServiceImpl schedulerService = new SchedulerServiceImpl();
+        schedulerService.setBundleContext(bundleContext);
+        schedulerService.setThreadPoolSize(4);
+        schedulerService.setExecutorNode(executorNode);
+        schedulerService.setNodeId(nodeId);
+        schedulerService.setPurgeTaskEnabled(false);
+        if (lockTimeout > 0) {
+            schedulerService.setLockTimeout(lockTimeout);
+        }
+
+        // Set all required managers
+        schedulerService.setStateManager(taskStateManager);
+        schedulerService.setLockManager(taskLockManager);
+        schedulerService.setExecutionManager(taskExecutionManager);
+        schedulerService.setRecoveryManager(taskRecoveryManager);
+        schedulerService.setMetricsManager(taskMetricsManager);
+        schedulerService.setHistoryManager(taskHistoryManager);
+        schedulerService.setValidationManager(taskValidationManager);
+        schedulerService.setExecutorRegistry(taskExecutorRegistry);
+
+        // Note: persistenceProvider is intentionally not set to test optional dependency
+
+        // Set the schedulerService on all managers that need it
+        taskLockManager.setSchedulerService(schedulerService);
+        taskExecutionManager.setSchedulerService(schedulerService);
+        taskRecoveryManager.setSchedulerService(schedulerService);
+
+        if (construct) {
+            schedulerService.postConstruct();
+        }
+        return schedulerService;
+    }
+
+
+
+    /**
+     * Creates and wires a new ClusterServiceImpl with the specified persistence service and node ID.
+     * Callers must invoke postConstruct() themselves if initialization behaviour is needed.
+     *
+     * NOTE: Due to circular dependency between ClusterService and SchedulerService,
+     * when using both services together:
+     * 1. Create the ClusterService first using this method
+     * 2. Create the SchedulerService using createSchedulerService() and pass the ClusterService
+     * 3. If tasks were not initialized during startup, call clusterService.initializeScheduledTasks()
+     *
+     * @param persistenceService The persistence service to use
+     * @param nodeId The unique identifier for this node
+     * @param bundleContext The bundle context to use for service trackers (can be null)
+     * @return A configured ClusterServiceImpl instance
+     */
+    public static ClusterServiceImpl createClusterService(PersistenceService persistenceService, String nodeId, BundleContext bundleContext) {
+        return createClusterService(persistenceService, nodeId, "127.0.0.1", "127.0.0.1", bundleContext);
+    }
+
+
+    /**
+     * Creates and wires a new ClusterServiceImpl with custom addresses and bundle context.
+     * Callers must invoke postConstruct() themselves if initialization behaviour is needed.
+     *
+     * NOTE: Due to circular dependency between ClusterService and SchedulerService,
+     * when using both services together:
+     * 1. Create the ClusterService first using this method
+     * 2. Create the SchedulerService using createSchedulerService() and pass the ClusterService
+     * 3. If tasks were not initialized during startup, call clusterService.initializeScheduledTasks()
+     *
+     * @param persistenceService The persistence service to use
+     * @param nodeId The unique identifier for this node
+     * @param publicAddress The public address for the node
+     * @param internalAddress The internal address for the node
+     * @param bundleContext The bundle context to use for service trackers (can be null)
+     * @return A configured ClusterServiceImpl instance
+     */
+    public static ClusterServiceImpl createClusterService(
+            PersistenceService persistenceService,
+            String nodeId,
+            String publicAddress,
+            String internalAddress,
+            BundleContext bundleContext) {
+        ClusterServiceImpl clusterService = new ClusterServiceImpl();
+        clusterService.setPersistenceService(persistenceService);
+        clusterService.setPublicAddress(publicAddress);
+        clusterService.setInternalAddress(internalAddress);
+        clusterService.setNodeStatisticsUpdateFrequency(60000);
+        clusterService.setNodeId(nodeId);
+
+        return clusterService;
+    }
+
+
+    /**
+     * Creates a test action type with specified configuration.
+     * Initializes an ActionType with the provided ID and action executor.
+     *
+     * @param id The unique identifier for the action type
+     * @param actionExecutor The name of the action executor to use
+     * @return A configured ActionType instance
+     */
+    public static ActionType createActionType(String id, String actionExecutor) {
+        ActionType actionType = new ActionType() {
+            private Metadata metadata = new Metadata();
+            @Override
+            public String getItemId() {
+                return id;
+            }
+            @Override
+            public String getItemType() {
+                return "actionType";
+            }
+            @Override
+            public Metadata getMetadata() {
+                return metadata;
+            }
+            @Override
+            public void setMetadata(Metadata metadata) {
+                this.metadata = metadata;
+            }
+            @Override
+            public Long getVersion() {
+                return 1L;
+            }
+        };
+        Metadata actionMetadata = new Metadata();
+        actionMetadata.setId(id);
+        actionMetadata.setEnabled(true);
+        actionType.setMetadata(actionMetadata);
+        if (actionExecutor != null) {
+            actionType.setActionExecutor(actionExecutor);
+        }
+        return actionType;
+    }
+
+    /**
+     * Sets up common test data in the tenant service.
+     * Creates standard test tenants with basic configuration.
+     *
+     * @param tenantService The tenant service to populate with test data
+     */
+    public static void setupCommonTestData(TenantService tenantService) {
+        // Create standard test tenants
+        tenantService.createTenant("system", Collections.singletonMap("description", "System tenant"));
+        tenantService.createTenant("tenant1", Collections.singletonMap("description", "Tenant 1"));
+        tenantService.createTenant("tenant2", Collections.singletonMap("description", "Tenant 2"));
+    }
+
+    /**
+     * Creates a mock bundle context for testing purposes.
+     * Sets up a mock BundleContext with basic behavior for bundle operations.
+     *
+     * @return A configured mock BundleContext instance
+     */
+    public static BundleContext createMockBundleContext() {
+        BundleContext bundleContext = mock(BundleContext.class);
+        Bundle bundle = mock(Bundle.class);
+        when(bundleContext.getBundle()).thenReturn(bundle);
+        when(bundle.getBundleContext()).thenReturn(bundleContext);
+        // Default to no predefined entries for any path to avoid strict stubbing issues in tests
+        when(bundle.findEntries(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyBoolean()
+        )).thenReturn(null);
+        when(bundleContext.getBundles()).thenReturn(new Bundle[0]);
+        return bundleContext;
+    }
+
+    /**
+     * Creates an event service instance for testing purposes.
+     * Initializes an EventServiceImpl with all required dependencies.
+     *
+     * @param persistenceService The persistence service to use
+     * @param bundleContext The bundle context to use
+     * @param definitionsService The definitions service to use
+     * @param tenantService The tenant service to use
+     * @param tracerService The tracer service to use
+     * @return A configured EventServiceImpl instance
+     */
+
+    /**
+     * Creates a TypeResolutionService instance for testing purposes.
+     *
+     * @param definitionsService The definitions service to use
+     * @return A configured TypeResolutionServiceImpl instance
+     */
+
+    public static void setupSegmentActionTypes(DefinitionsServiceImpl definitionsService) {
+        // Register the evaluateProfileSegmentsAction type
+        ActionType actionType = new ActionType();
+        actionType.setItemId("evaluateProfileSegmentsAction");
+        actionType.setActionExecutor("evaluateProfileSegments");
+
+        Metadata metadata = new Metadata();
+        metadata.setId("evaluateProfileSegmentsAction");
+        metadata.setName("Evaluate Profile Segments");
+        metadata.setDescription("Evaluates the segments for a profile and updates the profile with the matching segments");
+        metadata.setSystemTags(Collections.singleton("profileTags"));
+        metadata.setEnabled(true);
+        metadata.setHidden(false);
+        actionType.setMetadata(metadata);
+
+        definitionsService.setActionType(actionType);
+    }
+
+    /**
+     * Creates a test task executor with specified behavior.
+     * The executor will run the provided execution and handle success/failure callbacks.
+     *
+     * @param taskType The type identifier for the task executor
+     * @param execution The runnable containing the execution logic
+     * @return A configured TaskExecutor instance
+     */
+    public static TaskExecutor createTestExecutor(String taskType, Runnable execution) {
+        return new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return taskType;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                try {
+                    execution.run();
+                    callback.complete();
+                } catch (Exception e) {
+                    callback.fail(e.getMessage());
+                }
+            }
+        };
+    }
+
+    /**
+     * Creates a test task with specified configuration.
+     * Initializes a new ScheduledTask with the provided parameters and default settings.
+     *
+     * @param taskId The unique identifier for the task
+     * @param taskType The type of task to create
+     * @param persistent Whether the task should be persistent
+     * @return A configured ScheduledTask instance
+     */
+    public static ScheduledTask createTestTask(String taskId, String taskType, boolean persistent) {
+        ScheduledTask task = new ScheduledTask();
+        task.setItemId(taskId);
+        task.setTaskType(taskType);
+        task.setEnabled(true);
+        task.setPersistent(persistent);
+        task.setStatus(ScheduledTask.TaskStatus.SCHEDULED);
+        return task;
+    }
+
+    /**
+     * Cleans up the default storage directory used in tests.
+     * Attempts to delete the directory with retries in case of failures.
+     * Optimized for speed with shorter retry intervals.
+     *
+     * @param maxRetries The maximum number of deletion attempts
+     * @throws RuntimeException if the directory cannot be deleted after all retries
+     */
+    public static void cleanDefaultStorageDirectory(int maxRetries) {
+        Path defaultStorageDir = Paths.get(InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR).toAbsolutePath().normalize();
+        if (!Files.exists(defaultStorageDir)) {
+            return; // Already clean, skip expensive operations
+        }
+        int count = 0;
+        while (Files.exists(defaultStorageDir) && count < maxRetries) {
+            try {
+                FileUtils.deleteDirectory(defaultStorageDir.toFile());
+                // If deletion succeeded, break early
+                if (!Files.exists(defaultStorageDir)) {
+                    return;
+                }
+            } catch (IOException e) {
+                LOGGER.warn("Error deleting default storage directory, will retry", e);
+            }
+            // Use shorter sleep time (100ms instead of 1000ms) for faster retries
+            // This significantly speeds up test execution when cleanup is needed
+            if (count < maxRetries - 1) { // Don't sleep after last attempt
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+            count++;
+        }
+        if (Files.exists(defaultStorageDir)) {
+            throw new RuntimeException("Failed to delete default storage directory after " + maxRetries + " retries");
+        }
+    }
+
+    /**
+     * Generic retry method that will retry an operation until it succeeds or reaches max retries.
+     * @param operation The operation to retry that returns a result
+     * @param successCondition The predicate to test if the operation was successful
+     * @param <T> The type of result returned by the operation
+     * @return The result of the successful operation
+     * @throws RuntimeException if max retries are reached without success
+     */
+    public static <T> T retryUntil(Supplier<T> operation, Predicate<T> successCondition) {
+        int attempts = 0;
+        T result = null;
+        boolean success = false;
+
+        while (!success && attempts < MAX_RETRIES) {
+            result = operation.get();
+            success = successCondition.test(result);
+
+            if (!success) {
+                attempts++;
+                try {
+                    Thread.sleep(RETRY_DELAY_MS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Retry interrupted", e);
+                }
+            }
+        }
+
+        if (!success) {
+            throw new RuntimeException("Operation failed after " + MAX_RETRIES + " attempts");
+        }
+
+        return result;
+    }
+
+    /**
+     * Retries a query operation until items are available or timeout is reached.
+     * This is useful for tests that need to wait for refresh delay in in-memory persistence service.
+     * The method will retry the query until the expected number of items are found, or until
+     * any items are found if expectedCount is null.
+     *
+     * @param querySupplier Supplier that returns the query result (List or PartialList)
+     * @param expectedCount Expected number of items (null to wait for any items > 0)
+     * @param maxWaitMs Maximum time to wait in milliseconds (defaults to 2000ms if <= 0)
+     * @param <T> The type of query result (List or PartialList)
+     * @return The query result when condition is met
+     * @throws RuntimeException if timeout is reached without meeting the condition
+     */
+    @SuppressWarnings("unchecked")
+    public static <T> T retryQueryUntilAvailable(Supplier<T> querySupplier, Integer expectedCount, long maxWaitMs) {
+        long maxWait = maxWaitMs > 0 ? maxWaitMs : 2000L;
+        long startTime = System.currentTimeMillis();
+        long retryDelay = Math.min(50L, maxWait / 20); // Adaptive retry delay
+
+        T result = querySupplier.get();
+
+        while (System.currentTimeMillis() - startTime < maxWait) {
+            int currentCount = 0;
+
+            if (result instanceof List) {
+                currentCount = ((List<?>) result).size();
+            } else if (result instanceof PartialList) {
+                currentCount = ((PartialList<?>) result).getList().size();
+            }
+
+            // Check if condition is met
+            boolean conditionMet = expectedCount != null
+                ? currentCount == expectedCount
+                : currentCount > 0;
+
+            if (conditionMet) {
+                return result;
+            }
+
+            // Wait before retrying
+            try {
+                Thread.sleep(retryDelay);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException("Retry interrupted", e);
+            }
+
+            result = querySupplier.get();
+        }
+
+        // If we get here, timeout was reached
+        int finalCount = 0;
+        if (result instanceof List) {
+            finalCount = ((List<?>) result).size();
+        } else if (result instanceof PartialList) {
+            finalCount = ((PartialList<?>) result).getList().size();
+        }
+
+        String message = expectedCount != null
+            ? String.format("Query did not return expected count %d after %d ms (got %d)", expectedCount, maxWait, finalCount)
+            : String.format("Query did not return any items after %d ms", maxWait);
+        throw new RuntimeException(message);
+    }
+
+    /**
+     * Retries a query operation until items are available.
+     * Uses default timeout of 2000ms.
+     *
+     * @param querySupplier Supplier that returns the query result
+     * @param expectedCount Expected number of items (null to wait for any items > 0)
+     * @param <T> The type of query result
+     * @return The query result when condition is met
+     */
+    public static <T> T retryQueryUntilAvailable(Supplier<T> querySupplier, Integer expectedCount) {
+        return retryQueryUntilAvailable(querySupplier, expectedCount, 2000L);
+    }
+
+    /**
+     * Retries a query operation until any items are available.
+     * Uses default timeout of 2000ms.
+     *
+     * @param querySupplier Supplier that returns the query result
+     * @param <T> The type of query result
+     * @return The query result when items are found
+     */
+    public static <T> T retryQueryUntilAvailable(Supplier<T> querySupplier) {
+        return retryQueryUntilAvailable(querySupplier, null, 2000L);
+    }
+
+    /**
+     * Common tearDown method to be used by test classes to clean up resources.
+     * This centralizes the common teardown logic to reduce duplication.
+     *
+     * @param schedulerService The scheduler service instance to stop
+     * @param multiTypeCacheService The cache service to clear
+     * @param persistenceService The persistence service to purge
+     * @param tenantService The tenant service to reset
+     * @param tenantIds Array of tenant IDs to clear from the cache
+     * @throws Exception If an error occurs during teardown
+     */
+    public static void tearDown(
+            SchedulerService schedulerService,
+            MultiTypeCacheService multiTypeCacheService,
+            PersistenceService persistenceService,
+            TenantService tenantService,
+            String... tenantIds) throws Exception {
+
+        // Stop scheduler service
+        if (schedulerService instanceof SchedulerServiceImpl) {
+            // instanceof already handles null; preDestroy shuts down threads cleanly
+            ((SchedulerServiceImpl) schedulerService).preDestroy();
+        }
+
+        // Clear cache by clearing each tenant
+        if (multiTypeCacheService != null && tenantIds != null) {
+            for (String tenantId : tenantIds) {
+                if (tenantId != null) {
+                    multiTypeCacheService.clear(tenantId);
+                }
+            }
+        }
+
+        // Clear persistence service data if possible
+        if (persistenceService instanceof InMemoryPersistenceServiceImpl) {
+            // purge(null) purges all items — used to reset test state between test methods
+            ((InMemoryPersistenceServiceImpl) persistenceService).purge((Date) null);
+        }
+
+        // Reset tenant context
+        if (tenantService instanceof TestTenantService) {
+            // clearCurrentTenantId() removes the ThreadLocal entry rather than setting it to null
+            ((TestTenantService) tenantService).clearCurrentTenantId();
+        }
+    }
+
+    /**
+     * This method is a no-op. It exists as a documentation reminder to null out references
+     * in the calling code after the call. Java is pass-by-value, so passing references here
+     * cannot null out the caller's variables.
+     *
+     * @param objects The objects whose references the caller should null out after this call
+     */
+    public static void cleanupReferences(Object... objects) {
+        // No-op. The caller is responsible for setting its own instance variables to null.
+        // This method exists solely as a visible reminder to do so.
+    }
+
+    /**
+     * Injects the definitions service into the condition evaluator dispatcher.
+     * This is required for proper condition type resolution, especially for conditions
+     * with parent conditions that need to be resolved through the definitions service.
+     *
+     * @param conditionEvaluatorDispatcher The condition evaluator dispatcher to inject into
+     * @param definitionsService The definitions service to inject
+     */
+    public static void injectDefinitionsServiceIntoDispatcher(
+            ConditionEvaluatorDispatcher conditionEvaluatorDispatcher,
+            DefinitionsService definitionsService) {
+        if (conditionEvaluatorDispatcher instanceof ConditionEvaluatorDispatcherImpl) {
+            ((ConditionEvaluatorDispatcherImpl) conditionEvaluatorDispatcher).setDefinitionsService(definitionsService);
+        }
+    }
+}

@@ -18,6 +18,7 @@
 package org.apache.unomi.persistence.spi.conditions.evaluator.impl;
 
 import org.apache.unomi.api.Item;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
@@ -50,6 +51,7 @@ public class ConditionEvaluatorDispatcherImpl
 
     private MetricsService metricsService;
     private ScriptExecutor scriptExecutor;
+    private DefinitionsService definitionsService;
 
     public ConditionEvaluatorDispatcherImpl() {
     }
@@ -71,6 +73,24 @@ public class ConditionEvaluatorDispatcherImpl
 
     public void unbindEvaluator(ConditionEvaluator evaluator, Map<String, Object> props) {
         evaluators.remove((String) props.get("conditionEvaluatorId"));
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    public void unsetDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = null;
+    }
+
+    @Override
+    public void addEvaluator(String name, ConditionEvaluator evaluator) {
+        evaluators.put(name, evaluator);
+    }
+
+    @Override
+    public void removeEvaluator(String name) {
+        evaluators.remove(name);
     }
 
     @Override
