@@ -37,6 +37,8 @@ import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cluster.ClusterServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.scheduler.*;
+import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
+import org.apache.unomi.services.impl.validation.validators.*;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
@@ -118,6 +120,19 @@ public class TestHelper {
         definitionsService.setContextManager(executionContextManager);
         definitionsService.setTenantService(tenantService);
         definitionsService.setEventAdmin(eventAdmin);
+
+        // Configure built-in validators for the ConditionValidationService created internally
+        List<ValueTypeValidator> validators = new ArrayList<>();
+        validators.add(new StringValueTypeValidator());
+        validators.add(new IntegerValueTypeValidator());
+        validators.add(new LongValueTypeValidator());
+        validators.add(new FloatValueTypeValidator());
+        validators.add(new DoubleValueTypeValidator());
+        validators.add(new BooleanValueTypeValidator());
+        validators.add(new DateValueTypeValidator());
+        validators.add(new ComparisonOperatorValueTypeValidator());
+        validators.add(new ConditionValueTypeValidator());
+        definitionsService.setConditionValidationServiceBuiltInValidators(validators);
 
         definitionsService.postConstruct();
         return definitionsService;
@@ -384,6 +399,22 @@ public class TestHelper {
 
 
 
+    public static ConditionValidationService createConditionValidationService() {
+        ConditionValidationServiceImpl conditionValidationService = new ConditionValidationServiceImpl();
+        List<ValueTypeValidator> validators = new ArrayList<>();
+        validators.add(new StringValueTypeValidator());
+        validators.add(new IntegerValueTypeValidator());
+        validators.add(new LongValueTypeValidator());
+        validators.add(new FloatValueTypeValidator());
+        validators.add(new DoubleValueTypeValidator());
+        validators.add(new BooleanValueTypeValidator());
+        validators.add(new DateValueTypeValidator());
+        validators.add(new ComparisonOperatorValueTypeValidator());
+        validators.add(new ConditionValueTypeValidator());
+        conditionValidationService.setBuiltInValidators(validators);
+        return conditionValidationService;
+    }
+
     /**
      * Creates and wires a new ClusterServiceImpl with the specified persistence service and node ID.
      * Callers must invoke postConstruct() themselves if initialization behaviour is needed.
@@ -402,6 +433,7 @@ public class TestHelper {
     public static ClusterServiceImpl createClusterService(PersistenceService persistenceService, String nodeId, BundleContext bundleContext) {
         return createClusterService(persistenceService, nodeId, "127.0.0.1", "127.0.0.1", bundleContext);
     }
+
 
 
     /**

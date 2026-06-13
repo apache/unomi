@@ -90,7 +90,7 @@ public class QueryServiceImpl implements QueryService {
     private Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query, boolean optimizedQuery) {
         if (query != null) {
             // resolve condition
-            ParserHelper.resolveConditionType(definitionsService, query.getCondition(), "aggregate on property " + property + " for type " + itemType);
+            definitionsService.getConditionValidationService().validate(query.getCondition());
 
             // resolve aggregate
             BaseAggregate baseAggregate = null;

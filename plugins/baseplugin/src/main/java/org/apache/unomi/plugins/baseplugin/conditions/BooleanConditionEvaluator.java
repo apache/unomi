@@ -36,13 +36,16 @@ public class BooleanConditionEvaluator implements ConditionEvaluator {
         boolean isAnd = "and".equalsIgnoreCase((String) condition.getParameter("operator"));
         @SuppressWarnings("unchecked")
         List<Condition> conditions = (List<Condition>) condition.getParameter("subConditions");
+
+        if (conditions == null || conditions.isEmpty()) {
+            return true;
+        }
+
         for (Condition sub : conditions) {
             boolean eval = dispatcher.eval(sub, item, context);
             if (!eval && isAnd) {
-                // And
                 return false;
             } else if (eval && !isAnd) {
-                // Or
                 return true;
             }
         }

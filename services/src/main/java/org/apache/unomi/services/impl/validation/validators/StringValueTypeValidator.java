@@ -14,23 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.unomi.services.impl.validation.validators;
 
-package org.apache.unomi.api.exceptions;
+import org.apache.unomi.api.services.ValueTypeValidator;
 
-/**
- * Exception thrown when a segment condition is invalid or cannot be used.
- */
-public class BadSegmentConditionException extends RuntimeException {
-
-    public BadSegmentConditionException() {
-        super();
+public class StringValueTypeValidator implements ValueTypeValidator {
+    @Override
+    public String getValueTypeId() {
+        return "string";
     }
 
-    public BadSegmentConditionException(String message) {
-        super(message);
+    @Override
+    public boolean validate(Object value) {
+        return value instanceof String;
     }
 
-    public BadSegmentConditionException(String message, Throwable cause) {
-        super(message, cause);
+    @Override
+    public String getValueTypeDescription() {
+        return "Value must be a string";
     }
 }

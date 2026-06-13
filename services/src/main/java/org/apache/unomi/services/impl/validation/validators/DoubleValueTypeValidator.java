@@ -14,23 +14,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.unomi.services.impl.validation.validators;
 
-package org.apache.unomi.api.exceptions;
-
-/**
- * Exception thrown when a segment condition is invalid or cannot be used.
- */
-public class BadSegmentConditionException extends RuntimeException {
-
-    public BadSegmentConditionException() {
-        super();
-    }
-
-    public BadSegmentConditionException(String message) {
-        super(message);
-    }
-
-    public BadSegmentConditionException(String message, Throwable cause) {
-        super(message, cause);
+public class DoubleValueTypeValidator extends AbstractNumericValueTypeValidator {
+    public DoubleValueTypeValidator() {
+        super("double", Double.class);
     }
 }

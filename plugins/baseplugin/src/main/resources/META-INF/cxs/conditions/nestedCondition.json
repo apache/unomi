@@ -2,7 +2,7 @@
   "metadata": {
     "id": "nestedCondition",
     "name": "nestedCondition",
-    "description": "",
+    "description": "Evaluates a condition on nested items within a profile or session property",
     "systemTags": [
       "profileTags",
       "logical",
@@ -17,13 +17,19 @@
   "parameters": [
     {
       "id": "path",
-      "type": "String",
-      "multivalued": false
+      "type": "string",
+      "multivalued": false,
+      "validation": {
+        "required": true
+      }
     },
     {
       "id": "subCondition",
       "type": "Condition",
-      "multivalued": false
+      "multivalued": false,
+      "validation": {
+        "required": true
+      }
     }
   ]
 }

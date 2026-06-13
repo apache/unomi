@@ -14,23 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.unomi.api.exceptions;
+package org.apache.unomi.api.services;
 
 /**
- * Exception thrown when a segment condition is invalid or cannot be used.
+ * A service interface for validating values against specific types.
  */
-public class BadSegmentConditionException extends RuntimeException {
+public interface ValueTypeValidator {
 
-    public BadSegmentConditionException() {
-        super();
-    }
+    /**
+     * @return The type identifier this validator handles
+     */
+    String getValueTypeId();
 
-    public BadSegmentConditionException(String message) {
-        super(message);
-    }
+    /**
+     * Validates if a value matches the expected type
+     * @param value The value to validate
+     * @return true if the value is valid for this type, false otherwise
+     */
+    boolean validate(Object value);
 
-    public BadSegmentConditionException(String message, Throwable cause) {
-        super(message, cause);
-    }
+    /**
+     * @return A human readable description of what this type expects, used in error messages
+     */
+    String getValueTypeDescription();
 }

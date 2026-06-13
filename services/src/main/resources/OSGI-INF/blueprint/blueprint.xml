@@ -35,6 +35,16 @@
     <reference id="auditService" interface="org.apache.unomi.api.tenants.AuditService" availability="optional"/>
     <reference id="eventAdmin" interface="org.osgi.service.event.EventAdmin"/>
 
+    <!-- Reference list for custom validators from plugins -->
+    <reference-list id="customValidators"
+                   interface="org.apache.unomi.api.services.ValueTypeValidator"
+                   availability="optional">
+        <reference-listener bind-method="bindValidator"
+                          unbind-method="unbindValidator"
+                          ref="definitionsServiceImpl"/>
+    </reference-list>
+
+
     <!-- Reference Lists -->
     <reference-list id="eventListenerServices"
                     interface="org.apache.unomi.api.services.EventListenerService"
@@ -238,6 +248,19 @@
         <property name="contextManager" ref="executionContextManager"/>
         <property name="eventAdmin" ref="eventAdmin"/>
         <property name="auditService" ref="auditService"/>
+        <property name="conditionValidationServiceBuiltInValidators">
+            <list>
+                <ref component-id="stringValueTypeValidator"/>
+                <ref component-id="integerValueTypeValidator"/>
+                <ref component-id="longValueTypeValidator"/>
+                <ref component-id="floatValueTypeValidator"/>
+                <ref component-id="doubleValueTypeValidator"/>
+                <ref component-id="booleanValueTypeValidator"/>
+                <ref component-id="dateValueTypeValidator"/>
+                <ref component-id="comparisonOperatorValueTypeValidator"/>
+                <ref component-id="conditionValueTypeValidator"/>
+            </list>
+        </property>
     </bean>
 
     <bean id="eventServiceImpl" class="org.apache.unomi.services.impl.events.EventServiceImpl">
@@ -452,6 +475,18 @@
         <property name="contextManager" ref="executionContextManager"/>
     </bean>
 
+    <!-- Value Type Validator Beans -->
+    <bean id="stringValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.StringValueTypeValidator"/>
+    <bean id="integerValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.IntegerValueTypeValidator"/>
+    <bean id="longValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.LongValueTypeValidator"/>
+    <bean id="floatValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.FloatValueTypeValidator"/>
+    <bean id="doubleValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.DoubleValueTypeValidator"/>
+    <bean id="booleanValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.BooleanValueTypeValidator"/>
+    <bean id="dateValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.DateValueTypeValidator"/>
+    <bean id="comparisonOperatorValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.ComparisonOperatorValueTypeValidator"/>
+    <bean id="conditionValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.ConditionValueTypeValidator"/>
+
+
     <!-- Services -->
     <service id="multiTypeCacheService" ref="multiTypeCacheServiceImpl" interface="org.apache.unomi.api.services.cache.MultiTypeCacheService" />
 
@@ -641,5 +676,17 @@
     </service>
 
     <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
+
+
+    <!-- Value Type Validator Services -->
+    <service ref="stringValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="integerValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="longValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="floatValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="doubleValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="booleanValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="dateValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="comparisonOperatorValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="conditionValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
 
 </blueprint>

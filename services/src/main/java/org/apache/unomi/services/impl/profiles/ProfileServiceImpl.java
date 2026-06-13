@@ -429,7 +429,8 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
         if (query.getScrollIdentifier() != null) {
             return persistenceService.continueScrollQuery(clazz, query.getScrollIdentifier(), query.getScrollTimeValidity());
         }
-        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
+        if (query.getCondition() != null) {
+            definitionsService.getConditionValidationService().validate(query.getCondition());
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
             } else {
