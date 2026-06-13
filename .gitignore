@@ -21,6 +21,7 @@ itests/src/main
 dependency_tree.txt
 .mvn/.develocity/develocity-workspace-id
 /.cursor/
+/.claude/
 /.local-notes/
 itests/snapshots_repository/
 itests/archives/
