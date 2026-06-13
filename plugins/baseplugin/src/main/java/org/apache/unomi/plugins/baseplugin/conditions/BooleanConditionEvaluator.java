@@ -38,7 +38,7 @@ public class BooleanConditionEvaluator implements ConditionEvaluator {
         List<Condition> conditions = (List<Condition>) condition.getParameter("subConditions");
 
         if (conditions == null || conditions.isEmpty()) {
-            return true;
+            return isAnd;
         }
 
         for (Condition sub : conditions) {

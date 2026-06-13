@@ -58,7 +58,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
         }
         String typeId = validator.getValueTypeId().toLowerCase();
         // Only remove if it's not a built-in validator
-        if (builtInValidators.stream().noneMatch(v -> v.getValueTypeId().equalsIgnoreCase(typeId))) {
+        if (builtInValidators == null || builtInValidators.stream().noneMatch(v -> v.getValueTypeId().equalsIgnoreCase(typeId))) {
             validators.remove(typeId);
             LOGGER.debug("Removed custom validator for type: {}", validator.getValueTypeId());
         }

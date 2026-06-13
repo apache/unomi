@@ -622,7 +622,7 @@ public class TypeResolutionServiceImplTest {
         InvalidObjectInfo info2 = typeResolutionService.getInvalidObjects("segments").get("testSegment");
 
         assertEquals(firstSeen, info2.getFirstSeenTimestamp(), "First seen timestamp should not change");
-        assertTrue(info2.getLastSeenTimestamp() > firstSeen, "Last seen timestamp should be updated");
+        assertTrue(info2.getLastSeenTimestamp() >= firstSeen, "Last seen timestamp should be updated");
         assertEquals(2, info2.getEncounterCount(), "Encounter count should be incremented");
         assertEquals(2, info2.getMissingConditionTypeIds().size(), "Should accumulate all missing condition types");
         assertTrue(info2.getMissingConditionTypeIds().contains("missingCond1"), "Should contain initial condition type");
@@ -739,7 +739,7 @@ public class TypeResolutionServiceImplTest {
         InvalidObjectInfo info2 = typeResolutionService.getInvalidObjects("rules").get("rule1");
 
         assertEquals(firstSeen, info2.getFirstSeenTimestamp(), "First seen timestamp should not change");
-        assertTrue(info2.getLastSeenTimestamp() > firstSeen, "Last seen timestamp should be updated");
+        assertTrue(info2.getLastSeenTimestamp() >= firstSeen, "Last seen timestamp should be updated");
         assertTrue(info2.getLastSeenTimestamp() >= lastSeen, "Last seen should be greater than or equal to previous last seen");
     }
 

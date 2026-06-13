@@ -19,11 +19,11 @@ package org.apache.unomi.services.impl.validation.validators;
 import org.apache.unomi.api.services.ValueTypeValidator;
 
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class ComparisonOperatorValueTypeValidator implements ValueTypeValidator {
-    private static final Set<String> VALID_OPERATORS = new HashSet<>(Arrays.asList(
+    private static final Set<String> VALID_OPERATORS = new LinkedHashSet<>(Arrays.asList(
         // Equality operators
         "equals", "notEquals",
         // Comparison operators

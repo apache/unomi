@@ -35,6 +35,7 @@ public class IdsConditionEvaluator implements ConditionEvaluator {
         }
 
         boolean contained = ids.contains(item.getItemId());
-        return match == contained;
+        boolean matchValue = match == null || match;
+        return matchValue == contained;
     }
 }
