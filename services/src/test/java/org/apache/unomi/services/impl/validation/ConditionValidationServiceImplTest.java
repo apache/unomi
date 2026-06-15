@@ -1172,6 +1172,7 @@ public class ConditionValidationServiceImplTest {
                    "Should have error for missing required parameter");
     }
 
+    @org.junit.jupiter.api.Nested
     public class PartialValidationTests {
         @Test
         public void testValidate_SkipsParameterReferences() {

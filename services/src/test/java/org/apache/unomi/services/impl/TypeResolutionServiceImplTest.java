@@ -511,10 +511,71 @@ public class TypeResolutionServiceImplTest {
     }
 
     @Test
-    public void testResolveValueType() {
-        // This test would require PropertyType and ValueType classes
-        // For now, we'll just verify the method exists and doesn't throw
+    public void testResolveValueType_Null() {
         assertDoesNotThrow(() -> typeResolutionService.resolveValueType(null), "resolveValueType should handle null gracefully");
+    }
+
+    @Test
+    public void testResolveValueType_SetsValueTypeOnPropertyType() {
+        org.apache.unomi.api.PropertyType propertyType = new org.apache.unomi.api.PropertyType();
+        propertyType.setMetadata(new Metadata("testProp"));
+        propertyType.setValueTypeId("string");
+
+        org.apache.unomi.api.ValueType valueType = new org.apache.unomi.api.ValueType("string");
+        when(definitionsService.getValueType("string")).thenReturn(valueType);
+
+        typeResolutionService.resolveValueType(propertyType);
+
+        assertNotNull(propertyType.getValueType(), "resolveValueType should set the valueType on the PropertyType");
+        assertEquals("string", propertyType.getValueType().getId(), "ValueType should match the looked-up type");
+    }
+
+    @Test
+    public void testResolveValueType_MissingType_LeavesNull() {
+        org.apache.unomi.api.PropertyType propertyType = new org.apache.unomi.api.PropertyType();
+        propertyType.setMetadata(new Metadata("testProp"));
+        propertyType.setValueTypeId("nonExistent");
+
+        when(definitionsService.getValueType("nonExistent")).thenReturn(null);
+
+        typeResolutionService.resolveValueType(propertyType);
+
+        assertNull(propertyType.getValueType(), "resolveValueType should leave valueType null when type is not found");
+    }
+
+    @Test
+    public void testResolveActionTypes_IgnoreErrors_StillReturnsFalseOnPartialFailure() {
+        Rule rule = new Rule();
+        rule.setItemId("testRule");
+        rule.setMetadata(new Metadata("testRule"));
+
+        Action action1 = new Action();
+        action1.setActionTypeId("testActionType");
+        Action action2 = new Action();
+        action2.setActionTypeId("nonExistentActionType");
+        rule.setActions(Arrays.asList(action1, action2));
+
+        when(definitionsService.getActionType("testActionType")).thenReturn(testActionType);
+        when(definitionsService.getActionType("nonExistentActionType")).thenReturn(null);
+
+        // ignoreErrors only suppresses the warning log; return value still reflects resolution outcome
+        boolean resolved = typeResolutionService.resolveActionTypes(rule, true);
+
+        assertFalse(resolved, "resolveActionTypes should return false when any action fails, regardless of ignoreErrors");
+        assertNotNull(action1.getActionType(), "Successfully resolved action should have its type set");
+    }
+
+    @Test
+    public void testResolveActionTypes_NullActions_IgnoreErrors_SuppressesWarning() {
+        Rule rule = new Rule();
+        rule.setItemId("testRule");
+        rule.setMetadata(new Metadata("testRule"));
+        rule.setActions(null);
+
+        // ignoreErrors=true suppresses the null-actions warning; method still returns false
+        boolean resolved = typeResolutionService.resolveActionTypes(rule, true);
+
+        assertFalse(resolved, "resolveActionTypes should return false when actions are null, even with ignoreErrors=true");
     }
 
     @Test

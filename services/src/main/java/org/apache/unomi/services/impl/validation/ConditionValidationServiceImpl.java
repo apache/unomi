@@ -246,7 +246,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
                 null));
         }
 
-        if (value != null && !ConditionContextHelper.hasContextualParameter(value)) {
+        if (value != null) {
             // Check allowed values
             if (validation.getAllowedValues() != null && !validation.getAllowedValues().isEmpty()) {
                 if (!validation.getAllowedValues().contains(value.toString())) {
@@ -268,6 +268,18 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
                 ConditionType subConditionType = subCondition.getConditionType();
                 String subLocation = parentLocation + ".condition[" +
                     (subCondition.getConditionTypeId() != null ? subCondition.getConditionTypeId() : "unknown") + "]";
+
+                if (subConditionType == null) {
+                    Map<String, Object> typeContext = buildValidationContext(paramName, value, param, subLocation, null);
+                    errors.add(new ValidationError(paramName,
+                        "Nested condition type could not be resolved: " + subCondition.getConditionTypeId(),
+                        ValidationErrorType.INVALID_CONDITION_TYPE,
+                        condition.getConditionTypeId(),
+                        type.getItemId(),
+                        typeContext,
+                        null));
+                    return errors;
+                }
 
                 // Check allowed condition tags
                 if (validation.getAllowedConditionTags() != null && !validation.getAllowedConditionTags().isEmpty()) {
@@ -392,9 +404,8 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
         // and validated at that point. Type validation here would fail incorrectly
         // since parameter references appear as Strings but will resolve to the correct type.
         if (ConditionContextHelper.isParameterReference(value)) {
-            // Parameter reference or script expression - skip type validation
-            // Other constraints (required, allowedValues, etc.) are still validated
-            // Type will be validated when the reference is resolved
+            // Parameter reference or script expression - skip all type and value validation;
+            // validation happens when the reference is resolved at evaluation time
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Skipping type validation for parameter reference: {}={}", 
                     paramName, value);

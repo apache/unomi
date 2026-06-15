@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * with automatic tracking of invalid objects that have unresolved types.
  * 
  * This service centralizes all resolution logic that was previously in ParserHelper.
- * It can work in degraded mode when DefinitionsService is not available (returns false for resolution attempts).
+ * Requires a non-null DefinitionsService; the constructor enforces this.
  */
 public class TypeResolutionServiceImpl implements TypeResolutionService {
 
@@ -443,17 +443,15 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         if (objectType == null || objectId == null) {
             return;
         }
-        
-        Map<String, InvalidObjectInfo> typeMap = invalidObjects.get(objectType);
-        if (typeMap != null) {
-            InvalidObjectInfo removed = typeMap.remove(objectId);
-            if (removed != null) {
-                LOGGER.debug("Marked {} {} as valid (removed from invalid tracking)", objectType, objectId);
-            }
-            // Clean up empty type maps
-            if (typeMap.isEmpty()) {
-                invalidObjects.remove(objectType);
-            }
+        final boolean[] wasRemoved = {false};
+        // compute() is atomic per key — avoids TOCTOU between isEmpty() and remove()
+        invalidObjects.compute(objectType, (k, typeMap) -> {
+            if (typeMap == null) return null;
+            wasRemoved[0] = typeMap.remove(objectId) != null;
+            return typeMap.isEmpty() ? null : typeMap;
+        });
+        if (wasRemoved[0]) {
+            LOGGER.debug("Marked {} {} as valid (removed from invalid tracking)", objectType, objectId);
         }
     }
 

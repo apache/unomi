@@ -1148,13 +1148,52 @@ public class ParserHelperTest {
         // Test deep copy with empty parameter map
         Condition original = new Condition();
         original.setConditionTypeId("testConditionType");
-        
+
         Condition copied = original.deepCopy();
-        
+
         assertNotNull("Copied condition should not be null", copied);
-        assertEquals("Condition type ID should be copied", 
+        assertEquals("Condition type ID should be copied",
             "testConditionType", copied.getConditionTypeId());
         assertNotNull("Parameter values map should exist", copied.getParameterValues());
         assertTrue("Parameter values map should be empty", copied.getParameterValues().isEmpty());
+    }
+
+    /**
+     * Guards against regression where putAll is replaced with putIfAbsent in
+     * resolveEffectiveCondition. Child condition parameters MUST be written into the
+     * shared context map unconditionally so that parent conditions containing
+     * "parameter::X" references can resolve them via ConditionContextHelper.
+     *
+     * Simulates the eventTypeCondition pattern:
+     *   child sets  eventTypeId = "view"
+     *   parent uses propertyValue = "parameter::eventTypeId"
+     */
+    @Test
+    public void testResolveEffectiveConditionPopulatesContextWithChildParameters() {
+        ConditionType childType = new ConditionType();
+        childType.setItemId("eventTypeCondition");
+
+        Condition parentCondition = new Condition();
+        parentCondition.setConditionTypeId("eventPropertyCondition");
+        parentCondition.setParameter("propertyName", "eventType");
+        parentCondition.setParameter("propertyValue", "parameter::eventTypeId");
+        parentCondition.setParameter("comparisonOperator", "equals");
+        childType.setParentCondition(parentCondition);
+
+        ConditionType parentType = new ConditionType();
+        parentType.setItemId("eventPropertyCondition");
+
+        when(definitionsService.getConditionType("eventTypeCondition")).thenReturn(childType);
+        when(definitionsService.getConditionType("eventPropertyCondition")).thenReturn(parentType);
+
+        Condition child = new Condition();
+        child.setConditionTypeId("eventTypeCondition");
+        child.setParameter("eventTypeId", "view");
+
+        Map<String, Object> context = new HashMap<>();
+        ParserHelper.resolveEffectiveCondition(child, definitionsService, context, "test");
+
+        assertEquals("context must contain child parameter so parent parameter:: refs can be resolved",
+            "view", context.get("eventTypeId"));
     }
 }

@@ -510,12 +510,7 @@ public class ParserHelper {
             return ((Condition) value).deepCopy();
         } else if (value instanceof Collection) {
             Collection<?> collection = (Collection<?>) value;
-            Collection<Object> copiedCollection;
-            if (collection instanceof List) {
-                copiedCollection = new ArrayList<>();
-            } else {
-                copiedCollection = new ArrayList<>();
-            }
+            Collection<Object> copiedCollection = new ArrayList<>();
             for (Object item : collection) {
                 if (item instanceof Condition) {
                     copiedCollection.add(((Condition) item).deepCopy());
