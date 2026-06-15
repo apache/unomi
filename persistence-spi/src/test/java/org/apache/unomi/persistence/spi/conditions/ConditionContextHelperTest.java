@@ -512,6 +512,22 @@ public class ConditionContextHelperTest {
         assertEquals("Script reference should execute", "scriptResult", resolvedValues.get("scriptRef"));
     }
 
+    // TC5: null scriptExecutor + script:: expression — getContextualCondition must return null
+    // (RESOLUTION_ERROR propagated internally then converted to null at the public boundary)
+    @Test
+    public void testGetContextualCondition_nullScriptExecutor_scriptExpression_returnsNull() {
+        Map<String, Object> paramValues = new HashMap<>();
+        paramValues.put("value", ConditionContextHelper.SCRIPT_EXPRESSION_PREFIX + "return 'result';");
+
+        Condition condition = new Condition();
+        condition.setParameterValues(paramValues);
+
+        // Pass null as scriptExecutor — simulates OSGi service not yet wired
+        Condition resolved = ConditionContextHelper.getContextualCondition(condition, context, null);
+
+        assertNull("getContextualCondition must return null when scriptExecutor is null and a script:: value is present", resolved);
+    }
+
     // ========== Helper Methods ==========
 
     private Condition createConditionWithParameter(String paramName, Object paramValue) {

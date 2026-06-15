@@ -76,8 +76,11 @@ public class ConditionContextHelper {
     }
 
     private static void loadMappingFile() throws IOException {
-        try (InputStream is = ConditionContextHelper.class.getClassLoader().getResourceAsStream("mapping-FoldToASCII.txt");
-             BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
+        InputStream is = ConditionContextHelper.class.getClassLoader().getResourceAsStream("mapping-FoldToASCII.txt");
+        if (is == null) {
+            throw new IOException("Classpath resource 'mapping-FoldToASCII.txt' not found on classpath");
+        }
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
 
             String line;
             while ((line = reader.readLine()) != null) {

@@ -430,7 +430,10 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
             return persistenceService.continueScrollQuery(clazz, query.getScrollIdentifier(), query.getScrollTimeValidity());
         }
         if (query.getCondition() != null) {
-            definitionsService.getConditionValidationService().validate(query.getCondition());
+            ParserHelper.resolveConditionType(definitionsService, query.getCondition(), "profile search");
+            if (definitionsService.getConditionValidationService() != null) {
+                definitionsService.getConditionValidationService().validate(query.getCondition());
+            }
             if (query.getCondition().getConditionType() == null) {
                 LOGGER.warn("Cannot execute query: condition type '{}' could not be resolved", query.getCondition().getConditionTypeId());
                 return new PartialList<>();

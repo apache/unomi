@@ -118,7 +118,9 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         }
 
         try {
-            if (rootCondition.getConditionType() == null) {
+            // Track whether we set the type in this call so we can roll back on child failure
+            final boolean conditionTypeWasNull = rootCondition.getConditionType() == null;
+            if (conditionTypeWasNull) {
                 String conditionTypeId = rootCondition.getConditionTypeId();
                 if (conditionTypeId == null) {
                     LOGGER.warn("Condition has no type ID for {}", contextObjectName);
@@ -154,6 +156,9 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
                 if (value instanceof Condition) {
                     if (!resolveConditionTypeInternal((Condition) value, contextObjectName,
                             parentChainPath, false, depth + 1)) {
+                        if (conditionTypeWasNull) {
+                            rootCondition.setConditionType(null);
+                        }
                         return false;
                     }
                 } else if (value instanceof Collection) {
@@ -161,6 +166,9 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
                         if (item instanceof Condition) {
                             if (!resolveConditionTypeInternal((Condition) item, contextObjectName,
                                     parentChainPath, false, depth + 1)) {
+                                if (conditionTypeWasNull) {
+                                    rootCondition.setConditionType(null);
+                                }
                                 return false;
                             }
                         }

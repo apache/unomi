@@ -41,6 +41,9 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
 
     public void setBuiltInValidators(List<ValueTypeValidator> builtInValidators) {
         this.builtInValidators = builtInValidators;
+        if (builtInValidators == null) {
+            return;
+        }
         for (ValueTypeValidator validator : builtInValidators) {
             validators.put(validator.getValueTypeId().toLowerCase(), validator);
         }
@@ -142,7 +145,8 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
 
         // Group parameters by exclusive group (only for parameters with validation)
         Map<String, List<Parameter>> exclusiveGroups = new HashMap<>();
-        for (Parameter param : type.getParameters()) {
+        List<Parameter> typeParameters = type.getParameters() != null ? type.getParameters() : Collections.emptyList();
+        for (Parameter param : typeParameters) {
             if (param.getValidation() != null &&
                 param.getValidation().isExclusive() &&
                 param.getValidation().getExclusiveGroup() != null) {
@@ -152,7 +156,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
         }
 
         // Check each parameter, skipping those with references/scripts (partial validation)
-        for (Parameter param : type.getParameters()) {
+        for (Parameter param : typeParameters) {
             String paramName = param.getId();
             Object value = condition.getParameter(paramName);
             String location = "condition[" + condition.getConditionTypeId() + "]." + paramName;
@@ -203,8 +207,20 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             }
         }
 
-        // Recursively validate nested conditions (with same partial logic)
-        for (Object value : condition.getParameterValues().values()) {
+        // Recursively validate nested conditions not already validated by the typed parameter loop above.
+        // Typed 'condition' parameters are already validated inline via validateSingleParameterValue →
+        // ConditionValueTypeValidator → validate(). The bottom loop only catches legacy/untyped parameters.
+        Set<String> alreadyValidatedConditionParams = new HashSet<>();
+        for (Parameter param : typeParameters) {
+            if ("condition".equalsIgnoreCase(param.getType())) {
+                alreadyValidatedConditionParams.add(param.getId());
+            }
+        }
+        for (Map.Entry<String, Object> entry : condition.getParameterValues().entrySet()) {
+            if (alreadyValidatedConditionParams.contains(entry.getKey())) {
+                continue;
+            }
+            Object value = entry.getValue();
             if (value instanceof Condition) {
                 errors.addAll(validate((Condition) value));
             } else if (value instanceof Collection) {
@@ -251,18 +267,24 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
         }
 
         if (value != null) {
-            // Check allowed values
+            // Check allowed values (only enforced for String values; non-String types cannot be
+            // meaningfully compared to a Set<String> via toString())
             if (validation.getAllowedValues() != null && !validation.getAllowedValues().isEmpty()) {
-                if (!validation.getAllowedValues().contains(value.toString())) {
-                    Map<String, Object> allowedContext = new HashMap<>(context);
-                    allowedContext.put("allowedValues", validation.getAllowedValues());
-                    errors.add(new ValidationError(paramName,
-                        "Value must be one of: " + String.join(", ", validation.getAllowedValues()),
-                        ValidationErrorType.INVALID_VALUE,
-                        condition.getConditionTypeId(),
-                        type.getItemId(),
-                        allowedContext,
-                        null));
+                if (value instanceof String) {
+                    if (!validation.getAllowedValues().contains((String) value)) {
+                        Map<String, Object> allowedContext = new HashMap<>(context);
+                        allowedContext.put("allowedValues", validation.getAllowedValues());
+                        errors.add(new ValidationError(paramName,
+                            "Value must be one of: " + String.join(", ", validation.getAllowedValues()),
+                            ValidationErrorType.INVALID_VALUE,
+                            condition.getConditionTypeId(),
+                            type.getItemId(),
+                            allowedContext,
+                            null));
+                    }
+                } else {
+                    LOGGER.warn("allowedValues check skipped for parameter '{}': value type {} cannot be compared to String set",
+                        paramName, value.getClass().getSimpleName());
                 }
             }
 

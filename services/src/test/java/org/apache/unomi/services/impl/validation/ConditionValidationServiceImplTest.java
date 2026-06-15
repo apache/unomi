@@ -1365,4 +1365,71 @@ public class ConditionValidationServiceImplTest {
         assertNotNull(errors, "Result must not be null");
         assertTrue(errors.isEmpty(), "Uninitialized service must return empty list rather than throwing IllegalStateException");
     }
+
+    // TC2: multivalued + required + empty collection hits MISSING_REQUIRED_PARAMETER
+    @Test
+    public void validate_multivaluedRequiredEmptyCollection_reportsMissingRequired() {
+        ConditionType type = new ConditionType(new Metadata());
+        Parameter param = new Parameter("items", "string", true);
+        ConditionValidation validation = new ConditionValidation();
+        validation.setRequired(true);
+        param.setValidation(validation);
+        type.setParameters(Collections.singletonList(param));
+
+        Condition condition = new Condition(type);
+        condition.setParameter("items", Collections.emptyList());
+
+        List<ValidationError> errors = conditionValidationService.validate(condition);
+        assertEquals(1, errors.size(), "Empty required multivalued parameter must produce exactly one error");
+        assertEquals(ValidationErrorType.MISSING_REQUIRED_PARAMETER, errors.get(0).getType(),
+            "Error type must be MISSING_REQUIRED_PARAMETER for empty required collection");
+        assertEquals("items", errors.get(0).getParameterName(), "Error must name the offending parameter");
+    }
+
+    // TC7: when typeResolutionService is wired, a condition with null type gets resolved before validation
+    @Test
+    public void validate_withTypeResolutionService_autoResolvesNullConditionType() {
+        ConditionType resolved = new ConditionType(new Metadata());
+        resolved.setItemId("realType");
+        resolved.setParameters(Collections.emptyList());
+
+        org.apache.unomi.api.services.TypeResolutionService mockTrs =
+            org.mockito.Mockito.mock(org.apache.unomi.api.services.TypeResolutionService.class);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            Condition c = invocation.getArgument(0);
+            c.setConditionType(resolved);
+            return null;
+        }).when(mockTrs).resolveConditionType(
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any());
+
+        ConditionValidationServiceImpl serviceWithTrs =
+            (ConditionValidationServiceImpl) TestHelper.createConditionValidationService();
+        serviceWithTrs.setTypeResolutionService(mockTrs);
+
+        Condition condition = new Condition();
+        condition.setConditionTypeId("realType");
+
+        List<ValidationError> errors = serviceWithTrs.validate(condition);
+        assertTrue(errors.isEmpty(),
+            "No errors expected when typeResolutionService resolves the type before validation");
+    }
+
+    // TC8: two-arg ConditionValueTypeValidator.validate(Object, ConditionValidationService) behaves like one-arg
+    @Test
+    public void conditionValueTypeValidator_twoArgForm_behavesLikeOneArg() {
+        org.apache.unomi.services.impl.validation.validators.ConditionValueTypeValidator validator =
+            new org.apache.unomi.services.impl.validation.validators.ConditionValueTypeValidator();
+
+        ConditionType typeWithMeta = new ConditionType(new Metadata());
+        typeWithMeta.setItemId("t");
+        Condition validCondition = new Condition(typeWithMeta);
+
+        assertTrue(validator.validate(validCondition, null),
+            "Two-arg validate must accept a condition with a type and metadata");
+        assertFalse(validator.validate("not-a-condition", null),
+            "Two-arg validate must reject a non-Condition value");
+        assertTrue(validator.validate(null, null),
+            "Two-arg validate must accept null (null is valid; required-check is separate)");
+    }
 }

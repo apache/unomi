@@ -398,30 +398,32 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                     throw new BadSegmentConditionException();
                 }
 
-                List<ValidationError> validationErrors = definitionsService.getConditionValidationService().validate(segment.getCondition());
+                if (definitionsService.getConditionValidationService() != null) {
+                    List<ValidationError> validationErrors = definitionsService.getConditionValidationService().validate(segment.getCondition());
 
-                List<ValidationError> errors = validationErrors.stream()
-                    .filter(error -> error.getType() != ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
-                    .collect(Collectors.toList());
+                    List<ValidationError> errors = validationErrors.stream()
+                        .filter(error -> error.getType() != ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                        .collect(Collectors.toList());
 
-                List<ValidationError> warnings = validationErrors.stream()
-                    .filter(error -> error.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
-                    .collect(Collectors.toList());
+                    List<ValidationError> warnings = validationErrors.stream()
+                        .filter(error -> error.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                        .collect(Collectors.toList());
 
-                if (!warnings.isEmpty()) {
-                    StringBuilder warningMessage = new StringBuilder("Segment condition has warnings:");
-                    for (ValidationError warning : warnings) {
-                        warningMessage.append("\n- ").append(warning.getDetailedMessage());
+                    if (!warnings.isEmpty()) {
+                        StringBuilder warningMessage = new StringBuilder("Segment condition has warnings:");
+                        for (ValidationError warning : warnings) {
+                            warningMessage.append("\n- ").append(warning.getDetailedMessage());
+                        }
+                        LOGGER.warn(warningMessage.toString());
                     }
-                    LOGGER.warn(warningMessage.toString());
-                }
 
-                if (!errors.isEmpty()) {
-                    StringBuilder errorMessage = new StringBuilder("Invalid segment condition:");
-                    for (ValidationError error : errors) {
-                        errorMessage.append("\n- ").append(error.getDetailedMessage());
+                    if (!errors.isEmpty()) {
+                        StringBuilder errorMessage = new StringBuilder("Invalid segment condition:");
+                        for (ValidationError error : errors) {
+                            errorMessage.append("\n- ").append(error.getDetailedMessage());
+                        }
+                        throw new BadSegmentConditionException(errorMessage.toString());
                     }
-                    throw new BadSegmentConditionException(errorMessage.toString());
                 }
             }
         }

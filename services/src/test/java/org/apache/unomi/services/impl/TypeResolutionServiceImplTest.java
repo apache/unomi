@@ -985,6 +985,50 @@ public class TypeResolutionServiceImplTest {
         assertEquals(2, info2.getContextNames().size(), "Should have both contexts");
     }
 
+    // TC6: resolveActions(null) must return true, consistent with resolveCondition(null) and resolveRule(null)
+    @Test
+    public void resolveActions_nullRule_returnsTrue() {
+        assertTrue(typeResolutionService.resolveActions("rules", null),
+            "resolveActions with null rule must return true (consistent with resolveCondition and resolveRule)");
+    }
+
+    // TC4: markValid on the last object for a type removes the outer key from getAllInvalidObjects()
+    @Test
+    public void markValid_lastObjectForType_removesOuterKey() {
+        typeResolutionService.markInvalid("rules", "rule1", "reason");
+        assertTrue(typeResolutionService.getAllInvalidObjects().containsKey("rules"),
+            "Outer key must exist after markInvalid");
+
+        typeResolutionService.markValid("rules", "rule1");
+        assertFalse(typeResolutionService.getAllInvalidObjects().containsKey("rules"),
+            "Outer key must be removed when the last invalid object for a type is marked valid");
+    }
+
+    // TC3: pre-resolved root (conditionType != null) with an unresolvable child returns false;
+    // the root type must NOT be rolled back since it was set before this call
+    @Test
+    public void resolveConditionType_preResolvedRootWithUnresolvedChild_returnsFalse() {
+        ConditionType rootType = new ConditionType(new Metadata());
+        rootType.setItemId("rootType");
+
+        Condition root = new Condition();
+        root.setConditionType(rootType); // already resolved — type lookup is skipped
+        root.setConditionTypeId("rootType");
+
+        Condition child = new Condition();
+        child.setConditionTypeId("unresolvedChildType");
+        root.setParameter("subCondition", child);
+
+        when(definitionsService.getConditionType("unresolvedChildType")).thenReturn(null);
+
+        boolean resolved = typeResolutionService.resolveConditionType(root, "test");
+
+        assertFalse(resolved, "Should return false when pre-resolved root has an unresolvable child");
+        assertNotNull(root.getConditionType(),
+            "Pre-resolved root type must not be rolled back — it was set before this call");
+        assertNull(child.getConditionType(), "Unresolvable child must remain null");
+    }
+
     @Nested
     class ResolutionTests {
         @Test
