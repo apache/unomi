@@ -226,7 +226,11 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         andCondition.setParameter("operator", "and");
         andCondition.setParameter("subConditions", l);
 
-        l.add(ConditionContextHelper.getContextualCondition(eventCondition, context, scriptExecutor));
+        Condition contextualEventCondition = ConditionContextHelper.getContextualCondition(eventCondition, context, scriptExecutor);
+        if (contextualEventCondition == null) {
+            throw new IllegalArgumentException("Could not resolve event condition context for past event query");
+        }
+        l.add(contextualEventCondition);
 
         if (profileId != null) {
             Condition profileCondition = new Condition();

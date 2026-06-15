@@ -394,6 +394,10 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                     typeResolutionService.resolveCondition("segments", segment, segment.getCondition(), "segment " + segment.getItemId());
                 }
 
+                if (!persistenceService.isValidCondition(segment.getCondition(), new Profile(VALIDATION_PROFILE_ID))) {
+                    throw new BadSegmentConditionException();
+                }
+
                 List<ValidationError> validationErrors = definitionsService.getConditionValidationService().validate(segment.getCondition());
 
                 List<ValidationError> errors = validationErrors.stream()

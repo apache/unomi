@@ -152,7 +152,10 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
     public Set<Metadata> getGoalMetadatas(Query query) {
         if (query.getCondition() != null) {
-            definitionsService.getConditionValidationService().validate(query.getCondition());
+            List<?> validationErrors = definitionsService.getConditionValidationService().validate(query.getCondition());
+            if (!validationErrors.isEmpty()) {
+                LOGGER.warn("Goal query condition has {} validation issue(s)", validationErrors.size());
+            }
         }
         Set<Metadata> descriptions = new LinkedHashSet<>();
 
@@ -265,7 +268,10 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
     public Set<Metadata> getCampaignMetadatas(Query query) {
         if (query.getCondition() != null) {
-            definitionsService.getConditionValidationService().validate(query.getCondition());
+            List<?> validationErrors = definitionsService.getConditionValidationService().validate(query.getCondition());
+            if (!validationErrors.isEmpty()) {
+                LOGGER.warn("Campaign query condition has {} validation issue(s)", validationErrors.size());
+            }
         }
         Set<Metadata> descriptions = new HashSet<Metadata>();
         for (Campaign definition : persistenceService.query(query.getCondition(), query.getSortby(), Campaign.class, query.getOffset(), query.getLimit()).getList()) {
@@ -276,7 +282,10 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
     public PartialList<CampaignDetail> getCampaignDetails(Query query) {
         if (query.getCondition() != null) {
-            definitionsService.getConditionValidationService().validate(query.getCondition());
+            List<?> validationErrors = definitionsService.getConditionValidationService().validate(query.getCondition());
+            if (!validationErrors.isEmpty()) {
+                LOGGER.warn("Campaign details query condition has {} validation issue(s)", validationErrors.size());
+            }
         }
         PartialList<Campaign> campaigns = persistenceService.query(query.getCondition(), query.getSortby(), Campaign.class, query.getOffset(), query.getLimit());
         List<CampaignDetail> details = new LinkedList<>();
@@ -388,7 +397,10 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
         }
 
         if (query != null && query.getCondition() != null) {
-            definitionsService.getConditionValidationService().validate(query.getCondition());
+            List<?> validationErrors = definitionsService.getConditionValidationService().validate(query.getCondition());
+            if (!validationErrors.isEmpty()) {
+                LOGGER.warn("Events query condition has {} validation issue(s)", validationErrors.size());
+            }
             list.add(query.getCondition());
         }
 

@@ -161,14 +161,15 @@ public class ConditionContextHelper {
             }
         }
 
-        @SuppressWarnings("unchecked")
-        Map<String, Object> values = (Map<String, Object>) parseParameterWithValidation(
+        Object rawValues = parseParameterWithValidation(
             context, condition.getParameterValues(), scriptExecutor,
             parameterDefs, condition.getConditionTypeId());
 
-        if (values == null) {
+        if (rawValues == null || rawValues == RESOLUTION_ERROR) {
             return null;
         }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> values = (Map<String, Object>) rawValues;
         Condition n = new Condition(condition.getConditionType());
         n.setParameterValues(values);
 
@@ -203,7 +204,7 @@ public class ConditionContextHelper {
      * @param conditionTypeId condition type ID for context
      * @param resolutionChain set of parameter keys/scripts already being resolved (for cycle detection)
      * @param depth current resolution depth
-     * @return resolved value, or null if cycle detected or max depth exceeded
+     * @return resolved value, or {@code RESOLUTION_ERROR} sentinel if cycle detected or max depth exceeded
      */
     @SuppressWarnings("unchecked")
     private static Object parseParameterWithValidationRecursive(
@@ -265,8 +266,7 @@ public class ConditionContextHelper {
                 if (resolvedValue != null && isParameterReference(resolvedValue)) {
                     Object furtherResolved = parseParameterWithValidationRecursive(
                         context, resolvedValue, scriptExecutor, parameterDefs, conditionTypeId, resolutionChain, depth + 1);
-                    // If further resolution returns null due to cycle or max depth, propagate it
-                    // But if it's just a missing parameter, return null (not a cycle)
+                    // Propagate RESOLUTION_ERROR if cycle/max-depth was detected, or resolved value otherwise
                     return furtherResolved;
                 }
 
@@ -286,9 +286,9 @@ public class ConditionContextHelper {
                 Object parameter = parseParameterWithValidationRecursive(
                     context, paramValue, scriptExecutor, parameterDefs, conditionTypeId, resolutionChain, depth);
 
-                // If resolution returned an error marker, return null for entire map
+                // If resolution returned an error marker, propagate failure
                 if (parameter == RESOLUTION_ERROR) {
-                    return null;
+                    return RESOLUTION_ERROR;
                 }
 
                 // Validate type if parameter definition is available and value is not null
@@ -306,9 +306,9 @@ public class ConditionContextHelper {
             for (Object o : ((List<?>) value)) {
                 Object parameter = parseParameterWithValidationRecursive(
                     context, o, scriptExecutor, parameterDefs, conditionTypeId, resolutionChain, depth);
-                // If resolution returned an error marker, skip this element
+                // If resolution returned an error marker, propagate failure (consistent with Map behavior)
                 if (parameter == RESOLUTION_ERROR) {
-                    continue;
+                    return RESOLUTION_ERROR;
                 }
                 // Add the value, even if null (missing parameter is valid in lists)
                 values.add(parameter);

@@ -1353,4 +1353,16 @@ public class ConditionValidationServiceImplTest {
             assertNoErrors(errors);
         }
     }
+
+    @Test
+    public void validate_withUninitializedService_returnsEmptyListInsteadOfThrowing() {
+        ConditionValidationServiceImpl uninitializedService = new ConditionValidationServiceImpl();
+        Condition condition = new Condition();
+        condition.setConditionTypeId("someType");
+
+        List<ValidationError> errors = uninitializedService.validate(condition);
+
+        assertNotNull(errors, "Result must not be null");
+        assertTrue(errors.isEmpty(), "Uninitialized service must return empty list rather than throwing IllegalStateException");
+    }
 }

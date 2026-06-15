@@ -119,7 +119,7 @@ public class ConditionEvaluatorDispatcherImpl
                 }
                 // If still null after attempting resolution (or definitionsService was null), return false gracefully
                 if (condition.getConditionType() == null) {
-                    LOGGER.debug("Condition type is null for condition typeID={}, returning false gracefully", condition.getConditionTypeId());
+                    LOGGER.warn("Condition type is null for condition typeID={}, returning false gracefully", condition.getConditionTypeId());
                     return false;
                 }
             }

@@ -61,7 +61,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             return;
         }
         String typeId = rawTypeId.toLowerCase();
-        if (builtInValidators == null || builtInValidators.stream().noneMatch(v -> v.getValueTypeId().equalsIgnoreCase(typeId))) {
+        if (builtInValidators == null || builtInValidators.stream().noneMatch(v -> v.getValueTypeId() != null && v.getValueTypeId().equalsIgnoreCase(typeId))) {
             validators.remove(typeId);
             LOGGER.debug("Removed custom validator for type: {}", rawTypeId);
         }
@@ -107,7 +107,8 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
     @Override
     public List<ValidationError> validate(Condition condition) {
         if (builtInValidators == null) {
-            throw new IllegalStateException("ConditionValidationService not properly initialized");
+            LOGGER.warn("ConditionValidationService not properly initialized (no built-in validators), skipping validation");
+            return Collections.emptyList();
         }
         List<ValidationError> errors = new ArrayList<>();
 

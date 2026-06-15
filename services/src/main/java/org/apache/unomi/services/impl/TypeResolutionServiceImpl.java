@@ -38,7 +38,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * Implementation of TypeResolutionService that resolves condition types, action types, and value types,
  * with automatic tracking of invalid objects that have unresolved types.
  * 
- * This service centralizes all resolution logic that was previously in ParserHelper.
  * Requires a non-null DefinitionsService; the constructor enforces this.
  */
 public class TypeResolutionServiceImpl implements TypeResolutionService {
@@ -296,7 +295,7 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         
         boolean resolved = resolveActionTypes(rule, false);
         String objectId = rule.getItemId();
-        
+
         if (!resolved) {
             // Collect all unresolved action type IDs
             List<String> unresolvedActionIds = new ArrayList<>();
@@ -307,14 +306,15 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
                     }
                 }
             }
-            String reason = unresolvedActionIds.isEmpty()
-                    ? "Unresolved action type"
+            boolean structuralError = rule.getActions() == null || rule.getActions().isEmpty();
+            String reason = structuralError
+                    ? (rule.getActions() == null ? "Rule has null actions" : "Rule has no actions")
                     : "Unresolved action type(s): " + String.join(", ", unresolvedActionIds);
             if (objectId != null) {
                 markInvalid(objectType, objectId, reason, null, unresolvedActionIds, "rule " + objectId);
             }
-            // Set missingPlugins flag when types can't be resolved
-            if (rule.getMetadata() != null) {
+            // Only set missingPlugins when action plugin types are genuinely missing, not for structural errors
+            if (!structuralError && rule.getMetadata() != null) {
                 rule.getMetadata().setMissingPlugins(true);
             }
         } else {
@@ -410,23 +410,20 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         
         Map<String, InvalidObjectInfo> typeMap = invalidObjects.computeIfAbsent(objectType, k -> new ConcurrentHashMap<>());
         
-        InvalidObjectInfo existingInfo = typeMap.get(objectId);
+        InvalidObjectInfo newInfo = new InvalidObjectInfo(
+            objectType,
+            objectId,
+            reason != null ? reason : "Unknown reason",
+            missingConditionTypeIds,
+            missingActionTypeIds,
+            contextName
+        );
+        InvalidObjectInfo existingInfo = typeMap.putIfAbsent(objectId, newInfo);
         if (existingInfo != null) {
             // Object already marked invalid - update encounter info but don't log again
             existingInfo.updateEncounter(missingConditionTypeIds, missingActionTypeIds, contextName);
         } else {
-            // First time encountering this invalid object - create info and log
-            InvalidObjectInfo newInfo = new InvalidObjectInfo(
-                objectType, 
-                objectId, 
-                reason != null ? reason : "Unknown reason",
-                missingConditionTypeIds,
-                missingActionTypeIds,
-                contextName
-            );
-            typeMap.put(objectId, newInfo);
-            
-            // Log only on first encounter with detailed information
+            // First time encountering this invalid object - log
             StringBuilder logMessage = new StringBuilder("Marked ").append(objectType).append(" ").append(objectId)
                 .append(" as invalid: ").append(reason != null ? reason : "Unknown reason");
             

@@ -658,6 +658,43 @@ public class TypeResolutionServiceImplTest {
             "All concurrent increments must be counted without loss");
     }
 
+    @Test
+    public void updateEncounter_readDuringConcurrentWrite_neverObservesCorruptCount() throws InterruptedException {
+        InvalidObjectInfo info = new InvalidObjectInfo("rules", "rule1", "test");
+        int writerThreads = 4;
+        int readerThreads = 4;
+        int iterations = 200;
+        java.util.concurrent.CountDownLatch startLatch = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch doneLatch = new java.util.concurrent.CountDownLatch(writerThreads + readerThreads);
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(writerThreads + readerThreads);
+        java.util.concurrent.atomic.AtomicBoolean corrupt = new java.util.concurrent.atomic.AtomicBoolean(false);
+
+        for (int i = 0; i < writerThreads; i++) {
+            executor.submit(() -> {
+                try { startLatch.await(); } catch (InterruptedException ignored) {}
+                for (int j = 0; j < iterations; j++) {
+                    info.updateEncounter(null, null, "ctx");
+                }
+                doneLatch.countDown();
+            });
+        }
+        for (int i = 0; i < readerThreads; i++) {
+            executor.submit(() -> {
+                try { startLatch.await(); } catch (InterruptedException ignored) {}
+                for (int j = 0; j < iterations; j++) {
+                    if (info.getEncounterCount() < 1) {
+                        corrupt.set(true);
+                    }
+                }
+                doneLatch.countDown();
+            });
+        }
+        startLatch.countDown();
+        doneLatch.await();
+        executor.shutdown();
+        assertFalse(corrupt.get(), "Concurrent reads must never observe a corrupted (< 1) encounter count");
+    }
+
     // Tests for enhanced InvalidObjectInfo functionality
 
     @Test
@@ -913,6 +950,7 @@ public class TypeResolutionServiceImplTest {
         assertEquals(2, info2.getEncounterCount(), "Second encounter should have count of 2");
         // The reason should still be the first one (not updated)
         assertEquals("First reason", info2.getReason(), "Reason should remain the first one");
+        assertSame(info1, info2, "Second markInvalid call must update the existing entry, not replace it");
     }
 
     @Test

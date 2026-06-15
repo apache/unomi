@@ -97,7 +97,10 @@ public class InvalidObjectInfo {
 
     /**
      * Updates tracking info when the object is encountered again during type resolution.
-     * This method is thread-safe and may be called concurrently from multiple resolution threads.
+     * This method is thread-safe with respect to concurrent calls to {@code updateEncounter} itself.
+     * Note: reads via {@code getMissingConditionTypeIds()}, {@code getMissingActionTypeIds()}, and
+     * {@code getContextNames()} are not synchronized and may observe inconsistent state if called
+     * concurrently with an in-progress {@code updateEncounter} call.
      *
      * @param missingConditionTypeIds additional missing condition type IDs found in this encounter
      * @param missingActionTypeIds    additional missing action type IDs found in this encounter
