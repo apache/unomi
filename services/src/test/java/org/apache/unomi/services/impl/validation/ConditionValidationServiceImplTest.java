@@ -702,12 +702,10 @@ public class ConditionValidationServiceImplTest {
         assertEquals(ValidationErrorType.INVALID_VALUE, errors.get(0).getType());
         assertEquals("Value must be a test string", errors.get(0).getMessage());
 
-        // Test unbinding
+        // Test unbinding — after removal, unknown type is now permissive (WARN+skip)
         conditionValidationService.unbindValidator(testValidator);
         errors = conditionValidationService.validate(condition);
-        assertEquals(1, errors.size());
-        assertEquals(ValidationErrorType.INVALID_VALUE, errors.get(0).getType());
-        assertEquals("No validator found for type: test", errors.get(0).getMessage());
+        assertTrue(errors.isEmpty(), "Unknown type after unbind should produce no errors (WARN+skip)");
     }
 
     @Test
@@ -761,7 +759,7 @@ public class ConditionValidationServiceImplTest {
     }
 
     @Test
-    public void testUnknownTypeValidation() {
+    public void testUnknownTypeValidation_isPermissive() {
         ConditionType type = new ConditionType(new Metadata());
         List<Parameter> parameters = new ArrayList<>();
 
@@ -772,10 +770,9 @@ public class ConditionValidationServiceImplTest {
         Condition condition = new Condition(type);
         condition.setParameter("value", "any value");
 
+        // Unknown validator types produce a WARN log and are skipped (backward-compatible, permissive)
         List<ValidationError> errors = conditionValidationService.validate(condition);
-        assertEquals(1, errors.size());
-        assertEquals(ValidationErrorType.INVALID_VALUE, errors.get(0).getType());
-        assertEquals("No validator found for type: unknown_type", errors.get(0).getMessage());
+        assertTrue(errors.isEmpty(), "Unknown parameter types should produce no errors — WARN+skip for backward compatibility");
     }
 
     @Test
@@ -1170,6 +1167,73 @@ public class ConditionValidationServiceImplTest {
         assertTrue(errors.size() >= 1, "Should have at least one error for missing propertyName");
         assertTrue(errors.stream().anyMatch(e -> e.getType() == ValidationErrorType.MISSING_REQUIRED_PARAMETER),
                    "Should have error for missing required parameter");
+    }
+
+    // --- Regression tests for review findings ---
+
+    @Test
+    public void unbindValidator_nullTypeId_doesNotThrow() {
+        ValueTypeValidator badValidator = new ValueTypeValidator() {
+            @Override public String getValueTypeId() { return null; }
+            @Override public boolean validate(Object value) { return true; }
+            @Override public String getValueTypeDescription() { return "bad"; }
+        };
+        assertDoesNotThrow(() -> conditionValidationService.unbindValidator(badValidator),
+            "unbindValidator should not NPE when getValueTypeId() returns null");
+    }
+
+    @Test
+    public void unbindValidator_builtInValidator_remainsRegistered() {
+        // Attempt to unbind the built-in "string" validator via a proxy — it must stay active
+        ValueTypeValidator proxy = new ValueTypeValidator() {
+            @Override public String getValueTypeId() { return "string"; }
+            @Override public boolean validate(Object value) { return true; }
+            @Override public String getValueTypeDescription() { return "proxy"; }
+        };
+        conditionValidationService.unbindValidator(proxy);
+
+        ConditionType type = new ConditionType(new Metadata());
+        type.setParameters(Collections.singletonList(new Parameter("s", "string", false)));
+        Condition cond = new Condition(type);
+        cond.setParameter("s", 123); // wrong type — string validator must still catch this
+        List<ValidationError> errors = conditionValidationService.validate(cond);
+        assertFalse(errors.isEmpty(), "Built-in string validator must remain active after an unbind attempt");
+    }
+
+    @Test
+    public void nullSubConditionType_inValidateAdditionalRules_reportsError() {
+        ConditionType parentType = new ConditionType(new Metadata());
+        Parameter subParam = new Parameter("sub", "condition", false);
+        ConditionValidation v = new ConditionValidation();
+        subParam.setValidation(v);
+        parentType.setParameters(Collections.singletonList(subParam));
+
+        // Condition whose conditionType was never resolved (null)
+        Condition subCond = new Condition();
+        subCond.setConditionTypeId("ghost");
+
+        Condition parent = new Condition(parentType);
+        parent.setParameter("sub", subCond);
+
+        List<ValidationError> errors = conditionValidationService.validate(parent);
+        assertFalse(errors.isEmpty(), "Null subConditionType should produce a validation error");
+        assertTrue(errors.stream().anyMatch(e -> e.getType() == ValidationErrorType.INVALID_CONDITION_TYPE),
+            "Error type should be INVALID_CONDITION_TYPE for unresolvable sub-condition");
+    }
+
+    @Test
+    public void listValuedParameter_containingContextualReference_skipsValidation() {
+        ConditionType type = new ConditionType(new Metadata());
+        Parameter param = new Parameter("values", "string", true);
+        type.setParameters(Collections.singletonList(param));
+
+        Condition cond = new Condition(type);
+        // First element is a parameter reference — entire parameter must be skipped
+        cond.setParameter("values", Arrays.asList("parameter::someKey", "literal"));
+
+        List<ValidationError> errors = conditionValidationService.validate(cond);
+        assertTrue(errors.isEmpty(),
+            "Multivalued parameter containing a contextual reference should skip validation entirely");
     }
 
     @org.junit.jupiter.api.Nested

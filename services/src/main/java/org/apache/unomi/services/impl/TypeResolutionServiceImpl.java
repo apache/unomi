@@ -79,6 +79,9 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
      * @param definitionsService the definitions service to use for resolution
      */
     public void setDefinitionsService(DefinitionsService definitionsService) {
+        if (definitionsService == null) {
+            throw new IllegalArgumentException("DefinitionsService cannot be null");
+        }
         this.definitionsService = definitionsService;
     }
 
@@ -116,7 +119,6 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         }
 
         try {
-            // Resolve current condition type if needed
             if (rootCondition.getConditionType() == null) {
                 String conditionTypeId = rootCondition.getConditionTypeId();
                 if (conditionTypeId == null) {
@@ -149,7 +151,6 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
                 }
             }
 
-            // Recursively resolve nested conditions in parameter values
             for (Object value : rootCondition.getParameterValues().values()) {
                 if (value instanceof Condition) {
                     if (!resolveConditionTypeInternal((Condition) value, contextObjectName,
@@ -211,6 +212,8 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
     @Override
     public boolean resolveActionType(Action action) {
         if (definitionsService == null) {
+            LOGGER.warn("DefinitionsService not available, cannot resolve action type for {}",
+                action != null ? action.getActionTypeId() : "null");
             return false;
         }
         if (action.getActionType() == null) {
@@ -238,6 +241,9 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
             ValueType valueType = definitionsService.getValueType(propertyType.getValueTypeId());
             if (valueType != null) {
                 propertyType.setValueType(valueType);
+            } else {
+                LOGGER.warn("Couldn't resolve value type '{}' for property '{}'",
+                    propertyType.getValueTypeId(), propertyType.getItemId());
             }
         }
     }

@@ -33,6 +33,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @RunWith(MockitoJUnitRunner.class)
@@ -93,6 +95,7 @@ public class BooleanConditionEvaluatorTest {
         Condition sub2 = new Condition();
         when(dispatcher.eval(same(sub1), same(profile), any())).thenReturn(false);
         assertFalse(evaluator.eval(booleanCondition("and", sub1, sub2), profile, new HashMap<>(), dispatcher));
+        verify(dispatcher, never()).eval(same(sub2), any(), any());
     }
 
     @Test
@@ -121,6 +124,7 @@ public class BooleanConditionEvaluatorTest {
         Condition sub2 = new Condition();
         when(dispatcher.eval(same(sub1), same(profile), any())).thenReturn(true);
         assertTrue(evaluator.eval(booleanCondition("or", sub1, sub2), profile, new HashMap<>(), dispatcher));
+        verify(dispatcher, never()).eval(same(sub2), any(), any());
     }
 
     @Test

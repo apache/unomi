@@ -56,11 +56,14 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
         if (validator == null) {
             return;
         }
-        String typeId = validator.getValueTypeId().toLowerCase();
-        // Only remove if it's not a built-in validator
+        String rawTypeId = validator.getValueTypeId();
+        if (rawTypeId == null) {
+            return;
+        }
+        String typeId = rawTypeId.toLowerCase();
         if (builtInValidators == null || builtInValidators.stream().noneMatch(v -> v.getValueTypeId().equalsIgnoreCase(typeId))) {
             validators.remove(typeId);
-            LOGGER.debug("Removed custom validator for type: {}", validator.getValueTypeId());
+            LOGGER.debug("Removed custom validator for type: {}", rawTypeId);
         }
     }
 
@@ -469,14 +472,8 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
                     null));
             }
         } else {
-            context.put("availableValidators", new ArrayList<>(validators.keySet()));
-            errors.add(new ValidationError(parameterDescription,
-                "No validator found for type: " + paramType,
-                ValidationErrorType.INVALID_VALUE,
-                condition.getConditionTypeId(),
-                type.getItemId(),
-                context,
-                null));
+            LOGGER.warn("No ValueTypeValidator for type '{}' (param '{}') — plugin MUST register one, skipping type check",
+                paramType, paramName);
         }
 
         return errors;

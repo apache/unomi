@@ -71,7 +71,7 @@ public class ConditionContextHelper {
         try {
             loadMappingFile();
         } catch (IOException e) {
-            LOGGER.error("Erreur lors du chargement du fichier de mapping", e);
+            throw new ExceptionInInitializerError(e);
         }
     }
 

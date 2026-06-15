@@ -44,7 +44,7 @@ public interface ConditionValidationService {
         private final String message;
         private final ValidationErrorType type;
         private final String conditionId;
-        private final String conditionTypeName;
+        private final String conditionTypeId;
         private final Map<String, Object> context;
         private final ValidationError parentError;
 
@@ -53,13 +53,13 @@ public interface ConditionValidationService {
         }
 
         public ValidationError(String parameterName, String message, ValidationErrorType type,
-                             String conditionId, String conditionTypeName, Map<String, Object> context,
+                             String conditionId, String conditionTypeId, Map<String, Object> context,
                              ValidationError parentError) {
             this.parameterName = parameterName;
             this.message = message;
             this.type = type;
             this.conditionId = conditionId;
-            this.conditionTypeName = conditionTypeName;
+            this.conditionTypeId = conditionTypeId;
             this.context = context != null ? new HashMap<>(context) : new HashMap<>();
             this.parentError = parentError;
         }
@@ -80,8 +80,14 @@ public interface ConditionValidationService {
             return conditionId;
         }
 
+        public String getConditionTypeId() {
+            return conditionTypeId;
+        }
+
+        /** @deprecated Use {@link #getConditionTypeId()} instead. */
+        @Deprecated
         public String getConditionTypeName() {
-            return conditionTypeName;
+            return conditionTypeId;
         }
 
         public Map<String, Object> getContext() {
@@ -100,8 +106,8 @@ public interface ConditionValidationService {
             StringBuilder sb = new StringBuilder();
 
             // Build location context
-            if (conditionTypeName != null) {
-                sb.append("In condition type '").append(conditionTypeName).append("'");
+            if (conditionTypeId != null) {
+                sb.append("In condition type '").append(conditionTypeId).append("'");
                 if (conditionId != null) {
                     sb.append(" (ID: ").append(conditionId).append(")");
                 }

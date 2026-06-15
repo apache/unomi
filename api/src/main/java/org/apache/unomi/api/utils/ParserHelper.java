@@ -265,6 +265,14 @@ public class ParserHelper {
     }
 
 
+    /**
+     * @deprecated Use {@link #resolveConditionEventTypes(Condition, DefinitionsService)} instead.
+     */
+    @Deprecated
+    public static Set<String> resolveConditionEventTypes(Condition rootCondition) {
+        return resolveConditionEventTypes(rootCondition, null);
+    }
+
     public static Set<String> resolveConditionEventTypes(Condition rootCondition, DefinitionsService definitionsService) {
         if (rootCondition == null) {
             return new HashSet<>();
@@ -597,10 +605,14 @@ public class ParserHelper {
             return condition;
         }
 
-        // Get parent chain
         List<Condition> parentChain = getParentChain(type, definitionsService,
             contextName, maxDepth);
-        if (parentChain == null || parentChain.isEmpty()) {
+        if (parentChain == null) {
+            LOGGER.warn("Failed to build parent chain for condition type '{}' in '{}', returning unresolved condition",
+                type.getItemId(), contextName);
+            return condition;
+        }
+        if (parentChain.isEmpty()) {
             return condition;
         }
 

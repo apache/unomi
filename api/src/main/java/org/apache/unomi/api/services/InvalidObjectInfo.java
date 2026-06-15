@@ -18,6 +18,8 @@
 package org.apache.unomi.api.services;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Information about an invalid object, including detailed reasons for invalidation.
@@ -27,8 +29,8 @@ public class InvalidObjectInfo {
     private final String objectId;
     private final String reason;
     private final long firstSeenTimestamp;
-    private volatile long lastSeenTimestamp;
-    private volatile int encounterCount;
+    private final AtomicLong lastSeenTimestamp;
+    private final AtomicInteger encounterCount;
     private final List<String> missingConditionTypeIds;
     private final List<String> missingActionTypeIds;
     private final Set<String> contextNames;
@@ -45,8 +47,8 @@ public class InvalidObjectInfo {
         this.objectId = objectId;
         this.reason = reason;
         this.firstSeenTimestamp = System.currentTimeMillis();
-        this.lastSeenTimestamp = this.firstSeenTimestamp;
-        this.encounterCount = 1;
+        this.lastSeenTimestamp = new AtomicLong(this.firstSeenTimestamp);
+        this.encounterCount = new AtomicInteger(1);
         this.missingConditionTypeIds = missingConditionTypeIds != null 
             ? new ArrayList<>(missingConditionTypeIds) : new ArrayList<>();
         this.missingActionTypeIds = missingActionTypeIds != null 
@@ -74,11 +76,11 @@ public class InvalidObjectInfo {
     }
 
     public long getLastSeenTimestamp() {
-        return lastSeenTimestamp;
+        return lastSeenTimestamp.get();
     }
 
     public int getEncounterCount() {
-        return encounterCount;
+        return encounterCount.get();
     }
 
     public List<String> getMissingConditionTypeIds() {
@@ -94,18 +96,18 @@ public class InvalidObjectInfo {
     }
 
     /**
-     * Update the info when the object is encountered again.
-     * This method is called internally by TypeResolutionService to track repeated encounters.
-     * 
-     * @param missingConditionTypeIds additional missing condition type IDs
-     * @param missingActionTypeIds additional missing action type IDs
-     * @param contextName context where it was encountered
+     * Updates tracking info when the object is encountered again during type resolution.
+     * This method is thread-safe and may be called concurrently from multiple resolution threads.
+     *
+     * @param missingConditionTypeIds additional missing condition type IDs found in this encounter
+     * @param missingActionTypeIds    additional missing action type IDs found in this encounter
+     * @param contextName             context where this encounter occurred
      */
-    public void updateEncounter(List<String> missingConditionTypeIds, 
-                       List<String> missingActionTypeIds,
-                       String contextName) {
-        this.lastSeenTimestamp = System.currentTimeMillis();
-        this.encounterCount++;
+    public synchronized void updateEncounter(List<String> missingConditionTypeIds,
+                                             List<String> missingActionTypeIds,
+                                             String contextName) {
+        this.lastSeenTimestamp.set(System.currentTimeMillis());
+        this.encounterCount.incrementAndGet();
         
         if (missingConditionTypeIds != null) {
             for (String typeId : missingConditionTypeIds) {
@@ -148,8 +150,8 @@ public class InvalidObjectInfo {
         sb.append(", objectId='").append(objectId).append('\'');
         sb.append(", reason='").append(reason).append('\'');
         sb.append(", firstSeen=").append(firstSeenTimestamp);
-        sb.append(", lastSeen=").append(lastSeenTimestamp);
-        sb.append(", encounters=").append(encounterCount);
+        sb.append(", lastSeen=").append(lastSeenTimestamp.get());
+        sb.append(", encounters=").append(encounterCount.get());
         if (!missingConditionTypeIds.isEmpty()) {
             sb.append(", missingConditionTypes=").append(missingConditionTypeIds);
         }

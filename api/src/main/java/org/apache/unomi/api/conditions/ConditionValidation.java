@@ -50,7 +50,7 @@ public class ConditionValidation implements Serializable, YamlConvertible {
     private boolean exclusive;  // Only one of the exclusive parameters in a group can have a value
     private String exclusiveGroup;  // Name of the exclusive group this parameter belongs to
     private boolean recommended;  // Parameter is recommended but not required
-    private Class<?> customType;  // For OBJECT type, specifies the exact class expected
+    private transient Class<?> customType;
 
     public ConditionValidation() {
     }

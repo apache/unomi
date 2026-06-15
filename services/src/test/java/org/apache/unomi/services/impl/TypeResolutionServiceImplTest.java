@@ -613,6 +613,51 @@ public class TypeResolutionServiceImplTest {
         assertFalse(typeResolutionService.isInvalid("segments", "testSegment"), "Should be marked as valid after successful resolution");
     }
 
+    // --- Regression tests for review findings ---
+
+    @Test
+    public void setDefinitionsService_null_throwsIllegalArgumentException() {
+        assertThrows(IllegalArgumentException.class,
+            () -> typeResolutionService.setDefinitionsService(null),
+            "setDefinitionsService(null) must throw IllegalArgumentException");
+    }
+
+    @Test
+    public void resolveValueType_unknownTypeId_doesNotThrow() {
+        org.apache.unomi.api.PropertyType propertyType = new org.apache.unomi.api.PropertyType();
+        propertyType.setMetadata(new Metadata("testProp"));
+        propertyType.setValueTypeId("nonExistentType");
+        when(definitionsService.getValueType("nonExistentType")).thenReturn(null);
+
+        assertDoesNotThrow(() -> typeResolutionService.resolveValueType(propertyType),
+            "resolveValueType must not throw when type lookup returns null");
+        assertNull(propertyType.getValueType(), "ValueType must remain null when lookup fails");
+    }
+
+    @Test
+    public void updateEncounter_concurrentAccess_isThreadSafe() throws InterruptedException {
+        InvalidObjectInfo info = new InvalidObjectInfo("rules", "rule1", "test");
+        int threads = 10;
+        int iterationsPerThread = 100;
+        java.util.concurrent.CountDownLatch latch = new java.util.concurrent.CountDownLatch(threads);
+        java.util.concurrent.ExecutorService executor =
+            java.util.concurrent.Executors.newFixedThreadPool(threads);
+
+        for (int i = 0; i < threads; i++) {
+            executor.submit(() -> {
+                for (int j = 0; j < iterationsPerThread; j++) {
+                    info.updateEncounter(null, null, "ctx-" + j);
+                }
+                latch.countDown();
+            });
+        }
+        latch.await();
+        executor.shutdown();
+
+        assertEquals(1 + threads * iterationsPerThread, info.getEncounterCount(),
+            "All concurrent increments must be counted without loss");
+    }
+
     // Tests for enhanced InvalidObjectInfo functionality
 
     @Test
