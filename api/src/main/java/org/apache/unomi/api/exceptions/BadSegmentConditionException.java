@@ -17,8 +17,20 @@
 
 package org.apache.unomi.api.exceptions;
 
+/**
+ * Exception thrown when a segment condition is invalid or cannot be used.
+ */
 public class BadSegmentConditionException extends RuntimeException {
+
     public BadSegmentConditionException() {
         super();
+    }
+
+    public BadSegmentConditionException(String message) {
+        super(message);
+    }
+
+    public BadSegmentConditionException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

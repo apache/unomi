@@ -53,6 +53,9 @@ public class TestSetEventOccurrenceCountAction implements ActionExecutor {
         ArrayList<Condition> conditions = new ArrayList<Condition>();
 
         Condition eventCondition = (Condition) pastEventCondition.getParameter("eventCondition");
+        if (eventCondition != null) {
+            definitionsService.getConditionValidationService().validate(eventCondition);
+        }
         conditions.add(eventCondition);
 
         Condition c = new Condition(definitionsService.getConditionType("eventPropertyCondition"));

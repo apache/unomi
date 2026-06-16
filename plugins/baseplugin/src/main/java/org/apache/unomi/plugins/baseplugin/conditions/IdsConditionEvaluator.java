@@ -30,7 +30,12 @@ public class IdsConditionEvaluator implements ConditionEvaluator {
         Collection<String> ids = (Collection<String>) condition.getParameter("ids");
         Boolean match = (Boolean) condition.getParameter("match");
 
-        boolean contained = ids != null && !ids.isEmpty() && ids.contains(item.getItemId());
-        return match == contained;
+        if (ids == null || ids.isEmpty()) {
+            return false;
+        }
+
+        boolean contained = ids.contains(item.getItemId());
+        boolean matchValue = match == null || match;
+        return matchValue == contained;
     }
 }

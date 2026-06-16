@@ -256,7 +256,7 @@ public class ClusterServiceImpl implements ClusterService {
         LOGGER.info("Cluster service shutdown.");
     }
 
-    private void cancelScheduledTasks() {
+    void cancelScheduledTasks() {
         // Cancel scheduled tasks
         if (schedulerService != null) {
             try {
@@ -355,7 +355,7 @@ public class ClusterServiceImpl implements ClusterService {
     /**
      * Updates the system statistics for this node and stores them in the persistence service
      */
-    private void updateSystemStats() {
+    void updateSystemStats() {
         if (shutdownNow) {
             return;
         }
@@ -413,7 +413,7 @@ public class ClusterServiceImpl implements ClusterService {
     /**
      * Removes stale nodes from the cluster
      */
-    private void cleanupStaleNodes() {
+    void cleanupStaleNodes() {
         if (shutdownNow) {
             return;
         }

@@ -25,11 +25,14 @@ import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.utils.ConditionBuilder;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
+import org.apache.unomi.services.impl.TypeResolutionServiceImpl;
+import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.SynchronousBundleListener;
@@ -64,7 +67,9 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     private static final long TASK_TIMEOUT_MS = 60000; // 1 minute timeout for tasks
 
+    private ConditionValidationServiceImpl conditionValidationService;
     private EventAdmin eventAdmin;
+    private TypeResolutionServiceImpl typeResolutionService;
 
     // OSGi Event Admin topic constants for type change events
     private static final String TOPIC_CONDITION_TYPE_ADDED = "org/apache/unomi/definitions/conditionType/ADDED";
@@ -89,6 +94,12 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     public DefinitionsServiceImpl() {
         // Initialize other components
         conditionBuilder = new ConditionBuilder(this);
+        // Create TypeResolutionService internally - it will get DefinitionsService reference in postConstruct
+        typeResolutionService = new TypeResolutionServiceImpl(this);
+        // Create ConditionValidationService internally
+        conditionValidationService = new ConditionValidationServiceImpl();
+        // Pass TypeResolutionService to validation service for auto-resolution
+        conditionValidationService.setTypeResolutionService(typeResolutionService);
     }
 
     @Override
@@ -96,6 +107,46 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
         super.postConstruct();
 
         LOGGER.debug("Definitions service initialized.");
+    }
+
+    /**
+     * Sets the built-in validators for the ConditionValidationService.
+     * This is called by Blueprint after the service is created.
+     *
+     * @param builtInValidators the list of built-in validators
+     */
+    public void setConditionValidationServiceBuiltInValidators(List<ValueTypeValidator> builtInValidators) {
+        conditionValidationService.setBuiltInValidators(builtInValidators);
+    }
+
+    /**
+     * Binds a validator to the ConditionValidationService.
+     * Called by OSGi reference listener.
+     *
+     * @param validator the validator to bind
+     */
+    public void bindValidator(ValueTypeValidator validator) {
+        conditionValidationService.bindValidator(validator);
+    }
+
+    /**
+     * Unbinds a validator from the ConditionValidationService.
+     * Called by OSGi reference listener.
+     *
+     * @param validator the validator to unbind
+     */
+    public void unbindValidator(ValueTypeValidator validator) {
+        conditionValidationService.unbindValidator(validator);
+    }
+
+    @Override
+    public TypeResolutionService getTypeResolutionService() {
+        return typeResolutionService;
+    }
+
+    @Override
+    public ConditionValidationService getConditionValidationService() {
+        return conditionValidationService;
     }
 
     public void setDefinitionsRefreshInterval(long definitionsRefreshInterval) {
@@ -164,42 +215,22 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public Collection<ConditionType> getAllConditionTypes() {
-        Collection<ConditionType> all = getAllItems(ConditionType.class, true);
-        for (ConditionType type : all) {
-            resolveParentCondition(type);
-        }
-        return all;
+        return getAllItems(ConditionType.class, true);
     }
 
     @Override
     public Set<ConditionType> getConditionTypesByTag(String tag) {
-        Set<ConditionType> types = getItemsByTag(ConditionType.class, tag);
-        for (ConditionType type : types) {
-            resolveParentCondition(type);
-        }
-        return types;
+        return getItemsByTag(ConditionType.class, tag);
     }
 
     @Override
     public Set<ConditionType> getConditionTypesBySystemTag(String tag) {
-        Set<ConditionType> types = getItemsBySystemTag(ConditionType.class, tag);
-        for (ConditionType type : types) {
-            resolveParentCondition(type);
-        }
-        return types;
+        return getItemsBySystemTag(ConditionType.class, tag);
     }
 
     @Override
     public ConditionType getConditionType(String id) {
-        ConditionType type = getItem(id, ConditionType.class);
-        resolveParentCondition(type);
-        return type;
-    }
-
-    private void resolveParentCondition(ConditionType type) {
-        if (type != null && type.getParentCondition() != null) {
-            ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
-        }
+        return getItem(id, ConditionType.class);
     }
 
     @Override
@@ -533,9 +564,47 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
         return res;
     }
 
+    @Deprecated
     @Override
     public boolean resolveConditionType(Condition rootCondition) {
-        return ParserHelper.resolveConditionType(this, rootCondition, (rootCondition != null ? "condition type " + rootCondition.getConditionTypeId() : "unknown"));
+        if (rootCondition == null) {
+            return false;
+        }
+        // Delegate to TypeResolutionService for resolution
+        boolean resolved = typeResolutionService.resolveConditionType(rootCondition, "condition type " + rootCondition.getConditionTypeId());
+        if (resolved) {
+            // Validate the condition after resolving its type (validation service will auto-resolve if needed)
+            List<ValidationError> validationErrors = conditionValidationService.validate(rootCondition);
+
+
+            // Separate errors and warnings
+            List<ValidationError> errors = validationErrors.stream()
+                .filter(error -> error.getType() != ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            List<ValidationError> warnings = validationErrors.stream()
+                .filter(error -> error.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            // Log warnings but don't block the operation
+            if (!warnings.isEmpty()) {
+                StringBuilder warningMessage = new StringBuilder("Condition has warnings:");
+                for (ValidationError warning : warnings) {
+                    warningMessage.append("\n- ").append(warning.getDetailedMessage());
+                }
+                LOGGER.warn(warningMessage.toString());
+            }
+
+            // Only throw exception for actual errors
+            if (!errors.isEmpty()) {
+                StringBuilder errorMessage = new StringBuilder("Invalid condition:");
+                for (ValidationError error : errors) {
+                    errorMessage.append("\n- ").append(error.getDetailedMessage());
+                }
+                throw new IllegalArgumentException(errorMessage.toString());
+            }
+        }
+        return resolved;
     }
 
     @Override
@@ -713,5 +782,4 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     public ConditionBuilder getConditionBuilder() {
         return conditionBuilder;
     }
-
 }

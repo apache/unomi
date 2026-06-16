@@ -20,6 +20,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.conditions.ConditionValidation;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
@@ -873,6 +874,20 @@ public class TestConditionEvaluators {
         parameter.setType(type);
         parameter.setMultivalued(multivalued);
 
+        // Create validation settings
+        ConditionValidation validation = new ConditionValidation();
+
+        // Set required flag
+        validation.setRequired(required);
+
+        // Set exclusive group if provided
+        if (exclusiveGroup != null) {
+            validation.setExclusive(true);
+            validation.setExclusiveGroup(exclusiveGroup);
+        }
+
+        parameter.setValidation(validation);
+
         return parameter;
     }
 
@@ -881,6 +896,21 @@ public class TestConditionEvaluators {
         parameter.setId(name);
         parameter.setType(type);
         parameter.setMultivalued(multivalued);
+
+        // Create validation settings
+        ConditionValidation validation = new ConditionValidation();
+
+        // Set recommended flag instead of required
+        validation.setRequired(false);
+        validation.setRecommended(true);
+
+        // Set exclusive group if provided
+        if (exclusiveGroup != null) {
+            validation.setExclusive(true);
+            validation.setExclusiveGroup(exclusiveGroup);
+        }
+
+        parameter.setValidation(validation);
 
         return parameter;
     }

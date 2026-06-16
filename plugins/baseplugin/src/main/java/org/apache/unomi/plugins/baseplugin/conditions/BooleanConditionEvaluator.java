@@ -34,15 +34,23 @@ public class BooleanConditionEvaluator implements ConditionEvaluator {
     public boolean eval(Condition condition, Item item, Map<String, Object> context,
             ConditionEvaluatorDispatcher dispatcher) {
         boolean isAnd = "and".equalsIgnoreCase((String) condition.getParameter("operator"));
+        Object subConditionsParam = condition.getParameter("subConditions");
+        if (subConditionsParam != null && !(subConditionsParam instanceof List)) {
+            throw new IllegalArgumentException("Parameter 'subConditions' of condition type '"
+                + condition.getConditionTypeId() + "' must be a List, got: " + subConditionsParam.getClass().getName());
+        }
         @SuppressWarnings("unchecked")
-        List<Condition> conditions = (List<Condition>) condition.getParameter("subConditions");
+        List<Condition> conditions = (List<Condition>) subConditionsParam;
+
+        if (conditions == null || conditions.isEmpty()) {
+            return isAnd;
+        }
+
         for (Condition sub : conditions) {
             boolean eval = dispatcher.eval(sub, item, context);
             if (!eval && isAnd) {
-                // And
                 return false;
             } else if (eval && !isAnd) {
-                // Or
                 return true;
             }
         }

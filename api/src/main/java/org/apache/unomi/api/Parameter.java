@@ -17,12 +17,15 @@
 
 package org.apache.unomi.api;
 
+import org.apache.unomi.api.conditions.ConditionValidation;
 import org.apache.unomi.api.utils.YamlUtils;
 import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
 
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
+
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
  * A representation of a condition parameter, to be used in the segment building UI to either select parameters from a
@@ -39,6 +42,7 @@ public class Parameter implements Serializable, YamlConvertible {
     private String type;
     private boolean multivalued;
     private Object defaultValue;
+    private ConditionValidation validation;
 
     public Parameter() {
     }
@@ -90,6 +94,14 @@ public class Parameter implements Serializable, YamlConvertible {
         this.defaultValue = defaultValue;
     }
 
+    public ConditionValidation getValidation() {
+        return validation;
+    }
+
+    public void setValidation(ConditionValidation validation) {
+        this.validation = validation;
+    }
+
     /**
      * Converts this parameter to a Map structure for YAML output.
      * Implements YamlConvertible interface.
@@ -112,6 +124,7 @@ public class Parameter implements Serializable, YamlConvertible {
             .putIfNotNull("type", type)
             .putIf("multivalued", true, multivalued)
             .putIfNotNull("defaultValue", defaultValue)
+            .putIfNotNull("validation", validation != null ? toYamlValue(validation, visited, maxDepth - 1) : null)
             .build();
     }
 

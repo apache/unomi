@@ -28,11 +28,13 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.TypeResolutionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Helper class to resolve condition, action and values types when loading definitions from JSON files
@@ -41,12 +43,16 @@ public class ParserHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ParserHelper.class);
 
-    private static final Set<String> unresolvedActionTypes = new HashSet<>();
-    private static final Set<String> unresolvedConditionTypes = new HashSet<>();
+    private static final Set<String> unresolvedActionTypes = ConcurrentHashMap.newKeySet();
+    private static final Set<String> unresolvedConditionTypes = ConcurrentHashMap.newKeySet();
+    // Track rules that have already been warned about null/empty actions to avoid log spam
+    private static final Set<String> warnedRulesWithNullActions = ConcurrentHashMap.newKeySet();
 
     private static final String VALUE_NAME_SEPARATOR = "::";
     private static final String PLACEHOLDER_PREFIX = "${";
     private static final String PLACEHOLDER_SUFFIX = "}";
+
+    private static final int MAX_RECURSION_DEPTH = 1000;
 
     public interface ConditionVisitor {
         void visit(Condition condition);
@@ -68,34 +74,88 @@ public class ParserHelper {
     }
 
     public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition, String contextObjectName) {
+        return resolveConditionType(definitionsService, rootCondition, contextObjectName,
+                new HashSet<>(), false, 0);
+    }
+
+    private static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition,
+            String contextObjectName, Set<String> parentChainPath, boolean isGoingUp, int depth) {
         if (rootCondition == null) {
             LOGGER.warn("Couldn't resolve null condition for {}", contextObjectName);
             return false;
         }
-        final List<String> result = new ArrayList<String>();
-        visitConditions(rootCondition, new ConditionVisitor() {
-            @Override
-            public void visit(Condition condition) {
-                if (condition.getConditionType() == null) {
-                    ConditionType conditionType = definitionsService.getConditionType(condition.getConditionTypeId());
-                    if (conditionType != null) {
-                        unresolvedConditionTypes.remove(condition.getConditionTypeId());
-                        condition.setConditionType(conditionType);
-                    } else {
-                        result.add(condition.getConditionTypeId());
-                        if (!unresolvedConditionTypes.contains(condition.getConditionTypeId())) {
-                            unresolvedConditionTypes.add(condition.getConditionTypeId());
-                            LOGGER.warn("Couldn't resolve condition type: {} for {}", condition.getConditionTypeId(), contextObjectName);
+
+        if (depth > MAX_RECURSION_DEPTH) {
+            LOGGER.error("Maximum recursion depth ({}) exceeded when resolving condition type {} in {}",
+                    MAX_RECURSION_DEPTH, rootCondition.getConditionTypeId(), contextObjectName);
+            return false;
+        }
+
+        if (isGoingUp) {
+            if (!parentChainPath.add(rootCondition.getConditionTypeId())) {
+                LOGGER.warn("Detected circular reference for condition type {} in {}", rootCondition.getConditionTypeId(), contextObjectName);
+                return false;
+            }
+        }
+
+        try {
+            // Resolve current condition type if needed
+            if (rootCondition.getConditionType() == null) {
+                String conditionTypeId = rootCondition.getConditionTypeId();
+                if (conditionTypeId == null) {
+                    LOGGER.warn("Condition has no type ID for {}", contextObjectName);
+                    return false;
+                }
+                ConditionType conditionType = definitionsService.getConditionType(conditionTypeId);
+                if (conditionType == null) {
+                    if (!unresolvedConditionTypes.contains(conditionTypeId)) {
+                        unresolvedConditionTypes.add(conditionTypeId);
+                        LOGGER.warn("Couldn't resolve condition type: {} for {}", conditionTypeId, contextObjectName);
+                    }
+                    return false;
+                }
+                unresolvedConditionTypes.remove(rootCondition.getConditionTypeId());
+                rootCondition.setConditionType(conditionType);
+
+                if (conditionType.getParentCondition() != null) {
+                    Set<String> pathForParent = new HashSet<>(parentChainPath);
+                    if (!isGoingUp) {
+                        pathForParent.add(rootCondition.getConditionTypeId());
+                    }
+                    if (!resolveConditionType(definitionsService, conditionType.getParentCondition(), contextObjectName,
+                            pathForParent, true, depth + 1)) {
+                        rootCondition.setConditionType(null);
+                        LOGGER.warn("Failed to resolve parent condition for type: {} in {}",
+                            rootCondition.getConditionTypeId(), contextObjectName);
+                        return false;
+                    }
+                }
+            }
+
+            for (Object value : rootCondition.getParameterValues().values()) {
+                if (value instanceof Condition) {
+                    if (!resolveConditionType(definitionsService, (Condition) value, contextObjectName,
+                            parentChainPath, false, depth + 1)) {
+                        return false;
+                    }
+                } else if (value instanceof Collection) {
+                    for (Object item : (Collection<?>) value) {
+                        if (item instanceof Condition) {
+                            if (!resolveConditionType(definitionsService, (Condition) item, contextObjectName,
+                                    parentChainPath, false, depth + 1)) {
+                                return false;
+                            }
                         }
                     }
                 }
             }
 
-            @Override
-            public void postVisit(Condition condition) {
+            return true;
+        } finally {
+            if (isGoingUp) {
+                parentChainPath.remove(rootCondition.getConditionTypeId());
             }
-        });
-        return result.isEmpty();
+        }
     }
 
     public static List<String> getConditionTypeIds(Condition rootCondition) {
@@ -136,20 +196,33 @@ public class ParserHelper {
 
     public static boolean resolveActionTypes(DefinitionsService definitionsService, Rule rule, boolean ignoreErrors) {
         boolean result = true;
+        String ruleId = rule.getItemId();
         if (rule.getActions() == null) {
             if (!ignoreErrors) {
-                LOGGER.warn("Rule {}:{} has null actions", rule.getItemId(), rule.getMetadata().getName());
+                // Only warn once per rule to avoid log spam
+                if (warnedRulesWithNullActions.add(ruleId)) {
+                    LOGGER.warn("Rule {}:{} has null actions", ruleId, rule.getMetadata().getName());
+                }
             }
             return false;
         }
         if (rule.getActions().isEmpty()) {
             if (!ignoreErrors) {
-                LOGGER.warn("Rule {}:{} has empty actions", rule.getItemId(), rule.getMetadata().getName());
+                // Only warn once per rule to avoid log spam
+                if (warnedRulesWithNullActions.add(ruleId)) {
+                    LOGGER.warn("Rule {}:{} has empty actions", ruleId, rule.getMetadata().getName());
+                }
             }
             return false;
         }
+        TypeResolutionService typeResolutionService = definitionsService != null ? definitionsService.getTypeResolutionService() : null;
         for (Action action : rule.getActions()) {
-            result &= ParserHelper.resolveActionType(definitionsService, action);
+            if (typeResolutionService != null) {
+                result &= typeResolutionService.resolveActionType(action);
+            } else {
+                // Fallback to direct resolution if TypeResolutionService is not available
+                result &= ParserHelper.resolveActionType(definitionsService, action);
+            }
         }
         return result;
     }
@@ -175,6 +248,15 @@ public class ParserHelper {
     }
 
     public static void resolveValueType(DefinitionsService definitionsService, PropertyType propertyType) {
+        if (definitionsService == null) {
+            return;
+        }
+        TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+        if (typeResolutionService != null) {
+            typeResolutionService.resolveValueType(propertyType);
+            return;
+        }
+        // Fallback to direct resolution if TypeResolutionService is not available
         if (propertyType.getValueType() == null) {
             ValueType valueType = definitionsService.getValueType(propertyType.getValueTypeId());
             if (valueType != null) {
@@ -184,22 +266,55 @@ public class ParserHelper {
     }
 
 
+    /**
+     * @deprecated Use {@link #resolveConditionEventTypes(Condition, DefinitionsService)} instead.
+     */
+    @Deprecated
     public static Set<String> resolveConditionEventTypes(Condition rootCondition) {
+        return resolveConditionEventTypes(rootCondition, null);
+    }
+
+    public static Set<String> resolveConditionEventTypes(Condition rootCondition, DefinitionsService definitionsService) {
         if (rootCondition == null) {
             return new HashSet<>();
         }
-        EventTypeConditionVisitor eventTypeConditionVisitor = new EventTypeConditionVisitor();
+        EventTypeConditionVisitor eventTypeConditionVisitor = new EventTypeConditionVisitor(definitionsService);
         visitConditions(rootCondition, eventTypeConditionVisitor);
         return eventTypeConditionVisitor.getEventTypeIds();
     }
 
     public static class EventTypeConditionVisitor implements ConditionVisitor {
 
+        private final DefinitionsService definitionsService;
         private Set<String> eventTypeIds = new HashSet<>();
         private Stack<String> conditionTypeStack = new Stack<>();
 
+        public EventTypeConditionVisitor(DefinitionsService definitionsService) {
+            this.definitionsService = definitionsService;
+        }
+
         public void visit(Condition condition) {
             conditionTypeStack.push(condition.getConditionTypeId());
+
+            // Ensure condition type is resolved before checking parent conditions
+            if (definitionsService != null && condition.getConditionType() == null) {
+                TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                if (typeResolutionService != null) {
+                    typeResolutionService.resolveConditionType(condition, "eventTypeResolution");
+                } else {
+                    // Fallback to direct resolution if TypeResolutionService is not available
+                    String conditionTypeId = condition.getConditionTypeId();
+                    if (conditionTypeId != null) {
+                        ConditionType conditionType = definitionsService.getConditionType(conditionTypeId);
+                        if (conditionType != null) {
+                            condition.setConditionType(conditionType);
+                        } else {
+                            LOGGER.warn("Condition type {} could not be resolved!", conditionTypeId);
+                        }
+                    }
+                }
+            }
+
             if ("eventTypeCondition".equals(condition.getConditionTypeId())) {
                 String eventTypeId = (String) condition.getParameter("eventTypeId");
                 if (eventTypeId == null) {
@@ -214,7 +329,18 @@ public class ParserHelper {
                     }
                 }
             } else if (condition.getConditionType() != null && condition.getConditionType().getParentCondition() != null) {
-                visitConditions(condition.getConditionType().getParentCondition(), this);
+                // Resolve parent condition type if needed before traversing
+                Condition parentCondition = condition.getConditionType().getParentCondition();
+                if (definitionsService != null && parentCondition.getConditionType() == null) {
+                    TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.resolveConditionType(parentCondition, "eventTypeResolution");
+                    } else {
+                        // Fallback to direct resolution if TypeResolutionService is not available
+                        resolveConditionType(definitionsService, parentCondition, "eventTypeResolution");
+                    }
+                }
+                visitConditions(parentCondition, this);
             }
         }
 
@@ -272,7 +398,12 @@ public class ParserHelper {
         String valueAsString = StringUtils.substringAfter(s, VALUE_NAME_SEPARATOR);
         ValueExtractor extractor = valueExtractors.get(valueType);
         if (extractor != null) {
-            value = extractor.extract(valueAsString, event);
+            try {
+                value = extractor.extract(valueAsString, event);
+            } catch (Exception e) {
+                LOGGER.warn("Failed to extract value from event type {} using {}, will return null instead", event.getEventType(), valueAsString, e);
+                return null;
+            }
         }
 
         return value;
@@ -299,6 +430,243 @@ public class ParserHelper {
             }
         }
         return false;
+    }
+
+    /**
+     * Gets the full parent chain for a condition type.
+     *
+     * This method iteratively collects all parent conditions, detecting
+     * circular references.
+     *
+     * @param conditionType the condition type
+     * @param definitionsService service to resolve types
+     * @param contextName name for error messages
+     * @param maxDepth maximum depth to traverse
+     * @return list of parent conditions (ordered from immediate to root),
+     *         or null if circular reference detected or max depth exceeded
+     */
+    public static List<Condition> getParentChain(
+        ConditionType conditionType,
+        DefinitionsService definitionsService,
+        String contextName,
+        int maxDepth) {
+
+        if (conditionType == null || definitionsService == null) {
+            return new ArrayList<>();
+        }
+
+        List<Condition> chain = new ArrayList<>();
+        Set<String> visited = new HashSet<>();
+
+        ConditionType current = conditionType;
+        int depth = 0;
+
+        while (current != null && current.getParentCondition() != null && depth < maxDepth) {
+            Condition parentCondition = current.getParentCondition();
+
+            // Resolve parent condition type if needed
+            if (parentCondition.getConditionType() == null) {
+                TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+                if (typeResolutionService != null) {
+                    typeResolutionService.resolveConditionType(parentCondition, contextName);
+                } else {
+                    // Fallback to direct resolution if TypeResolutionService is not available
+                    resolveConditionType(definitionsService, parentCondition, contextName);
+                }
+            }
+
+            ConditionType parentType = parentCondition.getConditionType();
+            if (parentType == null) {
+                LOGGER.warn("Parent condition type could not be resolved for {} in {}",
+                    current.getItemId(), contextName);
+                break;
+            }
+
+            String parentId = parentType.getItemId();
+
+            // Check for circular reference
+            if (visited.contains(parentId)) {
+                LOGGER.warn("Circular reference detected in parent chain for {} in {}: {}",
+                    conditionType.getItemId(), contextName, visited);
+                return null;
+            }
+
+            visited.add(parentId);
+            chain.add(parentCondition);
+
+            current = parentType;
+            depth++;
+        }
+
+        if (depth >= maxDepth) {
+            LOGGER.warn("Maximum depth ({}) exceeded when traversing parent chain for {} in {}",
+                maxDepth, conditionType.getItemId(), contextName);
+            return null;
+        }
+
+        return chain;
+    }
+
+    /**
+     * Deep copies a parameter value, handling Condition objects and collections containing Conditions.
+     * This is a helper method to avoid code duplication when merging parameters.
+     *
+     * @param value the parameter value to deep copy
+     * @return a deep copy of the value, or the original value if it's not a Condition or collection
+     */
+    private static Object deepCopyParameterValue(Object value) {
+        if (value instanceof Condition) {
+            return ((Condition) value).deepCopy();
+        } else if (value instanceof Collection) {
+            Collection<?> collection = (Collection<?>) value;
+            Collection<Object> copiedCollection = new ArrayList<>();
+            for (Object item : collection) {
+                if (item instanceof Condition) {
+                    copiedCollection.add(((Condition) item).deepCopy());
+                } else {
+                    copiedCollection.add(item);
+                }
+            }
+            return copiedCollection;
+        } else {
+            return value;
+        }
+    }
+
+    /**
+     * Resolves the effective condition to use, following the parent chain.
+     *
+     * This method traverses the parent condition chain and returns the condition
+     * at the end of the chain (the root parent). It merges parameters from all
+     * levels in the chain into the context and the effective condition.
+     *
+     * @param condition the condition to resolve
+     * @param definitionsService service to resolve condition types
+     * @param context context map for parameter merging (will be modified)
+     * @param contextName name for error messages
+     * @return the effective condition (may be from parent chain), or the original condition if no parent chain
+     */
+    public static Condition resolveEffectiveCondition(
+        Condition condition,
+        DefinitionsService definitionsService,
+        Map<String, Object> context,
+        String contextName) {
+        return resolveEffectiveCondition(condition, definitionsService, context,
+            contextName, MAX_RECURSION_DEPTH);
+    }
+
+    /**
+     * Resolves the effective condition to use, following the parent chain.
+     *
+     * @param condition the condition to resolve
+     * @param definitionsService service to resolve condition types
+     * @param context context map for parameter merging (will be modified)
+     * @param contextName name for error messages
+     * @param maxDepth maximum depth to traverse (prevents infinite loops)
+     * @return the effective condition (may be from parent chain), or the original condition if no parent chain
+     */
+    public static Condition resolveEffectiveCondition(
+        Condition condition,
+        DefinitionsService definitionsService,
+        Map<String, Object> context,
+        String contextName,
+        int maxDepth) {
+
+        if (condition == null || definitionsService == null) {
+            return condition;
+        }
+
+        // Ensure condition type is resolved (this also resolves parent conditions)
+        // definitionsService is guaranteed non-null here (checked at line 575)
+        TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+        if (condition.getConditionType() == null) {
+            if (typeResolutionService != null) {
+                typeResolutionService.resolveConditionType(condition, contextName);
+            } else {
+                // Fallback to direct resolution if TypeResolutionService is not available
+                resolveConditionType(definitionsService, condition, contextName);
+            }
+        } else {
+            // Even if condition type is already resolved, ensure parent condition is also resolved
+            ConditionType type = condition.getConditionType();
+            if (type != null && type.getParentCondition() != null && type.getParentCondition().getConditionType() == null) {
+                if (typeResolutionService != null) {
+                    typeResolutionService.resolveConditionType(type.getParentCondition(), contextName);
+                } else {
+                    // Fallback to direct resolution if TypeResolutionService is not available
+                    resolveConditionType(definitionsService, type.getParentCondition(), contextName);
+                }
+            }
+        }
+
+        ConditionType type = condition.getConditionType();
+        if (type == null) {
+            return condition;
+        }
+        if (type.getParentCondition() == null) {
+            return condition;
+        }
+
+        List<Condition> parentChain = getParentChain(type, definitionsService,
+            contextName, maxDepth);
+        if (parentChain == null) {
+            LOGGER.warn("Failed to build parent chain for condition type '{}' in '{}' (cycle or max depth exceeded), cannot resolve effective condition",
+                type.getItemId(), contextName);
+            return null;
+        }
+        if (parentChain.isEmpty()) {
+            return condition;
+        }
+
+        // Use the last parent in the chain (root parent)
+        Condition rootParent = parentChain.get(parentChain.size() - 1);
+
+        // Create new condition from root parent with deep copy
+        Condition effectiveCondition = rootParent.deepCopy();
+
+        // Merge all parameters from chain into context
+        // Start with condition's parameters
+        if (context != null) {
+            context.putAll(condition.getParameterValues());
+        }
+
+        // Merge parameters from all parents in the chain (skip rootParent as it's already copied)
+        for (Condition parent : parentChain) {
+            if (parent == rootParent) {
+                continue; // Already copied above
+            }
+            if (context != null) {
+                context.putAll(parent.getParameterValues());
+            }
+            // Merge into effective condition (only add parameters not already present, deep copying if nested condition)
+            for (Map.Entry<String, Object> entry : parent.getParameterValues().entrySet()) {
+                if (!effectiveCondition.getParameterValues().containsKey(entry.getKey())) {
+                    effectiveCondition.getParameterValues().put(entry.getKey(), deepCopyParameterValue(entry.getValue()));
+                }
+            }
+        }
+
+        // Merge condition parameters into effective condition (highest priority)
+        // Deep copy nested conditions from condition as well
+        for (Map.Entry<String, Object> entry : condition.getParameterValues().entrySet()) {
+            effectiveCondition.getParameterValues().put(entry.getKey(), deepCopyParameterValue(entry.getValue()));
+        }
+
+        // Resolve the effective condition's type to ensure nested conditions are resolved
+        if (typeResolutionService != null) {
+            typeResolutionService.resolveConditionType(effectiveCondition, contextName + " (effective condition)");
+        } else {
+            // Fallback to direct resolution if TypeResolutionService is not available
+            resolveConditionType(definitionsService, effectiveCondition, contextName + " (effective condition)");
+        }
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Resolved effective condition: original={}, effective={}, chainDepth={}",
+                condition.getConditionTypeId(),
+                effectiveCondition.getConditionTypeId(),
+                parentChain.size());
+        }
+
+        return effectiveCondition;
     }
 
 }

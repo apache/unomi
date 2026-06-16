@@ -31,6 +31,9 @@ import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
+import org.apache.unomi.api.services.TypeResolutionService;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.config.ConfigurationUpdateHelper;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
@@ -63,8 +66,6 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
     private Integer rulesStatisticsRefreshInterval = 10000;
 
     private final List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<>();
-
-    private final Set<String> invalidRulesId = new HashSet<>();
 
     private final Object cacheLock = new Object();
     private final Map<String, Map<String, Set<Rule>>> rulesByEventTypeByTenant = new ConcurrentHashMap<>();
@@ -110,6 +111,14 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
 
     public void setOptimizedRulesActivated(Boolean optimizedRulesActivated) {
         this.optimizedRulesActivated = optimizedRulesActivated;
+    }
+
+    /**
+     * Helper method to get TypeResolutionService from DefinitionsService.
+     * Returns null if DefinitionsService is not available or does not expose TypeResolutionService.
+     */
+    private TypeResolutionService getTypeResolutionService() {
+        return definitionsService != null ? definitionsService.getTypeResolutionService() : null;
     }
 
     @Override
@@ -581,7 +590,9 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         if (query.isForceRefresh()) {
             persistenceService.refreshIndex(Rule.class);
         }
-        definitionsService.resolveConditionType(query.getCondition());
+        if (query.getCondition() != null) {
+            definitionsService.getConditionValidationService().validate(query.getCondition());
+        }
         List<Metadata> descriptions = new LinkedList<>();
         PartialList<Rule> rules = persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit());
         for (Rule definition : rules.getList()) {
@@ -594,7 +605,9 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         if (query.isForceRefresh()) {
             persistenceService.refreshIndex(Rule.class);
         }
-        definitionsService.resolveConditionType(query.getCondition());
+        if (query.getCondition() != null) {
+            definitionsService.getConditionValidationService().validate(query.getCondition());
+        }
         PartialList<Rule> rules = persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit());
         List<Rule> details = new LinkedList<>();
         details.addAll(rules.getList());
@@ -654,6 +667,49 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                         throw e;
                     } else {
                         LOGGER.warn("Invalid rule condition for rule {} : ", rule, e);
+                        TypeResolutionService typeResolutionService = getTypeResolutionService();
+                        if (typeResolutionService != null) {
+                            typeResolutionService.markInvalid("rules", rule.getItemId(),
+                                "Missing eventCondition: " + e.getMessage());
+                        }
+                    }
+                }
+            }
+        }
+
+
+        if (rule.getCondition() != null) {
+            List<ValidationError> validationErrors = definitionsService.getConditionValidationService().validate(rule.getCondition());
+
+            List<ValidationError> errors = validationErrors.stream()
+                .filter(error -> error.getType() != ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            List<ValidationError> warnings = validationErrors.stream()
+                .filter(error -> error.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            if (!warnings.isEmpty()) {
+                StringBuilder warningMessage = new StringBuilder("Rule condition has warnings:");
+                for (ValidationError warning : warnings) {
+                    warningMessage.append("\n- ").append(warning.getMessage());
+                }
+                LOGGER.warn(warningMessage.toString());
+            }
+
+            if (!errors.isEmpty()) {
+                StringBuilder errorMessage = new StringBuilder("Invalid rule condition:");
+                for (ValidationError error : errors) {
+                    errorMessage.append("\n- ").append(error.getMessage());
+                }
+                if (!effectiveAllowInvalidRules) {
+                    throw new IllegalArgumentException(errorMessage.toString());
+                } else {
+                    LOGGER.warn("Invalid rule condition for rule {} : {}", rule, errorMessage.toString());
+                    TypeResolutionService typeResolutionService = getTypeResolutionService();
+                    if (typeResolutionService != null) {
+                        typeResolutionService.markInvalid("rules", rule.getItemId(),
+                            "Condition validation errors: " + errorMessage.toString());
                     }
                 }
             }
@@ -790,10 +846,11 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             return true;
         }
 
-        // Check if rule has missing plugins or is invalid (set by resolveRule)
         boolean hasMissingPlugins = rule.getMetadata().isMissingPlugins();
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        boolean isInvalid = typeResolutionService != null && typeResolutionService.isInvalid("rules", rule.getItemId());
 
-        if (hasMissingPlugins) {
+        if (hasMissingPlugins || isInvalid) {
             String ruleName = getRuleName(rule);
             String ruleId = rule.getItemId();
             String reason = hasMissingPlugins ? "missing plugins" : "invalid rule";
@@ -849,7 +906,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
      * @return the set of event type IDs, which may include "*" for wildcard matching, or empty set if condition has unresolved types
      */
     private Set<String> resolveEventTypesWithWarnings(Rule rule) {
-        Set<String> eventTypeIds = ParserHelper.resolveConditionEventTypes(rule.getCondition());
+        Set<String> eventTypeIds = ParserHelper.resolveConditionEventTypes(rule.getCondition(), definitionsService);
         boolean hasWildcard = eventTypeIds.contains("*");
         boolean defaultingToWildcard = false;
 
@@ -861,7 +918,9 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             // Check if rule has unresolved types by checking resolution status
             // Note: shouldExcludeRuleFromEventTypeIndex() also checks disabled, so we need to check specifically
             boolean hasMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
-            boolean hasUnresolvedTypes = hasMissingPlugins;
+            TypeResolutionService typeResolutionService = getTypeResolutionService();
+            boolean isInvalid = typeResolutionService != null && typeResolutionService.isInvalid("rules", rule.getItemId());
+            boolean hasUnresolvedTypes = hasMissingPlugins || isInvalid;
 
             if (hasUnresolvedTypes) {
                 // Rule has unresolved types - return empty set to exclude rule
@@ -934,14 +993,20 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         if (rule == null) {
             return false;
         }
-        boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-        isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
-        if (!isValid) {
-            invalidRulesId.add(rule.getItemId());
-        } else {
-            invalidRulesId.remove(rule.getItemId());
+
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService == null) {
+            return false;
         }
-        return isValid;
+
+        boolean wasInvalid = typeResolutionService.isInvalid("rules", rule.getItemId());
+        boolean hadMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
+
+        if (!wasInvalid && !hadMissingPlugins) {
+            return true;
+        }
+
+        return typeResolutionService.resolveRule("rules", rule);
     }
 
     /**
@@ -953,7 +1018,16 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
      * @return true if the rule is now valid, false if it's still invalid
      */
     private boolean ensureRuleResolvedForIndexing(Rule rule) {
-        return ensureRuleResolved(rule);
+        if (rule == null) {
+            return false;
+        }
+
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService == null) {
+            return false;
+        }
+
+        return typeResolutionService.resolveRule("rules", rule);
     }
 
     /**
@@ -969,7 +1043,11 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             return false;
         }
 
-        boolean wasInvalid = invalidRulesId.contains(rule.getItemId());
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService == null) {
+            return false;
+        }
+        boolean wasInvalid = typeResolutionService.isInvalid("rules", rule.getItemId());
         boolean hadMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
 
         // Ensure rule is resolved (idempotent - only resolves if needed)
@@ -1065,8 +1143,14 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                     if (persistenceService.testMatch(evalCondition, source)) {
                         trackedConditions.add(trackedCondition);
                     }
-                } else if (
-                        trackedCondition.getConditionType() != null &&
+                } else {
+                    if (trackedCondition.getConditionType() == null) {
+                        TypeResolutionService typeResolutionService = getTypeResolutionService();
+                        if (typeResolutionService != null) {
+                            typeResolutionService.resolveConditionType(trackedCondition, "tracked conditions");
+                        }
+                    }
+                    if (trackedCondition.getConditionType() != null &&
                             trackedCondition.getConditionType().getParameters() != null && !trackedCondition.getConditionType()
                             .getParameters().isEmpty()
                     ) {
@@ -1102,6 +1186,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                         } else {
                             trackedConditions.add(trackedCondition);
                         }
+                    }
                 }
             }
         }
