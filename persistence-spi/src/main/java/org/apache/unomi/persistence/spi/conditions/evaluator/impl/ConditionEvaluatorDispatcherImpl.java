@@ -150,10 +150,8 @@ public class ConditionEvaluatorDispatcherImpl
 
             String conditionEvaluatorKey = effectiveCondition.getConditionType().getConditionEvaluator();
             if (conditionEvaluatorKey == null) {
-                if (effectiveCondition.getConditionType().getParentCondition() != null) {
-                    context.putAll(effectiveCondition.getParameterValues());
-                    return eval(effectiveCondition.getConditionType().getParentCondition(), item, context);
-                }
+                // resolveEffectiveCondition() already resolved to the root parent above,
+                // so a null evaluator key here means the chain genuinely has no evaluator.
                 LOGGER.warn("No evaluator defined for condition type: {}", effectiveCondition.getConditionTypeId());
                 return false;
             }

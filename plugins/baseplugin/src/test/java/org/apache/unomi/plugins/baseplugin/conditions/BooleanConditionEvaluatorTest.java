@@ -31,6 +31,7 @@ import java.util.HashMap;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.never;
@@ -161,6 +162,24 @@ public class BooleanConditionEvaluatorTest {
         Condition c = new Condition();
         c.setParameter("subConditions", Collections.emptyList());
         assertFalse(evaluator.eval(c, profile, new HashMap<>(), dispatcher));
+    }
+
+    // --- type safety guard ---
+
+    @Test
+    public void nonListSubConditions_throwsIllegalArgumentException() {
+        // Passing a non-List as subConditions must throw IAE immediately (not silently cast or swallow).
+        Condition c = new Condition();
+        c.setParameter("operator", "and");
+        c.setParameter("subConditions", "not-a-list");
+
+        try {
+            evaluator.eval(c, profile, new HashMap<>(), dispatcher);
+            fail("Expected IllegalArgumentException when subConditions is not a List");
+        } catch (IllegalArgumentException expected) {
+            assertTrue("Exception message must mention 'subConditions'",
+                expected.getMessage().contains("subConditions"));
+        }
     }
 
     // --- helper ---

@@ -36,10 +36,15 @@ import org.mockito.quality.Strictness;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -1198,6 +1203,178 @@ public class TypeResolutionServiceImplTest {
             assertTrue(rule.getMetadata().isMissingPlugins(), "missingPlugins should be true when resolution fails");
             assertTrue(typeResolutionService.isInvalid("rules", "testRule"), "Rule should be marked as invalid");
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Regression tests for review findings: cycle, max-depth, sibling rollback
+    // -----------------------------------------------------------------------
+
+    @Test
+    public void resolveConditionType_circularParentChain_returnsFalse() {
+        // typeA's parentCondition points to typeB, typeB's parentCondition points back to typeA
+        ConditionType typeA = new ConditionType(new Metadata());
+        typeA.setItemId("cycleTypeA");
+        ConditionType typeB = new ConditionType(new Metadata());
+        typeB.setItemId("cycleTypeB");
+
+        Condition parentOfA = new Condition();
+        parentOfA.setConditionTypeId("cycleTypeB");
+        typeA.setParentCondition(parentOfA);
+
+        Condition parentOfB = new Condition();
+        parentOfB.setConditionTypeId("cycleTypeA");
+        typeB.setParentCondition(parentOfB);
+
+        when(definitionsService.getConditionType("cycleTypeA")).thenReturn(typeA);
+        when(definitionsService.getConditionType("cycleTypeB")).thenReturn(typeB);
+
+        Condition root = new Condition();
+        root.setConditionTypeId("cycleTypeA");
+
+        boolean resolved = typeResolutionService.resolveConditionType(root, "cycle test");
+
+        assertFalse(resolved, "Must return false for a circular parent chain");
+        assertNull(root.getConditionType(), "Condition type must be rolled back on cycle detection");
+    }
+
+    @Test
+    public void resolveConditionType_exceedsMaxDepth_returnsFalse() {
+        // Build a chain of 1002 conditions as nested sub-condition parameters.
+        // Each depth increment passes through resolveConditionTypeInternal, so depth > 1000 triggers the guard.
+        int chainLength = 1002;
+        Condition[] conditions = new Condition[chainLength];
+        for (int i = 0; i < chainLength; i++) {
+            conditions[i] = new Condition();
+            conditions[i].setConditionTypeId("depthType" + i);
+        }
+        for (int i = 0; i < chainLength - 1; i++) {
+            conditions[i].setParameter("sub", conditions[i + 1]);
+        }
+
+        when(definitionsService.getConditionType(startsWith("depthType")))
+            .thenAnswer(inv -> {
+                String id = inv.getArgument(0);
+                ConditionType ct = new ConditionType(new Metadata());
+                ct.setItemId(id);
+                return ct;
+            });
+
+        boolean resolved = typeResolutionService.resolveConditionType(conditions[0], "depth test");
+
+        assertFalse(resolved, "Must return false when recursion depth exceeds MAX_RECURSION_DEPTH");
+    }
+
+    @Test
+    public void resolveConditionType_threeSiblings_thirdFailsRollsBackAll() {
+        // parent has three sub-conditions as a list; child1 and child2 resolve, child3 does not.
+        // On failure, all resolved siblings and the parent must be rolled back.
+        ConditionType parentType = new ConditionType(new Metadata());
+        parentType.setItemId("rollbackParent");
+        ConditionType child1Type = new ConditionType(new Metadata());
+        child1Type.setItemId("rollbackChild1");
+        ConditionType child2Type = new ConditionType(new Metadata());
+        child2Type.setItemId("rollbackChild2");
+
+        Condition parent = new Condition();
+        parent.setConditionTypeId("rollbackParent");
+        Condition child1 = new Condition();
+        child1.setConditionTypeId("rollbackChild1");
+        Condition child2 = new Condition();
+        child2.setConditionTypeId("rollbackChild2");
+        Condition child3 = new Condition();
+        child3.setConditionTypeId("rollbackMissing");
+
+        parent.setParameter("subConditions", Arrays.asList(child1, child2, child3));
+
+        when(definitionsService.getConditionType("rollbackParent")).thenReturn(parentType);
+        when(definitionsService.getConditionType("rollbackChild1")).thenReturn(child1Type);
+        when(definitionsService.getConditionType("rollbackChild2")).thenReturn(child2Type);
+        when(definitionsService.getConditionType("rollbackMissing")).thenReturn(null);
+
+        boolean resolved = typeResolutionService.resolveConditionType(parent, "rollback test");
+
+        assertFalse(resolved, "Must return false when any sibling fails to resolve");
+        assertNull(parent.getConditionType(), "Parent type must be rolled back");
+        assertNull(child1.getConditionType(), "child1 type must be rolled back after third sibling failure");
+        assertNull(child2.getConditionType(), "child2 type must be rolled back after third sibling failure");
+        assertNull(child3.getConditionType(), "child3 type must remain null (was never resolved)");
+    }
+
+    @Test
+    public void updateEncounter_concurrentUpdates_noDuplicateMissingTypeIds() throws InterruptedException {
+        // CopyOnWriteArraySet deduplication: concurrent threads adding the same type ID
+        // must not produce duplicates in the returned list.
+        InvalidObjectInfo info = new InvalidObjectInfo("rules", "rule1", "test");
+        int threads = 10;
+        CountDownLatch latch = new CountDownLatch(threads);
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+
+        List<String> singletonList = Collections.singletonList("sameConditionType");
+        for (int i = 0; i < threads; i++) {
+            executor.submit(() -> {
+                info.updateEncounter(singletonList, null, "ctx");
+                latch.countDown();
+            });
+        }
+        latch.await();
+        executor.shutdown();
+
+        List<String> ids = info.getMissingConditionTypeIds();
+        assertEquals(1, ids.size(),
+            "Concurrent adds of the same type ID must not produce duplicates");
+        assertEquals("sameConditionType", ids.get(0));
+    }
+
+    @Test
+    public void resolveRule_nullActions_doesNotSetMissingPlugins() {
+        // Structural config error (null actions) must not set missingPlugins —
+        // that flag is reserved for genuinely missing plugin types.
+        Rule rule = new Rule();
+        rule.setItemId("emptyRule");
+        rule.setMetadata(new Metadata("emptyRule"));
+        rule.setCondition(null);
+        rule.setActions(null);
+
+        boolean resolved = typeResolutionService.resolveRule("rules", rule);
+
+        assertFalse(resolved, "Must return false when actions are null");
+        assertFalse(rule.getMetadata().isMissingPlugins(),
+            "missingPlugins must NOT be set for structural config errors like null actions");
+    }
+
+    @Test
+    public void resolveCondition_nestedChildFails_reportsLeafTypeIdNotRoot() {
+        // When a nested sub-condition fails, InvalidObjectInfo must name the leaf type,
+        // not the root booleanCondition wrapper.
+        ConditionType boolType = new ConditionType(new Metadata());
+        boolType.setItemId("booleanCondition");
+
+        Condition root = new Condition();
+        root.setConditionTypeId("booleanCondition");
+        // Pre-set root's conditionType so that rollback on leaf failure leaves root resolved;
+        // findUnresolvedConditionTypeId() will then drill into children to find the leaf.
+        root.setConditionType(boolType);
+        Condition leaf = new Condition();
+        leaf.setConditionTypeId("missingLeafType");
+        root.setParameter("subConditions", Collections.singletonList(leaf));
+
+        Segment segment = new Segment();
+        segment.setItemId("seg1");
+        segment.setMetadata(new Metadata("seg1"));
+
+        when(definitionsService.getConditionType("booleanCondition")).thenReturn(boolType);
+        when(definitionsService.getConditionType("missingLeafType")).thenReturn(null);
+
+        typeResolutionService.resolveCondition("segments", segment, root, "test");
+
+        Map<String, InvalidObjectInfo> invalids = typeResolutionService.getInvalidObjects("segments");
+        InvalidObjectInfo info = invalids.get("seg1");
+        assertNotNull(info, "Segment must be recorded as invalid");
+        assertEquals(1, info.getMissingConditionTypeIds().size());
+        assertEquals("missingLeafType", info.getMissingConditionTypeIds().get(0),
+            "Reported missing type must be the failing leaf, not the root wrapper");
+        assertTrue(info.getReason().contains("missingLeafType"),
+            "Reason text must name the actual failing leaf type");
     }
 }
 

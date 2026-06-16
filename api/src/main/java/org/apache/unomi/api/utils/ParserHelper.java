@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Helper class to resolve condition, action and values types when loading definitions from JSON files
@@ -42,10 +43,10 @@ public class ParserHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ParserHelper.class);
 
-    private static final Set<String> unresolvedActionTypes = new HashSet<>();
-    private static final Set<String> unresolvedConditionTypes = new HashSet<>();
+    private static final Set<String> unresolvedActionTypes = ConcurrentHashMap.newKeySet();
+    private static final Set<String> unresolvedConditionTypes = ConcurrentHashMap.newKeySet();
     // Track rules that have already been warned about null/empty actions to avoid log spam
-    private static final Set<String> warnedRulesWithNullActions = Collections.synchronizedSet(new HashSet<>());
+    private static final Set<String> warnedRulesWithNullActions = ConcurrentHashMap.newKeySet();
 
     private static final String VALUE_NAME_SEPARATOR = "::";
     private static final String PLACEHOLDER_PREFIX = "${";
@@ -400,7 +401,7 @@ public class ParserHelper {
             try {
                 value = extractor.extract(valueAsString, event);
             } catch (Exception e) {
-                LOGGER.warn("Failed to extract value from event type {} using {} : {}, will return null instead", event.getEventType(), valueAsString, e.getMessage());
+                LOGGER.warn("Failed to extract value from event type {} using {}, will return null instead", event.getEventType(), valueAsString, e);
                 return null;
             }
         }
@@ -576,7 +577,8 @@ public class ParserHelper {
         }
 
         // Ensure condition type is resolved (this also resolves parent conditions)
-        TypeResolutionService typeResolutionService = definitionsService != null ? definitionsService.getTypeResolutionService() : null;
+        // definitionsService is guaranteed non-null here (checked at line 575)
+        TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
         if (condition.getConditionType() == null) {
             if (typeResolutionService != null) {
                 typeResolutionService.resolveConditionType(condition, contextName);

@@ -18,7 +18,6 @@
 package org.apache.unomi.api.services;
 
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -33,9 +32,9 @@ public class InvalidObjectInfo {
     private final long firstSeenTimestamp;
     private final AtomicLong lastSeenTimestamp;
     private final AtomicInteger encounterCount;
-    private final List<String> missingConditionTypeIds;  // CopyOnWriteArrayList — safe for concurrent reads during updateEncounter
-    private final List<String> missingActionTypeIds;
-    private final Set<String> contextNames;  // CopyOnWriteArraySet
+    private final Set<String> missingConditionTypeIds;  // CopyOnWriteArraySet — atomic add-if-absent, no TOCTOU
+    private final Set<String> missingActionTypeIds;
+    private final Set<String> contextNames;
 
     public InvalidObjectInfo(String objectType, String objectId, String reason) {
         this(objectType, objectId, reason, null, null, null);
@@ -52,9 +51,9 @@ public class InvalidObjectInfo {
         this.lastSeenTimestamp = new AtomicLong(this.firstSeenTimestamp);
         this.encounterCount = new AtomicInteger(1);
         this.missingConditionTypeIds = missingConditionTypeIds != null
-            ? new CopyOnWriteArrayList<>(missingConditionTypeIds) : new CopyOnWriteArrayList<>();
+            ? new CopyOnWriteArraySet<>(missingConditionTypeIds) : new CopyOnWriteArraySet<>();
         this.missingActionTypeIds = missingActionTypeIds != null
-            ? new CopyOnWriteArrayList<>(missingActionTypeIds) : new CopyOnWriteArrayList<>();
+            ? new CopyOnWriteArraySet<>(missingActionTypeIds) : new CopyOnWriteArraySet<>();
         this.contextNames = new CopyOnWriteArraySet<>();
         if (contextName != null) {
             this.contextNames.add(contextName);
@@ -86,11 +85,11 @@ public class InvalidObjectInfo {
     }
 
     public List<String> getMissingConditionTypeIds() {
-        return Collections.unmodifiableList(missingConditionTypeIds);
+        return Collections.unmodifiableList(new ArrayList<>(missingConditionTypeIds));
     }
 
     public List<String> getMissingActionTypeIds() {
-        return Collections.unmodifiableList(missingActionTypeIds);
+        return Collections.unmodifiableList(new ArrayList<>(missingActionTypeIds));
     }
 
     public Set<String> getContextNames() {
@@ -114,19 +113,11 @@ public class InvalidObjectInfo {
         this.encounterCount.incrementAndGet();
 
         if (missingConditionTypeIds != null) {
-            for (String typeId : missingConditionTypeIds) {
-                if (!this.missingConditionTypeIds.contains(typeId)) {
-                    this.missingConditionTypeIds.add(typeId);
-                }
-            }
+            this.missingConditionTypeIds.addAll(missingConditionTypeIds);
         }
 
         if (missingActionTypeIds != null) {
-            for (String typeId : missingActionTypeIds) {
-                if (!this.missingActionTypeIds.contains(typeId)) {
-                    this.missingActionTypeIds.add(typeId);
-                }
-            }
+            this.missingActionTypeIds.addAll(missingActionTypeIds);
         }
 
         if (contextName != null) {

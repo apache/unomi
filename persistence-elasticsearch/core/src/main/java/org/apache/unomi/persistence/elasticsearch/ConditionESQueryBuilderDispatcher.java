@@ -119,10 +119,10 @@ public class ConditionESQueryBuilderDispatcher extends ConditionQueryBuilderDisp
             } else {
                 LOGGER.debug("DefinitionsService not available, cannot resolve condition type for condition typeID={}", condition.getConditionTypeId());
             }
-            // If still null after attempting resolution (or definitionsService was null), return match-all
+            // If still null after attempting resolution (or definitionsService was null), return match-none
             if (condition.getConditionType() == null) {
-                LOGGER.debug("Condition type is null for condition typeID={}, returning match-all query", condition.getConditionTypeId());
-                return Query.of(q -> q.matchAll(m -> m));
+                LOGGER.warn("Condition type is null for condition typeID={}, returning match-none query", condition.getConditionTypeId());
+                return Query.of(q -> q.matchNone(m -> m));
             }
         }
 
@@ -132,18 +132,18 @@ public class ConditionESQueryBuilderDispatcher extends ConditionQueryBuilderDisp
             Condition resolved = ParserHelper.resolveEffectiveCondition(
                 condition, definitionsService, context, "query builder");
             if (resolved == null) {
-                LOGGER.warn("Could not resolve effective condition for typeID={} (cycle or max depth), returning match-all query",
+                LOGGER.warn("Could not resolve effective condition for typeID={} (cycle or max depth), returning match-none query",
                     condition.getConditionTypeId());
-                return Query.of(q -> q.matchAll(m -> m));
+                return Query.of(q -> q.matchNone(m -> m));
             }
             effectiveCondition = resolved;
         }
 
-        // Check if effective condition has a type - if not, return match-all query
+        // Check if effective condition has a type - if not, return match-none query
         if (effectiveCondition.getConditionType() == null) {
-            LOGGER.debug("Effective condition type is null for condition typeID={}, returning match-all query",
+            LOGGER.warn("Effective condition type is null for condition typeID={}, returning match-none query",
                 effectiveCondition.getConditionTypeId());
-            return Query.of(q -> q.matchAll(m -> m));
+            return Query.of(q -> q.matchNone(m -> m));
         }
 
         String queryBuilderKey = effectiveCondition.getConditionType().getQueryBuilder();
@@ -152,8 +152,8 @@ public class ConditionESQueryBuilderDispatcher extends ConditionQueryBuilderDisp
                 context.putAll(effectiveCondition.getParameterValues());
                 return buildFilter(effectiveCondition.getConditionType().getParentCondition(), context);
             }
-            LOGGER.warn("No query builder defined for condition type: {}, returning match-all query", effectiveCondition.getConditionTypeId());
-            return Query.of(q -> q.matchAll(m -> m));
+            LOGGER.warn("No query builder defined for condition type: {}, returning match-none query", effectiveCondition.getConditionTypeId());
+            return Query.of(q -> q.matchNone(m -> m));
         }
 
         // Find the appropriate query builder key (new or legacy)
@@ -168,13 +168,15 @@ public class ConditionESQueryBuilderDispatcher extends ConditionQueryBuilderDisp
             if (contextualCondition != null) {
                 return queryBuilder.buildQuery(contextualCondition, context, this);
             }
+            LOGGER.warn("getContextualCondition returned null for conditionTypeId={}, returning match-none query",
+                effectiveCondition.getConditionTypeId());
         } else {
             LOGGER.warn("No matching query builder for conditionTypeId={} (queryBuilderKey={})",
                 effectiveCondition.getConditionTypeId(), queryBuilderKey);
             LOGGER.debug("No matching query builder for condition {} and context {}", effectiveCondition, context);
         }
 
-        return Query.of(q -> q.matchAll(m -> m));
+        return Query.of(q -> q.matchNone(m -> m));
     }
 
     public long count(Condition condition) {

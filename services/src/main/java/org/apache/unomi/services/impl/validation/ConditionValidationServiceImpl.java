@@ -161,8 +161,21 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             Object value = condition.getParameter(paramName);
             String location = "condition[" + condition.getConditionTypeId() + "]." + paramName;
 
-            // Skip validation entirely for parameters with references/scripts
+            // Skip most validation for parameters with references/scripts (resolved at runtime).
+            // Still emit an advisory for required parameters so operators know static checks
+            // were skipped and the reference must resolve at evaluation time.
             if (ConditionContextHelper.hasContextualParameter(value)) {
+                if (param.getValidation() != null && param.getValidation().isRequired()) {
+                    Map<String, Object> ctx = buildValidationContext(paramName, value, param, location,
+                            Collections.singletonMap("referenceValue", String.valueOf(value)));
+                    errors.add(new ValidationError(paramName,
+                            "Required parameter uses a contextual reference; ensure the reference resolves at runtime.",
+                            ValidationErrorType.MISSING_RECOMMENDED_PARAMETER,
+                            condition.getConditionTypeId(),
+                            type.getItemId(),
+                            ctx,
+                            null));
+                }
                 continue;
             }
 

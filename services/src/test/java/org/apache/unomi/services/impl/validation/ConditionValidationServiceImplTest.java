@@ -1255,8 +1255,11 @@ public class ConditionValidationServiceImplTest {
 
             List<ValidationError> errors = conditionValidationService.validate(condition);
 
-            // Should skip validation for parameter references
-            assertNoErrors(errors);
+            // A required parameter with a contextual reference emits an advisory (MISSING_RECOMMENDED_PARAMETER)
+            // so operators know the reference must resolve at evaluation time. No blocking errors allowed.
+            assertTrue(
+                errors.stream().allMatch(e -> e.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER),
+                "Only advisory errors expected for required parameter references; got: " + errors);
         }
 
         @Test
@@ -1276,8 +1279,11 @@ public class ConditionValidationServiceImplTest {
 
             List<ValidationError> errors = conditionValidationService.validate(condition);
 
-            // Should skip validation for script expressions
-            assertNoErrors(errors);
+            // A required parameter with a script expression emits an advisory (MISSING_RECOMMENDED_PARAMETER)
+            // so operators know the script must resolve at evaluation time. No blocking errors allowed.
+            assertTrue(
+                errors.stream().allMatch(e -> e.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER),
+                "Only advisory errors expected for required script expressions; got: " + errors);
         }
 
         @Test

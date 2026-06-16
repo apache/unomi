@@ -127,8 +127,7 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
                 }
                 ConditionType conditionType = definitionsService.getConditionType(conditionTypeId);
                 if (conditionType == null) {
-                    if (!unresolvedConditionTypes.contains(conditionTypeId)) {
-                        unresolvedConditionTypes.add(conditionTypeId);
+                    if (unresolvedConditionTypes.add(conditionTypeId)) {
                         LOGGER.warn("Couldn't resolve condition type: {} for {}", conditionTypeId, contextObjectName);
                     }
                     return false;
@@ -189,6 +188,26 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         }
     }
 
+    /** Walks the condition tree and returns the first node whose conditionType is still null. */
+    private String findUnresolvedConditionTypeId(Condition condition) {
+        if (condition == null) return null;
+        if (condition.getConditionType() == null) return condition.getConditionTypeId();
+        for (Object value : condition.getParameterValues().values()) {
+            if (value instanceof Condition) {
+                String id = findUnresolvedConditionTypeId((Condition) value);
+                if (id != null) return id;
+            } else if (value instanceof Collection) {
+                for (Object item : (Collection<?>) value) {
+                    if (item instanceof Condition) {
+                        String id = findUnresolvedConditionTypeId((Condition) item);
+                        if (id != null) return id;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     private void rollback(List<Condition> resolvedInThisCall, Condition rootToRollBack) {
         for (Condition c : resolvedInThisCall) {
             c.setConditionType(null);
@@ -243,9 +262,8 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
                 unresolvedActionTypes.remove(action.getActionTypeId());
                 action.setActionType(actionType);
             } else {
-                if (!unresolvedActionTypes.contains(action.getActionTypeId())) {
+                if (unresolvedActionTypes.add(action.getActionTypeId())) {
                     LOGGER.warn("Couldn't resolve action type : {}", action.getActionTypeId());
-                    unresolvedActionTypes.add(action.getActionTypeId());
                 }
                 return false;
             }
@@ -281,13 +299,13 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         
         boolean resolved = resolveConditionType(condition, contextName);
         String objectId = item != null ? item.getItemId() : null;
-        
+
         if (!resolved) {
-            // Extract the specific unresolved condition type ID for better error message
-            String unresolvedTypeId = condition.getConditionTypeId();
-            List<String> missingConditionTypeIds = unresolvedTypeId != null 
+            // Walk the tree to find the actual failing leaf, not just the root
+            String unresolvedTypeId = findUnresolvedConditionTypeId(condition);
+            List<String> missingConditionTypeIds = unresolvedTypeId != null
                     ? Collections.singletonList(unresolvedTypeId) : Collections.emptyList();
-            String reason = unresolvedTypeId != null 
+            String reason = unresolvedTypeId != null
                     ? "Unresolved condition type: " + unresolvedTypeId
                     : "Unresolved condition type";
             if (objectId != null) {
@@ -363,31 +381,36 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         if (rule.getCondition() != null) {
             conditionResolved = resolveConditionType(rule.getCondition(), contextName);
             if (!conditionResolved) {
-                String unresolvedTypeId = rule.getCondition().getConditionTypeId();
+                // Walk tree to find the actual failing leaf, not just root
+                String unresolvedTypeId = findUnresolvedConditionTypeId(rule.getCondition());
                 if (unresolvedTypeId != null) {
                     missingConditionTypeIds.add(unresolvedTypeId);
                 }
                 reasons.add("Unresolved condition type" + (unresolvedTypeId != null ? ": " + unresolvedTypeId : ""));
             }
         }
-        
-        boolean actionsResolved = resolveActionTypes(rule, false);
+
+        boolean structuralActionsError = rule.getActions() == null || rule.getActions().isEmpty();
+        boolean actionsResolved = structuralActionsError ? false : resolveActionTypes(rule, false);
         if (!actionsResolved) {
-            // Collect all unresolved action type IDs
-            if (rule.getActions() != null) {
+            if (!structuralActionsError && rule.getActions() != null) {
                 for (Action action : rule.getActions()) {
                     if (action.getActionType() == null && action.getActionTypeId() != null) {
                         missingActionTypeIds.add(action.getActionTypeId());
                     }
                 }
             }
-            reasons.add("Unresolved action type(s): " + (missingActionTypeIds.isEmpty() ? "unknown" : String.join(", ", missingActionTypeIds)));
+            String actionMsg = structuralActionsError
+                    ? (rule.getActions() == null ? "Rule has null actions" : "Rule has no actions")
+                    : "Unresolved action type(s): " + (missingActionTypeIds.isEmpty() ? "unknown" : String.join(", ", missingActionTypeIds));
+            reasons.add(actionMsg);
         }
-        
-        // Set/clear missingPlugins based on both condition and actions resolution
+
         boolean allResolved = conditionResolved && actionsResolved;
+        // missingPlugins reflects actual missing plugin types, not structural config errors
+        boolean hasMissingPlugins = !conditionResolved || (!actionsResolved && !structuralActionsError);
         if (rule.getMetadata() != null) {
-            rule.getMetadata().setMissingPlugins(!allResolved);
+            rule.getMetadata().setMissingPlugins(hasMissingPlugins);
         }
         
         // Track invalid objects

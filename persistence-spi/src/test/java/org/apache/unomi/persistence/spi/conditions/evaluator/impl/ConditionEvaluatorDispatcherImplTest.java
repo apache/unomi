@@ -177,4 +177,35 @@ public class ConditionEvaluatorDispatcherImplTest {
         boolean result = dispatcher.eval(condition, dummyProfile);
         assertFalse("After removal, evaluator key must not resolve to any registered evaluator", result);
     }
+
+    // eval() where the ConditionType parent chain forms a cycle —
+    // resolveEffectiveCondition() detects it and returns null; eval() must return false, not loop infinitely.
+    @Test
+    public void eval_cycleInParentChain_returnsFalseGracefully() {
+        // cycleTypeA.parentCondition → conditionWithTypeB (conditionType = cycleTypeB)
+        // cycleTypeB.parentCondition → conditionWithTypeA (conditionType = cycleTypeA)
+        // → ParserHelper.getParentChain() detects "cycleTypeB" already visited → returns null
+        ConditionType cycleTypeA = new ConditionType(new Metadata());
+        cycleTypeA.setItemId("cycleTypeA");
+        ConditionType cycleTypeB = new ConditionType(new Metadata());
+        cycleTypeB.setItemId("cycleTypeB");
+
+        Condition conditionWithTypeB = new Condition(cycleTypeB);
+        conditionWithTypeB.setConditionType(cycleTypeB);
+        Condition conditionWithTypeA = new Condition(cycleTypeA);
+        conditionWithTypeA.setConditionType(cycleTypeA);
+
+        cycleTypeA.setParentCondition(conditionWithTypeB);
+        cycleTypeB.setParentCondition(conditionWithTypeA);
+
+        dispatcher.setDefinitionsService(definitionsService);
+        // definitionsService.getTypeResolutionService() returns null (mock default);
+        // no resolution is needed since all condition types are pre-set.
+
+        Condition root = new Condition(cycleTypeA);
+
+        boolean result = dispatcher.eval(root, dummyProfile);
+
+        assertFalse("Cycle in ConditionType parent chain must return false, not cause infinite recursion or NPE", result);
+    }
 }
