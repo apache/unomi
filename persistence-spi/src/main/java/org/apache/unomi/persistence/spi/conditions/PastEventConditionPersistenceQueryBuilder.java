@@ -38,7 +38,7 @@ import java.util.Map;
  * <ul>
  *   <li>Implementations are provided by persistence modules and injected where needed.</li>
  *   <li>
- *     In {@code org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionEvaluator}, evaluation follows two paths:
+ *     In {@code org.apache.unomi.plugins.advancedconditions.conditions.PastEventConditionEvaluator}, evaluation follows two paths:
  *     <ol>
  *       <li>If the condition has a {@code generatedPropertyKey}, the evaluator reads a precomputed count from the
  *       {@link org.apache.unomi.api.Profile} system properties (no persistence query).</li>
@@ -51,7 +51,7 @@ import java.util.Map;
  *   the result means "events occurred within bounds" or "no events occurred".</li>
  * </ul>
  *
- * @see org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionEvaluator
+ * @see org.apache.unomi.plugins.advancedconditions.conditions.PastEventConditionEvaluator
  */
 public interface PastEventConditionPersistenceQueryBuilder {
 

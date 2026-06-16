@@ -177,6 +177,12 @@
         <bundle start="false">mvn:org.apache.unomi/unomi-plugins-base/${project.version}</bundle>
     </feature>
 
+    <feature name="unomi-plugins-advanced-conditions" description="Apache Unomi :: Plugins :: Advanced Conditions" version="${project.version}">
+        <feature>unomi-plugins-base</feature>
+        <requirement>unomi.persistence.conditions</requirement>
+        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-advanced-conditions/${project.version}</bundle>
+    </feature>
+
     <feature name="unomi-plugins-request" description="Apache Unomi :: Plugins :: Request" version="${project.version}">
         <feature>unomi-services</feature>
         <configfile finalname="/etc/org.apache.unomi.plugins.request.cfg">mvn:org.apache.unomi/unomi-plugins-request/${project.version}/cfg/requestcfg</configfile>

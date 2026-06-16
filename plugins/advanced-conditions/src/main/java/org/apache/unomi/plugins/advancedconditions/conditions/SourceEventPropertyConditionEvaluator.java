@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.plugins.baseplugin.conditions;
+package org.apache.unomi.plugins.advancedconditions.conditions;
 
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
@@ -24,12 +24,15 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Component(service = ConditionEvaluator.class, property = {"conditionEvaluatorId=sourceEventPropertyConditionEvaluator"})
 public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator {
     private static final Map<String,String> MAPPED_PROPERTIES;
     static {
@@ -82,10 +85,7 @@ public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator
         }
     }
 
-    public DefinitionsService getDefinitionsService() {
-        return definitionsService;
-    }
-
+    @Reference
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }

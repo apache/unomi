@@ -50,8 +50,6 @@
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
     <reference id="topicService" interface="org.apache.unomi.api.services.TopicService"/>
-    <reference id="pastEventConditionPersistenceQueryBuilder" interface="org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder"/>
-
     <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager">
         <reference-listener ref="mergeProfilesOnPropertyAction" bind-method="bindExecutionContextManager" unbind-method="unbindExecutionContextManager" />
     </reference>
@@ -102,27 +100,6 @@
             <entry key="conditionEvaluatorId" value="geoLocationByPointSessionConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.GeoLocationByPointSessionConditionEvaluator"/>
-    </service>
-
-    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="sourceEventPropertyConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.SourceEventPropertyConditionEvaluator">
-            <property name="definitionsService" ref="definitionsService"/>
-        </bean>
-    </service>
-
-    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="pastEventConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionEvaluator">
-            <property name="definitionsService" ref="definitionsService"/>
-            <property name="persistenceService" ref="persistenceService"/>
-            <property name="pastEventConditionPersistenceQueryBuilder" ref="pastEventConditionPersistenceQueryBuilder"/>
-            <property name="scriptExecutor" ref="scriptExecutor"/>
-        </bean>
     </service>
 
     <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
