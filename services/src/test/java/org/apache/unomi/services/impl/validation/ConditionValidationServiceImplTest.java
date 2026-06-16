@@ -656,8 +656,8 @@ public class ConditionValidationServiceImplTest {
         assertEquals(ValidationErrorType.MISSING_REQUIRED_PARAMETER, error.getType());
         assertNotNull(error.getContext(), "Error should have context");
         assertTrue(
-            error.getContext().containsKey("location") || error.getContext().containsKey("parameterType"),
-            "Context should contain location information");
+            error.getContext().containsKey("location") && error.getContext().containsKey("parameterType"),
+            "Context should contain both location and parameterType keys");
     }
 
     @Test
@@ -1413,6 +1413,42 @@ public class ConditionValidationServiceImplTest {
         List<ValidationError> errors = serviceWithTrs.validate(condition);
         assertTrue(errors.isEmpty(),
             "No errors expected when typeResolutionService resolves the type before validation");
+    }
+
+    // Untyped (legacy) nested-condition path: parameter type is NOT "condition" but its value IS a Condition.
+    // The bottom loop in validate() (lines 219-233) must recurse into it and report errors from the inner condition.
+    @Test
+    public void validate_untypedParameterHoldingCondition_recursesIntoNestedCondition() {
+        // Inner condition type that requires "propertyName" (string)
+        ConditionType innerType = new ConditionType(new Metadata());
+        innerType.setItemId("innerType");
+        Parameter requiredParam = new Parameter("propertyName", "string", false);
+        ConditionValidation requiredValidation = new ConditionValidation();
+        requiredValidation.setRequired(true);
+        requiredParam.setValidation(requiredValidation);
+        innerType.setParameters(Collections.singletonList(requiredParam));
+
+        // Inner condition is missing its required "propertyName"
+        Condition innerCondition = new Condition(innerType);
+        // propertyName deliberately not set
+
+        // Outer condition type whose parameter type is "object" (NOT "condition"),
+        // so it won't be included in alreadyValidatedConditionParams
+        ConditionType outerType = new ConditionType(new Metadata());
+        outerType.setItemId("outerType");
+        Parameter untypedParam = new Parameter("nestedCond", "object", false);
+        outerType.setParameters(Collections.singletonList(untypedParam));
+
+        Condition outerCondition = new Condition(outerType);
+        outerCondition.setParameter("nestedCond", innerCondition);
+
+        List<ValidationError> errors = conditionValidationService.validate(outerCondition);
+
+        assertTrue(errors.size() >= 1,
+            "validate() must recurse into an untyped parameter that holds a Condition and report its errors");
+        assertTrue(errors.stream().anyMatch(e -> e.getType() == ValidationErrorType.MISSING_REQUIRED_PARAMETER
+                && "propertyName".equals(e.getParameterName())),
+            "The recursed inner condition must report its missing required parameter 'propertyName'");
     }
 
     // TC8: two-arg ConditionValueTypeValidator.validate(Object, ConditionValidationService) behaves like one-arg

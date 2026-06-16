@@ -1029,6 +1029,52 @@ public class TypeResolutionServiceImplTest {
         assertNull(child.getConditionType(), "Unresolvable child must remain null");
     }
 
+    // Test A: resolveRule with a null rule must return true
+    @Test
+    public void testResolveRule_NullRule_ReturnsTrue() {
+        assertTrue(typeResolutionService.resolveRule("rules", null), "resolveRule(null) must return true");
+    }
+
+    // Test B: resolveActionTypes with an empty (non-null) actions list returns false;
+    // missingPlugins is NOT set on the rule (structural error, not a missing plugin)
+    @Test
+    public void testResolveActionTypes_emptyActions_returnsFalse_doesNotSetMissingPlugins() {
+        Rule rule = new Rule();
+        rule.setItemId("emptyActionsRule");
+        rule.setMetadata(new Metadata("emptyActionsRule"));
+        rule.setActions(Collections.emptyList());
+
+        boolean resolved = typeResolutionService.resolveActionTypes(rule, false);
+
+        assertFalse(resolved, "resolveActionTypes with an empty list must return false");
+        assertFalse(rule.getMetadata().isMissingPlugins(),
+            "missingPlugins must NOT be set for a structurally-empty actions list (no plugins are actually missing)");
+    }
+
+    // Test C: resolveConditionType with null conditionTypeId returns false
+    @Test
+    public void testResolveConditionType_withNullConditionTypeId_returnsFalse() {
+        Condition condition = new Condition();
+        // conditionTypeId is null by default — no ID to look up
+        boolean resolved = typeResolutionService.resolveConditionType(condition, "test");
+        assertFalse(resolved, "resolveConditionType must return false when conditionTypeId is null");
+        assertNull(condition.getConditionType(), "conditionType must remain null when conditionTypeId is null");
+    }
+
+    // Test D: getAllInvalidObjectIds returns a map covering all object types with their IDs
+    @Test
+    public void testGetAllInvalidObjectIds_returnsAllTrackedIds() {
+        typeResolutionService.markInvalid("rules", "rule1", "reason A");
+        typeResolutionService.markInvalid("segments", "seg1", "reason B");
+
+        Map<String, Set<String>> allIds = typeResolutionService.getAllInvalidObjectIds();
+
+        assertTrue(allIds.containsKey("rules"), "Map must contain 'rules' key");
+        assertTrue(allIds.containsKey("segments"), "Map must contain 'segments' key");
+        assertTrue(allIds.get("rules").contains("rule1"), "rules set must contain rule1");
+        assertTrue(allIds.get("segments").contains("seg1"), "segments set must contain seg1");
+    }
+
     @Nested
     class ResolutionTests {
         @Test

@@ -608,9 +608,9 @@ public class ParserHelper {
         List<Condition> parentChain = getParentChain(type, definitionsService,
             contextName, maxDepth);
         if (parentChain == null) {
-            LOGGER.warn("Failed to build parent chain for condition type '{}' in '{}', returning unresolved condition",
+            LOGGER.warn("Failed to build parent chain for condition type '{}' in '{}' (cycle or max depth exceeded), cannot resolve effective condition",
                 type.getItemId(), contextName);
-            return condition;
+            return null;
         }
         if (parentChain.isEmpty()) {
             return condition;

@@ -127,8 +127,14 @@ public class ConditionEvaluatorDispatcherImpl
             // Resolve effective condition from parent chain if needed
             Condition effectiveCondition = condition;
             if (definitionsService != null) {
-                effectiveCondition = ParserHelper.resolveEffectiveCondition(
+                Condition resolved = ParserHelper.resolveEffectiveCondition(
                     condition, definitionsService, context, "condition evaluator");
+                if (resolved == null) {
+                    LOGGER.warn("Could not resolve effective condition for typeID={} on item={} (cycle or max depth), returning false",
+                        condition.getConditionTypeId(), item != null ? item.getItemId() : "null");
+                    return false;
+                }
+                effectiveCondition = resolved;
             } else if (condition.getConditionType().getParentCondition() != null) {
                 // Fallback when DefinitionsService is not wired: recurse on embedded parent (master behaviour)
                 context.putAll(condition.getParameterValues());
@@ -178,7 +184,8 @@ public class ConditionEvaluatorDispatcherImpl
                 return false;
             }
         } catch (Exception e) {
-            LOGGER.error("Error during condition evaluation", e);
+            LOGGER.error("Infrastructure error during condition evaluation for typeID={} on item={}",
+                condition.getConditionTypeId(), item != null ? item.getItemId() : "null", e);
             return false;
         }
     }

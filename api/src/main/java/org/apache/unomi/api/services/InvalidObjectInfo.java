@@ -18,6 +18,8 @@
 package org.apache.unomi.api.services;
 
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -31,9 +33,9 @@ public class InvalidObjectInfo {
     private final long firstSeenTimestamp;
     private final AtomicLong lastSeenTimestamp;
     private final AtomicInteger encounterCount;
-    private final List<String> missingConditionTypeIds;
+    private final List<String> missingConditionTypeIds;  // CopyOnWriteArrayList — safe for concurrent reads during updateEncounter
     private final List<String> missingActionTypeIds;
-    private final Set<String> contextNames;
+    private final Set<String> contextNames;  // CopyOnWriteArraySet
 
     public InvalidObjectInfo(String objectType, String objectId, String reason) {
         this(objectType, objectId, reason, null, null, null);
@@ -49,11 +51,11 @@ public class InvalidObjectInfo {
         this.firstSeenTimestamp = System.currentTimeMillis();
         this.lastSeenTimestamp = new AtomicLong(this.firstSeenTimestamp);
         this.encounterCount = new AtomicInteger(1);
-        this.missingConditionTypeIds = missingConditionTypeIds != null 
-            ? new ArrayList<>(missingConditionTypeIds) : new ArrayList<>();
-        this.missingActionTypeIds = missingActionTypeIds != null 
-            ? new ArrayList<>(missingActionTypeIds) : new ArrayList<>();
-        this.contextNames = new HashSet<>();
+        this.missingConditionTypeIds = missingConditionTypeIds != null
+            ? new CopyOnWriteArrayList<>(missingConditionTypeIds) : new CopyOnWriteArrayList<>();
+        this.missingActionTypeIds = missingActionTypeIds != null
+            ? new CopyOnWriteArrayList<>(missingActionTypeIds) : new CopyOnWriteArrayList<>();
+        this.contextNames = new CopyOnWriteArraySet<>();
         if (contextName != null) {
             this.contextNames.add(contextName);
         }
@@ -97,21 +99,20 @@ public class InvalidObjectInfo {
 
     /**
      * Updates tracking info when the object is encountered again during type resolution.
-     * This method is thread-safe with respect to concurrent calls to {@code updateEncounter} itself.
-     * Note: reads via {@code getMissingConditionTypeIds()}, {@code getMissingActionTypeIds()}, and
-     * {@code getContextNames()} are not synchronized and may observe inconsistent state if called
-     * concurrently with an in-progress {@code updateEncounter} call.
+     * Thread-safe: backed by CopyOnWriteArrayList/CopyOnWriteArraySet, so reads via
+     * {@code getMissingConditionTypeIds()}, {@code getMissingActionTypeIds()}, and
+     * {@code getContextNames()} are safe during concurrent writes.
      *
      * @param missingConditionTypeIds additional missing condition type IDs found in this encounter
      * @param missingActionTypeIds    additional missing action type IDs found in this encounter
      * @param contextName             context where this encounter occurred
      */
-    public synchronized void updateEncounter(List<String> missingConditionTypeIds,
-                                             List<String> missingActionTypeIds,
-                                             String contextName) {
+    public void updateEncounter(List<String> missingConditionTypeIds,
+                                List<String> missingActionTypeIds,
+                                String contextName) {
         this.lastSeenTimestamp.set(System.currentTimeMillis());
         this.encounterCount.incrementAndGet();
-        
+
         if (missingConditionTypeIds != null) {
             for (String typeId : missingConditionTypeIds) {
                 if (!this.missingConditionTypeIds.contains(typeId)) {
@@ -119,7 +120,7 @@ public class InvalidObjectInfo {
                 }
             }
         }
-        
+
         if (missingActionTypeIds != null) {
             for (String typeId : missingActionTypeIds) {
                 if (!this.missingActionTypeIds.contains(typeId)) {
@@ -127,7 +128,7 @@ public class InvalidObjectInfo {
                 }
             }
         }
-        
+
         if (contextName != null) {
             this.contextNames.add(contextName);
         }

@@ -140,6 +140,27 @@ public class ConditionEvaluatorDispatcherImplTest {
         assertFalse("Must return false when evaluatorKey references an unregistered evaluator", result);
     }
 
+    // eval() with a registered evaluator that always returns true — must return true
+    @Test
+    public void testEval_withRegisteredEvaluator_returnsResult() {
+        // Register an evaluator that always returns true
+        dispatcher.addEvaluator("testEval", (condition, item, ctx, d) -> true);
+
+        Condition condition = new Condition();
+        condition.setConditionTypeId("testEvalType");
+        ConditionType conditionType = new ConditionType(new Metadata());
+        conditionType.setConditionEvaluator("testEval");
+        condition.setConditionType(conditionType);
+
+        // Use a real Profile as item
+        Profile profile = new Profile("test-profile-eval");
+
+        boolean result = dispatcher.eval(condition, profile);
+        assertTrue("Evaluator returning true should produce true", result);
+
+        dispatcher.removeEvaluator("testEval");
+    }
+
     // addEvaluator / removeEvaluator wiring round-trip
     @Test
     public void addRemoveEvaluator_registrationRoundTrip() {

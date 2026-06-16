@@ -129,13 +129,19 @@ public class ConditionESQueryBuilderDispatcher extends ConditionQueryBuilderDisp
         // Resolve effective condition from parent chain if needed
         Condition effectiveCondition = condition;
         if (definitionsService != null) {
-            effectiveCondition = ParserHelper.resolveEffectiveCondition(
+            Condition resolved = ParserHelper.resolveEffectiveCondition(
                 condition, definitionsService, context, "query builder");
+            if (resolved == null) {
+                LOGGER.warn("Could not resolve effective condition for typeID={} (cycle or max depth), returning match-all query",
+                    condition.getConditionTypeId());
+                return Query.of(q -> q.matchAll(m -> m));
+            }
+            effectiveCondition = resolved;
         }
 
         // Check if effective condition has a type - if not, return match-all query
         if (effectiveCondition.getConditionType() == null) {
-            LOGGER.debug("Effective condition type is null for condition typeID={}, returning match-all query", 
+            LOGGER.debug("Effective condition type is null for condition typeID={}, returning match-all query",
                 effectiveCondition.getConditionTypeId());
             return Query.of(q -> q.matchAll(m -> m));
         }
@@ -163,9 +169,9 @@ public class ConditionESQueryBuilderDispatcher extends ConditionQueryBuilderDisp
                 return queryBuilder.buildQuery(contextualCondition, context, this);
             }
         } else {
-            // if no matching
-            LOGGER.warn("No matching query builder. See debug log level for more information");
-            LOGGER.debug("No matching query builder for condition {} and context {}", condition, context);
+            LOGGER.warn("No matching query builder for conditionTypeId={} (queryBuilderKey={})",
+                effectiveCondition.getConditionTypeId(), queryBuilderKey);
+            LOGGER.debug("No matching query builder for condition {} and context {}", effectiveCondition, context);
         }
 
         return Query.of(q -> q.matchAll(m -> m));
@@ -201,13 +207,19 @@ public class ConditionESQueryBuilderDispatcher extends ConditionQueryBuilderDisp
         // Resolve effective condition from parent chain if needed
         Condition effectiveCondition = condition;
         if (definitionsService != null) {
-            effectiveCondition = ParserHelper.resolveEffectiveCondition(
+            Condition resolved = ParserHelper.resolveEffectiveCondition(
                 condition, definitionsService, context, "query builder");
+            if (resolved == null) {
+                throw new IllegalArgumentException(
+                    "Could not resolve effective condition for typeID=" + condition.getConditionTypeId()
+                    + " (cycle or max depth exceeded)");
+            }
+            effectiveCondition = resolved;
         }
 
         // Check if effective condition has a type - if not, throw exception for count
         if (effectiveCondition.getConditionType() == null) {
-            LOGGER.warn("Effective condition type is null for condition typeID={}, cannot perform count operation", 
+            LOGGER.warn("Effective condition type is null for condition typeID={}, cannot perform count operation",
                 effectiveCondition.getConditionTypeId());
             throw new IllegalArgumentException("Effective condition type not resolved for : " + effectiveCondition.getConditionTypeId());
         }

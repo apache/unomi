@@ -46,16 +46,15 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
     
     private static final int MAX_RECURSION_DEPTH = 1000;
     
-    private DefinitionsService definitionsService;
-    
+    private volatile DefinitionsService definitionsService;
+
     // Map of object type -> Map of object ID -> InvalidObjectInfo
     private final Map<String, Map<String, InvalidObjectInfo>> invalidObjects = new ConcurrentHashMap<>();
-    
-    // Track unresolved types to avoid log spam (similar to ParserHelper's static sets)
-    private final Set<String> unresolvedActionTypes = Collections.synchronizedSet(new HashSet<>());
-    private final Set<String> unresolvedConditionTypes = Collections.synchronizedSet(new HashSet<>());
-    // Track rules that have already been warned about null/empty actions to avoid log spam
-    private final Set<String> warnedRulesWithNullActions = Collections.synchronizedSet(new HashSet<>());
+
+    // Track unresolved types to avoid log spam — ConcurrentHashMap.newKeySet() makes add() atomic
+    private final Set<String> unresolvedActionTypes = ConcurrentHashMap.newKeySet();
+    private final Set<String> unresolvedConditionTypes = ConcurrentHashMap.newKeySet();
+    private final Set<String> warnedRulesWithNullActions = ConcurrentHashMap.newKeySet();
 
     /**
      * Constructor that requires DefinitionsService.
@@ -152,24 +151,30 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
                 }
             }
 
+            // Track which child conditions we newly resolve so we can roll them back on sibling failure
+            List<Condition> resolvedInThisCall = new ArrayList<>();
             for (Object value : rootCondition.getParameterValues().values()) {
                 if (value instanceof Condition) {
-                    if (!resolveConditionTypeInternal((Condition) value, contextObjectName,
-                            parentChainPath, false, depth + 1)) {
-                        if (conditionTypeWasNull) {
-                            rootCondition.setConditionType(null);
-                        }
+                    Condition child = (Condition) value;
+                    boolean childWasNull = child.getConditionType() == null;
+                    if (!resolveConditionTypeInternal(child, contextObjectName, parentChainPath, false, depth + 1)) {
+                        rollback(resolvedInThisCall, conditionTypeWasNull ? rootCondition : null);
                         return false;
+                    }
+                    if (childWasNull && child.getConditionType() != null) {
+                        resolvedInThisCall.add(child);
                     }
                 } else if (value instanceof Collection) {
                     for (Object item : (Collection<?>) value) {
                         if (item instanceof Condition) {
-                            if (!resolveConditionTypeInternal((Condition) item, contextObjectName,
-                                    parentChainPath, false, depth + 1)) {
-                                if (conditionTypeWasNull) {
-                                    rootCondition.setConditionType(null);
-                                }
+                            Condition child = (Condition) item;
+                            boolean childWasNull = child.getConditionType() == null;
+                            if (!resolveConditionTypeInternal(child, contextObjectName, parentChainPath, false, depth + 1)) {
+                                rollback(resolvedInThisCall, conditionTypeWasNull ? rootCondition : null);
                                 return false;
+                            }
+                            if (childWasNull && child.getConditionType() != null) {
+                                resolvedInThisCall.add(child);
                             }
                         }
                     }
@@ -181,6 +186,15 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
             if (isGoingUp) {
                 parentChainPath.remove(rootCondition.getConditionTypeId());
             }
+        }
+    }
+
+    private void rollback(List<Condition> resolvedInThisCall, Condition rootToRollBack) {
+        for (Condition c : resolvedInThisCall) {
+            c.setConditionType(null);
+        }
+        if (rootToRollBack != null) {
+            rootToRollBack.setConditionType(null);
         }
     }
 
@@ -431,21 +445,14 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
             // Object already marked invalid - update encounter info but don't log again
             existingInfo.updateEncounter(missingConditionTypeIds, missingActionTypeIds, contextName);
         } else {
-            // First time encountering this invalid object - log
-            StringBuilder logMessage = new StringBuilder("Marked ").append(objectType).append(" ").append(objectId)
-                .append(" as invalid: ").append(reason != null ? reason : "Unknown reason");
-            
-            if (missingConditionTypeIds != null && !missingConditionTypeIds.isEmpty()) {
-                logMessage.append(" (missing condition types: ").append(String.join(", ", missingConditionTypeIds)).append(")");
-            }
-            if (missingActionTypeIds != null && !missingActionTypeIds.isEmpty()) {
-                logMessage.append(" (missing action types: ").append(String.join(", ", missingActionTypeIds)).append(")");
-            }
-            if (contextName != null) {
-                logMessage.append(" [context: ").append(contextName).append("]");
-            }
-            
-            LOGGER.warn(logMessage.toString());
+            // First time encountering this invalid object — log with structured parameters
+            String missingConditions = (missingConditionTypeIds != null && !missingConditionTypeIds.isEmpty())
+                ? " (missing condition types: " + String.join(", ", missingConditionTypeIds) + ")" : "";
+            String missingActions = (missingActionTypeIds != null && !missingActionTypeIds.isEmpty())
+                ? " (missing action types: " + String.join(", ", missingActionTypeIds) + ")" : "";
+            String context = (contextName != null) ? " [context: " + contextName + "]" : "";
+            LOGGER.warn("Marked {} {} as invalid: {}{}{}{}", objectType, objectId,
+                reason != null ? reason : "Unknown reason", missingConditions, missingActions, context);
         }
     }
 
