@@ -38,7 +38,6 @@ import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 
 import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -267,13 +266,7 @@ public class ClusterServiceImplTest {
 
         // Force a cache refresh: updateSystemStats() queries persistence and populates
         // cachedClusterNodes. The scheduled task runs every 10 s, so we invoke it directly.
-        try {
-            Method updateSystemStats = ClusterServiceImpl.class.getDeclaredMethod("updateSystemStats");
-            updateSystemStats.setAccessible(true);
-            updateSystemStats.invoke(clusterService);
-        } catch (ReflectiveOperationException e) {
-            throw new RuntimeException("Failed to invoke updateSystemStats via reflection", e);
-        }
+        clusterService.updateSystemStats();
 
         List<ClusterNode> result = clusterService.getClusterNodes();
 
@@ -319,6 +312,12 @@ public class ClusterServiceImplTest {
 
     @Test
     public void testCleanupStaleNodes() {
+        // Cancel the background cluster tasks to prevent a race: cleanupStaleNodes() has
+        // initialDelay=0, so on a loaded CI machine the thread pool may defer its first
+        // execution until after we save the stale node — at which point it would delete the
+        // node before our precondition assertions run.
+        clusterService.cancelScheduledTasks();
+
         // Setup - create a stale node
         long cutoffTime = System.currentTimeMillis() - (NODE_STATISTICS_UPDATE_FREQUENCY * 3);
 
@@ -343,31 +342,18 @@ public class ClusterServiceImplTest {
             return null;
         });
 
-        // Refresh persistence to ensure nodes are available for querying (handles refresh delay)
-        persistenceService.refresh();
+        // Verify both nodes exist — in-memory persistence with simulateRefreshDelay=false is
+        // synchronous, so no retry loop is needed here.
+        assertNotNull(persistenceService.load("stale-node", ClusterNode.class),
+                "Stale node should exist before cleanup, nodeId=stale-node");
+        assertNotNull(persistenceService.load("fresh-node", ClusterNode.class),
+                "Fresh node should exist before cleanup, nodeId=fresh-node");
 
-        // Verify both nodes exist - use retry to handle potential race conditions with scheduled cleanup task
-        ClusterNode staleNodeBeforeCleanup = TestHelper.retryUntil(
-            () -> persistenceService.load("stale-node", ClusterNode.class),
-            node -> node != null
-        );
-        assertNotNull(staleNodeBeforeCleanup, "Stale node should exist before cleanup, nodeId=stale-node");
-
-        ClusterNode freshNodeBeforeCleanup = TestHelper.retryUntil(
-            () -> persistenceService.load("fresh-node", ClusterNode.class),
-            node -> node != null
-        );
-        assertNotNull(freshNodeBeforeCleanup, "Fresh node should exist before cleanup, nodeId=fresh-node");
-
-        // Trigger the cleanup by running the scheduled task's logic directly.
-        // The cleanup scheduled task runs every 60 s (hardcoded) which is impractical in a unit test;
-        // we therefore invoke the private method synchronously to observe the same end-to-end
-        // persistence behaviour (query by lastHeartbeat, remove stale, keep fresh) without the wait.
-        assertDoesNotThrow(() -> {
-            Method cleanupMethod = ClusterServiceImpl.class.getDeclaredMethod("cleanupStaleNodes");
-            cleanupMethod.setAccessible(true);
-            cleanupMethod.invoke(clusterService);
-        }, "cleanupStaleNodes should run without throwing");
+        // Trigger the cleanup synchronously. The scheduled task runs every 60 s which is
+        // impractical in a unit test; calling the method directly exercises the same end-to-end
+        // persistence behaviour (query by lastHeartbeat, remove stale, keep fresh).
+        assertDoesNotThrow(() -> clusterService.cleanupStaleNodes(),
+                "cleanupStaleNodes should run without throwing");
 
         // Verify stale node was removed but fresh node remains
         assertNull(persistenceService.load("stale-node", ClusterNode.class), "Stale node should be removed");
