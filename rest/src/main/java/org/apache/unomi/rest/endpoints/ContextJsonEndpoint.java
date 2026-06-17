@@ -29,9 +29,11 @@ import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.schema.api.SchemaService;
+import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.utils.EventsRequestContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -78,6 +80,8 @@ public class ContextJsonEndpoint {
     private SchemaService schemaService;
     @Reference
     private ProfileService profileService;
+    @Reference
+    private TracerService tracerService;
 
     @OPTIONS
     @Path("/context.js")
@@ -100,8 +104,9 @@ public class ContextJsonEndpoint {
             @QueryParam("timestamp") Long timestampAsLong,
             @QueryParam("invalidateProfile") boolean invalidateProfile,
             @QueryParam("invalidateSession") boolean invalidateSession,
+            @QueryParam("explain") boolean explain,
             @Context SecurityContext securityContext) throws JsonProcessingException {
-        return contextJSAsGet(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession, securityContext);
+        return contextJSAsGet(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession, explain, securityContext);
     }
 
     @GET
@@ -113,9 +118,10 @@ public class ContextJsonEndpoint {
             @QueryParam("timestamp") Long timestampAsLong,
             @QueryParam("invalidateProfile") boolean invalidateProfile,
             @QueryParam("invalidateSession") boolean invalidateSession,
+            @QueryParam("explain") boolean explain,
             @Context SecurityContext securityContext) throws JsonProcessingException {
         ContextResponse contextResponse = contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile,
-                invalidateSession, securityContext);
+                invalidateSession, explain, securityContext);
         String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(contextResponse);
         StringBuilder responseAsString = new StringBuilder();
         responseAsString.append("window.digitalData = window.digitalData || {};\n").append("var cxs = ").append(contextAsJSONString)
@@ -132,8 +138,9 @@ public class ContextJsonEndpoint {
             @QueryParam("timestamp") Long timestampAsLong,
             @QueryParam("invalidateProfile") boolean invalidateProfile,
             @QueryParam("invalidateSession") boolean invalidateSession,
+            @QueryParam("explain") boolean explain,
             @Context SecurityContext securityContext) {
-        return contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession, securityContext);
+        return contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession, explain, securityContext);
     }
 
     @POST
@@ -145,7 +152,19 @@ public class ContextJsonEndpoint {
                                              @QueryParam("timestamp") Long timestampAsLong,
                                              @QueryParam("invalidateProfile") boolean invalidateProfile,
                                              @QueryParam("invalidateSession") boolean invalidateSession,
+                                             @QueryParam("explain") boolean explain,
                                              @Context SecurityContext securityContext) {
+
+        // Check if tracing is requested and user has required role
+        if (explain && !(securityContext.isUserInRole(UnomiRoles.ADMINISTRATOR) ||
+                        securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR))) {
+            throw new ForbiddenException("Insufficient privileges to access tracing information");
+        }
+
+        if (explain) {
+            tracerService.enableTracing();
+            tracerService.getCurrentTracer().startOperation("context-request", "Processing context request", contextRequest);
+        }
 
         try {
             // Schema validation
@@ -153,6 +172,9 @@ public class ContextJsonEndpoint {
             paramsAsJson.put("personaId", personaId);
             paramsAsJson.put("sessionId", sessionId);
             if (!schemaService.isValid(paramsAsJson.toString(), "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
+                if (explain) {
+                    tracerService.getCurrentTracer().endOperation(false, "Schema validation failed");
+                }
                 throw new InvalidRequestException("Invalid parameter", "Invalid received data");
             }
 
@@ -191,9 +213,17 @@ public class ContextJsonEndpoint {
                 contextResponse.setSessionId(sessionId);
             }
 
+            // Add tracing information if requested
+            if (explain) {
+                contextResponse.setRequestTracing(tracerService.getTraceNode());
+                tracerService.getCurrentTracer().endOperation(null, "Context request processed successfully");
+            }
+
             return contextResponse;
         } finally {
-            // @todo placeholder for tracing integration
+            if (explain) {
+                tracerService.disableTracing();
+            }
         }
     }
 
@@ -356,7 +386,7 @@ public class ContextJsonEndpoint {
     private Object sanitizeValue(Object value) {
         if (value instanceof String) {
             String stringValue = (String) value;
-            if (stringValue.startsWith("script::") || stringValue.startsWith("parameter::")) {
+            if (ConditionContextHelper.isParameterReference(value)) {
                 LOGGER.warn("Scripting detected in context request, filtering out. See debug level for more information");
                 LOGGER.debug("Scripting detected in context request with value {}, filtering out...", value);
                 return null;

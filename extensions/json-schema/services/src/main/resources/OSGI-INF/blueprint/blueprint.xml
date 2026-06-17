@@ -27,6 +27,7 @@
     <reference id="scopeService" interface="org.apache.unomi.api.services.ScopeService"/>
     <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService"/>
     <reference id="contextManager" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
+    <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService"/>
     <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService" timeout="2000"/>
     <reference id="cacheService" interface="org.apache.unomi.api.services.cache.MultiTypeCacheService" />
 
@@ -44,6 +45,7 @@
         <property name="scopeService" ref="scopeService"/>
         <property name="tenantService" ref="tenantService"/>
         <property name="contextManager" ref="contextManager"/>
+        <property name="tracerService" ref="tracerService"/>
         <property name="jsonSchemaRefreshInterval" value="${json.schema.refresh.interval}"/>
         <property name="schedulerService" ref="schedulerService"/>
         <property name="bundleContext" ref="blueprintBundleContext" />

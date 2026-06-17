@@ -21,6 +21,8 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.util.Map;
 
@@ -28,13 +30,41 @@ import java.util.Map;
  * Evaluator for NOT condition.
  */
 public class NotConditionEvaluator implements ConditionEvaluator {
+    private TracerService tracerService;
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
-        Condition subCondition = (Condition) condition.getParameter("subCondition");
-        if (subCondition == null) {
-            return false;
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("not",
+                "Evaluating NOT condition", condition);
         }
-        return !dispatcher.eval(subCondition, item, context);
+
+        try {
+            Condition subCondition = (Condition) condition.getParameter("subCondition");
+            if (subCondition == null) {
+                if (tracer != null) {
+                    tracer.endOperation(false, "No subcondition found");
+                }
+                return false;
+            }
+
+            boolean result = !dispatcher.eval(subCondition, item, context);
+
+            if (tracer != null) {
+                tracer.endOperation(result, "NOT condition evaluation completed");
+            }
+            return result;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error during NOT condition evaluation: " + e.getMessage());
+            }
+            throw e;
+        }
     }
 }

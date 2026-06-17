@@ -27,17 +27,18 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tenants.Tenant;
-import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
-import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
-import org.apache.unomi.api.services.TypeResolutionService;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.config.ConfigurationUpdateHelper;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.*;
 import org.osgi.service.cm.ManagedService;
 import org.osgi.service.event.EventHandler;
@@ -61,6 +62,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
     private DefinitionsService definitionsService;
     private EventService eventService;
     private ActionExecutorDispatcher actionExecutorDispatcher;
+    private TracerService tracerService;
 
     private Integer rulesRefreshInterval = 1000;
     private Integer rulesStatisticsRefreshInterval = 10000;
@@ -113,9 +115,13 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         this.optimizedRulesActivated = optimizedRulesActivated;
     }
 
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
+
     /**
      * Helper method to get TypeResolutionService from DefinitionsService.
-     * Returns null if DefinitionsService is not available or does not expose TypeResolutionService.
+     * Returns null if DefinitionsService is not available or doesn't have TypeResolutionService.
      */
     private TypeResolutionService getTypeResolutionService() {
         return definitionsService != null ? definitionsService.getTypeResolutionService() : null;
@@ -677,10 +683,29 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             }
         }
 
-
         if (rule.getCondition() != null) {
+            // Start validation operation in tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.startOperation("rule-condition-validation", "Validating rule condition: " + rule.getItemId(), rule.getCondition());
+                }
+            }
+
+            // Validate condition (skips parameters with references/scripts)
+            // Validation service will auto-resolve types if needed
             List<ValidationError> validationErrors = definitionsService.getConditionValidationService().validate(rule.getCondition());
 
+            // Add validation info to tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.addValidationInfo(validationErrors, "rule-condition-validation");
+                    tracer.endOperation(!validationErrors.isEmpty(), String.format("Rule validation completed with %d errors", validationErrors.size()));
+                }
+            }
+
+            // Separate errors and warnings
             List<ValidationError> errors = validationErrors.stream()
                 .filter(error -> error.getType() != ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
                 .collect(Collectors.toList());
@@ -689,6 +714,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                 .filter(error -> error.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
                 .collect(Collectors.toList());
 
+            // Log warnings but don't block the operation
             if (!warnings.isEmpty()) {
                 StringBuilder warningMessage = new StringBuilder("Rule condition has warnings:");
                 for (ValidationError warning : warnings) {
@@ -697,6 +723,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                 LOGGER.warn(warningMessage.toString());
             }
 
+            // Only throw exception for actual errors
             if (!errors.isEmpty()) {
                 StringBuilder errorMessage = new StringBuilder("Invalid rule condition:");
                 for (ValidationError error : errors) {
@@ -846,6 +873,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             return true;
         }
 
+        // Check if rule has missing plugins or is invalid (set by resolveRule)
         boolean hasMissingPlugins = rule.getMetadata().isMissingPlugins();
         TypeResolutionService typeResolutionService = getTypeResolutionService();
         boolean isInvalid = typeResolutionService != null && typeResolutionService.isInvalid("rules", rule.getItemId());
@@ -913,7 +941,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
         // Before defaulting to wildcard when eventTypeIds is empty, check if rule has unresolved types
         // This relies on ensureRuleResolvedForIndexing() having been called, which marks the rule appropriately
         // We check for unresolved types by looking at the rule's resolution status (missingPlugins or invalid)
-        // This avoids duplicating the resolution logic - we rely on ensureRuleResolvedForIndexing / ParserHelper
+        // This avoids duplicating the resolution logic - we rely on TypeResolutionService infrastructure
         if (eventTypeIds.isEmpty()) {
             // Check if rule has unresolved types by checking resolution status
             // Note: shouldExcludeRuleFromEventTypeIndex() also checks disabled, so we need to check specifically
@@ -999,13 +1027,17 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             return false;
         }
 
+        // Check if rule needs resolution (invalid or missing plugins)
         boolean wasInvalid = typeResolutionService.isInvalid("rules", rule.getItemId());
         boolean hadMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
 
+        // If rule is already valid, no need to resolve
         if (!wasInvalid && !hadMissingPlugins) {
             return true;
         }
 
+        // Attempt to resolve the rule (conditions + actions)
+        // This will update missingPlugins flag and invalid status if resolution succeeds
         return typeResolutionService.resolveRule("rules", rule);
     }
 
@@ -1027,6 +1059,10 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             return false;
         }
 
+        // Always attempt to resolve the rule to ensure resolution status is up-to-date
+        // This is idempotent - resolveRule() efficiently checks if types are already resolved
+        // and only performs actual resolution if needed. This ensures newly loaded rules
+        // are properly checked for unresolved types before indexing.
         return typeResolutionService.resolveRule("rules", rule);
     }
 
@@ -1043,6 +1079,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             return false;
         }
 
+        // Check if rule was previously invalid or had missing plugins
         TypeResolutionService typeResolutionService = getTypeResolutionService();
         if (typeResolutionService == null) {
             return false;
@@ -1144,6 +1181,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                         trackedConditions.add(trackedCondition);
                     }
                 } else {
+                    // Resolve condition type if needed before accessing it
                     if (trackedCondition.getConditionType() == null) {
                         TypeResolutionService typeResolutionService = getTypeResolutionService();
                         if (typeResolutionService != null) {
@@ -1230,9 +1268,15 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                         List<Rule> rules = persistenceService.query("tenantId", tId, "priority", Rule.class);
 
                         for (Rule rule : rules) {
+                            // Only re-evaluate rules that were previously invalid or had missing plugins
+                            TypeResolutionService typeResolutionService = getTypeResolutionService();
+                            if (typeResolutionService == null) {
+                                continue;
+                            }
+                            boolean wasInvalid = typeResolutionService.isInvalid("rules", rule.getItemId());
                             boolean hadMissingPlugins = rule.getMetadata() != null && rule.getMetadata().isMissingPlugins();
 
-                            if (hadMissingPlugins) {
+                            if (wasInvalid || hadMissingPlugins) {
                                 // Re-evaluate this rule
                                 boolean resolved = reEvaluateRuleResolution(rule);
 

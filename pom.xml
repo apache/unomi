@@ -410,6 +410,7 @@
         <module>persistence-opensearch</module>
         <module>services-common</module>
         <module>services</module>
+        <module>tracing</module>
         <!-- plugins -->
         <module>plugins</module>
         <module>plugins/baseplugin</module>
@@ -430,6 +431,7 @@
         <module>extensions/privacy-extension</module>
         <module>extensions/web-tracker</module>
         <module>tools</module>
+        <module>web-servlets</module>
         <module>wab</module>
         <module>rest</module>
         <module>manual</module>

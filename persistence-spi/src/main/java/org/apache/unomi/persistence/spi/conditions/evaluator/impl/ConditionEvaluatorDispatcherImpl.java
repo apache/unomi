@@ -28,6 +28,8 @@ import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.scripting.ScriptExecutor;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
@@ -52,6 +54,7 @@ public class ConditionEvaluatorDispatcherImpl
 
     private MetricsService metricsService;
     private ScriptExecutor scriptExecutor;
+    private TracerService tracerService;
     private DefinitionsService definitionsService;
 
     public ConditionEvaluatorDispatcherImpl() {
@@ -85,6 +88,11 @@ public class ConditionEvaluatorDispatcherImpl
         evaluators.remove((String) props.get("conditionEvaluatorId"));
     }
 
+    @Reference
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
+
     @Override
     public void addEvaluator(String name, ConditionEvaluator evaluator) {
         evaluators.put(name, evaluator);
@@ -106,6 +114,13 @@ public class ConditionEvaluatorDispatcherImpl
             throw new UnsupportedOperationException("Null condition passed for item : " + item);
         }
 
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("condition-evaluation",
+                "Evaluating condition: " + condition.getConditionTypeId(), condition);
+        }
+
         try {
             // Resolve condition type if needed - try to resolve first if definitionsService is available
             if (condition.getConditionType() == null) {
@@ -120,6 +135,9 @@ public class ConditionEvaluatorDispatcherImpl
                 // If still null after attempting resolution (or definitionsService was null), return false gracefully
                 if (condition.getConditionType() == null) {
                     LOGGER.warn("Condition type is null for condition typeID={}, returning false gracefully", condition.getConditionTypeId());
+                    if (tracer != null) {
+                        tracer.endOperation(false, "Condition type not resolved");
+                    }
                     return false;
                 }
             }
@@ -132,6 +150,9 @@ public class ConditionEvaluatorDispatcherImpl
                 if (resolved == null) {
                     LOGGER.warn("Could not resolve effective condition for typeID={} on item={} (cycle or max depth), returning false",
                         condition.getConditionTypeId(), item != null ? item.getItemId() : "null");
+                    if (tracer != null) {
+                        tracer.endOperation(false, "Could not resolve effective condition");
+                    }
                     return false;
                 }
                 effectiveCondition = resolved;
@@ -145,14 +166,18 @@ public class ConditionEvaluatorDispatcherImpl
             if (effectiveCondition.getConditionType() == null) {
                 LOGGER.debug("Effective condition type is null for condition typeID={}, returning false gracefully",
                     effectiveCondition.getConditionTypeId());
+                if (tracer != null) {
+                    tracer.endOperation(false, "Effective condition type not resolved");
+                }
                 return false;
             }
 
             String conditionEvaluatorKey = effectiveCondition.getConditionType().getConditionEvaluator();
             if (conditionEvaluatorKey == null) {
-                // resolveEffectiveCondition() already resolved to the root parent above,
-                // so a null evaluator key here means the chain genuinely has no evaluator.
                 LOGGER.warn("No evaluator defined for condition type: {}", effectiveCondition.getConditionTypeId());
+                if (tracer != null) {
+                    tracer.endOperation(false, "No evaluator defined for condition type");
+                }
                 return false;
             }
 
@@ -161,8 +186,11 @@ public class ConditionEvaluatorDispatcherImpl
                 final ConditionEvaluatorDispatcher dispatcher = this;
                 try {
                     // Use effective condition for evaluation
-                    Condition contextualCondition = ConditionContextHelper.getContextualCondition(effectiveCondition, context, scriptExecutor);
+                    Condition contextualCondition = ConditionContextHelper.getContextualCondition(effectiveCondition, context, scriptExecutor, definitionsService, tracerService);
                     if (contextualCondition == null) {
+                        if (tracer != null) {
+                            tracer.endOperation(false, "Contextual condition is null");
+                        }
                         return false;
                     }
                     final Condition finalContextualCondition = contextualCondition;
@@ -172,18 +200,30 @@ public class ConditionEvaluatorDispatcherImpl
                             return evaluator.eval(finalContextualCondition, item, context, dispatcher);
                         }
                     }.runWithTimer();
+
+                    if (tracer != null) {
+                        tracer.endOperation(result, "Condition evaluation completed");
+                    }
                     return result;
                 } catch (Exception e) {
                     LOGGER.error("Error executing condition evaluator with key={}", conditionEvaluatorKey, e);
+                    if (tracer != null) {
+                        tracer.endOperation(false, "Error during condition evaluation: " + e.getMessage());
+                    }
                     return false;
                 }
             } else {
                 LOGGER.error("Couldn't find evaluator with key={}", conditionEvaluatorKey);
+                if (tracer != null) {
+                    tracer.endOperation(false, "No evaluator found for condition type: " + conditionEvaluatorKey);
+                }
                 return false;
             }
         } catch (Exception e) {
-            LOGGER.error("Infrastructure error during condition evaluation for typeID={} on item={}",
-                condition.getConditionTypeId(), item != null ? item.getItemId() : "null", e);
+            LOGGER.error("Error during condition evaluation", e);
+            if (tracer != null) {
+                tracer.endOperation(false, "Error during condition evaluation: " + e.getMessage());
+            }
             return false;
         }
     }

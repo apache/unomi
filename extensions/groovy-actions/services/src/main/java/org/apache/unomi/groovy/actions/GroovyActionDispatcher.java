@@ -21,14 +21,19 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionDispatcher;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.HashMap;
 
 /**
  * High-performance ActionDispatcher for pre-compiled Groovy scripts.
@@ -46,6 +51,7 @@ public class GroovyActionDispatcher implements ActionDispatcher {
     private GroovyActionsService groovyActionsService;
     private DefinitionsService definitionsService;
     private ActionExecutorDispatcher actionExecutorDispatcher;
+    private TracerService tracerService;
 
     @Reference
     public void setMetricsService(MetricsService metricsService) {
@@ -67,32 +73,54 @@ public class GroovyActionDispatcher implements ActionDispatcher {
         this.actionExecutorDispatcher = actionExecutorDispatcher;
     }
 
+    @Reference
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
+
     public String getPrefix() {
         return GROOVY_PREFIX;
     }
 
     public Integer execute(Action action, Event event, String actionName) {
-        Class<? extends Script> scriptClass = groovyActionsService.getCompiledScript(actionName);
-        if (scriptClass == null) {
-            LOGGER.warn("Couldn't find a Groovy action with name {}, action will not execute!", actionName);
-            return 0;
+        RequestTracer tracer = tracerService.getCurrentTracer();
+        if (!tracer.isEnabled()) {
+            tracer.setEnabled(true);
         }
-        
+
+        tracer.startOperation("groovy-action", "Executing Groovy action", new HashMap<String, Object>() {{
+            put("action.name", actionName);
+            put("action.type", action.getActionTypeId());
+            put("event.type", event.getEventType());
+        }});
+
         try {
-            Script script = scriptClass.getDeclaredConstructor().newInstance();
-            setScriptVariables(script, action, event);
+            Class<? extends Script> scriptClass = groovyActionsService.getCompiledScript(actionName);
+            if (scriptClass == null) {
+                LOGGER.warn("Couldn't find a Groovy action with name {}, action will not execute!", actionName);
+                tracer.trace("Action not found", null);
+                return EventService.NO_CHANGE;
+            }
             
-            return new MetricAdapter<Integer>(metricsService, this.getClass().getName() + ".action.groovy." + actionName) {
-                @Override
-                public Integer execute(Object... args) throws Exception {
-                    return (Integer) script.invokeMethod("execute", null);
-                }
-            }.runWithTimer();
-            
-        } catch (Exception e) {
-            LOGGER.error("Error executing Groovy action with key={}", actionName, e);
+            try {
+                Script script = scriptClass.getDeclaredConstructor().newInstance();
+                setScriptVariables(script, action, event);
+                
+                return new MetricAdapter<Integer>(metricsService, this.getClass().getName() + ".action.groovy." + actionName) {
+                    @Override
+                    public Integer execute(Object... args) throws Exception {
+                        return (Integer) script.invokeMethod("execute", null);
+                    }
+                }.runWithTimer();
+                
+            } catch (Exception e) {
+                LOGGER.error("Error executing Groovy action with key={}", actionName, e);
+                tracer.trace("Error executing action", e);
+                return EventService.NO_CHANGE;
+            }
+        } finally {
+            tracer.endOperation(null, "Completed Groovy action execution");
         }
-        return 0;
     }
     
     /**

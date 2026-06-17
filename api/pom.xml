@@ -44,6 +44,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-tracing-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>
             <scope>provided</scope>

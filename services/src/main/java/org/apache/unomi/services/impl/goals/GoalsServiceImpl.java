@@ -31,18 +31,20 @@ import org.apache.unomi.api.goals.GoalReport;
 import org.apache.unomi.api.query.AggregateQuery;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.GoalsService;
 import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.api.services.TypeResolutionService;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.aggregate.*;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URL;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -54,6 +56,8 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
     private RulesService rulesService;
 
+    private TracerService tracerService;
+
     private long goalRefreshInterval = 5000; // 5 seconds
     private long campaignRefreshInterval = 5000; // 5 seconds
 
@@ -63,6 +67,18 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
+
+    /**
+     * Helper method to get TypeResolutionService from DefinitionsService.
+     * Returns null if DefinitionsService is not available or doesn't have TypeResolutionService.
+     */
+    private TypeResolutionService getTypeResolutionService() {
+        return definitionsService != null ? definitionsService.getTypeResolutionService() : null;
     }
 
     public void setGoalRefreshInterval(long goalRefreshInterval) {
@@ -152,13 +168,7 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
     public Set<Metadata> getGoalMetadatas(Query query) {
         if (query.getCondition() != null) {
-            ParserHelper.resolveConditionType(definitionsService, query.getCondition(), "goal metadata query");
-            if (definitionsService.getConditionValidationService() != null) {
-                List<?> validationErrors = definitionsService.getConditionValidationService().validate(query.getCondition());
-                if (!validationErrors.isEmpty()) {
-                    LOGGER.warn("Goal query condition has {} validation issue(s)", validationErrors.size());
-                }
-            }
+            definitionsService.getConditionValidationService().validate(query.getCondition());
         }
         Set<Metadata> descriptions = new LinkedHashSet<>();
 
@@ -188,8 +198,119 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
             LOGGER.warn("Trying to save null goal, aborting...");
             return;
         }
-        ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent(), "goal "+goal.getItemId()+" start event");
-        ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent(), "goal "+goal.getItemId()+" start event");
+        boolean isValid = true;
+        if (goal.getStartEvent() != null) {
+            // Resolve condition type (skips parameter resolution - happens on-demand in query builders/evaluators)
+            TypeResolutionService typeResolutionService = getTypeResolutionService();
+            boolean startValid = typeResolutionService != null && typeResolutionService.resolveCondition("goals", goal, goal.getStartEvent(), "goal "+goal.getItemId()+" start event");
+            isValid = isValid && startValid;
+            // Start validation operation in tracer for start event
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.startOperation("goal-start-event-validation", "Validating goal start event: " + goal.getItemId(), goal.getStartEvent());
+                }
+            }
+
+            // Validate condition (skips parameters with references/scripts)
+            // Validation service will auto-resolve types if needed
+            List<ValidationError> validationErrors = definitionsService.getConditionValidationService().validate(goal.getStartEvent());
+
+            // Add validation info to tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.addValidationInfo(validationErrors, "goal-start-event-validation");
+                    tracer.endOperation(!validationErrors.isEmpty(), String.format("Goal start event validation completed with %d errors", validationErrors.size()));
+                }
+            }
+
+            // Separate errors and warnings
+            List<ValidationError> errors = validationErrors.stream()
+                .filter(error -> error.getType() != ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            List<ValidationError> warnings = validationErrors.stream()
+                .filter(error -> error.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            // Log warnings but don't block the operation
+            if (!warnings.isEmpty()) {
+                StringBuilder warningMessage = new StringBuilder("Goal start event has warnings:");
+                for (ValidationError warning : warnings) {
+                    warningMessage.append("\n- ").append(warning.getMessage());
+                }
+                LOGGER.warn(warningMessage.toString());
+            }
+
+            // Only throw exception for actual errors
+            if (!errors.isEmpty()) {
+                StringBuilder errorMessage = new StringBuilder("Invalid goal start event:");
+                for (ValidationError error : errors) {
+                    errorMessage.append("\n- ").append(error.getMessage());
+                }
+                if (typeResolutionService != null) {
+                    typeResolutionService.markInvalid("goals", goal.getItemId(), "Start event validation errors: " + errorMessage.toString());
+                }
+                throw new IllegalArgumentException(errorMessage.toString());
+            }
+        }
+        if (goal.getTargetEvent() != null) {
+            // Resolve condition type (skips parameter resolution - happens on-demand in query builders/evaluators)
+            TypeResolutionService typeResolutionService = getTypeResolutionService();
+            boolean targetValid = typeResolutionService != null && typeResolutionService.resolveCondition("goals", goal, goal.getTargetEvent(), "goal "+goal.getItemId()+" target event");
+            isValid = isValid && targetValid;
+            // Start validation operation in tracer for target event
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.startOperation("goal-target-event-validation", "Validating goal target event: " + goal.getItemId(), goal.getTargetEvent());
+                }
+            }
+
+            // Validate condition (skips parameters with references/scripts)
+            // Validation service will auto-resolve types if needed
+            List<ValidationError> targetValidationErrors = definitionsService.getConditionValidationService().validate(goal.getTargetEvent());
+
+            // Add validation info to tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.addValidationInfo(targetValidationErrors, "goal-target-event-validation");
+                    tracer.endOperation(!targetValidationErrors.isEmpty(), String.format("Goal target event validation completed with %d errors", targetValidationErrors.size()));
+                }
+            }
+
+            // Separate errors and warnings
+            List<ValidationError> targetErrors = targetValidationErrors.stream()
+                .filter(error -> error.getType() != ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            List<ValidationError> targetWarnings = targetValidationErrors.stream()
+                .filter(error -> error.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            // Log warnings but don't block the operation
+            if (!targetWarnings.isEmpty()) {
+                StringBuilder warningMessage = new StringBuilder("Goal target event has warnings:");
+                for (ValidationError warning : targetWarnings) {
+                    warningMessage.append("\n- ").append(warning.getMessage());
+                }
+                LOGGER.warn(warningMessage.toString());
+            }
+
+            // Only throw exception for actual errors
+            if (!targetErrors.isEmpty()) {
+                StringBuilder errorMessage = new StringBuilder("Invalid goal target event:");
+                for (ValidationError error : targetErrors) {
+                    errorMessage.append("\n- ").append(error.getMessage());
+                }
+                if (typeResolutionService != null) {
+                    typeResolutionService.markInvalid("goals", goal.getItemId(), "Target event validation errors: " + errorMessage.toString());
+                }
+                throw new IllegalArgumentException(errorMessage.toString());
+            }
+        }
 
         if (goal.getMetadata().isEnabled()) {
             if (goal.getStartEvent() != null) {
@@ -271,13 +392,7 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
     public Set<Metadata> getCampaignMetadatas(Query query) {
         if (query.getCondition() != null) {
-            ParserHelper.resolveConditionType(definitionsService, query.getCondition(), "campaign metadata query");
-            if (definitionsService.getConditionValidationService() != null) {
-                List<?> validationErrors = definitionsService.getConditionValidationService().validate(query.getCondition());
-                if (!validationErrors.isEmpty()) {
-                    LOGGER.warn("Campaign query condition has {} validation issue(s)", validationErrors.size());
-                }
-            }
+            definitionsService.getConditionValidationService().validate(query.getCondition());
         }
         Set<Metadata> descriptions = new HashSet<Metadata>();
         for (Campaign definition : persistenceService.query(query.getCondition(), query.getSortby(), Campaign.class, query.getOffset(), query.getLimit()).getList()) {
@@ -288,13 +403,7 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
     public PartialList<CampaignDetail> getCampaignDetails(Query query) {
         if (query.getCondition() != null) {
-            ParserHelper.resolveConditionType(definitionsService, query.getCondition(), "campaign details query");
-            if (definitionsService.getConditionValidationService() != null) {
-                List<?> validationErrors = definitionsService.getConditionValidationService().validate(query.getCondition());
-                if (!validationErrors.isEmpty()) {
-                    LOGGER.warn("Campaign details query condition has {} validation issue(s)", validationErrors.size());
-                }
-            }
+            definitionsService.getConditionValidationService().validate(query.getCondition());
         }
         PartialList<Campaign> campaigns = persistenceService.query(query.getCondition(), query.getSortby(), Campaign.class, query.getOffset(), query.getLimit());
         List<CampaignDetail> details = new LinkedList<>();
@@ -406,12 +515,9 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
         }
 
         if (query != null && query.getCondition() != null) {
-            ParserHelper.resolveConditionType(definitionsService, query.getCondition(), "goal report query");
-            if (definitionsService.getConditionValidationService() != null) {
-                List<?> validationErrors = definitionsService.getConditionValidationService().validate(query.getCondition());
-                if (!validationErrors.isEmpty()) {
-                    LOGGER.warn("Events query condition has {} validation issue(s)", validationErrors.size());
-                }
+            TypeResolutionService typeResolutionService = getTypeResolutionService();
+            if (typeResolutionService != null) {
+                typeResolutionService.resolveConditionType(query.getCondition(), "goal " + goalId + " report");
             }
             list.add(query.getCondition());
         }
@@ -495,13 +601,7 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
             persistenceService.refreshIndex(CampaignEvent.class);
         }
         if (query.getCondition() != null) {
-            ParserHelper.resolveConditionType(definitionsService, query.getCondition(), "campaign events query");
-            if (definitionsService.getConditionValidationService() != null) {
-                List<?> validationErrors = definitionsService.getConditionValidationService().validate(query.getCondition());
-                if (!validationErrors.isEmpty()) {
-                    LOGGER.warn("Campaign events query condition has {} validation issue(s)", validationErrors.size());
-                }
-            }
+            definitionsService.getConditionValidationService().validate(query.getCondition());
         }
         return persistenceService.query(query.getCondition(), query.getSortby(), CampaignEvent.class, query.getOffset(), query.getLimit());
     }
@@ -545,14 +645,20 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
 
     /**
-     * Hook for campaign type resolution (validation stack not backported on this branch).
+     * Resolve a campaign's types and track its validity status using the TypeResolutionService.
      *
-     * @param campaign the campaign being saved
+     * @param campaign the campaign to resolve
      */
     private void resolveCampaign(Campaign campaign) {
         if (campaign == null) {
             return;
         }
-    }
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService == null) {
+            return;
+        }
 
+        typeResolutionService.resolveCondition("campaigns", campaign, campaign.getEntryCondition(), "campaign " + campaign.getItemId());
+    }
 }
+

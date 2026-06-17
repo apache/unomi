@@ -23,6 +23,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.scripting.ScriptExecutor;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,7 +116,7 @@ public class ConditionContextHelper {
     }
 
     public static Condition getContextualCondition(Condition condition, Map<String, Object> context, ScriptExecutor scriptExecutor) {
-        return getContextualCondition(condition, context, scriptExecutor, null);
+        return getContextualCondition(condition, context, scriptExecutor, null, null);
     }
 
     /**
@@ -125,13 +127,24 @@ public class ConditionContextHelper {
      * @param context context map for parameter resolution
      * @param scriptExecutor executor for script expressions
      * @param definitionsService optional service for parameter type information
+     * @param tracerService optional tracer service for validation warnings
      * @return resolved condition with all parameter references resolved
      */
+
     public static Condition getContextualCondition(
         Condition condition,
         Map<String, Object> context,
         ScriptExecutor scriptExecutor,
         DefinitionsService definitionsService) {
+        return getContextualCondition(condition, context, scriptExecutor, definitionsService, null);
+    }
+
+    public static Condition getContextualCondition(
+        Condition condition,
+        Map<String, Object> context,
+        ScriptExecutor scriptExecutor,
+        DefinitionsService definitionsService,
+        TracerService tracerService) {
 
         // Debug logging
 
@@ -166,7 +179,7 @@ public class ConditionContextHelper {
 
         Object rawValues = parseParameterWithValidation(
             context, condition.getParameterValues(), scriptExecutor,
-            parameterDefs, condition.getConditionTypeId());
+            parameterDefs, tracerService, condition.getConditionTypeId());
 
         if (rawValues == null || rawValues == RESOLUTION_ERROR) {
             return null;
@@ -181,7 +194,7 @@ public class ConditionContextHelper {
 
     @SuppressWarnings("unchecked")
     private static Object parseParameter(Map<String, Object> context, Object value, ScriptExecutor scriptExecutor) {
-        return parseParameterWithValidation(context, value, scriptExecutor, null, null);
+        return parseParameterWithValidation(context, value, scriptExecutor, null, null, null);
     }
 
     @SuppressWarnings("unchecked")
@@ -190,10 +203,12 @@ public class ConditionContextHelper {
         Object value,
         ScriptExecutor scriptExecutor,
         Map<String, Parameter> parameterDefs,
+        TracerService tracerService,
         String conditionTypeId) {
 
         return parseParameterWithValidationRecursive(
-            context, value, scriptExecutor, parameterDefs, conditionTypeId, new HashSet<>(), 0);
+            context, value, scriptExecutor, parameterDefs,
+            tracerService, conditionTypeId, new HashSet<>(), 0);
     }
 
     /**
@@ -204,10 +219,11 @@ public class ConditionContextHelper {
      * @param value the value to resolve
      * @param scriptExecutor executor for script expressions
      * @param parameterDefs optional parameter definitions for validation
+     * @param tracerService optional tracer service for warnings
      * @param conditionTypeId condition type ID for context
      * @param resolutionChain set of parameter keys/scripts already being resolved (for cycle detection)
      * @param depth current resolution depth
-     * @return resolved value, or {@code RESOLUTION_ERROR} sentinel if cycle detected or max depth exceeded
+     * @return resolved value, or null if cycle detected or max depth exceeded
      */
     @SuppressWarnings("unchecked")
     private static Object parseParameterWithValidationRecursive(
@@ -215,6 +231,7 @@ public class ConditionContextHelper {
         Object value,
         ScriptExecutor scriptExecutor,
         Map<String, Parameter> parameterDefs,
+        TracerService tracerService,
         String conditionTypeId,
         Set<String> resolutionChain,
         int depth) {
@@ -226,6 +243,16 @@ public class ConditionContextHelper {
                 "Possible infinite chain or very deep nesting. Resolution chain: %s",
                 MAX_RESOLUTION_DEPTH, resolutionChain);
             LOGGER.error(message);
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    Map<String, Object> traceContext = new HashMap<>();
+                    traceContext.put("maxDepth", MAX_RESOLUTION_DEPTH);
+                    traceContext.put("resolutionChain", new ArrayList<>(resolutionChain));
+                    traceContext.put("conditionTypeId", conditionTypeId);
+                    tracer.trace("Parameter resolution depth exceeded", traceContext);
+                }
+            }
             return RESOLUTION_ERROR;
         }
 
@@ -239,6 +266,16 @@ public class ConditionContextHelper {
                     "Circular parameter reference detected: %s. Resolution chain: %s",
                     referenceKey, resolutionChain);
                 LOGGER.warn(message);
+                if (tracerService != null) {
+                    RequestTracer tracer = tracerService.getCurrentTracer();
+                    if (tracer != null && tracer.isEnabled()) {
+                        Map<String, Object> traceContext = new HashMap<>();
+                        traceContext.put("circularReference", referenceKey);
+                        traceContext.put("resolutionChain", new ArrayList<>(resolutionChain));
+                        traceContext.put("conditionTypeId", conditionTypeId);
+                        tracer.trace("Circular parameter reference detected", traceContext);
+                    }
+                }
                 // Return a special marker to indicate cycle (we'll check for this in Map processing)
                 return RESOLUTION_ERROR;
             }
@@ -268,8 +305,10 @@ public class ConditionContextHelper {
                 // If resolved value is itself a parameter reference, continue resolving
                 if (resolvedValue != null && isParameterReference(resolvedValue)) {
                     Object furtherResolved = parseParameterWithValidationRecursive(
-                        context, resolvedValue, scriptExecutor, parameterDefs, conditionTypeId, resolutionChain, depth + 1);
-                    // Propagate RESOLUTION_ERROR if cycle/max-depth was detected, or resolved value otherwise
+                        context, resolvedValue, scriptExecutor, parameterDefs,
+                        tracerService, conditionTypeId, resolutionChain, depth + 1);
+                    // If further resolution returns null due to cycle or max depth, propagate it
+                    // But if it's just a missing parameter, return null (not a cycle)
                     return furtherResolved;
                 }
 
@@ -287,17 +326,18 @@ public class ConditionContextHelper {
                 Parameter paramDef = parameterDefs != null ? parameterDefs.get(paramName) : null;
 
                 Object parameter = parseParameterWithValidationRecursive(
-                    context, paramValue, scriptExecutor, parameterDefs, conditionTypeId, resolutionChain, depth);
+                    context, paramValue, scriptExecutor, parameterDefs,
+                    tracerService, conditionTypeId, resolutionChain, depth);
 
-                // If resolution returned an error marker, propagate failure
+                // If resolution returned an error marker, return null for entire map
                 if (parameter == RESOLUTION_ERROR) {
-                    return RESOLUTION_ERROR;
+                    return null;
                 }
 
                 // Validate type if parameter definition is available and value is not null
                 if (parameter != null && paramDef != null && paramDef.getType() != null) {
                     validateParameterType(paramName, parameter, paramDef,
-                        conditionTypeId);
+                        conditionTypeId, tracerService);
                 }
 
                 // Always put the value, even if null (missing parameter is valid)
@@ -308,10 +348,11 @@ public class ConditionContextHelper {
             List<Object> values = new ArrayList<Object>();
             for (Object o : ((List<?>) value)) {
                 Object parameter = parseParameterWithValidationRecursive(
-                    context, o, scriptExecutor, parameterDefs, conditionTypeId, resolutionChain, depth);
-                // If resolution returned an error marker, propagate failure (consistent with Map behavior)
+                    context, o, scriptExecutor, parameterDefs,
+                    tracerService, conditionTypeId, resolutionChain, depth);
+                // If resolution returned an error marker, skip this element
                 if (parameter == RESOLUTION_ERROR) {
-                    return RESOLUTION_ERROR;
+                    continue;
                 }
                 // Add the value, even if null (missing parameter is valid in lists)
                 values.add(parameter);
@@ -323,18 +364,20 @@ public class ConditionContextHelper {
 
     /**
      * Validates that a resolved parameter value matches the expected type.
-     * Logs warnings if type mismatch is detected.
+     * Logs warnings via tracer if type mismatch is detected.
      *
      * @param paramName parameter name
      * @param resolvedValue resolved parameter value
      * @param paramDef parameter definition
      * @param conditionTypeId condition type ID for context
+     * @param tracerService optional tracer service
      */
     private static void validateParameterType(
         String paramName,
         Object resolvedValue,
         Parameter paramDef,
-        String conditionTypeId) {
+        String conditionTypeId,
+        TracerService tracerService) {
 
         if (resolvedValue == null || paramDef == null || paramDef.getType() == null) {
             return;
@@ -350,6 +393,18 @@ public class ConditionContextHelper {
 
             LOGGER.warn(message + " (value: {})", resolvedValue);
 
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    Map<String, Object> traceContext = new HashMap<>();
+                    traceContext.put("parameter", paramName);
+                    traceContext.put("expectedType", expectedType);
+                    traceContext.put("actualType", actualType);
+                    traceContext.put("value", resolvedValue);
+                    traceContext.put("conditionTypeId", conditionTypeId);
+                    tracer.trace("Parameter type mismatch detected", traceContext);
+                }
+            }
         }
     }
 

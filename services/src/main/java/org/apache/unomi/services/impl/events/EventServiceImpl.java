@@ -25,11 +25,14 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.TypeResolutionService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.common.security.IPValidationUtils;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
@@ -106,6 +109,8 @@ public class EventServiceImpl implements EventService {
 
     private Set<String> restrictedEventTypeIds = new LinkedHashSet<String>();
 
+    private TracerService tracerService;
+
     public void setPredefinedEventTypeIds(Set<String> predefinedEventTypeIds) {
         this.predefinedEventTypeIds = predefinedEventTypeIds;
     }
@@ -122,12 +127,24 @@ public class EventServiceImpl implements EventService {
         this.definitionsService = definitionsService;
     }
 
+    /**
+     * Helper method to get TypeResolutionService from DefinitionsService.
+     * Returns null if DefinitionsService is not available or doesn't have TypeResolutionService.
+     */
+    private TypeResolutionService getTypeResolutionService() {
+        return definitionsService != null ? definitionsService.getTypeResolutionService() : null;
+    }
+
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
     }
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     @Override
@@ -191,6 +208,12 @@ public class EventServiceImpl implements EventService {
     }
 
     public int send(Event event) {
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.trace("Sending event: " + event.getEventType(), event.getItemId());
+        }
+
         // Get current event stack from ThreadLocal
         List<EventInfo> eventStack = EVENT_STACK.get();
 
@@ -200,6 +223,9 @@ public class EventServiceImpl implements EventService {
             String chainKey = recursionChainKey(eventStack);
             if (LOGGED_RECURSION_CHAINS.add(chainKey)) {
                 EventInfo currentEventInfo = new EventInfo(event);
+                if (tracer != null) {
+                    tracer.trace("Max recursion depth reached for event: " + event.getEventType(), event.getItemId());
+                }
                 StringBuilder errorMsg = new StringBuilder("Max recursion depth reached (depth: ").append(eventStack.size() + 1)
                         .append(", max: ").append(MAX_RECURSION_DEPTH + 1)
                         .append("). Current event: ").append(currentEventInfo);
@@ -231,11 +257,22 @@ public class EventServiceImpl implements EventService {
     }
 
     private int sendInternal(Event event) {
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+        }
+
         boolean saveSucceeded = true;
         if (event.isPersistent()) {
             try {
+                if (tracer != null) {
+                    tracer.trace("Saving persistent event: " + event.getEventType(), event.getItemId());
+                }
                 saveSucceeded = persistenceService.save(event, null, true);
             } catch (Throwable t) {
+                if (tracer != null) {
+                    tracer.trace("Failed to save event: " + event.getEventType() + ", error: " + t.getMessage(), event.getItemId());
+                }
                 LOGGER.error("Failed to save event: ", t);
                 return NO_CHANGE;
             }
@@ -248,20 +285,35 @@ public class EventServiceImpl implements EventService {
             final Session session = event.getSession();
             if (event.isPersistent() && session != null) {
                 session.setLastEventDate(event.getTimeStamp());
+                if (tracer != null) {
+                    tracer.trace("Updated session last event date", session.getItemId());
+                }
             }
 
             if (event.getProfile() != null) {
+                if (tracer != null) {
+                    tracer.trace("Processing event for profile: " + event.getProfile().getItemId(), event.getItemId());
+                }
                 for (EventListenerService eventListenerService : eventListeners) {
                     if (eventListenerService.canHandle(event)) {
+                        if (tracer != null) {
+                            tracer.trace("Event listener service handling event: " + eventListenerService.getClass().getSimpleName(), event.getItemId());
+                        }
                         changes |= eventListenerService.onEvent(event);
                     }
                 }
                 // At the end of the processing event execute the post executor actions
                 for (ActionPostExecutor actionPostExecutor : event.getActionPostExecutors()) {
+                    if (tracer != null) {
+                        tracer.trace("Executing post action executor", event.getItemId());
+                    }
                     changes |= actionPostExecutor.execute() ? changes : NO_CHANGE;
                 }
 
                 if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
+                    if (tracer != null) {
+                        tracer.trace("Profile updated, sending profileUpdated event", event.getItemId());
+                    }
                     Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
                     profileUpdated.setPersistent(false);
                     profileUpdated.getAttributes().putAll(event.getAttributes());
@@ -358,6 +410,10 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public PartialList<Event> searchEvents(Condition condition, int offset, int size) {
+        TypeResolutionService typeResolutionService = getTypeResolutionService();
+        if (typeResolutionService != null) {
+            typeResolutionService.resolveConditionType(condition, "event search");
+        }
         // Note: Effective condition resolution happens in the query builder dispatcher or condition evaluator dispatcher
         // For in-memory persistence, the condition evaluator dispatcher will resolve the effective condition
         return persistenceService.query(condition, "timeStamp", Event.class, offset, size);
@@ -403,6 +459,7 @@ public class EventServiceImpl implements EventService {
             return persistenceService.continueScrollQuery(Event.class, query.getScrollIdentifier(), query.getScrollTimeValidity());
         }
         if (query.getCondition() != null) {
+            definitionsService.getConditionValidationService().validate(query.getCondition());
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
             } else {

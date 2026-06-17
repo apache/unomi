@@ -37,6 +37,7 @@
             <cm:property name="maximumIdsQueryCount" value="5000"/>
             <cm:property name="aggregateQueryBucketSize" value="5000"/>
             <cm:property name="pastEventsDisablePartitions" value="false"/>
+            <cm:property name="conditionEvaluationTracing" value="false"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -44,12 +45,13 @@
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
     <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
-    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
+    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService" timeout="2000"/>
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
     <reference id="topicService" interface="org.apache.unomi.api.services.TopicService"/>
+    <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService"/>
     <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager">
         <reference-listener ref="mergeProfilesOnPropertyAction" bind-method="bindExecutionContextManager" unbind-method="unbindExecutionContextManager" />
     </reference>
@@ -62,25 +64,32 @@
         <service-properties>
             <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionEvaluator"/>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionEvaluator">
+            <property name="tracerService" ref="tracerService" />
+        </bean>
     </service>
 
     <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="idsConditionEvaluator"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.IdsConditionEvaluator"/>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.IdsConditionEvaluator">
+            <property name="tracerService" ref="tracerService" />
+        </bean>
     </service>
 
     <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="notConditionEvaluator"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.NotConditionEvaluator"/>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.NotConditionEvaluator">
+            <property name="tracerService" ref="tracerService" />
+        </bean>
     </service>
 
-    <bean id="propertyConditionEvaluator" class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator">
+    <bean id="propertyConditionEvaluator" class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator" init-method="init">
         <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}"/>
+        <property name="tracerService" ref="tracerService" />
     </bean>
     <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator" ref="propertyConditionEvaluator">
         <service-properties>
@@ -102,6 +111,7 @@
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.GeoLocationByPointSessionConditionEvaluator"/>
     </service>
 
+
     <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="nestedConditionEvaluator"/>
@@ -120,6 +130,7 @@
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.AllEventToProfilePropertiesAction">
             <property name="profileService" ref="profileService"/>
+            <property name="tracerService" ref="tracerService"/>
         </bean>
     </service>
 
@@ -129,6 +140,7 @@
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.CopyPropertiesAction">
             <property name="profileService" ref="profileService"/>
+            <property name="tracerService" ref="tracerService"/>
         </bean>
     </service>
 
@@ -136,7 +148,9 @@
         <service-properties>
             <entry key="actionExecutorId" value="eventToProfileProperty"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.EventToProfilePropertyAction"/>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.EventToProfilePropertyAction">
+            <property name="tracerService" ref="tracerService"/>
+        </bean>
     </service>
 
     <service interface="org.apache.unomi.api.actions.ActionExecutor">
@@ -145,6 +159,7 @@
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.SetPropertyAction">
             <property name="eventService" ref="eventService"/>
+            <property name="tracerService" ref="tracerService"/>
             <property name="useEventToUpdateProfile" value="${base.useEventToUpdateProfile}"/>
         </bean>
     </service>
@@ -153,7 +168,9 @@
         <service-properties>
             <entry key="actionExecutorId" value="evaluateVisitProperties"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.EvaluateVisitPropertiesAction"/>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.EvaluateVisitPropertiesAction">
+            <property name="tracerService" ref="tracerService"/>
+        </bean>
     </service>
 
     <service interface="org.apache.unomi.api.actions.ActionExecutor">
@@ -163,6 +180,7 @@
         <bean class="org.apache.unomi.plugins.baseplugin.actions.UpdatePropertiesAction">
             <property name="profileService" ref="profileService"/>
             <property name="eventService" ref="eventService"/>
+            <property name="tracerService" ref="tracerService"/>
         </bean>
     </service>
 
@@ -171,6 +189,7 @@
             <entry key="actionExecutorId" value="modifyConsent"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.ModifyConsentAction">
+            <property name="tracerService" ref="tracerService"/>
         </bean>
     </service>
 
@@ -180,6 +199,8 @@
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.EvaluateProfileSegmentsAction">
             <property name="segmentService" ref="segmentService"/>
+            <property name="profileService" ref="profileService"/>
+            <property name="tracerService" ref="tracerService"/>
         </bean>
     </service>
 
@@ -187,7 +208,10 @@
         <service-properties>
             <entry key="actionExecutorId" value="evaluateProfileAge"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.EvaluateProfileAgeAction"/>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.EvaluateProfileAgeAction">
+            <property name="profileService" ref="profileService"/>
+            <property name="tracerService" ref="tracerService"/>
+        </bean>
     </service>
 
     <service interface="org.apache.unomi.api.actions.ActionExecutor">
@@ -197,6 +221,7 @@
         <bean class="org.apache.unomi.plugins.baseplugin.actions.SetEventOccurenceCountAction">
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
+            <property name="tracerService" ref="tracerService"/>
         </bean>
     </service>
 
@@ -206,6 +231,7 @@
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.SendEventAction">
             <property name="eventService" ref="eventService"/>
+            <property name="tracerService" ref="tracerService"/>
         </bean>
     </service>
 
@@ -216,6 +242,7 @@
         <property name="definitionsService" ref="definitionsService"/>
         <property name="privacyService" ref="privacyService"/>
         <property name="schedulerService" ref="schedulerService"/>
+        <property name="tracerService" ref="tracerService"/>
         <property name="maxProfilesInOneMerge" value="${base.maxProfilesInOneMerge}"/>
     </bean>
 
@@ -229,6 +256,8 @@
         <service-properties>
             <entry key="actionExecutorId" value="incrementProperty"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.IncrementPropertyAction"/>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.IncrementPropertyAction">
+            <property name="tracerService" ref="tracerService"/>
+        </bean>
     </service>
 </blueprint>

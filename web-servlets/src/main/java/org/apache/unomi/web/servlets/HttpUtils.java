@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.web;
+package org.apache.unomi.web.servlets;
 
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;

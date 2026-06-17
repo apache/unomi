@@ -33,6 +33,8 @@ import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.services.impl.TypeResolutionServiceImpl;
 import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.SynchronousBundleListener;
@@ -68,6 +70,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     private static final long TASK_TIMEOUT_MS = 60000; // 1 minute timeout for tasks
 
     private ConditionValidationServiceImpl conditionValidationService;
+    private TracerService tracerService;
     private EventAdmin eventAdmin;
     private TypeResolutionServiceImpl typeResolutionService;
 
@@ -85,6 +88,10 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     public void setCacheService(MultiTypeCacheService cacheService) {
         super.setCacheService(cacheService);
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     public void setEventAdmin(EventAdmin eventAdmin) {
@@ -573,9 +580,25 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
         // Delegate to TypeResolutionService for resolution
         boolean resolved = typeResolutionService.resolveConditionType(rootCondition, "condition type " + rootCondition.getConditionTypeId());
         if (resolved) {
+            // Start validation operation in tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.startOperation("condition-validation", "Validating condition: " + rootCondition.getConditionTypeId(), rootCondition);
+                }
+            }
+
             // Validate the condition after resolving its type (validation service will auto-resolve if needed)
             List<ValidationError> validationErrors = conditionValidationService.validate(rootCondition);
 
+            // Add validation info to tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.addValidationInfo(validationErrors, "condition-validation");
+                    tracer.endOperation(!validationErrors.isEmpty(), String.format("Validation completed with %d errors", validationErrors.size()));
+                }
+            }
 
             // Separate errors and warnings
             List<ValidationError> errors = validationErrors.stream()

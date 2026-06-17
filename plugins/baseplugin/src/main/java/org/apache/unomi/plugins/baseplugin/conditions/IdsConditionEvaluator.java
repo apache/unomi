@@ -20,22 +20,51 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 
 import java.util.Collection;
 import java.util.Map;
 
 public class IdsConditionEvaluator implements ConditionEvaluator {
+    private TracerService tracerService;
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
+
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
-        Collection<String> ids = (Collection<String>) condition.getParameter("ids");
-        Boolean match = (Boolean) condition.getParameter("match");
-
-        if (ids == null || ids.isEmpty()) {
-            return false;
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("ids", "Evaluating IDs condition", condition);
         }
 
-        boolean contained = ids.contains(item.getItemId());
-        boolean matchValue = match == null || match;
-        return matchValue == contained;
+        try {
+            Collection<String> ids = (Collection<String>) condition.getParameter("ids");
+            Boolean match = (Boolean) condition.getParameter("match");
+
+            if (ids == null || ids.isEmpty()) {
+                if (tracer != null) {
+                    tracer.endOperation(false, "No IDs found");
+                }
+                return false;
+            }
+
+            boolean contained = ids.contains(item.getItemId());
+            boolean matchValue = match == null || match;
+            boolean result = matchValue == contained;
+
+            if (tracer != null) {
+                tracer.endOperation(result, "IDs condition evaluation completed");
+            }
+            return result;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error during IDs condition evaluation: " + e.getMessage());
+            }
+            throw e;
+        }
     }
 }

@@ -247,6 +247,21 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-tracing-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-tracing-impl</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-web-servlets</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-plugins-base</artifactId>
                 <version>${project.version}</version>
             </dependency>

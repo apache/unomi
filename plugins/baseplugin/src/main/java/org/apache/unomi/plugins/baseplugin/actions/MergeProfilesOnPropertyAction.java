@@ -32,6 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.api.services.ExecutionContextManager;
 
 import java.util.*;
@@ -47,12 +49,19 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private DefinitionsService definitionsService;
     private PrivacyService privacyService;
     private SchedulerService schedulerService;
+    private TracerService tracerService;
     private ExecutionContextManager executionContextManager;
     private SecurityService securityService;
     // TODO we can remove this limit after dealing with: UNOMI-776 (50 is completely arbitrary and it's used to bypass the auto-scroll done by the persistence Service)
     private int maxProfilesInOneMerge = 50;
 
     public int execute(Action action, Event event) {
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("merge-profiles",
+                "Starting profile merge operation", action);
+        }
 
         try {
             Profile eventProfile = event.getProfile();
@@ -65,14 +74,33 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
             if (eventProfile instanceof Persona || eventProfile.isAnonymousProfile() || StringUtils.isEmpty(mergePropName) ||
                     StringUtils.isEmpty(mergePropValue)) {
+                if (tracer != null) {
+                    tracer.endOperation(false, "Invalid profile or missing merge parameters");
+                }
                 return EventService.NO_CHANGE;
             }
 
             final List<Profile> profilesToBeMerge = getProfilesToBeMerge(mergePropName, mergePropValue);
 
+            if (tracer != null) {
+                tracer.trace("Found profiles to merge", Map.of(
+                    "count", profilesToBeMerge.size(),
+                    "profileIds", profilesToBeMerge.stream().map(Profile::getItemId).collect(Collectors.toList())
+                ));
+            }
+
             // Check if the user switched to another profile
             if (StringUtils.isNotEmpty(currentProfileMergeValue) && !currentProfileMergeValue.equals(mergePropValue)) {
+                if (tracer != null) {
+                    tracer.trace("Profile switch detected", Map.of(
+                        "fromValue", currentProfileMergeValue,
+                        "toValue", mergePropValue
+                    ));
+                }
                 reassignCurrentBrowsingData(event, profilesToBeMerge, forceEventProfileAsMaster, mergePropName, mergePropValue);
+                if (tracer != null) {
+                    tracer.endOperation(true, "Profile switch completed");
+                }
                 return EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED;
             }
 
@@ -85,6 +113,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
             // If not profiles to merge we are done here.
             if (profilesToBeMerge.isEmpty()) {
+                if (tracer != null) {
+                    tracer.endOperation(profileUpdated, profileUpdated ? "Profile updated but no merges needed" : "No changes needed");
+                }
                 return profileUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
             }
 
@@ -97,8 +128,18 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             final Profile masterProfile = profileService.mergeProfiles(forceEventProfileAsMaster ? eventProfile : profilesToBeMerge.get(0), profilesToBeMerge);
             final String masterProfileId = masterProfile.getItemId();
 
+            if (tracer != null) {
+                tracer.trace("Profile merge completed", Map.of(
+                    "masterProfileId", masterProfileId,
+                    "originalProfileId", eventProfileId
+                ));
+            }
+
             // Profile is still using the same profileId after being merged, no need to rewrite exists data, merge is done
             if (!forceEventProfileAsMaster && masterProfileId.equals(eventProfileId)) {
+                if (tracer != null) {
+                    tracer.endOperation(profileUpdated, "Profile merge completed with same ID");
+                }
                 return profileUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
             }
 
@@ -118,6 +159,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             event.setProfileId(anonymousBrowsing ? null : masterProfileId);
             event.setProfile(masterProfile);
 
+            final RequestTracer finalTracer = tracer;
             event.getActionPostExecutors().add(() -> {
                 try {
                     // This is the list of profile Ids to be updated in browsing data (events/sessions)
@@ -146,15 +188,30 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                         }
                     }
 
+                    if (finalTracer != null) {
+                        finalTracer.trace("Post-merge cleanup completed", Map.of(
+                            "mergedProfileIds", mergedProfileIds,
+                            "masterProfileId", masterProfileId
+                        ));
+                    }
                 } catch (Exception e) {
                     LOGGER.error("unable to execute callback action, profile and session will not be saved", e);
+                    if (finalTracer != null) {
+                        finalTracer.endOperation(false, "Error during post-execution: " + e.getMessage());
+                    }
                     return false;
                 }
                 return true;
             });
 
+            if (tracer != null) {
+                tracer.endOperation(true, "Profile merge completed successfully");
+            }
             return EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED;
         } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error during profile merge: " + e.getMessage());
+            }
             throw e;
         }
     }
@@ -290,6 +347,10 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
     public void setMaxProfilesInOneMerge(String maxProfilesInOneMerge) {
         this.maxProfilesInOneMerge = Integer.parseInt(maxProfilesInOneMerge);
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     public void bindExecutionContextManager(ExecutionContextManager executionContextManager) {
