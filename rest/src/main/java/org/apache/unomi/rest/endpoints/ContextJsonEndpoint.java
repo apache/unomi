@@ -161,12 +161,12 @@ public class ContextJsonEndpoint {
             throw new ForbiddenException("Insufficient privileges to access tracing information");
         }
 
-        if (explain) {
-            tracerService.enableTracing();
-            tracerService.getCurrentTracer().startOperation("context-request", "Processing context request", contextRequest);
-        }
-
         try {
+            if (explain) {
+                tracerService.enableTracing();
+                tracerService.getCurrentTracer().startOperation("context-request", "Processing context request", contextRequest);
+            }
+
             // Schema validation
             ObjectNode paramsAsJson = JsonNodeFactory.instance.objectNode();
             paramsAsJson.put("personaId", personaId);
@@ -221,10 +221,17 @@ public class ContextJsonEndpoint {
 
             return contextResponse;
         } finally {
-            if (explain) {
-                tracerService.disableTracing();
+            try {
+                if (explain) {
+                    tracerService.disableTracing();
+                }
+            } finally {
+                try {
+                    tracerService.cleanup();
+                } catch (RuntimeException e) {
+                    LOGGER.warn("Failed to clean up tracer", e);
+                }
             }
-            tracerService.cleanup();
         }
     }
 

@@ -47,14 +47,25 @@ class HttpServletRequestForwardWrapper extends HttpServletRequestWrapper {
      */
     public static void forward(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
+            javax.servlet.ServletContext cxsContext = request.getServletContext().getContext("/cxs");
+            if (cxsContext == null) {
+                LOGGER.error("Could not obtain /cxs servlet context — ensure cross-context dispatch is enabled and the cxs bundle is deployed");
+                if (!response.isCommitted()) {
+                    response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE, "Service unavailable");
+                }
+                return;
+            }
             HttpServletRequest requestWrapper = new HttpServletRequestForwardWrapper(request);
-            requestWrapper.getServletContext()
-                    .getContext("/cxs")
-                    .getRequestDispatcher("/cxs" + request.getRequestURI())
-                    .forward(requestWrapper, response);
+            cxsContext.getRequestDispatcher("/cxs" + request.getRequestURI()).forward(requestWrapper, response);
         } catch (Throwable t) { // Here in order to return generic message instead of the whole stack trace in case of not caught exception
             LOGGER.error("HttpServletRequestForwardWrapper failed to forward the request", t);
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
+            if (!response.isCommitted()) {
+                try {
+                    response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
+                } catch (IOException ioe) {
+                    LOGGER.warn("Could not send error response after forward failure", ioe);
+                }
+            }
         }
     }
 

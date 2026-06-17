@@ -31,6 +31,7 @@ public class DefaultRequestTracer implements RequestTracer {
     private final ThreadLocal<TraceNode> currentNode = new ThreadLocal<>();
     private final ThreadLocal<TraceNode> rootNode = new ThreadLocal<>();
     private final ThreadLocal<Stack<TraceNode>> nodeStack = ThreadLocal.withInitial(Stack::new);
+    private final ThreadLocal<Integer> droppedOperations = ThreadLocal.withInitial(() -> 0);
     private static final int MAX_CONTEXT_STRING_LENGTH = 4096;
     private static final int MAX_TRACE_DEPTH = 100;
 
@@ -58,6 +59,7 @@ public class DefaultRequestTracer implements RequestTracer {
         }
 
         if (rootNode.get() != null && nodeStack.get().size() >= MAX_TRACE_DEPTH) {
+            droppedOperations.set(droppedOperations.get() + 1);
             return;
         }
 
@@ -81,6 +83,12 @@ public class DefaultRequestTracer implements RequestTracer {
     @Override
     public void endOperation(Object result, String description) {
         if (!isEnabled()) {
+            return;
+        }
+
+        int dropped = droppedOperations.get();
+        if (dropped > 0) {
+            droppedOperations.set(dropped - 1);
             return;
         }
 
@@ -146,6 +154,15 @@ public class DefaultRequestTracer implements RequestTracer {
     public void reset() {
         rootNode.remove();
         currentNode.remove();
-        nodeStack.get().clear();
+        nodeStack.remove();
+        droppedOperations.set(0);
+    }
+
+    void removeThreadLocals() {
+        enabled.remove();
+        currentNode.remove();
+        rootNode.remove();
+        nodeStack.remove();
+        droppedOperations.remove();
     }
 }

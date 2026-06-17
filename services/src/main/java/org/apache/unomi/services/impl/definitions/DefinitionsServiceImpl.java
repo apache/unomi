@@ -580,24 +580,27 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
         // Delegate to TypeResolutionService for resolution
         boolean resolved = typeResolutionService.resolveConditionType(rootCondition, "condition type " + rootCondition.getConditionTypeId());
         if (resolved) {
-            // Start validation operation in tracer
-            if (tracerService != null) {
-                RequestTracer tracer = tracerService.getCurrentTracer();
-                if (tracer != null && tracer.isEnabled()) {
-                    tracer.startOperation("condition-validation", "Validating condition: " + rootCondition.getConditionTypeId(), rootCondition);
-                }
+            RequestTracer tracer = (tracerService != null) ? tracerService.getCurrentTracer() : null;
+            boolean tracerActive = tracer != null && tracer.isEnabled();
+
+            if (tracerActive) {
+                tracer.startOperation("condition-validation", "Validating condition: " + rootCondition.getConditionTypeId(), rootCondition);
             }
 
             // Validate the condition after resolving its type (validation service will auto-resolve if needed)
-            List<ValidationError> validationErrors = conditionValidationService.validate(rootCondition);
-
-            // Add validation info to tracer
-            if (tracerService != null) {
-                RequestTracer tracer = tracerService.getCurrentTracer();
-                if (tracer != null && tracer.isEnabled()) {
-                    tracer.addValidationInfo(validationErrors, "condition-validation");
-                    tracer.endOperation(validationErrors.isEmpty(), String.format("Validation completed with %d errors", validationErrors.size()));
+            List<ValidationError> validationErrors;
+            try {
+                validationErrors = conditionValidationService.validate(rootCondition);
+            } catch (Exception e) {
+                if (tracerActive) {
+                    tracer.endOperation(false, "Condition validation threw: " + e.getMessage());
                 }
+                throw e;
+            }
+
+            if (tracerActive) {
+                tracer.addValidationInfo(validationErrors, "condition-validation");
+                tracer.endOperation(validationErrors.isEmpty(), String.format("Validation completed with %d errors", validationErrors.size()));
             }
 
             // Separate errors and warnings

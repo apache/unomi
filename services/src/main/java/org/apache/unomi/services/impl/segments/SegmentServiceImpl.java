@@ -673,12 +673,18 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
     public Boolean isProfileInSegment(Profile profile, String segmentId) {
         if (tracerService != null && tracerService.isTracingEnabled()) {
-            tracerService.getCurrentTracer().trace("Checking if profile is in segment: " + segmentId, profile.getItemId());
+            RequestTracer tracer = tracerService.getCurrentTracer();
+            if (tracer != null) {
+                tracer.trace("Checking if profile is in segment: " + segmentId, profile.getItemId());
+            }
         }
         Set<String> matchingSegments = getSegmentsAndScoresForProfile(profile).getSegments();
         boolean isInSegment = matchingSegments.contains(segmentId);
         if (tracerService != null && tracerService.isTracingEnabled()) {
-            tracerService.getCurrentTracer().trace("Profile " + profile.getItemId() + " is " + (isInSegment ? "in" : "not in") + " segment: " + segmentId, profile.getItemId());
+            RequestTracer tracer = tracerService.getCurrentTracer();
+            if (tracer != null) {
+                tracer.trace("Profile " + profile.getItemId() + " is " + (isInSegment ? "in" : "not in") + " segment: " + segmentId, profile.getItemId());
+            }
         }
         return isInSegment;
     }
@@ -702,7 +708,10 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
                     segments.add(segment.getMetadata().getId());
                     if (tracerService != null && tracerService.isTracingEnabled()) {
-                        tracerService.getCurrentTracer().trace("Profile matches system segment: " + segment.getMetadata().getId(), profile.getItemId());
+                        RequestTracer tracer = tracerService.getCurrentTracer();
+                        if (tracer != null) {
+                            tracer.trace("Profile matches system segment: " + segment.getMetadata().getId(), profile.getItemId());
+                        }
                     }
                 }
             }
@@ -721,7 +730,10 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
                     segments.add(segment.getMetadata().getId());
                     if (tracerService != null && tracerService.isTracingEnabled()) {
-                        tracerService.getCurrentTracer().trace("Profile matches tenant segment: " + segment.getMetadata().getId(), profile.getItemId());
+                        RequestTracer tracer = tracerService.getCurrentTracer();
+                        if (tracer != null) {
+                            tracer.trace("Profile matches tenant segment: " + segment.getMetadata().getId(), profile.getItemId());
+                        }
                     }
                 }
             }

@@ -29,6 +29,8 @@ import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.utils.EventsRequestContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -46,6 +48,8 @@ import java.util.List;
 @Path("/")
 @Component(service = EventsCollectorEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class EventsCollectorEndpoint {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventsCollectorEndpoint.class.getName());
 
     public static final String SYSTEMSCOPE = "systemscope";
     @Reference
@@ -94,12 +98,12 @@ public class EventsCollectorEndpoint {
             throw new ForbiddenException("Insufficient privileges to access tracing information");
         }
 
-        if (explain) {
-            tracerService.enableTracing();
-            tracerService.getCurrentTracer().startOperation("event-collection", "Processing event collection request", eventsCollectorRequest);
-        }
-
         try {
+            if (explain) {
+                tracerService.enableTracing();
+                tracerService.getCurrentTracer().startOperation("event-collection", "Processing event collection request", eventsCollectorRequest);
+            }
+
             Date timestamp = new Date();
             if (timestampAsLong != null) {
                 timestamp = new Date(timestampAsLong);
@@ -147,10 +151,17 @@ public class EventsCollectorEndpoint {
 
             return response;
         } finally {
-            if (explain) {
-                tracerService.disableTracing();
+            try {
+                if (explain) {
+                    tracerService.disableTracing();
+                }
+            } finally {
+                try {
+                    tracerService.cleanup();
+                } catch (RuntimeException e) {
+                    LOGGER.warn("Failed to clean up tracer", e);
+                }
             }
-            tracerService.cleanup();
         }
     }
 }

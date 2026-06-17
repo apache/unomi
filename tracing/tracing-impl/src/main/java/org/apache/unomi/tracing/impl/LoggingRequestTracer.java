@@ -73,6 +73,12 @@ public class LoggingRequestTracer extends DefaultRequestTracer {
         indentLevel.set(0);
     }
 
+    @Override
+    void removeThreadLocals() {
+        super.removeThreadLocals();
+        indentLevel.remove();
+    }
+
     /**
      * Format a message for operation start.
      *

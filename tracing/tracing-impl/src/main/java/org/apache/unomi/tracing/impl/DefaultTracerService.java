@@ -64,6 +64,10 @@ public class DefaultTracerService implements TracerService {
     }
 
     public void cleanup() {
+        RequestTracer tracer = currentTracer.get();
+        if (tracer instanceof DefaultRequestTracer) {
+            ((DefaultRequestTracer) tracer).removeThreadLocals();
+        }
         currentTracer.remove();
     }
 } 
