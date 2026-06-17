@@ -214,14 +214,25 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
             // Validate condition (skips parameters with references/scripts)
             // Validation service will auto-resolve types if needed
-            List<ValidationError> validationErrors = definitionsService.getConditionValidationService().validate(goal.getStartEvent());
+            List<ValidationError> validationErrors;
+            try {
+                validationErrors = definitionsService.getConditionValidationService().validate(goal.getStartEvent());
+            } catch (Exception e) {
+                if (tracerService != null) {
+                    RequestTracer tracer = tracerService.getCurrentTracer();
+                    if (tracer != null && tracer.isEnabled()) {
+                        tracer.endOperation(false, "Goal start event validation threw: " + e.getMessage());
+                    }
+                }
+                throw e;
+            }
 
             // Add validation info to tracer
             if (tracerService != null) {
                 RequestTracer tracer = tracerService.getCurrentTracer();
                 if (tracer != null && tracer.isEnabled()) {
                     tracer.addValidationInfo(validationErrors, "goal-start-event-validation");
-                    tracer.endOperation(!validationErrors.isEmpty(), String.format("Goal start event validation completed with %d errors", validationErrors.size()));
+                    tracer.endOperation(validationErrors.isEmpty(), String.format("Goal start event validation completed with %d errors", validationErrors.size()));
                 }
             }
 
@@ -270,14 +281,25 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
             // Validate condition (skips parameters with references/scripts)
             // Validation service will auto-resolve types if needed
-            List<ValidationError> targetValidationErrors = definitionsService.getConditionValidationService().validate(goal.getTargetEvent());
+            List<ValidationError> targetValidationErrors;
+            try {
+                targetValidationErrors = definitionsService.getConditionValidationService().validate(goal.getTargetEvent());
+            } catch (Exception e) {
+                if (tracerService != null) {
+                    RequestTracer tracer = tracerService.getCurrentTracer();
+                    if (tracer != null && tracer.isEnabled()) {
+                        tracer.endOperation(false, "Goal target event validation threw: " + e.getMessage());
+                    }
+                }
+                throw e;
+            }
 
             // Add validation info to tracer
             if (tracerService != null) {
                 RequestTracer tracer = tracerService.getCurrentTracer();
                 if (tracer != null && tracer.isEnabled()) {
                     tracer.addValidationInfo(targetValidationErrors, "goal-target-event-validation");
-                    tracer.endOperation(!targetValidationErrors.isEmpty(), String.format("Goal target event validation completed with %d errors", targetValidationErrors.size()));
+                    tracer.endOperation(targetValidationErrors.isEmpty(), String.format("Goal target event validation completed with %d errors", targetValidationErrors.size()));
                 }
             }
 

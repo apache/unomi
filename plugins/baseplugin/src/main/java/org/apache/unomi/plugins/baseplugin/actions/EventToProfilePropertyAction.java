@@ -40,44 +40,46 @@ public class EventToProfilePropertyAction implements ActionExecutor {
     }
 
     public int execute(Action action, Event event) {
-        RequestTracer tracer = tracerService.getCurrentTracer();
-        if (!tracer.isEnabled()) {
-            tracer.setEnabled(true);
-        }
+        final RequestTracer tracer = (tracerService != null && tracerService.isTracingEnabled())
+                ? tracerService.getCurrentTracer() : null;
 
         String eventPropertyName = (String) action.getParameterValues().get("eventPropertyName");
         String profilePropertyName = (String) action.getParameterValues().get("profilePropertyName");
 
-        tracer.startOperation("event-to-profile-property", "Copying event property to profile property", new HashMap<String, Object>() {{
-            put("action.type", action.getActionTypeId());
-            put("event.type", event.getEventType());
-            put("event.property", eventPropertyName);
-            put("profile.property", profilePropertyName);
-        }});
+        if (tracer != null) {
+            tracer.startOperation("event-to-profile-property", "Copying event property to profile property", new HashMap<String, Object>() {{
+                put("action.type", action.getActionTypeId());
+                put("event.type", event.getEventType());
+                put("event.property", eventPropertyName);
+                put("profile.property", profilePropertyName);
+            }});
+        }
 
         try {
             Object currentProfileValue = event.getProfile().getProperty(profilePropertyName);
             Object eventValue = event.getProperty(eventPropertyName);
             boolean needsUpdate = currentProfileValue == null || !currentProfileValue.equals(eventValue);
 
-            tracer.trace("Property values", new HashMap<String, Object>() {{
-                put("current.profile.value", currentProfileValue);
-                put("event.value", eventValue);
-                put("needs.update", needsUpdate);
-            }});
+            if (tracer != null) {
+                tracer.trace("Property values", new HashMap<String, Object>() {{
+                    put("current.profile.value", currentProfileValue);
+                    put("event.value", eventValue);
+                    put("needs.update", needsUpdate);
+                }});
+            }
 
             if (needsUpdate) {
                 event.getProfile().setProperty(profilePropertyName, eventValue);
-                tracer.trace("Property updated", null);
+                if (tracer != null) tracer.trace("Property updated", null);
                 return EventService.PROFILE_UPDATED;
             }
-            tracer.trace("No update needed", null);
+            if (tracer != null) tracer.trace("No update needed", null);
             return EventService.NO_CHANGE;
         } catch (Exception e) {
-            tracer.trace("Error during property copy", e);
+            if (tracer != null) tracer.trace("Error during property copy", e);
             throw e;
         } finally {
-            tracer.endOperation(null, "Completed event to profile property copy");
+            if (tracer != null) tracer.endOperation(null, "Completed event to profile property copy");
         }
     }
 }

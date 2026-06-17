@@ -18,6 +18,7 @@ package org.apache.unomi.tracing.api;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -27,8 +28,8 @@ import java.util.List;
 public class TraceNode implements Serializable {
     private String operationType;
     private String description;
-    private Object context;
-    private Object result;
+    private String context;
+    private String result;
     private long startTime;
     private long endTime;
     private List<String> traces;
@@ -55,19 +56,19 @@ public class TraceNode implements Serializable {
         this.description = description;
     }
 
-    public Object getContext() {
+    public String getContext() {
         return context;
     }
 
-    public void setContext(Object context) {
+    public void setContext(String context) {
         this.context = context;
     }
 
-    public Object getResult() {
+    public String getResult() {
         return result;
     }
 
-    public void setResult(Object result) {
+    public void setResult(String result) {
         this.result = result;
     }
 
@@ -88,22 +89,30 @@ public class TraceNode implements Serializable {
     }
 
     public long getDuration() {
-        return endTime - startTime;
+        return Math.max(0, endTime - startTime);
+    }
+
+    public void addTrace(String trace) {
+        this.traces.add(trace);
     }
 
     public List<String> getTraces() {
-        return traces;
+        return Collections.unmodifiableList(traces);
     }
 
     public void setTraces(List<String> traces) {
         this.traces = traces;
     }
 
+    public void addChild(TraceNode child) {
+        this.children.add(child);
+    }
+
     public List<TraceNode> getChildren() {
-        return children;
+        return Collections.unmodifiableList(children);
     }
 
     public void setChildren(List<TraceNode> children) {
         this.children = children;
     }
-} 
+}

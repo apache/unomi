@@ -408,14 +408,25 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
             // Validate condition (skips parameters with references/scripts)
             // Validation service will auto-resolve types if needed
-            List<ValidationError> validationErrors = definitionsService.getConditionValidationService().validate(segment.getCondition());
+            List<ValidationError> validationErrors;
+            try {
+                validationErrors = definitionsService.getConditionValidationService().validate(segment.getCondition());
+            } catch (Exception e) {
+                if (tracerService != null) {
+                    RequestTracer tracer = tracerService.getCurrentTracer();
+                    if (tracer != null && tracer.isEnabled()) {
+                        tracer.endOperation(false, "Segment validation threw: " + e.getMessage());
+                    }
+                }
+                throw e;
+            }
 
             // Add validation info to tracer
             if (tracerService != null) {
                 RequestTracer tracer = tracerService.getCurrentTracer();
                 if (tracer != null && tracer.isEnabled()) {
                     tracer.addValidationInfo(validationErrors, "segment-condition-validation");
-                    tracer.endOperation(!validationErrors.isEmpty(), String.format("Segment validation completed with %d errors", validationErrors.size()));
+                    tracer.endOperation(validationErrors.isEmpty(), String.format("Segment validation completed with %d errors", validationErrors.size()));
                 }
             }
 
@@ -661,22 +672,22 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     }
 
     public Boolean isProfileInSegment(Profile profile, String segmentId) {
-        RequestTracer tracer = tracerService.getCurrentTracer();
-        tracer.trace("Checking if profile is in segment: " + segmentId, profile.getItemId());
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracerService.getCurrentTracer().trace("Checking if profile is in segment: " + segmentId, profile.getItemId());
+        }
         Set<String> matchingSegments = getSegmentsAndScoresForProfile(profile).getSegments();
         boolean isInSegment = matchingSegments.contains(segmentId);
-        tracer.trace("Profile " + profile.getItemId() + " is " + (isInSegment ? "in" : "not in") + " segment: " + segmentId, profile.getItemId());
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracerService.getCurrentTracer().trace("Profile " + profile.getItemId() + " is " + (isInSegment ? "in" : "not in") + " segment: " + segmentId, profile.getItemId());
+        }
         return isInSegment;
     }
 
     public SegmentsAndScores getSegmentsAndScoresForProfile(Profile profile) {
-        RequestTracer tracer = tracerService.getCurrentTracer();
-        tracer.trace("Getting segments and scores for profile: " + profile.getItemId(), profile.getItemId());
         Set<String> segments = new HashSet<String>();
         Map<String, Integer> scores = new HashMap<String, Integer>();
 
         String currentTenant = contextManager.getCurrentContext().getTenantId();
-        tracer.trace("Current tenant: " + currentTenant, profile.getItemId());
 
         // Get system tenant segments and scoring first
         Map<String, Segment> systemSegments = cacheService.getTenantCache("system", Segment.class);
@@ -690,7 +701,9 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 }
                 if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
                     segments.add(segment.getMetadata().getId());
-                    tracer.trace("Profile matches system segment: " + segment.getMetadata().getId(), profile.getItemId());
+                    if (tracerService != null && tracerService.isTracingEnabled()) {
+                        tracerService.getCurrentTracer().trace("Profile matches system segment: " + segment.getMetadata().getId(), profile.getItemId());
+                    }
                 }
             }
         }
@@ -707,7 +720,9 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 }
                 if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
                     segments.add(segment.getMetadata().getId());
-                    tracer.trace("Profile matches tenant segment: " + segment.getMetadata().getId(), profile.getItemId());
+                    if (tracerService != null && tracerService.isTracingEnabled()) {
+                        tracerService.getCurrentTracer().trace("Profile matches tenant segment: " + segment.getMetadata().getId(), profile.getItemId());
+                    }
                 }
             }
         }
@@ -724,7 +739,6 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     }
 
     private void processScoring(Map<String, Scoring> scoringMap, Profile profile, Map<String, Integer> scores) {
-        RequestTracer tracer = tracerService.getCurrentTracer();
         Map<String, Integer> scoreModifiers = (Map<String, Integer>) profile.getSystemProperties().get("scoreModifiers");
         for (Scoring scoring : scoringMap.values()) {
             if (scoring.getMetadata().isEnabled()) {

@@ -49,4 +49,10 @@ public interface TracerService {
      * @return the root trace node or null if tracing is not enabled
      */
     TraceNode getTraceNode();
+
+    /**
+     * Release the ThreadLocal tracer for the current thread. Must be called at the end of
+     * every request (explain or not) in environments with thread pools to prevent class-loader leaks.
+     */
+    void cleanup();
 } 

@@ -257,6 +257,31 @@ public class DefaultTracerServiceTest {
     }
 
     @Test
+    public void testEndOperationWithoutStartOperationShouldBeNoOp() {
+        tracerService.enableTracing();
+        RequestTracer tracer = tracerService.getCurrentTracer();
+
+        tracer.endOperation("result", "desc");
+
+        assertNull(tracerService.getTraceNode(), "No trace node should exist when endOperation is called without startOperation");
+    }
+
+    @Test
+    public void testExtraEndOperationAfterBalancedPairUpdatesRootNode() {
+        tracerService.enableTracing();
+        RequestTracer tracer = tracerService.getCurrentTracer();
+
+        tracer.startOperation("op", "description", null);
+        tracer.endOperation("r1", "first end");
+        tracer.endOperation("r2", "second end");
+
+        TraceNode root = tracerService.getTraceNode();
+        assertNotNull(root, "Root node should still exist after extra endOperation");
+        assertEquals("second end", root.getDescription(), "Extra endOperation overwrites root description");
+        assertEquals("r2", root.getResult(), "Extra endOperation overwrites root result");
+    }
+
+    @Test
     public void testTraceShouldNotFailWhenContextToStringOverflowsStack() {
         tracerService.enableTracing();
         RequestTracer tracer = tracerService.getCurrentTracer();

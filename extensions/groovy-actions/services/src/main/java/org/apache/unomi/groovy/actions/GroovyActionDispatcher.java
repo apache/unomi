@@ -83,43 +83,42 @@ public class GroovyActionDispatcher implements ActionDispatcher {
     }
 
     public Integer execute(Action action, Event event, String actionName) {
-        RequestTracer tracer = tracerService.getCurrentTracer();
-        if (!tracer.isEnabled()) {
-            tracer.setEnabled(true);
+        final RequestTracer tracer = (tracerService != null && tracerService.isTracingEnabled())
+                ? tracerService.getCurrentTracer() : null;
+        if (tracer != null) {
+            tracer.startOperation("groovy-action", "Executing Groovy action", new HashMap<String, Object>() {{
+                put("action.name", actionName);
+                put("action.type", action.getActionTypeId());
+                put("event.type", event.getEventType());
+            }});
         }
-
-        tracer.startOperation("groovy-action", "Executing Groovy action", new HashMap<String, Object>() {{
-            put("action.name", actionName);
-            put("action.type", action.getActionTypeId());
-            put("event.type", event.getEventType());
-        }});
 
         try {
             Class<? extends Script> scriptClass = groovyActionsService.getCompiledScript(actionName);
             if (scriptClass == null) {
                 LOGGER.warn("Couldn't find a Groovy action with name {}, action will not execute!", actionName);
-                tracer.trace("Action not found", null);
+                if (tracer != null) tracer.trace("Action not found", null);
                 return EventService.NO_CHANGE;
             }
-            
+
             try {
                 Script script = scriptClass.getDeclaredConstructor().newInstance();
                 setScriptVariables(script, action, event);
-                
+
                 return new MetricAdapter<Integer>(metricsService, this.getClass().getName() + ".action.groovy." + actionName) {
                     @Override
                     public Integer execute(Object... args) throws Exception {
                         return (Integer) script.invokeMethod("execute", null);
                     }
                 }.runWithTimer();
-                
+
             } catch (Exception e) {
                 LOGGER.error("Error executing Groovy action with key={}", actionName, e);
-                tracer.trace("Error executing action", e);
+                if (tracer != null) tracer.trace("Error executing action", e);
                 return EventService.NO_CHANGE;
             }
         } finally {
-            tracer.endOperation(null, "Completed Groovy action execution");
+            if (tracer != null) tracer.endOperation(null, "Completed Groovy action execution");
         }
     }
     

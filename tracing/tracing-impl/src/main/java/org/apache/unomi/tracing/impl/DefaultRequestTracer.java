@@ -32,14 +32,15 @@ public class DefaultRequestTracer implements RequestTracer {
     private final ThreadLocal<TraceNode> rootNode = new ThreadLocal<>();
     private final ThreadLocal<Stack<TraceNode>> nodeStack = ThreadLocal.withInitial(Stack::new);
     private static final int MAX_CONTEXT_STRING_LENGTH = 4096;
+    private static final int MAX_TRACE_DEPTH = 100;
 
     private static String safeContextToString(Object context) {
         if (context == null) {
-            return "null";
+            return null;
         }
         try {
             String rendered = String.valueOf(context);
-            if (rendered != null && rendered.length() > MAX_CONTEXT_STRING_LENGTH) {
+            if (rendered.length() > MAX_CONTEXT_STRING_LENGTH) {
                 return rendered.substring(0, MAX_CONTEXT_STRING_LENGTH) + "...(truncated)";
             }
             return rendered;
@@ -56,10 +57,14 @@ public class DefaultRequestTracer implements RequestTracer {
             return;
         }
 
+        if (rootNode.get() != null && nodeStack.get().size() >= MAX_TRACE_DEPTH) {
+            return;
+        }
+
         TraceNode node = new TraceNode();
         node.setOperationType(operationType);
         node.setDescription(description);
-        node.setContext(context);
+        node.setContext(safeContextToString(context));
         node.setStartTime(System.currentTimeMillis());
 
         if (rootNode.get() == null) {
@@ -67,7 +72,7 @@ public class DefaultRequestTracer implements RequestTracer {
             currentNode.set(node);
         } else {
             TraceNode parent = currentNode.get();
-            parent.getChildren().add(node);
+            parent.addChild(node);
             nodeStack.get().push(currentNode.get());
             currentNode.set(node);
         }
@@ -81,7 +86,7 @@ public class DefaultRequestTracer implements RequestTracer {
 
         TraceNode node = currentNode.get();
         if (node != null) {
-            node.setResult(result);
+            node.setResult(safeContextToString(result));
             node.setDescription(description);
             node.setEndTime(System.currentTimeMillis());
 
@@ -100,9 +105,9 @@ public class DefaultRequestTracer implements RequestTracer {
         TraceNode node = currentNode.get();
         if (node != null) {
             if (context != null) {
-                node.getTraces().add(message + " - Context: " + safeContextToString(context));
+                node.addTrace(message + " - Context: " + safeContextToString(context));
             } else {
-                node.getTraces().add(message);
+                node.addTrace(message);
             }
         }
     }
@@ -115,7 +120,7 @@ public class DefaultRequestTracer implements RequestTracer {
 
         TraceNode node = currentNode.get();
         if (node != null) {
-            node.getTraces().add("Validation against schema " + schemaId + ": " + safeContextToString(validationMessages));
+            node.addTrace("Validation against schema " + schemaId + ": " + safeContextToString(validationMessages));
         }
     }
 

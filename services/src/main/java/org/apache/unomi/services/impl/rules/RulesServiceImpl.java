@@ -694,14 +694,25 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
 
             // Validate condition (skips parameters with references/scripts)
             // Validation service will auto-resolve types if needed
-            List<ValidationError> validationErrors = definitionsService.getConditionValidationService().validate(rule.getCondition());
+            List<ValidationError> validationErrors;
+            try {
+                validationErrors = definitionsService.getConditionValidationService().validate(rule.getCondition());
+            } catch (Exception e) {
+                if (tracerService != null) {
+                    RequestTracer tracer = tracerService.getCurrentTracer();
+                    if (tracer != null && tracer.isEnabled()) {
+                        tracer.endOperation(false, "Rule validation threw: " + e.getMessage());
+                    }
+                }
+                throw e;
+            }
 
             // Add validation info to tracer
             if (tracerService != null) {
                 RequestTracer tracer = tracerService.getCurrentTracer();
                 if (tracer != null && tracer.isEnabled()) {
                     tracer.addValidationInfo(validationErrors, "rule-condition-validation");
-                    tracer.endOperation(!validationErrors.isEmpty(), String.format("Rule validation completed with %d errors", validationErrors.size()));
+                    tracer.endOperation(validationErrors.isEmpty(), String.format("Rule validation completed with %d errors", validationErrors.size()));
                 }
             }
 

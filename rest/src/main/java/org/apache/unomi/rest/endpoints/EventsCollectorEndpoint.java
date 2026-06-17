@@ -141,8 +141,8 @@ public class EventsCollectorEndpoint {
 
             // Add tracing information if requested
             if (explain) {
-                response.setRequestTracing(tracerService.getTraceNode());
                 tracerService.getCurrentTracer().endOperation(null, "Event collection request processed successfully");
+                response.setRequestTracing(tracerService.getTraceNode());
             }
 
             return response;
@@ -150,6 +150,7 @@ public class EventsCollectorEndpoint {
             if (explain) {
                 tracerService.disableTracing();
             }
+            tracerService.cleanup();
         }
     }
 }

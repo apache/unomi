@@ -215,8 +215,8 @@ public class ContextJsonEndpoint {
 
             // Add tracing information if requested
             if (explain) {
-                contextResponse.setRequestTracing(tracerService.getTraceNode());
                 tracerService.getCurrentTracer().endOperation(null, "Context request processed successfully");
+                contextResponse.setRequestTracing(tracerService.getTraceNode());
             }
 
             return contextResponse;
@@ -224,6 +224,7 @@ public class ContextJsonEndpoint {
             if (explain) {
                 tracerService.disableTracing();
             }
+            tracerService.cleanup();
         }
     }
 
