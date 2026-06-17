@@ -596,7 +596,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
                 RequestTracer tracer = tracerService.getCurrentTracer();
                 if (tracer != null && tracer.isEnabled()) {
                     tracer.addValidationInfo(validationErrors, "condition-validation");
-                    tracer.endOperation(!validationErrors.isEmpty(), String.format("Validation completed with %d errors", validationErrors.size()));
+                    tracer.endOperation(validationErrors.isEmpty(), String.format("Validation completed with %d errors", validationErrors.size()));
                 }
             }
 
