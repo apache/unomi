@@ -414,7 +414,7 @@
         <module>plugins</module>
         <module>plugins/baseplugin</module>
         <module>plugins/hover-event</module>
-        <module>plugins/past-event</module>
+        <module>plugins/advanced-conditions</module>
         <module>plugins/tracked-event</module>
         <module>plugins/kafka-injector</module>
         <module>plugins/mail</module>
