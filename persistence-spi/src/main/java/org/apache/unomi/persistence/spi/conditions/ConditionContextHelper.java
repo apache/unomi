@@ -243,7 +243,7 @@ public class ConditionContextHelper {
                 "Possible infinite chain or very deep nesting. Resolution chain: %s",
                 MAX_RESOLUTION_DEPTH, resolutionChain);
             LOGGER.error(message);
-            if (tracerService != null) {
+            if (tracerService != null && tracerService.isTracingEnabled()) {
                 RequestTracer tracer = tracerService.getCurrentTracer();
                 if (tracer != null && tracer.isEnabled()) {
                     Map<String, Object> traceContext = new HashMap<>();
@@ -266,7 +266,7 @@ public class ConditionContextHelper {
                     "Circular parameter reference detected: %s. Resolution chain: %s",
                     referenceKey, resolutionChain);
                 LOGGER.warn(message);
-                if (tracerService != null) {
+                if (tracerService != null && tracerService.isTracingEnabled()) {
                     RequestTracer tracer = tracerService.getCurrentTracer();
                     if (tracer != null && tracer.isEnabled()) {
                         Map<String, Object> traceContext = new HashMap<>();
@@ -393,7 +393,7 @@ public class ConditionContextHelper {
 
             LOGGER.warn(message + " (value: {})", resolvedValue);
 
-            if (tracerService != null) {
+            if (tracerService != null && tracerService.isTracingEnabled()) {
                 RequestTracer tracer = tracerService.getCurrentTracer();
                 if (tracer != null && tracer.isEnabled()) {
                     Map<String, Object> traceContext = new HashMap<>();

@@ -27,16 +27,16 @@ import org.osgi.service.component.annotations.Component;
 @Component(service = TracerService.class, immediate = true)
 public class DefaultTracerService implements TracerService {
 
-    private final ThreadLocal<RequestTracer> currentTracer = new ThreadLocal<RequestTracer>() {
-        @Override
-        protected RequestTracer initialValue() {
-            return new DefaultRequestTracer();
-        }
-    };
+    private final ThreadLocal<RequestTracer> currentTracer = new ThreadLocal<>();
 
     @Override
     public RequestTracer getCurrentTracer() {
-        return currentTracer.get();
+        RequestTracer tracer = currentTracer.get();
+        if (tracer == null) {
+            tracer = new DefaultRequestTracer();
+            currentTracer.set(tracer);
+        }
+        return tracer;
     }
 
     @Override
@@ -48,19 +48,23 @@ public class DefaultTracerService implements TracerService {
 
     @Override
     public void disableTracing() {
-        RequestTracer tracer = getCurrentTracer();
-        tracer.setEnabled(false);
-        tracer.reset();
+        RequestTracer tracer = currentTracer.get();
+        if (tracer != null) {
+            tracer.setEnabled(false);
+            tracer.reset();
+        }
     }
 
     @Override
     public boolean isTracingEnabled() {
-        return getCurrentTracer().isEnabled();
+        RequestTracer tracer = currentTracer.get();
+        return tracer != null && tracer.isEnabled();
     }
 
     @Override
     public TraceNode getTraceNode() {
-        return getCurrentTracer().getTraceNode();
+        RequestTracer tracer = currentTracer.get();
+        return tracer != null ? tracer.getTraceNode() : null;
     }
 
     public void cleanup() {

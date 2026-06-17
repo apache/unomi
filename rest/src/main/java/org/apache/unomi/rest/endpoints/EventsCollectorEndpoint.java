@@ -152,12 +152,14 @@ public class EventsCollectorEndpoint {
             return response;
         } finally {
             try {
-                if (explain) {
+                if (explain && tracerService != null) {
                     tracerService.disableTracing();
                 }
             } finally {
                 try {
-                    tracerService.cleanup();
+                    if (tracerService != null) {
+                        tracerService.cleanup();
+                    }
                 } catch (RuntimeException e) {
                     LOGGER.warn("Failed to clean up tracer", e);
                 }
