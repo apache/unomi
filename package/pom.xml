@@ -204,7 +204,7 @@
                             <artifactItems>
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-wab</artifactId>
+                                    <artifactId>unomi-web-servlets</artifactId>
                                     <classifier>unomicfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
