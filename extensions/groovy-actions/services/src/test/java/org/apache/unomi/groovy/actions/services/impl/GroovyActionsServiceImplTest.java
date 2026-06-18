@@ -38,6 +38,7 @@ import org.apache.unomi.services.impl.TestConditionEvaluators;
 import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.Bundle;
@@ -45,7 +46,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.wiring.BundleWiring;
 
 import java.net.URL;
-import java.nio.file.Files;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -139,24 +140,29 @@ public class GroovyActionsServiceImplTest {
         groovyActionsService.activate(config, bundleContext);
     }
 
+    @After
+    public void tearDown() {
+        if (groovyActionsService != null) {
+            groovyActionsService.preDestroy();
+        }
+        if (schedulerService instanceof org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) {
+            ((org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) schedulerService).preDestroy();
+        }
+    }
+
+    private String loadGroovyScript(String resourcePath, String missingMessage) throws Exception {
+        URL resourceUrl = getClass().getResource(resourcePath);
+        assertNotNull(missingMessage, resourceUrl);
+        return java.nio.file.Files.readString(Paths.get(resourceUrl.toURI()), StandardCharsets.UTF_8);
+    }
+
     @Test
-    public void testSaveGroovyAction() {
+    public void testSaveGroovyAction() throws Exception {
         // Prepare test data
         String actionName = "testSaveAction";
-
-        // Load the Groovy script from the resource file
-        String groovyScript;
-        try {
-            URL resourceUrl = getClass().getResource("/META-INF/cxs/actions/testSaveAction.groovy");
-            if (resourceUrl == null) {
-                fail("Could not find test Groovy action file");
-            }
-            groovyScript = new String(Files.readAllBytes(
-                    Paths.get(resourceUrl.toURI())));
-        } catch (Exception e) {
-            fail("Failed to load Groovy action from resource file: " + e.getMessage());
-            return;
-        }
+        String groovyScript = loadGroovyScript(
+            "/META-INF/cxs/actions/testSaveAction.groovy",
+            "Could not find test Groovy action file");
 
         // Execute save action in tenant context
         contextManager.executeAsTenant(TENANT_1, () -> {
@@ -167,23 +173,12 @@ public class GroovyActionsServiceImplTest {
     }
 
     @Test
-    public void testRemoveGroovyAction() {
+    public void testRemoveGroovyAction() throws Exception {
         // First save an action
         String actionName = "testRemoveAction";
-
-        // Load the Groovy script from the resource file
-        String groovyScript;
-        try {
-            URL resourceUrl = getClass().getResource("/META-INF/cxs/actions/testRemoveAction.groovy");
-            if (resourceUrl == null) {
-                fail("Could not find test Groovy action file for removal test");
-            }
-            groovyScript = new String(Files.readAllBytes(
-                    Paths.get(resourceUrl.toURI())));
-        } catch (Exception e) {
-            fail("Failed to load Groovy action from resource file: " + e.getMessage());
-            return;
-        }
+        String groovyScript = loadGroovyScript(
+            "/META-INF/cxs/actions/testRemoveAction.groovy",
+            "Could not find test Groovy action file for removal test");
 
         // Execute save and then remove action in tenant context
         contextManager.executeAsTenant(TENANT_1, () -> {
@@ -198,23 +193,12 @@ public class GroovyActionsServiceImplTest {
     }
 
     @Test
-    public void testExecuteGroovyAction() {
+    public void testExecuteGroovyAction() throws Exception {
         // Prepare test data
         String actionName = "testExecuteAction";
-
-        // Load the Groovy script from the resource file
-        String groovyScript;
-        try {
-            URL resourceUrl = getClass().getResource("/META-INF/cxs/actions/testExecuteAction.groovy");
-            if (resourceUrl == null) {
-                fail("Could not find test Groovy action file for execution test");
-            }
-            groovyScript = new String(Files.readAllBytes(
-                    Paths.get(resourceUrl.toURI())));
-        } catch (Exception e) {
-            fail("Failed to load Groovy action from resource file: " + e.getMessage());
-            return;
-        }
+        String groovyScript = loadGroovyScript(
+            "/META-INF/cxs/actions/testExecuteAction.groovy",
+            "Could not find test Groovy action file for execution test");
 
         // First save the Groovy action
         contextManager.executeAsTenant(TENANT_1, () -> {
@@ -263,7 +247,7 @@ public class GroovyActionsServiceImplTest {
                 int result3 = groovyDispatcher.execute(action3, event, actionName);
                 assertEquals("Action should return ERROR", EventService.ERROR, result3);
             } catch (Exception e) {
-                fail("Failed to execute Groovy action: " + e.getMessage());
+                throw new AssertionError("Failed to execute Groovy action", e);
             }
         });
     }
@@ -286,7 +270,7 @@ public class GroovyActionsServiceImplTest {
                 Object result = scriptInstance.run();
                 assertEquals("Script result should match", "Hello, World!", result);
             } catch (Exception e) {
-                fail("Should be able to execute compiled script: " + e.getMessage());
+                throw new AssertionError("Should be able to execute compiled script", e);
             }
 
             // Clean up
@@ -466,7 +450,7 @@ public class GroovyActionsServiceImplTest {
                 try {
                     tenant1Result[0] = dispatcher.execute(action, event, actionName);
                 } catch (Exception e) {
-                    fail("Failed to execute action in tenant1: " + e.getMessage());
+                    throw new AssertionError("Failed to execute action in tenant1", e);
                 }
             });
 
@@ -476,7 +460,7 @@ public class GroovyActionsServiceImplTest {
                 try {
                     tenant2Result[0] = dispatcher.execute(action, event, actionName);
                 } catch (Exception e) {
-                    fail("Failed to execute action in tenant2: " + e.getMessage());
+                    throw new AssertionError("Failed to execute action in tenant2", e);
                 }
             });
 
@@ -513,4 +497,3 @@ public class GroovyActionsServiceImplTest {
         }
     }
 }
-

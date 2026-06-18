@@ -29,6 +29,7 @@ import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.Bundle;
@@ -106,6 +107,16 @@ public class SchemaServiceImplTest {
         schemaService.setBundleContext(bundleContext);
         schemaService.setCacheService(cacheService);
         schemaService.postConstruct();
+    }
+
+    @After
+    public void tearDown() {
+        if (schemaService != null) {
+            schemaService.preDestroy();
+        }
+        if (schedulerService instanceof org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) {
+            ((org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) schedulerService).preDestroy();
+        }
     }
 
     @Test
@@ -1189,13 +1200,9 @@ public class SchemaServiceImplTest {
                 // Test events - should not have errors (valid test event)
                 assertFalse("Should not have errors for test event type", validationResults.containsKey("test"));
 
-                // Unknown event type - should have errors
-                assertTrue("Should have errors for unknown event type",
-                    validationResults.containsKey("unknown") || validationResults.containsKey("error"));
-
-                // Missing eventType event - should produce an error (may be under 'error' key)
-                assertTrue("Should have generic error for missing eventType",
-                    validationResults.containsKey("error"));
+                assertEquals("Batch validation should report the invalid known type, the unknown event type and the missing eventType error",
+                    new HashSet<>(Arrays.asList("test_event", "unknown", "error")),
+                    validationResults.keySet());
 
                 return null;
             } catch (ValidationException e) {
@@ -1211,17 +1218,14 @@ public class SchemaServiceImplTest {
 
                 Map<String, Set<ValidationError>> validationResults = schemaService.validateEvents(invalidJson);
 
-                // Should return a generic error with key "error"
                 assertNotNull("Validation results should not be null", validationResults);
-                assertTrue("Should have generic error key", validationResults.containsKey("error"));
+                assertEquals("Non-array input should be reported under the generic error key",
+                    Collections.singleton("error"), validationResults.keySet());
                 assertFalse("Error set should not be empty", validationResults.get("error").isEmpty());
 
                 return null;
             } catch (ValidationException e) {
-                // This is expected for implementation that throws exceptions
-                // If the implementation returns error map instead, this catch block won't execute
-                assertNotNull("Exception should have a message", e.getMessage());
-                return null;
+                throw new AssertionError("validateEvents should normalize malformed JSON input to the generic error bucket", e);
             }
         });
 

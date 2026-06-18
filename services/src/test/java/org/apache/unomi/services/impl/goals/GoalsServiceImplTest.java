@@ -195,22 +195,6 @@ public class GoalsServiceImplTest {
         Condition startEvent = new Condition();
         goal.setStartEvent(startEvent);
 
-        // Mock validation to return errors with enhanced context
-        List<ConditionValidationService.ValidationError> errors = new ArrayList<>();
-        Map<String, Object> context = new HashMap<>();
-        context.put("location", "startEvent");
-        context.put("parameterType", "string");
-        context.put("actualValue", 123);
-        errors.add(new ConditionValidationService.ValidationError(
-            "testParam",
-            "Invalid parameter value",
-            ConditionValidationService.ValidationErrorType.INVALID_VALUE,
-            "testGoal",
-            "startEvent",
-            context,
-            null
-        ));
-
         // Should throw IllegalArgumentException with detailed message
         org.junit.jupiter.api.Assertions.assertThrows(
             IllegalArgumentException.class,
@@ -230,21 +214,6 @@ public class GoalsServiceImplTest {
         Condition targetEvent = new Condition();
         goal.setTargetEvent(targetEvent);
 
-        // Mock validation to return errors with enhanced context
-        List<ConditionValidationService.ValidationError> errors = new ArrayList<>();
-        Map<String, Object> context = new HashMap<>();
-        context.put("location", "targetEvent");
-        context.put("parameterType", "integer");
-        context.put("actualValue", "not a number");
-        errors.add(new ConditionValidationService.ValidationError(
-            "testParam",
-            "Invalid parameter value",
-            ConditionValidationService.ValidationErrorType.INVALID_VALUE,
-            "testGoal",
-            "targetEvent",
-            context,
-            null
-        ));
         // Should throw IllegalArgumentException with detailed message
         org.junit.jupiter.api.Assertions.assertThrows(
             IllegalArgumentException.class,

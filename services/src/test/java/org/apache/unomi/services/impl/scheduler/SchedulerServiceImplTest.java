@@ -1338,15 +1338,12 @@ public class SchedulerServiceImplTest {
                 node2.simulateCrash();
             }
 
-            // Wait for lock to expire: TEST_LOCK_TIMEOUT plus buffer for the surviving node to detect it
-            Thread.sleep(TEST_LOCK_TIMEOUT * 2);
-
-            // Trigger recovery on surviving node
-            if (originalNode.equals("node1")) {
-                node2.recoverCrashedTasks();
-            } else {
-                node1.recoverCrashedTasks();
-            }
+            // Retry triggering recovery until the lock expires and the task is actually recovered
+            SchedulerServiceImpl survivingNode = originalNode.equals("node1") ? node2 : node1;
+            TestHelper.retryUntil(
+                () -> { survivingNode.recoverCrashedTasks(); return taskRecovered.get(); },
+                recovered -> recovered
+            );
 
             assertTrue(completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should be recovered");
             assertTrue(taskRecovered.get(), "Task should be recovered by other node");

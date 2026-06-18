@@ -485,6 +485,7 @@ public class TestConditionEvaluators {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private static List<Object> getValueSet(Object value) {
         if (value instanceof List) {
             return (List<Object>) value;
@@ -967,4 +968,3 @@ public class TestConditionEvaluators {
         };
     }
 }
-

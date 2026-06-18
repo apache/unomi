@@ -352,10 +352,7 @@ public class TestHelper {
             schedulerService.setLockTimeout(lockTimeout); // Set a default lock timeout for tests
         }
 
-        // Set the persistence provider on the scheduler service (optional dependency)
-        if (persistenceSchedulerProvider != null) {
-            schedulerService.setPersistenceProvider(persistenceSchedulerProvider);
-        }
+        schedulerService.setPersistenceProvider(persistenceSchedulerProvider);
 
         // Set the schedulerService on all managers that need it
         taskLockManager.setSchedulerService(schedulerService);

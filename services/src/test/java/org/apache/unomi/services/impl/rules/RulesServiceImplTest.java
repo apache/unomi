@@ -25,7 +25,7 @@ import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RuleListenerService;
-import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
@@ -35,8 +35,10 @@ import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
+import org.apache.unomi.services.impl.events.EventServiceImpl;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -69,12 +71,12 @@ public class RulesServiceImplTest {
 
     @Mock
     private BundleContext bundleContext;
-    private EventService eventService;
+    private EventServiceImpl eventService;
     private TracerService tracerService;
     private RequestTracer requestTracer;
 
     private TestActionExecutorDispatcher actionExecutorDispatcher;
-    private SchedulerService schedulerService;
+    private SchedulerServiceImpl schedulerService;
     private TestEventAdmin testEventAdmin;
 
     private static final String TENANT_1 = "tenant1";
@@ -146,6 +148,7 @@ public class RulesServiceImplTest {
 
         // Initialize rule caches
         rulesService.postConstruct();
+        eventService.addEventListenerService(rulesService);
 
         // Register RulesServiceImpl as an EventHandler with TestEventAdmin
         // In real OSGi, this would be done via service registry, but for tests we register manually
@@ -154,13 +157,19 @@ public class RulesServiceImplTest {
         }
     }
 
-    @org.junit.jupiter.api.AfterEach
+    @AfterEach
     public void tearDown() {
         if (testEventAdmin != null) {
             testEventAdmin.shutdown();
         }
         if (rulesService != null) {
             rulesService.preDestroy();
+        }
+        if (eventService != null && rulesService != null) {
+            eventService.removeEventListenerService(rulesService);
+        }
+        if (schedulerService != null) {
+            schedulerService.preDestroy();
         }
     }
 
@@ -258,6 +267,13 @@ public class RulesServiceImplTest {
         event.setTarget(target);
 
         return event;
+    }
+
+    private Set<Rule> waitForMatchingRules(Event event, int expectedCount) {
+        return TestHelper.retryUntil(
+            () -> rulesService.getMatchingRules(event),
+            rules -> rules != null && rules.size() >= expectedCount
+        );
     }
 
     private Rule createRuleWithUnavailableConditionType(String conditionTypeId) {
@@ -776,32 +792,27 @@ public class RulesServiceImplTest {
     }
 
     @Test
-    public void testRuleExecutionWithValidCondition() {
-        // Create a rule with valid condition
-        Rule rule = new Rule();
-        rule.setMetadata(new Metadata());
-        rule.getMetadata().setId("testRule");
-        rule.getMetadata().setEnabled(true);
-        rule.setScope("systemscope");
+    public void testRuleExecutionWithMatchingCondition() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Rule rule = createTestRule();
+            rule.setItemId("testRule");
+            rule.setTenantId(TENANT_1);
+            rule.setCondition(createEventTypeCondition("testEvent"));
+            rule.setActions(Collections.singletonList(createTestAction()));
 
-        Condition condition = new Condition();
-        rule.setCondition(condition);
+            rulesService.setRule(rule);
+            rulesService.refreshRules();
 
-        // Create test event
-        Event event = new Event();
-        event.setEventType("testEvent");
-        event.setScope("systemscope");
-        event.setProfile(new Profile("testProfile"));
+            Event event = createTestEvent();
+            event.setEventType("testEvent");
+            event.setItemId("test-event");
 
-        // Add test action
-        Action action = new Action();
-        ActionType actionType = new ActionType();
-        actionType.setActionExecutor("test");
-        action.setActionType(actionType);
-        rule.setActions(List.of(action));
-
-        // Execute rule
-        rulesService.onEvent(event);
+            Set<Rule> matchingRules = waitForMatchingRules(event, 1);
+            assertEquals(1, matchingRules.size(), "The test rule should match the event before execution");
+            assertEquals(EventService.PROFILE_UPDATED, rulesService.onEvent(event),
+                "A matching rule should execute its configured action");
+            return null;
+        });
     }
 
     @Test
@@ -879,10 +890,7 @@ public class RulesServiceImplTest {
         Rule rule = createTestRule();
         rule.setItemId(ruleId);
         rule.setTenantId(TENANT_1);
-        Condition wildcardCondition = new Condition();
-        wildcardCondition.setConditionType(definitionsService.getConditionType("eventTypeCondition"));
-        wildcardCondition.setParameter("eventTypeId", "*");
-        rule.setCondition(wildcardCondition);
+        rule.setCondition(new Condition(definitionsService.getConditionType("matchAllCondition")));
         rule.setActions(Collections.singletonList(createTestAction()));
         return rule;
     }
@@ -890,22 +898,29 @@ public class RulesServiceImplTest {
     @Test
     public void testRuleFiredEventLoopDetection() {
         executionContextManager.executeAsTenant(TENANT_1, () -> {
-            // Wildcard rule matches ruleFired events, creating a loop
-            Rule wildcardRule = createWildcardRule("wildcard-rule");
-            rulesService.setRule(wildcardRule);
+            Rule triggerRule = createTestRule();
+            triggerRule.setItemId("event-trigger-rule");
+            triggerRule.setTenantId(TENANT_1);
+            triggerRule.setCondition(createEventTypeCondition("test"));
+            triggerRule.setActions(Collections.singletonList(createTestAction()));
+
+            Rule ruleFiredRule = createTestRule();
+            ruleFiredRule.setItemId("rule-fired-loop-rule");
+            ruleFiredRule.setTenantId(TENANT_1);
+            ruleFiredRule.setCondition(createEventTypeCondition("ruleFired"));
+            ruleFiredRule.setActions(Collections.singletonList(createTestAction()));
+
+            rulesService.setRule(triggerRule);
+            rulesService.setRule(ruleFiredRule);
             rulesService.refreshRules();
 
             Event event = createTestEvent();
-            event.setEventType("view");
             event.setItemId("test-event-123"); // Set explicit ID for proper loop detection
 
-            // First event should process normally (triggers rule, which sends ruleFired)
-            // The ruleFired event should be detected as a loop and prevented
             int result = rulesService.onEvent(event);
-            assertNotNull(result, "Event should return a result without infinite loop");
+            assertEquals(EventService.NO_CHANGE, result,
+                "The recursive ruleFired path should terminate without reporting net changes");
 
-            // Verify rule was processed (ruleFired was sent but loop was detected)
-            // The key is that processing completes without hanging
             return null;
         });
     }
@@ -913,24 +928,28 @@ public class RulesServiceImplTest {
     @Test
     public void testRuleFiredEventLoopDetectionWithProperIds() {
         executionContextManager.executeAsTenant(TENANT_1, () -> {
-            // Create a rule that matches ruleFired events
-            Rule rule = createWildcardRule("rule-matching-ruleFired");
-            rulesService.setRule(rule);
+            Rule triggerRule = createTestRule();
+            triggerRule.setItemId("proper-id-trigger-rule");
+            triggerRule.setTenantId(TENANT_1);
+            triggerRule.setCondition(createEventTypeCondition("test"));
+            triggerRule.setActions(Collections.singletonList(createTestAction()));
+
+            Rule ruleFiredRule = createTestRule();
+            ruleFiredRule.setItemId("proper-id-ruleFired-rule");
+            ruleFiredRule.setTenantId(TENANT_1);
+            ruleFiredRule.setCondition(createEventTypeCondition("ruleFired"));
+            ruleFiredRule.setActions(Collections.singletonList(createTestAction()));
+
+            rulesService.setRule(triggerRule);
+            rulesService.setRule(ruleFiredRule);
             rulesService.refreshRules();
 
-            // Create an event with a proper ID
             Event originalEvent = createTestEvent();
-            originalEvent.setEventType("view");
             originalEvent.setItemId("original-event-456");
 
-            // Process the event - this will trigger ruleFired
-            // The ruleFired event should use proper ID (source event + rule ID)
-            // and be detected as a loop when it tries to process again
             int result = rulesService.onEvent(originalEvent);
-            assertNotNull(result, "Should return without infinite loop");
-
-            // Verify the event was processed (but loop was prevented)
-            // The key is that it returns without hanging
+            assertEquals(EventService.NO_CHANGE, result,
+                "The recursive ruleFired path should terminate without reporting net changes");
             return null;
         });
     }
@@ -966,7 +985,8 @@ public class RulesServiceImplTest {
 
             // Should detect loop when same event ID is processed again
             int result = rulesService.onEvent(loopEvent);
-            assertNotNull(result, "Should return without infinite loop");
+            assertEquals(EventService.NO_CHANGE, result,
+                "Loop detection should prevent the re-sent event from reporting any changes");
             return null;
         });
     }
@@ -1032,14 +1052,16 @@ public class RulesServiceImplTest {
             // Depth protection is now handled by EventServiceImpl.MAX_RECURSION_DEPTH
             // RulesServiceImpl only handles loop detection (same event key seen twice)
             int result = rulesService.onEvent(startEvent);
-            assertNotNull(result, "Should return when maximum depth is reached by EventServiceImpl");
+            assertEquals(EventService.NO_CHANGE, result,
+                "The depth-protection scenario should stop without reporting any state changes");
 
             // Verify that processing can continue after depth limit (ThreadLocal was cleaned up)
             Event nextEvent = createTestEvent();
             nextEvent.setEventType("view");
             nextEvent.setItemId("next-event");
             int nextResult = rulesService.onEvent(nextEvent);
-            assertNotNull(nextResult, "Should be able to process new events after depth limit");
+            assertEquals(EventService.NO_CHANGE, nextResult,
+                "Processing should recover cleanly after the depth limit is reached");
 
             return null;
         });
@@ -1060,7 +1082,8 @@ public class RulesServiceImplTest {
             Event event = createTestEvent();
             event.setItemId(null);
             // Event without ID should still generate a key and be processed
-            assertNotNull(rulesService.onEvent(event), "Event without ID should be processed");
+            assertEquals(EventService.NO_CHANGE, rulesService.onEvent(event),
+                "Events without IDs should still be processed and return the expected default result");
             return null;
         });
     }
@@ -1068,16 +1091,34 @@ public class RulesServiceImplTest {
     @Test
     public void testMultipleRulesInLoop() {
         executionContextManager.executeAsTenant(TENANT_1, () -> {
-            // Multiple wildcard rules should all be caught by loop detection
-            rulesService.setRule(createWildcardRule("rule1"));
-            rulesService.setRule(createWildcardRule("rule2"));
+            Rule triggerRule = createTestRule();
+            triggerRule.setItemId("multi-loop-trigger");
+            triggerRule.setTenantId(TENANT_1);
+            triggerRule.setCondition(createEventTypeCondition("test"));
+            triggerRule.setActions(Collections.singletonList(createTestAction()));
+
+            Rule rule1 = createTestRule();
+            rule1.setItemId("rule1");
+            rule1.setTenantId(TENANT_1);
+            rule1.setCondition(createEventTypeCondition("ruleFired"));
+            rule1.setActions(Collections.singletonList(createTestAction()));
+
+            Rule rule2 = createTestRule();
+            rule2.setItemId("rule2");
+            rule2.setTenantId(TENANT_1);
+            rule2.setCondition(createEventTypeCondition("ruleFired"));
+            rule2.setActions(Collections.singletonList(createTestAction()));
+
+            rulesService.setRule(triggerRule);
+            rulesService.setRule(rule1);
+            rulesService.setRule(rule2);
             rulesService.refreshRules();
 
             Event event = createTestEvent();
-            event.setEventType("view");
             event.setItemId("test-event-multi");
 
-            assertNotNull(rulesService.onEvent(event), "Should handle multiple rules in loop");
+            assertEquals(EventService.NO_CHANGE, rulesService.onEvent(event),
+                "Processing multiple ruleFired rules should terminate without reporting net changes");
             return null;
         });
     }
@@ -1113,7 +1154,8 @@ public class RulesServiceImplTest {
 
             // Should detect loop when same event ID is processed again
             int result = rulesService.onEvent(event);
-            assertNotNull(result, "Should detect loop and return");
+            assertEquals(EventService.NO_CHANGE, result,
+                "Loop detection should stop the same event ID from producing duplicate changes");
             return null;
         });
     }
@@ -1132,20 +1174,23 @@ public class RulesServiceImplTest {
             // Process first event - should create ProcessingContext
             Event event1 = createTestEvent();
             event1.setItemId("event-1");
+            waitForMatchingRules(event1, 1);
             int result1 = rulesService.onEvent(event1);
-            assertNotNull(result1, "First event should process successfully");
+            assertEquals(EventService.PROFILE_UPDATED, result1, "First event should process successfully");
 
             // Process second event - should reuse ProcessingContext (but different event key, so no loop)
             Event event2 = createTestEvent();
             event2.setItemId("event-2");
+            waitForMatchingRules(event2, 1);
             int result2 = rulesService.onEvent(event2);
-            assertNotNull(result2, "Second event should process successfully");
+            assertEquals(EventService.PROFILE_UPDATED, result2, "Second event should process successfully");
 
             // Process third event - verify context is still working
             Event event3 = createTestEvent();
             event3.setItemId("event-3");
+            waitForMatchingRules(event3, 1);
             int result3 = rulesService.onEvent(event3);
-            assertNotNull(result3, "Third event should process successfully");
+            assertEquals(EventService.PROFILE_UPDATED, result3, "Third event should process successfully");
 
             return null;
         });
@@ -1200,12 +1245,17 @@ public class RulesServiceImplTest {
 
             // All three rules should fire and be recorded in history
             int result = rulesService.onEvent(event);
-            assertNotNull(result, "Event should process all matching rules");
+            assertEquals(EventService.PROFILE_UPDATED, result, "Event should process all matching rules");
 
-            // Verify rules were processed (history tracking happens in processEvent)
-            Set<Rule> matchingRules = rulesService.getMatchingRules(event);
-            assertTrue(matchingRules.size() >= 3,
-                "Should match at least 3 rules after processing. Found: " + matchingRules.size());
+            RuleStatistics stats1 = rulesService.getRuleStatistics("history-rule-1");
+            RuleStatistics stats2 = rulesService.getRuleStatistics("history-rule-2");
+            RuleStatistics stats3 = rulesService.getRuleStatistics("history-rule-3");
+            assertNotNull(stats1, "Rule 1 statistics should be available");
+            assertNotNull(stats2, "Rule 2 statistics should be available");
+            assertNotNull(stats3, "Rule 3 statistics should be available");
+            assertEquals(1, stats1.getLocalExecutionCount(), "Rule 1 should execute exactly once");
+            assertEquals(1, stats2.getLocalExecutionCount(), "Rule 2 should execute exactly once");
+            assertEquals(1, stats3.getLocalExecutionCount(), "Rule 3 should execute exactly once");
 
             return null;
         });
@@ -1218,6 +1268,7 @@ public class RulesServiceImplTest {
             Rule rule = createTestRule();
             rule.setItemId("rule-fired-null-test");
             rule.setTenantId(TENANT_1);
+            rule.setCondition(createEventTypeCondition("testEvent"));
             rule.setActions(Collections.singletonList(createTestAction()));
             rulesService.setRule(rule);
             rulesService.refreshRules();
@@ -1226,10 +1277,11 @@ public class RulesServiceImplTest {
             Event event = createTestEvent();
             event.setItemId(null);
             event.setEventType("testEvent");
+            waitForMatchingRules(event, 1);
 
             // Should process without error (generateEventKey handles null IDs)
             int result = rulesService.onEvent(event);
-            assertNotNull(result, "Event without ID should still process");
+            assertEquals(EventService.PROFILE_UPDATED, result, "Event without ID should still process");
 
             return null;
         });
@@ -1267,7 +1319,7 @@ public class RulesServiceImplTest {
 
             // First loop should be detected
             int result1 = rulesService.onEvent(loopEvent1);
-            assertNotNull(result1, "First loop should be detected");
+            assertEquals(EventService.NO_CHANGE, result1, "First loop should be detected");
 
             // Process a different event to reset context
             Event normalEvent = createTestEvent();
@@ -1280,7 +1332,7 @@ public class RulesServiceImplTest {
             loopEvent2.setEventType("loopEvent1");
             loopEvent2.setItemId("loop-1");
             int result2 = rulesService.onEvent(loopEvent2);
-            assertNotNull(result2, "Second loop should also be detected");
+            assertEquals(EventService.NO_CHANGE, result2, "Second loop should also be detected");
 
             return null;
         });
@@ -1344,16 +1396,16 @@ public class RulesServiceImplTest {
             // Should process without hitting depth limit (we only go 5 levels deep)
             // Depth protection is handled by EventServiceImpl.MAX_RECURSION_DEPTH (20)
             int result = rulesService.onEvent(startEvent);
-            assertNotNull(result, "Should process nested events without hitting depth limit");
+            assertEquals(EventService.NO_CHANGE, result,
+                "Nested events below the recursion limit should complete without reporting changes");
 
             // Verify nested events were processed (we should have processed multiple levels)
             // The action executor should be called at least once for the initial event
             // Note: The counter increments when the action executor is called, which happens
             // when a rule fires. Even if nested events aren't processed due to depth limits,
             // the initial event should trigger the action at least once.
-            assertTrue(depthCounter[0] > 0,
-                "Should have processed nested events. Action executor was called " + depthCounter[0] + " times. " +
-                "This means the rule matched and the action was executed.");
+            assertEquals(5, depthCounter[0],
+                "Nested events should execute exactly five times before the chain stops");
 
             return null;
         });
@@ -1404,13 +1456,15 @@ public class RulesServiceImplTest {
             event2.setEventType("anotherEvent");
             event2.setItemId("after-exception-event");
             int result = rulesService.onEvent(event2);
-            assertNotNull(result, "Should process events after exception - ThreadLocal cleanup verified");
+            assertEquals(EventService.NO_CHANGE, result,
+                "ThreadLocal cleanup should allow a later non-matching event to be processed normally");
 
             // Verify we can process multiple events in sequence (ThreadLocal is recreated properly)
             Event event3 = createTestEvent();
             event3.setEventType("thirdEvent");
             event3.setItemId("third-event");
-            assertNotNull(rulesService.onEvent(event3), "Should process multiple events sequentially");
+            assertEquals(EventService.NO_CHANGE, rulesService.onEvent(event3),
+                "Subsequent sequential events should still be processed after the cleanup");
 
             return null;
         });

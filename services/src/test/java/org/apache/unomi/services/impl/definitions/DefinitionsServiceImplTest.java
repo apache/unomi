@@ -34,6 +34,7 @@ import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
 import org.apache.unomi.services.impl.TestConditionEvaluators;
 import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -104,6 +105,16 @@ class DefinitionsServiceImplTest {
         definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
         // Inject definitionsService into the dispatcher
         TestHelper.injectDefinitionsServiceIntoDispatcher(conditionEvaluatorDispatcher, definitionsService);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (definitionsService != null) {
+            definitionsService.preDestroy();
+        }
+        if (schedulerService instanceof org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) {
+            ((org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) schedulerService).preDestroy();
+        }
     }
 
     @Nested
@@ -257,44 +268,41 @@ class DefinitionsServiceImplTest {
             CountDownLatch endLatch = new CountDownLatch(threadCount * 2);
             AtomicBoolean failed = new AtomicBoolean(false);
 
-            // Use synchronized mock to avoid race conditions
-            synchronized(tenantService) {
-                for (int i = 0; i < threadCount; i++) {
-                    final int index = i;
+            for (int i = 0; i < threadCount; i++) {
+                final int index = i;
 
-                    // System tenant thread
-                    new Thread(() -> {
-                        try {
-                            barrier.await();
-                            executionContextManager.executeAsSystem(() -> {
-                                ConditionType conditionType = createTestConditionType("test" + index, new HashSet<>(Arrays.asList("tag1")), null);
-                                definitionsService.setConditionType(conditionType);
+                // System tenant thread
+                new Thread(() -> {
+                    try {
+                        barrier.await();
+                        executionContextManager.executeAsSystem(() -> {
+                            ConditionType conditionType = createTestConditionType("test" + index, new HashSet<>(Arrays.asList("tag1")), null);
+                            definitionsService.setConditionType(conditionType);
 
-                            });
-                        } catch (Exception e) {
-                            failed.set(true);
-                            LOGGER.error("Thread execution failed", e);
-                        } finally {
-                            endLatch.countDown();
-                        }
-                    }).start();
+                        });
+                    } catch (Exception e) {
+                        failed.set(true);
+                        LOGGER.error("Thread execution failed", e);
+                    } finally {
+                        endLatch.countDown();
+                    }
+                }).start();
 
-                    // Custom tenant thread
-                    new Thread(() -> {
-                        try {
-                            barrier.await();
-                            executionContextManager.executeAsTenant("tenant1", () -> {
-                                ConditionType conditionType = createTestConditionType("test" + index + "-tenant", new HashSet<>(Arrays.asList("tag1")), null);
-                                definitionsService.setConditionType(conditionType);
-                            });
-                        } catch (Exception e) {
-                            failed.set(true);
-                            LOGGER.error("Thread execution failed", e);
-                        } finally {
-                            endLatch.countDown();
-                        }
-                    }).start();
-                }
+                // Custom tenant thread
+                new Thread(() -> {
+                    try {
+                        barrier.await();
+                        executionContextManager.executeAsTenant("tenant1", () -> {
+                            ConditionType conditionType = createTestConditionType("test" + index + "-tenant", new HashSet<>(Arrays.asList("tag1")), null);
+                            definitionsService.setConditionType(conditionType);
+                        });
+                    } catch (Exception e) {
+                        failed.set(true);
+                        LOGGER.error("Thread execution failed", e);
+                    } finally {
+                        endLatch.countDown();
+                    }
+                }).start();
             }
 
             assertTrue(endLatch.await(5, TimeUnit.SECONDS), "Test timed out");
@@ -1681,7 +1689,7 @@ class DefinitionsServiceImplTest {
     @Nested
     class RefreshTimerTests {
         @Test
-        void shouldScheduleAndExecuteRefreshTask() throws InterruptedException {
+        void shouldScheduleAndExecuteRefreshTask() {
             // Create a test condition type
             ConditionType testType = createTestConditionType("testCondition", new HashSet<>(), null);
             definitionsService.setConditionType(testType);
@@ -1689,17 +1697,17 @@ class DefinitionsServiceImplTest {
             // Set a short refresh interval for testing
             definitionsService.setDefinitionsRefreshInterval(100);
 
-            // Wait for at least one refresh cycle
-            Thread.sleep(150);
-
-            // Verify the condition type is still available
-            ConditionType retrieved = definitionsService.getConditionType("testCondition");
+            // Poll until the condition type survives at least one refresh cycle
+            ConditionType retrieved = TestHelper.retryUntil(
+                () -> definitionsService.getConditionType("testCondition"),
+                r -> r != null && testType.getItemId().equals(r.getItemId())
+            );
             assertNotNull(retrieved);
             assertEquals(testType.getItemId(), retrieved.getItemId());
         }
 
         @Test
-        void shouldHandleRefreshFailureGracefully() throws InterruptedException {
+        void shouldHandleRefreshFailureGracefully() {
             // Save original persistence service
             PersistenceService originalPersistence = definitionsService.getPersistenceService();
 
@@ -1714,11 +1722,11 @@ class DefinitionsServiceImplTest {
                 // Set a short refresh interval
                 definitionsService.setDefinitionsRefreshInterval(100);
 
-                // Wait for at least one refresh cycle
-                Thread.sleep(150);
-
-                // Service should still be operational with in-memory data
-                assertNotNull(definitionsService.getConditionType("testCondition"));
+                // Poll until a refresh cycle fires with null persistence and in-memory data is still intact
+                assertNotNull(TestHelper.retryUntil(
+                    () -> definitionsService.getConditionType("testCondition"),
+                    r -> r != null
+                ));
             } finally {
                 // Restore original persistence service
                 definitionsService.setPersistenceService(originalPersistence);
@@ -1739,10 +1747,7 @@ class DefinitionsServiceImplTest {
                 isShutdownField.setAccessible(true);
                 assertTrue((Boolean) isShutdownField.get(definitionsService));
 
-                // Wait for potential refresh cycle
-                Thread.sleep(150);
-
-                // Service should still respond to direct calls but not refresh
+                // Poll briefly — refresh must not fire after shutdown; direct calls must still work
                 ConditionType testType = createTestConditionType("testCondition", new HashSet<>(), null);
                 definitionsService.setConditionType(testType);
                 assertNotNull(definitionsService.getConditionType("testCondition"));

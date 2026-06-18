@@ -38,6 +38,7 @@ import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
 import org.apache.unomi.services.impl.TestConditionEvaluators;
 import org.apache.unomi.services.impl.TestEventAdmin;
+import org.apache.unomi.services.impl.TestRequestTracer;
 import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
@@ -96,7 +97,8 @@ public class SegmentServiceImplTest {
         tenantService = new TestTenantService();
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
-        TracerService tracerService = TestHelper.createTracerService();
+        tracerService = TestHelper.createTracerService();
+        requestTracer = new TestRequestTracer(true);
 
         // Create tenants using TestHelper
         TestHelper.setupCommonTestData(tenantService);
@@ -162,9 +164,6 @@ public class SegmentServiceImplTest {
         // Initialize services
         segmentService.postConstruct();
 
-        // Initialize rule caches
-        rulesService.postConstruct();
-
         // Create and deploy the system rule for segment evaluation
         executionContextManager.executeAsSystem(() -> {
             Rule segmentEvaluationRule = new Rule();
@@ -196,6 +195,8 @@ public class SegmentServiceImplTest {
 
     @AfterEach
     public void tearDown() throws Exception {
+        TestConditionEvaluators.setEventService(null);
+
         // Use the common tearDown method from TestHelper
         TestHelper.tearDown(
             schedulerService,
@@ -885,6 +886,7 @@ public class SegmentServiceImplTest {
             segmentService.recalculatePastEventConditions();
 
             // Verify profile is in segment
+            profile = persistenceService.load(profile.getItemId(), Profile.class);
             assertTrue(profile.getSegments().contains("test-segment"), "Profile should be in segment");
 
             return null;

@@ -52,7 +52,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryPersistenceServiceImpl.class);
     private static final Pattern SAFE_FILENAME_PATTERN = Pattern.compile("[^a-zA-Z0-9-_.]");
-    public static final String DEFAULT_STORAGE_DIR = "data/persistence";
+    public static final String DEFAULT_STORAGE_DIR = "target/persistence-data";
 
     // System items list - matches Elasticsearch/OpenSearch persistence services
     // System items have their itemType appended to the document ID: tenantId_itemId_itemType
@@ -2864,4 +2864,3 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         this.defaultQueryLimit = defaultQueryLimit != null && defaultQueryLimit > 0 ? defaultQueryLimit : 10;
     }
 }
-
