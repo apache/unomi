@@ -6248,10 +6248,11 @@ public class InMemoryPersistenceServiceImplTest {
                 service.save(item);
             }
 
-            // Query with explicit size should respect it - retry until items are available
-            PartialList<TestMetadataItem> result = TestHelper.retryQueryUntilAvailable(
+            // Retry until both list size and totalSize are correct — totalSize reflects only refreshed items,
+            // so checking list.size() == 5 alone can succeed before all 20 items are indexed.
+            PartialList<TestMetadataItem> result = TestHelper.retryUntil(
                 () -> service.query(null, null, TestMetadataItem.class, 0, 5),
-                5
+                r -> r != null && r.getTotalSize() == 20 && r.getList().size() == 5
             );
             assertEquals(5, result.getList().size(), "Query with explicit size=5 should return 5 items");
             assertEquals(20, result.getTotalSize(), "Total size should be 20");
@@ -6271,10 +6272,10 @@ public class InMemoryPersistenceServiceImplTest {
                 service.save(item);
             }
 
-            // Query with size = -1 should return custom default limit (5) - retry until items are available
-            PartialList<TestMetadataItem> result = TestHelper.retryQueryUntilAvailable(
+            // Retry until both list size and totalSize are correct — same race as shouldRespectExplicitSizeWhenProvided.
+            PartialList<TestMetadataItem> result = TestHelper.retryUntil(
                 () -> service.query(null, null, TestMetadataItem.class, 0, -1),
-                5
+                r -> r != null && r.getTotalSize() == 20 && r.getList().size() == 5
             );
             assertEquals(5, result.getList().size(), "Query with size=-1 should return custom default limit of 5");
             assertEquals(20, result.getTotalSize(), "Total size should be 20");

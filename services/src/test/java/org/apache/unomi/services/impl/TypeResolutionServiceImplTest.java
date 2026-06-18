@@ -757,13 +757,6 @@ public class TypeResolutionServiceImplTest {
         assertEquals(1, firstEncounterCount, "First encounter should have count of 1");
         assertEquals(1, info1.getMissingConditionTypeIds().size(), "Should have 1 missing condition type initially");
 
-        // Wait a bit to ensure timestamp difference
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
         // Second encounter with different missing type
         typeResolutionService.resolveCondition("segments", segment, condition2, "context2");
 
@@ -873,13 +866,6 @@ public class TypeResolutionServiceImplTest {
 
         assertTrue(firstSeen > 0, "First seen timestamp should be set");
         assertEquals(firstSeen, lastSeen, "First and last seen should be equal on first encounter");
-
-        // Wait a bit
-        try {
-            Thread.sleep(10);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
 
         // Second encounter
         typeResolutionService.markInvalid("rules", "rule1", "Updated reason");

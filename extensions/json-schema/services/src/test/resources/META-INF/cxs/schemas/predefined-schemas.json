@@ -1,0 +1,23 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/test",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "name": "test",
+    "target": "events"
+  },
+  "type": "object",
+  "properties": {
+    "eventType": {
+      "type": "string",
+      "const": "test"
+    },
+    "scope": {
+      "type": "string"
+    },
+    "properties": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "required": ["eventType", "scope"]
+} 

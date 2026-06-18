@@ -29,11 +29,11 @@ import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.conditions.evaluator.impl.ConditionEvaluatorDispatcherImpl;
 import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
+import org.apache.unomi.tracing.api.RequestTracer;
 import org.osgi.framework.BundleContext;
 
 import java.lang.reflect.Method;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -45,14 +45,17 @@ import java.util.stream.Collectors;
 public class TestConditionEvaluators {
 
     private static Map<String, ConditionType> conditionTypes = new ConcurrentHashMap<>();
-    private static final DateTimeFormatter ISO_DATE_FORMAT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(ZoneOffset.UTC);
-    private static final DateTimeFormatter YEAR_MONTH_DAY_FORMAT =
-            DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
+    private static final SimpleDateFormat ISO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
     private static EventService eventService;
     private static BundleContext bundleContext;
     private static TestRequestTracer tracer = new TestRequestTracer(false);
     private static Map<String, ConditionEvaluator> evaluators = new HashMap<>();
+
+    static {
+        ISO_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
+        yearMonthDayDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+    }
 
     public static void setEventService(EventService service) {
         eventService = service;
@@ -62,7 +65,7 @@ public class TestConditionEvaluators {
         TestConditionEvaluators.bundleContext = bundleContext;
     }
 
-    public static TestRequestTracer getTracer() {
+    public static RequestTracer getTracer() {
         return tracer;
     }
 
@@ -378,8 +381,8 @@ public class TestConditionEvaluators {
         if (actualDateVal == null || expectedDateVal == null) {
             return false;
         }
-        boolean isSameDay = YEAR_MONTH_DAY_FORMAT.format(actualDateVal.toInstant())
-                .equals(YEAR_MONTH_DAY_FORMAT.format(expectedDateVal.toInstant()));
+        boolean isSameDay = yearMonthDayDateFormat.format(actualDateVal)
+                .equals(yearMonthDayDateFormat.format(expectedDateVal));
         return operator.equals("isDay") ? isSameDay : !isSameDay;
     }
 
@@ -482,6 +485,7 @@ public class TestConditionEvaluators {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private static List<Object> getValueSet(Object value) {
         if (value instanceof List) {
             return (List<Object>) value;
@@ -964,4 +968,3 @@ public class TestConditionEvaluators {
         };
     }
 }
-
