@@ -32,6 +32,8 @@ import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
 import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
 import org.apache.unomi.scripting.ExpressionFilterFactory;
 import org.apache.unomi.scripting.SecureFilteringClassLoader;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,6 +58,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     private static final HardcodedPropertyAccessorRegistry hardcodedPropertyAccessorRegistry = new HardcodedPropertyAccessorRegistry();
     private ExpressionFilterFactory expressionFilterFactory;
 
+    private TracerService tracerService;
+
     public void setUsePropertyConditionOptimizations(boolean usePropertyConditionOptimizations) {
         this.usePropertyConditionOptimizations = usePropertyConditionOptimizations;
     }
@@ -64,6 +68,12 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         this.expressionFilterFactory = expressionFilterFactory;
     }
 
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
+
+    public void init() {
+    }
 
     private int compare(Object actualValue, String expectedValue, Object expectedValueDate, Object expectedValueInteger, Object expectedValueDateExpr, Object expectedValueDouble) {
         if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null && getDate(expectedValueDateExpr) == null && expectedValueDouble == null) {
@@ -204,6 +214,14 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("property",
+                "Evaluating property condition", condition);
+        }
+
+        try {
             String op = (String) condition.getParameter("comparisonOperator");
             String name = (String) condition.getParameter("propertyName");
 
@@ -239,9 +257,32 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 actualValue = ConditionContextHelper.foldToASCII((String) actualValue);
             }
 
+            final Object finalActualValue = actualValue;
+            if (tracer != null) {
+                tracer.trace("Property value comparison: " + name + " " + op + " " + expectedValue,
+                    new HashMap<String, Object>() {{
+                        put("actualValue", finalActualValue);
+                        put("expectedValue", expectedValue);
+                        put("expectedValueInteger", expectedValueInteger);
+                        put("expectedValueDouble", expectedValueDouble);
+                        put("expectedValueDate", expectedValueDate);
+                        put("expectedValueDateExpr", expectedValueDateExpr);
+                    }});
+            }
+
             boolean result = isMatch(op, actualValue, expectedValue, expectedValueInteger, expectedValueDouble, expectedValueDate,
                     expectedValueDateExpr, condition);
+
+            if (tracer != null) {
+                tracer.endOperation(result, "Property condition evaluation completed");
+            }
             return result;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error during property condition evaluation: " + e.getMessage());
+            }
+            throw e;
+        }
     }
 
     protected boolean isMatch(String op, Object actualValue, String expectedValue, Object expectedValueInteger, Object expectedValueDouble,

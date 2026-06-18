@@ -17,12 +17,13 @@
 
 package org.apache.unomi.rest.models;
 
+import org.apache.unomi.tracing.api.TraceNode;
 import java.io.Serializable;
 
 /**
  * Response model for the event collector endpoint.
  * This class provides information about the result of event processing, including
- * which entities were updated.
+ * which entities were updated and tracing information.
  */
 public class EventCollectorResponse implements Serializable {
     /**
@@ -41,9 +42,20 @@ public class EventCollectorResponse implements Serializable {
      */
     private int updated;
 
+    /**
+     * Contains tracing information about the request processing.
+     * This can be used for debugging and monitoring purposes.
+     */
+    private TraceNode requestTracing;
+
     public EventCollectorResponse() {
     }
 
+    /**
+     * Creates a new EventCollectorResponse with the specified update flags.
+     *
+     * @param updated The bitwise combination of EventService flags indicating what was updated
+     */
     public EventCollectorResponse(int updated) {
         this.updated = updated;
     }
@@ -64,5 +76,23 @@ public class EventCollectorResponse implements Serializable {
      */
     public int getUpdated() {
         return updated;
+    }
+
+    /**
+     * Gets the tracing information for the request.
+     *
+     * @return The TraceNode containing request tracing information
+     */
+    public TraceNode getRequestTracing() {
+        return requestTracing;
+    }
+
+    /**
+     * Sets the tracing information for the request.
+     *
+     * @param requestTracing The TraceNode containing request tracing information
+     */
+    public void setRequestTracing(TraceNode requestTracing) {
+        this.requestTracing = requestTracing;
     }
 }

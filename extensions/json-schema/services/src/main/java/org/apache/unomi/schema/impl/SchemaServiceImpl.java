@@ -40,6 +40,8 @@ import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.schema.api.ValidationError;
 import org.apache.unomi.schema.api.ValidationException;
 import org.apache.unomi.schema.keyword.ScopeKeyword;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,6 +80,7 @@ public class SchemaServiceImpl extends AbstractMultiTypeCachingService implement
     private Integer jsonSchemaRefreshInterval = 1000;
 
     private ScopeService scopeService;
+    private TracerService tracerService;
 
     // Map to store tenant-specific JsonSchemaFactory instances
     private final ConcurrentMap<String, JsonSchemaFactory> tenantJsonSchemaFactories = new ConcurrentHashMap<>();
@@ -375,6 +378,14 @@ public class SchemaServiceImpl extends AbstractMultiTypeCachingService implement
                 }
             }
 
+            // Add validation info to trace if tracing is enabled
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.addValidationInfo(validationMessages, jsonSchema.getCurrentUri().toString());
+                }
+            }
+
             return validationMessages != null ?
                     validationMessages.stream()
                             .map(validationMessage -> new ValidationError(validationMessage.getMessage()))
@@ -592,6 +603,10 @@ public class SchemaServiceImpl extends AbstractMultiTypeCachingService implement
 
     public void setJsonSchemaRefreshInterval(Integer jsonSchemaRefreshInterval) {
         this.jsonSchemaRefreshInterval = jsonSchemaRefreshInterval;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     /**

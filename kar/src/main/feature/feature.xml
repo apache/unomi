@@ -68,6 +68,8 @@
         <bundle>mvn:org.apache.unomi/unomi-lifecycle-watcher/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-api/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-common/${project.version}</bundle>
+        <bundle>mvn:org.apache.unomi/unomi-tracing-api/${project.version}</bundle>
+        <bundle>mvn:org.apache.unomi/unomi-tracing-impl/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-scripting/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-metrics/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-persistence-spi/${project.version}</bundle>
@@ -130,10 +132,13 @@
         <feature>unomi-cxs-privacy-extension-services</feature>
         <configfile finalname="/etc/org.apache.unomi.schema.cfg">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}/cfg/schemacfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.rest.authentication.cfg">mvn:org.apache.unomi/unomi-rest/${project.version}/cfg/restauth</configfile>
+        <!-- Legacy servlet forwarders (HTTP Whiteboard) and their configuration -->
+        <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-web-servlets/${project.version}/cfg/unomicfg</configfile>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-rest/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-actions/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-web-servlets/${project.version}</bundle>
     </feature>
 
     <feature name="unomi-cxs-lists-extension" description="Apache Unomi :: Extensions :: Lists" version="${project.version}">

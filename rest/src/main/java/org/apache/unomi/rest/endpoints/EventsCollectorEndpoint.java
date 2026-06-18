@@ -25,9 +25,12 @@ import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.models.EventCollectorResponse;
 import org.apache.unomi.rest.service.RestServiceUtils;
+import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.utils.EventsRequestContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -46,9 +49,14 @@ import java.util.List;
 @Component(service = EventsCollectorEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class EventsCollectorEndpoint {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventsCollectorEndpoint.class.getName());
+
     public static final String SYSTEMSCOPE = "systemscope";
     @Reference
     private RestServiceUtils restServiceUtils;
+
+    @Reference
+    private TracerService tracerService;
 
     @Context
     HttpServletRequest request;
@@ -65,24 +73,37 @@ public class EventsCollectorEndpoint {
     @Path("/eventcollector")
     public EventCollectorResponse collectAsGet(@QueryParam("payload") EventsCollectorRequest eventsCollectorRequest,
             @QueryParam("timestamp") Long timestampAsString,
+            @QueryParam("explain") boolean explain,
             @Context SecurityContext securityContext) {
-        return doEvent(eventsCollectorRequest, timestampAsString, securityContext);
+        return doEvent(eventsCollectorRequest, timestampAsString, explain, securityContext);
     }
 
     @POST
     @Path("/eventcollector")
     public EventCollectorResponse collectAsPost(EventsCollectorRequest eventsCollectorRequest,
             @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("explain") boolean explain,
             @Context SecurityContext securityContext) {
-        return doEvent(eventsCollectorRequest, timestampAsLong, securityContext);
+        return doEvent(eventsCollectorRequest, timestampAsLong, explain, securityContext);
     }
 
-    private EventCollectorResponse doEvent(EventsCollectorRequest eventsCollectorRequest, Long timestampAsLong, SecurityContext securityContext) {
+    private EventCollectorResponse doEvent(EventsCollectorRequest eventsCollectorRequest, Long timestampAsLong, boolean explain, SecurityContext securityContext) {
         if (eventsCollectorRequest == null) {
             throw new InvalidRequestException("events collector cannot be empty", "Invalid received data");
         }
 
+        // Check if tracing is requested and user has required role
+        if (explain && !(securityContext.isUserInRole(UnomiRoles.ADMINISTRATOR) ||
+                        securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR))) {
+            throw new ForbiddenException("Insufficient privileges to access tracing information");
+        }
+
         try {
+            if (explain) {
+                tracerService.enableTracing();
+                tracerService.getCurrentTracer().startOperation("event-collection", "Processing event collection request", eventsCollectorRequest);
+            }
+
             Date timestamp = new Date();
             if (timestampAsLong != null) {
                 timestamp = new Date(timestampAsLong);
@@ -122,9 +143,27 @@ public class EventsCollectorEndpoint {
 
             EventCollectorResponse response = new EventCollectorResponse(eventsRequestContext.getChanges());
 
+            // Add tracing information if requested
+            if (explain) {
+                tracerService.getCurrentTracer().endOperation(null, "Event collection request processed successfully");
+                response.setRequestTracing(tracerService.getTraceNode());
+            }
+
             return response;
         } finally {
-            // @todo placeholder for tracing integration
+            try {
+                if (explain && tracerService != null) {
+                    tracerService.disableTracing();
+                }
+            } finally {
+                try {
+                    if (tracerService != null) {
+                        tracerService.cleanup();
+                    }
+                } catch (RuntimeException e) {
+                    LOGGER.warn("Failed to clean up tracer", e);
+                }
+            }
         }
     }
 }

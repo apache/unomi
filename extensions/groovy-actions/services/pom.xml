@@ -48,6 +48,19 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-tracing-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-tracing-impl</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-metrics</artifactId>
             <scope>provided</scope>
         </dependency>

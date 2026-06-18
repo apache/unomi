@@ -54,7 +54,13 @@
                 <artifactId>awaitility</artifactId>
                 <version>3.1.6</version>
             </dependency>
-        </dependencies>
+            <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-tracing-api</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
     </dependencyManagement>
 
     <dependencies>

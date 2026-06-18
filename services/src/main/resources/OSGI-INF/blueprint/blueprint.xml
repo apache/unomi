@@ -30,20 +30,11 @@
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
     <reference id="configAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
+    <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService"/>
     <reference id="bundleWatcher" interface="org.apache.unomi.lifecycle.BundleWatcher"/>
     <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager" />
     <reference id="auditService" interface="org.apache.unomi.api.tenants.AuditService" availability="optional"/>
     <reference id="eventAdmin" interface="org.osgi.service.event.EventAdmin"/>
-
-    <!-- Reference list for custom validators from plugins -->
-    <reference-list id="customValidators"
-                   interface="org.apache.unomi.api.services.ValueTypeValidator"
-                   availability="optional">
-        <reference-listener bind-method="bindValidator"
-                          unbind-method="unbindValidator"
-                          ref="definitionsServiceImpl"/>
-    </reference-list>
-
 
     <!-- Reference Lists -->
     <reference-list id="eventListenerServices"
@@ -88,6 +79,15 @@
         <reference-listener ref="tenantServiceImpl"
                            bind-method="bindListener"
                            unbind-method="unbindListener"/>
+    </reference-list>
+
+    <!-- Reference list for custom validators from plugins -->
+    <reference-list id="customValidators"
+                   interface="org.apache.unomi.api.services.ValueTypeValidator"
+                   availability="optional">
+        <reference-listener bind-method="bindValidator"
+                          unbind-method="unbindValidator"
+                          ref="definitionsServiceImpl"/>
     </reference-list>
 
     <!-- Configuration -->
@@ -246,6 +246,7 @@
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
         <property name="contextManager" ref="executionContextManager"/>
+        <property name="tracerService" ref="tracerService"/>
         <property name="eventAdmin" ref="eventAdmin"/>
         <property name="auditService" ref="auditService"/>
         <property name="conditionValidationServiceBuiltInValidators">
@@ -267,6 +268,7 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="tracerService" ref="tracerService" />
         <property name="predefinedEventTypeIds">
             <set>
                 <value>view</value>
@@ -296,6 +298,7 @@
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="contextManager" ref="executionContextManager"/>
+        <property name="tracerService" ref="tracerService"/>
         <property name="contextManager" ref="executionContextManager"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
@@ -322,6 +325,7 @@
         <property name="metricsService" ref="metricsService"/>
         <property name="scriptExecutor" ref="scriptExecutor"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="tracerService" ref="tracerService" />
         <property name="definitionsService" ref="definitionsServiceImpl"/>
     </bean>
 
@@ -338,6 +342,7 @@
         <property name="optimizedRulesActivated" value="${services.rules.optimizationActivated}"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="contextManager" ref="executionContextManager"/>
+        <property name="tracerService" ref="tracerService"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
         <property name="auditService" ref="auditService"/>
     </bean>
@@ -364,6 +369,7 @@
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="contextManager" ref="executionContextManager"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="tracerService" ref="tracerService"/>
         <property name="auditService" ref="auditService"/>
     </bean>
 
@@ -676,7 +682,6 @@
     </service>
 
     <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
-
 
     <!-- Value Type Validator Services -->
     <service ref="stringValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
