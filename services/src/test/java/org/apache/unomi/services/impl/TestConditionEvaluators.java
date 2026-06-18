@@ -29,11 +29,11 @@ import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.conditions.evaluator.impl.ConditionEvaluatorDispatcherImpl;
 import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
+import org.apache.unomi.tracing.api.RequestTracer;
 import org.osgi.framework.BundleContext;
 
 import java.lang.reflect.Method;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -45,14 +45,17 @@ import java.util.stream.Collectors;
 public class TestConditionEvaluators {
 
     private static Map<String, ConditionType> conditionTypes = new ConcurrentHashMap<>();
-    private static final DateTimeFormatter ISO_DATE_FORMAT =
-            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'").withZone(ZoneOffset.UTC);
-    private static final DateTimeFormatter YEAR_MONTH_DAY_FORMAT =
-            DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
+    private static final SimpleDateFormat ISO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
     private static EventService eventService;
     private static BundleContext bundleContext;
     private static TestRequestTracer tracer = new TestRequestTracer(false);
     private static Map<String, ConditionEvaluator> evaluators = new HashMap<>();
+
+    static {
+        ISO_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
+        yearMonthDayDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+    }
 
     public static void setEventService(EventService service) {
         eventService = service;
@@ -62,7 +65,7 @@ public class TestConditionEvaluators {
         TestConditionEvaluators.bundleContext = bundleContext;
     }
 
-    public static TestRequestTracer getTracer() {
+    public static RequestTracer getTracer() {
         return tracer;
     }
 
@@ -83,15 +86,9 @@ public class TestConditionEvaluators {
         return (condition, item, context, dispatcher) -> {
             tracer.startOperation("boolean", "Evaluating boolean condition with operator: " + condition.getParameter("operator"), condition);
             String operator = (String) condition.getParameter("operator");
-            Object subConditionsParam = condition.getParameter("subConditions");
-            if (!(subConditionsParam instanceof List)) {
-                tracer.endOperation(true, "No subconditions found, returning true");
-                return true;
-            }
-            @SuppressWarnings("unchecked")
-            List<Condition> subConditions = (List<Condition>) subConditionsParam;
+            List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
 
-            if (subConditions.isEmpty()) {
+            if (subConditions == null || subConditions.isEmpty()) {
                 tracer.endOperation(true, "No subconditions found, returning true");
                 return true;
             }
@@ -373,13 +370,8 @@ public class TestConditionEvaluators {
     private static boolean evaluateDateCondition(Object actualValue, Object expectedValueDate,
                                                Object expectedValueDateExpr, String operator) {
         Object expectedDate = expectedValueDate == null ? expectedValueDateExpr : expectedValueDate;
-        Date actualDateVal = getDate(actualValue);
-        Date expectedDateVal = getDate(expectedDate);
-        if (actualDateVal == null || expectedDateVal == null) {
-            return false;
-        }
-        boolean isSameDay = YEAR_MONTH_DAY_FORMAT.format(actualDateVal.toInstant())
-                .equals(YEAR_MONTH_DAY_FORMAT.format(expectedDateVal.toInstant()));
+        boolean isSameDay = yearMonthDayDateFormat.format(getDate(actualValue))
+                .equals(yearMonthDayDateFormat.format(getDate(expectedDate)));
         return operator.equals("isDay") ? isSameDay : !isSameDay;
     }
 
@@ -431,7 +423,7 @@ public class TestConditionEvaluators {
         switch (operator) {
             case "in": return actual.stream().anyMatch(expected::contains);
             case "inContains": return actual.stream().anyMatch(a ->
-                (a instanceof String) && expected.stream().anyMatch(b -> (b instanceof String) && ((String) a).contains((String) b)));
+                expected.stream().anyMatch(b -> ((String) a).contains((String) b)));
             case "notIn": return actual.stream().noneMatch(expected::contains);
             case "all": return expected.stream().allMatch(actual::contains);
             case "hasNoneOf": return Collections.disjoint(actual, expected);
@@ -532,13 +524,8 @@ public class TestConditionEvaluators {
                 String key = (String) parameters.get("generatedPropertyKey");
                 tracer.trace(condition, "Using generated property key: " + key);
 
-                Object pastEventsObj = profile.getSystemProperties().get("pastEvents");
-                if (!(pastEventsObj instanceof List)) {
-                    tracer.trace(condition, "No pastEvents found in profile system properties");
-                    count = 0;
-                } else {
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> pastEvents = (List<Map<String, Object>>) pastEventsObj;
+                List<Map<String, Object>> pastEvents = (ArrayList<Map<String, Object>>) profile.getSystemProperties().get("pastEvents");
+                if (pastEvents != null) {
                     tracer.trace(condition, "Found pastEvents in profile system properties");
                     Number l = (Number) pastEvents
                             .stream()
@@ -547,6 +534,9 @@ public class TestConditionEvaluators {
                             .map(pastEvent -> pastEvent.get("count")).orElse(0L);
                     count = l.longValue();
                     tracer.trace(condition, "Found count=" + count + " for key=" + key);
+                } else {
+                    tracer.trace(condition, "No pastEvents found in profile system properties");
+                    count = 0;
                 }
             } else {
                 tracer.trace(condition, "No generatedPropertyKey found, querying events directly");
@@ -916,7 +906,7 @@ public class TestConditionEvaluators {
     }
 
     public static Map<String, ConditionType> getConditionTypes() {
-        return Collections.unmodifiableMap(conditionTypes);
+        return conditionTypes;
     }
 
     public static ConditionType getConditionType(String conditionTypeId) {

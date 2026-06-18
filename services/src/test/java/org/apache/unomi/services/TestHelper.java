@@ -36,9 +36,15 @@ import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cluster.ClusterServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
+import org.apache.unomi.services.impl.events.EventServiceImpl;
+import org.apache.unomi.services.impl.rules.RulesServiceImpl;
+import org.apache.unomi.services.impl.rules.TestActionExecutorDispatcher;
 import org.apache.unomi.services.impl.scheduler.*;
 import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.apache.unomi.services.impl.validation.validators.*;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TraceNode;
+import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.event.EventAdmin;
@@ -113,12 +119,14 @@ public class TestHelper {
         EventAdmin eventAdmin
     ) {
         DefinitionsServiceImpl definitionsService = new DefinitionsServiceImpl();
+        TracerService tracerService = createTracerService();
         definitionsService.setPersistenceService(persistenceService);
         definitionsService.setBundleContext(bundleContext);
         definitionsService.setSchedulerService(schedulerService);
         definitionsService.setCacheService(multiTypeCacheService);
         definitionsService.setContextManager(executionContextManager);
         definitionsService.setTenantService(tenantService);
+        definitionsService.setTracerService(tracerService);
         definitionsService.setEventAdmin(eventAdmin);
 
         // Configure built-in validators for the ConditionValidationService created internally
@@ -167,6 +175,86 @@ public class TestHelper {
         return new AbstractMap.SimpleEntry<>(definitionsService, eventAdmin);
     }
 
+    public static RulesServiceImpl createRulesService(
+        PersistenceService persistenceService,
+        BundleContext bundleContext,
+        SchedulerService schedulerService,
+        DefinitionsServiceImpl definitionsService,
+        EventServiceImpl eventService,
+        ExecutionContextManager executionContextManager,
+        TenantService tenantService,
+        MultiTypeCacheService multiTypeCacheService,
+        TestActionExecutorDispatcher actionExecutorDispatcher
+    ) {
+        return createRulesService(persistenceService, bundleContext, schedulerService,
+            definitionsService, eventService, executionContextManager, tenantService,
+            multiTypeCacheService, actionExecutorDispatcher, null);
+    }
+
+    public static RulesServiceImpl createRulesService(
+        PersistenceService persistenceService,
+        BundleContext bundleContext,
+        SchedulerService schedulerService,
+        DefinitionsServiceImpl definitionsService,
+        EventServiceImpl eventService,
+        ExecutionContextManager executionContextManager,
+        TenantService tenantService,
+        MultiTypeCacheService multiTypeCacheService,
+        TestActionExecutorDispatcher actionExecutorDispatcher,
+        EventAdmin eventAdmin
+    ) {
+        RulesServiceImpl rulesService = new RulesServiceImpl();
+
+        // Set up tracing
+        TracerService tracerService = createTracerService();
+        TestRequestTracer tracer = new TestRequestTracer(true);
+        actionExecutorDispatcher.setTracer(tracer);
+
+        rulesService.setBundleContext(bundleContext);
+        rulesService.setPersistenceService(persistenceService);
+        rulesService.setDefinitionsService(definitionsService);
+        rulesService.setEventService(eventService);
+        rulesService.setActionExecutorDispatcher(actionExecutorDispatcher);
+        rulesService.setTenantService(tenantService);
+        rulesService.setSchedulerService(schedulerService);
+        rulesService.setContextManager(executionContextManager);
+        rulesService.setTracerService(tracerService);
+        rulesService.setCacheService(multiTypeCacheService);
+
+
+        // Create and register test action type
+        ActionType testActionType = new ActionType();
+        testActionType.setItemId("test");
+        Metadata actionMetadata = new Metadata();
+        actionMetadata.setId("test");
+        actionMetadata.setEnabled(true);
+        testActionType.setMetadata(actionMetadata);
+        testActionType.setActionExecutor("test");
+        definitionsService.setActionType(testActionType);
+
+        // Create and register setEventOccurenceCountAction type
+        ActionType setEventOccurenceCountActionType = new ActionType();
+        setEventOccurenceCountActionType.setItemId("setEventOccurenceCountAction");
+        Metadata setEventOccurenceCountMetadata = new Metadata();
+        setEventOccurenceCountMetadata.setId("setEventOccurenceCountAction");
+        setEventOccurenceCountMetadata.setEnabled(true);
+        setEventOccurenceCountActionType.setMetadata(setEventOccurenceCountMetadata);
+        setEventOccurenceCountActionType.setActionExecutor("setEventOccurenceCountAction");
+        definitionsService.setActionType(setEventOccurenceCountActionType);
+
+        // Initialize rule caches
+        rulesService.postConstruct();
+        eventService.addEventListenerService(rulesService);
+
+        // Register RulesServiceImpl as EventHandler with EventAdmin if provided
+        // In real OSGi, this would be done via service registry, but for tests we register manually
+        if (eventAdmin instanceof TestEventAdmin) {
+            ((TestEventAdmin) eventAdmin).registerHandler(
+                rulesService, "org/apache/unomi/definitions/**");
+        }
+
+        return rulesService;
+    }
 
     /**
      * Creates a scheduler service instance for testing purposes with ClusterService support.
@@ -397,8 +485,6 @@ public class TestHelper {
         return schedulerService;
     }
 
-
-
     public static ConditionValidationService createConditionValidationService() {
         ConditionValidationServiceImpl conditionValidationService = new ConditionValidationServiceImpl();
         List<ValueTypeValidator> validators = new ArrayList<>();
@@ -415,9 +501,13 @@ public class TestHelper {
         return conditionValidationService;
     }
 
+    public static TracerService createTracerService() {
+        return new TestTracerService();
+    }
+
     /**
-     * Creates and wires a new ClusterServiceImpl with the specified persistence service and node ID.
-     * Callers must invoke postConstruct() themselves if initialization behaviour is needed.
+     * Creates a cluster service instance for testing purposes.
+     * Initializes a new ClusterServiceImpl with the specified persistence service and node ID.
      *
      * NOTE: Due to circular dependency between ClusterService and SchedulerService,
      * when using both services together:
@@ -435,10 +525,9 @@ public class TestHelper {
     }
 
 
-
     /**
-     * Creates and wires a new ClusterServiceImpl with custom addresses and bundle context.
-     * Callers must invoke postConstruct() themselves if initialization behaviour is needed.
+     * Creates a cluster service instance for testing purposes with custom addresses and bundle context.
+     * Initializes a new ClusterServiceImpl with the specified persistence service, node ID, addresses, and bundle context.
      *
      * NOTE: Due to circular dependency between ClusterService and SchedulerService,
      * when using both services together:
@@ -469,6 +558,43 @@ public class TestHelper {
         return clusterService;
     }
 
+    /**
+     * Test implementation of TracerService for testing purposes.
+     * Provides basic tracing functionality with a test request tracer.
+     */
+    private static class TestTracerService implements TracerService {
+        private final RequestTracer requestTracer = new TestRequestTracer(true);
+
+        @Override
+        public RequestTracer getCurrentTracer() {
+            return requestTracer;
+        }
+
+        @Override
+        public void enableTracing() {
+            requestTracer.setEnabled(true);
+        }
+
+        @Override
+        public void disableTracing() {
+            requestTracer.setEnabled(false);
+        }
+
+        @Override
+        public boolean isTracingEnabled() {
+            return requestTracer.isEnabled();
+        }
+
+        @Override
+        public TraceNode getTraceNode() {
+            return requestTracer.getTraceNode();
+        }
+
+        @Override
+        public void cleanup() {
+            requestTracer.reset();
+        }
+    }
 
     /**
      * Creates a test action type with specified configuration.
@@ -557,6 +683,22 @@ public class TestHelper {
      * @param tracerService The tracer service to use
      * @return A configured EventServiceImpl instance
      */
+    public static EventServiceImpl createEventService(
+            PersistenceService persistenceService,
+            BundleContext bundleContext,
+            DefinitionsServiceImpl definitionsService,
+            TenantService tenantService,
+            TracerService tracerService) {
+        EventServiceImpl eventService = new EventServiceImpl();
+        eventService.setBundleContext(bundleContext);
+        eventService.setPersistenceService(persistenceService);
+        eventService.setDefinitionsService(definitionsService);
+        eventService.setTenantService(tenantService);
+        eventService.setTracerService(tracerService);
+
+
+        return eventService;
+    }
 
     /**
      * Creates a TypeResolutionService instance for testing purposes.
@@ -564,6 +706,9 @@ public class TestHelper {
      * @param definitionsService The definitions service to use
      * @return A configured TypeResolutionServiceImpl instance
      */
+    public static TypeResolutionService createTypeResolutionService(DefinitionsService definitionsService) {
+        return new TypeResolutionServiceImpl(definitionsService);
+    }
 
     public static void setupSegmentActionTypes(DefinitionsServiceImpl definitionsService) {
         // Register the evaluateProfileSegmentsAction type
@@ -651,7 +796,7 @@ public class TestHelper {
                     return;
                 }
             } catch (IOException e) {
-                LOGGER.warn("Error deleting default storage directory, will retry", e);
+                LOGGER.warn("Error deleting default storage directory, will retry: {}", e.getMessage());
             }
             // Use shorter sleep time (100ms instead of 1000ms) for faster retries
             // This significantly speeds up test execution when cleanup is needed
@@ -749,7 +894,7 @@ public class TestHelper {
                 Thread.sleep(retryDelay);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new RuntimeException("Retry interrupted", e);
+                break;
             }
 
             result = querySupplier.get();
@@ -813,8 +958,7 @@ public class TestHelper {
             String... tenantIds) throws Exception {
 
         // Stop scheduler service
-        if (schedulerService instanceof SchedulerServiceImpl) {
-            // instanceof already handles null; preDestroy shuts down threads cleanly
+        if (schedulerService != null && schedulerService instanceof SchedulerServiceImpl) {
             ((SchedulerServiceImpl) schedulerService).preDestroy();
         }
 
@@ -828,13 +972,12 @@ public class TestHelper {
         }
 
         // Clear persistence service data if possible
-        if (persistenceService instanceof InMemoryPersistenceServiceImpl) {
-            // purge(null) purges all items — used to reset test state between test methods
-            ((InMemoryPersistenceServiceImpl) persistenceService).purge((Date) null);
+        if (persistenceService != null && persistenceService instanceof InMemoryPersistenceServiceImpl) {
+            ((InMemoryPersistenceServiceImpl) persistenceService).purge((Date)null);
         }
 
         // Reset tenant context
-        if (tenantService instanceof TestTenantService) {
+        if (tenantService != null && tenantService instanceof TestTenantService) {
             // clearCurrentTenantId() removes the ThreadLocal entry rather than setting it to null
             ((TestTenantService) tenantService).clearCurrentTenantId();
         }

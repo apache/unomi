@@ -21,7 +21,6 @@ import org.osgi.framework.*;
 import java.io.File;
 import java.io.InputStream;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Dictionary;
 import java.util.HashMap;
 import java.util.Map;
@@ -149,7 +148,7 @@ public class TestBundleContext implements BundleContext {
 
     @Override
     public <S> Collection<ServiceReference<S>> getServiceReferences(Class<S> clazz, String filter) {
-        return Collections.emptyList();
+        return null;
     }
 
     @Override

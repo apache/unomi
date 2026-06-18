@@ -62,9 +62,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  *    - EVENT_FILTER property is optional and not implemented (minimal compliance)
  * 
  * Threading model:
- * - postEvent(): Each handler has a dedicated daemon thread (from a cached thread pool) consuming
- *   events from its own queue, guaranteeing per-handler ordered delivery
+ * - postEvent(): Uses a single-threaded executor to process events in order
  * - sendEvent(): Calls handlers directly in the current thread (synchronous)
+ * - Each handler has a dedicated queue to guarantee ordered delivery per handler
  * 
  * Note: Security (TopicPermission) is not enforced in this test mock, as it's not required for minimal compliance
  * in a test environment. Real OSGi implementations must enforce TopicPermission checks.
@@ -81,18 +81,10 @@ public class TestEventAdmin implements EventAdmin {
     private final Map<EventHandler, Set<String>> handlers = new ConcurrentHashMap<>();
 
     /**
-     * Cached thread pool providing one daemon thread per registered handler.
-     * A single-thread executor cannot be shared across handlers because each handler's
-     * worker blocks on queue.take(), starving all subsequent handler submissions.
+     * Single-threaded executor for processing asynchronous events in order.
+     * This ensures events are delivered to handlers in the order they were posted.
      */
     private final ExecutorService asyncExecutor;
-
-    /**
-     * Number of events currently being processed (taken from queue but not yet finished).
-     * Used by waitForEventProcessing to avoid a race where the queue appears empty before
-     * handleEvent has actually completed.
-     */
-    private final AtomicInteger inFlightCount = new AtomicInteger(0);
 
     /**
      * Queue per handler to guarantee event sequencing.
@@ -125,9 +117,13 @@ public class TestEventAdmin implements EventAdmin {
      */
     private final List<Event> sentEvents = new CopyOnWriteArrayList<>();
 
+    /**
+     * Creates a TestEventAdmin with a single-threaded executor for ordered event delivery.
+     */
     public TestEventAdmin() {
-        this.asyncExecutor = Executors.newCachedThreadPool(r -> {
-            Thread t = new Thread(r, "TestEventAdmin-Handler-" + System.identityHashCode(this));
+        // Use single-threaded executor to guarantee ordered delivery
+        this.asyncExecutor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "TestEventAdmin-Async-" + System.identityHashCode(this));
             t.setDaemon(true);
             return t;
         });
@@ -165,15 +161,15 @@ public class TestEventAdmin implements EventAdmin {
             try {
                 while (!Thread.currentThread().isInterrupted()) {
                     Event event = queue.take(); // Blocks until event is available
-                    inFlightCount.incrementAndGet();
-                    try {
-                        handler.handleEvent(event);
-                    } catch (Exception e) {
-                        // OSGi spec: catch exceptions, log them, and continue
-                        LOGGER.warn("Exception in event handler {} while processing event {}: {}",
-                            handler.getClass().getName(), event.getTopic(), e.getMessage(), e);
-                    } finally {
-                        inFlightCount.decrementAndGet();
+                    if (event != null) {
+                        try {
+                            handler.handleEvent(event);
+                        } catch (Exception e) {
+                            // OSGi spec: catch exceptions, log them, and continue
+                            // If LogService is available, it should be used (we use SLF4J)
+                            LOGGER.warn("Exception in event handler {} while processing event {}: {}",
+                                handler.getClass().getName(), event.getTopic(), e.getMessage(), e);
+                        }
                     }
                 }
             } catch (InterruptedException e) {
@@ -327,10 +323,6 @@ public class TestEventAdmin implements EventAdmin {
                 return true;
             }
 
-            if ("**".equals(filter)) {
-                return true;
-            }
-
             // Support wildcard pattern: "org/apache/unomi/**"
             // Matches all topics starting with the prefix (including the prefix itself)
             if (filter.endsWith("/**")) {
@@ -426,24 +418,23 @@ public class TestEventAdmin implements EventAdmin {
      */
     public boolean waitForEventProcessing(long timeoutMs) {
         long deadline = System.currentTimeMillis() + timeoutMs;
-
-        // Wait until all queues are drained AND all in-flight handleEvent calls have returned.
-        // Checking only queue.isEmpty() is insufficient: workers remove events from the queue
-        // before calling handleEvent, so the queue can appear empty while processing is ongoing.
-        while (System.currentTimeMillis() < deadline) {
-            boolean allQueuesEmpty = handlerQueues.values().stream().allMatch(BlockingQueue::isEmpty);
-            if (allQueuesEmpty && inFlightCount.get() == 0) {
-                return true;
+        
+        // Wait for all handler queues to be empty
+        for (BlockingQueue<Event> queue : handlerQueues.values()) {
+            while (!queue.isEmpty() && System.currentTimeMillis() < deadline) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return false;
+                }
             }
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+            if (!queue.isEmpty()) {
                 return false;
             }
         }
-
-        return false;
+        
+        return true;
     }
 
     /**

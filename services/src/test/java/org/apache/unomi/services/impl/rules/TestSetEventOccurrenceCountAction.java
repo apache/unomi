@@ -32,7 +32,7 @@ import java.util.*;
 
 /**
  * Test implementation of the SetEventOccurrenceCountAction.
- * TODO: This is a duplicate of the SetEventOccurrenceCountAction in the unomi-plugins-base project to avoid introducing a dependency on it but should be cleaned up.
+ * @TODO This is a duplicate of the SetEventOccurrenceCountAction in the unomi-plugins-base project to avoid introducing a depending to it but should be cleaned up.
  */
 public class TestSetEventOccurrenceCountAction implements ActionExecutor {
 
