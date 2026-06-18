@@ -156,9 +156,6 @@ public class SegmentServiceImplTest {
         actionExecutorDispatcher.addExecutor("evaluateProfileSegments",
                 new TestEvaluateProfileSegmentsAction(segmentService));
 
-        // Register TestEvaluateProfileSegmentsAction
-        actionExecutorDispatcher.addExecutor("evaluateProfileSegments", new TestEvaluateProfileSegmentsAction(segmentService));
-
         // Set up action types
         TestHelper.setupSegmentActionTypes(definitionsService);
 

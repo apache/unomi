@@ -86,9 +86,15 @@ public class TestConditionEvaluators {
         return (condition, item, context, dispatcher) -> {
             tracer.startOperation("boolean", "Evaluating boolean condition with operator: " + condition.getParameter("operator"), condition);
             String operator = (String) condition.getParameter("operator");
-            List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+            Object subConditionsParam = condition.getParameter("subConditions");
+            if (!(subConditionsParam instanceof List)) {
+                tracer.endOperation(true, "No subconditions found, returning true");
+                return true;
+            }
+            @SuppressWarnings("unchecked")
+            List<Condition> subConditions = (List<Condition>) subConditionsParam;
 
-            if (subConditions == null || subConditions.isEmpty()) {
+            if (subConditions.isEmpty()) {
                 tracer.endOperation(true, "No subconditions found, returning true");
                 return true;
             }
@@ -370,8 +376,13 @@ public class TestConditionEvaluators {
     private static boolean evaluateDateCondition(Object actualValue, Object expectedValueDate,
                                                Object expectedValueDateExpr, String operator) {
         Object expectedDate = expectedValueDate == null ? expectedValueDateExpr : expectedValueDate;
-        boolean isSameDay = yearMonthDayDateFormat.format(getDate(actualValue))
-                .equals(yearMonthDayDateFormat.format(getDate(expectedDate)));
+        Date actualDateVal = getDate(actualValue);
+        Date expectedDateVal = getDate(expectedDate);
+        if (actualDateVal == null || expectedDateVal == null) {
+            return false;
+        }
+        boolean isSameDay = yearMonthDayDateFormat.format(actualDateVal)
+                .equals(yearMonthDayDateFormat.format(expectedDateVal));
         return operator.equals("isDay") ? isSameDay : !isSameDay;
     }
 
@@ -423,7 +434,7 @@ public class TestConditionEvaluators {
         switch (operator) {
             case "in": return actual.stream().anyMatch(expected::contains);
             case "inContains": return actual.stream().anyMatch(a ->
-                expected.stream().anyMatch(b -> ((String) a).contains((String) b)));
+                (a instanceof String) && expected.stream().anyMatch(b -> (b instanceof String) && ((String) a).contains((String) b)));
             case "notIn": return actual.stream().noneMatch(expected::contains);
             case "all": return expected.stream().allMatch(actual::contains);
             case "hasNoneOf": return Collections.disjoint(actual, expected);
@@ -524,8 +535,13 @@ public class TestConditionEvaluators {
                 String key = (String) parameters.get("generatedPropertyKey");
                 tracer.trace(condition, "Using generated property key: " + key);
 
-                List<Map<String, Object>> pastEvents = (ArrayList<Map<String, Object>>) profile.getSystemProperties().get("pastEvents");
-                if (pastEvents != null) {
+                Object pastEventsObj = profile.getSystemProperties().get("pastEvents");
+                if (!(pastEventsObj instanceof List)) {
+                    tracer.trace(condition, "No pastEvents found in profile system properties");
+                    count = 0;
+                } else {
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> pastEvents = (List<Map<String, Object>>) pastEventsObj;
                     tracer.trace(condition, "Found pastEvents in profile system properties");
                     Number l = (Number) pastEvents
                             .stream()
@@ -534,9 +550,6 @@ public class TestConditionEvaluators {
                             .map(pastEvent -> pastEvent.get("count")).orElse(0L);
                     count = l.longValue();
                     tracer.trace(condition, "Found count=" + count + " for key=" + key);
-                } else {
-                    tracer.trace(condition, "No pastEvents found in profile system properties");
-                    count = 0;
                 }
             } else {
                 tracer.trace(condition, "No generatedPropertyKey found, querying events directly");
@@ -906,7 +919,7 @@ public class TestConditionEvaluators {
     }
 
     public static Map<String, ConditionType> getConditionTypes() {
-        return conditionTypes;
+        return Collections.unmodifiableMap(conditionTypes);
     }
 
     public static ConditionType getConditionType(String conditionTypeId) {

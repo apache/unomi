@@ -98,6 +98,13 @@ public class TestEventAdmin implements EventAdmin {
     private final Map<EventHandler, Future<?>> handlerWorkers = new ConcurrentHashMap<>();
 
     /**
+     * Counter for in-flight handleEvent calls across all handlers.
+     * Used by waitForEventProcessing to confirm all processing has truly completed,
+     * not just that queues are drained (workers dequeue before calling handleEvent).
+     */
+    private final AtomicInteger inFlightCount = new AtomicInteger(0);
+
+    /**
      * Counter for tracking posted events (for test verification).
      */
     private final AtomicInteger postedEventCount = new AtomicInteger(0);
@@ -118,12 +125,13 @@ public class TestEventAdmin implements EventAdmin {
     private final List<Event> sentEvents = new CopyOnWriteArrayList<>();
 
     /**
-     * Creates a TestEventAdmin with a single-threaded executor for ordered event delivery.
+     * Creates a TestEventAdmin with a cached thread pool so each registered handler
+     * can run its own long-lived worker thread without blocking other handlers.
+     * Per-handler ordering is guaranteed by the per-handler BlockingQueue.
      */
     public TestEventAdmin() {
-        // Use single-threaded executor to guarantee ordered delivery
-        this.asyncExecutor = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "TestEventAdmin-Async-" + System.identityHashCode(this));
+        this.asyncExecutor = Executors.newCachedThreadPool(r -> {
+            Thread t = new Thread(r, "TestEventAdmin-Handler-" + System.identityHashCode(this));
             t.setDaemon(true);
             return t;
         });
@@ -162,6 +170,7 @@ public class TestEventAdmin implements EventAdmin {
                 while (!Thread.currentThread().isInterrupted()) {
                     Event event = queue.take(); // Blocks until event is available
                     if (event != null) {
+                        inFlightCount.incrementAndGet();
                         try {
                             handler.handleEvent(event);
                         } catch (Exception e) {
@@ -169,6 +178,8 @@ public class TestEventAdmin implements EventAdmin {
                             // If LogService is available, it should be used (we use SLF4J)
                             LOGGER.warn("Exception in event handler {} while processing event {}: {}",
                                 handler.getClass().getName(), event.getTopic(), e.getMessage(), e);
+                        } finally {
+                            inFlightCount.decrementAndGet();
                         }
                     }
                 }
@@ -418,23 +429,23 @@ public class TestEventAdmin implements EventAdmin {
      */
     public boolean waitForEventProcessing(long timeoutMs) {
         long deadline = System.currentTimeMillis() + timeoutMs;
-        
-        // Wait for all handler queues to be empty
-        for (BlockingQueue<Event> queue : handlerQueues.values()) {
-            while (!queue.isEmpty() && System.currentTimeMillis() < deadline) {
-                try {
-                    Thread.sleep(10);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return false;
-                }
+
+        // Wait until all queues are drained AND all in-flight handleEvent calls have returned.
+        // Checking only queue.isEmpty() is insufficient: workers remove events from the queue
+        // before calling handleEvent, so the queue can appear empty while processing is ongoing.
+        while (System.currentTimeMillis() < deadline) {
+            boolean allQueuesEmpty = handlerQueues.values().stream().allMatch(BlockingQueue::isEmpty);
+            if (allQueuesEmpty && inFlightCount.get() == 0) {
+                return true;
             }
-            if (!queue.isEmpty()) {
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
                 return false;
             }
         }
-        
-        return true;
+        return false;
     }
 
     /**

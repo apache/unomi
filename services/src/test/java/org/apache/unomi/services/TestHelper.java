@@ -796,7 +796,7 @@ public class TestHelper {
                     return;
                 }
             } catch (IOException e) {
-                LOGGER.warn("Error deleting default storage directory, will retry: {}", e.getMessage());
+                LOGGER.warn("Error deleting default storage directory, will retry", e);
             }
             // Use shorter sleep time (100ms instead of 1000ms) for faster retries
             // This significantly speeds up test execution when cleanup is needed
@@ -894,7 +894,7 @@ public class TestHelper {
                 Thread.sleep(retryDelay);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                break;
+                throw new RuntimeException("Retry interrupted", e);
             }
 
             result = querySupplier.get();
