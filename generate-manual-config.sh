@@ -25,10 +25,10 @@
 # === VERSION CONFIGURATION ===
 # Latest version (master branch)
 LATEST_BRANCH="master"
-LATEST_VERSION="3.1.0-SNAPSHOT"
+LATEST_VERSION="3.0.1-SNAPSHOT"
 LATEST_DIR="latest"
 
-# Stable version (release branch)  
+# Stable version (release branch)
 STABLE_BRANCH="unomi-3.0.x"
 STABLE_VERSION="3.0.0"
 STABLE_DIR="3_0_x"
@@ -82,7 +82,7 @@ PROJECT_STAGING_DIR="target/staging"
 # === TIMEOUTS ===
 # Command timeouts in seconds
 MAVEN_TIMEOUT=1800  # 30 minutes
-GIT_TIMEOUT=300     # 5 minutes  
+GIT_TIMEOUT=300     # 5 minutes
 SVN_TIMEOUT=600     # 10 minutes
 
 # Export all configuration variables
