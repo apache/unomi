@@ -48,12 +48,11 @@ class RestExceptionMapperTest {
     }
 
     @Test
-    void runtimeException_withJsonCause_stillMapsToInternalServerError() {
-        // RuntimeExceptionMapper only downgrades the log level for JSON causes; the response stays 500.
+    void runtimeException_withJsonMappingCause_mapsToBadRequest() {
         RuntimeException exception = new RuntimeException(
                 JsonMappingException.from((com.fasterxml.jackson.core.JsonParser) null, "cannot deserialize"));
         Response response = new RuntimeExceptionMapper().toResponse(exception);
-        assertErrorResponse(response, 500, "internalServerError");
+        assertErrorResponse(response, 400, "badRequest");
     }
 
     @Test

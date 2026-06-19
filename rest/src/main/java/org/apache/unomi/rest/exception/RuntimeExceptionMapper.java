@@ -39,8 +39,8 @@ public class RuntimeExceptionMapper extends AbstractRestExceptionMapper implemen
                 ? rootCause.getMessage()
                 : (exception.getMessage() != null ? exception.getMessage() : ""));
 
-        // For client errors (like deserialization), log at WARN level. For true server errors, log at ERROR level.
-        if (isJsonDeserializationError(rootCause)) {
+        boolean isDeserializationError = isJsonDeserializationError(rootCause);
+        if (isDeserializationError) {
             LOGGER.warn(
                     "Bad request on {} - Root cause: {} - {} (Set RuntimeExceptionMapper to debug to get the full stacktrace)",
                     requestContext, rootCauseClassName, rootCauseMessage);
@@ -51,6 +51,6 @@ public class RuntimeExceptionMapper extends AbstractRestExceptionMapper implemen
         }
         LOGGER.debug("Full exception details for request: {}", requestContext, exception);
 
-        return internalServerErrorResponse();
+        return isDeserializationError ? badRequestResponse() : internalServerErrorResponse();
     }
 }
