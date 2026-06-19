@@ -349,19 +349,18 @@ public class ContextJsonEndpoint {
             } else {
                 return stringValue;
             }
-        } else if (value instanceof List) {
-            List values = (List) value;
-            List newValues = new ArrayList();
+        } else if (value instanceof List values) {
+            List newValues = new ArrayList(values.size());
             for (Object listObject : values) {
                 Object newObject = sanitizeValue(listObject);
                 if (newObject != null) {
                     newValues.add(newObject);
                 }
             }
-            return values;
-        } else if (value instanceof Map) {
-            Map<Object, Object> newMap = new LinkedHashMap<>();
-            ((Map<?, ?>) value).forEach((key, value1) -> {
+            return newValues;
+        } else if (value instanceof Map values) {
+            Map<Object, Object> newMap = new LinkedHashMap<>(values.size());
+            values.forEach((key, value1) -> {
                 Object newObject = sanitizeValue(value1);
                 if (newObject != null) {
                     newMap.put(key, newObject);
