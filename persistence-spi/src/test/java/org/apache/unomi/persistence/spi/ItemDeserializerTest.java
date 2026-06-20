@@ -76,6 +76,11 @@ public class ItemDeserializerTest {
     }
 
     @Test(expected = JsonMappingException.class)
+    public void deserialize_booleanValue_throwsJsonMappingException() throws Exception {
+        objectMapper.readValue("true", Item.class);
+    }
+
+    @Test(expected = JsonMappingException.class)
     public void deserialize_numericItemType_throwsJsonMappingException() throws Exception {
         objectMapper.readValue("{\"itemType\":42,\"itemId\":\"home\"}", Item.class);
     }

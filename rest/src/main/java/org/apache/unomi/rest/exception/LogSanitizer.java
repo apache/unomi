@@ -32,6 +32,7 @@ final class LogSanitizer {
 
     private static final int MAX_URL_LENGTH = 500;
     private static final int MAX_QUERY_STRING_LENGTH = 200;
+    private static final int MAX_MESSAGE_LENGTH = 500;
     private static final int MAX_CLASS_NAME_LENGTH = 100;
     private static final int MAX_METHOD_LENGTH = 10;
     private static final int MAX_QUERY_PARAMS = 10;
@@ -51,6 +52,9 @@ final class LogSanitizer {
     static String forLogging(String input) {
         if (input == null) {
             return "";
+        }
+        if (input.length() > MAX_MESSAGE_LENGTH) {
+            input = input.substring(0, MAX_MESSAGE_LENGTH) + "...[truncated]";
         }
         StringBuilder sanitized = new StringBuilder(input.length());
         for (int i = 0; i < input.length(); i++) {

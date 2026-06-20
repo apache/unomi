@@ -75,13 +75,15 @@ public class ItemDeserializer extends StdDeserializer<Item> {
         if (objectClass == null) {
             objectClass = CustomItem.class;
         } else {
+            // Registered Item subclasses don't declare itemType as a Jackson field; remove it
+            // so treeToValue doesn't fail with an unknown-property error.
             treeNode.remove("itemType");
         }
         Item item = codec.treeToValue(treeNode, objectClass);
         if (item == null) {
             throw JsonMappingException.from(jp, "Deserializing itemType '" + type + "' produced a null Item");
         }
-        item.setItemId(itemIdNode.asText());
+        item.setItemId(itemIdNode.textValue());
         if (item instanceof CustomItem) {
             ((CustomItem) item).setCustomItemType(type);
         }
@@ -95,6 +97,6 @@ public class ItemDeserializer extends StdDeserializer<Item> {
         if (jsonNode.isArray()) {
             return "an array";
         }
-        return jsonNode.getNodeType().name().toLowerCase();
+        return "a " + jsonNode.getNodeType().name().toLowerCase();
     }
 }
