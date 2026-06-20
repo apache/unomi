@@ -28,9 +28,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for the REST exception mappers (UNOMI-928). These verify the status code and JSON body
- * contract directly, without a running container, so the mapper logic is validated deterministically
- * regardless of how a given endpoint deserializes its request body.
+ * Unit tests for the REST exception mappers (UNOMI-928, UNOMI-952). These verify the status code
+ * and JSON body contract directly, without a running container, so the mapper logic is validated
+ * deterministically regardless of how a given endpoint deserializes its request body.
  */
 class RestExceptionMapperTest {
 
@@ -51,6 +51,13 @@ class RestExceptionMapperTest {
     void runtimeException_withJsonMappingCause_mapsToBadRequest() {
         RuntimeException exception = new RuntimeException(
                 JsonMappingException.from((com.fasterxml.jackson.core.JsonParser) null, "cannot deserialize"));
+        Response response = new RuntimeExceptionMapper().toResponse(exception);
+        assertErrorResponse(response, 400, "badRequest");
+    }
+
+    @Test
+    void runtimeException_withJsonParseCause_mapsToBadRequest() {
+        RuntimeException exception = new RuntimeException(new JsonParseException(null, "malformed"));
         Response response = new RuntimeExceptionMapper().toResponse(exception);
         assertErrorResponse(response, 400, "badRequest");
     }

@@ -39,6 +39,7 @@ public class RuntimeExceptionMapper extends AbstractRestExceptionMapper implemen
                 ? rootCause.getMessage()
                 : (exception.getMessage() != null ? exception.getMessage() : ""));
 
+        // Client errors (deserialization) are logged at WARN; genuine server faults at ERROR.
         boolean isDeserializationError = isJsonDeserializationError(rootCause);
         if (isDeserializationError) {
             LOGGER.warn(

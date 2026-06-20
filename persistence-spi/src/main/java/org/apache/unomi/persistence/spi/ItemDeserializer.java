@@ -28,13 +28,13 @@ import org.apache.unomi.api.CustomItem;
 import org.apache.unomi.api.Item;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ItemDeserializer extends StdDeserializer<Item> {
 
     private static final long serialVersionUID = -7040054009670771266L;
-    private Map<String, Class<? extends Item>> classes = new HashMap<>();
+    private Map<String, Class<? extends Item>> classes = new ConcurrentHashMap<>();
 
     public ItemDeserializer() {
         super(Item.class);
@@ -49,12 +49,14 @@ public class ItemDeserializer extends StdDeserializer<Item> {
     }
 
     @Override
+    public Item getNullValue(DeserializationContext ctxt) throws JsonMappingException {
+        throw JsonMappingException.from(ctxt, "Item cannot be null");
+    }
+
+    @Override
     public Item deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
         ObjectCodec codec = jp.getCodec();
         JsonNode jsonNode = codec.readTree(jp);
-        if (jsonNode == null || jsonNode.isNull()) {
-            return null;
-        }
         if (!jsonNode.isObject()) {
             throw JsonMappingException.from(jp, "Expected a JSON object to deserialize an Item but got "
                     + describeJsonNode(jsonNode));
@@ -76,6 +78,9 @@ public class ItemDeserializer extends StdDeserializer<Item> {
             treeNode.remove("itemType");
         }
         Item item = codec.treeToValue(treeNode, objectClass);
+        if (item == null) {
+            throw JsonMappingException.from(jp, "Deserializing itemType '" + type + "' produced a null Item");
+        }
         item.setItemId(itemIdNode.asText());
         if (item instanceof CustomItem) {
             ((CustomItem) item).setCustomItemType(type);
