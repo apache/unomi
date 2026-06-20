@@ -2435,13 +2435,14 @@ public class SchedulerServiceImplTest {
         assertTrue(
             firstExecutionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
             "Task should execute with dedicated executor");
+
+        // Stop the scheduler before asserting: the task runs at 100ms fixed-rate, so on a loaded
+        // CI runner the second tick can fire between the latch release and the assertEquals.
+        schedulerService.preDestroy();
         assertEquals(1, executionCount.get(), "Task should execute once");
 
         // Force refresh to ensure the task is properly saved
         persistenceService.refreshIndex(ScheduledTask.class);
-
-        // Now shut down and restart the scheduler
-        schedulerService.preDestroy();
 
         // Create a new scheduler service
         SchedulerServiceImpl newSchedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
