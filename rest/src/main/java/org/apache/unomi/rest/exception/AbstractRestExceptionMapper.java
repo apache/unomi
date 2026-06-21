@@ -74,6 +74,8 @@ public abstract class AbstractRestExceptionMapper {
             return null;
         }
         Throwable current = throwable;
+        // Standard Java Throwable.initCause() prevents circular cause chains, so the visited-set
+        // cycle guard below is defensive and not reachable in practice.
         java.util.Set<Throwable> visited = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
         while (current.getCause() != null && current.getCause() != current && visited.add(current)) {
             current = current.getCause();

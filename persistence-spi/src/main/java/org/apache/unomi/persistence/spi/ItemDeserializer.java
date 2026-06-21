@@ -20,19 +20,21 @@ package org.apache.unomi.persistence.spi;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.unomi.api.CustomItem;
 import org.apache.unomi.api.Item;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ItemDeserializer extends StdDeserializer<Item> {
 
     private static final long serialVersionUID = -7040054009670771266L;
-    private Map<String,Class<? extends Item>> classes = new HashMap<>();
+    private Map<String, Class<? extends Item>> classes = new ConcurrentHashMap<>();
 
     public ItemDeserializer() {
         super(Item.class);
@@ -47,21 +49,54 @@ public class ItemDeserializer extends StdDeserializer<Item> {
     }
 
     @Override
+    public Item getNullValue(DeserializationContext ctxt) throws JsonMappingException {
+        throw JsonMappingException.from(ctxt, "Item cannot be null");
+    }
+
+    @Override
     public Item deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
         ObjectCodec codec = jp.getCodec();
-        ObjectNode treeNode = codec.readTree(jp);
-        String type = treeNode.get("itemType").textValue();
+        JsonNode jsonNode = codec.readTree(jp);
+        if (!jsonNode.isObject()) {
+            throw JsonMappingException.from(jp, "Expected a JSON object to deserialize an Item but got "
+                    + describeJsonNode(jsonNode));
+        }
+        ObjectNode treeNode = (ObjectNode) jsonNode;
+        JsonNode itemTypeNode = treeNode.get("itemType");
+        if (itemTypeNode == null || !itemTypeNode.isTextual()) {
+            throw JsonMappingException.from(jp, "Item JSON object must contain a textual itemType property");
+        }
+        String type = itemTypeNode.textValue();
+        JsonNode itemIdNode = treeNode.get("itemId");
+        if (itemIdNode == null || !itemIdNode.isTextual()) {
+            throw JsonMappingException.from(jp, "Item JSON object must contain a textual itemId property");
+        }
         Class<? extends Item> objectClass = classes.get(type);
         if (objectClass == null) {
             objectClass = CustomItem.class;
         } else {
+            // Registered Item subclasses don't declare itemType as a Jackson field; remove it
+            // so treeToValue doesn't fail with an unknown-property error.
             treeNode.remove("itemType");
         }
         Item item = codec.treeToValue(treeNode, objectClass);
-        item.setItemId(treeNode.get("itemId").asText());
+        if (item == null) {
+            throw JsonMappingException.from(jp, "Deserializing itemType '" + type + "' produced a null Item");
+        }
+        item.setItemId(itemIdNode.textValue());
         if (item instanceof CustomItem) {
             ((CustomItem) item).setCustomItemType(type);
         }
         return item;
+    }
+
+    private static String describeJsonNode(JsonNode jsonNode) {
+        if (jsonNode.isTextual()) {
+            return "a string";
+        }
+        if (jsonNode.isArray()) {
+            return "an array";
+        }
+        return "a " + jsonNode.getNodeType().name().toLowerCase();
     }
 }
