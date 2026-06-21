@@ -137,7 +137,8 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                 lineSplitProcessor.setProfilePropertyTypes(profileService.getTargetPropertyTypes("profiles"));
 
                 String endpoint = (String) importConfiguration.getProperties().get("source");
-                endpoint += "&moveFailed=.error";
+                // Poll immediately when the route starts rather than waiting the default 1-second initialDelay.
+                endpoint += "&initialDelay=0&moveFailed=.error";
 
                 if (StringUtils.isNotBlank(endpoint) && allowedEndpoints.contains(endpoint.substring(0, endpoint.indexOf(':')))) {
                     ProcessorDefinition prDef = from(endpoint)
