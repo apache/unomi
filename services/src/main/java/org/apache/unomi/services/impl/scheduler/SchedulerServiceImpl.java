@@ -790,6 +790,36 @@ public class SchedulerServiceImpl implements SchedulerService {
             LOGGER.debug("Error shutting down execution manager: {}", e.getMessage());
         }
 
+        // Mark tasks still in RUNNING state as CRASHED — they were interrupted mid-execution.
+        // This allows the next scheduler instance to reschedule them via CRASHED→SCHEDULED,
+        // and prevents invalid RUNNING→SCHEDULED transitions in shared persistence environments.
+        // We go directly to persistenceProvider/nonPersistentTasks here (instead of
+        // getAllTasks()/saveTask()) because shutdownNow is already true at this point,
+        // and those wrapper methods short-circuit to no-ops once that flag is set.
+        if (stateManager != null) {
+            try {
+                List<ScheduledTask> tasksToCheck = new ArrayList<>(nonPersistentTasks.values());
+                if (persistenceProvider != null) {
+                    tasksToCheck.addAll(persistenceProvider.getAllTasks());
+                }
+                for (ScheduledTask task : tasksToCheck) {
+                    if (ScheduledTask.TaskStatus.RUNNING.equals(task.getStatus())) {
+                        try {
+                            stateManager.updateTaskState(task, ScheduledTask.TaskStatus.CRASHED,
+                                    "Interrupted by scheduler shutdown", nodeId);
+                            if (task.isPersistent() && persistenceProvider != null) {
+                                persistenceProvider.saveTask(task);
+                            }
+                        } catch (Exception e) {
+                            LOGGER.warn("Error marking task {} as crashed during shutdown: {}", task.getItemId(), e.getMessage());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.debug("Error marking running tasks as crashed during shutdown: {}", e.getMessage());
+            }
+        }
+
         // Release all manager references
         this.recoveryManager = null;
         this.executionManager = null;

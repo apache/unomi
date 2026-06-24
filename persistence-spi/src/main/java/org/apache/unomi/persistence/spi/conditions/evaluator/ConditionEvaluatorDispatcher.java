@@ -42,7 +42,6 @@ import java.util.Map;
  * {@code PastEventConditionEvaluator} for a typical evaluator.
  *
  * @see org.apache.unomi.persistence.spi.conditions.evaluator.impl.ConditionEvaluatorDispatcherImpl
- * @see org.apache.unomi.plugins.advancedconditions.conditions.PastEventConditionEvaluator
  */
 public interface ConditionEvaluatorDispatcher {
 

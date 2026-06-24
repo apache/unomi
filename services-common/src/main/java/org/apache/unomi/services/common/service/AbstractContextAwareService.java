@@ -35,7 +35,15 @@ import java.util.function.Supplier;
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
 /**
- * Base class for services that need to be context-aware and handle inheritance from the system tenant.
+ * Base class for services that operate within a tenant {@link org.apache.unomi.api.ExecutionContext} and support
+ * inheritance from the system tenant.
+ * <p>
+ * Subclasses use {@link #loadWithInheritance(String, Class)} and {@link #getMetadatas(Query, Class)}
+ * to resolve tenant-scoped data with fallback to the system tenant. System-tenant operations are
+ * delegated to {@link ExecutionContextManager#executeAsSystem(Runnable)}.
+ *
+ * @see org.apache.unomi.api.services.ExecutionContextManager
+ * @see org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService
  */
 public abstract class AbstractContextAwareService {
 
@@ -44,25 +52,42 @@ public abstract class AbstractContextAwareService {
     protected PersistenceService persistenceService;
     protected volatile ExecutionContextManager contextManager = null;
 
+    /**
+     * Sets the persistence service used for loading and saving items.
+     *
+     * @param persistenceService the persistence service
+     */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
 
+    /**
+     * Sets the execution context manager for tenant-scoped operations.
+     *
+     * @param contextManager the execution context manager
+     */
     public void setContextManager(ExecutionContextManager contextManager) {
         this.contextManager = contextManager;
     }
 
+    /**
+     * Retrieves the persistence service.
+     *
+     * @return the persistence service
+     */
     public PersistenceService getPersistenceService() {
         return persistenceService;
     }
 
     /**
-     * Load an item with tenant inheritance support.
-     * First tries to load from the current tenant, then falls back to the system tenant if not found.
+     * Loads an item with tenant inheritance support.
+     * <p>
+     * First loads from the current tenant; if not found, falls back to the system tenant.
      *
-     * @param itemId The ID of the item to load
-     * @param itemClass The class of the item
-     * @return The loaded item or null if not found in either tenant
+     * @param <T> the item type
+     * @param itemId the identifier of the item to load
+     * @param itemClass the item class
+     * @return the loaded item, or {@code null} if not found in either tenant
      */
     protected <T extends Item> T loadWithInheritance(String itemId, Class<T> itemClass) {
         T item = persistenceService.load(itemId, itemClass);
@@ -75,10 +100,11 @@ public abstract class AbstractContextAwareService {
     }
 
     /**
-     * Save an item with tenant awareness.
-     * Ensures the item is saved to the current tenant and handles any inheritance implications.
+     * Saves an item to the current tenant.
+     * <p>
+     * Sets the item's tenant identifier from the current execution context before persisting.
      *
-     * @param item The item to save
+     * @param item the item to save
      */
     protected void saveWithTenant(Item item) {
         String currentTenant = contextManager.getCurrentContext().getTenantId();
@@ -89,11 +115,12 @@ public abstract class AbstractContextAwareService {
     }
 
     /**
-     * Get metadata items with tenant awareness and inheritance.
+     * Retrieves metadata for items matching a query in the current tenant.
      *
-     * @param query The query to execute
-     * @param clazz The class of items to retrieve
-     * @return A partial list of metadata items
+     * @param <T> the metadata item type
+     * @param query the query to execute
+     * @param clazz the item class
+     * @return a partial list of metadata, or empty if no tenant context is set
      */
     protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
         String currentTenantId =  contextManager.getCurrentContext().getTenantId();
@@ -109,7 +136,10 @@ public abstract class AbstractContextAwareService {
     }
 
     /**
-     * Create a condition to filter by tenant
+     * Creates a condition that filters items by tenant identifier.
+     *
+     * @param tenantId the tenant identifier
+     * @return a condition matching the given tenant
      */
     protected Condition createTenantCondition(String tenantId) {
         Condition tenantCondition = new Condition();
@@ -121,7 +151,11 @@ public abstract class AbstractContextAwareService {
     }
 
     /**
-     * Combine a query condition with a tenant condition
+     * Combines a query condition with a tenant filter using a logical AND.
+     *
+     * @param queryCondition the user query condition
+     * @param tenantCondition the tenant filter condition
+     * @return the combined condition
      */
     protected Condition combineTenantCondition(Condition queryCondition, Condition tenantCondition) {
         Condition finalCondition = new Condition();
@@ -132,7 +166,11 @@ public abstract class AbstractContextAwareService {
     }
 
     /**
-     * Convert a list of items to a list of metadata
+     * Converts a partial list of metadata items to a partial list of {@link Metadata}.
+     *
+     * @param <T> the metadata item type
+     * @param items the source items
+     * @return the converted metadata list with the same paging metadata
      */
     protected <T extends MetadataItem> PartialList<Metadata> convertToMetadataList(PartialList<T> items) {
         List<Metadata> metadatas = new LinkedList<>();
@@ -143,9 +181,9 @@ public abstract class AbstractContextAwareService {
     }
 
     /**
-     * Check if the current tenant is the system tenant
+     * Determines whether the current execution context is the system tenant.
      *
-     * @return true if the current tenant is the system tenant
+     * @return {@code true} if the current tenant is the system tenant
      */
     protected boolean isSystemTenant() {
         String currentTenant =  contextManager.getCurrentContext().getTenantId();
@@ -153,19 +191,20 @@ public abstract class AbstractContextAwareService {
     }
 
     /**
-     * Execute code in the context of the system tenant
+     * Executes an operation in the system tenant context.
      *
-     * @param runnable The code to execute
+     * @param operation the operation to execute
      */
     protected void executeAsSystem(Runnable operation) {
         contextManager.executeAsSystem(operation);
     }
 
     /**
-     * Execute code in the context of the system tenant and return a value
+     * Executes an operation in the system tenant context and returns its result.
      *
-     * @param supplier The code to execute that returns a value
-     * @return The value returned by the supplier
+     * @param <T> the result type
+     * @param operation the operation to execute
+     * @return the value returned by the operation
      */
     protected <T> T executeAsSystem(Supplier<T> operation) {
         return contextManager.executeAsSystem(operation);

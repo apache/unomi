@@ -41,7 +41,6 @@ import java.util.Map;
  *   <li>Maintains execution history within configured size limits</li>
  *   <li>Persists updated configuration information</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -66,7 +65,6 @@ public class ExportRouteCompletionProcessor implements Processor {
      *   <li>Maintains the execution history size limit</li>
      *   <li>Updates the export status to complete</li>
      * </ul>
-     * </p>
      *
      * @param exchange the Camel exchange containing export execution details
      * @throws Exception if an error occurs during processing

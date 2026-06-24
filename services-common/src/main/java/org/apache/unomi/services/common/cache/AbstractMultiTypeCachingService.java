@@ -49,7 +49,15 @@ import java.util.stream.Collectors;
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
 /**
- * Base service supporting multiple cacheable types
+ * Abstract base for services that cache multiple {@link CacheableTypeConfig} types per tenant.
+ * <p>
+ * Handles OSGi bundle lifecycle (loading predefined JSON from {@code META-INF/cxs/}), periodic
+ * cache refresh via {@link SchedulerService}, tenant-aware persistence queries, and system-tenant
+ * inheritance. Concrete implementations include {@code DefinitionsServiceImpl},
+ * {@code SegmentServiceImpl}, and {@code RulesServiceImpl}.
+ *
+ * @see MultiTypeCacheService
+ * @see CacheableTypeConfig
  */
 public abstract class AbstractMultiTypeCachingService extends AbstractContextAwareService implements SynchronousBundleListener {
 
@@ -81,26 +89,55 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     // Each service defines its supported types
     protected abstract Set<CacheableTypeConfig<?>> getTypeConfigs();
 
+    /**
+     * Sets the OSGi bundle context used for bundle lifecycle listening and predefined item loading.
+     *
+     * @param bundleContext the bundle context
+     */
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
 
+    /**
+     * Sets the scheduler service used for periodic cache refresh tasks.
+     *
+     * @param schedulerService the scheduler service
+     */
     public void setSchedulerService(SchedulerService schedulerService) {
         this.schedulerService = schedulerService;
     }
 
+    /**
+     * Sets the multi-type cache service backing this service.
+     *
+     * @param cacheService the cache service
+     */
     public void setCacheService(MultiTypeCacheService cacheService) {
         this.cacheService = cacheService;
     }
 
+    /**
+     * Sets the tenant service used to enumerate tenants during cache refresh.
+     *
+     * @param tenantService the tenant service
+     */
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
     }
 
+    /**
+     * Sets the audit service used when saving items to persistence.
+     *
+     * @param auditService the audit service
+     */
     public void setAuditService(AuditService auditService) {
         this.auditService = auditService;
     }
 
+    /**
+     * Initializes caches, loads predefined items from bundles, registers a bundle listener,
+     * loads initial persistence data, and starts refresh timers.
+     */
     public void postConstruct() {
         logger.debug("postConstruct {{}}", bundleContext.getBundle());
 
@@ -148,6 +185,9 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         }
     }
 
+    /**
+     * Shuts down the service by removing the bundle listener and cancelling refresh timers.
+     */
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
         shutdownTimers();
@@ -441,7 +481,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     }
 
     /**
-     * Get all items contributed by a specific bundle.
+     * Retrieves all items contributed by a specific bundle.
      *
      * @param bundleId the ID of the bundle
      * @return a list of items contributed by that bundle, or an empty list if none
@@ -575,6 +615,11 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         }
     }
 
+    /**
+     * Handles OSGi bundle start and stop events to load or remove predefined items.
+     *
+     * @param event the bundle event
+     */
     @Override
     public void bundleChanged(BundleEvent event) {
         contextManager.executeAsSystem(() -> {
@@ -672,16 +717,16 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     }
 
     /**
-     * Get a map of all plugin types indexed by plugin ID (bundle ID).
+     * Retrieves a map of plugin types indexed by contributing bundle identifier.
      *
-     * @return Map where key is the bundle ID, value is the list of plugin types from that bundle
+     * @return map of bundle ID to plugin types contributed by that bundle
      */
     public Map<Long, List<PluginType>> getTypesByPlugin() {
         return pluginTypes;
     }
 
     /**
-     * Get all items of a specific type for the current tenant.
+     * Retrieves all items of a specific type for the current tenant.
      *
      * @param <T> the type of items to retrieve
      * @param itemClass the class of the items to retrieve
@@ -696,7 +741,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     }
 
     /**
-     * Get items of a specific type filtered by tag.
+     * Retrieves items of a specific type filtered by tag.
      *
      * @param <T> the type of items to retrieve
      * @param itemClass the class of the items to retrieve
@@ -713,7 +758,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     }
 
     /**
-     * Get items of a specific type filtered by system tag.
+     * Retrieves items of a specific type filtered by system tag.
      *
      * @param <T> the type of items to retrieve
      * @param itemClass the class of the items to retrieve
@@ -730,12 +775,12 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     }
 
     /**
-     * Get a specific item by ID.
+     * Retrieves a specific item by identifier.
      *
      * @param <T> the type of item to retrieve
      * @param id the ID of the item
      * @param itemClass the class of the item
-     * @return the item with the specified ID, or null if not found
+     * @return the item with the specified identifier, or {@code null} if not found
      */
     protected <T extends Serializable> T getItem(String id, Class<T> itemClass) {
         String tenantId = contextManager.getCurrentContext().getTenantId();

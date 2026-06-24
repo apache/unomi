@@ -31,7 +31,6 @@ import org.apache.unomi.router.api.RouterUtils;
  *   <li>For the first message (when oldExchange is null), it simply returns the new exchange</li>
  *   <li>For subsequent messages, it appends the new content to the existing content using the configured line separator</li>
  * </ul>
- * </p>
  *
  * <p>The line separator used for aggregation is obtained from the ExportConfiguration object
  * stored in the exchange header under the key "exportConfig".</p>
@@ -50,7 +49,6 @@ public class StringLinesAggregationStrategy implements AggregationStrategy {
      *   <li>If there's an old exchange, the new content is appended to it with the line separator</li>
      *   <li>If there's no old exchange, the new exchange is returned as is</li>
      * </ul>
-     * </p>
      *
      * @param oldExchange the previous exchange being aggregated (may be null on first invocation)
      * @param newExchange the current exchange being aggregated (contains the new line to append)

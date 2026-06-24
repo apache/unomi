@@ -31,7 +31,6 @@ import java.util.ArrayList;
  *   <li>For the first message (when oldExchange is null), it creates a new ArrayList and adds the message body to it</li>
  *   <li>For subsequent messages, it adds the new message body to the existing ArrayList</li>
  * </ul>
- * </p>
  *
  * <p>The ArrayList is maintained in the exchange body, allowing for easy access to all aggregated items
  * once the aggregation is complete.</p>
@@ -50,7 +49,6 @@ public class ArrayListAggregationStrategy implements AggregationStrategy {
      *   <li>The new body is added to the ArrayList</li>
      *   <li>The ArrayList is maintained in the exchange body for subsequent aggregations</li>
      * </ul>
-     * </p>
      *
      * @param oldExchange the previous exchange being aggregated (may be null on first invocation)
      * @param newExchange the current exchange being aggregated (contains the new item to add to the list)

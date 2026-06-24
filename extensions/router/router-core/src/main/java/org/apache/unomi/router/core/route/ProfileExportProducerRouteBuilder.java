@@ -41,7 +41,6 @@ import java.util.Map;
  *   <li>Completion handling and status updates</li>
  *   <li>Support for Kafka and in-process {@code direct:} endpoints ({@link RouterConstants#CONFIG_TYPE_KAFKA} / {@link RouterConstants#CONFIG_TYPE_NOBROKER})</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -86,7 +85,6 @@ public class ProfileExportProducerRouteBuilder extends RouterAbstractRouteBuilde
      *   <li>Handles export completion</li>
      *   <li>Routes data to configured destinations</li>
      * </ul>
-     * </p>
      *
      * @throws Exception if an error occurs during route configuration
      */

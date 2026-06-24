@@ -43,7 +43,6 @@ import java.util.Set;
  *   <li>Updates profile information with calculated segments</li>
  *   <li>Persists profiles in the Unomi storage system</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -70,7 +69,6 @@ public class UnomiStorageProcessor implements Processor {
      *   <li>For non-delete operations, calculates and updates segments and scores</li>
      *   <li>Persists the profile using the ProfileImportService</li>
      * </ul>
-     * </p>
      *
      * @param exchange the Camel exchange containing the profile to process
      * @throws Exception if an error occurs during processing

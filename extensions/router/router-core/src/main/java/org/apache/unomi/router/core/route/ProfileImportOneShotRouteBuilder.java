@@ -43,7 +43,6 @@ import java.util.Map;
  *   <li>Automatic file movement after processing</li>
  *   <li>Error reporting and failed file handling</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -79,7 +78,6 @@ public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder
      *   <li>Handles validation and format errors</li>
      *   <li>Routes processed data to appropriate endpoints</li>
      * </ul>
-     * </p>
      *
      * @throws Exception if an error occurs during route configuration
      */

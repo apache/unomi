@@ -38,6 +38,7 @@ import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
  * parameters may test whether a given property has a specific value: “User property x has value y”.
  */
 public class ConditionType extends MetadataItem implements PluginType, YamlConvertible {
+    /** Item type identifier for condition types. */
     public static final String ITEM_TYPE = "conditionType";
 
     private static final long serialVersionUID = -6965481691241954969L;

@@ -25,15 +25,31 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+/**
+ * Default implementation of {@link AuditService} backed by {@link PersistenceService}.
+ * <p>
+ * Records create, update, and delete metadata on {@link Item} instances and supports
+ * tenant synchronization queries (modified items and last-sync tracking).
+ */
 public class AuditServiceImpl implements AuditService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuditServiceImpl.class);
 
     private PersistenceService persistenceService;
 
+    /**
+     * Binds the persistence service used for sync queries and updates.
+     *
+     * @param persistenceService the persistence service
+     */
     public void bindPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
 
+    /**
+     * Unbinds the persistence service.
+     *
+     * @param persistenceService the persistence service being unbound
+     */
     public void unbindPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = null;
     }
@@ -132,6 +148,12 @@ public class AuditServiceImpl implements AuditService {
         LOGGER.info("Tenant operation: {} performed on tenant {}", operation, tenantId);
     }
 
+    /**
+     * Updates the last-modified metadata on an item.
+     *
+     * @param item the item to update
+     * @param userId the user performing the modification
+     */
     public void updateModificationMetadata(Item item, String userId) {
         item.setLastModifiedBy(userId);
         item.setLastModificationDate(new Date());

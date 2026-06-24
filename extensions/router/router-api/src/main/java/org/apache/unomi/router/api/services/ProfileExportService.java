@@ -34,7 +34,6 @@ import java.util.Collection;
  *   <li>Handling data formatting and transformation</li>
  *   <li>Managing export file generation</li>
  * </ul>
- * </p>
  *
  * <p>Usage in Unomi:
  * <ul>
@@ -42,7 +41,6 @@ import java.util.Collection;
  *   <li>Used during scheduled export operations</li>
  *   <li>Integrated with Unomi's segmentation system</li>
  * </ul>
- * </p>
  *
  * <p>Implementation considerations:
  * <ul>
@@ -51,7 +49,6 @@ import java.util.Collection;
  *   <li>Must respect profile property formatting</li>
  *   <li>Should handle multi-valued properties</li>
  * </ul>
- * </p>
  *
  * @see Profile
  * @see ExportConfiguration

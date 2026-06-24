@@ -124,6 +124,11 @@ public abstract class Item implements Serializable, YamlConvertible {
         return itemType;
     }
 
+    /**
+     * Sets the Item's type.
+     *
+     * @param itemType the Item's type
+     */
     public void setItemType(String itemType) {
         this.itemType = itemType;
     }
@@ -137,6 +142,11 @@ public abstract class Item implements Serializable, YamlConvertible {
         return scope;
     }
 
+    /**
+     * Sets the Item's scope.
+     *
+     * @param scope the Item's scope
+     */
     public void setScope(String scope) {
         this.scope = scope;
     }
@@ -164,10 +174,22 @@ public abstract class Item implements Serializable, YamlConvertible {
         this.version = version;
     }
 
+    /**
+     * Returns the system metadata for the given key.
+     *
+     * @param key the key
+     * @return the system metadata for the given key
+     */
     public Object getSystemMetadata(String key) {
         return systemMetadata.get(key);
     }
 
+    /**
+     * Sets the system metadata for the given key.
+     *
+     * @param key the key
+     * @param value the value
+     */
     public void setSystemMetadata(String key, Object value) {
         systemMetadata.put(key, value);
     }
@@ -176,6 +198,11 @@ public abstract class Item implements Serializable, YamlConvertible {
         return tenantId;
     }
 
+    /**
+     * Sets the tenant ID.
+     *
+     * @param tenantId the tenant ID
+     */
     public void setTenantId(String tenantId) {
         this.tenantId = tenantId;
     }
@@ -185,6 +212,11 @@ public abstract class Item implements Serializable, YamlConvertible {
         return createdBy;
     }
 
+    /**
+     * Sets the created by.
+     *
+     * @param createdBy the created by
+     */
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
     }
@@ -193,38 +225,83 @@ public abstract class Item implements Serializable, YamlConvertible {
         return lastModifiedBy;
     }
 
+    /**
+     * Sets the last modified by.
+     *
+     * @param lastModifiedBy the last modified by
+     */
     public void setLastModifiedBy(String lastModifiedBy) {
         this.lastModifiedBy = lastModifiedBy;
     }
 
+    /**
+     * Returns the date when this item was created.
+     *
+     * @return the date when this item was created
+     */
     public Date getCreationDate() {
         return creationDate;
     }
 
+    /**
+     * Sets the date when this item was created.
+     *
+     * @param creationDate the creation date
+     */
     public void setCreationDate(Date creationDate) {
         this.creationDate = creationDate;
     }
 
+    /**
+     * Returns the date when this item was last modified.
+     *
+     * @return the date when this item was last modified
+     */
     public Date getLastModificationDate() {
         return lastModificationDate;
     }
 
+    /**
+     * Sets the date when this item was last modified.
+     *
+     * @param lastModificationDate the last modification date
+     */
     public void setLastModificationDate(Date lastModificationDate) {
         this.lastModificationDate = lastModificationDate;
     }
 
+    /**
+     * Returns the source instance ID.
+     *
+     * @return the source instance ID
+     */
     public String getSourceInstanceId() {
         return sourceInstanceId;
     }
 
+    /**
+     * Sets the source instance ID.
+     *
+     * @param sourceInstanceId the source instance ID
+     */
     public void setSourceInstanceId(String sourceInstanceId) {
         this.sourceInstanceId = sourceInstanceId;
     }
 
+    /**
+     * Returns the last synchronization date.
+     *
+     * @return the last synchronization date
+     */
     public Date getLastSyncDate() {
         return lastSyncDate;
     }
 
+    /**
+     * Sets the last synchronization date.
+     *
+     * @param lastSyncDate the last synchronization date
+     */
     public void setLastSyncDate(Date lastSyncDate) {
         this.lastSyncDate = lastSyncDate;
     }

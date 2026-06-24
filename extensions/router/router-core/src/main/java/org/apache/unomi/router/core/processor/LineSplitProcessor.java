@@ -49,7 +49,6 @@ import java.util.*;
  *   <li>Profile merging configuration</li>
  *   <li>Delete operation support</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -101,7 +100,6 @@ public class LineSplitProcessor implements Processor {
      *   <li>Sets up profile merging configuration</li>
      *   <li>Processes delete operations if configured</li>
      * </ul>
-     * </p>
      *
      * @param exchange the Camel exchange containing the CSV line to process
      * @throws Exception if an error occurs during processing, including BadProfileDataFormatException

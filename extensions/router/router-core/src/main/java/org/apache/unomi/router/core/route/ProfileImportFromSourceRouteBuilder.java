@@ -52,7 +52,6 @@ import java.util.Map;
  *   <li>Support for Kafka and in-process {@code direct:} endpoints ({@link RouterConstants#CONFIG_TYPE_KAFKA} / {@link RouterConstants#CONFIG_TYPE_NOBROKER})</li>
  *   <li>Graceful shutdown handling</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -92,7 +91,6 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
      *   <li>Route processed data to appropriate endpoints</li>
      *   <li>Manage graceful completion of imports</li>
      * </ul>
-     * </p>
      *
      * @throws Exception if an error occurs during route configuration
      */

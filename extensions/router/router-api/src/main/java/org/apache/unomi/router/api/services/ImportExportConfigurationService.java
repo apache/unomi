@@ -35,7 +35,6 @@ import java.util.Map;
  *   <li>Coordinating with Camel routes for configuration updates</li>
  *   <li>Tracking configuration changes that need route updates</li>
  * </ul>
- * </p>
  *
  * <p>Usage in Unomi:
  * <ul>
@@ -43,7 +42,6 @@ import java.util.Map;
  *   <li>Consumed by Camel routes to get configuration updates</li>
  *   <li>Utilized by admin interfaces for configuration management</li>
  * </ul>
- * </p>
  *
  * <p>Implementation considerations:
  * <ul>
@@ -51,7 +49,6 @@ import java.util.Map;
  *   <li>Thread safety should be considered for concurrent operations</li>
  *   <li>Configuration changes should be properly propagated to running routes</li>
  * </ul>
- * </p>
  *
  * @param <T> The type of configuration (ImportConfiguration or ExportConfiguration)
  * @see ImportConfiguration

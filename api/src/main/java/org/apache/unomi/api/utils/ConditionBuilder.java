@@ -216,6 +216,7 @@ public class ConditionBuilder {
         return new ConditionItem(conditionTypeId, definitionsService);
     }
 
+    /** Base class for comparison-based condition items. */
     public abstract class ComparisonCondition extends ConditionItem {
 
         /**
@@ -857,7 +858,9 @@ public class ConditionBuilder {
      */
     public class ConditionItem {
 
+        /** The underlying condition. */
         protected Condition condition;
+        /** Service for resolving condition definitions. */
         protected DefinitionsService definitionsService;
 
         /**

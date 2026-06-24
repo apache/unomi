@@ -51,7 +51,6 @@ import java.util.Map;
  *   the result means "events occurred within bounds" or "no events occurred".</li>
  * </ul>
  *
- * @see org.apache.unomi.plugins.advancedconditions.conditions.PastEventConditionEvaluator
  */
 public interface PastEventConditionPersistenceQueryBuilder {
 

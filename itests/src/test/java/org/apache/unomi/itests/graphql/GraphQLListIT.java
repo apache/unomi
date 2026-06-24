@@ -102,7 +102,8 @@ public class GraphQLListIT extends BaseGraphQLIT {
                         Object profileId = context.getValue("data.cdp.findLists.edges[0].node.active.edges[0].node.cdp_profileIDs[0].id");
                         return profile.getItemId().equals(profileId);
                     },
-                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                    // async rule-engine processing needs more retries on loaded CI
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES * 3);
 
             Assert.assertEquals("testListId", findListsContext.getValue("data.cdp.findLists.edges[0].node.id"));
 

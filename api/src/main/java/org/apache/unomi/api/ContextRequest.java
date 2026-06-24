@@ -190,10 +190,20 @@ public class ContextRequest {
         this.filters = filters;
     }
 
+    /**
+     * Returns the list of personalization requests.
+     *
+     * @return the list of personalization requests
+     */
     public List<PersonalizationService.PersonalizationRequest> getPersonalizations() {
         return personalizations;
     }
 
+    /**
+     * Sets the list of personalization requests.
+     *
+     * @param personalizations the list of personalization requests
+     */
     public void setPersonalizations(List<PersonalizationService.PersonalizationRequest> personalizations) {
         this.personalizations = personalizations;
     }
@@ -292,10 +302,20 @@ public class ContextRequest {
         this.profileId = profileId;
     }
 
+    /**
+     * Returns the client ID for this request.
+     *
+     * @return the client ID
+     */
     public String getClientId() {
         return clientId;
     }
 
+    /**
+     * Sets the client ID for this request.
+     *
+     * @param clientId the client ID
+     */
     public void setClientId(String clientId) {
         this.clientId = clientId;
     }

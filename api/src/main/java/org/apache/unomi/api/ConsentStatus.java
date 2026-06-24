@@ -21,7 +21,10 @@ package org.apache.unomi.api;
  * remove a consent for a profile.
  */
 public enum ConsentStatus {
+    // Consent has been granted.
     GRANTED,
+    // Consent has been denied.
     DENIED,
+    // Consent has been revoked.
     REVOKED
 }

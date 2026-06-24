@@ -23,21 +23,29 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A service to validate conditions against their type definitions
+ * Service that validates {@link Condition} instances against their {@link org.apache.unomi.api.conditions.ConditionType} definitions.
+ * <p>
+ * Used during save operations to ensure condition parameters satisfy type constraints. Parameters containing
+ * references ({@code parameter::}) or script expressions ({@code script::}) are skipped because their values
+ * are resolved at evaluation time.
+ *
+ * @see DefinitionsService#getConditionValidationService()
  */
 public interface ConditionValidationService {
 
     /**
      * Validates a condition against its type definition.
-     * Skips validation for parameters that contain references (`parameter::`) or script expressions (`script::`).
-     * Only validates parameters that are NOT parameter references or script expressions.
+     * <p>
+     * Skips validation for parameters that contain references ({@code parameter::}) or script expressions
+     * ({@code script::}). Only literal parameter values are validated.
+     *
      * @param condition the condition to validate
-     * @return a list of validation errors, empty if the condition is valid (for non-reference/script values)
+     * @return a list of validation errors, empty when the condition is valid
      */
     List<ValidationError> validate(Condition condition);
 
     /**
-     * Represents a validation error with detailed context
+     * A validation error with detailed context about the failing condition, parameter, and cause.
      */
     class ValidationError {
         private final String parameterName;
@@ -48,10 +56,28 @@ public interface ConditionValidationService {
         private final Map<String, Object> context;
         private final ValidationError parentError;
 
+        /**
+         * Instantiates a validation error for a single parameter.
+         *
+         * @param parameterName the parameter that caused the error
+         * @param message the error description
+         * @param type the error type
+         */
         public ValidationError(String parameterName, String message, ValidationErrorType type) {
             this(parameterName, message, type, null, null, null, null);
         }
 
+        /**
+         * Instantiates a validation error with full condition context and optional parent error.
+         *
+         * @param parameterName the parameter that caused the error
+         * @param message the error description
+         * @param type the error type
+         * @param conditionId the identifier of the condition being validated
+         * @param conditionTypeId the identifier of the condition type
+         * @param context additional context key-value pairs
+         * @param parentError the parent error that caused this error, or {@code null}
+         */
         public ValidationError(String parameterName, String message, ValidationErrorType type,
                              String conditionId, String conditionTypeId, Map<String, Object> context,
                              ValidationError parentError) {
@@ -64,43 +90,81 @@ public interface ConditionValidationService {
             this.parentError = parentError;
         }
 
+        /**
+         * Retrieves the name of the parameter that caused the error.
+         *
+         * @return the parameter name, or {@code null} if not applicable
+         */
         public String getParameterName() {
             return parameterName;
         }
 
+        /**
+         * Retrieves the error description message.
+         *
+         * @return the error message
+         */
         public String getMessage() {
             return message;
         }
 
+        /**
+         * Retrieves the type of validation error.
+         *
+         * @return the error type
+         */
         public ValidationErrorType getType() {
             return type;
         }
 
+        /**
+         * Retrieves the identifier of the condition associated with this error.
+         *
+         * @return the condition identifier, or {@code null} if not applicable
+         */
         public String getConditionId() {
             return conditionId;
         }
 
+        /**
+         * Retrieves the identifier of the condition type associated with this error.
+         *
+         * @return the condition type identifier, or {@code null} if not applicable
+         */
         public String getConditionTypeId() {
             return conditionTypeId;
         }
 
-        /** @deprecated Use {@link #getConditionTypeId()} instead. */
+        /**
+         * @deprecated Use {@link #getConditionTypeId()} instead.
+         */
         @Deprecated
         public String getConditionTypeName() {
             return conditionTypeId;
         }
 
+        /**
+         * Retrieves a copy of the additional context map for this error.
+         *
+         * @return the context map
+         */
         public Map<String, Object> getContext() {
             return new HashMap<>(context);
         }
 
+        /**
+         * Retrieves the parent error that caused this error, if any.
+         *
+         * @return the parent error, or {@code null} if none
+         */
         public ValidationError getParentError() {
             return parentError;
         }
 
         /**
-         * Returns a detailed error message including all context information
-         * @return A detailed error message
+         * Retrieves a detailed error message including condition, parameter, context, and parent error information.
+         *
+         * @return the detailed error message
          */
         public String getDetailedMessage() {
             StringBuilder sb = new StringBuilder();
@@ -151,13 +215,18 @@ public interface ConditionValidationService {
     }
 
     /**
-     * Types of validation errors
+     * Categories of validation errors returned by {@link #validate(Condition)}.
      */
     enum ValidationErrorType {
+        /** A required parameter is absent. */
         MISSING_REQUIRED_PARAMETER("Required parameter is missing"),
+        /** The value provided for a parameter is not valid. */
         INVALID_VALUE("Invalid value provided"),
+        /** The condition type is invalid or not supported. */
         INVALID_CONDITION_TYPE("Invalid or unsupported condition type"),
+        /** Mutually exclusive parameters are both present. */
         EXCLUSIVE_PARAMETER_VIOLATION("Mutually exclusive parameters conflict"),
+        /** A recommended parameter is absent. */
         MISSING_RECOMMENDED_PARAMETER("Recommended parameter is missing");
 
         private final String description;
@@ -166,6 +235,11 @@ public interface ConditionValidationService {
             this.description = description;
         }
 
+        /**
+         * Retrieves the human-readable description of this error type.
+         *
+         * @return the error type description
+         */
         public String getDescription() {
             return description;
         }
