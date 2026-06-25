@@ -55,7 +55,6 @@ public class LineBuildProcessor implements Processor {
      *   <li>Converts the profile to a CSV line using the ProfileExportService</li>
      *   <li>Sets the resulting string as the new exchange body</li>
      * </ul>
-     * </p>
      *
      * @param exchange the Camel exchange containing the Profile to convert and export configuration
      * @throws Exception if an error occurs during processing

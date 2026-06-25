@@ -40,7 +40,6 @@ public interface TenantSecurityService {
      *
      * @param tenantId the ID of the tenants to configure
      * @param settings the security settings to apply
-     * @throws ConfigurationException if the settings are invalid or cannot be applied
      */
     void configureSecuritySettings(String tenantId, SecuritySettings settings);
 

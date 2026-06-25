@@ -26,3 +26,5 @@ dependency_tree.txt
 itests/snapshots_repository/
 itests/archives/
 .env.local
+.venv*
+javadoc_*

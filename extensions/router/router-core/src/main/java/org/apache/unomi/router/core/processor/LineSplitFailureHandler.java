@@ -34,7 +34,6 @@ import org.slf4j.LoggerFactory;
  *   <li>BadProfileDataFormatException - for data format related errors</li>
  *   <li>General exceptions - capturing the root cause message</li>
  * </ul>
- * </p>
  *
  * <p>For each failure, it creates an ImportLineError object containing:
  * <ul>
@@ -42,7 +41,6 @@ import org.slf4j.LoggerFactory;
  *   <li>The content of the failed line</li>
  *   <li>The line number in the source file</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -60,7 +58,6 @@ public class LineSplitFailureHandler implements Processor {
      *   <li>Extracts the appropriate error message based on the exception type</li>
      *   <li>Sets the failure information in the exchange for further processing</li>
      * </ul>
-     * </p>
      *
      * @param exchange the Camel exchange containing the failed message and exception details
      * @throws Exception if an error occurs during failure handling

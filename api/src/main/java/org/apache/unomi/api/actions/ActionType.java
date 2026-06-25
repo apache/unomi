@@ -34,6 +34,7 @@ import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
  * A type definition for {@link Action}s.
  */
 public class ActionType extends MetadataItem implements PluginType, YamlConvertible {
+    /** Item type identifier for action types. */
     public static final String ITEM_TYPE = "actionType";
 
     private static final long serialVersionUID = -3522958600710010935L;

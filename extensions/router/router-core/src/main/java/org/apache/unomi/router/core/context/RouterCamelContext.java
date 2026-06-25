@@ -66,7 +66,6 @@ import java.util.concurrent.TimeUnit;
  *   <li>Supports Kafka ({@link RouterConstants#CONFIG_TYPE_KAFKA}) and in-process
  *       {@code direct:} endpoints when configured as {@link RouterConstants#CONFIG_TYPE_NOBROKER}</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */

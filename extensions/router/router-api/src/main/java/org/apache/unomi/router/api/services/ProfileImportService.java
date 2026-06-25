@@ -32,7 +32,6 @@ import java.lang.reflect.InvocationTargetException;
  *   <li>Handling profile creation for new imports</li>
  *   <li>Managing profile deletion when specified</li>
  * </ul>
- * </p>
  *
  * <p>Usage in Unomi:
  * <ul>
@@ -40,7 +39,6 @@ import java.lang.reflect.InvocationTargetException;
  *   <li>Used during batch import operations</li>
  *   <li>Integrated with Unomi's profile management system</li>
  * </ul>
- * </p>
  *
  * <p>Implementation considerations:
  * <ul>
@@ -49,7 +47,6 @@ import java.lang.reflect.InvocationTargetException;
  *   <li>Must maintain data consistency</li>
  *   <li>Expects property values already parsed (type conversion is done upstream, e.g. by import processors)</li>
  * </ul>
- * </p>
  *
  * @see ProfileToImport
  * @see org.apache.unomi.api.Profile

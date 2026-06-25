@@ -127,10 +127,8 @@ public class ConditionContextHelper {
      * @param context context map for parameter resolution
      * @param scriptExecutor executor for script expressions
      * @param definitionsService optional service for parameter type information
-     * @param tracerService optional tracer service for validation warnings
      * @return resolved condition with all parameter references resolved
      */
-
     public static Condition getContextualCondition(
         Condition condition,
         Map<String, Object> context,
@@ -139,6 +137,17 @@ public class ConditionContextHelper {
         return getContextualCondition(condition, context, scriptExecutor, definitionsService, null);
     }
 
+    /**
+     * Resolves parameter references and script expressions in a condition,
+     * with optional type validation and execution tracing.
+     *
+     * @param condition the condition to resolve
+     * @param context context map for parameter resolution
+     * @param scriptExecutor executor for script expressions
+     * @param definitionsService optional service for parameter type information
+     * @param tracerService optional tracer service for validation warnings
+     * @return resolved condition with all parameter references resolved
+     */
     public static Condition getContextualCondition(
         Condition condition,
         Map<String, Object> context,

@@ -33,7 +33,6 @@ import java.util.List;
  *   <li>Handles profile deletion flags</li>
  *   <li>Controls merge vs full-replace behavior for existing profiles (see {@link #isOverwriteExistingProfiles()})</li>
  * </ul>
- * </p>
  *
  * <p>Usage in Unomi:
  * <ul>
@@ -41,7 +40,6 @@ import java.util.List;
  *   <li>Consumed by ProfileImportService for import operations</li>
  *   <li>Supports different import strategies (merge/overwrite/delete)</li>
  * </ul>
- * </p>
  *
  * @see Profile
  * @see org.apache.unomi.router.api.services.ProfileImportService

@@ -24,7 +24,13 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A specification for an aggregate as part of {@link AggregateQuery}s
+ * Specification for an aggregation used by {@link AggregateQuery}.
+ * <p>
+ * The {@link #type} identifies the aggregation strategy: {@code date}, {@code dateRange},
+ * {@code numericRange}, {@code ipRange}, or {@code null} (terms aggregation on distinct values).
+ * Type-specific configuration is supplied through {@link #parameters} and the corresponding range lists.
+ *
+ * @see AggregateQuery
  */
 public class Aggregate implements Serializable {
     private String type;
@@ -35,49 +41,119 @@ public class Aggregate implements Serializable {
     private List<IpRange> ipRanges = new ArrayList<>();
 
 
+    /**
+     * Instantiates a new Aggregate.
+     */
     public Aggregate() {
     }
 
+    /**
+     * Retrieves the aggregation type.
+     * <p>
+     * Supported values are {@code date}, {@code dateRange}, {@code numericRange}, and {@code ipRange}.
+     * When {@code null}, a terms aggregation is used on distinct property values.
+     *
+     * @return the aggregation type, or {@code null} for a terms aggregation
+     */
     public String getType() {
         return type;
     }
 
+    /**
+     * Sets the aggregation type.
+     * <p>
+     * Supported values are {@code date}, {@code dateRange}, {@code numericRange}, and {@code ipRange}.
+     * When {@code null}, a terms aggregation is used on distinct property values.
+     *
+     * @param type the aggregation type
+     */
     public void setType(String type) {
         this.type = type;
     }
 
+    /**
+     * Retrieves the aggregation parameters.
+     * <p>
+     * For {@code date} aggregations, expected keys are {@code interval} and {@code format}.
+     * For {@code dateRange} aggregations, the {@code format} key defines the date format.
+     *
+     * @return the aggregation parameters
+     */
     public Map<String, Object> getParameters() {
         return parameters;
     }
 
+    /**
+     * Sets the aggregation parameters.
+     * <p>
+     * For {@code date} aggregations, expected keys are {@code interval} and {@code format}.
+     * For {@code dateRange} aggregations, the {@code format} key defines the date format.
+     *
+     * @param parameters the aggregation parameters
+     */
     public void setParameters(Map<String, Object> parameters) {
         this.parameters = parameters;
     }
 
+    /**
+     * Retrieves the property to aggregate on.
+     *
+     * @return the property to aggregate on
+     */
     public String getProperty() {
         return property;
     }
 
+    /**
+     * Sets the property to aggregate on.
+     *
+     * @param property the property name
+     */
     public void setProperty(String property) {
         this.property = property;
     }
 
+    /**
+     * Retrieves the numeric ranges used by {@code numericRange} aggregations.
+     *
+     * @return the numeric ranges
+     */
     public List<NumericRange> getNumericRanges() {
         return numericRanges;
     }
 
+    /**
+     * Retrieves the date ranges used by {@code dateRange} aggregations.
+     *
+     * @return the date ranges
+     */
     public List<DateRange> getDateRanges() {
         return dateRanges;
     }
 
+    /**
+     * Sets the date ranges used by {@code dateRange} aggregations.
+     *
+     * @param dateRanges the date ranges
+     */
     public void setDateRanges(List<DateRange> dateRanges) {
         this.dateRanges = dateRanges;
     }
 
+    /**
+     * Retrieves the IP ranges used by {@code ipRange} aggregations.
+     *
+     * @return the IP ranges
+     */
     public List<IpRange> ipRanges() {
         return ipRanges;
     }
 
+    /**
+     * Sets the IP ranges used by {@code ipRange} aggregations.
+     *
+     * @param ipRanges the IP ranges
+     */
     public void setIpRanges(List<IpRange> ipRanges) {
         this.ipRanges = ipRanges;
     }

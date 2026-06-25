@@ -24,6 +24,7 @@ public class ClusterNode extends Item {
 
     private static final long serialVersionUID = 1281422346318230514L;
 
+    // Item type identifier for cluster nodes.
     public static final String ITEM_TYPE = "clusterNode";
 
     private double cpuLoad;

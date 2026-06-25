@@ -41,7 +41,6 @@ import java.util.Map;
  *   <li>Profile service integration</li>
  *   <li>Endpoint security through allowlist</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -110,7 +109,6 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
      *   <li>Returns direct endpoint URIs when not using Kafka</li>
      *   <li>Configures consumer properties for incoming endpoints</li>
      * </ul>
-     * </p>
      *
      * @param direction the direction of the endpoint (to/from)
      * @param operationDepositBuffer the operation buffer identifier

@@ -30,6 +30,16 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Supplier;
 
+/**
+ * Thread-local implementation of {@link ExecutionContextManager}.
+ * <p>
+ * Maintains the current {@link ExecutionContext} per thread, derived from the active
+ * {@link SecurityService} subject. {@link #executeAsSystem(Supplier)} switches both the
+ * security subject and execution context to the system tenant for the duration of the
+ * operation, then restores the previous state.
+ *
+ * @see KarafSecurityService
+ */
 public class ExecutionContextManagerImpl implements ExecutionContextManager {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ExecutionContextManagerImpl.class);
@@ -37,6 +47,11 @@ public class ExecutionContextManagerImpl implements ExecutionContextManager {
     private final ThreadLocal<ExecutionContext> currentContext = new ThreadLocal<>();
     private SecurityService securityService;
 
+    /**
+     * Sets the security service used to resolve subjects, roles, and permissions.
+     *
+     * @param securityService the security service
+     */
     public void setSecurityService(SecurityService securityService) {
         this.securityService = securityService;
     }

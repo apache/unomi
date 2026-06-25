@@ -40,7 +40,6 @@ import java.util.Map;
  *   <li>Import completion handling</li>
  *   <li>Error handling and reporting</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -75,7 +74,6 @@ public class ProfileImportToUnomiRouteBuilder extends RouterAbstractRouteBuilder
      *   <li>Handles import completion</li>
      *   <li>Manages error reporting</li>
      * </ul>
-     * </p>
      *
      * @throws Exception if an error occurs during route configuration
      */

@@ -272,6 +272,9 @@ IT_DEBUG_PORT=5006
 IT_DEBUG_SUSPEND=false
 SKIP_MIGRATION_TESTS=false
 KEEP_CONTAINER=false
+JAVADOC=false
+LOG_FILE=""
+LOG_FILE_ONLY=false
 
 # Enhanced usage function with color support
 usage() {
@@ -312,7 +315,10 @@ EOF
         echo -e "  ${CYAN}--it-debug-suspend${NC}         Suspend integration test until debugger connects"
         echo -e "  ${CYAN}--skip-migration-tests${NC}     Skip migration-related tests"
         echo -e "  ${CYAN}--keep-container${NC}           Keep search engine container running after tests (for post-failure inspection)"
-        echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, no Maven build cache, non-interactive"
+        echo -e "  ${CYAN}--javadoc${NC}                  Build and validate Javadoc after install (fails on doclint errors)"
+        echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, no Maven build cache, non-interactive, includes Javadoc"
+        echo -e "  ${CYAN}--log-file PATH${NC}            Tee all output to PATH (console + file)"
+        echo -e "  ${CYAN}--log-file-only${NC}            With --log-file: write to file only, suppress console"
     else
         cat << "EOF"
      _    _ _____ _      ____
@@ -348,7 +354,10 @@ EOF
         echo "  --it-debug-suspend        Suspend integration test until debugger connects"
         echo "  --skip-migration-tests    Skip migration-related tests"
         echo "  --keep-container          Keep search engine container running after tests (for post-failure inspection)"
-        echo "  --ci                      CI mode: no Karaf, no Maven build cache, non-interactive"
+        echo "  --javadoc                 Build and validate Javadoc after install (fails on doclint errors)"
+        echo "  --ci                      CI mode: no Karaf, no Maven build cache, non-interactive, includes Javadoc"
+        echo "  --log-file PATH           Tee all output to PATH (console + file)"
+        echo "  --log-file-only           With --log-file: write to file only, suppress console"
     fi
 
     echo
@@ -496,11 +505,22 @@ while [ "$1" != "" ]; do
         --keep-container)
             KEEP_CONTAINER=true
             ;;
+        --javadoc)
+            JAVADOC=true
+            ;;
+        --log-file)
+            shift
+            LOG_FILE="$1"
+            ;;
+        --log-file-only)
+            LOG_FILE_ONLY=true
+            ;;
         --ci)
             NO_KARAF=true
             USE_MAVEN_CACHE=false
             BUILD_NON_INTERACTIVE=true
             MAVEN_QUIET=true
+            JAVADOC=true
             ;;
         *)
             echo "Unknown option: $1"
@@ -509,6 +529,20 @@ while [ "$1" != "" ]; do
     esac
     shift
 done
+
+# Wire up log file output if requested
+if [ "$LOG_FILE_ONLY" = true ] && [ -z "$LOG_FILE" ]; then
+    echo "Error: --log-file-only requires --log-file PATH"
+    exit 1
+fi
+
+if [ -n "$LOG_FILE" ]; then
+    if [ "$LOG_FILE_ONLY" = true ]; then
+        exec > "$LOG_FILE" 2>&1
+    else
+        exec > >(tee -a "$LOG_FILE") 2>&1
+    fi
+fi
 
 # Set environment
 DIRNAME=`dirname "$0"`
@@ -522,6 +556,10 @@ if [ "$PURGE_MAVEN_CACHE" = true ]; then
     echo "Purging Maven cache..."
     rm -rf ~/.m2/build-cache ~/.m2/dependency-cache ~/.m2/dependency-cache_v2
     echo "Maven cache purged."
+    # Disable the build cache for this run: a cold cache with the extension still active
+    # causes the workspace resolver to return target/classes instead of built JARs,
+    # breaking karaf-maven-plugin:verify. Disabling matches CI behaviour.
+    USE_MAVEN_CACHE=false
 fi
 
 # Function to check if command exists
@@ -974,7 +1012,7 @@ echo "Estimated time: 3-5 minutes for build, 50-60 minutes with integration test
 start_timer
 
 # Build phases with enhanced output
-total_steps=2
+[ "$JAVADOC" = true ] && total_steps=3 || total_steps=2
 current_step=0
 
 write_it_run_trace_start() {
@@ -1055,6 +1093,21 @@ if [ "$INSTALL_EXIT" -ne 0 ]; then
 fi
 
 print_status "success" "Build completed in $(get_elapsed_time)"
+
+if [ "$JAVADOC" = true ]; then
+    print_section "Javadoc Validation"
+    print_progress $((++current_step)) $total_steps "Generating and validating Javadoc..."
+    if [ "$HAS_COLORS" -eq 1 ]; then
+        echo -e "${GRAY}Running: $MVN_CMD javadoc:javadoc -DskipTests $MVN_OPTS${NC}"
+    else
+        echo "Running: $MVN_CMD javadoc:javadoc -DskipTests $MVN_OPTS"
+    fi
+    $MVN_CMD javadoc:javadoc -DskipTests $MVN_OPTS || {
+        print_status "error" "Javadoc validation failed — fix doclint errors above before pushing"
+        exit 1
+    }
+    print_status "success" "Javadoc validated successfully"
+fi
 
 # Deployment section with enhanced output
 if [ "$DEPLOY" = true ]; then

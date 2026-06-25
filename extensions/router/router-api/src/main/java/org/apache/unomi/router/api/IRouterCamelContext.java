@@ -29,14 +29,12 @@ package org.apache.unomi.router.api;
  *   <li>Rebuilding export reader routes after an {@link org.apache.unomi.router.api.ExportConfiguration} update</li>
  *   <li>Optional Camel tracing for troubleshooting route execution</li>
  * </ul>
- * </p>
  *
  * <p>Typical usage:
  * <ul>
  *   <li>Management services call update methods when import/export configuration documents change</li>
  *   <li>Cleanup paths call {@link #killExistingRoute(String, boolean)} to drop routes whose configs were removed</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */

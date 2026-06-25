@@ -123,6 +123,7 @@ public interface ProfileService {
      * @param profileID the identifier of the profile
      * @param alias     the alias which should be unlinked from the profile
      * @param clientID  the identifier of the client
+     * @return the removed ProfileAlias, or null if not found
      */
     ProfileAlias removeAliasFromProfile(String profileID, String alias, String clientID);
 

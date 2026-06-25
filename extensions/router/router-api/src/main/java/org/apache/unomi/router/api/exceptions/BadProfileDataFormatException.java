@@ -28,14 +28,12 @@ package org.apache.unomi.router.api.exceptions;
  *   <li>Malformed multi-value fields</li>
  *   <li>Empty lines in import files</li>
  * </ul>
- * </p>
  *
  * <p>Usage in Unomi:
  * <ul>
  *   <li>Thrown by import line processors (e.g. {@code LineSplitProcessor})</li>
  *   <li>Handled by import route error handlers</li>
  * </ul>
- * </p>
  *
  * @see org.apache.unomi.router.api.ProfileToImport
  * @since 1.0

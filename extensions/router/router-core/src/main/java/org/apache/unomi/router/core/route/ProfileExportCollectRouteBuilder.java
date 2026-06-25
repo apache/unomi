@@ -45,7 +45,6 @@ import java.util.Map;
  *   <li>Security through endpoint allowlist</li>
  *   <li>Support for Kafka and in-process {@code direct:} endpoints ({@link RouterConstants#CONFIG_TYPE_KAFKA} / {@link RouterConstants#CONFIG_TYPE_NOBROKER})</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -82,7 +81,6 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
      *   <li>Processes profiles for export</li>
      *   <li>Routes data to appropriate endpoints</li>
      * </ul>
-     * </p>
      *
      * @throws Exception if an error occurs during route configuration
      */

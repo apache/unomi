@@ -34,7 +34,6 @@ import java.util.List;
  *   <li>Segment-based profile extraction via persistence queries</li>
  *   <li>Integration with Unomi's persistence service</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */

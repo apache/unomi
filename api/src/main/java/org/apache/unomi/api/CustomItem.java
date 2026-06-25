@@ -68,10 +68,20 @@ public class CustomItem extends Item {
         this.properties = properties;
     }
 
+    /**
+     * Returns the custom item type identifier.
+     *
+     * @return the custom item type identifier
+     */
     public String getCustomItemType() {
         return customItemType;
     }
 
+    /**
+     * Sets the custom item type identifier.
+     *
+     * @param customItemType the custom item type identifier
+     */
     public void setCustomItemType(String customItemType) {
         this.customItemType = customItemType;
     }

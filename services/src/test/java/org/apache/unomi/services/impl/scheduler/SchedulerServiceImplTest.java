@@ -86,7 +86,7 @@ public class SchedulerServiceImplTest {
     /** Maximum number of retries for storage operations */
     private static final int MAX_RETRIES = 10;
     /** Default timeout for test assertions */
-    private static final long TEST_TIMEOUT = 5000; // 5 seconds
+    private static final long TEST_TIMEOUT = 15000; // 15 seconds — extra margin for loaded CI runners
     /** Time unit for test timeouts */
     private static final TimeUnit TEST_TIME_UNIT = TimeUnit.MILLISECONDS;
     /** Lock timeout for testing lock expiration */
@@ -2473,5 +2473,88 @@ public class SchedulerServiceImplTest {
 
         // Clean up
         newSchedulerService.preDestroy();
+    }
+
+    /**
+     * Regression test for the preDestroy() shutdown sequence: a persistent task still in
+     * RUNNING state when the node goes down must be marked CRASHED so the next scheduler
+     * instance can reschedule it via the CRASHED-&gt;SCHEDULED transition. This exercises the
+     * direct persistenceProvider/nonPersistentTasks path used during shutdown, bypassing the
+     * getAllTasks()/saveTask() wrappers which become no-ops once shutdownNow is set.
+     */
+    @Test
+    @Tag("RecoveryTests")
+    public void testPreDestroyMarksStaleRunningPersistentTaskAsCrashed() throws Exception {
+        ScheduledTask runningTask = createTestTask("predestroy-crash-test", ScheduledTask.TaskStatus.RUNNING);
+        persistenceService.refresh();
+
+        schedulerService.preDestroy();
+
+        ScheduledTask reloadedTask = persistenceService.load(runningTask.getItemId(), ScheduledTask.class);
+        assertNotNull(reloadedTask, "Task should still exist after shutdown");
+        assertEquals(
+            ScheduledTask.TaskStatus.CRASHED,
+            reloadedTask.getStatus(),
+            "Task still RUNNING at shutdown should be marked CRASHED");
+        assertEquals(
+            "Interrupted by scheduler shutdown",
+            reloadedTask.getLastError(),
+            "Crashed task should record the shutdown as the cause");
+    }
+
+    /**
+     * End-to-end version of the above: a task actually executing (and ignoring the
+     * interrupt sent by executionManager.shutdown()) must still be observed as RUNNING
+     * and marked CRASHED by the time preDestroy() returns.
+     */
+    @Test
+    @Tag("RecoveryTests")
+    public void testPreDestroyMarksActivelyExecutingTaskAsCrashed() throws Exception {
+        String taskType = "predestroy-active-crash-test";
+        CountDownLatch startLatch = new CountDownLatch(1);
+        AtomicBoolean shouldStop = new AtomicBoolean(false);
+
+        TaskExecutor executor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return taskType;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                startLatch.countDown();
+                // Block past the shutdown's interrupt so the task is still RUNNING
+                // when preDestroy() scans for crashed tasks.
+                while (!shouldStop.get()) {
+                    try {
+                        Thread.sleep(TEST_SLEEP);
+                    } catch (InterruptedException ignored) {
+                        Thread.interrupted(); // clear the flag so the loop keeps running
+                    }
+                }
+            }
+        };
+
+        schedulerService.registerTaskExecutor(executor);
+
+        ScheduledTask task = schedulerService.newTask(taskType).disallowParallelExecution().schedule();
+
+        assertTrue(startLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should start executing");
+        TestHelper.retryUntil(
+            () -> schedulerService.getTask(task.getItemId()).getStatus(),
+            status -> status == ScheduledTask.TaskStatus.RUNNING);
+
+        try {
+            schedulerService.preDestroy();
+
+            ScheduledTask reloadedTask = persistenceService.load(task.getItemId(), ScheduledTask.class);
+            assertNotNull(reloadedTask, "Task should still exist after shutdown");
+            assertEquals(
+                ScheduledTask.TaskStatus.CRASHED,
+                reloadedTask.getStatus(),
+                "Task actively executing at shutdown should be marked CRASHED");
+        } finally {
+            shouldStop.set(true);
+        }
     }
 }

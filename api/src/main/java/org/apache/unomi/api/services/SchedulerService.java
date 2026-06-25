@@ -241,7 +241,7 @@ public interface SchedulerService {
      * @param runnable the code to execute
      * @param persistent whether to store in persistence service (true) or only in memory (false)
      * @return the created and scheduled task
-     * @throws IllegalArgumentException if period <= 0 or timeUnit is null
+     * @throws IllegalArgumentException if period &lt;= 0 or timeUnit is null
      */
     ScheduledTask createRecurringTask(String taskType, long period, TimeUnit timeUnit, Runnable runnable, boolean persistent);
 

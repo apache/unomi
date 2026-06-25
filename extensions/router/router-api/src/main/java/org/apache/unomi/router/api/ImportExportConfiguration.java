@@ -35,7 +35,6 @@ import java.util.Map;
  *   <li>Tracks execution status and history</li>
  *   <li>Handles configuration activation/deactivation</li>
  * </ul>
- * </p>
  *
  * <p>Usage in Unomi:
  * <ul>
@@ -43,7 +42,6 @@ import java.util.Map;
  *   <li>Consumed by Camel routes to determine how to process data</li>
  *   <li>Referenced by import/export processors to format data correctly</li>
  * </ul>
- * </p>
  *
  * <p>Configuration properties include:
  * <ul>
@@ -58,7 +56,6 @@ import java.util.Map;
  *   <li>status - current status of the configuration</li>
  *   <li>executions - history of execution attempts</li>
  * </ul>
- * </p>
  *
  * @see org.apache.unomi.router.api.services.ImportExportConfigurationService
  * @since 1.0

@@ -38,7 +38,7 @@ import java.nio.file.Paths;
  *
  * <p>The processor expects filenames in the format:
  * <pre>configurationId.extension</pre>
- * where the configurationId matches an existing import configuration.</p>
+ * where the configurationId matches an existing import configuration.
  *
  * <p>Features:
  * <ul>
@@ -47,7 +47,6 @@ import java.nio.file.Paths;
  *   <li>Sets configuration in exchange header for processing</li>
  *   <li>Handles missing configurations gracefully</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -73,7 +72,6 @@ public class ImportConfigByFileNameProcessor implements Processor {
      *   <li>Sets the configuration in the exchange header if found</li>
      *   <li>Stops route processing if no configuration is found</li>
      * </ul>
-     * </p>
      *
      * @param exchange the Camel exchange containing the file to process
      * @throws Exception if an error occurs during processing

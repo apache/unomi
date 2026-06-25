@@ -192,16 +192,27 @@ public class ContextResponse implements Serializable {
     }
 
 
+    /**
+     * Returns the number of events processed in this request.
+     *
+     * @return the number of events processed in this request
+     */
     public int getProcessedEvents() {
         return processedEvents;
     }
 
+    /**
+     * Sets the number of processed events.
+     *
+     * @param processedEvents the count
+     */
     public void setProcessedEvents(int processedEvents) {
         this.processedEvents = processedEvents;
     }
 
     /**
      * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: getPersonalizationResults()
+     * @return the personalization results map
      */
     @Deprecated
     public Map<String, List<String>> getPersonalizations() {
@@ -210,6 +221,7 @@ public class ContextResponse implements Serializable {
 
     /**
      * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: setPersonalizationResults()
+     * @param personalizations the personalization results
      */
     @Deprecated
     public void setPersonalizations(Map<String, List<String>> personalizations) {
@@ -224,6 +236,11 @@ public class ContextResponse implements Serializable {
         return personalizationResults;
     }
 
+    /**
+     * Sets the personalization results.
+     *
+     * @param personalizationResults the results map
+     */
     public void setPersonalizationResults(Map<String, PersonalizationResult> personalizationResults) {
         this.personalizationResults = personalizationResults;
     }
@@ -289,10 +306,20 @@ public class ContextResponse implements Serializable {
         this.consents = consents;
     }
 
+    /**
+     * Returns the request tracing data.
+     *
+     * @return the request tracing data
+     */
     public TraceNode getRequestTracing() {
         return requestTracing;
     }
 
+    /**
+     * Sets the request tracing data.
+     *
+     * @param requestTracing the tracing node
+     */
     public void setRequestTracing(TraceNode requestTracing) {
         this.requestTracing = requestTracing;
     }

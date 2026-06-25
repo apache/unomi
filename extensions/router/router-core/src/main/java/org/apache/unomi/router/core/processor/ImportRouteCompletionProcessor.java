@@ -38,7 +38,6 @@ import java.util.*;
  *   <li>Maintains execution history</li>
  *   <li>Handles both one-shot and recurring imports</li>
  * </ul>
- * </p>
  *
  * @since 1.0
  */
@@ -66,7 +65,6 @@ public class ImportRouteCompletionProcessor implements Processor {
      *   <li>Updates the import configuration with execution results</li>
      *   <li>Sets the final status based on success/failure counts</li>
      * </ul>
-     * </p>
      *
      * @param exchange the Camel exchange containing import results
      * @throws Exception if an error occurs during processing

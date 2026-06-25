@@ -32,9 +32,20 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Karaf JAAS-based implementation of {@link SecurityService}.
+ * <p>
+ * Resolves the active {@link Subject} from the JAAS context, a temporary privileged subject,
+ * or the current request subject. Role and permission checks consult all active subjects in that
+ * order. Provides the system subject used by {@link ExecutionContextManagerImpl} for elevated
+ * operations.
+ *
+ * @see ExecutionContextManagerImpl
+ */
 public class KarafSecurityService implements SecurityService {
     private static final Logger LOGGER = LoggerFactory.getLogger(KarafSecurityService.class);
 
+    /** The system tenant identifier used for system-wide operations. */
     public static final String SYSTEM_TENANT = "system";
     private final Subject SYSTEM_SUBJECT;
 
@@ -45,6 +56,9 @@ public class KarafSecurityService implements SecurityService {
     private final ThreadLocal<Subject> currentSubject = new ThreadLocal<>();
     private final ThreadLocal<Subject> privilegedSubject = new ThreadLocal<>();
 
+    /**
+     * Creates the security service and initializes the system subject.
+     */
     public KarafSecurityService() {
         SYSTEM_SUBJECT = createSystemSubject();
     }
@@ -58,6 +72,9 @@ public class KarafSecurityService implements SecurityService {
         return subject;
     }
 
+    /**
+     * Initializes the service with default configuration if none was injected.
+     */
     public void init() {
         if (configuration == null) {
             configuration = new SecurityServiceConfiguration();
@@ -65,6 +82,9 @@ public class KarafSecurityService implements SecurityService {
         updateSystemSubject();
     }
 
+    /**
+     * Shuts down the security service.
+     */
     public void destroy() {
         // Cleanup
     }
@@ -78,18 +98,38 @@ public class KarafSecurityService implements SecurityService {
         }
     }
 
+    /**
+     * Sets the audit service used for tenant operation logging.
+     *
+     * @param tenantAuditService the tenant audit service
+     */
     public void setTenantAuditService(AuditService tenantAuditService) {
         this.tenantAuditService = tenantAuditService;
     }
 
+    /**
+     * Sets the security configuration (role-to-permission mappings and system roles).
+     *
+     * @param configuration the security configuration
+     */
     public void setConfiguration(SecurityServiceConfiguration configuration) {
         this.configuration = configuration;
     }
 
+    /**
+     * Binds the encryption service for tenant key retrieval.
+     *
+     * @param encryptionService the encryption service
+     */
     public void bindEncryptionService(EncryptionService encryptionService) {
         this.encryptionService = encryptionService;
     }
 
+    /**
+     * Unbinds the encryption service.
+     *
+     * @param encryptionService the encryption service being unbound
+     */
     public void unbindEncryptionService(EncryptionService encryptionService) {
         this.encryptionService = null;
     }
