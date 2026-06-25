@@ -800,8 +800,14 @@ public class SchedulerServiceImpl implements SchedulerService {
             try {
                 List<ScheduledTask> tasksToCheck = new ArrayList<>(nonPersistentTasks.values());
                 if (persistenceProvider != null) {
-                    // Only consider tasks owned by this node to avoid crashing tasks running on other nodes.
-                    tasksToCheck.addAll(persistenceProvider.findTasksByLockOwner(nodeId));
+                    // Only crash RUNNING tasks owned by this node, or stale orphans with no lock owner.
+                    // Do not touch RUNNING tasks locked by other nodes in a cluster.
+                    for (ScheduledTask task : persistenceProvider.findTasksByStatus(ScheduledTask.TaskStatus.RUNNING)) {
+                        String lockOwner = task.getLockOwner();
+                        if (lockOwner == null || nodeId.equals(lockOwner)) {
+                            tasksToCheck.add(task);
+                        }
+                    }
                 }
                 for (ScheduledTask task : tasksToCheck) {
                     if (ScheduledTask.TaskStatus.RUNNING.equals(task.getStatus())) {
