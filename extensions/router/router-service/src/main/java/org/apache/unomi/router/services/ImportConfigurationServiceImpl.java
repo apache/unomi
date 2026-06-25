@@ -106,4 +106,10 @@ public class ImportConfigurationServiceImpl implements ImportExportConfiguration
         camelConfigsToRefresh.clear();
         return result;
     }
+
+    @Override
+    public void requeueForRefresh(String tenantId, String configId, RouterConstants.CONFIG_CAMEL_REFRESH refreshType) {
+        camelConfigsToRefresh.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>())
+                .putIfAbsent(configId, refreshType);
+    }
 }

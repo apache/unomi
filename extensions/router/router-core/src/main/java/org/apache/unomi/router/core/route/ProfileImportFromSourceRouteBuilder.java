@@ -137,9 +137,21 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                 lineSplitProcessor.setProfilePropertyTypes(profileService.getTargetPropertyTypes("profiles"));
 
                 String endpoint = (String) importConfiguration.getProperties().get("source");
-                endpoint += "&moveFailed=.error";
+                if (StringUtils.isBlank(endpoint)) {
+                    LOGGER.error("No source endpoint configured, route {} will be skipped.", importConfiguration.getItemId());
+                    continue;
+                }
+                // Poll immediately when the route starts rather than waiting the default 1-second initialDelay.
+                endpoint += "&initialDelay=0&moveFailed=.error";
 
-                if (StringUtils.isNotBlank(endpoint) && allowedEndpoints.contains(endpoint.substring(0, endpoint.indexOf(':')))) {
+                int schemeSeparatorIndex = endpoint.indexOf(':');
+                if (schemeSeparatorIndex < 0) {
+                    LOGGER.error("Endpoint {} has no scheme, route {} will be skipped.", endpoint, importConfiguration.getItemId());
+                    continue;
+                }
+                String endpointScheme = endpoint.substring(0, schemeSeparatorIndex);
+
+                if (allowedEndpoints.contains(endpointScheme)) {
                     ProcessorDefinition prDef = from(endpoint)
                             .routeId(importConfiguration.getItemId())// This allow identification of the route for manual start/stop
                             .autoStartup(importConfiguration.isActive())// Auto-start if the import configuration is set active
@@ -176,7 +188,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                         prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
                     }
                 } else {
-                    LOGGER.error("Endpoint scheme {} is not allowed, route {} will be skipped.", endpoint.substring(0, endpoint.indexOf(':')), importConfiguration.getItemId());
+                    LOGGER.error("Endpoint scheme {} is not allowed, route {} will be skipped.", endpointScheme, importConfiguration.getItemId());
                 }
             }
         }

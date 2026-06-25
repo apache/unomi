@@ -98,4 +98,15 @@ public interface ImportExportConfigurationService<T> {
      * @return map of tenantId to map of configId per operation to be done in camel
      */
     Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> consumeConfigsToBeRefresh();
+
+    /**
+     * Re-queues a configuration for a Camel route refresh. Used by the timer when a route
+     * creation attempt fails, so the config is retried on the next timer tick rather than
+     * being permanently dropped by the snap-and-clear in {@link #consumeConfigsToBeRefresh()}.
+     *
+     * @param tenantId the tenant that owns the configuration
+     * @param configId the configuration identifier to re-queue
+     * @param refreshType the refresh operation to retry
+     */
+    void requeueForRefresh(String tenantId, String configId, RouterConstants.CONFIG_CAMEL_REFRESH refreshType);
 }
