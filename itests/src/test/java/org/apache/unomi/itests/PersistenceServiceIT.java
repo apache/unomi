@@ -62,10 +62,10 @@ public class PersistenceServiceIT extends BaseIT {
 
         refreshPersistence(Profile.class);
 
-        // Upper bound uses "41" so Elasticsearch (exclusive lt) still includes age 40.
+        // Both bounds are inclusive, so age 40 (the "to" value) must be included while age 50 is excluded.
         PartialList<Profile> results = keepTrying(
                 "Range query should return profiles with age between 20 and 40",
-                () -> persistenceService.rangeQuery(AGE_PROPERTY, "20", "41", AGE_PROPERTY + ":asc", Profile.class, 0, -1),
+                () -> persistenceService.rangeQuery(AGE_PROPERTY, "20", "40", AGE_PROPERTY + ":asc", Profile.class, 0, -1),
                 r -> r != null && r.getList().size() == 3,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
