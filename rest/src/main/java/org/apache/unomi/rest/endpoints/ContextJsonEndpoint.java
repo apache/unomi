@@ -340,8 +340,7 @@ public class ContextJsonEndpoint {
     }
 
     private Object sanitizeValue(Object value) {
-        if (value instanceof String) {
-            String stringValue = (String) value;
+        if (value instanceof String stringValue) {
             if (stringValue.startsWith("script::") || stringValue.startsWith("parameter::")) {
                 LOGGER.warn("Scripting detected in context request, filtering out. See debug level for more information");
                 LOGGER.debug("Scripting detected in context request with value {}, filtering out...", value);
@@ -349,8 +348,8 @@ public class ContextJsonEndpoint {
             } else {
                 return stringValue;
             }
-        } else if (value instanceof List values) {
-            List newValues = new ArrayList(values.size());
+        } else if (value instanceof List<?> values) {
+            List<Object> newValues = new ArrayList<>(values.size());
             for (Object listObject : values) {
                 Object newObject = sanitizeValue(listObject);
                 if (newObject != null) {
@@ -358,7 +357,7 @@ public class ContextJsonEndpoint {
                 }
             }
             return newValues;
-        } else if (value instanceof Map values) {
+        } else if (value instanceof Map<?, ?> values) {
             Map<Object, Object> newMap = new LinkedHashMap<>(values.size());
             values.forEach((key, value1) -> {
                 Object newObject = sanitizeValue(value1);
