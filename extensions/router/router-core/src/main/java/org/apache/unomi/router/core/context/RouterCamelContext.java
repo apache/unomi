@@ -102,6 +102,10 @@ public class RouterCamelContext implements IRouterCamelContext {
     private static final int MAX_ROUTE_CREATION_RETRIES = 5;
     private final Map<String, Integer> routeCreationRetryCount = new ConcurrentHashMap<>();
 
+    private static String retryKey(String direction, String tenantId, String configId) {
+        return direction + ":" + tenantId + ":" + configId;
+    }
+
     public void setExecHistorySize(String execHistorySize) {
         this.execHistorySize = execHistorySize;
     }
@@ -168,16 +172,17 @@ public class RouterCamelContext implements IRouterCamelContext {
                                 for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> importConfigToRefresh : tenantImportConfigsToRefresh.getValue().entrySet()) {
                                     String configId = importConfigToRefresh.getKey();
                                     RouterConstants.CONFIG_CAMEL_REFRESH refreshType = importConfigToRefresh.getValue();
+                                    String retryKey = retryKey("import", tenantId, configId);
                                     try {
                                         if (refreshType.equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {
                                             updateProfileImportReaderRoute(configId, true);
-                                            routeCreationRetryCount.remove(configId);
+                                            routeCreationRetryCount.remove(retryKey);
                                         } else if (refreshType.equals(RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED)) {
                                             killExistingRoute(configId, true);
-                                            routeCreationRetryCount.remove(configId);
+                                            routeCreationRetryCount.remove(retryKey);
                                         }
                                     } catch (Exception e) {
-                                        int attempt = routeCreationRetryCount.merge(configId, 1, Integer::sum);
+                                        int attempt = routeCreationRetryCount.merge(retryKey, 1, Integer::sum);
                                         if (attempt <= MAX_ROUTE_CREATION_RETRIES) {
                                             LOGGER.error("Refreshing({}) camel route {} failed (attempt {}/{}) — will retry on next tick",
                                                     refreshType, configId, attempt, MAX_ROUTE_CREATION_RETRIES, e);
@@ -185,7 +190,7 @@ public class RouterCamelContext implements IRouterCamelContext {
                                         } else {
                                             LOGGER.error("Refreshing({}) camel route {} failed after {} attempts — giving up",
                                                     refreshType, configId, MAX_ROUTE_CREATION_RETRIES, e);
-                                            routeCreationRetryCount.remove(configId);
+                                            routeCreationRetryCount.remove(retryKey);
                                         }
                                     }
                                 }
@@ -204,16 +209,17 @@ public class RouterCamelContext implements IRouterCamelContext {
                                 for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> exportConfigToRefresh : tenantExportConfigsToRefresh.getValue().entrySet()) {
                                     String configId = exportConfigToRefresh.getKey();
                                     RouterConstants.CONFIG_CAMEL_REFRESH refreshType = exportConfigToRefresh.getValue();
+                                    String retryKey = retryKey("export", tenantId, configId);
                                     try {
                                         if (refreshType.equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {
                                             updateProfileExportReaderRoute(configId, true);
-                                            routeCreationRetryCount.remove(configId);
+                                            routeCreationRetryCount.remove(retryKey);
                                         } else if (refreshType.equals(RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED)) {
                                             killExistingRoute(configId, true);
-                                            routeCreationRetryCount.remove(configId);
+                                            routeCreationRetryCount.remove(retryKey);
                                         }
                                     } catch (Exception e) {
-                                        int attempt = routeCreationRetryCount.merge(configId, 1, Integer::sum);
+                                        int attempt = routeCreationRetryCount.merge(retryKey, 1, Integer::sum);
                                         if (attempt <= MAX_ROUTE_CREATION_RETRIES) {
                                             LOGGER.error("Refreshing({}) camel route {} failed (attempt {}/{}) — will retry on next tick",
                                                     refreshType, configId, attempt, MAX_ROUTE_CREATION_RETRIES, e);
@@ -221,7 +227,7 @@ public class RouterCamelContext implements IRouterCamelContext {
                                         } else {
                                             LOGGER.error("Refreshing({}) camel route {} failed after {} attempts — giving up",
                                                     refreshType, configId, MAX_ROUTE_CREATION_RETRIES, e);
-                                            routeCreationRetryCount.remove(configId);
+                                            routeCreationRetryCount.remove(retryKey);
                                         }
                                     }
                                 }
@@ -365,8 +371,7 @@ public class RouterCamelContext implements IRouterCamelContext {
 
         ExportConfiguration exportConfiguration = exportConfigurationService.load(configId);
         if (exportConfiguration == null) {
-            LOGGER.warn("Cannot update profile export reader route, config: {} not found", configId);
-            return;
+            throw new IllegalStateException("Cannot update profile export reader route, config: " + configId + " not found — will be retried");
         }
 
         if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfiguration.getConfigType())) {
