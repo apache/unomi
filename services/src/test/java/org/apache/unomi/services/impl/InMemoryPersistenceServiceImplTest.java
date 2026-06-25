@@ -3140,6 +3140,7 @@ public class InMemoryPersistenceServiceImplTest {
 
             // then
             assertEquals(2, page1.getList().size());
+            assertEquals(5, page1.getTotalSize());
             assertEquals(1.0, page1.getList().get(0).getNumericValue());
             assertEquals(2.0, page1.getList().get(1).getNumericValue());
 
@@ -3152,6 +3153,7 @@ public class InMemoryPersistenceServiceImplTest {
 
             // then
             assertEquals(2, page2.getList().size());
+            assertEquals(5, page2.getTotalSize());
             assertEquals(3.0, page2.getList().get(0).getNumericValue());
             assertEquals(4.0, page2.getList().get(1).getNumericValue());
 
@@ -3164,6 +3166,7 @@ public class InMemoryPersistenceServiceImplTest {
 
             // then
             assertEquals(1, page3.getList().size());
+            assertEquals(5, page3.getTotalSize());
             assertEquals(5.0, page3.getList().get(0).getNumericValue());
         }
 

@@ -33,6 +33,7 @@ import org.junit.runners.Suite.SuiteClasses;
 @SuiteClasses({
         Migrate16xToCurrentVersionIT.class,
         MigrationIT.class,
+        PersistenceServiceIT.class,
         BasicIT.class,
         ConditionEvaluatorIT.class,
         ConditionQueryBuilderIT.class,

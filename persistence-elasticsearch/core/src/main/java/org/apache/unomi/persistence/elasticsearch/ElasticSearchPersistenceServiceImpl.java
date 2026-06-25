@@ -2074,6 +2074,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return query(Query.of(q -> q.queryString(qs -> qs.query(fulltext))), sortBy, clazz, offset, size, null, null);
     }
 
+    @Override
+    public <T extends Item> PartialList<T> rangeQuery(String fieldName, String from, String to, String sortBy, Class<T> clazz, int offset, int size) {
+        return query(Query.of(q -> q.range(r -> r.untyped(v -> v.field(fieldName).gte(JsonData.of(from)).lt(JsonData.of(to))))), sortBy, clazz, offset, size, null, null);
+    }
+
     @Override public long queryCount(Condition query, String itemType) {
         try {
             return conditionESQueryBuilderDispatcher.count(query);

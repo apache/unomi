@@ -1949,6 +1949,11 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     @Override
+    public <T extends Item> PartialList<T> rangeQuery(String fieldName, String from, String to, String sortBy, Class<T> clazz, int offset, int size) {
+        return query(Query.of(q -> q.range(r -> r.field(fieldName).from(JsonData.of(from)).to(JsonData.of(to)))), sortBy, clazz, offset, size, null, null);
+    }
+
+    @Override
     public long queryCount(Condition query, String itemType) {
         try {
             return conditionOSQueryBuilderDispatcher.count(query);
