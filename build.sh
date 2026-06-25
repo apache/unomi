@@ -531,6 +531,11 @@ while [ "$1" != "" ]; do
 done
 
 # Wire up log file output if requested
+if [ "$LOG_FILE_ONLY" = true ] && [ -z "$LOG_FILE" ]; then
+    echo "Error: --log-file-only requires --log-file PATH"
+    exit 1
+fi
+
 if [ -n "$LOG_FILE" ]; then
     if [ "$LOG_FILE_ONLY" = true ]; then
         exec > "$LOG_FILE" 2>&1
