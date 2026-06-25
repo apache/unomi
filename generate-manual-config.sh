@@ -25,12 +25,12 @@
 # === VERSION CONFIGURATION ===
 # Latest version (master branch)
 LATEST_BRANCH="master"
-LATEST_VERSION="3.0.1-SNAPSHOT"
+LATEST_VERSION="3.1.0-SNAPSHOT"
 LATEST_DIR="latest"
 
 # Stable version (release branch)
 STABLE_BRANCH="unomi-3.0.x"
-STABLE_VERSION="3.0.0"
+STABLE_VERSION="3.0.1"
 STABLE_DIR="3_0_x"
 
 # === INFRASTRUCTURE CONFIGURATION ===
