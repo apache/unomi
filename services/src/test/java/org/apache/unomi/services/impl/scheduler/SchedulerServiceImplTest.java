@@ -2486,6 +2486,12 @@ public class SchedulerServiceImplTest {
     @Tag("RecoveryTests")
     public void testPreDestroyMarksStaleRunningPersistentTaskAsCrashed() throws Exception {
         ScheduledTask runningTask = createTestTask("predestroy-crash-test", ScheduledTask.TaskStatus.RUNNING);
+        // Hold a valid lock so the background recovery loop does not treat this as an
+        // orphaned RUNNING task (null lockDate is considered expired) before preDestroy().
+        runningTask.setLockOwner(schedulerService.getNodeId());
+        runningTask.setLockDate(new Date());
+        runningTask.setExecutingNodeId(schedulerService.getNodeId());
+        persistenceService.save(runningTask);
         persistenceService.refresh();
 
         schedulerService.preDestroy();
