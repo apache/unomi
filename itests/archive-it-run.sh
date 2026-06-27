@@ -48,6 +48,8 @@
 #   - llm-it-run-analysis-guide.md, expected-karaf-log-patterns.txt
 #   - exam/.../karaf-unexpected-candidates.log (errors not matching expected patterns)
 #   - test-results.tsv, run-summary.properties, failed-tests.txt (LLM-friendly per-run test manifest)
+#   - it-run-operator-note.txt (auto-generated operator note from build.sh)
+#   - memory-samples.tsv, memory-summary.txt (JVM/system memory observed during IT run)
 #   - run-context.txt, run-config/it-run-trace.properties (build/Maven/options trace)
 #   - archives/runs-index.tsv (updated each capture — cross-run comparison index)
 #   - comparison-last-3.txt, archives/latest-comparison.txt (auto when 2+ captures exist)
@@ -64,6 +66,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 source "$SCRIPT_DIR/lib/it-run-bootstrap.sh"
 # shellcheck source=lib/it-run-karaf.sh disable=SC1091
 source "$SCRIPT_DIR/lib/it-run-karaf.sh"
+# shellcheck source=lib/it-run-memory.sh disable=SC1091
+source "$SCRIPT_DIR/lib/it-run-memory.sh"
 # shellcheck source=lib/it-run-context.sh disable=SC1091
 source "$SCRIPT_DIR/lib/it-run-context.sh"
 
@@ -85,6 +89,7 @@ RUN_CONFIG_FILES=(
     elasticsearch-port.properties
     opensearch-port.properties
     it-run-trace.properties
+    it-run-operator-note.txt
 )
 
 ENGINE_LOG_TREES=(
@@ -113,12 +118,23 @@ usage() {
     echo "  (default)     Unexploded directory: archives/it-run-YYYYMMDD-HHMMSS/"
     echo "  --tar         Write a .tar.gz instead (default name under archives/)"
     echo "  -o PATH       Output directory, or .tar.gz / .tgz archive path"
-    echo "  -m, --message Operator note about run context (quoted string)"
+    echo "  -m, --message Operator note (default: it-run-operator-note.txt from build.sh)"
     echo "  --message-file  Read operator note from a file"
     echo "  --full-karaf  Include complete karaf.log and rollover segments (default: tail + filtered errors)"
     echo "  --no-compare  Skip auto compare of last 3 captures (default: on when 2+ runs exist)"
     echo "  --force       Archive even if this target/ run was already captured"
     exit 1
+}
+
+
+load_default_operator_note() {
+    if [ -n "$RUN_MESSAGE" ]; then
+        return 0
+    fi
+    if RUN_MESSAGE="$(it_load_default_operator_note "$TARGET_DIR" "$SCRIPT_DIR" 2>/dev/null)"; then
+        ui_detail "Using auto-generated operator note from $IT_OPERATOR_NOTE_FILE"
+        return 0
+    fi
 }
 
 parse_args() {
@@ -373,6 +389,10 @@ write_run_summary() {
             echo "tests.skipped=$(it_failsafe_summary_count "$summary_xml" skipped)"
         fi
         echo "failed.tests.count=$failed_count"
+        if [ -f "$(target_path "$IT_MEMORY_SUMMARY")" ]; then
+            grep -E '^memory\.(peak|min|warning|samples|karaf|search)\.' \
+                "$(target_path "$IT_MEMORY_SUMMARY")" 2>/dev/null || true
+        fi
         if [ -n "$RUN_FINGERPRINT" ]; then
             echo "${IT_RUN_FINGERPRINT_FIELD}=$RUN_FINGERPRINT"
         fi
@@ -416,11 +436,24 @@ archive_engine_log_trees() {
     done
 }
 
+archive_memory_artifacts() {
+    local name samples summary
+    for name in "$IT_MEMORY_SAMPLES" "$IT_MEMORY_SUMMARY" "$IT_MEMORY_SAMPLER_LOG"; do
+        copy_file "$(target_path "$name")" "$name"
+    done
+    samples="$(target_path "$IT_MEMORY_SAMPLES")"
+    summary="$(target_path "$IT_MEMORY_SUMMARY")"
+    if [ -f "$samples" ] && [ ! -f "$summary" ]; then
+        it_memory_summarize_samples "$samples" "$summary" && copy_file "$summary" "$IT_MEMORY_SUMMARY"
+    fi
+}
+
 archive_test_artifacts() {
     archive_report_trees
     capture_test_manifest
     archive_run_config_files
     archive_engine_log_trees
+    archive_memory_artifacts
     write_run_context
 }
 
@@ -493,6 +526,7 @@ finalize_output() {
 main() {
     it_run_entry_init "$SCRIPT_DIR"
     parse_args "$@"
+    load_default_operator_note
 
     require_target_dir
     reject_duplicate_archive

@@ -45,7 +45,59 @@ run under `itests/target/exam/` with a UUID directory name.
 | `kt.sh` | Live Karaf inspection during a run (log, tail, grep, debug) |
 | `archive-it-run.sh` | Capture IT run artifacts before the next build wipes them |
 | `compare-it-runs.sh` | Diff multiple captures to classify flaky vs systematic failures |
+| `sample-it-memory.sh` | Memory sampling, summarize, operator note, and cross-platform verify |
 | `jacoco-report.sh` | Generate a JaCoCo coverage report after a run |
+
+
+---
+
+## Memory sizing analysis
+
+`./build.sh --integration-tests` starts a background memory sampler automatically.
+Results land in `itests/target/`:
+
+| File | Purpose |
+|------|---------|
+| `memory-samples.tsv` | Time-series samples (Karaf heap, search heap, Docker RSS, swap) |
+| `memory-summary.txt` | Peak usage, headroom %, peak Karaf GCT (seconds), swap warnings |
+| `memory-sampler.log` | Sampler diagnostics |
+
+Disable sampling with `--no-memory-sampler`, or change the interval with
+`--memory-interval 60` (default: 30s).
+
+Each sample uses one header-aware `jstat -gc` attach (cached `MaxHeapSize` per Karaf PID,
+with `jinfo`/`jcmd`/trace fallbacks), a filtered ES `/_nodes/stats/jvm` request, and
+`docker stats` on the IT container only (`itests-elasticsearch` or `itests-opensearch`).
+System metrics use `vm_stat`/`sysctl` on macOS and `free`/`/proc/loadavg` on Linux.
+
+Swap warnings fire only when available RAM drops below 2 GB during the run or swap
+grows by more than 256 MB (avoids false positives from baseline macOS swap).
+
+Verify locally:
+
+```bash
+cd itests
+./sample-it-memory.sh verify
+```
+
+Manual usage:
+
+```bash
+./itests/sample-it-memory.sh start --interval 30
+./itests/sample-it-memory.sh stop    # writes memory-summary.txt
+./itests/sample-it-memory.sh summarize
+./itests/sample-it-memory.sh operator-note --print-only
+```
+
+After a run, `build.sh` writes `itests/target/it-run-operator-note.txt` with outcome,
+heap config, test counts, and memory peaks. `archive-it-run.sh` uses that file as the
+default operator note when you omit `-m` (override with `-m` or `--message-file` as before).
+
+The archive also includes memory files and adds peak metrics to `run-summary.properties`.
+On GitHub Actions, download the `it-memory-metrics-*` artifact from the workflow run.
+
+Compare heap configurations across runs using `archives/runs-index.tsv` (configured
+heaps + observed peaks from `memory.peak.*` fields in each capture).
 
 ---
 
@@ -325,8 +377,8 @@ wipes `itests/target/`:
 
 ```bash
 cd itests
-./archive-it-run.sh
-./archive-it-run.sh -m "Heavy swap, 2 failures in GraphQLListIT"   # with an operator note
+./archive-it-run.sh                                    # uses auto-generated operator note
+./archive-it-run.sh -m "Heavy swap, 2 failures in GraphQLListIT"   # override auto note
 ./archive-it-run.sh --full-karaf                                    # include complete Karaf log
 ```
 

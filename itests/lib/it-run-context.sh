@@ -20,6 +20,7 @@
 # Expects archive hooks: target_path, staging_path, log_staged_file, mark_included,
 # and globals: SCRIPT_DIR, REPO_ROOT, TARGET_DIR, MANIFEST, OUTPUT, RUN_MESSAGE,
 # RUN_ID, FULL_KARAF, CREATE_TAR, RUN_CONTEXT_REL, RUN_TRACE_FILE.
+# Requires it-run-memory.sh to be sourced by the caller (archive-it-run.sh).
 
 context_append_inferred_maven_properties() {
     local engine
@@ -72,6 +73,7 @@ context_append_system_snapshot() {
     if [ "$(uname -s 2>/dev/null)" = Darwin ] && command -v memory_pressure >/dev/null 2>&1; then
         echo "snapshot.memory_pressure=$(memory_pressure 2>/dev/null | head -1)"
     fi
+    it_memory_append_system_snapshot
 }
 
 context_emit_manifest_git_lines() {
@@ -151,6 +153,10 @@ write_run_context() {
         echo
         echo "## System snapshot (at archive time — not at IT start)"
         context_append_system_snapshot
+        echo
+        it_memory_append_context_section \
+            "$(target_path "$IT_MEMORY_SUMMARY")" \
+            "$(target_path "$IT_MEMORY_SAMPLES")"
     } > "$out"
     log_staged_file "$RUN_CONTEXT_REL" "Wrote $RUN_CONTEXT_REL"
     mark_included
