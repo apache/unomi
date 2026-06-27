@@ -362,6 +362,11 @@ public class ClusterServiceImplTest {
 
     @Test
     public void testPurgeByDateDelegatesToPersistenceService() {
+        // Cancel the background cluster tasks to prevent a race: cleanupStaleNodes() has
+        // initialDelay=0 and would treat these fixtures (no lastHeartbeat set, defaults to 0)
+        // as stale, deleting them before/while this test's own purge(Date) assertions run.
+        clusterService.cancelScheduledTasks();
+
         // Setup: create items with different creation dates in real persistence
         executionContextManager.executeAsSystem(() -> {
             ClusterNode oldNode = new ClusterNode();
@@ -390,6 +395,11 @@ public class ClusterServiceImplTest {
 
     @Test
     public void testPurgeByScopeDelegatesToPersistenceService() {
+        // Cancel the background cluster tasks to prevent a race: cleanupStaleNodes() has
+        // initialDelay=0 and would treat these fixtures (no lastHeartbeat set, defaults to 0)
+        // as stale, deleting them before/while this test's own purge(String) assertions run.
+        clusterService.cancelScheduledTasks();
+
         // Setup: create two nodes with different scopes in real persistence
         executionContextManager.executeAsSystem(() -> {
             ClusterNode scopedNode = new ClusterNode();
