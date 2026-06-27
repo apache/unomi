@@ -383,13 +383,14 @@ public class ClusterServiceImplTest {
             persistenceService.save(recentNode);
         });
 
-        // Purge items older than cutoff (between old and recent)
-        Date cutoff = new Date(System.currentTimeMillis() - 3L * 24 * 3600 * 1000); // 3 days ago
-        clusterService.purge(cutoff);
+        // Purge and verify in system tenant — items were saved there; load/purge are tenant-scoped.
+        executionContextManager.executeAsSystem(() -> {
+            Date cutoff = new Date(System.currentTimeMillis() - 3L * 24 * 3600 * 1000); // 3 days ago
+            clusterService.purge(cutoff);
 
-        // Verify: old node removed, recent node remains
-        assertNull(persistenceService.load("old-node", ClusterNode.class));
-        assertNotNull(persistenceService.load("recent-node", ClusterNode.class));
+            assertNull(persistenceService.load("old-node", ClusterNode.class));
+            assertNotNull(persistenceService.load("recent-node", ClusterNode.class));
+        });
     }
 
     @Test
@@ -411,11 +412,11 @@ public class ClusterServiceImplTest {
             persistenceService.save(otherNode);
         });
 
-        // Execute purge by scope
-        clusterService.purge("testScope");
+        executionContextManager.executeAsSystem(() -> {
+            clusterService.purge("testScope");
 
-        // Verify: scoped node removed, other node remains
-        assertNull(persistenceService.load("scoped-node", ClusterNode.class));
-        assertNotNull(persistenceService.load("other-node", ClusterNode.class));
+            assertNull(persistenceService.load("scoped-node", ClusterNode.class));
+            assertNotNull(persistenceService.load("other-node", ClusterNode.class));
+        });
     }
 }
