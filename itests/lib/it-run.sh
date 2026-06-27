@@ -37,7 +37,9 @@ IT_ENGINE_PORT_FILES=(
     elasticsearch-port.properties
     opensearch-port.properties
 )
-IT_RUN_CONTEXT_NO_OPERATOR_NOTE='(none — pass --message "..." to describe run conditions, e.g. heavy swap, CI runner, single-test rerun)'
+IT_RUN_CONTEXT_NO_OPERATOR_NOTE='(none — auto-generated note missing; run via ./build.sh --integration-tests or pass -m "...")'
+IT_RUN_TRACE="it-run-trace.properties"
+IT_OPERATOR_NOTE_FILE="it-run-operator-note.txt"
 
 it_run_lib_init() {
     IT_SCRIPT_DIR="$1"
@@ -77,14 +79,33 @@ it_read_pom_profile_property() {
 
     awk -v profile="$profile" -v prop="$property" '
         $0 ~ "<id>" profile "</id>" { in_profile=1 }
-        in_profile && $0 ~ "<" prop ">" {
-            gsub(/.*<[^>]+>/, "")
-            gsub(/<.*/, "")
-            print
+        in_profile && index($0, "<" prop ">") {
+            start = index($0, "<" prop ">") + length(prop) + 2
+            rest = substr($0, start)
+            end = index(rest, "<")
+            if (end > 0) {
+                print substr(rest, 1, end - 1)
+            }
             exit
         }
         in_profile && $0 ~ "</profile>" { exit }
     ' "$pom"
+}
+
+it_resolve_configured_heap() {
+    local trace_file="$1"
+    local trace_field="$2"
+    local pom="$3"
+    local profile="$4"
+    local pom_field="$5"
+    local configured
+
+    configured="$(it_read_properties_field "$trace_file" "$trace_field")"
+    if [ -n "$configured" ]; then
+        echo "$configured"
+        return
+    fi
+    it_read_pom_profile_property "$pom" "$profile" "$pom_field"
 }
 
 it_infer_search_engine() {
@@ -101,6 +122,41 @@ it_infer_search_engine() {
     else
         echo "unknown"
     fi
+}
+
+it_search_engine_pom_profile() {
+    case "$1" in
+        opensearch) echo "opensearch" ;;
+        *) echo "elasticsearch" ;;
+    esac
+}
+
+it_search_engine_heap_pom_field() {
+    case "$1" in
+        opensearch) echo "opensearch.heap" ;;
+        *) echo "elasticsearch.heap" ;;
+    esac
+}
+
+it_search_engine_docker_container() {
+    case "$1" in
+        opensearch) echo "itests-opensearch" ;;
+        *) echo "itests-elasticsearch" ;;
+    esac
+}
+
+it_search_engine_port_properties_file() {
+    case "$1" in
+        opensearch) echo "opensearch-port.properties" ;;
+        *) echo "elasticsearch-port.properties" ;;
+    esac
+}
+
+it_search_engine_default_port() {
+    case "$1" in
+        opensearch) echo "9401" ;;
+        *) echo "9400" ;;
+    esac
 }
 
 it_run_label() {
@@ -468,4 +524,138 @@ it_update_runs_index() {
         done
     } > "$index"
     ui_detail "Updated $index"
+}
+
+it_format_configured_heap() {
+    local trace_file="$1"
+    local trace_field="$2"
+    local pom="$3"
+    local profile="$4"
+    local pom_field="$5"
+    local trace_value resolved
+
+    trace_value="$(it_read_properties_field "$trace_file" "$trace_field")"
+    if [ -n "$trace_value" ]; then
+        echo "$trace_value"
+        return
+    fi
+    resolved="$(it_resolve_configured_heap "$trace_file" "$trace_field" "$pom" "$profile" "$pom_field")"
+    if [ -n "$resolved" ]; then
+        echo "${resolved} (pom default)"
+    else
+        echo "unknown"
+    fi
+}
+
+it_generate_operator_note() {
+    local target_dir="$1"
+    local script_dir="$2"
+    local trace_file="$target_dir/$IT_RUN_TRACE"
+    local memory_summary="$target_dir/${IT_MEMORY_SUMMARY:-memory-summary.txt}"
+    local failsafe_summary="$target_dir/failsafe-reports/failsafe-summary.xml"
+    local engine profile search_heap karaf_heap exit_code single_test
+    local failures errors skipped completed started completed_ts host ci
+    local swap_warn search_high karaf_high
+
+    if [ ! -f "$trace_file" ]; then
+        return 1
+    fi
+
+    engine="$(it_read_properties_field "$trace_file" search.engine)"
+    if [ -z "$engine" ]; then
+        engine="$(it_infer_search_engine "$target_dir")"
+    fi
+    profile="$(it_search_engine_pom_profile "$engine")"
+    search_heap="$(it_format_configured_heap "$trace_file" search.heap "$script_dir/pom.xml" "$profile" "$(it_search_engine_heap_pom_field "$engine")")"
+    karaf_heap="$(it_format_configured_heap "$trace_file" karaf.heap "$script_dir/pom.xml" "$profile" karaf.heap)"
+    exit_code="$(it_read_properties_field "$trace_file" maven.exit.code)"
+    single_test="$(it_read_properties_field "$trace_file" single.test)"
+    started="$(it_read_properties_field "$trace_file" trace.started)"
+    completed_ts="$(it_read_properties_field "$trace_file" trace.completed)"
+    host="$(it_read_properties_field "$trace_file" host)"
+    if [ -z "$host" ]; then
+        host="$(it_hostname)"
+    fi
+    if [ -n "${GITHUB_ACTIONS:-}" ]; then
+        ci="yes (${GITHUB_WORKFLOW:-workflow}/${GITHUB_JOB:-job})"
+    else
+        ci="no"
+    fi
+
+    failures="$(it_failsafe_summary_count "$failsafe_summary" failures)"
+    errors="$(it_failsafe_summary_count "$failsafe_summary" errors)"
+    skipped="$(it_failsafe_summary_count "$failsafe_summary" skipped)"
+    completed="$(it_failsafe_summary_count "$failsafe_summary" completed)"
+
+    swap_warn="$(it_read_properties_field "$memory_summary" memory.warning.swap.detected)"
+    search_high="$(it_read_properties_field "$memory_summary" memory.warning.search.heap.high)"
+    karaf_high="$(it_read_properties_field "$memory_summary" memory.warning.karaf.heap.high)"
+
+    echo "Auto-generated operator note ($(it_utc_now))"
+    if [ "$exit_code" = "0" ]; then
+        echo "Outcome: PASS (maven exit 0)"
+    elif [ -n "$exit_code" ]; then
+        echo "Outcome: FAIL (maven exit ${exit_code})"
+    else
+        echo "Outcome: unknown (run still in progress or trace incomplete)"
+    fi
+    echo "Search engine: ${engine}"
+    echo "Heaps: search=${search_heap}, karaf=${karaf_heap}"
+    echo "Host: ${host}; CI: ${ci}"
+    if [ -n "$started" ] && [ -n "$completed_ts" ]; then
+        echo "Run window: ${started} → ${completed_ts}"
+    elif [ -n "$started" ]; then
+        echo "Run started: ${started}"
+    fi
+    if [ -n "$single_test" ]; then
+        echo "Scope: single test ${single_test}"
+    else
+        echo "Scope: full AllITs suite"
+    fi
+    if [ -n "$completed" ]; then
+        echo "Tests: completed=${completed:-0} failures=${failures:-0} errors=${errors:-0} skipped=${skipped:-0}"
+    fi
+    if [ -f "$memory_summary" ]; then
+        echo "Memory peaks: karaf=$(it_read_properties_field "$memory_summary" memory.peak.karaf.heap.used.mb)/$(it_read_properties_field "$memory_summary" memory.peak.karaf.heap.max.mb) MB, karaf GCT=$(it_read_properties_field "$memory_summary" memory.peak.karaf.gct.s)s, search=$(it_read_properties_field "$memory_summary" memory.peak.search.heap.used.mb)/$(it_read_properties_field "$memory_summary" memory.peak.search.heap.max.mb) MB, swap=$(it_read_properties_field "$memory_summary" memory.peak.system.swap.used.mb) MB"
+        if [ "$swap_warn" = "true" ]; then
+            echo "Memory alert: swap detected during run — consider lowering JVM heaps or using a larger runner"
+        fi
+        if [ "$search_high" = "true" ]; then
+            echo "Memory alert: search engine heap usage high (>=85% of max) — may be GC-bound"
+        fi
+        if [ "$karaf_high" = "true" ]; then
+            echo "Memory alert: Karaf heap usage high (>=85% of max) — may be GC-bound"
+        fi
+    else
+        echo "Memory peaks: (no memory-summary.txt — sampler disabled or run archived before finalize)"
+    fi
+}
+
+it_write_operator_note_file() {
+    local target_dir="$1"
+    local script_dir="$2"
+    local out="$target_dir/$IT_OPERATOR_NOTE_FILE"
+
+    mkdir -p "$target_dir"
+    if ! it_generate_operator_note "$target_dir" "$script_dir" > "$out"; then
+        rm -f "$out"
+        return 1
+    fi
+}
+
+it_load_default_operator_note() {
+    local target_dir="$1"
+    local script_dir="$2"
+    local note_file="$target_dir/$IT_OPERATOR_NOTE_FILE"
+
+    if [ -f "$note_file" ]; then
+        cat "$note_file"
+        return 0
+    fi
+    if [ -f "$target_dir/$IT_RUN_TRACE" ]; then
+        it_write_operator_note_file "$target_dir" "$script_dir" || return 1
+        cat "$note_file"
+        return 0
+    fi
+    return 1
 }

@@ -272,6 +272,8 @@ IT_DEBUG_PORT=5006
 IT_DEBUG_SUSPEND=false
 SKIP_MIGRATION_TESTS=false
 KEEP_CONTAINER=false
+IT_MEMORY_SAMPLER=true
+IT_MEMORY_INTERVAL=30
 JAVADOC=false
 LOG_FILE=""
 LOG_FILE_ONLY=false
@@ -315,6 +317,8 @@ EOF
         echo -e "  ${CYAN}--it-debug-suspend${NC}         Suspend integration test until debugger connects"
         echo -e "  ${CYAN}--skip-migration-tests${NC}     Skip migration-related tests"
         echo -e "  ${CYAN}--keep-container${NC}           Keep search engine container running after tests (for post-failure inspection)"
+        echo -e "  ${CYAN}--no-memory-sampler${NC}        Disable JVM/system memory sampling during integration tests"
+        echo -e "  ${CYAN}--memory-interval SEC${NC}    Memory sample interval in seconds (default: 30)"
         echo -e "  ${CYAN}--javadoc${NC}                  Build and validate Javadoc after install (fails on doclint errors)"
         echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, no Maven build cache, non-interactive, includes Javadoc"
         echo -e "  ${CYAN}--log-file PATH${NC}            Tee all output to PATH (console + file)"
@@ -354,6 +358,8 @@ EOF
         echo "  --it-debug-suspend        Suspend integration test until debugger connects"
         echo "  --skip-migration-tests    Skip migration-related tests"
         echo "  --keep-container          Keep search engine container running after tests (for post-failure inspection)"
+        echo "  --no-memory-sampler       Disable JVM/system memory sampling during integration tests"
+        echo "  --memory-interval SEC     Memory sample interval in seconds (default: 30)"
         echo "  --javadoc                 Build and validate Javadoc after install (fails on doclint errors)"
         echo "  --ci                      CI mode: no Karaf, no Maven build cache, non-interactive, includes Javadoc"
         echo "  --log-file PATH           Tee all output to PATH (console + file)"
@@ -504,6 +510,13 @@ while [ "$1" != "" ]; do
             ;;
         --keep-container)
             KEEP_CONTAINER=true
+            ;;
+        --no-memory-sampler)
+            IT_MEMORY_SAMPLER=false
+            ;;
+        --memory-interval)
+            shift
+            IT_MEMORY_INTERVAL="$1"
             ;;
         --javadoc)
             JAVADOC=true
@@ -1037,6 +1050,8 @@ write_it_run_trace_start() {
         echo "it.debug.suspend=$IT_DEBUG_SUSPEND"
         echo "skip.migration.tests=$SKIP_MIGRATION_TESTS"
         echo "it.keep.container=$KEEP_CONTAINER"
+        echo "it.memory.sampler=$IT_MEMORY_SAMPLER"
+        echo "it.memory.interval=$IT_MEMORY_INTERVAL"
         echo "maven.debug=$MAVEN_DEBUG"
         echo "maven.offline=$MAVEN_OFFLINE"
         echo "maven.quiet=$MAVEN_QUIET"
@@ -1046,6 +1061,31 @@ write_it_run_trace_start() {
         echo "host=$(hostname 2>/dev/null || echo unknown)"
         echo "uname=$(uname -a 2>/dev/null || echo unknown)"
     } > "$trace_file"
+}
+
+
+start_it_memory_sampler() {
+    local sampler="$DIRNAME/itests/sample-it-memory.sh"
+    if [ "$IT_MEMORY_SAMPLER" != true ] || [ ! -f "$sampler" ]; then
+        return 0
+    fi
+    bash "$sampler" start --target-dir "$DIRNAME/itests/target" --interval "$IT_MEMORY_INTERVAL" || \
+        print_status "warning" "Could not start IT memory sampler"
+}
+
+write_it_run_operator_note() {
+    local sampler="$DIRNAME/itests/sample-it-memory.sh"
+    if [ -f "$sampler" ]; then
+        bash "$sampler" operator-note --target-dir "$DIRNAME/itests/target" 2>/dev/null || true
+    fi
+}
+
+stop_it_memory_sampler() {
+    local sampler="$DIRNAME/itests/sample-it-memory.sh"
+    if [ ! -f "$sampler" ]; then
+        return 0
+    fi
+    bash "$sampler" stop --target-dir "$DIRNAME/itests/target" 2>/dev/null || true
 }
 
 finalize_it_run_trace() {
@@ -1074,6 +1114,7 @@ $MVN_CMD clean $MVN_OPTS || {
 
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     write_it_run_trace_start
+    start_it_memory_sampler
 fi
 
 print_progress $((++current_step)) $total_steps "Compiling and installing artifacts..."
@@ -1085,7 +1126,9 @@ fi
 INSTALL_EXIT=0
 $MVN_CMD install $MVN_OPTS || INSTALL_EXIT=$?
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
+    stop_it_memory_sampler
     finalize_it_run_trace "$INSTALL_EXIT"
+    write_it_run_operator_note
 fi
 if [ "$INSTALL_EXIT" -ne 0 ]; then
     print_status "error" "Maven install failed"

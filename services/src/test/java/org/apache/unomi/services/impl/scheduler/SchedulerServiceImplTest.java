@@ -2033,8 +2033,10 @@ public class SchedulerServiceImplTest {
 
         taskId.set(systemTask.getItemId());
 
-        // Wait for task to execute once
+        // Wait for task to execute once, then cancel immediately so fixed-rate scheduling
+        // cannot fire a second execution before we assert the count (CI timing flake).
         assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute");
+        schedulerService.cancelTask(systemTask.getItemId());
         assertEquals(1, executionCount.get(), "Task should have executed once");
 
         // Force persistence to ensure the task is saved
@@ -2485,7 +2487,17 @@ public class SchedulerServiceImplTest {
     @Test
     @Tag("RecoveryTests")
     public void testPreDestroyMarksStaleRunningPersistentTaskAsCrashed() throws Exception {
-        ScheduledTask runningTask = createTestTask("predestroy-crash-test", ScheduledTask.TaskStatus.RUNNING);
+        // Persist once with a valid lock. createTestTask() saves RUNNING tasks without a
+        // lock first, which lets the background recovery loop (initial delay 0) mark them
+        // CRASHED before preDestroy() under CI scheduling.
+        ScheduledTask runningTask = new ScheduledTask();
+        runningTask.setItemId(UUID.randomUUID().toString());
+        runningTask.setTaskType("predestroy-crash-test");
+        runningTask.setStatus(ScheduledTask.TaskStatus.RUNNING);
+        runningTask.setLockOwner(schedulerService.getNodeId());
+        runningTask.setLockDate(new Date());
+        runningTask.setExecutingNodeId(schedulerService.getNodeId());
+        persistenceService.save(runningTask);
         persistenceService.refresh();
 
         schedulerService.preDestroy();

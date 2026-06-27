@@ -70,6 +70,16 @@ jobs:
           else
             ./build.sh --ci --integration-tests
           fi
+      - name: Archive IT memory metrics
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: it-memory-metrics-jdk17-${{ matrix.search-engine }}-${{ github.run_number }}
+          path: |
+            itests/target/memory-samples.tsv
+            itests/target/memory-summary.txt
+            itests/target/memory-sampler.log
+          if-no-files-found: ignore
       - name: Archive code coverage logs
         uses: actions/upload-artifact@v4
         if: false # UNOMI-746 Reactivate if necessary
