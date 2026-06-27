@@ -170,7 +170,6 @@
             <plugin>
                 <groupId>net.nicoulaj.maven.plugins</groupId>
                 <artifactId>checksum-maven-plugin</artifactId>
-                <version>1.7</version>
                 <executions>
                     <execution>
                         <id>package-release-checksum</id>

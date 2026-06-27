@@ -16,7 +16,7 @@
 
 Schemas can be complex to develop, and sometimes, understanding why an event is rejected can be challenging.
 
-This section of the documentation defails mechanisms put in place to facilitate the development when working around JSON Schemas (when creating a new schema, when 
+This section of the documentation details mechanisms put in place to facilitate the development when working around JSON Schemas (when creating a new schema, when 
 modifying an existing event, ...etc).
 
 ==== Logs in debug mode
@@ -41,14 +41,14 @@ Doing so will output logs similar to this:
 
 ==== validateEvent endpoint
 
-A dedicated Admin endpoint (requires authentication), accessible at: `cxs/jsonSchema/validateEvent`, was created to validate events against JSON Schemas loaded in Apache Unomi.
+A dedicated endpoint (requires tenant authentication), accessible at: `cxs/jsonSchema/validateEvent`, was created to validate events against JSON Schemas loaded in Apache Unomi.
 
 For example, sending an event not matching a schema:
 [source]
 ----
 curl --request POST \
   --url http://localhost:8181/cxs/jsonSchema/validateEvent \
-  --user karaf:karaf \  
+  --user 'TENANT_ID:PRIVATE_KEY' \
   --header 'Content-Type: application/json' \
   --data '{
     "eventType": "no-event",
@@ -81,14 +81,14 @@ towards the incorrect property:
 
 ==== validateEvents endpoint
 
-A dedicated Admin endpoint (requires authentication), accessible at: `cxs/jsonSchema/validateEvents`, was created to validate a list of event at once against JSON Schemas loaded in Apache Unomi.
+A dedicated endpoint (requires tenant authentication), accessible at: `cxs/jsonSchema/validateEvents`, was created to validate a list of event at once against JSON Schemas loaded in Apache Unomi.
 
 For example, sending a list of event not matching a schema:
 [source]
 ----
 curl --request POST \
   --url http://localhost:8181/cxs/jsonSchema/validateEvents \
-  --user karaf:karaf \
+  --user 'TENANT_ID:PRIVATE_KEY' \
   --header 'Content-Type: application/json' \
   --data '[{
     "eventType": "view",

@@ -1,0 +1,1260 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Implementing a JavaScript Tracker
+
+This guide explains how to implement a basic JavaScript tracker for Apache Unomi from scratch. This will help you understand the underlying concepts and API interactions, whether you're building a custom tracker or integrating Apache Unomi into an existing application.
+
+[NOTE]
+====
+Apache Unomi provides an official web tracker (see <<_unomi_web_tracker_reference,Unomi Web Tracker reference>>) that handles many of these details automatically. This guide is useful if you need a custom implementation or want to understand how the tracker works internally.
+====
+
+==== Prerequisites
+
+Before implementing a tracker, you need:
+
+* An Apache Unomi instance running and accessible
+* A tenant created with a public API key (see <<_request_examples,Request examples>> for tenant creation)
+* Basic knowledge of JavaScript and HTTP requests
+* Understanding of how profile tracking works (see <<_how_profile_tracking_works,How profile tracking works>>)
+
+==== Basic Tracker Structure
+
+A basic JavaScript tracker needs to:
+
+1. **Manage session and profile identifiers** - Generate and store session IDs, handle profile ID cookies
+2. **Make context requests** - Call `/cxs/context.json` to retrieve profile/session data
+3. **Send events** - Send user interaction events to Apache Unomi
+4. **Handle personalization** - Request and apply personalized content
+5. **Manage cookies** - Read and write cookies for profile tracking
+
+Here's a minimal tracker structure:
+
+[source,javascript]
+----
+(function() {
+    'use strict';
+
+    // Configuration
+    const CONFIG = {
+        contextServerUrl: 'http://localhost:8181',
+        apiKey: 'YOUR_PUBLIC_API_KEY',
+        scope: 'mydigital',
+        sessionCookieName: 'unomi-session-id',
+        profileCookieName: 'context-profile-id'
+    };
+
+    // Tracker object
+    const tracker = {
+        // Session management
+        getSessionId: function() { /* ... */ },
+        setSessionId: function(sessionId) { /* ... */ },
+        
+        // Cookie utilities
+        getCookie: function(name) { /* ... */ },
+        setCookie: function(name, value, days) { /* ... */ },
+        
+        // Context requests
+        getContext: function(options, callback) { /* ... */ },
+        
+        // Event tracking
+        trackEvent: function(event, callback) { /* ... */ },
+        trackEvents: function(events, callback) { /* ... */ },
+        
+        // Personalization
+        personalize: function(personalizations, callback) { /* ... */ },
+        
+        // Initialization
+        init: function() { /* ... */ }
+    };
+
+    // Expose tracker globally
+    window.unomiTracker = tracker;
+})();
+----
+
+==== Cookie Management
+
+The tracker needs to read and write cookies to maintain the session ID and handle the profile ID cookie set by Apache Unomi.
+
+[source,javascript]
+----
+// Cookie utilities
+getCookie: function(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) {
+        return parts.pop().split(';').shift();
+    }
+    return null;
+},
+
+setCookie: function(name, value, days) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+},
+
+deleteCookie: function(name) {
+    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;`;
+}
+----
+
+==== Session Management
+
+The tracker needs to generate and maintain a session ID. If no session ID exists, generate a new one:
+
+[source,javascript]
+----
+// Generate a UUID v4
+// Uses crypto.randomUUID() if available (most secure, modern browsers)
+// Falls back to crypto.getRandomValues() (secure, widely supported)
+// Falls back to Math.random() only for very old browsers (less secure)
+generateUUID: function() {
+    // Use crypto.randomUUID() if available (Chrome 92+, Firefox 95+, Safari 15.4+, Node.js 19+)
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    
+    // Use crypto.getRandomValues() if available (widely supported, secure)
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            const r = crypto.getRandomValues(new Uint8Array(1))[0] % 16;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+    
+    // Fallback to Math.random() for very old browsers (not cryptographically secure)
+    // Note: This is less secure and should only be used as a last resort
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+},
+
+// Get or create session ID
+getSessionId: function() {
+    let sessionId = this.getCookie(CONFIG.sessionCookieName);
+    if (!sessionId) {
+        sessionId = this.generateUUID();
+        this.setSessionId(sessionId);
+    }
+    return sessionId;
+},
+
+setSessionId: function(sessionId) {
+    this.setCookie(CONFIG.sessionCookieName, sessionId, 1); // 1 day expiration
+}
+----
+
+==== Making Context Requests
+
+The core of the tracker is making requests to `/cxs/context.json`. This endpoint:
+
+* Automatically creates or loads profiles and sessions
+* Processes events
+* Resolves personalization
+* Returns profile and session data
+
+[source,javascript]
+----
+// Make a context request
+getContext: function(options, callback) {
+    const sessionId = this.getSessionId();
+    const url = `${CONFIG.contextServerUrl}/cxs/context.json?sessionId=${encodeURIComponent(sessionId)}`;
+    
+    // Build request payload
+    const payload = {
+        source: {
+            itemId: options.sourceId || window.location.pathname,
+            itemType: options.sourceType || 'page',
+            scope: CONFIG.scope
+        }
+    };
+    
+    // Add optional parameters
+    if (options.requiredProfileProperties) {
+        payload.requiredProfileProperties = options.requiredProfileProperties;
+    }
+    if (options.requiredSessionProperties) {
+        payload.requiredSessionProperties = options.requiredSessionProperties;
+    }
+    if (options.requireSegments) {
+        payload.requireSegments = true;
+    }
+    if (options.requireScores) {
+        payload.requireScores = true;
+    }
+    if (options.events) {
+        payload.events = options.events;
+    }
+    if (options.filters) {
+        payload.filters = options.filters;
+    }
+    if (options.personalizations) {
+        payload.personalizations = options.personalizations;
+    }
+    
+    // Make the request
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.setRequestHeader('X-Unomi-Api-Key', CONFIG.apiKey);
+    xhr.withCredentials = true; // Important for cookies
+    
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (callback) {
+                        callback(null, response);
+                    }
+                } catch (e) {
+                    if (callback) {
+                        callback(new Error('Failed to parse response: ' + e.message), null);
+                    }
+                }
+            } else {
+                if (callback) {
+                    callback(new Error('Request failed with status: ' + xhr.status), null);
+                }
+            }
+        }
+    };
+    
+    xhr.send(JSON.stringify(payload));
+}
+----
+
+==== Retrieving Profile and Session Properties
+
+To retrieve profile and session properties, include them in the context request:
+
+[source,javascript]
+----
+// Get all profile and session properties
+tracker.getContext({
+    requireSegments: true,
+    requireScores: true,
+    requiredProfileProperties: ['*'], // '*' means all properties
+    requiredSessionProperties: ['*']
+}, function(error, response) {
+    if (error) {
+        console.error('Failed to get context:', error);
+        return;
+    }
+    
+    console.log('Profile ID:', response.profileId);
+    console.log('Session ID:', response.sessionId);
+    console.log('Profile Properties:', response.profileProperties);
+    console.log('Session Properties:', response.sessionProperties);
+    console.log('Profile Segments:', response.profileSegments);
+    console.log('Profile Scores:', response.profileScores);
+});
+----
+
+You can also request specific properties:
+
+[source,javascript]
+----
+// Get specific profile properties
+tracker.getContext({
+    requiredProfileProperties: ['firstName', 'lastName', 'email', 'pageViewCount']
+}, function(error, response) {
+    if (error) {
+        console.error('Failed to get context:', error);
+        return;
+    }
+    
+    const profile = response.profileProperties || {};
+    console.log('User:', profile.firstName, profile.lastName);
+    console.log('Email:', profile.email);
+    console.log('Page Views:', profile.pageViewCount);
+});
+----
+
+==== Sending Events
+
+Events are sent as part of the context request. You can send a single event or multiple events in one request:
+
+[source,javascript]
+----
+// Build an event object
+buildEvent: function(eventType, target, source) {
+    const event = {
+        eventType: eventType,
+        scope: CONFIG.scope
+    };
+    
+    // Set source if provided, otherwise use default based on event type
+    if (source) {
+        event.source = source;
+    } else if (eventType === 'view') {
+        // For view events, source should typically be a site
+        event.source = {
+            itemType: 'site',
+            scope: CONFIG.scope,
+            itemId: window.location.hostname || 'default-site'
+        };
+    } else {
+        // For other events, source defaults to the current page
+        event.source = {
+            itemType: 'page',
+            scope: CONFIG.scope,
+            itemId: window.location.pathname
+        };
+    }
+    
+    // Set target if provided
+    if (target) {
+        event.target = target;
+    }
+    
+    return event;
+},
+
+// Track a single event
+trackEvent: function(event, callback) {
+    this.getContext({
+        events: [event]
+    }, callback);
+},
+
+// Track multiple events (more efficient)
+trackEvents: function(events, callback) {
+    this.getContext({
+        events: events
+    }, callback);
+}
+----
+
+**Example: Tracking a page view**
+
+[source,javascript]
+----
+// Track a page view event
+const viewEvent = tracker.buildEvent('view', {
+    itemType: 'page',
+    scope: CONFIG.scope,
+    itemId: window.location.pathname,
+    properties: {
+        pageInfo: {
+            pageName: document.title,
+            destinationURL: window.location.href,
+            referringURL: document.referrer
+        }
+    }
+}, {
+    itemType: 'site',
+    scope: CONFIG.scope,
+    itemId: window.location.hostname || 'default-site'
+});
+
+tracker.trackEvent(viewEvent, function(error, response) {
+    if (error) {
+        console.error('Failed to track view event:', error);
+        return;
+    }
+    console.log('View event tracked. Processed events:', response.processedEvents);
+});
+----
+
+**Example: Tracking a click event**
+
+[source,javascript]
+----
+// Track a click on a button
+function trackButtonClick(buttonId, buttonText) {
+    const clickEvent = tracker.buildEvent('click', {
+        itemType: 'button',
+        scope: CONFIG.scope,
+        itemId: buttonId,
+        properties: {
+            text: buttonText
+        }
+    });
+    
+    tracker.trackEvent(clickEvent, function(error, response) {
+        if (error) {
+            console.error('Failed to track click:', error);
+            return;
+        }
+        console.log('Click event tracked');
+    });
+}
+
+// Use it
+document.getElementById('myButton').addEventListener('click', function() {
+    trackButtonClick('myButton', 'Click Me');
+});
+----
+
+**Example: Tracking a form submission**
+
+[source,javascript]
+----
+// Track a form submission
+function trackFormSubmission(formId, formData) {
+    const formEvent = {
+        eventType: 'form',
+        scope: CONFIG.scope,
+        source: {
+            itemType: 'page',
+            scope: CONFIG.scope,
+            itemId: window.location.pathname
+        },
+        target: {
+            itemType: 'form',
+            scope: CONFIG.scope,
+            itemId: formId,
+            properties: formData
+        }
+    };
+    
+    tracker.trackEvent(formEvent, function(error, response) {
+        if (error) {
+            console.error('Failed to track form:', error);
+            return;
+        }
+        console.log('Form event tracked');
+    });
+}
+
+// Use it
+document.getElementById('myForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = {
+        formName: this.id,
+        formFields: {}
+    };
+    
+    // Extract form field values
+    Array.from(this.elements).forEach(function(element) {
+        if (element.name) {
+            formData.formFields[element.name] = element.value;
+        }
+    });
+    
+    trackFormSubmission(this.id, formData);
+});
+----
+
+==== Using Filters
+
+Filters allow you to evaluate conditions against the profile and session to determine which content should be displayed. Filters return boolean results indicating whether conditions match.
+
+[source,javascript]
+----
+// Request filter evaluation
+tracker.getContext({
+    filters: [
+        {
+            id: 'premium-user-filter',
+            filters: [
+                {
+                    condition: {
+                        type: 'profileSegmentCondition',
+                        parameterValues: {
+                            segments: ['premium-users']
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            id: 'new-visitor-filter',
+            filters: [
+                {
+                    condition: {
+                        type: 'profilePropertyCondition',
+                        parameterValues: {
+                            propertyName: 'properties.firstVisit',
+                            comparisonOperator: 'exists'
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+}, function(error, response) {
+    if (error) {
+        console.error('Failed to evaluate filters:', error);
+        return;
+    }
+    
+    const results = response.filteringResults || {};
+    if (results['premium-user-filter']) {
+        console.log('User is a premium user');
+        // Show premium content
+    }
+    if (results['new-visitor-filter']) {
+        console.log('User is a new visitor');
+        // Show welcome message
+    }
+});
+----
+
+==== Using Personalization
+
+Personalization allows you to request content variants and have Apache Unomi select the most appropriate one based on the profile and session state.
+
+[source,javascript]
+----
+// Request personalization
+tracker.getContext({
+    personalizations: [
+        {
+            id: 'homepage-hero',
+            strategy: 'matching-first',
+            strategyOptions: {
+                fallback: 'default-hero'
+            },
+            contents: [
+                {
+                    id: 'premium-user-hero',
+                    filters: [
+                        {
+                            condition: {
+                                type: 'profileSegmentCondition',
+                                parameterValues: {
+                                    segments: ['premium-users']
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    id: 'new-visitor-hero',
+                    filters: [
+                        {
+                            condition: {
+                                type: 'profilePropertyCondition',
+                                parameterValues: {
+                                    propertyName: 'properties.firstVisit',
+                                    comparisonOperator: 'exists'
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    id: 'default-hero'
+                }
+            ]
+        }
+    ]
+}, function(error, response) {
+    if (error) {
+        console.error('Failed to get personalization:', error);
+        return;
+    }
+    
+    // Get selected content ID(s)
+    // Note: personalizations is deprecated but still available
+    // It returns a List<String>, so get the first element for single-selection strategies
+    const contentIds = response.personalizations['homepage-hero'];
+    const selectedContentId = contentIds && contentIds.length > 0 ? contentIds[0] : null;
+    
+    // Alternatively, use personalizationResults for more detailed information
+    const personalizationResult = response.personalizationResults['homepage-hero'];
+    if (personalizationResult && personalizationResult.contentIds && personalizationResult.contentIds.length > 0) {
+        const selectedId = personalizationResult.contentIds[0];
+        console.log('Selected content:', selectedId);
+        console.log('Strategy used:', personalizationResult.strategy);
+        applyPersonalizedContent('homepage-hero', selectedId);
+    } else if (selectedContentId) {
+        console.log('Selected content:', selectedContentId);
+        applyPersonalizedContent('homepage-hero', selectedContentId);
+    } else {
+        console.log('No content selected, using fallback');
+        applyPersonalizedContent('homepage-hero', 'default-hero');
+    }
+});
+
+function applyPersonalizedContent(personalizationId, contentId) {
+    // Your logic to apply the personalized content
+    const element = document.getElementById(personalizationId);
+    if (element) {
+        // Example: Update content based on selected ID
+        if (contentId === 'premium-user-hero') {
+            element.innerHTML = '<h1>Welcome, Premium Member!</h1>';
+        } else if (contentId === 'new-visitor-hero') {
+            element.innerHTML = '<h1>Welcome! Sign up today!</h1>';
+        } else {
+            element.innerHTML = '<h1>Welcome!</h1>';
+        }
+    }
+}
+----
+
+==== Complete Example: Page Load with Personalization
+
+Here's a complete example that loads context, tracks a page view, and applies personalization on page load:
+
+[source,javascript]
+----
+// Initialize tracker on page load
+tracker.init = function() {
+    const sessionId = this.getSessionId();
+    
+    // Build page view event
+    const viewEvent = this.buildEvent('view', {
+        itemType: 'page',
+        scope: CONFIG.scope,
+        itemId: window.location.pathname,
+        properties: {
+            pageInfo: {
+                pageName: document.title,
+                destinationURL: window.location.href,
+                referringURL: document.referrer
+            }
+        }
+    });
+    
+    // Request context with event and personalization
+    this.getContext({
+        events: [viewEvent],
+        requireSegments: true,
+        requiredProfileProperties: ['firstName', 'lastName', 'pageViewCount'],
+        personalizations: [
+            {
+                id: 'homepage-hero',
+                strategy: 'matching-first',
+                strategyOptions: {
+                    fallback: 'default-hero'
+                },
+                contents: [
+                    {
+                        id: 'premium-user-hero',
+                        filters: [
+                            {
+                                condition: {
+                                    type: 'profileSegmentCondition',
+                                    parameterValues: {
+                                        segments: ['premium-users']
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        id: 'new-visitor-hero',
+                        filters: [
+                            {
+                                condition: {
+                                    type: 'profilePropertyCondition',
+                                    parameterValues: {
+                                        propertyName: 'properties.firstVisit',
+                                        comparisonOperator: 'exists'
+                                    }
+                                }
+                            }
+                        ]
+                    },
+                    {
+                        id: 'default-hero'
+                    }
+                ]
+            }
+        ]
+    }, function(error, response) {
+        if (error) {
+            console.error('Failed to initialize tracker:', error);
+            return;
+        }
+        
+        // Log profile information
+        console.log('Profile ID:', response.profileId);
+        console.log('Session ID:', response.sessionId);
+        console.log('Profile Segments:', response.profileSegments);
+        
+        // Apply personalization
+        // Get the first content ID from the list (for single-selection strategies like 'matching-first')
+        // Note: personalizations returns a List<String>, so get the first element
+        const contentIds = response.personalizations && response.personalizations['homepage-hero'];
+        const selectedContentId = contentIds && contentIds.length > 0 ? contentIds[0] : 'default-hero';
+        applyPersonalizedContent('homepage-hero', selectedContentId);
+        
+        // Update UI with profile data
+        if (response.profileProperties) {
+            const profile = response.profileProperties;
+            if (profile.firstName) {
+                updateWelcomeMessage(profile.firstName, profile.lastName);
+            }
+            if (profile.pageViewCount) {
+                updatePageViewCount(profile.pageViewCount);
+            }
+        }
+    });
+};
+
+function applyPersonalizedContent(personalizationId, contentId) {
+    const element = document.getElementById(personalizationId);
+    if (!element) return;
+    
+    const contentMap = {
+        'premium-user-hero': '<div class="hero premium"><h1>Welcome, Premium Member!</h1><p>Thank you for your loyalty.</p></div>',
+        'new-visitor-hero': '<div class="hero new-visitor"><h1>Welcome!</h1><p>Sign up today and get 10% off your first purchase.</p></div>',
+        'default-hero': '<div class="hero default"><h1>Welcome!</h1><p>Discover our amazing products.</p></div>'
+    };
+    
+    element.innerHTML = contentMap[contentId] || contentMap['default-hero'];
+}
+
+function updateWelcomeMessage(firstName, lastName) {
+    const element = document.getElementById('welcome-message');
+    if (element) {
+        element.textContent = `Welcome back, ${firstName} ${lastName}!`;
+    }
+}
+
+function updatePageViewCount(count) {
+    const element = document.getElementById('page-view-count');
+    if (element) {
+        element.textContent = `You've viewed ${count} pages`;
+    }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        tracker.init();
+    });
+} else {
+    tracker.init();
+}
+----
+
+==== Advanced Features
+
+===== Batch Event Tracking
+
+For better performance, batch multiple events into a single request:
+
+[source,javascript]
+----
+// Track multiple events in one request
+const events = [
+    tracker.buildEvent('view', { /* ... */ }),
+    tracker.buildEvent('click', { /* ... */ }),
+    tracker.buildEvent('form', { /* ... */ })
+];
+
+tracker.trackEvents(events, function(error, response) {
+    if (error) {
+        console.error('Failed to track events:', error);
+        return;
+    }
+    console.log('Tracked', response.processedEvents, 'events');
+});
+----
+
+===== Event Queue
+
+Implement an event queue to batch events and send them periodically or when a threshold is reached:
+
+[source,javascript]
+----
+// Event queue implementation
+const eventQueue = {
+    queue: [],
+    maxSize: 10,
+    flushInterval: 5000, // 5 seconds
+    
+    add: function(event) {
+        this.queue.push(event);
+        if (this.queue.length >= this.maxSize) {
+            this.flush();
+        }
+    },
+    
+    flush: function() {
+        if (this.queue.length === 0) return;
+        
+        const events = this.queue.slice();
+        this.queue = [];
+        
+        tracker.trackEvents(events, function(error, response) {
+            if (error) {
+                console.error('Failed to flush events:', error);
+                // Re-add events to queue on error
+                eventQueue.queue = events.concat(eventQueue.queue);
+            } else {
+                console.log('Flushed', response.processedEvents, 'events');
+            }
+        });
+    },
+    
+    start: function() {
+        setInterval(function() {
+            eventQueue.flush();
+        }, this.flushInterval);
+    }
+};
+
+// Start automatic flushing
+eventQueue.start();
+
+// Add events to queue
+eventQueue.add(tracker.buildEvent('click', { /* ... */ }));
+----
+
+===== Error Handling and Retry Logic
+
+Implement robust error handling with retry logic:
+
+[source,javascript]
+----
+// Enhanced context request with retry logic
+getContextWithRetry: function(options, callback, maxRetries) {
+    maxRetries = maxRetries || 3;
+    let retries = 0;
+    
+    const attempt = () => {
+        this.getContext(options, function(error, response) {
+            if (error && retries < maxRetries) {
+                retries++;
+                console.warn('Request failed, retrying...', retries);
+                setTimeout(attempt, 1000 * retries); // Exponential backoff
+            } else {
+                callback(error, response);
+            }
+        });
+    };
+    
+    attempt();
+}
+----
+
+===== Profile ID Synchronization
+
+The profile ID is set by Apache Unomi in a cookie. Make sure to read it from the response:
+
+[source,javascript]
+----
+// Enhanced context request that handles profile ID cookie
+getContext: function(options, callback) {
+    // ... existing code ...
+    
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    
+                    // Profile ID cookie is automatically set by Apache Unomi
+                    // but we can verify it matches the response
+                    const cookieProfileId = tracker.getCookie(CONFIG.profileCookieName);
+                    if (response.profileId && cookieProfileId !== response.profileId) {
+                        console.warn('Profile ID mismatch:', {
+                            cookie: cookieProfileId,
+                            response: response.profileId
+                        });
+                    }
+                    
+                    if (callback) {
+                        callback(null, response);
+                    }
+                } catch (e) {
+                    if (callback) {
+                        callback(new Error('Failed to parse response: ' + e.message), null);
+                    }
+                }
+            } else {
+                if (callback) {
+                    callback(new Error('Request failed with status: ' + xhr.status), null);
+                }
+            }
+        }
+    };
+    
+    // ... rest of existing code ...
+}
+----
+
+===== Consent Management
+
+Handle user consent for tracking:
+
+[source,javascript]
+----
+// Check if user has consented to tracking
+hasConsent: function(consentType) {
+    // Check localStorage or cookie for consent
+    const consent = localStorage.getItem('unomi-consent-' + consentType);
+    return consent === 'true';
+},
+
+// Request context only if consent is given
+getContextWithConsent: function(options, callback) {
+    if (!this.hasConsent('tracking')) {
+        console.warn('User has not consented to tracking');
+        if (callback) {
+            callback(new Error('Consent required'), null);
+        }
+        return;
+    }
+    
+    this.getContext(options, callback);
+}
+----
+
+===== Cross-Domain Tracking
+
+For cross-domain tracking, ensure cookies are set with the correct domain:
+
+[source,javascript]
+----
+// Enhanced cookie setting with domain support
+setCookie: function(name, value, days, domain) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    
+    let cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+    if (domain) {
+        cookie += `;domain=${domain}`;
+    }
+    
+    document.cookie = cookie;
+}
+----
+
+===== Performance Optimization
+
+Optimize performance by:
+
+* **Debouncing events**: Don't send every single interaction immediately
+* **Batching requests**: Combine multiple operations into one request
+* **Caching context**: Cache profile data and only refresh when needed
+
+[source,javascript]
+----
+// Debounce function
+debounce: function(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+},
+
+// Debounced event tracking
+trackEventDebounced: this.debounce(function(event) {
+    tracker.trackEvent(event, function(error, response) {
+        if (error) {
+            console.error('Failed to track event:', error);
+        }
+    });
+}, 1000), // Wait 1 second before sending
+
+// Context caching
+contextCache: {
+    data: null,
+    timestamp: null,
+    ttl: 60000, // 1 minute
+    
+    get: function() {
+        if (this.data && this.timestamp && (Date.now() - this.timestamp) < this.ttl) {
+            return this.data;
+        }
+        return null;
+    },
+    
+    set: function(data) {
+        this.data = data;
+        this.timestamp = Date.now();
+    },
+    
+    clear: function() {
+        this.data = null;
+        this.timestamp = null;
+    }
+}
+----
+
+==== Complete Tracker Implementation
+
+Here's a complete, production-ready tracker implementation combining all the concepts:
+
+[source,javascript]
+----
+(function() {
+    'use strict';
+
+    const CONFIG = {
+        contextServerUrl: 'http://localhost:8181',
+        apiKey: 'YOUR_PUBLIC_API_KEY',
+        scope: 'mydigital',
+        sessionCookieName: 'unomi-session-id',
+        profileCookieName: 'context-profile-id',
+        eventQueueSize: 10,
+        eventQueueInterval: 5000
+    };
+
+    const tracker = {
+        // Cookie management
+        getCookie: function(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) {
+                return parts.pop().split(';').shift();
+            }
+            return null;
+        },
+        
+        setCookie: function(name, value, days, domain) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            let cookie = `${name}=${value};expires=${expires.toUTCString()};path=/`;
+            if (domain) {
+                cookie += `;domain=${domain}`;
+            }
+            document.cookie = cookie;
+        },
+        
+        // UUID generation
+        // Uses crypto.randomUUID() if available (most secure, modern browsers)
+        // Falls back to crypto.getRandomValues() (secure, widely supported)
+        // Falls back to Math.random() only for very old browsers (less secure)
+        generateUUID: function() {
+            // Use crypto.randomUUID() if available (Chrome 92+, Firefox 95+, Safari 15.4+, Node.js 19+)
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            
+            // Use crypto.getRandomValues() if available (widely supported, secure)
+            if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+                return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                    const r = crypto.getRandomValues(new Uint8Array(1))[0] % 16;
+                    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                    return v.toString(16);
+                });
+            }
+            
+            // Fallback to Math.random() for very old browsers (not cryptographically secure)
+            // Note: This is less secure and should only be used as a last resort
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        },
+        
+        // Session management
+        getSessionId: function() {
+            let sessionId = this.getCookie(CONFIG.sessionCookieName);
+            if (!sessionId) {
+                sessionId = this.generateUUID();
+                this.setSessionId(sessionId);
+            }
+            return sessionId;
+        },
+        
+        setSessionId: function(sessionId) {
+            this.setCookie(CONFIG.sessionCookieName, sessionId, 1);
+        },
+        
+        // Event building
+        buildEvent: function(eventType, target, source) {
+            return {
+                eventType: eventType,
+                scope: CONFIG.scope,
+                source: source || {
+                    itemType: 'page',
+                    scope: CONFIG.scope,
+                    itemId: window.location.pathname
+                },
+                target: target
+            };
+        },
+        
+        // Context request
+        getContext: function(options, callback) {
+            const sessionId = this.getSessionId();
+            const url = `${CONFIG.contextServerUrl}/cxs/context.json?sessionId=${encodeURIComponent(sessionId)}`;
+            
+            const payload = {
+                source: {
+                    itemId: options.sourceId || window.location.pathname,
+                    itemType: options.sourceType || 'page',
+                    scope: CONFIG.scope
+                }
+            };
+            
+            if (options.requiredProfileProperties) {
+                payload.requiredProfileProperties = options.requiredProfileProperties;
+            }
+            if (options.requiredSessionProperties) {
+                payload.requiredSessionProperties = options.requiredSessionProperties;
+            }
+            if (options.requireSegments) {
+                payload.requireSegments = true;
+            }
+            if (options.requireScores) {
+                payload.requireScores = true;
+            }
+            if (options.events) {
+                payload.events = options.events;
+            }
+            if (options.filters) {
+                payload.filters = options.filters;
+            }
+            if (options.personalizations) {
+                payload.personalizations = options.personalizations;
+            }
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', url, true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.setRequestHeader('X-Unomi-Api-Key', CONFIG.apiKey);
+            xhr.withCredentials = true;
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (callback) {
+                                callback(null, response);
+                            }
+                        } catch (e) {
+                            if (callback) {
+                                callback(new Error('Failed to parse response: ' + e.message), null);
+                            }
+                        }
+                    } else {
+                        if (callback) {
+                            callback(new Error('Request failed with status: ' + xhr.status), null);
+                        }
+                    }
+                }
+            };
+            
+            xhr.send(JSON.stringify(payload));
+        },
+        
+        // Event tracking
+        trackEvent: function(event, callback) {
+            this.getContext({
+                events: [event]
+            }, callback);
+        },
+        
+        trackEvents: function(events, callback) {
+            this.getContext({
+                events: events
+            }, callback);
+        },
+        
+        // Initialization
+        init: function(config) {
+            // Merge custom config
+            if (config) {
+                Object.assign(CONFIG, config);
+            }
+            
+            // Initialize session
+            this.getSessionId();
+            
+            // Track page view
+            const viewEvent = this.buildEvent('view', {
+                itemType: 'page',
+                scope: CONFIG.scope,
+                itemId: window.location.pathname,
+                properties: {
+                    pageInfo: {
+                        pageName: document.title,
+                        destinationURL: window.location.href,
+                        referringURL: document.referrer
+                    }
+                }
+            });
+            
+            this.trackEvent(viewEvent, function(error, response) {
+                if (error) {
+                    console.error('Failed to track page view:', error);
+                } else {
+                    console.log('Page view tracked');
+                }
+            });
+        }
+    };
+
+    // Expose tracker
+    window.unomiTracker = tracker;
+    
+    // Auto-initialize if DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            tracker.init();
+        });
+    } else {
+        tracker.init();
+    }
+})();
+----
+
+==== Best Practices
+
+1. **Always use HTTPS in production** - Update `contextServerUrl` to use HTTPS
+2. **Handle errors gracefully** - Don't break the user experience if tracking fails
+3. **Respect user privacy** - Implement consent management
+4. **Optimize performance** - Batch events, cache context, debounce rapid interactions
+5. **Test thoroughly** - Test with different browsers, network conditions, and privacy settings
+6. **Monitor and log** - Log errors and track success rates
+7. **Keep session IDs secure** - Use cryptographically secure UUID generation (see UUID generation section below)
+8. **Handle cookie restrictions** - Some browsers block third-party cookies
+
+==== UUID Generation Security
+
+[IMPORTANT]
+====
+**Security Considerations for UUID Generation**
+
+The tracker uses UUIDs for session IDs, which should be unpredictable to prevent session hijacking. The implementation in this guide uses a secure fallback chain:
+
+1. **`crypto.randomUUID()`** (Preferred): Available in modern browsers (Chrome 92+, Firefox 95+, Safari 15.4+, Edge 92+). This is the most secure option and generates RFC 4122-compliant UUIDs using cryptographically secure random number generation.
+
+2. **`crypto.getRandomValues()`** (Fallback): Available in all modern browsers (IE 11+, Chrome 11+, Firefox 21+, Safari 5.1+). Uses the Web Crypto API to generate cryptographically secure random values. This is secure and widely compatible.
+
+3. **`Math.random()`** (Last Resort): Only used for very old browsers that don't support the Web Crypto API. This is **not cryptographically secure** and can be predictable, making it vulnerable to session hijacking attacks.
+
+**Recommendations:**
+* For production applications, ensure your minimum browser support includes browsers with `crypto.getRandomValues()` support (essentially all browsers from 2013+)
+* If you need to support very old browsers (IE 10 and below), consider using a polyfill or warning users about security limitations
+* Never use `Math.random()` alone for security-sensitive identifiers like session IDs or authentication tokens
+* The profile ID is always generated server-side by Apache Unomi using secure UUID generation, so client-side UUID generation is only needed for session IDs
+
+**Browser Compatibility:**
+* `crypto.randomUUID()`: Chrome 92+, Firefox 95+, Safari 15.4+, Edge 92+ (2021+)
+* `crypto.getRandomValues()`: All modern browsers (2013+)
+* `Math.random()`: All browsers (but not secure)
+
+For maximum security and compatibility, the implementation automatically uses the best available method.
+====
+
+==== Next Steps
+
+* Learn about <<_how_profile_tracking_works,How profile tracking works>> to understand the full flow
+* Review the <<_unomi_web_tracker_reference,official Unomi Web Tracker>> for a production-ready implementation
+* Explore <<_request_examples,Request examples>> for more API usage patterns
+* Check <<_builtin_event_types,Built-in event types>> for available event types
+* Review <<_builtin_condition_types,Built-in condition types>> for filter conditions

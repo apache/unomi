@@ -11,7 +11,184 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_request_examples]]
 === Request examples
+
+==== Prerequisites
+
+Before running any of the examples below, you need to:
+
+===== 1. Create a tenant
+
+First, create a tenant that will own all the data:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/tenants \
+--user karaf:karaf \
+-H "Content-Type: application/json" \
+-d '{
+    "requestedId": "mytenant",
+    "properties": {
+        "name": "My Company",
+        "description": "My tenant description"
+    }
+}'
+----
+
+The response will include the created tenant with automatically generated API keys:
+
+[source,json]
+----
+{
+    "itemId": "mytenant",
+    "name": "My Company",
+    "description": "My tenant description",
+    "apiKeys": [
+        {
+            "type": "PUBLIC",
+            "key": "public-key-abc123...",
+            "created": "2024-01-01T00:00:00Z"
+        },
+        {
+            "type": "PRIVATE",
+            "key": "private-key-xyz789...",
+            "created": "2024-01-01T00:00:00Z"
+        }
+    ]
+}
+----
+
+After creating the tenant, you will need to use these credentials in the examples:
+- Tenant ID: `mytenant`
+- Private API Key: Extract the `key` value from the API key with `type: "PRIVATE"` in the response
+- Public API Key: Extract the `key` value from the API key with `type: "PUBLIC"` in the response
+
+===== 2. Create a scope
+
+Then, create a scope for your digital property (website, mobile app, etc.):
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/scopes \
+--user "mytenant:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "metadata": {
+        "id": "mydigital",
+        "name": "My Digital Property",
+        "description": "My website scope"
+    }
+}'
+----
+
+TIP: The scope creation response will include a public API key that you should save for use with the public APIs.
+
+[IMPORTANT]
+====
+**Tenant Resolution (Version 3.1+)**
+
+Starting with Apache Unomi 3.1, tenant resolution is mandatory for all requests to `/cxs/context.json` and `/cxs/eventcollector` endpoints. The tenant must be identified before Apache Unomi can process the request. This is done automatically when you use:
+
+* **Public API Key** (recommended for public endpoints): The `X-Unomi-Api-Key` header with a public API key automatically resolves the tenant
+* **Private API Key**: Basic authentication with `tenantId:privateApiKey` resolves the tenant from the credentials
+* **Tenant ID Header**: When using JAAS authentication, the `X-Unomi-Tenant-Id` header can be used
+
+All examples in this document use the `X-Unomi-Api-Key` header with a public API key, which is the recommended approach for public-facing applications. See <<_how_profile_tracking_works,How profile tracking works>> for complete details about tenant resolution.
+====
+
+NOTE: In all the examples below, replace:
+- `YOUR_TENANT_ID` with `mytenant`
+- `YOUR_PRIVATE_API_KEY` with your actual private API key
+- `example` scope with `mydigital`
+- `YOUR_PUBLIC_API_KEY` with the public key from the scope creation response
+
+===== 3. Verify the scope
+
+You can verify the scope was created correctly by retrieving it:
+
+[source]
+----
+curl -X GET http://localhost:8181/cxs/scopes/mydigital \
+--user "mytenant:YOUR_PRIVATE_API_KEY"
+----
+
+Or list all scopes:
+
+[source]
+----
+curl -X GET http://localhost:8181/cxs/scopes \
+--user "mytenant:YOUR_PRIVATE_API_KEY"
+----
+
+[TIP]
+====
+To get nicely formatted JSON responses, you can pipe the curl output through `jq`:
+
+[source]
+----
+# Install jq if you don't have it:
+# macOS: brew install jq
+# Ubuntu/Debian: apt-get install jq
+# CentOS/RHEL: yum install jq
+
+# Then add | jq '.' to any curl command:
+curl -X GET http://localhost:8181/cxs/scopes \
+--user "mytenant:YOUR_PRIVATE_API_KEY" | jq '.'
+----
+
+For multi-line curl requests using heredoc syntax (`<<'EOF'`), you can still use jq:
+
+[source]
+----
+# With heredoc
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-d @- <<'EOF' | jq '.'
+{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "requiredProfileProperties": ["*"]
+}
+EOF
+
+# With inline JSON
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "offset": 0,
+    "limit": 20
+}' | jq '.'
+----
+
+Useful jq options and filters:
+
+[source]
+----
+# Pretty print with specific indentation
+curl ... | jq '.' --indent 4
+
+# Only show specific fields
+curl ... | jq '.metadata'
+
+# Show array elements on separate lines
+curl ... | jq '.[]'
+
+# Filter and format specific data
+curl ... | jq '.profiles[] | {id: .itemId, name: .properties.firstName}'
+
+# Sort array elements
+curl ... | jq '.profiles | sort_by(.properties.lastName)'
+
+# Count array elements
+curl ... | jq '.profiles | length'
+----
+====
 
 ==== Retrieving your first context
 
@@ -19,12 +196,26 @@ You can retrieve a context using curl like this :
 
 [source]
 ----
-curl http://localhost:8181/cxs/context.js?sessionId=1234
+curl http://localhost:8181/cxs/context.js?sessionId=1234 \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY"
 ----
 
 This will retrieve a JavaScript script that contains a `cxs` object that contains the context with the current user
 profile, segments, scores as well as functions that makes it easier to perform further requests (such as collecting
 events using the cxs.collectEvents() function).
+
+[NOTE]
+====
+When you make a request to the `context.js` or `context.json` endpoints, Apache Unomi automatically:
+
+* Creates or loads a visitor profile (from cookie, parameter, or creates a new one)
+* Creates or loads a visitor session (if `sessionId` is provided)
+* Processes any events provided in the request (which automatically triggers rule execution)
+* Resolves personalization (if requested)
+* Sets a cookie with the profile ID in the response
+
+For detailed information about how profile tracking, session management, event processing, and rule execution work, see the <<_how_profile_tracking_works,How profile tracking works>> section.
+====
 
 ==== Retrieving a context as a JSON object.
 
@@ -32,8 +223,11 @@ If you prefer to retrieve a pure JSON object, you can simply use a request forme
 
 [source]
 ----
-curl http://localhost:8181/cxs/context.json?sessionId=1234
+curl http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY"
 ----
+
+The same automatic profile and session creation behavior applies to `context.json` requests. See <<_how_profile_tracking_works,How profile tracking works>> for complete details.
 
 ==== Accessing profile properties in a context
 
@@ -48,12 +242,13 @@ scores
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d @- <<'EOF'
 {
     "source": {
         "itemId":"homepage",
         "itemType":"page",
-        "scope":"example"
+        "scope":"mydigital"
     },
     "requiredProfileProperties":["*"],
     "requiredSessionProperties":["*"],
@@ -77,25 +272,26 @@ illustrated in the following example:
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d @- <<'EOF'
 {
     "source":{
         "itemId":"homepage",
         "itemType":"page",
-        "scope":"example"
+        "scope":"mydigital"
     },
     "events":[
         {
             "eventType":"view",
-            "scope": "example",
+            "scope": "mydigital",
             "source":{
                 "itemType": "site",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId": "mysite"
             },
             "target":{
                 "itemType":"page",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
@@ -123,21 +319,22 @@ respond quickly and minimize network traffic. Here is an example of using this s
 ----
 curl -X POST http://localhost:8181/cxs/eventcollector \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d @- <<'EOF'
 {
     "sessionId" : "1234",
     "events":[
         {
             "eventType":"view",
-            "scope": "example",
+            "scope": "mydigital",
             "source":{
                 "itemType": "site",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId": "mysite"
             },
             "target":{
                 "itemType":"page",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
@@ -156,5 +353,1475 @@ to send additional events.
 
 ==== Where to go from here
 
-* You can find more <<Useful Apache Unomi URLs,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
-* Read the <<Twitter sample,Twitter sample>> documentation that contains a detailed example of how to integrate with Apache Unomi.
+* You can find more <<_useful_apache_unomi_urls,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
+* Read the <<_twitter_sample,Twitter sample>> documentation that contains a detailed example of how to integrate with Apache Unomi.
+
+=== Public API Examples
+
+==== Sending a context request
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-d @- <<'EOF'
+{
+    "source":{
+        "itemId":"homepage",
+        "itemType":"page",
+        "scope":"mydigital"
+    },
+    "events":[
+        {
+            "eventType":"view",
+            "scope": "mydigital",
+            "source":{
+                "itemType": "site",
+                "scope":"mydigital",
+                "itemId": "mysite"
+            },
+            "target":{
+                "itemType":"page",
+                "scope":"mydigital",
+                "itemId":"homepage",
+                "properties":{
+                    "pageInfo":{
+                        "referringURL":"https://apache.org/"
+                    }
+                }
+            }
+        }
+    ]
+}
+EOF
+----
+
+==== Collecting events
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/eventcollector \
+-H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "sessionId" : "1234",
+    "events":[
+        {
+            "eventType":"contactInfoSubmitted",
+            "scope": "mydigital",
+            "source":{
+                "itemType": "site",
+                "scope": "mydigital",
+                "itemId": "mysite"
+            },
+            "target":{
+                "itemType": "form",
+                "scope": "mydigital",
+                "itemId": "contactForm"
+            },
+            "properties" : {
+              "firstName": "John",
+              "lastName": "Doe",
+              "email": "john.doe@acme.com"
+            }
+        }
+    ]
+}'
+----
+
+=== Private API Examples
+
+==== Setting up birthday personalization
+
+This example shows how to set up and test birthday-based personalization in Unomi.
+
+===== 1. Creating test profiles
+
+First, let's create two test profiles - one with today's birth date and another with a different date:
+
+[source]
+----
+# Create a profile with today's birth date
+curl -X POST http://localhost:8181/cxs/profiles \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "itemId": "profile-1",
+    "itemType": "profile",
+    "scope": "mydigital",
+    "properties": {
+        "firstName": "John",
+        "lastName": "Birthday",
+        "email": "john.birthday@example.com",
+        "birthDate": "2000-03-24",
+        "birthday": "03-24"
+    }
+}'
+
+# Create a profile with a different birth date
+curl -X POST http://localhost:8181/cxs/profiles \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "itemId": "profile-2",
+    "itemType": "profile",
+    "scope": "mydigital",
+    "properties": {
+        "firstName": "Jane",
+        "lastName": "Regular",
+        "email": "jane.regular@example.com",
+        "birthDate": "1995-12-31",
+        "birthday": "12-31"
+    }
+}'
+----
+
+NOTE: The `birthday` property stores just the month and day in `MM-DD` format for easy matching, while `birthDate` stores the full date.
+
+===== 2. Verifying the profiles
+
+You can verify that both profiles were created with their birth dates:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset": 0,
+  "limit": 20,
+  "condition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.birthday",
+      "comparisonOperator": "exists"
+    }
+  }
+}'
+----
+
+===== 3. Finding profiles with birthdays today
+
+To find all profiles whose birthday matches today's date:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset": 0,
+  "limit": 20,
+  "condition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.birthday",
+      "comparisonOperator": "equals",
+      "propertyValue": "03-24"
+    }
+  }
+}'
+----
+
+[IMPORTANT]
+====
+Replace `03-24` with the current month and day in zero-padded format. For example:
+- March 24th: `03-24`
+- December 31st: `12-31`
+
+The format is always `MM-DD` where:
+- `MM` is the two-digit month (01-12)
+- `DD` is the two-digit day (01-31)
+====
+
+You can also update the personalization example to use the birthday property:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json \
+-H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "sessionId": "birthday-session",
+    "profileId": "profile-1",
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "requiredProfileProperties": ["properties.birthday"],
+    "personalizations": [
+        {
+            "id": "birthdayMessage",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "Welcome to our site!"
+            },
+            "contents": [
+                {
+                    "id": "birthday-content",
+                    "path": "/birthday",
+                    "content": "🎉 Happy Birthday! Enjoy your special day!",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "profilePropertyCondition",
+                                "parameterValues": {
+                                    "propertyName": "properties.birthday",
+                                    "comparisonOperator": "equals",
+                                    "propertyValue": "03-24"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}'
+----
+
+And similarly for the birthday segment:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/segments \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "birthdaySegment",
+    "name": "Users with Birthday Today",
+    "scope": "mydigital"
+  },
+  "condition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.birthday",
+      "comparisonOperator": "equals",
+      "propertyValue": "03-24"
+    }
+  }
+}'
+----
+
+[TIP]
+====
+To make this more maintainable in a production environment, you can deploy a custom condition type that handles birthday matching:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/definitions \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "birthdayTodayCondition",
+    "name": "birthdayTodayCondition",
+    "description": "A condition that matches birthdays on current day",
+    "systemTags": [
+      "profileCondition",
+      "demographic",
+      "condition"
+    ]
+  },
+  "parentCondition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.birthday",
+      "comparisonOperator": "equals",
+      "propertyValue": "parameter::monthDay"
+    }
+  },
+  "parameters": [
+    {
+      "id": "monthDay",
+      "type": "string",
+      "multivalued": false,
+      "defaultValue": "03-24"
+    }
+  ]
+}'
+----
+
+After deploying the condition, you can use it in your searches and segments like this:
+
+[source]
+----
+{
+  "type": "birthdayTodayCondition",
+  "parameterValues": {
+    "monthDay": "03-24"
+  }
+}
+----
+
+For example, to create a segment using this condition:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/segments \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "birthdaySegment",
+    "name": "Users with Birthday Today",
+    "scope": "mydigital"
+  },
+  "condition": {
+    "type": "birthdayTodayCondition",
+    "parameterValues": {
+      "monthDay": "03-24"
+    }
+  }
+}'
+----
+====
+
+===== 4. Testing personalization
+
+Now we can test how personalization works for both profiles. We'll use the context.json endpoint to get personalized content:
+
+For the birthday profile (should show birthday message):
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json \
+-H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "sessionId": "birthday-session",
+    "profileId": "profile-1",
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "requiredProfileProperties": ["properties.birthday"],
+    "personalizations": [
+        {
+            "id": "birthdayMessage",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "Welcome to our site!"
+            },
+            "contents": [
+                {
+                    "id": "birthday-content",
+                    "path": "/birthday",
+                    "content": "🎉 Happy Birthday! Enjoy your special day!",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "profilePropertyCondition",
+                                "parameterValues": {
+                                    "propertyName": "properties.birthday",
+                                    "comparisonOperator": "equals",
+                                    "propertyValue": "03-24"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}'
+----
+
+For the non-birthday profile (should show welcome message):
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json \
+-H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "sessionId": "regular-session",
+    "profileId": "profile-2",
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "requiredProfileProperties": ["properties.birthday"],
+    "personalizations": [
+        {
+            "id": "birthdayMessage",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "Welcome to our site!"
+            },
+            "contents": [
+                {
+                    "id": "birthday-content",
+                    "path": "/birthday",
+                    "content": "🎉 Happy Birthday! Enjoy your special day!",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "profilePropertyCondition",
+                                "parameterValues": {
+                                    "propertyName": "properties.birthday",
+                                    "comparisonOperator": "equals",
+                                    "propertyValue": "03-24"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}'
+----
+
+The responses will include a `personalizations` object that contains:
+- For profile-1: The birthday message "🎉 Happy Birthday! Enjoy your special day!"
+- For profile-2: The fallback message "Welcome to our site!"
+
+===== 5. Creating a birthday segment
+
+You can also create a segment to automatically group profiles with birthdays today:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/segments \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "birthdaySegment",
+    "name": "Users with Birthday Today",
+    "scope": "mydigital"
+  },
+  "condition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.birthday",
+      "comparisonOperator": "equals",
+      "propertyValue": "03-24"
+    }
+  }
+}'
+----
+
+==== Searching profiles
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset" : 0,
+  "limit" : 20,
+  "condition" : {
+    "type": "profilePropertyCondition",
+    "parameterValues" : {
+      "propertyName" : "properties.firstName",
+      "comparisonOperator" : "equals",
+      "propertyValue" : "John"
+    }
+  }
+}'
+----
+
+==== Creating a segment
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/segments \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "newSegment",
+    "name": "New Segment",
+    "scope": "mydigital"
+  },
+  "condition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.age",
+      "comparisonOperator": "greaterThan",
+      "propertyValueInteger": 25
+    }
+  }
+}'
+----
+
+==== Setting up product view tracking
+
+Before using the product view search examples, you need to send product view events to Unomi. Here's how to set it up:
+
+===== 1. Sending a product view event
+
+You can use the eventcollector endpoint to send product view events:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/eventcollector \
+-H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "sessionId": "1234",
+    "events": [
+        {
+            "eventType": "view",
+            "scope": "mydigital",
+            "source": {
+                "itemType": "site",
+                "scope": "mydigital",
+                "itemId": "mysite"
+            },
+            "target": {
+                "itemType": "product",
+                "scope": "mydigital",
+                "itemId": "product-123",
+                "properties": {
+                    "pageInfo": {
+                        "referringURL": "https://www.google.com"
+                    }
+                }
+            }
+        }
+    ]
+}'
+----
+
+Key points about the event structure:
+1. Use `"eventType": "view"` for view events
+2. Set `target.itemType` to `"product"` for product views
+3. Include product details in `target.properties`
+4. Use consistent `itemId` values to track the same product
+
+===== 2. Using the context.json endpoint
+
+For web applications, you can also send product views through the context.json endpoint:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "source": {
+        "itemId": "product-page",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "events": [
+        {
+            "eventType": "view",
+            "scope": "mydigital",
+            "source": {
+                "itemType": "site",
+                "scope": "mydigital",
+                "itemId": "mysite"
+            },
+            "target": {
+                "itemType": "product",
+                "scope": "mydigital",
+                "itemId": "product-123",
+                "properties": {
+                    "pageInfo": {
+                        "referringURL": "https://www.google.com"
+                    }
+                }
+            }
+        }
+    ],
+    "requiredProfileProperties": ["*"]
+}'
+----
+
+===== 3. Product properties schema
+
+[IMPORTANT]
+====
+To simplify product view tracking, you can deploy a custom condition type that combines all the necessary event conditions:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/definitions \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "productViewEventCondition",
+    "name": "productViewEventCondition",
+    "description": "A condition that matches product view events",
+    "systemTags": [
+      "eventCondition",
+      "event",
+      "condition"
+    ]
+  },
+  "parentCondition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator": "and",
+      "subConditions": [
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "view"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.itemType",
+            "comparisonOperator": "equals",
+            "propertyValue": "product"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.itemId",
+            "comparisonOperator": "equals",
+            "propertyValue": "parameter::productId"
+          }
+        }
+      ]
+    }
+  },
+  "parameters": [
+    {
+      "id": "productId",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}'
+----
+
+After deploying the condition, you can use it in your searches like this:
+
+[source]
+----
+{
+  "type": "productViewEventCondition",
+  "parameterValues": {
+    "productId": "product-123"
+  }
+}
+----
+
+This custom condition type:
+1. Is properly tagged with `eventCondition` making it valid for use in `pastEventCondition`
+2. Combines all the necessary conditions using `booleanCondition` in its definition
+3. Provides a simple parameter interface (just specify the product ID)
+====
+
+Unomi is flexible with product properties - you don't need to declare a schema beforehand. However, for consistency, you should:
+1. Use consistent property names across events
+2. Use consistent value types (e.g., always use numbers for prices)
+3. Use consistent categories and other enumerated values
+
+Common product properties to consider:
+- `name`: Product name (string)
+- `category`: Product category (string)
+- `price`: Product price (number)
+- `brand`: Product brand (string)
+- `sku`: Stock keeping unit (string)
+- `color`: Product color (string)
+- `size`: Product size (string)
+- `inStock`: Stock status (boolean)
+
+===== 4. Testing the setup
+
+To verify your events are being recorded, you can:
+
+1. Send multiple view events for the same product
+2. Wait a few seconds for processing
+3. Use the profile search example below to check if the views were counted
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset": 0,
+  "limit": 20,
+  "condition": {
+    "type": "pastEventCondition",
+    "parameterValues": {
+      "numberOfDays": 1,
+      "minimumEventCount": 1,
+      "eventCondition": {
+        "type": "productViewEventCondition",
+        "parameterValues": {
+          "productId": "product-123"
+        }
+      }
+    }
+  }
+}'
+----
+
+==== Searching profiles with frequent product views
+
+This example shows how to find profiles that have viewed a specific product at least 3 times in the last 7 days:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset": 0,
+  "limit": 20,
+  "condition": {
+    "type": "pastEventCondition",
+    "parameterValues": {
+      "numberOfDays": 7,
+      "minimumEventCount": 3,
+      "eventCondition": {
+        "type": "productViewEventCondition",
+        "parameterValues": {
+          "productId": "product-123"
+        }
+      }
+    }
+  }
+}'
+----
+
+This search will:
+1. Look for product view events in the past 7 days
+2. Match events that:
+   - Have type "view"
+   - Target a product (target.itemType = "product")
+   - Target the specific product ID (product-123)
+3. Return profiles that have at least 3 such events
+4. Results are paginated (20 results per page)
+
+You can adjust:
+- `minimumEventCount`: change the minimum number of views required
+- `maximumEventCount`: optionally set a maximum number of views
+- `numberOfDays`: modify the time period to look back
+- `operator`: use "eventsOccurred" (default) or "eventsNotOccurred"
+- `productId`: change which product to track
+
+For example, to find profiles that have viewed products in a specific category, you could create another custom condition type `productCategoryViewEventCondition.json`:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "productCategoryViewEventCondition",
+    "name": "productCategoryViewEventCondition",
+    "description": "A condition that matches product views in a category",
+    "systemTags": [
+      "eventCondition",
+      "event",
+      "condition"
+    ]
+  },
+  "parentCondition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator": "and",
+      "subConditions": [
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "view"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.itemType",
+            "comparisonOperator": "equals",
+            "propertyValue": "product"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.properties.category",
+            "comparisonOperator": "equals",
+            "propertyValue": "parameter::category"
+          }
+        }
+      ]
+    }
+  },
+  "parameters": [
+    {
+      "id": "category",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}
+----
+
+Then use it like this:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset": 0,
+  "limit": 20,
+  "condition": {
+    "type": "pastEventCondition",
+    "parameterValues": {
+      "numberOfDays": 30,
+      "minimumEventCount": 5,
+      "eventCondition": {
+        "type": "productCategoryViewEventCondition",
+        "parameterValues": {
+          "category": "electronics"
+        }
+      }
+    }
+  }
+}'
+----
+
+=== Setting up Groovy Actions
+
+==== Deploying a Groovy Action
+
+This example shows how to deploy and use a Groovy action to automatically extract the birthday (MM-DD) from a full birthDate.
+
+===== 1. Create the Groovy action file
+
+First, create a file named `ExtractBirthdayAction.groovy` with this content:
+
+[source,groovy]
+----
+package org.apache.unomi.groovy.actions
+
+import org.apache.unomi.api.Event
+import org.apache.unomi.api.Profile
+import org.apache.unomi.api.actions.Action
+import org.apache.unomi.api.actions.ActionExecutor
+import org.apache.unomi.api.services.EventService
+
+class ExtractBirthdayAction implements ActionExecutor {
+    public int execute(Action action, Event event) {
+        Profile profile = event.getProfile()
+        def birthDate = profile.getProperty("birthDate")
+
+        if (birthDate != null && birthDate instanceof String && birthDate.length() >= 10) {
+            try {
+                // Extract month-day part (e.g., "03-24" from "2000-03-24")
+                def monthDay = birthDate.substring(5, 10)
+
+                // Only update if different to avoid unnecessary saves
+                if (monthDay != profile.getProperty("birthday")) {
+                    profile.setProperty("birthday", monthDay)
+                    return EventService.PROFILE_UPDATED
+                }
+            } catch (Exception e) {
+                // Log error or handle invalid date format
+            }
+        }
+        return EventService.NO_CHANGE
+    }
+}
+----
+
+===== 2. Deploy the Groovy action
+
+Use the Groovy actions endpoint to deploy the action:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/groovyActions \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: multipart/form-data" \
+-F "file=@ExtractBirthdayAction.groovy"
+----
+
+NOTE: The action ID will be `extractBirthday` (derived from the filename without the .groovy extension).
+
+===== 3. Create the action definition
+
+After deploying the Groovy script, create the action definition:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/definitions \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "extractBirthdayAction",
+    "name": "Extract Birthday Action",
+    "description": "Extracts MM-DD from birthDate and sets it as birthday property",
+    "systemTags": [
+      "profileTags",
+      "demographic",
+      "event"
+    ]
+  },
+  "actionExecutor": "groovy:extractBirthday",
+  "parameters": []
+}'
+----
+
+===== 4. Create a rule to trigger the action
+
+Create a rule that will trigger the Groovy action whenever a profile's birthDate is set or modified:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/rules \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "setBirthdayRule",
+    "name": "Set Birthday Rule",
+    "description": "Sets birthday property when birthDate changes",
+    "scope": "mydigital"
+  },
+  "condition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator": "and",
+      "subConditions": [
+        {
+          "type": "profilePropertyCondition",
+          "parameterValues": {
+            "propertyName": "properties.birthDate",
+            "comparisonOperator": "exists"
+          }
+        },
+        {
+          "type": "profileUpdatedEventCondition",
+          "parameterValues": {
+            "propertyName": "properties.birthDate"
+          }
+        }
+      ]
+    }
+  },
+  "actions": [
+    {
+      "type": "extractBirthdayAction",
+      "parameterValues": {}
+    }
+  ]
+}'
+----
+
+===== 5. Test with example profiles
+
+Create test profiles to verify the action works:
+
+[source]
+----
+# Create a profile with birthDate - should trigger the action
+curl -X POST http://localhost:8181/cxs/profiles \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "itemId": "test-profile-1",
+    "properties": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "birthDate": "1990-03-24"
+    }
+}'
+
+# Verify the birthday property was set
+curl -X GET http://localhost:8181/cxs/profiles/test-profile-1 \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" | jq '.'
+
+# Update an existing profile's birthDate - should trigger the action
+curl -X PATCH http://localhost:8181/cxs/profiles/test-profile-1 \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "properties": {
+        "birthDate": "1990-12-31"
+    }
+}'
+
+# Verify the birthday property was updated
+curl -X GET http://localhost:8181/cxs/profiles/test-profile-1 \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" | jq '.'
+----
+
+The responses should show:
+1. First profile creation: `birthday` property set to "03-24"
+2. After update: `birthday` property changed to "12-31"
+
+===== 6. Remove the Groovy action (if needed)
+
+To remove the Groovy action:
+
+[source]
+----
+curl -X DELETE http://localhost:8181/cxs/groovyActions/extractBirthday \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json"
+----
+
+NOTE: This will only remove the Groovy script. You'll need to separately delete the action definition and rule if desired.
+
+[TIP]
+====
+Best practices for Groovy actions:
+1. Always handle potential errors gracefully
+2. Check property existence and types
+3. Avoid unnecessary profile updates
+4. Use meaningful action and rule names
+5. Test with various date formats
+====
+
+==== Using the explain parameter for request tracing
+
+Apache Unomi provides a powerful request tracing feature through the `explain` query parameter. This feature helps administrators understand how requests are processed internally, including event processing, condition evaluations, and rule executions.
+
+===== Prerequisites
+
+To use the explain parameter, you must have one of the following roles:
+- ADMINISTRATOR
+- TENANT_ADMINISTRATOR
+
+===== Request examples
+
+====== Context request with explain
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234&explain=true \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+    "source": {
+        "itemId":"homepage",
+        "itemType":"page",
+        "scope":"mydigital"
+    },
+    "requiredProfileProperties":["*"],
+    "requireSegments":true
+}
+EOF
+----
+
+====== Event collector request with explain
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/eventcollector?explain=true \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+    "sessionId": "1234",
+    "events": [
+        {
+            "eventType":"view",
+            "scope": "mydigital",
+            "source":{
+                "itemType": "site",
+                "scope":"mydigital",
+                "itemId": "mysite"
+            },
+            "target":{
+                "itemType":"page",
+                "scope":"mydigital",
+                "itemId":"homepage"
+            }
+        }
+    ]
+}
+EOF
+----
+
+===== Understanding the trace output
+
+The explain parameter adds a `requestTracing` field to the response that contains a tree structure of all operations performed during request processing. Here's an example trace output:
+
+[source,json]
+----
+{
+    "profileId": "12345",
+    "sessionId": "1234",
+    // ... other response fields ...
+    "requestTracing": {
+        "operationType": "request-processing",
+        "description": "Processing context request",
+        "startTime": 1234567890,
+        "endTime": 1234567899,
+        "children": [
+            {
+                "operationType": "event-validation",
+                "description": "Validating event: view",
+                "startTime": 1234567891,
+                "endTime": 1234567892,
+                "traces": [
+                    "Validating against schema event/1-0-0",
+                    "Event validation successful"
+                ]
+            },
+            {
+                "operationType": "rule-evaluation",
+                "description": "Evaluating rules for event",
+                "startTime": 1234567893,
+                "endTime": 1234567895,
+                "children": [
+                    {
+                        "operationType": "condition-evaluation",
+                        "description": "Evaluating condition: matchAll",
+                        "startTime": 1234567894,
+                        "endTime": 1234567894,
+                        "result": true
+                    }
+                ]
+            }
+        ]
+    }
+}
+----
+
+===== Request processing flow
+
+The following diagram shows the high-level flow of request processing when explain is enabled:
+
+[plantuml]
+----
+@startuml
+participant "Client" as client
+participant "ContextJsonEndpoint" as context
+participant "EventsCollectorEndpoint" as collector
+participant "TracerService" as tracer
+participant "RequestTracer" as requestTracer
+
+alt Context Request
+    client -> context: POST /context.json?explain=true
+    activate context
+    context -> context: Check admin role
+    context -> tracer: enableTracing()
+    activate tracer
+    tracer -> requestTracer: setEnabled(true)
+    activate requestTracer
+    context -> context: Process request
+    context -> requestTracer: startOperation()
+    requestTracer -> requestTracer: Create trace node
+    context -> requestTracer: endOperation()
+    context -> tracer: getTraceNode()
+    tracer --> context: TraceNode
+    context --> client: ContextResponse with traces
+    deactivate requestTracer
+    deactivate tracer
+    deactivate context
+else Event Collector Request
+    client -> collector: POST /eventcollector?explain=true
+    activate collector
+    collector -> collector: Check admin role
+    collector -> tracer: enableTracing()
+    activate tracer
+    tracer -> requestTracer: setEnabled(true)
+    activate requestTracer
+    collector -> collector: Process events
+    collector -> requestTracer: startOperation()
+    requestTracer -> requestTracer: Create trace node
+    collector -> requestTracer: endOperation()
+    collector -> tracer: getTraceNode()
+    tracer --> collector: TraceNode
+    collector --> client: EventCollectorResponse with traces
+    deactivate requestTracer
+    deactivate tracer
+    deactivate collector
+end
+@enduml
+----
+
+===== Common trace operations
+
+The tracing system captures various types of operations:
+
+1. Request Processing
+- Overall request handling
+- Parameter validation
+- Schema validation
+
+2. Event Processing
+- Event validation
+- Event type resolution
+- Event property processing
+
+3. Rule Evaluation
+- Condition evaluation
+- Action execution
+- Score updates
+
+4. Profile Operations
+- Profile merging
+- Property updates
+- Segment evaluation
+
+Each operation in the trace contains:
+- Operation type
+- Description
+- Start time
+- End time
+- Result (if applicable)
+- Child operations
+- Trace messages
+
+===== Best practices
+
+1. Use explain parameter selectively
+- Only enable when debugging or troubleshooting
+- Disable in production environments
+- Consider performance impact
+
+2. Analyze trace output
+- Look for unexpected operations
+- Check operation timing
+- Review validation results
+- Monitor rule evaluations
+
+3. Security considerations
+- Only grant admin access to trusted users
+- Monitor explain parameter usage
+- Review trace data for sensitive information
+
+===== Complex personalization example with explain
+
+This example demonstrates using the explain parameter to understand how personalization filters are evaluated:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234&explain=true \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "requiredProfileProperties": ["*"],
+    "requireSegments": true,
+    "personalizations": [
+        {
+            "id": "homepage-hero",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "default-content"
+            },
+            "contents": [
+                {
+                    "id": "premium-user-content",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "profileSegmentCondition",
+                                "parameterValues": {
+                                    "segments": ["premium-users"]
+                                }
+                            }
+                        },
+                        {
+                            "condition": {
+                                "type": "pastEventCondition",
+                                "parameterValues": {
+                                    "eventType": "purchase",
+                                    "minimumEventCount": 1,
+                                    "numberOfDays": 30
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "new-visitor-content",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "sessionPropertyCondition",
+                                "parameterValues": {
+                                    "propertyName": "duration",
+                                    "comparisonOperator": "lessThan",
+                                    "propertyValueInteger": 300
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+EOF
+----
+
+The response will include detailed tracing of the personalization evaluation process:
+
+[source,json]
+----
+{
+    "profileId": "12345",
+    "sessionId": "1234",
+    "requestTracing": {
+        "operationType": "request-processing",
+        "description": "Processing context request with personalization",
+        "startTime": 1234567890,
+        "endTime": 1234567899,
+        "children": [
+            {
+                "operationType": "personalization-evaluation",
+                "description": "Evaluating personalization: homepage-hero",
+                "startTime": 1234567891,
+                "endTime": 1234567895,
+                "children": [
+                    {
+                        "operationType": "content-filter-evaluation",
+                        "description": "Evaluating filters for content: premium-user-content",
+                        "startTime": 1234567892,
+                        "endTime": 1234567893,
+                        "children": [
+                            {
+                                "operationType": "condition-evaluation",
+                                "description": "Evaluating segment condition",
+                                "startTime": 1234567892,
+                                "endTime": 1234567892,
+                                "result": false,
+                                "traces": [
+                                    "Profile not in segment: premium-users"
+                                ]
+                            },
+                            {
+                                "operationType": "condition-evaluation",
+                                "description": "Evaluating past event condition",
+                                "startTime": 1234567892,
+                                "endTime": 1234567893,
+                                "result": false,
+                                "traces": [
+                                    "No purchase events found in last 30 days"
+                                ]
+                            }
+                        ],
+                        "result": false
+                    },
+                    {
+                        "operationType": "content-filter-evaluation",
+                        "description": "Evaluating filters for content: new-visitor-content",
+                        "startTime": 1234567893,
+                        "endTime": 1234567894,
+                        "children": [
+                            {
+                                "operationType": "condition-evaluation",
+                                "description": "Evaluating session duration condition",
+                                "startTime": 1234567893,
+                                "endTime": 1234567894,
+                                "result": true,
+                                "traces": [
+                                    "Session duration: 120 seconds, threshold: 300 seconds"
+                                ]
+                            }
+                        ],
+                        "result": true
+                    }
+                ]
+            }
+        ]
+    },
+    "personalizations": {
+        "homepage-hero": "new-visitor-content"
+    }
+}
+----
+
+This example demonstrates:
+
+1. Complex personalization setup
+- Multiple content variants
+- Different condition types
+- Fallback content
+- Strategy configuration
+
+2. Detailed tracing of
+- Personalization evaluation flow
+- Filter condition evaluation
+- Segment membership checks
+- Past event queries
+- Session property checks
+
+3. Trace node hierarchy showing
+- Parent-child relationships
+- Timing information
+- Decision points
+- Result propagation
+
+The trace output helps understand:
+- Why specific content was selected
+- Which conditions failed/passed
+- Performance of different operations
+- Order of evaluation
+
+[plantuml]
+----
+@startuml
+participant "Client" as client
+participant "ContextEndpoint" as context
+participant "PersonalizationService" as perso
+participant "TracerService" as tracer
+participant "RequestTracer" as requestTracer
+
+client -> context: POST /context.json?explain=true
+activate context
+
+context -> tracer: enableTracing()
+activate tracer
+
+context -> perso: filter(profile, session, content)
+activate perso
+
+perso -> requestTracer: startOperation("personalization-evaluation")
+activate requestTracer
+
+loop for each content
+    perso -> requestTracer: startOperation("content-filter-evaluation")
+
+    loop for each filter
+        perso -> requestTracer: startOperation("condition-evaluation")
+        perso -> perso: evaluate condition
+        perso -> requestTracer: trace(result details)
+        perso -> requestTracer: endOperation(result)
+    end
+
+    perso -> requestTracer: endOperation(filter result)
+end
+
+perso -> requestTracer: endOperation(selected content)
+deactivate requestTracer
+
+perso --> context: PersonalizationResult
+deactivate perso
+
+context -> tracer: getTraceNode()
+tracer --> context: TraceNode
+
+context --> client: ContextResponse with traces
+deactivate tracer
+deactivate context
+
+@enduml
+----
+
+This sequence diagram shows the detailed flow of personalization evaluation with tracing enabled, including:
+1. Initial request handling
+2. Personalization service interaction
+3. Filter evaluation loops
+4. Trace node creation and updates
+5. Result aggregation and response
