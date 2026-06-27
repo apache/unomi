@@ -107,8 +107,12 @@ public class ClusterServiceImplTest {
         // Set scheduler in cluster service - this would normally be done by OSGi but we need to do it manually in tests
         clusterService.setSchedulerService(schedulerService);
 
-        // Explicitly initialize scheduled tasks to handle the circular dependency properly
-        clusterService.initializeScheduledTasks();
+        // Note: scheduled tasks are intentionally NOT started here. clusterStaleNodesCleanup and
+        // clusterNodeStatisticsUpdate both have initialDelay=0, so starting them eagerly in every
+        // test's setUp() raced the test body on a real background thread pool and could delete
+        // freshly-saved fixtures before assertions ran (flaky only under CI-like scheduling/timing).
+        // Tests that actually exercise scheduled-task behavior call clusterService.init() themselves,
+        // which starts them at the right time.
     }
 
     @Test
@@ -362,11 +366,6 @@ public class ClusterServiceImplTest {
 
     @Test
     public void testPurgeByDateDelegatesToPersistenceService() {
-        // Cancel the background cluster tasks to prevent a race: cleanupStaleNodes() has
-        // initialDelay=0 and would treat these fixtures (no lastHeartbeat set, defaults to 0)
-        // as stale, deleting them before/while this test's own purge(Date) assertions run.
-        clusterService.cancelScheduledTasks();
-
         // Setup: create items with different creation dates in real persistence
         executionContextManager.executeAsSystem(() -> {
             ClusterNode oldNode = new ClusterNode();
@@ -395,11 +394,6 @@ public class ClusterServiceImplTest {
 
     @Test
     public void testPurgeByScopeDelegatesToPersistenceService() {
-        // Cancel the background cluster tasks to prevent a race: cleanupStaleNodes() has
-        // initialDelay=0 and would treat these fixtures (no lastHeartbeat set, defaults to 0)
-        // as stale, deleting them before/while this test's own purge(String) assertions run.
-        clusterService.cancelScheduledTasks();
-
         // Setup: create two nodes with different scopes in real persistence
         executionContextManager.executeAsSystem(() -> {
             ClusterNode scopedNode = new ClusterNode();
