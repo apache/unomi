@@ -82,7 +82,7 @@ it_memory_read_trace_heap_mb() {
 
     script_dir="$(cd "$(dirname "$target_dir")" && pwd)"
     trace_file="$target_dir/it-run-trace.properties"
-    if [ -z "${it_resolve_configured_heap:-}" ] || [ ! -f "$script_dir/pom.xml" ]; then
+    if [ ! -f "$script_dir/pom.xml" ]; then
         echo "0"
         return
     fi
@@ -262,12 +262,10 @@ it_memory_resolve_search_engine() {
         echo "$IT_SEARCH_ENGINE"
         return
     fi
-    if [ -n "${it_infer_search_engine:-}" ]; then
-        engine="$(it_infer_search_engine "$target_dir")"
-        if [ -n "$engine" ] && [ "$engine" != "unknown" ]; then
-            echo "$engine"
-            return
-        fi
+    engine="$(it_infer_search_engine "$target_dir")"
+    if [ -n "$engine" ] && [ "$engine" != "unknown" ]; then
+        echo "$engine"
+        return
     fi
     echo "elasticsearch"
 }
@@ -484,7 +482,7 @@ it_memory_sample_once() {
     es_line="$(it_memory_search_engine_stats "$port")"
     sys_line="$(it_memory_system_stats)"
 
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         "${karaf_pid:-0}" \
         "$karaf_line" \
