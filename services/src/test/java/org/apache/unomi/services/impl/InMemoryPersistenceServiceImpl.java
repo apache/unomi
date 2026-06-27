@@ -968,9 +968,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         return createPartialList(items, offset, size);
     }
 
-    /**
-     * Test-harness helper for range queries. Not on PersistenceService on master yet.
-     */
+    @Override
     public <T extends Item> PartialList<T> rangeQuery(String fieldName, String from, String to, String sortBy, Class<T> clazz, int offset, int size) {
         List<T> items = filterItemsByClass(clazz);
         items = items.stream()

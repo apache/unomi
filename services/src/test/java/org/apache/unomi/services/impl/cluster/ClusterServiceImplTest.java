@@ -107,8 +107,12 @@ public class ClusterServiceImplTest {
         // Set scheduler in cluster service - this would normally be done by OSGi but we need to do it manually in tests
         clusterService.setSchedulerService(schedulerService);
 
-        // Explicitly initialize scheduled tasks to handle the circular dependency properly
-        clusterService.initializeScheduledTasks();
+        // Note: scheduled tasks are intentionally NOT started here. clusterStaleNodesCleanup and
+        // clusterNodeStatisticsUpdate both have initialDelay=0, so starting them eagerly in every
+        // test's setUp() raced the test body on a real background thread pool and could delete
+        // freshly-saved fixtures before assertions ran (flaky only under CI-like scheduling/timing).
+        // Tests that actually exercise scheduled-task behavior call clusterService.init() themselves,
+        // which starts them at the right time.
     }
 
     @Test
