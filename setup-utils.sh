@@ -100,7 +100,10 @@ load_password_from_env_local() {
             
             # Export the variable by evaluating the assignment
             # This is safe because we've already validated the variable name matches
-            eval "export ${var_assignment}"
+            if ! eval "export ${var_assignment}"; then
+                echo "ERROR: Failed to parse ${password_var} assignment in .env.local" >&2
+                return 1
+            fi
             echo "Loaded ${password_var} from .env.local"
             return 0
         fi
@@ -147,7 +150,8 @@ clear_opposite() {
     if [ -f "${clear_script}" ]; then
         source "${clear_script}"
     else
-        echo "Warning: clear-${opposite_type}.sh not found, skipping ${opposite_type} cleanup"
+        echo "ERROR: clear-${opposite_type}.sh not found, cannot clear ${opposite_type} variables" >&2
+        return 1
     fi
 }
 

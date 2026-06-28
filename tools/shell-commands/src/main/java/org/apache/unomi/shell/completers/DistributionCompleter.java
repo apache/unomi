@@ -25,12 +25,16 @@ import org.apache.karaf.shell.api.console.CommandLine;
 import org.apache.karaf.shell.api.console.Completer;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.karaf.shell.support.completers.StringsCompleter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
 
 @Service
 public class DistributionCompleter implements Completer {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(DistributionCompleter.class);
 
     @Reference
     private FeaturesService featuresService;
@@ -53,8 +57,8 @@ public class DistributionCompleter implements Completer {
                         }
                     }
                 } catch (Exception e) {
-                    // Skip repositories that can't be accessed
-                    // This is normal for some repositories
+                    // Skip repositories that can't be accessed; this is normal for some repositories
+                    LOGGER.debug("Could not read features from repository {}", repository.getName(), e);
                 }
             }
 
@@ -72,11 +76,13 @@ public class DistributionCompleter implements Completer {
                         }
                     } catch (Exception e) {
                         // Feature doesn't exist, skip it
+                        LOGGER.debug("Could not look up known distribution feature {}", dist, e);
                     }
                 }
             }
         } catch (Exception e) {
             // If we can't list repositories, fall back to common distribution names
+            LOGGER.warn("Could not list feature repositories, falling back to default distribution names", e);
             delegate.getStrings().add("unomi-distribution-elasticsearch");
             delegate.getStrings().add("unomi-distribution-opensearch");
         }

@@ -20,8 +20,6 @@
 
 # Main function - wraps all logic so we can use 'return' when sourced
 _setup_elasticsearch() {
-    local exit_code=0
-    
     # Get the directory where this script is located
     # Support both bash and zsh
     if [ -n "${ZSH_VERSION}" ]; then
@@ -50,8 +48,13 @@ _setup_elasticsearch() {
         fi
     fi
 
-    # Clear OpenSearch environment variables first
-    clear_opposite "${SCRIPT_DIR}" "opensearch" || { echo "WARNING: Failed to clear OpenSearch variables" >&2; }
+    # Clear OpenSearch environment variables first. This must succeed: leaving both
+    # engines' variables set is exactly the conflicting state build.sh's
+    # check_integration_test_env_vars is designed to detect and reject.
+    if ! clear_opposite "${SCRIPT_DIR}" "opensearch"; then
+        echo "ERROR: Failed to clear OpenSearch variables" >&2
+        return 1
+    fi
 
     # Load only the Elasticsearch password from .env.local if it exists
     # This ensures we don't load the OpenSearch password

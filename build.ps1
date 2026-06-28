@@ -116,6 +116,21 @@ if ($LogFileOnly -and [string]::IsNullOrWhiteSpace($LogFile)) {
     exit 1
 }
 
+# -LogFileOnly must suppress console output entirely (matching build.sh's
+# `exec > "$LOG_FILE" 2>&1`). Start-Transcript alone only tees to console + file,
+# so re-invoke this script once with all output streams redirected to the file.
+if ($LogFile -and $LogFileOnly -and -not $env:UNOMI_BUILD_PS1_LOG_REDIRECTED) {
+    $logDir = Split-Path -Parent $LogFile
+    if ($logDir -and -not (Test-Path $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
+    $env:UNOMI_BUILD_PS1_LOG_REDIRECTED = '1'
+    try {
+        & $PSCommandPath @PSBoundParameters *> $LogFile
+        exit $LASTEXITCODE
+    } finally {
+        Remove-Item Env:\UNOMI_BUILD_PS1_LOG_REDIRECTED -ErrorAction SilentlyContinue
+    }
+}
+
 function Test-NonInteractive {
     return [bool]($env:CI -or $env:GITHUB_ACTIONS -or $env:BUILD_NON_INTERACTIVE -eq 'true')
 }
@@ -399,13 +414,18 @@ function Test-DockerForIntegrationTests {
 }
 
 function Test-IntegrationTestEnvVars {
+    param([bool]$UseOpenSearch, [string]$AutoStart)
     $detected = @()
     if ($env:UNOMI_ELASTICSEARCH_CLUSTERNAME -or $env:UNOMI_ELASTICSEARCH_USERNAME -or $env:UNOMI_ELASTICSEARCH_PASSWORD -or
         $env:UNOMI_ELASTICSEARCH_SSL_ENABLE -or $env:UNOMI_ELASTICSEARCH_SSL_TRUST_ALL_CERTIFICATES) {
         $detected += 'Elasticsearch'
     }
+    # UNOMI_OPENSEARCH_PASSWORD is required (and checked) by Test-Requirements when
+    # -UseOpenSearch or -AutoStart opensearch is selected, so it must not be treated as a
+    # conflicting leftover variable in that case, or the build would always fail.
+    $openSearchSelected = $UseOpenSearch -or ($AutoStart -eq 'opensearch')
     if ($env:UNOMI_OPENSEARCH_CLUSTERNAME -or $env:UNOMI_OPENSEARCH_ADDRESSES -or $env:UNOMI_OPENSEARCH_USERNAME -or
-        $env:UNOMI_OPENSEARCH_PASSWORD -or $env:UNOMI_OPENSEARCH_SSL_ENABLE -or $env:UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES) {
+        (-not $openSearchSelected -and $env:UNOMI_OPENSEARCH_PASSWORD) -or $env:UNOMI_OPENSEARCH_SSL_ENABLE -or $env:UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES) {
         $detected += 'OpenSearch'
     }
     if ($detected.Count -eq 0) { return }
@@ -566,7 +586,7 @@ function Get-MavenArgumentList {
 
     $profiles = @()
     if ($IntegrationTests) {
-        Test-IntegrationTestEnvVars
+        Test-IntegrationTestEnvVars -UseOpenSearch:$UseOpenSearch -AutoStart $AutoStart
         if ($UseOpenSearch) {
             $args += '-Duse.opensearch=true'
             $args += '-Popensearch'
@@ -698,7 +718,7 @@ function Get-BuildElapsed {
     return '{0:d2}:{1:d2}' -f [math]::Floor($elapsed / 60), ($elapsed % 60)
 }
 
-if ($LogFile) {
+if ($LogFile -and -not $LogFileOnly) {
     $logDir = Split-Path -Parent $LogFile
     if ($logDir -and -not (Test-Path $logDir)) { New-Item -ItemType Directory -Force -Path $logDir | Out-Null }
     Start-Transcript -Path $LogFile -Append | Out-Null
@@ -797,6 +817,10 @@ if (-not $NoKaraf) {
             exit 1
         }
         & tar -xzf $archive
+        if ($LASTEXITCODE -ne 0) {
+            Write-Status 'error' "Failed to extract $archive"
+            exit $LASTEXITCODE
+        }
         $unomiHome = Join-Path $packageTarget "unomi-$($env:UNOMI_VERSION)"
 
         foreach ($pair in @(
@@ -867,6 +891,6 @@ Write-Host @'
 '@
 Write-Host 'Operation completed successfully.'
 
-if ($LogFile) {
+if ($LogFile -and -not $LogFileOnly) {
     Stop-Transcript | Out-Null
 }

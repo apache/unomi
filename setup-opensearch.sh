@@ -48,8 +48,13 @@ _setup_opensearch() {
         fi
     fi
 
-    # Clear Elasticsearch environment variables first
-    clear_opposite "${SCRIPT_DIR}" "elasticsearch" || { echo "WARNING: Failed to clear Elasticsearch variables" >&2; }
+    # Clear Elasticsearch environment variables first. This must succeed: leaving both
+    # engines' variables set is exactly the conflicting state build.sh's
+    # check_integration_test_env_vars is designed to detect and reject.
+    if ! clear_opposite "${SCRIPT_DIR}" "elasticsearch"; then
+        echo "ERROR: Failed to clear Elasticsearch variables" >&2
+        return 1
+    fi
 
     # Load only the OpenSearch password from .env.local if it exists
     # This ensures we don't load the Elasticsearch password

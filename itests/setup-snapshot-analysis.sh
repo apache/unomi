@@ -30,10 +30,10 @@ echo "=========================================="
 echo "Elasticsearch Snapshot Analysis Setup"
 echo "=========================================="
 
-# Step 1: Extract snapshot repository (matching Maven build process from pom.xml line 235)
+# Step 1: Extract snapshot repository (matching Maven build process from itests/pom.xml's unzip task)
 if [ ! -d "$EXTRACT_DIR" ]; then
     echo "Extracting snapshot repository..."
-    echo "  (Matching Maven build: unzip to ${project.build.directory}/snapshots_repository)"
+    echo "  (Matching Maven build: unzip to \${project.build.directory}/snapshots_repository)"
     unzip -q "$SNAPSHOT_ZIP" -d "$SCRIPT_DIR"
     echo "✓ Extracted to $EXTRACT_DIR"
 else
@@ -88,7 +88,7 @@ fi
 # Step 5: Verify snapshot exists (matching test configuration)
 echo ""
 echo "Verifying snapshot exists..."
-SNAPSHOT_NAME="snapshot_2"  # From Migrate16xToCurrentVersionIT.java line 55
+SNAPSHOT_NAME="snapshot_3"  # From Migrate16xToCurrentVersionIT.java's ES_SNAPSHOT_3 constant
 SNAPSHOT_CHECK=$(curl -s "http://localhost:9200/_snapshot/snapshots_repository/$SNAPSHOT_NAME")
 if [ -z "$SNAPSHOT_CHECK" ] || echo "$SNAPSHOT_CHECK" | grep -q '"error"'; then
     echo "✗ Snapshot $SNAPSHOT_NAME not found"
@@ -107,12 +107,13 @@ RESTORE_RESPONSE=$(curl -s -X POST "http://localhost:9200/_snapshot/snapshots_re
   -H 'Content-Type: application/json' \
   -d '{}')
 
-if echo "$RESTORE_RESPONSE" | grep -q '"snapshot"'; then
+if echo "$RESTORE_RESPONSE" | grep -q '"snapshot"' && ! echo "$RESTORE_RESPONSE" | grep -q '"error"'; then
     echo "✓ Snapshot restored successfully!"
 else
-    echo "⚠ Restore response: $RESTORE_RESPONSE"
-    echo "Snapshot may still be restoring. Check status with:"
+    echo "✗ Failed to restore snapshot: $RESTORE_RESPONSE"
+    echo "Check status with:"
     echo "  curl http://localhost:9200/_snapshot/snapshots_repository/$SNAPSHOT_NAME/_status"
+    exit 1
 fi
 
 # Step 7: List restored indices
@@ -133,12 +134,14 @@ echo "  - Search an index: curl http://localhost:9200/INDEX_NAME/_search?pretty"
 echo "  - Stop services: docker-compose -f $COMPOSE_FILE down"
 echo "  - View logs: docker-compose -f $COMPOSE_FILE logs -f"
 echo ""
-echo "Configuration details (matching test setup):"
-echo "  - Repository name: snapshots_repository (from Migrate16xToCurrentVersionIT.java:53)"
-echo "  - Snapshot name: snapshot_2 (from Migrate16xToCurrentVersionIT.java:55)"
+echo "Configuration details:"
+echo "  - Repository name: snapshots_repository (from Migrate16xToCurrentVersionIT.java's getEsSnapshotRepo())"
+echo "  - Snapshot name: snapshot_3 (from Migrate16xToCurrentVersionIT.java's ES_SNAPSHOT_3 constant)"
 echo "  - Repository location: snapshots (relative to path.repo, from create_snapshots_repository.json)"
-echo "  - path.repo: /usr/share/elasticsearch/snapshots_repository (matching pom.xml:356)"
-echo "  - Elasticsearch version: 9.1.3 (matching pom.xml:347)"
-echo "  - Snapshot extraction: matches pom.xml:235 (unzip to target/snapshots_repository)"
+echo "  - path.repo: /usr/share/elasticsearch/snapshots_repository (this standalone tool's own setting;"
+echo "    the Maven IT itself uses /tmp/snapshots_repository, see itests/pom.xml)"
+echo "  - Elasticsearch version: 9.1.3 (this standalone tool's own pin in docker-compose-snapshot-analysis.yml;"
+echo "    the Maven IT uses elasticsearch.test.version from the root pom.xml)"
+echo "  - Snapshot extraction: matches itests/pom.xml's unzip task (unzip to target/snapshots_repository)"
 echo ""
 

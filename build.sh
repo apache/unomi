@@ -19,7 +19,7 @@
 ################################################################################
 
 set -e  # Exit on error
-trap 'handle_error $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
+trap 'handle_error $? $LINENO "${BASH_COMMAND:0:200}"' ERR
 
 # Error handling function
 handle_error() {
@@ -1040,10 +1040,13 @@ check_integration_test_env_vars() {
         detected_vars+=("Elasticsearch")
     fi
 
+    # UNOMI_OPENSEARCH_PASSWORD is required (and checked) by check_requirements when
+    # --use-opensearch is selected, so it must not be treated as a conflicting leftover
+    # variable in that case, or --integration-tests --use-opensearch would always fail.
     if [ -n "${UNOMI_OPENSEARCH_CLUSTERNAME+x}" ] || \
        [ -n "${UNOMI_OPENSEARCH_ADDRESSES+x}" ] || \
        [ -n "${UNOMI_OPENSEARCH_USERNAME+x}" ] || \
-       [ -n "${UNOMI_OPENSEARCH_PASSWORD+x}" ] || \
+       ([ "$USE_OPENSEARCH" != true ] && [ -n "${UNOMI_OPENSEARCH_PASSWORD+x}" ]) || \
        [ -n "${UNOMI_OPENSEARCH_SSL_ENABLE+x}" ] || \
        [ -n "${UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES+x}" ]; then
         detected_vars+=("OpenSearch")
