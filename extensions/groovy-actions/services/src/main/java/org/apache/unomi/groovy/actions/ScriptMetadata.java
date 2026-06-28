@@ -17,7 +17,6 @@
 package org.apache.unomi.groovy.actions;
 
 import groovy.lang.Script;
-
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.nio.charset.StandardCharsets;
@@ -29,9 +28,12 @@ import java.util.Base64;
  * This class encapsulates all metadata associated with a compiled Groovy script,
  * including content hash for efficient change detection and the compiled class
  * for direct execution without recompilation.
+ * </p>
+ *
  * <p>
  * Thread Safety: This class is immutable and thread-safe. All fields are final
  * and the class provides no methods to modify its state after construction.
+ * </p>
  *
  * @since 2.7.0
  */
@@ -90,6 +92,7 @@ public final class ScriptMetadata {
      * <p>
      * This method uses SHA-256 hash comparison for efficient change detection
      * without storing or comparing the full script content.
+     * </p>
      *
      * @param newContent the new script content to compare against
      * @return {@code true} if content has changed, {@code false} if unchanged
@@ -143,6 +146,7 @@ public final class ScriptMetadata {
      * <p>
      * This class can be used to create new script instances for execution
      * without requiring recompilation.
+     * </p>
      *
      * @return the compiled script class, never null
      */
