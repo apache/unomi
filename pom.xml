@@ -172,6 +172,7 @@
         <yarn.version>v1.22.19</yarn.version>
 
         <release.arguments>-Papache-release,integration-tests</release.arguments>
+        <unomi.skip.unit.tests>false</unomi.skip.unit.tests>
     </properties>
 
     <mailingLists>
@@ -448,6 +449,25 @@
     </modules>
 
     <profiles>
+        <profile>
+            <id>unit-tests</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <unomi.skip.unit.tests>false</unomi.skip.unit.tests>
+            </properties>
+        </profile>
+        <profile>
+            <id>skip-unit-tests</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <properties>
+                <unomi.skip.unit.tests>true</unomi.skip.unit.tests>
+            </properties>
+        </profile>
+
         <profile>
             <id>integration-tests</id>
             <activation>
@@ -996,6 +1016,13 @@
                 <groupId>org.apache.rat</groupId>
                 <artifactId>apache-rat-plugin</artifactId>
                 <version>${apache-rat.plugin.version}</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skip>${unomi.skip.unit.tests}</skip>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>external.atlassian.jgitflow</groupId>

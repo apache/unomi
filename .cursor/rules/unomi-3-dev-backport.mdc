@@ -1,0 +1,55 @@
+---
+description: UNOMI-875 overlay — backporting unomi-3-dev → master (extends branch-backport.mdc)
+alwaysApply: true
+---
+
+# unomi-3-dev → master (UNOMI-875 Phase 2)
+
+**Generic workflow first:** `.cursor/rules/branch-backport.mdc` (history audit, diff audit, ADD/MODIFY/MERGE).
+
+For this epic, set:
+
+```bash
+SOURCE=unomi-3-dev
+TARGET=master
+```
+
+Local tracker (git-ignored): `.local-notes/unomi-3-dev-backport-plan-phase2.md` — §2e playbook, §1 exclusion register.
+
+## Unomi-specific never
+
+- **Never** replace `master` review refactors with 3-dev monoliths (REST mappers, tracing lifecycle, test harness, shell CRUD fixes).
+- **Never** port items in plan §1 exclusion register: REST exception mappers (implement on master patterns), migration scripts (UNOMI-943), security WIP, wholesale 3-dev test harness.
+- **Never** wholesale-checkout `.github/workflows` (master ahead: #780, #957), `AGENTS.md` (#769), migration groovy, `.asf.yaml` rulesets.
+
+## Unomi-specific always
+
+- Check merged Phase 2 PRs (#771–#783, #755, #763, etc.) before assuming master lacks a 3-dev feature.
+- **MERGE surgically:** `build.sh`, root `pom.xml`, CI — keep master non-interactive CI, Javadoc, IT memory sampler (#780, #957).
+- **Docker compose:** additive only (`container_name`, debug ports); **keep** master OpenSearch/ES image pins (3-dev had 3.4.0 regressions vs master 3.0.0).
+
+## Shell CRUD (PR J) — learned 2026-06-10
+
+Shell CSV/table polish from 3-dev is **mostly already on master** (#755, #763). Remaining 3-dev shell diffs often **revert** review fixes (`UndeployDefinition`, `ConsentCrudCommand`, `ApiKeyCrudCommand`, `RuleCrudCommand`, docker pins). Port only:
+
+- New classes (`DistributionCompleter`)
+- Additive CLI flags (`Setup --show`, `@Completion`) on top of master defaults
+
+**PR 1 incident:** `git log origin/unomi-3-dev..origin/master -- tools/shell-dev-commands/` would have flagged #755/#763 before blind checkout reverted ~20 fixes.
+
+## Per–mega-PR risk (plan §2e)
+
+| PR | Extra risk |
+|---|---|
+| **2** (V+U) | Wrong feature name breaks Karaf boot — diff `feature.xml` vs master names |
+| **3** (L–P) | Security + persistence — never replace mappers/tracing |
+| **4** (F3–F4) | Extend master `AbstractRestExceptionMapper`; do not copy 3-dev monoliths |
+| **5** (K) | Router only — never bundle; never blind-checkout `extensions/router/**` |
+
+## Validation before PR (Unomi)
+
+Run generic checklist from `branch-backport.mdc`, plus:
+
+- `./build.sh --help`
+- `mvn -pl <affected-modules> -am compile -DskipTests`
+- PR description: “master-first backport; branch-backport + §2e history/diff audit run”

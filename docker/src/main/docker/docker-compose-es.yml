@@ -40,6 +40,7 @@ services:
 
   node-1:
     image: apache/unomi:${project.version}
+    container_name: unomi
     environment:
       - UNOMI_AUTO_START=true
       - UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch
@@ -52,6 +53,7 @@ services:
       - 8181:8181
       - 9443:9443
       - 8102:8102
+      - "${DEBUG_PORT:-5005}:5005"
     networks:
       - unomi-3
     links:
