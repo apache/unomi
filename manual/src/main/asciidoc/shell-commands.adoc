@@ -96,10 +96,11 @@ These commands are available once the application is running. If an argument is 
 |Command|Arguments|Description
 
 |rule-list
-|[maxEntries] [--csv]
+|[--csv] [maxEntries]
 |Lists all the rules registered in the Apache Unomi server. The maxEntries (defaults to 100) will allow you to specify
 how many entries need to be retrieved. If the value is inferior to the total value, a message will display the total
-value of rules registered in the server. If you add the "--csv" option the list will be output as a CSV formatted table
+value of rules registered in the server. If you add the "--csv" option the list will be output as a CSV formatted table.
+Note: Options must come before arguments, so use `rule-list --csv 100` not `rule-list 100 --csv`.
 |rule-view
 |rule-id
 |Dumps a single rule in JSON. The rule-id argument can be retrieved from the `rule-list` command output.
@@ -131,9 +132,11 @@ created, EXECUTE means the rule's actions are being executed.
 |event-id
 |Dumps a single event in JSON. The `event-id` can be retrieved from the event-tail command output.
 |event-list
-|[max-entries] [event-type] [--csv]
+|[--csv] [max-entries] [event-type]
 |List the last events processed by Apache Unomi. The `max-entries` parameter can be used to control how many events are
 displayed (default is 100). The `event-type` makes it possible to filter the list by event type. The `--csv` argument is used to output the list as a CSV list instead of an ASCII table.
+Note: Options must come before arguments, so use `event-list --csv 100 view` not `event-list 100 view --csv`.
+Note: Options must come before arguments, so use `event-list --csv 100 view` not `event-list 100 view --csv`.
 |event-search
 |profile-id [event-type] [max-entries]
 |This command makes it possible to search for the last events by `profile-id` and by `event-type`. A `max-entries`
@@ -148,7 +151,7 @@ check that everything is properly registered. If you add the "--csv" option the 
 |Dumps a single action in JSON. The action-id argument can be retrieved from the `action-list` command output.
 
 |condition-list
-|[csv]
+|[--csv]
 |List all the conditions registered in the server. If you add the "--csv" option the list will be output as a CSV formatted table
 |condition-view
 |condition-id

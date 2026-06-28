@@ -14,11 +14,25 @@
 
 This section contains information and steps to migrate between major Unomi versions.
 
+=== V2/V3 API Compatibility Guide
+
+include::v2-v3-compatibility.adoc[]
+
+=== V2 Compatibility Mode
+
+include::v2-compatibility-mode.adoc[]
+
+=== From version 3.0 to 3.1
+
+include::migrate-3.0-to-3.1.adoc[]
+
+include::migrate-elasticsearch-to-opensearch.adoc[]
+
 === From version 2.x to 3.0
 
 include::migrate-2.x-to-3.0.adoc[]
 
-include::migrate-elasticsearch-to-opensearch.adoc[]
+include::migrate-es7-to-es9.adoc[]
 
 === From version 1.6 to 2.0
 

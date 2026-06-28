@@ -18,6 +18,7 @@
 In this section of the documentation we provide quick recipes focused on helping you achieve a specific result with
 Apache Unomi.
 
+[[_enabling_debug_mode]]
 ==== Enabling debug mode
 
 Although the examples provided in this documentation are correct (they will work "as-is"), 
@@ -70,12 +71,18 @@ therefore to find the source of a schema validation issue it's best to start fro
 The simplest way to retrieve profile data for the current profile is to simply send a request to the /cxs/context.json
 endpoint. However you will need to send a body along with that request. Here's an example:
 
+[NOTE]
+====
+The `/cxs/context.json` endpoint automatically creates or loads profiles and sessions as needed. See <<_how_profile_tracking_works,How profile tracking works>> for complete details about the automatic profile and session creation process.
+====
+
 Here is an example that will retrieve all the session and profile properties, as well as the profile's segments and scores
 
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 --data-raw '{
     "source": {
         "itemId":"homepage",
@@ -137,7 +144,7 @@ Let's go into more detail about the preferred way to update a profile. Let's con
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/rules \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "metadata": {
@@ -193,7 +200,7 @@ We will start by creating a scope called "example" scope:
 [source]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/scopes' \
--u 'karaf:karaf' \
+--user "TENANT_ID:PRIVATE_KEY" \
 --header 'Content-Type: application/json' \
 --data-raw '{
 "itemId": "example",
@@ -201,12 +208,14 @@ curl --location --request POST 'http://localhost:8181/cxs/scopes' \
 }'
 ----
 
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (`karaf:karaf`).
+
 The next step consist in creating a JSON Schema to validate our event.
 
 [source]
 ----
 curl --location --request POST 'http://localhost:8181/cxs/jsonSchema' \
--u 'karaf:karaf' \
+--user "TENANT_ID:PRIVATE_KEY" \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "$id": "https://unomi.apache.org/schemas/json/events/contactInfoSubmitted/1-0-0",
@@ -260,6 +269,7 @@ Finally, send the `contactInfoSubmitted` event using a request similar to this o
 ----
 curl -X POST http://localhost:8181/cxs/eventcollector \
 -H "Content-Type: application/json" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 --data-raw '{
     "sessionId" : "1234",
     "events":[
@@ -291,7 +301,7 @@ The event we just submitted can be retrieved using the following request:
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/events/search \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "offset" : 0,
@@ -313,11 +323,11 @@ There could be two types of common errors while customizing the above requests:
 * The schema is invalid
 * The event is invalid
 
-While first submitting the schema during its creation, Apache Unomi will validate it is syntaxically correct (JSON) 
+While first submitting the schema during its creation, Apache Unomi will validate it is syntactically correct (JSON) 
 but will not perform any further validation. Since the schema will be processed for the first time when events are submitted, 
 errors might be noticeable at that time. 
 
-Those errors are usually self-explanatory, such as this one pointing to an incorrect lcoation for the "firstName" keyword:
+Those errors are usually self-explanatory, such as this one pointing to an incorrect location for the "firstName" keyword:
 [source]
 ----
 09:35:56.573 WARN [qtp1421852915-83] Unknown keyword firstName - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword
@@ -340,7 +350,7 @@ that looks something like this (and https://unomi.apache.org/rest-api-doc/#17681
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/events/search \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "offset" : 0,
@@ -372,7 +382,7 @@ on the Apache Unomi server.
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/rules \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "metadata": {
@@ -407,7 +417,7 @@ structure. Here's an example of a profile search with a Query object:
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/profiles/search \
---user karaf:karaf \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 --data-raw '{
   "text" : "unomi",
@@ -449,7 +459,7 @@ on the server and potentially this could affect performance.
 
 ==== Getting / updating consents
 
-You can find information on how to retrieve or create/update consents in the <<Consent API>> section.
+You can find information on how to retrieve or create/update consents in the <<_consent_api,Consent API>> section.
 
 ==== How to send a login event to Unomi
 
@@ -487,6 +497,43 @@ with as a parameter value the name of the property on which to perform the merge
 upon successful login using an email, Unomi will look for other profiles that have the same email and merge them into
 a single profile. Because of the merge, this should only be done for authenticated profiles, otherwise this could be a
 security issue since it could be a way to load data from other profiles by merging their data !
+
+==== Technical Implementation Details
+
+===== Profile Selection Strategy
+
+By default, profiles are merged with the oldest profile (determined by the `firstVisit` property) becoming the master profile. This behavior can be overridden by setting `forceEventProfileAsMaster` to true in the action parameters, which forces the current event's profile to become the master.
+
+===== Property Merge Strategy
+
+When merging profile properties, Unomi follows these rules:
+
+1. Properties from all profiles are combined into the master profile
+2. When conflicting values exist for a property, the master profile's value takes precedence
+3. Multi-valued properties (arrays/collections) are merged together
+4. Profile segments and scores are recalculated after the merge
+
+A custom property merge strategy can be implemented by:
+
+1. Creating a class that implements `PropertyMergeStrategyType`
+2. Registering it as an OSGi service
+3. Configuring it in your merge action
+
+===== Asynchronous Processing
+
+To ensure performance, Unomi processes resource-intensive operations asynchronously:
+
+1. The profile merge itself happens synchronously during event processing
+2. Session and event reassignment is scheduled asynchronously via the SchedulerService
+3. Property updates triggered by the merge may cause delayed rule evaluation
+
+===== Result Codes
+
+The `MergeProfilesOnPropertyAction` returns one of the following result codes:
+
+* `EventService.NO_CHANGE` - No merge was performed
+* `EventService.PROFILE_UPDATED` - A profile was updated during the merge
+* `EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED` - Both profile and session were updated
 
 ==== What profile aliases are and how to use them
 
@@ -546,3 +593,97 @@ Upon merge:
 | DELETE | /cxs/profiles/PROFILE_ID/aliases/ALIAS_ID | Remove an alias from a profile
 
 |===
+
+==== Common Issues and Best Practices
+
+===== Decision Guide for Profile Merging
+
+[plantuml]
+----
+@startuml
+title When to Use Profile Merges
+
+start
+:Evaluate Use Case;
+
+if (Do you need to combine visitor data\nafter authentication?) then (yes)
+  :Profile merging is appropriate;
+else (no)
+  :Consider alternative solutions;
+  stop
+endif
+
+if (Is the identifier unique per user?) then (yes)
+  :Continue;
+else (no)
+  :Choose a more unique identifier;
+  note right: Email, CRM ID, or verified account ID
+  stop
+endif
+
+if (Is the merge happening in a\nsecure/authenticated context?) then (yes)
+  :Continue;
+else (no)
+  :Secure the context first;
+  note right: Require login or verification
+  stop
+endif
+
+:Implement profile merging with
+MergeProfilesOnPropertyAction;
+stop
+@enduml
+----
+
+===== Troubleshooting Common Issues
+
+====== Merge Not Happening
+
+If profiles aren't merging as expected, check:
+
+1. The merge property exists on both profiles with exactly matching values
+2. The merge property is stored as a system property (`systemProperties.mergeIdentifier`)
+3. The rule containing the merge action is correctly triggered
+4. The profiles aren't personas or anonymous profiles (which are skipped)
+5. Ensure the `maxProfilesInOneMerge` limit (default 50) is not being exceeded
+
+====== Data Loss During Merge
+
+By default, when property values conflict, the master profile's values take precedence. This can appear as data loss from secondary profiles.
+
+Consider:
+
+1. Implementing a custom PropertyMergeStrategy for complex merging logic
+2. Pre-processing profiles to ensure critical data is preserved
+3. Logging pre-merge state for audit purposes
+
+====== Performance Issues
+
+Profile merges can impact performance, especially in high-traffic sites:
+
+1. Monitor Elasticsearch load during merge operations
+2. Consider batch processing for bulk merges
+3. Adjust the `maxProfilesInOneMerge` parameter based on your system capabilities
+4. Schedule large merge operations during off-peak hours
+
+===== Testing Recommendations
+
+To properly test profile merges, consider:
+
+1. *Test Environment*: Set up a separate testing environment that closely mirrors production
+2. *Test Scenarios*:
+   a. Simple merge of two profiles
+   b. Merge of profiles with conflicting property values
+   c. Merge with session data and event history
+   d. Race condition testing (simultaneous merges)
+3. *Data Verification*: Verify that all important data is preserved after merges
+4. *Performance Testing*: Test merge operations under load to identify bottlenecks
+
+===== Implementation Best Practices
+
+1. *Security First*: Always implement merges in authenticated contexts only
+2. *Clear Audit Trail*: Maintain logs of merge operations for troubleshooting
+3. *Graceful Degradation*: Handle merge failures gracefully without disrupting the user experience
+4. *Monitoring*: Set up alerts for unusual merge patterns that might indicate security issues
+5. *Data Protection*: Consider regulations like GDPR when merging personal data
+6. *Backup Strategy*: Ensure you have a strategy to recover from problematic merges
