@@ -1,0 +1,2638 @@
+{
+	"info": {
+		"_postman_id": "unomi-api-collection",
+		"name": "Apache Unomi API Examples",
+		"description": "Comprehensive collection of Apache Unomi REST API examples for getting started",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health/check",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health",
+								"check"
+							]
+						},
+						"description": "Check the health status of Unomi server and its components (Karaf, ElasticSearch/OpenSearch, Unomi bundles, Persistence, Cluster)",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{healthUsername}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{healthPassword}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "basic",
+				"basic": [
+					{
+						"key": "username",
+						"value": "{{healthUsername}}",
+						"type": "string"
+					},
+					{
+						"key": "password",
+						"value": "{{healthPassword}}",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "2. Tenant Management",
+			"item": [
+				{
+					"name": "List All Tenants",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/tenants",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"tenants"
+							]
+						},
+						"description": "Retrieve all tenants in the system. Requires administrator authentication.",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{adminUsername}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{adminPassword}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Tenant by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/tenants/{{tenantId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"tenants",
+								"{{tenantId}}"
+							]
+						},
+						"description": "Retrieve a specific tenant by ID",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{adminUsername}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{adminPassword}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Tenant",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"requestedId\": \"{{tenantId}}\",\n    \"properties\": {\n        \"name\": \"My Company\",\n        \"description\": \"My Company tenant\",\n        \"address\": \"123 Main St\",\n        \"country\": \"USA\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/tenants",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"tenants"
+							]
+						},
+						"description": "Create a new tenant. API keys (PUBLIC and PRIVATE) are automatically generated.",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{adminUsername}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{adminPassword}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Tenant",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"itemId\": \"{{tenantId}}\",\n    \"name\": \"My Company Updated\",\n    \"description\": \"Updated description\",\n    \"properties\": {\n        \"address\": \"456 New St\",\n        \"country\": \"USA\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/tenants/{{tenantId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"tenants",
+								"{{tenantId}}"
+							]
+						},
+						"description": "Update an existing tenant",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{adminUsername}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{adminPassword}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate API Key",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/tenants/{{tenantId}}/apikeys?type=PUBLIC&validityDays=365",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"tenants",
+								"{{tenantId}}",
+								"apikeys"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "PUBLIC",
+									"description": "PUBLIC or PRIVATE"
+								},
+								{
+									"key": "validityDays",
+									"value": "365",
+									"description": "Validity period in days (0 or null for no expiration)"
+								}
+							]
+						},
+						"description": "Generate a new API key for a tenant. Type can be PUBLIC or PRIVATE.",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{adminUsername}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{adminPassword}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Validate API Key",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/tenants/{{tenantId}}/apikeys/validate?key={{apiKey}}&type=PUBLIC",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"tenants",
+								"{{tenantId}}",
+								"apikeys",
+								"validate"
+							],
+							"query": [
+								{
+									"key": "key",
+									"value": "{{apiKey}}",
+									"description": "The API key to validate"
+								},
+								{
+									"key": "type",
+									"value": "PUBLIC",
+									"description": "PUBLIC or PRIVATE"
+								}
+							]
+						},
+						"description": "Validate an API key for a tenant. Returns 200 OK if valid, 401 Unauthorized if invalid.",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{adminUsername}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{adminPassword}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Tenant",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/tenants/{{tenantId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"tenants",
+								"{{tenantId}}"
+							]
+						},
+						"description": "Delete a tenant",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{adminUsername}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{adminPassword}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "basic",
+				"basic": [
+					{
+						"key": "username",
+						"value": "{{adminUsername}}",
+						"type": "string"
+					},
+					{
+						"key": "password",
+						"value": "{{adminPassword}}",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "3. Scope Management",
+			"auth": {
+				"type": "basic",
+				"basic": [
+					{
+						"key": "username",
+						"value": "{{tenantId}}",
+						"type": "string"
+					},
+					{
+						"key": "password",
+						"value": "{{privateApiKey}}",
+						"type": "string"
+					}
+				]
+			},
+			"item": [
+				{
+					"name": "List All Scopes",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/scopes",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"scopes"
+							]
+						},
+						"description": "Retrieve all scopes in the system",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Scope by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/scopes/{{scopeId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"scopes",
+								"{{scopeId}}"
+							]
+						},
+						"description": "Retrieve a specific scope by ID",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Scope",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"itemId\": \"example\",\n    \"itemType\": \"scope\",\n    \"metadata\": {\n        \"id\": \"example\",\n        \"name\": \"Example Scope\",\n        \"description\": \"An example scope for testing\",\n        \"scope\": \"systemscope\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/scopes",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"scopes"
+							]
+						},
+						"description": "Create a new scope. The itemId and metadata.id should match.",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Scope with Tags",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"itemId\": \"example-tagged\",\n    \"itemType\": \"scope\",\n    \"metadata\": {\n        \"id\": \"example-tagged\",\n        \"name\": \"Tagged Example Scope\",\n        \"description\": \"A scope with tags for organization\",\n        \"scope\": \"systemscope\",\n        \"tags\": [\"production\", \"ecommerce\"],\n        \"enabled\": true\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/scopes",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"scopes"
+							]
+						},
+						"description": "Create a scope with tags and additional metadata",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Scope",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"itemId\": \"{{scopeId}}\",\n    \"itemType\": \"scope\",\n    \"metadata\": {\n        \"id\": \"{{scopeId}}\",\n        \"name\": \"Updated Scope Name\",\n        \"description\": \"Updated description for the scope\",\n        \"scope\": \"systemscope\",\n        \"enabled\": true\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/scopes",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"scopes"
+							]
+						},
+						"description": "Update an existing scope. Use POST with the same itemId to update.",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Scope",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/scopes/{{scopeId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"scopes",
+								"{{scopeId}}"
+							]
+						},
+						"description": "Delete a scope by ID",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Event Schema Creation",
+			"item": [
+				{
+					"name": "Create Event Schema",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"$id\": \"https://unomi.apache.org/schemas/json/events/contactInfoSubmitted/1-0-0\",\n    \"$schema\": \"https://json-schema.org/draft/2019-09/schema\",\n    \"self\": {\n        \"vendor\": \"org.apache.unomi\",\n        \"name\": \"contactInfoSubmitted\",\n        \"format\": \"jsonschema\",\n        \"target\": \"events\",\n        \"version\": \"1-0-0\"\n    },\n    \"title\": \"contactInfoSubmittedEvent\",\n    \"type\": \"object\",\n    \"allOf\": [{ \"$ref\": \"https://unomi.apache.org/schemas/json/event/1-0-0\" }],\n    \"properties\": {\n        \"source\": {\n            \"$ref\": \"https://unomi.apache.org/schemas/json/item/1-0-0\"\n        },\n        \"target\": {\n            \"$ref\": \"https://unomi.apache.org/schemas/json/item/1-0-0\"\n        },\n        \"properties\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"firstName\": {\n                    \"type\": [\"null\", \"string\"]\n                },\n                \"lastName\": {\n                    \"type\": [\"null\", \"string\"]\n                },\n                \"email\": {\n                    \"type\": [\"null\", \"string\"]\n                }\n            }\n        }\n    },\n    \"unevaluatedProperties\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/jsonSchema",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"jsonSchema"
+							]
+						},
+						"description": "Create a JSON schema for validating custom events. The schema name must match the eventType in events.",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Installed Schemas",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/jsonSchema",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"jsonSchema"
+							]
+						},
+						"description": "Get list of all installed JSON schema IDs",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Schema by ID",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "\"https://unomi.apache.org/schemas/json/events/contactInfoSubmitted/1-0-0\""
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/jsonSchema/query",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"jsonSchema",
+								"query"
+							]
+						},
+						"description": "Retrieve a specific schema by its ID",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"eventType\": \"contactInfoSubmitted\",\n    \"scope\": \"{{scope}}\",\n    \"source\": {\n        \"itemId\": \"form\",\n        \"itemType\": \"form\",\n        \"scope\": \"{{scope}}\"\n    },\n    \"properties\": {\n        \"firstName\": \"John\",\n        \"lastName\": \"Doe\",\n        \"email\": \"john.doe@example.com\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/jsonSchema/validateEvent",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"jsonSchema",
+								"validateEvent"
+							]
+						},
+						"description": "Validate an event against its schema. Returns validation errors if any.",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Schema",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "\"https://unomi.apache.org/schemas/json/events/contactInfoSubmitted/1-0-0\""
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/jsonSchema/delete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"jsonSchema",
+								"delete"
+							]
+						},
+						"description": "Delete a JSON schema by ID",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "basic",
+				"basic": [
+					{
+						"key": "username",
+						"value": "{{adminUsername}}",
+						"type": "string"
+					},
+					{
+						"key": "password",
+						"value": "{{adminPassword}}",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "5. Basic Context Requests",
+			"item": [
+				{
+					"name": "Get Context (Minimal)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "X-Unomi-Api-Key",
+								"value": "{{publicApiKey}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/context.json?sessionId={{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"context.json"
+							],
+							"query": [
+								{
+									"key": "sessionId",
+									"value": "{{sessionId}}"
+								}
+							]
+						},
+						"description": "Get basic context with minimal information. Creates profile and session if they don't exist."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Context with Source",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Unomi-Api-Key",
+								"value": "{{publicApiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"source\": {\n        \"itemId\": \"homepage\",\n        \"itemType\": \"page\",\n        \"scope\": \"{{scope}}\"\n    },\n    \"sessionId\": \"{{sessionId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/context.json",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"context.json"
+							]
+						},
+						"description": "Get context with source information about the page/site"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Context with All Properties",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Unomi-Api-Key",
+								"value": "{{publicApiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"source\": {\n        \"itemId\": \"homepage\",\n        \"itemType\": \"page\",\n        \"scope\": \"{{scope}}\"\n    },\n    \"sessionId\": \"{{sessionId}}\",\n    \"requiredProfileProperties\": [\"*\"],\n    \"requiredSessionProperties\": [\"*\"],\n    \"requireSegments\": true,\n    \"requireScores\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/context.json",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"context.json"
+							]
+						},
+						"description": "Get context with all profile properties, session properties, segments, and scores"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Context with Specific Properties",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Unomi-Api-Key",
+								"value": "{{publicApiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"source\": {\n        \"itemId\": \"homepage\",\n        \"itemType\": \"page\",\n        \"scope\": \"{{scope}}\"\n    },\n    \"sessionId\": \"{{sessionId}}\",\n    \"requiredProfileProperties\": [\"properties.firstName\", \"properties.lastName\", \"properties.email\"],\n    \"requiredSessionProperties\": [\"properties.pageViews\", \"properties.lastVisit\"],\n    \"requireSegments\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/context.json",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"context.json"
+							]
+						},
+						"description": "Get context with only specific profile and session properties"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "6. Segment Creation",
+			"item": [
+				{
+					"name": "Simple Segment - Profile Property",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"metadata\": {\n        \"id\": \"premium-users\",\n        \"name\": \"Premium Users\",\n        \"scope\": \"{{scope}}\",\n        \"description\": \"Users with premium subscription\"\n    },\n    \"condition\": {\n        \"type\": \"profilePropertyCondition\",\n        \"parameterValues\": {\n            \"propertyName\": \"properties.subscriptionType\",\n            \"comparisonOperator\": \"equals\",\n            \"propertyValue\": \"premium\"\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/segments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"segments"
+							]
+						},
+						"description": "Create a simple segment based on a single profile property condition",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Segment - Multiple Conditions (AND)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"metadata\": {\n        \"id\": \"active-premium-users\",\n        \"name\": \"Active Premium Users\",\n        \"scope\": \"{{scope}}\",\n        \"description\": \"Premium users who are active\"\n    },\n    \"condition\": {\n        \"type\": \"booleanCondition\",\n        \"parameterValues\": {\n            \"operator\": \"and\",\n            \"subConditions\": [\n                {\n                    \"type\": \"profilePropertyCondition\",\n                    \"parameterValues\": {\n                        \"propertyName\": \"properties.subscriptionType\",\n                        \"comparisonOperator\": \"equals\",\n                        \"propertyValue\": \"premium\"\n                    }\n                },\n                {\n                    \"type\": \"profilePropertyCondition\",\n                    \"parameterValues\": {\n                        \"propertyName\": \"properties.isActive\",\n                        \"comparisonOperator\": \"equals\",\n                        \"propertyValueBoolean\": true\n                    }\n                }\n            ]\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/segments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"segments"
+							]
+						},
+						"description": "Create a segment with multiple conditions using AND operator",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Segment - Age Range",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"metadata\": {\n        \"id\": \"age-20-30\",\n        \"name\": \"Age 20-30\",\n        \"scope\": \"{{scope}}\",\n        \"description\": \"Users between 20 and 30 years old\"\n    },\n    \"condition\": {\n        \"type\": \"booleanCondition\",\n        \"parameterValues\": {\n            \"operator\": \"and\",\n            \"subConditions\": [\n                {\n                    \"type\": \"profilePropertyCondition\",\n                    \"parameterValues\": {\n                        \"propertyName\": \"properties.age\",\n                        \"comparisonOperator\": \"greaterThanOrEqualTo\",\n                        \"propertyValueInteger\": 20\n                    }\n                },\n                {\n                    \"type\": \"profilePropertyCondition\",\n                    \"parameterValues\": {\n                        \"propertyName\": \"properties.age\",\n                        \"comparisonOperator\": \"lessThan\",\n                        \"propertyValueInteger\": 30\n                    }\n                }\n            ]\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/segments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"segments"
+							]
+						},
+						"description": "Create a segment for users in a specific age range",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Segment - Past Events",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"metadata\": {\n        \"id\": \"active-users\",\n        \"name\": \"Active Users\",\n        \"scope\": \"{{scope}}\",\n        \"description\": \"Users who viewed pages in the last 30 days\"\n    },\n    \"condition\": {\n        \"type\": \"pastEventCondition\",\n        \"parameterValues\": {\n            \"eventType\": \"view\",\n            \"numberOfDays\": 30,\n            \"minimumEventCount\": 1\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/segments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"segments"
+							]
+						},
+						"description": "Create a segment based on past events (users who performed an action in the last N days)",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Segment - Complex (Multiple Past Events)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"metadata\": {\n        \"id\": \"engaged-customers\",\n        \"name\": \"Engaged Customers\",\n        \"scope\": \"{{scope}}\",\n        \"description\": \"Users who viewed pages recently and made purchases\"\n    },\n    \"condition\": {\n        \"type\": \"booleanCondition\",\n        \"parameterValues\": {\n            \"operator\": \"and\",\n            \"subConditions\": [\n                {\n                    \"type\": \"pastEventCondition\",\n                    \"parameterValues\": {\n                        \"eventType\": \"view\",\n                        \"numberOfDays\": 30,\n                        \"minimumEventCount\": 10\n                    }\n                },\n                {\n                    \"type\": \"pastEventCondition\",\n                    \"parameterValues\": {\n                        \"eventType\": \"purchase\",\n                        \"numberOfDays\": 90,\n                        \"minimumEventCount\": 1\n                    }\n                }\n            ]\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/segments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"segments"
+							]
+						},
+						"description": "Create a complex segment combining multiple past event conditions",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Segment - Nested Segment Condition",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"metadata\": {\n        \"id\": \"vip-premium-users\",\n        \"name\": \"VIP Premium Users\",\n        \"scope\": \"{{scope}}\",\n        \"description\": \"Users who are in premium segment and have VIP status\"\n    },\n    \"condition\": {\n        \"type\": \"booleanCondition\",\n        \"parameterValues\": {\n            \"operator\": \"and\",\n            \"subConditions\": [\n                {\n                    \"type\": \"profileSegmentCondition\",\n                    \"parameterValues\": {\n                        \"segments\": [\"premium-users\"]\n                    }\n                },\n                {\n                    \"type\": \"profilePropertyCondition\",\n                    \"parameterValues\": {\n                        \"propertyName\": \"properties.vipStatus\",\n                        \"comparisonOperator\": \"equals\",\n                        \"propertyValue\": \"active\"\n                    }\n                }\n            ]\n        }\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/segments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"segments"
+							]
+						},
+						"description": "Create a segment that references another segment (nested segment condition)",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Segments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/segments?offset=0&size=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"segments"
+							],
+							"query": [
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "50"
+								}
+							]
+						},
+						"description": "List all segments with pagination",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Segment",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/segments/{{segmentId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"segments",
+								"{{segmentId}}"
+							]
+						},
+						"description": "Get a specific segment by ID",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Segment Match Count",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/segments/{{segmentId}}/count",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"segments",
+								"{{segmentId}}",
+								"count"
+							]
+						},
+						"description": "Get the count of profiles matching a segment",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Matching Profiles",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/segments/{{segmentId}}/match?offset=0&size=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"segments",
+								"{{segmentId}}",
+								"match"
+							],
+							"query": [
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get profiles matching a segment",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Segment",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/segments/{{segmentId}}?validate=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"segments",
+								"{{segmentId}}"
+							],
+							"query": [
+								{
+									"key": "validate",
+									"value": "true",
+									"description": "Check for dependencies before deleting"
+								}
+							]
+						},
+						"description": "Delete a segment. Set validate=true to check for dependencies.",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "basic",
+				"basic": [
+					{
+						"key": "username",
+						"value": "{{adminUsername}}",
+						"type": "string"
+					},
+					{
+						"key": "password",
+						"value": "{{adminPassword}}",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "7. Context Requests with Events",
+			"item": [
+				{
+					"name": "Context with View Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Unomi-Api-Key",
+								"value": "{{publicApiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"source\": {\n        \"itemId\": \"homepage\",\n        \"itemType\": \"page\",\n        \"scope\": \"{{scope}}\"\n    },\n    \"sessionId\": \"{{sessionId}}\",\n    \"events\": [\n        {\n            \"eventType\": \"view\",\n            \"scope\": \"{{scope}}\",\n            \"source\": {\n                \"itemType\": \"site\",\n                \"scope\": \"{{scope}}\",\n                \"itemId\": \"mysite\"\n            },\n            \"target\": {\n                \"itemType\": \"page\",\n                \"scope\": \"{{scope}}\",\n                \"itemId\": \"homepage\",\n                \"properties\": {\n                    \"pageInfo\": {\n                        \"referringURL\": \"https://www.google.com\",\n                        \"pagePath\": \"/homepage\",\n                        \"pageTitle\": \"Homepage\"\n                    }\n                }\n            }\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/context.json",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"context.json"
+							]
+						},
+						"description": "Send a context request with a view event to track page views"
+					},
+					"response": []
+				},
+				{
+					"name": "Context with Custom Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Unomi-Api-Key",
+								"value": "{{publicApiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"source\": {\n        \"itemId\": \"contact-form\",\n        \"itemType\": \"form\",\n        \"scope\": \"{{scope}}\"\n    },\n    \"sessionId\": \"{{sessionId}}\",\n    \"events\": [\n        {\n            \"eventType\": \"contactInfoSubmitted\",\n            \"scope\": \"{{scope}}\",\n            \"source\": {\n                \"itemType\": \"form\",\n                \"scope\": \"{{scope}}\",\n                \"itemId\": \"contact-form\"\n            },\n            \"properties\": {\n                \"firstName\": \"John\",\n                \"lastName\": \"Doe\",\n                \"email\": \"john.doe@example.com\"\n            }\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/context.json",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"context.json"
+							]
+						},
+						"description": "Send a context request with a custom event (requires schema to be created first)"
+					},
+					"response": []
+				},
+				{
+					"name": "Event Collector - Multiple Events",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Unomi-Api-Key",
+								"value": "{{publicApiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"sessionId\": \"{{sessionId}}\",\n    \"events\": [\n        {\n            \"eventType\": \"view\",\n            \"scope\": \"{{scope}}\",\n            \"source\": {\n                \"itemType\": \"site\",\n                \"scope\": \"{{scope}}\",\n                \"itemId\": \"mysite\"\n            },\n            \"target\": {\n                \"itemType\": \"page\",\n                \"scope\": \"{{scope}}\",\n                \"itemId\": \"product-page\",\n                \"properties\": {\n                    \"pageInfo\": {\n                        \"pagePath\": \"/products\",\n                        \"pageTitle\": \"Products\"\n                    }\n                }\n            }\n        },\n        {\n            \"eventType\": \"click\",\n            \"scope\": \"{{scope}}\",\n            \"source\": {\n                \"itemType\": \"button\",\n                \"scope\": \"{{scope}}\",\n                \"itemId\": \"add-to-cart\"\n            },\n            \"target\": {\n                \"itemType\": \"product\",\n                \"scope\": \"{{scope}}\",\n                \"itemId\": \"product-123\"\n            }\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/eventcollector",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"eventcollector"
+							]
+						},
+						"description": "Send multiple events using the event collector endpoint. This executes rules but doesn't return context."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "8. Personalization",
+			"item": [
+				{
+					"name": "Context with Simple Personalization",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Unomi-Api-Key",
+								"value": "{{publicApiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"source\": {\n        \"itemId\": \"homepage\",\n        \"itemType\": \"page\",\n        \"scope\": \"{{scope}}\"\n    },\n    \"sessionId\": \"{{sessionId}}\",\n    \"personalizations\": [\n        {\n            \"id\": \"homepage-hero\",\n            \"strategy\": \"matching-first\",\n            \"strategyOptions\": {\n                \"fallback\": \"default-content\"\n            },\n            \"contents\": [\n                {\n                    \"id\": \"premium-user-content\",\n                    \"filters\": [\n                        {\n                            \"condition\": {\n                                \"type\": \"profileSegmentCondition\",\n                                \"parameterValues\": {\n                                    \"segments\": [\"premium-users\"]\n                                }\n                            }\n                        }\n                    ]\n                },\n                {\n                    \"id\": \"new-visitor-content\",\n                    \"filters\": [\n                        {\n                            \"condition\": {\n                                \"type\": \"sessionPropertyCondition\",\n                                \"parameterValues\": {\n                                    \"propertyName\": \"duration\",\n                                    \"comparisonOperator\": \"lessThan\",\n                                    \"propertyValueInteger\": 300\n                                }\n                            }\n                        }\n                    ]\n                },\n                {\n                    \"id\": \"default-content\"\n                }\n            ]\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/context.json",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"context.json"
+							]
+						},
+						"description": "Request personalization with matching-first strategy. Returns the first matching content or fallback."
+					},
+					"response": []
+				},
+				{
+					"name": "Context with Score-Based Personalization",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Unomi-Api-Key",
+								"value": "{{publicApiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"source\": {\n        \"itemId\": \"recommendations\",\n        \"itemType\": \"page\",\n        \"scope\": \"{{scope}}\"\n    },\n    \"sessionId\": \"{{sessionId}}\",\n    \"personalizations\": [\n        {\n            \"id\": \"recommendations-by-interest\",\n            \"strategy\": \"score-sorted\",\n            \"strategyOptions\": {\n                \"threshold\": -1\n            },\n            \"contents\": [\n                {\n                    \"id\": \"content-1\",\n                    \"filters\": [\n                        {\n                            \"condition\": {\n                                \"type\": \"pastEventCondition\",\n                                \"parameterValues\": {\n                                    \"minimumEventCount\": 1,\n                                    \"eventCondition\": {\n                                        \"type\": \"eventTypeCondition\",\n                                        \"parameterValues\": {\n                                            \"eventTypeId\": \"view\"\n                                        }\n                                    },\n                                    \"numberOfDays\": 30\n                                }\n                            },\n                            \"properties\": {\n                                \"score\": 100\n                            }\n                        }\n                    ],\n                    \"properties\": {\n                        \"interests\": \"health food\"\n                    }\n                },\n                {\n                    \"id\": \"content-2\",\n                    \"filters\": [\n                        {\n                            \"condition\": {\n                                \"type\": \"pastEventCondition\",\n                                \"parameterValues\": {\n                                    \"minimumEventCount\": 1,\n                                    \"eventCondition\": {\n                                        \"type\": \"eventTypeCondition\",\n                                        \"parameterValues\": {\n                                            \"eventTypeId\": \"view\"\n                                        }\n                                    },\n                                    \"numberOfDays\": 30\n                                }\n                            },\n                            \"properties\": {\n                                \"score\": 50\n                            }\n                        }\n                    ]\n                }\n            ]\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/context.json",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"context.json"
+							]
+						},
+						"description": "Request personalization with score-sorted strategy. Contents are sorted by their filter scores."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "9. Rule Management",
+			"item": [
+				{
+					"name": "List All Rules",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/rules",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"rules"
+							]
+						},
+						"description": "Get metadata for all rules",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Rule",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/rules/{{ruleId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"rules",
+								"{{ruleId}}"
+							]
+						},
+						"description": "Get a specific rule by ID",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Rule - Add Profile Property",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"metadata\": {\n        \"id\": \"set-premium-on-purchase\",\n        \"name\": \"Set Premium on Purchase\",\n        \"description\": \"Set premium flag when user makes a purchase\",\n        \"scope\": \"{{scope}}\",\n        \"enabled\": true\n    },\n    \"condition\": {\n        \"type\": \"eventTypeCondition\",\n        \"parameterValues\": {\n            \"eventTypeId\": \"purchase\"\n        }\n    },\n    \"actions\": [\n        {\n            \"type\": \"setPropertyAction\",\n            \"parameterValues\": {\n                \"setPropertyName\": \"properties.isPremium\",\n                \"setPropertyValue\": true\n            }\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/rules",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"rules"
+							]
+						},
+						"description": "Create a rule that sets a profile property when an event occurs",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Rule - Add to Segment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"metadata\": {\n        \"id\": \"add-to-premium-segment\",\n        \"name\": \"Add to Premium Segment\",\n        \"description\": \"Add profile to premium segment on purchase\",\n        \"scope\": \"{{scope}}\",\n        \"enabled\": true\n    },\n    \"condition\": {\n        \"type\": \"booleanCondition\",\n        \"parameterValues\": {\n            \"operator\": \"and\",\n            \"subConditions\": [\n                {\n                    \"type\": \"eventTypeCondition\",\n                    \"parameterValues\": {\n                        \"eventTypeId\": \"purchase\"\n                    }\n                },\n                {\n                    \"type\": \"eventPropertyCondition\",\n                    \"parameterValues\": {\n                        \"propertyName\": \"properties.totalAmount\",\n                        \"comparisonOperator\": \"greaterThan\",\n                        \"propertyValueInteger\": 100\n                    }\n                }\n            ]\n        }\n    },\n    \"actions\": [\n        {\n            \"type\": \"addToSegmentAction\",\n            \"parameterValues\": {\n                \"segmentId\": \"premium-users\"\n            }\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/rules",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"rules"
+							]
+						},
+						"description": "Create a rule that adds a profile to a segment based on event conditions",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Rule Statistics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/rules/statistics",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"rules",
+								"statistics"
+							]
+						},
+						"description": "Get statistics for all rules",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Rule Statistics by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/rules/{{ruleId}}/statistics",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"rules",
+								"{{ruleId}}",
+								"statistics"
+							]
+						},
+						"description": "Get statistics for a specific rule",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Rule",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/rules/{{ruleId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"rules",
+								"{{ruleId}}"
+							]
+						},
+						"description": "Delete a rule",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "basic",
+				"basic": [
+					{
+						"key": "username",
+						"value": "{{adminUsername}}",
+						"type": "string"
+					},
+					{
+						"key": "password",
+						"value": "{{adminPassword}}",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "11. Profile Management",
+			"item": [
+				{
+					"name": "Get Profile",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/profiles/{{profileId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"profiles",
+								"{{profileId}}"
+							]
+						},
+						"description": "Get a profile by ID",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create/Update Profile",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"itemId\": \"{{profileId}}\",\n    \"itemType\": \"profile\",\n    \"properties\": {\n        \"firstName\": \"John\",\n        \"lastName\": \"Doe\",\n        \"email\": \"john.doe@example.com\",\n        \"age\": 28,\n        \"subscriptionType\": \"premium\",\n        \"isActive\": true\n    }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/profiles",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"profiles"
+							]
+						},
+						"description": "Create or update a profile. Sends a profileUpdated event.",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Profiles",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"condition\": {\n        \"type\": \"profilePropertyCondition\",\n        \"parameterValues\": {\n            \"propertyName\": \"properties.subscriptionType\",\n            \"comparisonOperator\": \"equals\",\n            \"propertyValue\": \"premium\"\n        }\n    },\n    \"offset\": 0,\n    \"limit\": 50,\n    \"sortBy\": \"properties.lastName:asc\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/profiles/search",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"profiles",
+								"search"
+							]
+						},
+						"description": "Search profiles using a condition query",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile Count",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/profiles/count",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"profiles",
+								"count"
+							]
+						},
+						"description": "Get total count of profiles",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile Segments",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/profiles/{{profileId}}/segments",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"profiles",
+								"{{profileId}}",
+								"segments"
+							]
+						},
+						"description": "Get all segments that a profile belongs to",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile Sessions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/profiles/{{profileId}}/sessions?offset=0&size=10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"profiles",
+								"{{profileId}}",
+								"sessions"
+							],
+							"query": [
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get all sessions for a profile",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Profile",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/profiles/{{profileId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"profiles",
+								"{{profileId}}"
+							]
+						},
+						"description": "Delete a profile",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "basic",
+				"basic": [
+					{
+						"key": "username",
+						"value": "{{adminUsername}}",
+						"type": "string"
+					},
+					{
+						"key": "password",
+						"value": "{{adminPassword}}",
+						"type": "string"
+					}
+				]
+			}
+		},
+		{
+			"name": "10. Explain Context Request",
+			"item": [
+				{
+					"name": "Context Request with Explain",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "X-Unomi-Api-Key",
+								"value": "{{publicApiKey}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"source\": {\n        \"itemId\": \"homepage\",\n        \"itemType\": \"page\",\n        \"scope\": \"{{scope}}\"\n    },\n    \"sessionId\": \"{{sessionId}}\",\n    \"events\": [\n        {\n            \"eventType\": \"view\",\n            \"scope\": \"{{scope}}\",\n            \"source\": {\n                \"itemType\": \"site\",\n                \"scope\": \"{{scope}}\",\n                \"itemId\": \"mysite\"\n            },\n            \"target\": {\n                \"itemType\": \"page\",\n                \"scope\": \"{{scope}}\",\n                \"itemId\": \"homepage\"\n            }\n        }\n    ],\n    \"personalizations\": [\n        {\n            \"id\": \"homepage-hero\",\n            \"strategy\": \"matching-first\",\n            \"contents\": [\n                {\n                    \"id\": \"premium-content\",\n                    \"filters\": [\n                        {\n                            \"condition\": {\n                                \"type\": \"profileSegmentCondition\",\n                                \"parameterValues\": {\n                                    \"segments\": [\"premium-users\"]\n                                }\n                            }\n                        }\n                    ]\n                }\n            ]\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/context.json?explain=true",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"context.json"
+							],
+							"query": [
+								{
+									"key": "explain",
+									"value": "true",
+									"description": "Enable detailed tracing of request processing"
+								}
+							]
+						},
+						"description": "Get context with explain mode enabled. Returns detailed tracing information about rule execution, segment evaluation, and personalization. Requires administrator authentication."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "12. Additional Useful Requests",
+			"item": [
+				{
+					"name": "List Event Types",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/events/types",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"events",
+								"types"
+							]
+						},
+						"description": "Get list of all event type identifiers that the server has processed",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Events",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"condition\": {\n        \"type\": \"eventTypeCondition\",\n        \"parameterValues\": {\n            \"eventTypeId\": \"view\"\n        }\n    },\n    \"offset\": 0,\n    \"limit\": 50,\n    \"sortBy\": \"timeStamp:desc\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/cxs/events/search",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"events",
+								"search"
+							]
+						},
+						"description": "Search for events using a query condition",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Session Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/profiles/sessions/{{sessionId}}/events?eventTypes=view&eventTypes=click&offset=0&size=50",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"profiles",
+								"sessions",
+								"{{sessionId}}",
+								"events"
+							],
+							"query": [
+								{
+									"key": "eventTypes",
+									"value": "view"
+								},
+								{
+									"key": "eventTypes",
+									"value": "click"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "size",
+									"value": "50"
+								}
+							]
+						},
+						"description": "Get events for a specific session, optionally filtered by event types",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Condition Definitions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/definitions/conditions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"definitions",
+								"conditions"
+							]
+						},
+						"description": "Get all available condition type definitions",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Action Definitions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/definitions/actions",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"definitions",
+								"actions"
+							]
+						},
+						"description": "Get all available action type definitions",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Property Types",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/profiles/properties",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"profiles",
+								"properties"
+							]
+						},
+						"description": "Get all known property types organized by target",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "basic",
+				"basic": [
+					{
+						"key": "username",
+						"value": "{{adminUsername}}",
+						"type": "string"
+					},
+					{
+						"key": "password",
+						"value": "{{adminPassword}}",
+						"type": "string"
+					}
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8181",
+			"type": "string"
+		},
+		{
+			"key": "scope",
+			"value": "example",
+			"type": "string"
+		},
+		{
+			"key": "scopeId",
+			"value": "example",
+			"type": "string",
+			"description": "Scope ID for scope management operations"
+		},
+		{
+			"key": "sessionId",
+			"value": "session-123",
+			"type": "string"
+		},
+		{
+			"key": "profileId",
+			"value": "profile-123",
+			"type": "string"
+		},
+		{
+			"key": "tenantId",
+			"value": "mytenant",
+			"type": "string"
+		},
+		{
+			"key": "segmentId",
+			"value": "premium-users",
+			"type": "string"
+		},
+		{
+			"key": "ruleId",
+			"value": "set-premium-on-purchase",
+			"type": "string"
+		},
+		{
+			"key": "apiKey",
+			"value": "YOUR_API_KEY",
+			"type": "string",
+			"description": "API key to validate (used in Validate API Key request)"
+		},
+		{
+			"key": "publicApiKey",
+			"value": "YOUR_PUBLIC_API_KEY",
+			"type": "string",
+			"description": "Public API key from tenant"
+		},
+		{
+			"key": "privateApiKey",
+			"value": "YOUR_PRIVATE_API_KEY",
+			"type": "string",
+			"description": "Private API key from tenant (used with tenantId for Basic Auth)"
+		},
+		{
+			"key": "adminUsername",
+			"value": "karaf",
+			"type": "string",
+			"description": "Admin username for administrative endpoints"
+		},
+		{
+			"key": "adminPassword",
+			"value": "karaf",
+			"type": "string",
+			"description": "Admin password for administrative endpoints"
+		},
+		{
+			"key": "healthUsername",
+			"value": "health",
+			"type": "string",
+			"description": "Health check username"
+		},
+		{
+			"key": "healthPassword",
+			"value": "health",
+			"type": "string",
+			"description": "Health check password"
+		}
+	]
+}

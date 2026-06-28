@@ -19,7 +19,7 @@
 ################################################################################
 
 set -e  # Exit on error
-trap 'handle_error $? $LINENO "${BASH_COMMAND:0:200}"' ERR
+trap 'handle_error $? $LINENO $BASH_LINENO "$BASH_COMMAND" $(printf "::%s" ${FUNCNAME[@]:-})' ERR
 
 # Error handling function
 handle_error() {
@@ -251,6 +251,7 @@ print_section "Apache Unomi Build Script"
 
 # Default values
 SKIP_TESTS=false
+SKIP_UNIT_TESTS=false
 RUN_INTEGRATION_TESTS=false
 DEPLOY=false
 DEBUG=false
@@ -266,11 +267,16 @@ KARAF_HEAP=""
 MAVEN_QUIET=false
 NO_KARAF=false
 AUTO_START=""
+# Only initialize UNOMI_DISTRIBUTION if not already set (e.g., by setup-opensearch.sh or setup-elasticsearch.sh)
+if [ -z "${UNOMI_DISTRIBUTION+x}" ]; then
+    UNOMI_DISTRIBUTION=""
+fi
 SINGLE_TEST=""
 IT_DEBUG=false
 IT_DEBUG_PORT=5006
 IT_DEBUG_SUSPEND=false
 SKIP_MIGRATION_TESTS=false
+RESOLVER_DEBUG=false
 KEEP_CONTAINER=false
 IT_MEMORY_SAMPLER=true
 IT_MEMORY_INTERVAL=30
@@ -297,6 +303,7 @@ EOF
         echo -e "${BOLD}Options:${NC}"
         echo -e "  ${CYAN}-h, --help${NC}                 Show this help message"
         echo -e "  ${CYAN}-s, --skip-tests${NC}           Skip all tests"
+        echo -e "  ${CYAN}--skip-unit-tests${NC}          Skip unit tests (integration tests can still run)"
         echo -e "  ${CYAN}-i, --integration-tests${NC}    Run integration tests"
         echo -e "  ${CYAN}-d, --deploy${NC}               Deploy after build"
         echo -e "  ${CYAN}-X, --maven-debug${NC}          Enable Maven debug output"
@@ -309,6 +316,7 @@ EOF
         echo -e "  ${CYAN}--purge-maven-cache${NC}        Purge local Maven cache before building"
         echo -e "  ${CYAN}--karaf-home PATH${NC}          Set Karaf home directory for deployment"
         echo -e "  ${CYAN}--use-opensearch${NC}           Use OpenSearch instead of ElasticSearch"
+        echo -e "  ${CYAN}--distribution DIST${NC}        Set Unomi distribution (e.g., unomi-distribution-opensearch)"
         echo -e "  ${CYAN}--no-karaf${NC}                 Build without starting Karaf"
         echo -e "  ${CYAN}--auto-start ENGINE${NC}        Auto-start with specified engine"
         echo -e "  ${CYAN}--single-test TEST${NC}         Run a single integration test"
@@ -316,6 +324,7 @@ EOF
         echo -e "  ${CYAN}--it-debug-port PORT${NC}       Set integration test debug port"
         echo -e "  ${CYAN}--it-debug-suspend${NC}         Suspend integration test until debugger connects"
         echo -e "  ${CYAN}--skip-migration-tests${NC}     Skip migration-related tests"
+        echo -e "  ${CYAN}--resolver-debug${NC}           Enable Karaf Resolver debug logging for integration tests"
         echo -e "  ${CYAN}--keep-container${NC}           Keep search engine container running after tests (for post-failure inspection)"
         echo -e "  ${CYAN}--no-memory-sampler${NC}        Disable JVM/system memory sampling during integration tests"
         echo -e "  ${CYAN}--memory-interval SEC${NC}    Memory sample interval in seconds (default: 30)"
@@ -338,6 +347,7 @@ EOF
         echo "Options:"
         echo "  -h, --help                 Show this help message"
         echo "  -s, --skip-tests           Skip all tests"
+        echo "  --skip-unit-tests          Skip unit tests (integration tests can still run)"
         echo "  -i, --integration-tests    Run integration tests"
         echo "  -d, --deploy               Deploy after build"
         echo "  -X, --maven-debug         Enable Maven debug output"
@@ -350,6 +360,7 @@ EOF
         echo "  --purge-maven-cache        Purge local Maven cache before building"
         echo "  --karaf-home PATH          Set Karaf home directory for deployment"
         echo "  --use-opensearch          Use OpenSearch instead of ElasticSearch"
+        echo "  --distribution DIST       Set Unomi distribution (e.g., unomi-distribution-opensearch)"
         echo "  --no-karaf               Build without starting Karaf"
         echo "  --auto-start ENGINE      Auto-start with specified engine"
         echo "  --single-test TEST         Run a single integration test"
@@ -357,6 +368,7 @@ EOF
         echo "  --it-debug-port PORT      Set integration test debug port"
         echo "  --it-debug-suspend        Suspend integration test until debugger connects"
         echo "  --skip-migration-tests    Skip migration-related tests"
+        echo "  --resolver-debug          Enable Karaf Resolver debug logging for integration tests"
         echo "  --keep-container          Keep search engine container running after tests (for post-failure inspection)"
         echo "  --no-memory-sampler       Disable JVM/system memory sampling during integration tests"
         echo "  --memory-interval SEC     Memory sample interval in seconds (default: 30)"
@@ -373,6 +385,9 @@ EOF
         echo -e "${NC}"
         echo "  # Build with integration tests using OpenSearch"
         echo "  $0 --integration-tests --use-opensearch"
+        echo
+        echo "  # Build skipping unit tests but running integration tests"
+        echo "  $0 --skip-unit-tests --integration-tests"
         echo
         echo "  # Build in debug mode"
         echo "  $0 --debug --debug-port 5006 --debug-suspend"
@@ -397,6 +412,9 @@ EOF
     else
         echo "  # Build with integration tests using OpenSearch"
         echo "  $0 --integration-tests --use-opensearch"
+        echo
+        echo "  # Build skipping unit tests but running integration tests"
+        echo "  $0 --skip-unit-tests --integration-tests"
         echo
         echo "  # Build in debug mode"
         echo "  $0 --debug --debug-port 5006 --debug-suspend"
@@ -443,6 +461,9 @@ while [ "$1" != "" ]; do
         -s | --skip-tests)
             SKIP_TESTS=true
             ;;
+        --skip-unit-tests)
+            SKIP_UNIT_TESTS=true
+            ;;
         -i | --integration-tests)
             RUN_INTEGRATION_TESTS=true
             ;;
@@ -471,6 +492,10 @@ while [ "$1" != "" ]; do
             ;;
         --use-opensearch)
             USE_OPENSEARCH=true
+            ;;
+        --distribution)
+            shift
+            UNOMI_DISTRIBUTION="$1"
             ;;
         --search-heap)
             shift
@@ -508,6 +533,9 @@ while [ "$1" != "" ]; do
         --skip-migration-tests)
             SKIP_MIGRATION_TESTS=true
             ;;
+        --resolver-debug)
+            RESOLVER_DEBUG=true
+            ;;
         --keep-container)
             KEEP_CONTAINER=true
             ;;
@@ -542,6 +570,15 @@ while [ "$1" != "" ]; do
     esac
     shift
 done
+
+# Wire distribution and use-opensearch parameters
+if [ "$USE_OPENSEARCH" = true ] && [ -z "$UNOMI_DISTRIBUTION" ]; then
+    UNOMI_DISTRIBUTION="unomi-distribution-opensearch"
+fi
+
+if [ ! -z "$UNOMI_DISTRIBUTION" ] && [[ "$UNOMI_DISTRIBUTION" == *opensearch* ]]; then
+    USE_OPENSEARCH=true
+fi
 
 # Wire up log file output if requested
 if [ "$LOG_FILE_ONLY" = true ] && [ -z "$LOG_FILE" ]; then
@@ -796,6 +833,76 @@ check_requirements() {
         has_errors=true
     fi
 
+    if [ "$SKIP_TESTS" = true ] && [ "$SKIP_UNIT_TESTS" = true ]; then
+        print_status "error" "Cannot use --skip-tests and --skip-unit-tests together"
+        has_errors=true
+    fi
+
+    # Docker check for integration tests
+    if [ "$RUN_INTEGRATION_TESTS" = true ]; then
+        print_status "info" "Checking Docker availability for integration tests..."
+        if ! command_exists docker; then
+            print_status "error" "Docker is not installed or not in PATH"
+            echo "Integration tests require Docker to run Elasticsearch/OpenSearch containers."
+            echo "Please install Docker:"
+            if [[ "$(uname)" == "Darwin" ]]; then
+                echo "  - macOS: Download Docker Desktop from https://www.docker.com/products/docker-desktop"
+                echo "  - Or install via Homebrew: brew install --cask docker"
+            else
+                echo "  - Ubuntu/Debian: sudo apt install docker.io"
+                echo "  - CentOS/RHEL/Fedora: sudo yum install docker (or sudo dnf install docker)"
+                echo "  - Or follow: https://docs.docker.com/get-docker/"
+            fi
+            has_errors=true
+        else
+            docker_info_output=$(docker info 2>&1)
+            docker_info_exit_code=$?
+            if [ $docker_info_exit_code -ne 0 ]; then
+                if echo "$docker_info_output" | grep -q "permission denied\|Got permission denied"; then
+                    print_status "error" "Docker permission denied"
+                    echo "Docker is installed but you don't have permission to access it."
+                    if [[ "$(uname)" == "Darwin" ]]; then
+                        echo "On macOS, ensure Docker Desktop is running and you're logged in."
+                    else
+                        echo "On Linux, add your user to the docker group:"
+                        echo "  sudo usermod -aG docker $USER"
+                        echo "  Then log out and log back in, or run: newgrp docker"
+                    fi
+                elif echo "$docker_info_output" | grep -q "Cannot connect to the Docker daemon\|Is the docker daemon running"; then
+                    print_status "error" "Docker daemon is not running"
+                    echo "Please start Docker daemon:"
+                    if [[ "$(uname)" == "Darwin" ]]; then
+                        echo "  - macOS: Start Docker Desktop application from Applications"
+                        echo "  - Or from command line: open -a Docker"
+                    else
+                        echo "  - Linux: sudo systemctl start docker"
+                        echo "  - Or for older systems: sudo service docker start"
+                    fi
+                else
+                    print_status "error" "Docker is not accessible"
+                    echo "Docker command failed with:"
+                    echo "$docker_info_output"
+                fi
+                has_errors=true
+            else
+                docker_version=$(docker --version 2>&1)
+                print_status "success" "✓ Docker available: ${docker_version}"
+            fi
+        fi
+    fi
+
+    # OpenSearch password check
+    if [ "$USE_OPENSEARCH" = true ] || [ "$AUTO_START" = "opensearch" ]; then
+        if [ -z "$UNOMI_OPENSEARCH_PASSWORD" ]; then
+            print_status "error" "UNOMI_OPENSEARCH_PASSWORD is not set for OpenSearch"
+            echo "When using OpenSearch, you must export UNOMI_OPENSEARCH_PASSWORD before running the build/start."
+            echo "Examples:"
+            echo "  export UNOMI_OPENSEARCH_PASSWORD=yourStrongPassword"
+            echo "  UNOMI_OPENSEARCH_PASSWORD=yourStrongPassword $0 --integration-tests --use-opensearch"
+            has_errors=true
+        fi
+    fi
+
     if [ ! -z "$SINGLE_TEST" ] && [ "$RUN_INTEGRATION_TESTS" = false ]; then
         print_status "error" "Single test specified (--single-test) but integration tests are not enabled. Use --integration-tests to run the test."
         has_errors=true
@@ -920,9 +1027,59 @@ if [ ! -f ~/.m2/settings.xml ]; then
     fi
 fi
 
+# Function to check for conflicting environment variables before integration tests
+check_integration_test_env_vars() {
+    local detected_vars=()
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    if [ -n "${UNOMI_ELASTICSEARCH_CLUSTERNAME+x}" ] || \
+       [ -n "${UNOMI_ELASTICSEARCH_USERNAME+x}" ] || \
+       [ -n "${UNOMI_ELASTICSEARCH_PASSWORD+x}" ] || \
+       [ -n "${UNOMI_ELASTICSEARCH_SSL_ENABLE+x}" ] || \
+       [ -n "${UNOMI_ELASTICSEARCH_SSL_TRUST_ALL_CERTIFICATES+x}" ]; then
+        detected_vars+=("Elasticsearch")
+    fi
+
+    if [ -n "${UNOMI_OPENSEARCH_CLUSTERNAME+x}" ] || \
+       [ -n "${UNOMI_OPENSEARCH_ADDRESSES+x}" ] || \
+       [ -n "${UNOMI_OPENSEARCH_USERNAME+x}" ] || \
+       [ -n "${UNOMI_OPENSEARCH_PASSWORD+x}" ] || \
+       [ -n "${UNOMI_OPENSEARCH_SSL_ENABLE+x}" ] || \
+       [ -n "${UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES+x}" ]; then
+        detected_vars+=("OpenSearch")
+    fi
+
+    if [ ${#detected_vars[@]} -gt 0 ]; then
+        print_status "error" "Environment variables for ${detected_vars[*]} are set and will interfere with integration tests"
+        echo ""
+        echo "Integration tests manage their own search engine configuration and should not"
+        echo "be run with these environment variables set."
+        echo ""
+        echo "To clear the environment variables, run one of the following:"
+        echo ""
+        for var_type in "${detected_vars[@]}"; do
+            if [ "$var_type" = "Elasticsearch" ]; then
+                echo "  source ${script_dir}/clear-elasticsearch.sh"
+            elif [ "$var_type" = "OpenSearch" ]; then
+                echo "  source ${script_dir}/clear-opensearch.sh"
+            fi
+        done
+        echo ""
+        echo "After clearing the variables, you can run the integration tests again."
+        exit 1
+    fi
+}
+
+# Add unomi.distribution system property if set
+if [ ! -z "$UNOMI_DISTRIBUTION" ]; then
+    MVN_OPTS="$MVN_OPTS -Dunomi.distribution=$UNOMI_DISTRIBUTION"
+    echo "Using Unomi distribution: $UNOMI_DISTRIBUTION"
+fi
+
 # Add profile options
 PROFILES=""
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
+    check_integration_test_env_vars
     if [ "$USE_OPENSEARCH" = true ]; then
         MVN_OPTS="$MVN_OPTS -Duse.opensearch=true -P opensearch"
         echo "Running integration tests with OpenSearch"
@@ -976,10 +1133,23 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
         MVN_OPTS="$MVN_OPTS -Dit.keepContainer=true"
         echo "Search engine container will be kept running after tests"
     fi
+
+    if [ "$RESOLVER_DEBUG" = true ]; then
+        MVN_OPTS="$MVN_OPTS -Dit.unomi.resolver.debug=true"
+        echo "Enabling Karaf Resolver debug logging for integration tests"
+    fi
+
+    if [ "$SKIP_UNIT_TESTS" = true ]; then
+        MVN_OPTS="$MVN_OPTS -P skip-unit-tests"
+        echo "Skipping unit tests (integration tests will still run)"
+    fi
 else
     if [ "$SKIP_TESTS" = true ]; then
         PROFILES="$PROFILES,!integration-tests,!run-tests"
         MVN_OPTS="$MVN_OPTS -DskipTests"
+    elif [ "$SKIP_UNIT_TESTS" = true ]; then
+        MVN_OPTS="$MVN_OPTS -P skip-unit-tests"
+        echo "Skipping unit tests"
     fi
 
     # Warn if single test was specified but integration tests are not enabled
@@ -1326,9 +1496,22 @@ EOF
 
     if [ ! -z "$AUTO_START" ]; then
         print_status "info" "Configuring auto-start for $AUTO_START"
-        export KARAF_OPTS="-Dunomi.autoStart=$AUTO_START"
+        KARAF_OPTS_ARGS="-Dunomi.autoStart=$AUTO_START"
     else
         print_status "info" "Use [unomi:start] to start Unomi after Karaf initialization"
+    fi
+
+    if [ ! -z "$UNOMI_DISTRIBUTION" ]; then
+        if [ ! -z "$KARAF_OPTS_ARGS" ]; then
+            KARAF_OPTS_ARGS="$KARAF_OPTS_ARGS -Dunomi.distribution=$UNOMI_DISTRIBUTION"
+        else
+            KARAF_OPTS_ARGS="-Dunomi.distribution=$UNOMI_DISTRIBUTION"
+        fi
+        print_status "info" "Using Unomi distribution: $UNOMI_DISTRIBUTION"
+    fi
+
+    if [ ! -z "$KARAF_OPTS_ARGS" ]; then
+        export KARAF_OPTS="$KARAF_OPTS_ARGS"
     fi
 
     ./karaf || {

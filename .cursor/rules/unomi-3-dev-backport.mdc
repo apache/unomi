@@ -1,0 +1,49 @@
+---
+description: Mandatory workflow for backporting unomi-3-dev → master (UNOMI-875 Phase 2)
+alwaysApply: true
+---
+
+# unomi-3-dev → master backport rules (mandatory)
+
+Epic: **UNOMI-875**. Source branch: `unomi-3-dev`. Target: `master`.
+
+Local plan (git-ignored): `.local-notes/unomi-3-dev-backport-plan-phase2.md`
+
+## Never do this
+
+- **Never** `git checkout origin/unomi-3-dev -- <path>` on files that **already exist on master** (especially Java, CI, docker compose, `build.sh`).
+- **Never** port by commit hash from `unomi-3-dev` history.
+- **Never** replace `master` review refactors with 3-dev monoliths (REST mappers, tracing, test harness, shell CRUD fixes).
+- **Never** downgrade pinned versions on master (OpenSearch/Elasticsearch images, `pom.xml` properties) to match 3-dev without explicit review.
+
+## Always do this
+
+1. **Assume master may be ahead.** A diff vs `unomi-3-dev` ≠ missing feature. Check merged PRs (#771–#783, etc.) first.
+2. **Start from master** for every modified file: read `origin/master` version, then cherry-pick additive hunks from 3-dev.
+3. **Before staging**, run regression audit on touched paths:
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+git fetch origin
+# Master-only lines we must not drop:
+git diff origin/unomi-3-dev origin/master -- <path>
+# What our branch removes from master (should be empty or whitespace-only):
+git diff origin/master -- <path> | rg '^-' | rg -v '^---|^-import |^-package |^-\s*$|^- \*|^-\s*/\*|^-\s*\*'
+```
+
+4. **Safe to add wholesale** (new on master): new scripts, Postman JSON, docs, `build.ps1`, setup/clear helpers, new Java classes (e.g. `DistributionCompleter`).
+5. **Merge surgically**: `build.sh`, `pom.xml`, CI workflows — keep master CI/non-interactive, Javadoc, IT memory sampler (#780, #957).
+6. **Exclusion register** (master wins): see plan §1 — REST mappers, `EventServiceImpl`, `ParserHelper`, security WIP, migration scripts (UNOMI-943), etc.
+
+## Shell CRUD (PR J) — learned 2026-06-10
+
+Shell CSV/table polish from 3-dev is **mostly already on master** (#755, #763). Remaining 3-dev shell diffs often **revert** review fixes (UndeployDefinition, ConsentCrudCommand, ApiKeyCrudCommand, RuleCrudCommand, docker OpenSearch pins). Port only:
+
+- New classes (`DistributionCompleter`)
+- Additive CLI flags (`Setup --show`, `@Completion`) on top of master defaults
+
+## Validation before PR
+
+- `./build.sh --help`
+- `mvn -pl <affected-modules> -am compile -DskipTests`
+- Regression scan: no substantive `-` lines vs `origin/master` on modified existing files

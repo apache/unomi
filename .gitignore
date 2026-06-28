@@ -20,7 +20,10 @@ rest/.miredot-offline.json
 itests/src/main
 dependency_tree.txt
 .mvn/.develocity/develocity-workspace-id
-/.cursor/
+# Cursor IDE — commit shared agent rules; ignore local IDE state
+/.cursor/*
+!/.cursor/rules/
+!/.cursor/rules/**
 /.claude/
 /.local-notes/
 itests/snapshots_repository/
