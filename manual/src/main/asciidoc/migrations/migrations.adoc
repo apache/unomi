@@ -18,6 +18,10 @@ This section contains information and steps to migrate between major Unomi versi
 
 include::v2-v3-compatibility.adoc[]
 
+=== V2 Compatibility Mode
+
+include::v2-compatibility-mode.adoc[]
+
 === From version 3.0 to 3.1
 
 include::migrate-3.0-to-3.1.adoc[]

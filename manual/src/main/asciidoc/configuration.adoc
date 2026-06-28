@@ -94,7 +94,7 @@ org.apache.unomi.opensearch.cluster.name=opensearch-cluster
 org.apache.unomi.opensearch.addresses=localhost:9200
 
 # OpenSearch security settings (required by default since OpenSearch 3)
-org.apache.unomi.opensearch.ssl.enable=true
+org.apache.unomi.opensearch.sslEnable=true
 org.apache.unomi.opensearch.username=admin
 org.apache.unomi.opensearch.password=${env:OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
 org.apache.unomi.opensearch.sslTrustAllCertificates=true
