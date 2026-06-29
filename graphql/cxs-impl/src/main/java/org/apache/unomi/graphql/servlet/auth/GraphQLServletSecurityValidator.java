@@ -198,7 +198,8 @@ public class GraphQLServletSecurityValidator {
                     if (tenant != null) {
                         executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
                     } else {
-                        LOG.warn("Invalid tenant ID provided in header: {} — leaving context derived from JAAS login", tenantId);
+                        LOG.warn("Invalid tenant ID provided in header: {}", tenantId);
+                        executionContextManager.setCurrentContext(ExecutionContext.systemContext());
                     }
                 } else {
                     executionContextManager.setCurrentContext(ExecutionContext.systemContext());
