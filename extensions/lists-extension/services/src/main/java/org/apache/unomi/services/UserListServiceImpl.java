@@ -59,7 +59,9 @@ public class UserListServiceImpl implements UserListService {
         if (query.isForceRefresh()) {
             persistenceService.refreshIndex(UserList.class);
         }
-        definitionsService.resolveConditionType(query.getCondition());
+        if (query.getCondition() != null) {
+            definitionsService.getConditionValidationService().validate(query.getCondition());
+        }
         PartialList<UserList> userLists = persistenceService.query(query.getCondition(), query.getSortby(), UserList.class, query.getOffset(), query.getLimit());
         List<Metadata> metadata = new LinkedList<>();
         for (UserList definition : userLists.getList()) {
