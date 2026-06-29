@@ -385,11 +385,12 @@ public class ContextJsonEndpoint {
         for (Map.Entry<String, Object> parameterEntry : condition.getParameterValues().entrySet()) {
             Object sanitizedValue = sanitizeValue(parameterEntry.getValue());
             if (sanitizedValue != null) {
-                newParameterValues.put(parameterEntry.getKey(), parameterEntry.getValue());
+                newParameterValues.put(parameterEntry.getKey(), sanitizedValue);
             } else {
                 return null;
             }
         }
+        condition.setParameterValues(newParameterValues);
         return condition;
     }
 
@@ -412,7 +413,7 @@ public class ContextJsonEndpoint {
                     newValues.add(newObject);
                 }
             }
-            return values;
+            return newValues;
         } else if (value instanceof Map) {
             Map<Object, Object> newMap = new LinkedHashMap<>();
             ((Map<?, ?>) value).forEach((key, value1) -> {
