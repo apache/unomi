@@ -492,6 +492,26 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
+    public void testMVELVulnerabilityWithListPropertyValues() throws Exception {
+        File vulnFile = new File("target/vuln-file-list.txt");
+        if (vulnFile.exists()) {
+            vulnFile.delete();
+        }
+        String vulnFileCanonicalPath = vulnFile.getCanonicalPath();
+        vulnFileCanonicalPath = vulnFileCanonicalPath.replace("\\", "\\\\"); // this is required for Windows support
+
+        Map<String, String> parameters = new HashMap<>();
+        parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(
+                new StringEntity(getValidatedBundleJSON("security/mvel-payload-list.json", parameters), ContentType.APPLICATION_JSON));
+        TestUtils.executeContextJSONRequest(request);
+
+        shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
+                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
+    @Test
     public void testPersonalization() throws Exception {
 
         Map<String, String> parameters = new HashMap<>();
