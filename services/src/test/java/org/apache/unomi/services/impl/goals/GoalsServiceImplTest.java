@@ -19,8 +19,8 @@ package org.apache.unomi.services.impl.goals;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.goals.Goal;
-import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SchedulerService;
@@ -36,6 +36,7 @@ import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.events.EventServiceImpl;
+import org.apache.unomi.services.impl.rules.RulesServiceImpl;
 import org.apache.unomi.services.impl.rules.TestActionExecutorDispatcher;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
@@ -52,6 +53,8 @@ import org.osgi.framework.BundleContext;
 import java.io.IOException;
 import java.util.*;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 public class GoalsServiceImplTest {
@@ -66,6 +69,7 @@ public class GoalsServiceImplTest {
     private EventServiceImpl eventService;
     private SchedulerService schedulerService;
     private MultiTypeCacheServiceImpl multiTypeCacheService;
+    private TestEventAdmin testEventAdmin;
     @Mock
     private BundleContext bundleContext;
 
@@ -74,6 +78,7 @@ public class GoalsServiceImplTest {
 
         TracerService tracerService = TestHelper.createTracerService();
         tenantService = new TestTenantService();
+        TestHelper.setupCommonTestData(tenantService);
         tenantService.setCurrentTenantId("test-tenant");
         ConditionEvaluatorDispatcher conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
         securityService = TestHelper.createSecurityService();
@@ -90,7 +95,7 @@ public class GoalsServiceImplTest {
             TestHelper.createDefinitionServiceWithEventAdmin(persistenceService, bundleContext, schedulerService,
                 multiTypeCacheService, executionContextManager, tenantService);
         definitionsService = servicePair.getKey();
-        TestEventAdmin testEventAdmin = servicePair.getValue();
+        testEventAdmin = servicePair.getValue();
 
         // Inject definitionsService into the dispatcher
         TestHelper.injectDefinitionsServiceIntoDispatcher(conditionEvaluatorDispatcher, definitionsService);
@@ -144,13 +149,20 @@ public class GoalsServiceImplTest {
 
     @AfterEach
     public void tearDown() throws Exception {
-        // Shutdown TestEventAdmin if it exists (created via createDefinitionServiceWithEventAdmin)
-        // Note: TestEventAdmin is created internally by createDefinitionService, but we only have access
-        // to it when using createDefinitionServiceWithEventAdmin. For now, we rely on JVM cleanup.
-
-        // Stop scheduler service
-        if (schedulerService != null && schedulerService instanceof SchedulerServiceImpl) {
+        if (testEventAdmin != null) {
+            testEventAdmin.shutdown();
+        }
+        if (rulesService != null) {
+            ((RulesServiceImpl) rulesService).preDestroy();
+        }
+        if (eventService != null && rulesService != null) {
+            eventService.removeEventListenerService((RulesServiceImpl) rulesService);
+        }
+        if (schedulerService instanceof SchedulerServiceImpl) {
             ((SchedulerServiceImpl) schedulerService).preDestroy();
+        }
+        if (executionContextManager != null) {
+            executionContextManager.setCurrentContext(null);
         }
 
         // Clear cache by clearing each tenant
@@ -181,6 +193,7 @@ public class GoalsServiceImplTest {
         eventService = null;
         schedulerService = null;
         multiTypeCacheService = null;
+        testEventAdmin = null;
         bundleContext = null;
     }
 
@@ -247,33 +260,37 @@ public class GoalsServiceImplTest {
 
     @Test
     public void testSetGoalWithNestedConditions() {
-        // Create a goal with nested conditions
-        Goal goal = new Goal();
-        goal.setMetadata(new Metadata());
-        goal.getMetadata().setId("testGoal");
-        goal.getMetadata().setEnabled(true);
+        executionContextManager.executeAsSystem(() -> {
+            Goal goal = new Goal();
+            Metadata metadata = new Metadata();
+            metadata.setId("testGoal");
+            metadata.setEnabled(true);
+            goal.setMetadata(metadata);
+            goal.setItemId("testGoal");
 
-        // Create parent condition
-        Condition parentCondition = new Condition();
-        parentCondition.setConditionTypeId("booleanCondition");
-        parentCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        parentCondition.setParameter("operator", "and");
+            ConditionType booleanConditionType = definitionsService.getConditionType("booleanCondition");
+            assertNotNull(booleanConditionType, "Boolean condition type should exist");
+            ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
+            assertNotNull(profilePropertyConditionType, "Profile property condition type should exist");
 
-        // Create child condition
-        Condition childCondition = new Condition();
-        childCondition.setConditionTypeId("profilePropertyCondition");
-        childCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        childCondition.setParameter("propertyName", "profileProperty");
-        childCondition.setParameter("comparisonOperator", "exists");
+            Condition parentCondition = new Condition();
+            parentCondition.setConditionTypeId("booleanCondition");
+            parentCondition.setConditionType(booleanConditionType);
+            parentCondition.setParameter("operator", "and");
 
-        // Set up nested structure
-        List<Condition> subConditions = new ArrayList<>();
-        subConditions.add(childCondition);
-        parentCondition.setParameter("subConditions", subConditions);
+            Condition childCondition = new Condition();
+            childCondition.setConditionTypeId("profilePropertyCondition");
+            childCondition.setConditionType(profilePropertyConditionType);
+            childCondition.setParameter("propertyName", "profileProperty");
+            childCondition.setParameter("comparisonOperator", "exists");
 
-        goal.setStartEvent(parentCondition);
+            List<Condition> subConditions = new ArrayList<>();
+            subConditions.add(childCondition);
+            parentCondition.setParameter("subConditions", subConditions);
 
-        // Should not throw any exceptions
-        goalsService.setGoal(goal);
+            goal.setStartEvent(parentCondition);
+            goalsService.setGoal(goal);
+            return null;
+        });
     }
 }
