@@ -18,6 +18,7 @@ package org.apache.unomi.rest.exception;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.InternalServerErrorException;
@@ -84,6 +85,34 @@ class RestExceptionMapperTest {
                 new IllegalStateException("server fault"));
         Response response = new InternalServerErrorExceptionMapper().toResponse(exception);
         assertErrorResponse(response, 500, "internalServerError");
+    }
+
+    @Test
+    void illegalArgumentException_mapsToBadRequest() {
+        Response response = new IllegalArgumentExceptionMapper()
+                .toResponse(new IllegalArgumentException("Invalid rule condition:\n- missing type"));
+        assertErrorResponse(response, 400, "badRequest");
+    }
+
+    @Test
+    void badSegmentConditionException_mapsToBadRequest() {
+        Response response = new BadSegmentConditionExceptionMapper()
+                .toResponse(new BadSegmentConditionException("Invalid segment condition:\n- missing parameter"));
+        assertErrorResponse(response, 400, "badRequest");
+    }
+
+    @Test
+    void runtimeException_withIllegalArgumentCause_mapsToBadRequest() {
+        RuntimeException exception = new RuntimeException(new IllegalArgumentException("invalid rule"));
+        Response response = new RuntimeExceptionMapper().toResponse(exception);
+        assertErrorResponse(response, 400, "badRequest");
+    }
+
+    @Test
+    void runtimeException_withBadSegmentConditionCause_mapsToBadRequest() {
+        RuntimeException exception = new RuntimeException(new BadSegmentConditionException("invalid segment"));
+        Response response = new RuntimeExceptionMapper().toResponse(exception);
+        assertErrorResponse(response, 400, "badRequest");
     }
 
     private static void assertErrorResponse(Response response, int expectedStatus, String expectedErrorMessage) {
