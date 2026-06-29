@@ -412,7 +412,7 @@ public class ContextJsonEndpoint {
                     newValues.add(newObject);
                 }
             }
-            return values;
+            return newValues;
         } else if (value instanceof Map) {
             Map<Object, Object> newMap = new LinkedHashMap<>();
             ((Map<?, ?>) value).forEach((key, value1) -> {
