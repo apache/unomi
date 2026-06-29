@@ -385,11 +385,12 @@ public class ContextJsonEndpoint {
         for (Map.Entry<String, Object> parameterEntry : condition.getParameterValues().entrySet()) {
             Object sanitizedValue = sanitizeValue(parameterEntry.getValue());
             if (sanitizedValue != null) {
-                newParameterValues.put(parameterEntry.getKey(), parameterEntry.getValue());
+                newParameterValues.put(parameterEntry.getKey(), sanitizedValue);
             } else {
                 return null;
             }
         }
+        condition.setParameterValues(newParameterValues);
         return condition;
     }
 

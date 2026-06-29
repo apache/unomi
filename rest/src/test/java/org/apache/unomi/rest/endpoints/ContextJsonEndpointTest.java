@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.core.Response;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -120,6 +121,19 @@ class ContextJsonEndpointTest {
                 "propertyValue", "Jane"));
 
         assertNotNull(invokeSanitizeCondition(condition));
+    }
+
+    @Test
+    void sanitizeCondition_stripsScriptReferencesFromListParameterValues() throws Exception {
+        Condition condition = conditionWithParameters(Map.of(
+                "propertyName", "firstName",
+                "comparisonOperator", "equals",
+                "propertyValues", new ArrayList<>(List.of("safe-value", "script::Runtime.getRuntime().exec(\"touch /tmp/evil\")"))));
+
+        Condition sanitized = (Condition) invokeSanitizeCondition(condition);
+
+        assertNotNull(sanitized);
+        assertEquals(List.of("safe-value"), sanitized.getParameterValues().get("propertyValues"));
     }
 
     @Test
