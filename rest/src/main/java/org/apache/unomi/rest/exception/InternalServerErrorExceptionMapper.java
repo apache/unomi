@@ -27,8 +27,9 @@ import javax.ws.rs.ext.Provider;
 
 /**
  * Maps {@link InternalServerErrorException}. When the underlying cause is a Jackson deserialization
- * failure (a wrapped client error) the response is downgraded to a {@code 400 Bad Request};
- * otherwise it remains a {@code 500 Internal Server Error} with detailed, sanitized logging.
+ * failure or a domain validation error (a wrapped client error) the response is downgraded to a
+ * {@code 400 Bad Request}; otherwise it remains a {@code 500 Internal Server Error} with detailed,
+ * sanitized logging.
  */
 @Provider
 @Component(service = ExceptionMapper.class)
@@ -42,12 +43,13 @@ public class InternalServerErrorExceptionMapper extends AbstractRestExceptionMap
         String requestContext = buildRequestContext();
         Throwable rootCause = getRootCause(exception);
 
-        // A wrapped JSON deserialization failure is really a client error -> 400 Bad Request.
-        if (isJsonDeserializationError(rootCause)) {
+        // A wrapped JSON deserialization failure or domain validation error is really a client
+        // error -> 400 Bad Request.
+        if (isJsonDeserializationError(rootCause) || isClientValidationError(rootCause)) {
             String errorMessage = LogSanitizer.forLogging(messageOrType(rootCause));
-            LOGGER.warn("Bad request on {} - JSON deserialization error: {} (Set InternalServerErrorExceptionMapper to debug to get the full stacktrace)",
+            LOGGER.warn("Bad request on {} - Root cause: {} (Set InternalServerErrorExceptionMapper to debug to get the full stacktrace)",
                     requestContext, errorMessage);
-            LOGGER.debug("Full JSON mapping exception details for request: {}", requestContext, exception);
+            LOGGER.debug("Full exception details for request: {}", requestContext, exception);
             return badRequestResponse();
         }
 

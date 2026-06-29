@@ -115,6 +115,22 @@ class RestExceptionMapperTest {
         assertErrorResponse(response, 400, "badRequest");
     }
 
+    @Test
+    void internalServerError_withIllegalArgumentCause_mapsToBadRequest() {
+        InternalServerErrorException exception = new InternalServerErrorException("wrapped",
+                new IllegalArgumentException("invalid rule"));
+        Response response = new InternalServerErrorExceptionMapper().toResponse(exception);
+        assertErrorResponse(response, 400, "badRequest");
+    }
+
+    @Test
+    void internalServerError_withBadSegmentConditionCause_mapsToBadRequest() {
+        InternalServerErrorException exception = new InternalServerErrorException("wrapped",
+                new BadSegmentConditionException("invalid segment"));
+        Response response = new InternalServerErrorExceptionMapper().toResponse(exception);
+        assertErrorResponse(response, 400, "badRequest");
+    }
+
     private static void assertErrorResponse(Response response, int expectedStatus, String expectedErrorMessage) {
         assertEquals(expectedStatus, response.getStatus());
         Object entity = response.getEntity();
