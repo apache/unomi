@@ -18,6 +18,7 @@ package org.apache.unomi.rest.exception;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.apache.cxf.message.Message;
 import org.slf4j.Logger;
@@ -67,6 +68,14 @@ public abstract class AbstractRestExceptionMapper {
      */
     protected boolean isJsonDeserializationError(Throwable rootCause) {
         return rootCause instanceof JsonMappingException || rootCause instanceof JsonParseException;
+    }
+
+    /**
+     * @return {@code true} when the throwable represents invalid client input rejected by domain
+     * validation (e.g. rule or segment condition checks), rather than a server fault.
+     */
+    protected boolean isClientValidationError(Throwable throwable) {
+        return throwable instanceof IllegalArgumentException || throwable instanceof BadSegmentConditionException;
     }
 
     protected Throwable getRootCause(Throwable throwable) {
