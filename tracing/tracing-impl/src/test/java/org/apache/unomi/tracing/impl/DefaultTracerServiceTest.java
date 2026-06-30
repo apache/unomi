@@ -86,9 +86,9 @@ public class DefaultTracerServiceTest {
         RequestTracer tracer = tracerService.getCurrentTracer();
 
         // Start a root operation
-        tracer.startOperation("test", "Root operation", null);
         long startTime = System.currentTimeMillis();
-        
+        tracer.startOperation("test", "Root operation", null);
+
         // Add some traces
         tracer.trace("Test message", null);
         tracer.trace("Test with context", "context-data");
