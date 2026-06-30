@@ -1172,10 +1172,14 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
         ScheduledTask task = getTask(taskId);
         if (task != null) {
-            // Only cancel if in a cancellable state
+            // Only cancel if in a cancellable state. COMPLETED is included because a periodic task
+            // can be observed in that transient state by a caller racing handleTaskCompletion()
+            // (status briefly goes RUNNING -> COMPLETED -> SCHEDULED); without it, a cancelTask()
+            // call landing in that window would silently no-op and leave the task enabled.
             if (task.getStatus() == ScheduledTask.TaskStatus.SCHEDULED ||
                 task.getStatus() == ScheduledTask.TaskStatus.WAITING ||
-                task.getStatus() == ScheduledTask.TaskStatus.RUNNING) {
+                task.getStatus() == ScheduledTask.TaskStatus.RUNNING ||
+                task.getStatus() == ScheduledTask.TaskStatus.COMPLETED) {
 
                 task.setEnabled(false);
                 stateManager.updateTaskState(task, ScheduledTask.TaskStatus.CANCELLED, null, nodeId);

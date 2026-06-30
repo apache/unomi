@@ -176,13 +176,28 @@ public class TaskExecutionManager {
             // Ensure the executing set exists even under concurrent clears during shutdown
             Set<String> executingSet = executingTasksByType.computeIfAbsent(taskType, k -> ConcurrentHashMap.newKeySet());
 
+            // Atomically claim this task before dispatching. The persisted/cached status check above
+            // is only updated once prepareForExecution() actually runs inside the async taskWrapper below,
+            // so a second poll tick landing in that gap could otherwise see a stale non-RUNNING status and
+            // dispatch the same task again. Set.add() is atomic, so only one caller can win this race.
+            if (!executingSet.add(task.getItemId())) {
+                LOGGER.debug("Node {} : Task {} is already dispatched for execution, skipping duplicate dispatch", nodeId, task.getItemId());
+                return;
+            }
+
             TaskExecutor.TaskStatusCallback statusCallback = createStatusCallback(task);
             Runnable taskWrapper = createTaskWrapper(task, executor, statusCallback);
 
             // Execute task immediately using the scheduler
-            ScheduledFuture<?> future = scheduler.schedule(taskWrapper, 0, TimeUnit.MILLISECONDS);
-            scheduledTasks.put(task.getItemId(), future);
-            executingSet.add(task.getItemId());
+            try {
+                ScheduledFuture<?> future = scheduler.schedule(taskWrapper, 0, TimeUnit.MILLISECONDS);
+                scheduledTasks.put(task.getItemId(), future);
+            } catch (Exception e) {
+                // Scheduling failed (e.g. rejected during shutdown): release the claim so a later
+                // attempt isn't permanently blocked, since the wrapper that would normally do so never ran.
+                executingSet.remove(task.getItemId());
+                throw e;
+            }
         } catch (Exception e) {
             LOGGER.error("Node "+nodeId+", Error executing task: " + task.getItemId(), e);
             handleTaskError(task, e.getMessage(), System.currentTimeMillis());
@@ -281,35 +296,34 @@ public class TaskExecutionManager {
                 return;
             }
 
-            // Check shutdown again before preparing for execution
-            if (schedulerService != null && schedulerService.isShutdownNow()) {
-                LOGGER.debug("Node {} : Skipping task {} execution as scheduler is shutting down", nodeId, taskId);
-                return;
-            }
-
-            // Prepare task for execution (both persistent and in-memory)
-            if (!prepareForExecution(task)) {
-                return;
-            }
-
-            // Final shutdown check before executing
-            if (schedulerService != null && schedulerService.isShutdownNow()) {
-                LOGGER.debug("Node {} : Skipping task {} execution as scheduler is shutting down", nodeId, taskId);
-                return;
-            }
-
+            // From here on, executeTask() has already atomically claimed taskId in executingTasksByType
+            // before scheduling this wrapper. Every exit path below - including the early returns for
+            // shutdown and prepareForExecution() failing (e.g. lock already held by the caller, as
+            // happens when TaskRecoveryManager.attemptTaskResumption()/attemptTaskRestart() acquire the
+            // lock themselves before calling executeTask()) - must release that claim in the outer
+            // finally below, or the task is permanently blocked from ever being dispatched again.
+            boolean executingNodeIdSet = false;
             try {
-                // Get or create the executing tasks set
-                Set<String> executingTasks = executingTasksByType.computeIfAbsent(taskType,
-                    k -> ConcurrentHashMap.newKeySet());
+                // Check shutdown again before preparing for execution
+                if (schedulerService != null && schedulerService.isShutdownNow()) {
+                    LOGGER.debug("Node {} : Skipping task {} execution as scheduler is shutting down", nodeId, taskId);
+                    return;
+                }
 
-                // Only add to executing set if not already there
-                if (taskId != null) {
-                    executingTasks.add(taskId);
+                // Prepare task for execution (both persistent and in-memory)
+                if (!prepareForExecution(task)) {
+                    return;
+                }
+
+                // Final shutdown check before executing
+                if (schedulerService != null && schedulerService.isShutdownNow()) {
+                    LOGGER.debug("Node {} : Skipping task {} execution as scheduler is shutting down", nodeId, taskId);
+                    return;
                 }
 
                 // Set the executing node ID
                 task.setExecutingNodeId(nodeId);
+                executingNodeIdSet = true;
                 schedulerService.saveTask(task);
 
                 long startTime = System.currentTimeMillis();
@@ -329,11 +343,15 @@ public class TaskExecutionManager {
                 LOGGER.error("Unexpected error while executing task: " + taskId, e);
                 statusCallback.fail("Unexpected error: " + e.getMessage());
             } finally {
-                // Clear executing node ID
-                task.setExecutingNodeId(null);
-                schedulerService.saveTask(task);
+                // Only clear/save executingNodeId if we actually set it above; otherwise we never
+                // touched the task and a redundant save here could race a concurrent legitimate holder.
+                if (executingNodeIdSet) {
+                    task.setExecutingNodeId(null);
+                    schedulerService.saveTask(task);
+                }
 
-                // Remove task from executing set
+                // Always release the dispatch claim taken by executeTask(), regardless of which path
+                // above was taken.
                 try {
                     Set<String> executingTasks = executingTasksByType.get(taskType);
                     if (executingTasks != null && taskId != null) {
@@ -424,7 +442,11 @@ public class TaskExecutionManager {
                                 executeTask(task, executor);
                             }
                         };
-                        long retryDelay = task.getNextScheduledExecution().getTime() - System.currentTimeMillis();
+                        // Use the configured retry delay directly rather than re-deriving it from
+                        // nextScheduledExecution: that target was computed before the state/history/metrics
+                        // bookkeeping above ran, so subtracting "now" here would silently erode the delay
+                        // by however long that bookkeeping took (worse under slower/contended runners).
+                        long retryDelay = task.getRetryDelay();
                         scheduler.schedule(retryTask, retryDelay, TimeUnit.MILLISECONDS);
                         LOGGER.debug("Scheduled retry #{} for task {} in {} ms",
                             task.getFailureCount(), task.getItemId(), retryDelay);
