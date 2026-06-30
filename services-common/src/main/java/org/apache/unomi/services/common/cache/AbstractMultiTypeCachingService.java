@@ -43,6 +43,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -67,6 +70,25 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     protected MultiTypeCacheService cacheService;
     protected TenantService tenantService;
     protected AuditService auditService;
+
+    /**
+     * Per-item-type locks ensuring saveItem()/removeItem() (direct writes) and refreshTypeCache()'s
+     * persistence-read-then-cache-write cycle can never interleave for the same item type. Without this,
+     * refreshTypeCache() could read a snapshot from persistence just before a concurrent direct write
+     * commits, then overwrite the cache with that stale snapshot after the direct write's own cache.put()
+     * already applied the fresh value. Direct writes only need to exclude a concurrent refresh of the
+     * same type, not each other, so they take the read lock (shared, concurrent) while refreshTypeCache()
+     * takes the write lock (exclusive) for its whole read-then-cache cycle, including the "remove items no
+     * longer in persistence" step, which reads from the same persistence snapshot.
+     *
+     * Cardinality is bounded by the number of distinct item types a service registers (getTypeConfigs()),
+     * typically one to a handful per service, so this map needs no eviction.
+     */
+    private final Map<String, ReadWriteLock> typeRefreshLocks = new ConcurrentHashMap<>();
+
+    private ReadWriteLock typeRefreshLock(String itemType) {
+        return typeRefreshLocks.computeIfAbsent(itemType, k -> new ReentrantReadWriteLock());
+    }
 
     /**
      * Map tracking which plugin/bundle contributed which items.
@@ -261,12 +283,25 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         scheduledRefreshTasks.clear();
     }
 
-    @SuppressWarnings("unchecked")
     protected <T extends Serializable> void refreshTypeCache(CacheableTypeConfig<T> config) {
         if (!config.isRequiresRefresh()) {
             return;
         }
 
+        // Excludes any concurrent saveItem()/removeItem() for this item type for the duration of this
+        // refresh, so its persistence read can never be overwritten by - or overwrite - a direct write.
+        // See typeRefreshLocks for the full rationale.
+        Lock refreshLock = typeRefreshLock(config.getItemType()).writeLock();
+        refreshLock.lock();
+        try {
+            refreshTypeCacheLocked(config);
+        } finally {
+            refreshLock.unlock();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T extends Serializable> void refreshTypeCacheLocked(CacheableTypeConfig<T> config) {
         // Only create the global state maps if we need them
         Map<String, Map<String, T>> oldGlobalState = null;
         Map<String, Map<String, T>> newGlobalState = null;
@@ -858,8 +893,15 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
             }
         }
 
-        persistenceService.save(item);
-        cacheService.put(itemType, itemId, currentTenant, item);
+        // Excludes a concurrent refreshTypeCache() for this item type: see typeRefreshLocks.
+        Lock writeGuard = typeRefreshLock(itemType).readLock();
+        writeGuard.lock();
+        try {
+            persistenceService.save(item);
+            cacheService.put(itemType, itemId, currentTenant, item);
+        } finally {
+            writeGuard.unlock();
+        }
     }
 
     /**
@@ -872,7 +914,14 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
      */
     protected <T extends Item & Serializable> void removeItem(String id, Class<T> itemClass, String itemType) {
         String currentTenant = contextManager.getCurrentContext().getTenantId();
-        persistenceService.remove(id, itemClass);
-        cacheService.remove(itemType, id, currentTenant, itemClass);
+        // Excludes a concurrent refreshTypeCache() for this item type: see typeRefreshLocks.
+        Lock writeGuard = typeRefreshLock(itemType).readLock();
+        writeGuard.lock();
+        try {
+            persistenceService.remove(id, itemClass);
+            cacheService.remove(itemType, id, currentTenant, itemClass);
+        } finally {
+            writeGuard.unlock();
+        }
     }
 }
