@@ -51,15 +51,15 @@ Cursor rule: `.cursor/rules/branch-backport.mdc`
 
 ## Backporting `unomi-3-dev` → `master` (UNOMI-875)
 
-Active Phase 2 epic. **Apply generic rules above first**, then
-`.cursor/rules/unomi-3-dev-backport.mdc` for Unomi-specific exclusions and
-mega-PR risks.
+**Backport phase complete** (Phase 2 mega-PRs + [#791](https://github.com/apache/unomi/pull/791) final hygiene). **Apply generic rules above** for any future cherry-picks; see
+`.cursor/rules/unomi-3-dev-backport.mdc` for standing exclusions.
 
 | | |
 |---|---|
-| Source | `unomi-3-dev` |
+| Source | `unomi-3-dev` (archive/reference only) |
 | Target | `master` |
-| Local plan | `.local-notes/unomi-3-dev-backport-plan-phase2.md` (git-ignored) |
+| **Active local plan** | `.local-notes/unomi-3.1-remaining-work-plan.md` |
+| Archived backport plans | `.local-notes/archive/` (Phase 1, Phase 2, #757 stack tracker) |
 
 Unomi-specific reminders:
 
