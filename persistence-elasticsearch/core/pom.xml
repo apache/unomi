@@ -289,6 +289,7 @@
                             co.elastic.clients.util;version="${elasticsearch.version}",
                             co.elastic.clients.elasticsearch._types;version="${elasticsearch.version}"
                         </Export-Package>
+                        <_removeheaders>Bundle-Activator</_removeheaders>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                         <Provide-Capability>
