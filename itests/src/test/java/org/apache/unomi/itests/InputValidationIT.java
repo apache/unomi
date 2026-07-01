@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.itests;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -238,37 +239,78 @@ public class InputValidationIT extends BaseIT {
 
     /**
      * UNOMI-933: bad event payloads on {@code /context.json} must return 400, not 500.
+     * Deserialization failures return JSON {@code badRequest}; schema validation returns plain text.
      */
     @Test
     public void test_contextRequest_garbageBody() throws Exception {
         String url = CONTEXT_JSON_URL + "?sessionId=dummy-session-id";
-        doPOSTRawBodyTest(url, "foo", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRawBodyTestBadRequest(url, "foo");
     }
 
     @Test
     public void test_contextRequest_eventEmptySource() throws Exception {
-        doPOSTRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_eventEmptySource.json", 400,
-                ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRequestTestBadRequest(CONTEXT_JSON_URL, null, "/validation/contextRequest_eventEmptySource.json");
     }
 
     @Test
     public void test_contextRequest_eventEmptyTarget() throws Exception {
-        doPOSTRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_eventEmptyTarget.json", 400,
-                ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRequestTestBadRequest(CONTEXT_JSON_URL, null, "/validation/contextRequest_eventEmptyTarget.json");
     }
 
-    private void doPOSTRawBodyTest(String uri, String rawBody, int expectedHTTPStatusCode, String expectedErrorMessage)
+    private void doPOSTRawBodyTestBadRequest(String uri, String rawBody) throws Exception {
+        performPOSTRawBodyTestBadRequest(getFullUrl(uri), rawBody);
+        performPOSTRawBodyTestBadRequest(getFullUrl("/cxs" + uri), rawBody);
+    }
+
+    private void doPOSTRequestTestBadRequest(String uri, Map<String, String> headers, String entityResourcePath)
             throws Exception {
-        performPOSTRawBodyTest(getFullUrl(uri), rawBody, expectedHTTPStatusCode, expectedErrorMessage);
-        performPOSTRawBodyTest(getFullUrl("/cxs" + uri), rawBody, expectedHTTPStatusCode, expectedErrorMessage);
+        performPOSTRequestTestBadRequest(getFullUrl(uri), headers, entityResourcePath);
+        performPOSTRequestTestBadRequest(getFullUrl("/cxs" + uri), headers, entityResourcePath);
     }
 
-    private void performPOSTRawBodyTest(String url, String rawBody, int expectedHTTPStatusCode, String expectedErrorMessage)
-            throws IOException {
+    private void performPOSTRawBodyTestBadRequest(String url, String rawBody) throws IOException {
         HttpPost request = new HttpPost(url);
         request.setHeader("Content-Type", "application/json");
         request.setEntity(new StringEntity(rawBody, ContentType.APPLICATION_JSON));
-        performRequest(request, null, expectedHTTPStatusCode, expectedErrorMessage);
+        performRequestExpectBadRequest(request, null);
+    }
+
+    private void performPOSTRequestTestBadRequest(String url, Map<String, String> headers, String entityResourcePath)
+            throws IOException {
+        HttpPost request = new HttpPost(url);
+        if (headers == null) {
+            headers = new HashMap<>();
+        }
+        headers.put("Content-Type", "application/json");
+        if (entityResourcePath != null) {
+            request.setEntity(new StringEntity(getValidatedBundleJSON(entityResourcePath, new HashMap<>()), ContentType.create("application/json")));
+        }
+        performRequestExpectBadRequest(request, headers);
+    }
+
+    private void performRequestExpectBadRequest(HttpUriRequest request, Map<String, String> headers) throws IOException {
+        CloseableHttpResponse response;
+        if (headers != null && !headers.isEmpty()) {
+            for (Map.Entry<String, String> headerEntry : headers.entrySet()) {
+                request.addHeader(headerEntry.getKey(), headerEntry.getValue());
+            }
+        }
+        try {
+            response = HttpClientThatWaitsForUnomi.doRequest(request, 400);
+        } catch (Exception e) {
+            fail("Something went wrong with the request to Unomi that is unexpected: " + e.getMessage());
+            return;
+        }
+        assertEquals("Invalid response code", 400, response.getStatusLine().getStatusCode());
+        assertInvalidClientDataResponse(EntityUtils.toString(response.getEntity()));
+    }
+
+    private void assertInvalidClientDataResponse(String responseBody) throws IOException {
+        if (ERROR_MESSAGE_INVALID_DATA_RECEIVED.equals(responseBody)) {
+            return;
+        }
+        JsonNode json = objectMapper.readTree(responseBody);
+        assertEquals("badRequest", json.get("errorMessage").asText());
     }
 
     private void doGETRequestTest(String uri, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws Exception {
