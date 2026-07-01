@@ -18,9 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Set up JDK 17
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         distribution: 'temurin'
         java-version: '17'
@@ -47,9 +47,9 @@ jobs:
             port: 9401
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -71,7 +71,7 @@ jobs:
             ./build.sh --ci --integration-tests
           fi
       - name: Archive IT memory metrics
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: always()
         with:
           name: it-memory-metrics-jdk17-${{ matrix.search-engine }}-${{ github.run_number }}
@@ -81,13 +81,13 @@ jobs:
             itests/target/memory-sampler.log
           if-no-files-found: ignore
       - name: Archive code coverage logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: false # UNOMI-746 Reactivate if necessary
         with:
           name: unomi-code-coverage-jdk17-${{ matrix.search-engine }}-${{ github.run_number }}
           path: itests/target/site/jacoco
       - name: Archive unomi logs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         if: failure()
         with:
           name: unomi-log-jdk17-${{ matrix.search-engine }}-${{ github.run_number }}
