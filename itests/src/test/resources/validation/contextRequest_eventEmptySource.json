@@ -1,0 +1,9 @@
+{
+  "sessionId": "dummy-session-id",
+  "events": [
+    {
+      "eventType": "view",
+      "source": {}
+    }
+  ]
+}

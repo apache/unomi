@@ -235,6 +235,42 @@ public class InputValidationIT extends BaseIT {
         doGETRequestTest(CONTEXT_JS_URL, headers, null, 200, null);
     }
 
+
+    /**
+     * UNOMI-933: bad event payloads on {@code /context.json} must return 400, not 500.
+     */
+    @Test
+    public void test_contextRequest_garbageBody() throws Exception {
+        String url = CONTEXT_JSON_URL + "?sessionId=dummy-session-id";
+        doPOSTRawBodyTest(url, "foo", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+    }
+
+    @Test
+    public void test_contextRequest_eventEmptySource() throws Exception {
+        doPOSTRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_eventEmptySource.json", 400,
+                ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+    }
+
+    @Test
+    public void test_contextRequest_eventEmptyTarget() throws Exception {
+        doPOSTRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_eventEmptyTarget.json", 400,
+                ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+    }
+
+    private void doPOSTRawBodyTest(String uri, String rawBody, int expectedHTTPStatusCode, String expectedErrorMessage)
+            throws Exception {
+        performPOSTRawBodyTest(getFullUrl(uri), rawBody, expectedHTTPStatusCode, expectedErrorMessage);
+        performPOSTRawBodyTest(getFullUrl("/cxs" + uri), rawBody, expectedHTTPStatusCode, expectedErrorMessage);
+    }
+
+    private void performPOSTRawBodyTest(String url, String rawBody, int expectedHTTPStatusCode, String expectedErrorMessage)
+            throws IOException {
+        HttpPost request = new HttpPost(url);
+        request.setHeader("Content-Type", "application/json");
+        request.setEntity(new StringEntity(rawBody, ContentType.APPLICATION_JSON));
+        performRequest(request, null, expectedHTTPStatusCode, expectedErrorMessage);
+    }
+
     private void doGETRequestTest(String uri, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws Exception {
         // test old servlets
         performGETRequestTest(getFullUrl(uri), headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);

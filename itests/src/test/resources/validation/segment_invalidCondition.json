@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "id": "it-validation-invalid-segment",
+    "name": "Invalid segment IT",
+    "scope": "systemscope"
+  },
+  "condition": {
+    "type": "fakeConditionId",
+    "parameterValues": {
+      "param": "param value"
+    }
+  }
+}

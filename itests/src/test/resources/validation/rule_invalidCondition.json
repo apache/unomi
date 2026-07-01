@@ -1,0 +1,18 @@
+{
+  "metadata": {
+    "id": "it-validation-invalid-rule",
+    "name": "Invalid rule IT",
+    "scope": "systemscope",
+    "enabled": true
+  },
+  "condition": {},
+  "actions": [
+    {
+      "type": "setPropertyAction",
+      "parameterValues": {
+        "setPropertyName": "properties.itValidation",
+        "setPropertyValue": "test"
+      }
+    }
+  ]
+}
