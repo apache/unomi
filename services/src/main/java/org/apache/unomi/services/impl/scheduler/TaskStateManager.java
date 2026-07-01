@@ -39,7 +39,10 @@ public class TaskStateManager {
         EXECUTE(TaskStatus.RUNNING, EnumSet.of(TaskStatus.SCHEDULED, TaskStatus.CRASHED, TaskStatus.WAITING)),
         COMPLETE(TaskStatus.COMPLETED, EnumSet.of(TaskStatus.RUNNING)),
         FAIL(TaskStatus.FAILED, EnumSet.of(TaskStatus.RUNNING)),
-        CANCEL(TaskStatus.CANCELLED, EnumSet.of(TaskStatus.RUNNING, TaskStatus.SCHEDULED, TaskStatus.WAITING)),
+        // COMPLETED is included because a periodic task can be observed in that transient state
+        // (briefly, between finishing one run and being rescheduled for the next) by a concurrent
+        // cancelTask() call; cancellation should still apply rather than silently no-op.
+        CANCEL(TaskStatus.CANCELLED, EnumSet.of(TaskStatus.RUNNING, TaskStatus.SCHEDULED, TaskStatus.WAITING, TaskStatus.COMPLETED)),
         CRASH(TaskStatus.CRASHED, EnumSet.of(TaskStatus.RUNNING, TaskStatus.SCHEDULED)),
         WAIT(TaskStatus.WAITING, EnumSet.of(TaskStatus.SCHEDULED, TaskStatus.RUNNING));
 

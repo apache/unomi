@@ -134,6 +134,15 @@ public class TaskRecoveryManager {
             return;
         }
 
+        // Re-check shutdown right before writing: preDestroy() marks RUNNING tasks owned by this
+        // node as crashed with a more specific "Interrupted by scheduler shutdown" cause, and that
+        // write must win over the generic "Node failure detected" cause below if both race.
+        if (shutdownNow) {
+            LOGGER.debug("Node {} Skipping recovery of task {} : {} as scheduler is shutting down",
+                nodeId, task.getTaskType(), task.getItemId());
+            return;
+        }
+
         // First mark as crashed and release lock
         String previousOwner = task.getLockOwner();
         if (task.getStatus() != ScheduledTask.TaskStatus.CRASHED) {

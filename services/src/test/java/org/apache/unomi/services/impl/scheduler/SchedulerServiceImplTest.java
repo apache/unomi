@@ -622,6 +622,56 @@ public class SchedulerServiceImplTest {
         assertTrue(recovered.get(), "Task should be recovered and executed");
     }
 
+    @Test
+    @Tag("ClusterTests")
+    public void testNoDuplicateDispatchUnderSlowExecution() throws Exception {
+        // Validates TaskExecutionManager.executeTask(): the dispatch claim it takes in
+        // executingTasksByType before scheduling a task wrapper must hold for the entire run, or a
+        // poll tick landing while the first run is still in flight (status not yet flipped to RUNNING,
+        // or - as observed before this fix - never released because prepareForExecution() returned
+        // false on an early-return path) could dispatch the same task a second time. The execution
+        // below deliberately runs past several poll ticks (TASK_CHECK_INTERVAL = 1000ms) to exercise
+        // that window.
+        AtomicInteger concurrentExecutions = new AtomicInteger(0);
+        AtomicInteger maxConcurrentExecutions = new AtomicInteger(0);
+        AtomicInteger totalExecutions = new AtomicInteger(0);
+        CountDownLatch completionLatch = new CountDownLatch(1);
+
+        TaskExecutor executor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return "slow-dispatch-test";
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                int concurrent = concurrentExecutions.incrementAndGet();
+                maxConcurrentExecutions.updateAndGet(max -> Math.max(max, concurrent));
+                totalExecutions.incrementAndGet();
+                try {
+                    Thread.sleep(2500);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    concurrentExecutions.decrementAndGet();
+                }
+                callback.complete();
+                completionLatch.countDown();
+            }
+        };
+
+        schedulerService.registerTaskExecutor(executor);
+        schedulerService.newTask("slow-dispatch-test")
+            .disallowParallelExecution()
+            .schedule();
+
+        assertTrue(completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should complete");
+
+        assertEquals(1, maxConcurrentExecutions.get(), "Task must never run concurrently with itself");
+        assertEquals(1, totalExecutions.get(),
+            "Task must execute exactly once despite a slow run spanning multiple poll ticks");
+    }
+
     // Metrics and history tests
     @Test
     @Tag("MetricsTests")
@@ -1221,6 +1271,60 @@ public class SchedulerServiceImplTest {
             cancelledTask.getStatus(),
             "Task should be cancelled");
         assertFalse(completed.get(), "Task should not complete after cancellation");
+    }
+
+    /**
+     * Validates the fix broadening the CANCEL transition to accept COMPLETED. A periodic task only
+     * observes COMPLETED transiently (RUNNING -&gt; COMPLETED -&gt; SCHEDULED), but a one-shot task stays
+     * COMPLETED indefinitely once it finishes, giving a fully deterministic way to exercise
+     * cancelTask() against a task that is genuinely COMPLETED rather than racing the transient window.
+     * Before the fix, cancelTaskInternal() only handled SCHEDULED/WAITING/RUNNING and silently left a
+     * COMPLETED task enabled.
+     */
+    @Test
+    @Tag("StateTests")
+    public void testCancelTaskWhileCompleted() throws Exception {
+        CountDownLatch executionLatch = new CountDownLatch(1);
+
+        TaskExecutor executor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return "cancel-completed-test";
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                callback.complete();
+                executionLatch.countDown();
+            }
+        };
+
+        schedulerService.registerTaskExecutor(executor);
+
+        ScheduledTask task = schedulerService.newTask("cancel-completed-test")
+            .asOneShot()
+            .schedule();
+
+        assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute");
+
+        TestHelper.retryUntil(
+            () -> schedulerService.getTask(task.getItemId()),
+            t -> t != null && t.getStatus() == ScheduledTask.TaskStatus.COMPLETED
+        );
+
+        schedulerService.cancelTask(task.getItemId());
+
+        TestHelper.retryUntil(
+            () -> schedulerService.getTask(task.getItemId()),
+            t -> t != null && t.getStatus() == ScheduledTask.TaskStatus.CANCELLED
+        );
+
+        ScheduledTask cancelledTask = schedulerService.getTask(task.getItemId());
+        assertEquals(
+            ScheduledTask.TaskStatus.CANCELLED,
+            cancelledTask.getStatus(),
+            "cancelTask() on a COMPLETED task must actually cancel it, not silently no-op");
+        assertFalse(cancelledTask.isEnabled(), "Cancelled task should be disabled");
     }
 
     /**

@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.services.common.cache;
 
+import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
@@ -32,6 +33,9 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 import static org.junit.Assert.*;
@@ -110,6 +114,18 @@ public class AbstractMultiTypeCachingServiceTest {
         }
     }
 
+    // Minimal Item subclass: saveItem()/removeItem() require <T extends Item & Serializable>,
+    // which the plain-Serializable TestSerializable above does not satisfy.
+    // Public (not just the ITEM_TYPE field): Item's reflective ITEM_TYPE lookup needs the
+    // declaring class itself to be accessible, not just the field's own modifiers.
+    public static class TestItem extends Item {
+        public static final String ITEM_TYPE = TEST_ITEM_TYPE;
+
+        public TestItem(String itemId) {
+            super(itemId);
+        }
+    }
+
     private static class TestCachingServiceImpl extends AbstractMultiTypeCachingService {
         private final Set<CacheableTypeConfig<?>> typeConfigs = new HashSet<>();
 
@@ -134,6 +150,11 @@ public class AbstractMultiTypeCachingServiceTest {
         @Override
         protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
             return typeConfigs;
+        }
+
+        // Exposes the protected saveItem() for the concurrency test below.
+        void callSaveItem(TestItem item) {
+            saveItem(item, Item::getItemId, TEST_ITEM_TYPE);
         }
 
         // Helper method to set a config as persistable for testing
@@ -194,6 +215,9 @@ public class AbstractMultiTypeCachingServiceTest {
             runnable.run();
             return null;
         }).when(contextManager).executeAsSystem(any(Runnable.class));
+
+        // saveItem() reads the current tenant from contextManager.getCurrentContext().getTenantId().
+        when(contextManager.getCurrentContext()).thenReturn(new ExecutionContext(TEST_TENANT, null, null));
     }
 
     @Test
@@ -376,5 +400,71 @@ public class AbstractMultiTypeCachingServiceTest {
 
         // Verify items were removed from system tenant
         verify(cacheService).remove(eq(TEST_ITEM_TYPE), eq("item3"), eq(SYSTEM_TENANT), eq(TestSerializable.class));
+    }
+
+    /**
+     * Validates the ReadWriteLock fix in AbstractMultiTypeCachingService: saveItem() must block while
+     * a refreshTypeCache() for the same item type holds the write lock, so a refresh's persistence read
+     * can never be followed by it overwriting a cache entry that a concurrent direct write just applied.
+     * Without the fix, saveItem() and refreshTypeCache() could interleave freely and the two race
+     * scenarios this test would otherwise need to get lucky on (read-before-write, write-after-read)
+     * would only manifest occasionally - here we force the interleaving deterministically instead.
+     */
+    @Test
+    public void testSaveItemExcludedByConcurrentRefresh() throws Exception {
+        when(cacheService.getTenantCache(eq(TEST_TENANT), eq(TestSerializable.class))).thenReturn(new HashMap<>());
+        when(cacheService.getTenantCache(eq(SYSTEM_TENANT), eq(TestSerializable.class))).thenReturn(new HashMap<>());
+        doReturn(Collections.singleton(TEST_TENANT)).when(testCachingService).getTenants();
+
+        CacheableTypeConfig<TestSerializable> config = null;
+        for (CacheableTypeConfig<?> typeConfig : testCachingService.getTypeConfigs()) {
+            if (typeConfig.getType().equals(TestSerializable.class)) {
+                @SuppressWarnings("unchecked")
+                CacheableTypeConfig<TestSerializable> typedConfig = (CacheableTypeConfig<TestSerializable>) typeConfig;
+                config = typedConfig;
+                break;
+            }
+        }
+        assertNotNull("Should find config for TestSerializable", config);
+        final CacheableTypeConfig<TestSerializable> finalConfig = config;
+
+        CountDownLatch refreshHoldingLock = new CountDownLatch(1);
+        CountDownLatch releaseRefresh = new CountDownLatch(1);
+        AtomicBoolean refreshStillRunningWhenSaveReturned = new AtomicBoolean(true);
+
+        // Stand-in for the persistence read inside refreshTypeCache(): signal that the refresh has
+        // entered its critical section (and therefore holds the write lock), then block until the
+        // test releases it.
+        doAnswer(invocation -> {
+            refreshHoldingLock.countDown();
+            assertTrue("Test setup: refresh should be released within timeout",
+                releaseRefresh.await(5, TimeUnit.SECONDS));
+            return Collections.emptyList();
+        }).when(testCachingService).loadItemsForTenant(eq(TEST_TENANT), eq(finalConfig));
+
+        Thread refreshThread = new Thread(() -> testCachingService.refreshTypeCache(finalConfig));
+        refreshThread.start();
+
+        assertTrue("Refresh should reach loadItemsForTenant while holding the write lock",
+            refreshHoldingLock.await(5, TimeUnit.SECONDS));
+
+        Thread saveThread = new Thread(() -> {
+            testCachingService.callSaveItem(new TestItem("item1"));
+            refreshStillRunningWhenSaveReturned.set(refreshThread.isAlive());
+        });
+        saveThread.start();
+
+        // saveItem()'s read lock should be blocked behind the refresh's write lock: give it a moment,
+        // then confirm it has NOT returned yet.
+        saveThread.join(500);
+        assertTrue("saveItem() should still be blocked while refresh holds the write lock", saveThread.isAlive());
+
+        releaseRefresh.countDown();
+        refreshThread.join(5000);
+        saveThread.join(5000);
+
+        assertFalse("saveThread should have finished", saveThread.isAlive());
+        assertFalse("saveItem() must not proceed until the concurrent refresh released its write lock",
+            refreshStillRunningWhenSaveReturned.get());
     }
 }

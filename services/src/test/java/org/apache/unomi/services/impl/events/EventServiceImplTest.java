@@ -417,10 +417,13 @@ public class EventServiceImplTest {
         condition.setParameter("propertyValue", "test");
         query.setCondition(condition);
 
-        // Test - retry until event is available (handles refresh delay)
+        // Test - retry until event is available (handles refresh delay).
+        // Full-text indexing can take longer than the default 2000ms budget on loaded CI runners,
+        // so use a more generous timeout for this specific query.
         PartialList<Event> result = TestHelper.retryQueryUntilAvailable(
             () -> eventService.search(query),
-            1
+            1,
+            10000L
         );
 
         // Verify
