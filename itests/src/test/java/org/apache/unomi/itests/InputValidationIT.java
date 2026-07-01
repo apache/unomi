@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 @RunWith(PaxExam.class)
@@ -238,28 +239,50 @@ public class InputValidationIT extends BaseIT {
 
 
     /**
-     * UNOMI-933: bad event payloads on {@code /context.json} must return 400, not 500.
-     * Deserialization failures return JSON {@code badRequest}; schema validation returns plain text.
+     * UNOMI-933: unparseable context request bodies on {@code /context.json} and {@code /context.js}
+     * must return 400, not 500. Deserialization failures return JSON {@code {"errorMessage":"badRequest"}};
+     * schema-level validation returns plain text.
      */
     @Test
     public void test_contextRequest_garbageBody() throws Exception {
-        String url = CONTEXT_JSON_URL + "?sessionId=dummy-session-id";
-        doPOSTRawBodyTestBadRequest(url, "foo");
+        // test JSON endpoint (and its /cxs/ mirror via doPOSTRawBodyTestBadRequest)
+        doPOSTRawBodyTestBadRequest(CONTEXT_JSON_URL + "?sessionId=dummy-session-id", "foo");
+        // test JS endpoint (and its /cxs/ mirror)
+        doPOSTRawBodyTestBadRequest(CONTEXT_JS_URL + "?sessionId=dummy-session-id", "foo");
     }
 
     @Test
     public void test_contextRequest_eventEmptySource() throws Exception {
         doPOSTRequestTestBadRequest(CONTEXT_JSON_URL, null, "/validation/contextRequest_eventEmptySource.json");
+        doGETRequestTestBadRequest(CONTEXT_JSON_URL, "/validation/contextRequest_eventEmptySource.json");
     }
 
     @Test
     public void test_contextRequest_eventEmptyTarget() throws Exception {
         doPOSTRequestTestBadRequest(CONTEXT_JSON_URL, null, "/validation/contextRequest_eventEmptyTarget.json");
+        doGETRequestTestBadRequest(CONTEXT_JSON_URL, "/validation/contextRequest_eventEmptyTarget.json");
     }
 
     private void doPOSTRawBodyTestBadRequest(String uri, String rawBody) throws Exception {
+        // test old servlets
         performPOSTRawBodyTestBadRequest(getFullUrl(uri), rawBody);
+        // test directly CXS endpoints
         performPOSTRawBodyTestBadRequest(getFullUrl("/cxs" + uri), rawBody);
+    }
+
+    private void doGETRequestTestBadRequest(String uri, String entityResourcePath) throws Exception {
+        // test old servlets
+        performGETRequestTestBadRequest(getFullUrl(uri), entityResourcePath);
+        // test directly CXS endpoints
+        performGETRequestTestBadRequest(getFullUrl("/cxs" + uri), entityResourcePath);
+    }
+
+    private void performGETRequestTestBadRequest(String url, String entityResourcePath) throws Exception {
+        if (entityResourcePath != null) {
+            String payload = getValidatedBundleJSON(entityResourcePath, new HashMap<>());
+            url += (url.contains("?") ? "&" : "?") + "payload=" + URLEncoder.encode(payload, StandardCharsets.UTF_8.toString());
+        }
+        performRequestExpectBadRequest(new HttpGet(url), null);
     }
 
     private void doPOSTRequestTestBadRequest(String uri, Map<String, String> headers, String entityResourcePath)
@@ -310,7 +333,9 @@ public class InputValidationIT extends BaseIT {
             return;
         }
         JsonNode json = objectMapper.readTree(responseBody);
-        assertEquals("badRequest", json.get("errorMessage").asText());
+        JsonNode errorNode = json.get("errorMessage");
+        assertNotNull("Response JSON missing 'errorMessage' field. Body: " + responseBody, errorNode);
+        assertEquals("badRequest", errorNode.asText());
     }
 
     private void doGETRequestTest(String uri, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws Exception {

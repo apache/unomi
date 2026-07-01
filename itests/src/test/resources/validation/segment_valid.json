@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "id": "it-validation-valid-segment",
+    "name": "Valid segment IT",
+    "scope": "systemscope",
+    "enabled": false
+  },
+  "condition": {
+    "type": "matchAllCondition",
+    "parameterValues": {}
+  }
+}
