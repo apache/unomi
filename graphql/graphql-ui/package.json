@@ -27,8 +27,7 @@
     "**/terser": "4.8.1",
     "**/postcss": "7.0.39",
     "**/ansi-regex": "4.1.1",
-    "**/minimist": "1.2.6",
-    "**/semver": "5.7.2"
+    "**/minimist": "1.2.6"
   },
   "devDependencies": {
     "@babel/core": "^7.10.4",
