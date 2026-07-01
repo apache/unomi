@@ -160,7 +160,7 @@
         <docker-maven-plugin.version>0.48.0</docker-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.13</jacoco-maven-plugin.version>
         <maven-clean-plugin.version>3.1.0</maven-clean-plugin.version>
-        <frontend-maven-plugin.version>1.12.1</frontend-maven-plugin.version>
+        <frontend-maven-plugin.version>2.0.1</frontend-maven-plugin.version>
         <asciidoctor-maven-plugin.version>3.2.0</asciidoctor-maven-plugin.version>
         <checksum-maven-plugin.version>1.7</checksum-maven-plugin.version>
         <maven-jar-plugin.version>3.2.2</maven-jar-plugin.version>
@@ -168,8 +168,8 @@
         <license-maven-plugin.version>2.0.0</license-maven-plugin.version>
         <maven-notice-plugin.version>1.0.6</maven-notice-plugin.version>
 
-        <node.version>v16.20.2</node.version>
-        <yarn.version>v1.22.19</yarn.version>
+        <node.version>v22.19.0</node.version>
+        <yarn.version>v1.22.22</yarn.version>
 
         <release.arguments>-Papache-release,integration-tests</release.arguments>
         <unomi.skip.unit.tests>false</unomi.skip.unit.tests>
