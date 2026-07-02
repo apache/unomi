@@ -23,7 +23,7 @@ networks:
 
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.2.1
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.2
     container_name: elasticsearch
     volumes:
       - unomi-3-elasticsearch-data:/usr/share/elasticsearch/data

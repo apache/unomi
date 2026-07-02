@@ -105,6 +105,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <scope>provided</scope>
@@ -156,6 +161,19 @@
             <optional>true</optional>
         </dependency>
         <!-- End of optional ElasticSearch dependencies -->
+        <!-- ES 9.4 rest5-client / httpclient5 5.6+ reference brotli4j at runtime; embed for OSGi -->
+        <dependency>
+            <groupId>com.aayushatharva.brotli4j</groupId>
+            <artifactId>brotli4j</artifactId>
+            <version>1.20.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.github.luben</groupId>
+            <artifactId>zstd-jni</artifactId>
+            <version>1.5.7-4</version>
+            <scope>compile</scope>
+        </dependency>
 
         <dependency>
             <groupId>junit</groupId>
@@ -264,6 +282,16 @@
                             org.conscrypt;resolution:=optional,
                             org.glassfish.hk2.osgiresourcelocator;resolution:=optional,
                             org.brotli.dec;resolution:=optional,
+                            com.aayushatharva.brotli4j.decoder;resolution:=optional,
+                            com.aayushatharva.brotli4j.encoder;resolution:=optional,
+                            com.github.luben.zstd;resolution:=optional,
+                            io.netty.buffer;resolution:=optional,
+                            io.netty.channel;resolution:=optional,
+                            io.netty.util;resolution:=optional,
+                            javax.xml.datatype;resolution:=optional,
+                            javax.xml.namespace;resolution:=optional,
+                            javax.xml.transform.dom;resolution:=optional,
+                            org.newsclub.net.unix;resolution:=optional,
                             io.opentelemetry.opentelemetry-api;resolution:=optional,
                             io.opentelemetry.sdk.autoconfigure;resolution:=optional,
                             io.opentelemetry.opentelemetry-context;resolution:=optional,
@@ -289,7 +317,10 @@
                             co.elastic.clients.util;version="${elasticsearch.version}",
                             co.elastic.clients.elasticsearch._types;version="${elasticsearch.version}"
                         </Export-Package>
-                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Embed-Dependency>
+                            !groupId=org.apache.logging.log4j;artifactId=*,
+                            *;scope=compile|runtime
+                        </Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                         <Provide-Capability>
                             osgi.service;objectClass:List&lt;String&gt;="org.apache.unomi.persistence.spi.PersistenceService",

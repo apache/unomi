@@ -27,6 +27,6 @@ if [ -z "$UNOMI_VERSION" ]; then
 fi
 rm -f "$_mvn_err"
 echo "Detected project version=$UNOMI_VERSION"
-export KARAF_VERSION=4.4.8
+export KARAF_VERSION=4.4.11
 # Uncomment the following line if you need Apache Unomi to start automatically at the first start
 # export KARAF_OPTS="-Dunomi.autoStart=true"
