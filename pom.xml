@@ -64,10 +64,10 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
 
         <karaf.version>4.4.11</karaf.version>
-        <elasticsearch.version>9.1.4</elasticsearch.version>
-        <elasticsearch.test.version>9.2.1</elasticsearch.test.version>
-        <opensearch.version>3.0.0</opensearch.version>
-        <opensearch.rest.client.version>3.0.0</opensearch.rest.client.version>
+        <elasticsearch.version>9.4.2</elasticsearch.version>
+        <elasticsearch.test.version>9.4.2</elasticsearch.test.version>
+        <opensearch.version>3.9.0</opensearch.version>
+        <opensearch.rest.client.version>3.9.0</opensearch.rest.client.version>
         <httpclient5.version>5.2.1</httpclient5.version>
         <aws.sdk.version>2.28.14</aws.sdk.version>
         <javax-validation.version>1.1.0.Final</javax-validation.version>

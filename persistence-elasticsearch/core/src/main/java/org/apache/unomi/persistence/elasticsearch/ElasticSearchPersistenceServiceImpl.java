@@ -1073,7 +1073,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         BulkOperation bulkOp = BulkOperation.of(builder -> builder.update(
                                 u -> u.index(updateRequest.index()).id(updateRequest.id()).action(b -> b.doc(updateRequest.doc()))
                                         .ifSeqNo(updateRequest.ifSeqNo()).ifPrimaryTerm(updateRequest.ifPrimaryTerm())
-                                        .routing(updateRequest.routing())));
+                                        .routing(routingForBulk(updateRequest.routing()))));
                         bulkIngester.add(bulkOp);
                     }
                     logMetadataItemOperation("updated", item);
@@ -1126,7 +1126,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     BulkOperation bulkOp = BulkOperation.of(builder -> builder.update(
                             u -> u.index(updateRequest.index()).id(updateRequest.id()).action(b -> b.doc(updateRequest.doc()))
                                     .ifSeqNo(updateRequest.ifSeqNo()).ifPrimaryTerm(updateRequest.ifPrimaryTerm())
-                                    .routing(updateRequest.routing())));
+                                    .routing(routingForBulk(updateRequest.routing()))));
                     operations.add(bulkOp);
                 });
 
@@ -3184,6 +3184,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             TenantTransformationListener listener = bundleContext.getService(listenerReference);
             transformationListeners.remove(listener);
         }
+    }
+
+    private static String routingForBulk(List<String> routing) {
+        if (routing == null || routing.isEmpty()) {
+            return null;
+        }
+        if (routing.size() == 1) {
+            return routing.get(0);
+        }
+        return String.join(",", routing);
     }
 
 }
