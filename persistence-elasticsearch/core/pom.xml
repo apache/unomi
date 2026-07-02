@@ -289,10 +289,7 @@
                             co.elastic.clients.util;version="${elasticsearch.version}",
                             co.elastic.clients.elasticsearch._types;version="${elasticsearch.version}"
                         </Export-Package>
-                        <Embed-Dependency>
-                            !groupId=org.apache.logging.log4j;artifactId=*,
-                            *;scope=compile|runtime
-                        </Embed-Dependency>
+                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                         <Provide-Capability>
                             osgi.service;objectClass:List&lt;String&gt;="org.apache.unomi.persistence.spi.PersistenceService",
