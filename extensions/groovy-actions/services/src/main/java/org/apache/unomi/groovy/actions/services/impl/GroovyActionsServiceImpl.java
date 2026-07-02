@@ -587,12 +587,16 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
 
         LOGGER.info("Removing script: {}", actionName);
 
-        Map<String, ScriptMetadata> scriptMetadataMap = getScriptMetadataMap();
-
-        ScriptMetadata removedMetadata = scriptMetadataMap.remove(actionName);
+        // Snapshot the metadata before the locked removal so we can extract the @Action
+        // annotation id for the definitions-service cleanup below.  The actual removal
+        // from scriptMetadataCacheByTenant happens inside onItemRemoved(), which runs
+        // while the type-refresh read lock is held, preventing a concurrent cache refresh
+        // from re-inserting the entry between the removal and any subsequent lookup.
+        String tenantId = contextManager.getCurrentContext().getTenantId();
+        Map<String, ScriptMetadata> scriptMetadataMap = scriptMetadataCacheByTenant.get(tenantId);
+        ScriptMetadata removedMetadata = scriptMetadataMap != null ? scriptMetadataMap.get(actionName) : null;
 
         // Clean up error tracking to prevent memory leak
-        String tenantId = contextManager.getCurrentContext().getTenantId();
         Set<String> tenantErrors = loggedRefreshErrors.get(tenantId);
         if (tenantErrors != null) {
             tenantErrors.remove(actionName);
@@ -601,7 +605,8 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             }
         }
 
-        // Remove from persistent storage and cache
+        // Remove from persistent storage and cache; onItemRemoved() removes from
+        // scriptMetadataCacheByTenant under the type-refresh read lock.
         removeItem(actionName, GroovyAction.class, GroovyAction.ITEM_TYPE);
 
         if (removedMetadata != null) {
@@ -612,6 +617,16 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         }
 
         LOGGER.info("Script {} removed successfully", actionName);
+    }
+
+    @Override
+    protected void onItemRemoved(String id, String itemType, String tenantId) {
+        if (GroovyAction.ITEM_TYPE.equals(itemType)) {
+            Map<String, ScriptMetadata> map = scriptMetadataCacheByTenant.get(tenantId);
+            if (map != null) {
+                map.remove(id);
+            }
+        }
     }
 
     @Override

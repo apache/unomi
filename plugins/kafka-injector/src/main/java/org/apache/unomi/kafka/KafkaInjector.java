@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Dictionary;
 import java.util.Properties;
@@ -178,7 +179,7 @@ public class KafkaInjector implements Runnable {
     }
 
     private void consume() throws UnsupportedEncodingException, IOException, JsonMappingException {
-        ConsumerRecords<String, String> records = consumer.poll(10000);
+        ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(10000));
         if (records.isEmpty()) {
             return;
         }

@@ -920,8 +920,19 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         try {
             persistenceService.remove(id, itemClass);
             cacheService.remove(itemType, id, currentTenant, itemClass);
+            onItemRemoved(id, itemType, currentTenant);
         } finally {
             writeGuard.unlock();
         }
+    }
+
+    /**
+     * Called inside removeItem() while the type-refresh read lock is held, so subclasses
+     * can clean up their own per-tenant state atomically with the persistence removal.
+     * The read lock is exclusive with refreshTypeCache()'s write lock, which prevents a
+     * concurrent cache refresh from re-populating subclass state after removal.
+     * Default implementation is a no-op.
+     */
+    protected void onItemRemoved(String id, String itemType, String tenantId) {
     }
 }
