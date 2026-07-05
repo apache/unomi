@@ -116,7 +116,11 @@ public class ExecutionContextManagerImpl implements ExecutionContextManager {
                 } else {
                     currentContext.remove();
                 }
-                securityService.setCurrentSubject(previousSubject);
+                if (previousSubject == null) {
+                    securityService.clearCurrentSubject();
+                } else {
+                    securityService.setCurrentSubject(previousSubject);
+                }
             } catch (Exception e) {
                 LOGGER.error("Error restoring previous context: {}", e.getMessage(), e);
                 // Do not rethrow — would suppress the original operation exception if both fail together

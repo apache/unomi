@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.services.impl;
 
+import org.apache.karaf.jaas.boot.principal.UserPrincipal;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.SecurityServiceConfiguration;
@@ -34,6 +35,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -88,6 +90,7 @@ public class ExecutionContextManagerImplTest {
         Set<String> systemPermissions = new HashSet<>(Arrays.asList("READ", "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE, "ADMIN"));
 
         // Mock security service behavior
+        when(securityService.getCurrentSubject()).thenReturn(null);
         when(securityService.getSystemSubject()).thenReturn(systemSubject);
         when(securityService.extractRolesFromSubject(systemSubject)).thenReturn(systemRoles);
         when(securityService.getPermissionsForRole(UnomiRoles.ADMINISTRATOR)).thenReturn(systemPermissions);
@@ -106,6 +109,29 @@ public class ExecutionContextManagerImplTest {
         verify(securityService).getSystemSubject();
         verify(securityService).extractRolesFromSubject(systemSubject);
         verify(securityService).getPermissionsForRole(UnomiRoles.ADMINISTRATOR);
+        verify(securityService).clearCurrentSubject();
+        verify(securityService, never()).setCurrentSubject(null);
+    }
+
+    @Test
+    public void testExecuteAsSystemRestoresPreviousSubject() {
+        Subject previousSubject = new Subject();
+        previousSubject.getPrincipals().add(new UserPrincipal("previous"));
+        Subject systemSubject = new Subject();
+        systemSubject.getPrincipals().add(new UserPrincipal("system"));
+        Set<String> systemRoles = new HashSet<>(Arrays.asList(UnomiRoles.ADMINISTRATOR));
+        Set<String> systemPermissions = new HashSet<>(Arrays.asList("ADMIN"));
+
+        when(securityService.getCurrentSubject()).thenReturn(previousSubject);
+        when(securityService.getSystemSubject()).thenReturn(systemSubject);
+        when(securityService.extractRolesFromSubject(systemSubject)).thenReturn(systemRoles);
+        when(securityService.getPermissionsForRole(UnomiRoles.ADMINISTRATOR)).thenReturn(systemPermissions);
+
+        contextManager.executeAsSystem(() -> "done");
+
+        verify(securityService).setCurrentSubject(systemSubject);
+        verify(securityService).setCurrentSubject(previousSubject);
+        verify(securityService, never()).clearCurrentSubject();
     }
 
     @Test

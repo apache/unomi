@@ -78,6 +78,7 @@ public class KarafSecurityServiceTest {
     public void testGetSystemSubject() {
         Subject systemSubject = securityService.getSystemSubject();
         assertNotNull("System subject should not be null", systemSubject);
+        assertTrue("System subject should be read-only", systemSubject.isReadOnly());
 
         Set<Principal> principals = systemSubject.getPrincipals();
         assertTrue("System subject should have UserPrincipal",
@@ -92,6 +93,28 @@ public class KarafSecurityServiceTest {
             roles.contains(UnomiRoles.TENANT_ADMINISTRATOR));
         assertTrue("System subject should have system maintenance role",
             roles.contains(UnomiRoles.SYSTEM_MAINTENANCE));
+    }
+
+    @Test
+    public void testSystemSubjectImmutableAfterReconfiguration() {
+        Subject originalSystemSubject = securityService.getSystemSubject();
+        Set<String> originalRoles = extractRoles(originalSystemSubject.getPrincipals());
+
+        SecurityServiceConfiguration newConfig = new SecurityServiceConfiguration();
+        newConfig.setSystemRoles(new HashSet<>(Collections.singletonList(UnomiRoles.ADMINISTRATOR)));
+        securityService.setConfiguration(newConfig);
+        securityService.init();
+
+        Subject updatedSystemSubject = securityService.getSystemSubject();
+        assertNotSame("System subject should be replaced atomically",
+            originalSystemSubject, updatedSystemSubject);
+        assertTrue("Updated system subject should be read-only", updatedSystemSubject.isReadOnly());
+        assertEquals("Original subject principals should be unchanged", originalRoles,
+            extractRoles(originalSystemSubject.getPrincipals()));
+        assertTrue("Updated system subject should reflect new configuration",
+            extractRoles(updatedSystemSubject.getPrincipals()).contains(UnomiRoles.ADMINISTRATOR));
+        assertFalse("Updated system subject should not retain removed roles",
+            extractRoles(updatedSystemSubject.getPrincipals()).contains(UnomiRoles.SYSTEM_MAINTENANCE));
     }
 
     @Test

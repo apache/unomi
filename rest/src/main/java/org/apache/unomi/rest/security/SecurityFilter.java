@@ -73,7 +73,7 @@ public class SecurityFilter implements ContainerRequestFilter {
 
             // Check tenants-based access
             if (tenantAnnotation != null) {
-                String tenantId = requestContext.getHeaderString("X-Unomi-Tenant");
+                String tenantId = securityService.getCurrentSubjectTenantId();
                 if (tenantId == null) {
                     requestContext.abortWith(Response.status(Response.Status.BAD_REQUEST)
                             .entity("Tenant ID is required")
@@ -82,7 +82,7 @@ public class SecurityFilter implements ContainerRequestFilter {
                 }
                 if (!securityService.hasTenantAccess(tenantId)) {
                     requestContext.abortWith(Response.status(Response.Status.FORBIDDEN)
-                            .entity("User does not have access to tenants")
+                            .entity("User does not have access to tenant")
                             .build());
                     return;
                 }
