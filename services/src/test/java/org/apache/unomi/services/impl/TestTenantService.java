@@ -102,7 +102,7 @@ public class TestTenantService implements TenantService {
 
     private boolean matchesKey(ApiKey apiKey, String plainTextKey) {
         return plainTextKey != null && apiKey.getKeyHash() != null
-                && secretHashService.verifyHighEntropySecret(plainTextKey, apiKey.getKeyHash());
+                && secretHashService.verify(plainTextKey, apiKey.getKeyHash());
     }
 
     @Override
@@ -135,7 +135,7 @@ public class TestTenantService implements TenantService {
 
         ApiKey apiKey = new ApiKey();
         apiKey.setItemId(UUID.randomUUID().toString());
-        apiKey.setKeyHash(secretHashService.hashHighEntropySecret(plainTextKey));
+        apiKey.setKeyHash(secretHashService.hash(plainTextKey));
         apiKey.setMaskedKey(ApiKey.maskPlainTextKey(secretHashService, plainTextKey));
         apiKey.setKeyType(keyType);
         apiKey.setCreationDate(new Date());

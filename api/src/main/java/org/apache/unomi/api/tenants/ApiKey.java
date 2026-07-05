@@ -54,7 +54,7 @@ public class ApiKey extends Item {
     }
 
     /**
-     * SHA-256 hex digest of the API key ({@link org.apache.unomi.api.security.SecretHashService#hashHighEntropySecret(String)}).
+     * SHA-256 hex digest of the API key ({@link org.apache.unomi.api.security.SecretHashService#hash(String)}).
      * The plaintext key is never persisted; it is only returned once at creation time.
      */
     private String keyHash;

@@ -24,7 +24,7 @@ import java.util.Base64;
 
 /**
  * Fast {@link SecretHashService} for in-memory test doubles such as {@link TestTenantService}.
- * Uses deterministic hashing so key generation and verification stay consistent without PBKDF2 cost.
+ * Uses deterministic hashing so key generation and verification stay consistent without crypto cost.
  * Production-grade hashing is covered by {@link org.apache.unomi.services.security.SecretHashServiceImplTest}.
  */
 public class TestSecretHashService implements SecretHashService {
@@ -45,22 +45,6 @@ public class TestSecretHashService implements SecretHashService {
             return false;
         }
         return storedHash.equals(hash(plaintext));
-    }
-
-    @Override
-    public String hashHighEntropySecret(String plaintext) {
-        if (plaintext == null) {
-            throw new IllegalArgumentException("plaintext cannot be null");
-        }
-        return "test:" + Base64.getEncoder().encodeToString(plaintext.getBytes(StandardCharsets.UTF_8));
-    }
-
-    @Override
-    public boolean verifyHighEntropySecret(String plaintext, String storedHash) {
-        if (plaintext == null || storedHash == null) {
-            return false;
-        }
-        return storedHash.equals(hashHighEntropySecret(plaintext));
     }
 
     @Override

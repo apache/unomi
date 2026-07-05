@@ -35,12 +35,12 @@ String tenantId = context.getConfigString(TENANT_ID)
 ZonedDateTime unifiedDate = ZonedDateTime.now()
 String isoDate = unifiedDate.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
-// Hashes a plaintext API key the same way SecretHashServiceImpl.hashHighEntropySecret does
+// Hashes a plaintext API key the same way SecretHashServiceImpl.hash does
 // (SHA-256, lowercase hex) so it can be verified by TenantServiceImpl after migration without
 // ever persisting the plaintext value (see UNOMI-938).
 //
 // IMPORTANT: this script cannot depend on the `services` bundle, so the algorithm must match
-// SecretHashServiceImpl.HIGH_ENTROPY_HASH_ALGORITHM ("SHA-256") and UTF-8 encoding.
+// SecretHashServiceImpl.HASH_ALGORITHM ("SHA-256") and UTF-8 encoding.
 def hashApiKey = { String plainTextKey ->
     byte[] digest = MessageDigest.getInstance("SHA-256")
             .digest(plainTextKey.getBytes(StandardCharsets.UTF_8))

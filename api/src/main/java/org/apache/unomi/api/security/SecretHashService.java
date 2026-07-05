@@ -20,52 +20,27 @@ package org.apache.unomi.api.security;
  * One-way hashing for secrets that must never be stored in plaintext. This is distinct from
  * {@link EncryptionService}, which handles reversible encryption keys.
  * <p>
- * Two strategies are provided:
- * <ul>
- *   <li>{@link #hashHighEntropySecret(String)} / {@link #verifyHighEntropySecret(String, String)}
- *       — fast SHA-256 for machine-generated secrets such as API keys (256 bits of randomness).
- *       Safe to run on every HTTP request.</li>
- *   <li>{@link #hash(String)} / {@link #verify(String, String)} — slow PBKDF2-HMAC-SHA512 with
- *       per-value salt for low-entropy human secrets such as passwords. Not intended for per-request
- *       API key verification.</li>
- * </ul>
+ * API keys and other machine-generated secrets are hashed with SHA-256 (lowercase hex). Keys are
+ * generated with {@link #generateRandomSecret(int)} (256 bits of randomness), so a fast digest is
+ * sufficient and safe to run on every HTTP request.
  */
 public interface SecretHashService {
 
     /**
-     * Hashes a high-entropy secret (API keys, tokens) with SHA-256 for storage and online verification.
+     * Hashes a secret with SHA-256 for storage.
      *
      * @param plaintext the secret to hash; must not be {@code null}
      * @return lowercase hex-encoded SHA-256 digest
      * @throws IllegalArgumentException if {@code plaintext} is {@code null}
      */
-    String hashHighEntropySecret(String plaintext);
-
-    /**
-     * Verifies a high-entropy secret against a stored SHA-256 digest using a constant-time comparison.
-     *
-     * @param plaintext the plaintext secret to verify
-     * @param storedHash the stored digest, as produced by {@link #hashHighEntropySecret(String)}
-     * @return {@code true} if the secret matches, {@code false} otherwise
-     */
-    boolean verifyHighEntropySecret(String plaintext, String storedHash);
-
-    /**
-     * Hashes a low-entropy secret for storage using PBKDF2-HMAC-SHA512. Each call generates a new
-     * random salt. Do not use for API keys — use {@link #hashHighEntropySecret(String)} instead.
-     *
-     * @param plaintext the secret to hash; must not be {@code null}
-     * @return the salted hash, in the format {@code iterations:base64(salt):base64(hash)}
-     * @throws IllegalArgumentException if {@code plaintext} is {@code null}
-     */
     String hash(String plaintext);
 
     /**
-     * Verifies a low-entropy secret against a PBKDF2 hash produced by {@link #hash(String)}.
+     * Verifies a secret against a stored SHA-256 digest using a constant-time comparison.
      *
      * @param plaintext the plaintext secret to verify
-     * @param storedHash the stored hash to verify against
-     * @return {@code true} if the secret matches the hash, {@code false} otherwise
+     * @param storedHash the stored digest, as produced by {@link #hash(String)}
+     * @return {@code true} if the secret matches, {@code false} otherwise
      */
     boolean verify(String plaintext, String storedHash);
 

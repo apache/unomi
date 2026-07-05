@@ -32,18 +32,20 @@ class SecretHashServiceImplTest {
     private final SecretHashServiceImpl service = new SecretHashServiceImpl();
 
     @Test
-    void hashProducesThreePartFormat() {
+    void hashProducesLowercaseHexSha256() {
         String stored = service.hash("secret-value");
-        String[] parts = stored.split(":");
-        assertEquals(3, parts.length);
-        assertEquals(String.valueOf(SecretHashServiceImpl.DEFAULT_ITERATIONS), parts[0]);
+        assertEquals(64, stored.length());
+        assertTrue(stored.matches("[0-9a-f]+"));
     }
 
     @Test
-    void hashUsesUniqueSaltPerCall() {
-        String hash1 = service.hash("same-secret");
-        String hash2 = service.hash("same-secret");
-        assertNotEquals(hash1, hash2);
+    void hashIsDeterministic() {
+        assertEquals(service.hash("same-secret"), service.hash("same-secret"));
+    }
+
+    @Test
+    void hashDiffersForDifferentInputs() {
+        assertNotEquals(service.hash("secret-a"), service.hash("secret-b"));
     }
 
     @Test
@@ -72,12 +74,6 @@ class SecretHashServiceImplTest {
     @Test
     void verifyRejectsMalformedStoredHash() {
         assertFalse(service.verify("x", "not-a-valid-hash"));
-        assertFalse(service.verify("x", "1:only-two-parts"));
-    }
-
-    @Test
-    void verifyRejectsInvalidBase64InStoredHash() {
-        assertFalse(service.verify("x", "600000:!!!:!!!"));
     }
 
     @Test
@@ -141,35 +137,8 @@ class SecretHashServiceImplTest {
     @Test
     void apiKeyHashAndVerifyRoundTrip() {
         String key = ApiKey.generatePlainTextKey(service);
-        String stored = service.hashHighEntropySecret(key);
-        assertTrue(service.verifyHighEntropySecret(key, stored));
-        assertFalse(service.verifyHighEntropySecret(key + "x", stored));
-    }
-
-    @Test
-    void hashEmbedsIterationCountForFutureUpgrades() {
-        String stored = service.hash("upgrade-test");
-        assertTrue(stored.startsWith(SecretHashServiceImpl.DEFAULT_ITERATIONS + ":"));
-    }
-
-    @Test
-    void hashHighEntropySecretIsDeterministic() {
-        assertEquals(service.hashHighEntropySecret("same-secret"), service.hashHighEntropySecret("same-secret"));
-    }
-
-    @Test
-    void hashHighEntropySecretDiffersForDifferentInputs() {
-        assertNotEquals(service.hashHighEntropySecret("secret-a"), service.hashHighEntropySecret("secret-b"));
-    }
-
-    @Test
-    void hashHighEntropySecretRejectsNullPlaintext() {
-        assertThrows(IllegalArgumentException.class, () -> service.hashHighEntropySecret(null));
-    }
-
-    @Test
-    void highEntropyHashDiffersFromPasswordHash() {
-        String plaintext = "some-api-key";
-        assertNotEquals(service.hashHighEntropySecret(plaintext), service.hash(plaintext));
+        String stored = service.hash(key);
+        assertTrue(service.verify(key, stored));
+        assertFalse(service.verify(key + "x", stored));
     }
 }
