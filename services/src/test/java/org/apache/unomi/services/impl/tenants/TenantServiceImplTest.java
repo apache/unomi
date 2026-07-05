@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.services.impl.tenants;
 
-import org.apache.unomi.api.security.ApiKeyHashService;
+import org.apache.unomi.api.security.SecretHashService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
@@ -55,7 +55,7 @@ public class TenantServiceImplTest {
     private ExecutionContextManager executionContextManager;
 
     @Mock
-    private ApiKeyHashService apiKeyHashService;
+    private SecretHashService secretHashService;
 
     private TenantServiceImpl tenantService;
 
@@ -64,7 +64,7 @@ public class TenantServiceImplTest {
         tenantService = new TenantServiceImpl();
         tenantService.setPersistenceService(persistenceService);
         tenantService.setExecutionContextManager(executionContextManager);
-        tenantService.setApiKeyHashService(apiKeyHashService);
+        tenantService.setSecretHashService(secretHashService);
 
         when(executionContextManager.executeAsSystem(any(Supplier.class))).thenAnswer(invocation -> {
             Supplier<?> supplier = invocation.getArgument(0);
@@ -78,7 +78,7 @@ public class TenantServiceImplTest {
 
         // Treat the "hash" as the plaintext key itself, so tests can assert on plain values
         // without depending on the real PBKDF2 implementation.
-        when(apiKeyHashService.verify(anyString(), anyString()))
+        when(secretHashService.verify(anyString(), anyString()))
                 .thenAnswer(invocation -> Objects.equals(invocation.getArgument(0), invocation.getArgument(1)));
     }
 

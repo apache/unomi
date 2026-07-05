@@ -36,7 +36,7 @@ String tenantId = context.getConfigString(TENANT_ID)
 ZonedDateTime unifiedDate = ZonedDateTime.now()
 String isoDate = unifiedDate.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
-// Hashes a plaintext API key the same way ApiKeyHashServiceImpl does (PBKDF2WithHmacSHA512,
+// Hashes a plaintext API key the same way SecretHashServiceImpl does (PBKDF2WithHmacSHA512,
 // 600000 iterations, format "iterations:base64(salt):base64(hash)") so it can be verified by
 // TenantServiceImpl after migration without ever persisting the plaintext value (see UNOMI-938).
 def hashApiKey = { String plainTextKey ->
@@ -52,7 +52,7 @@ def hashApiKey = { String plainTextKey ->
     return "${iterations}:${Base64.encoder.encodeToString(salt)}:${Base64.encoder.encodeToString(hash)}"
 }
 
-// Masks a plaintext API key the same way ApiKeyHashServiceImpl does: "unomi_v1_****LAST4".
+// Masks a plaintext API key the same way ApiKey.maskPlainTextKey does via SecretHashService: "unomi_v1_****LAST4".
 def maskApiKey = { String plainTextKey ->
     String withoutPrefix = plainTextKey.startsWith("unomi_v1_") ? plainTextKey.substring(9) : plainTextKey
     String lastFour = withoutPrefix.length() >= 4 ? withoutPrefix.substring(withoutPrefix.length() - 4) : withoutPrefix

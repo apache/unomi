@@ -16,13 +16,13 @@
  */
 package org.apache.unomi.services.impl;
 
-import org.apache.unomi.api.security.ApiKeyHashService;
+import org.apache.unomi.api.security.SecretHashService;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.tenants.TenantStatus;
-import org.apache.unomi.services.common.security.ApiKeyHashServiceImpl;
+import org.apache.unomi.services.security.SecretHashServiceImpl;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +32,7 @@ public class TestTenantService implements TenantService {
     private ThreadLocal<String> currentTenantId = new ThreadLocal<>();
     private Map<String, Tenant> tenants = new ConcurrentHashMap<>();
     private ThreadLocal<Boolean> inSystemOperation = new ThreadLocal<>();
-    private final ApiKeyHashService apiKeyHashService = new ApiKeyHashServiceImpl();
+    private final SecretHashService secretHashService = new SecretHashServiceImpl();
 
     public void setInSystemOperation(boolean inSystemOperation) {
         this.inSystemOperation.set(inSystemOperation);
@@ -95,7 +95,7 @@ public class TestTenantService implements TenantService {
 
     private boolean matchesKey(ApiKey apiKey, String plainTextKey) {
         return plainTextKey != null && apiKey.getKeyHash() != null
-                && apiKeyHashService.verify(plainTextKey, apiKey.getKeyHash());
+                && secretHashService.verify(plainTextKey, apiKey.getKeyHash());
     }
 
     @Override
@@ -124,12 +124,12 @@ public class TestTenantService implements TenantService {
 
     @Override
     public ApiKeyCreationResult generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod) {
-        String plainTextKey = apiKeyHashService.generateKey();
+        String plainTextKey = ApiKey.generatePlainTextKey(secretHashService);
 
         ApiKey apiKey = new ApiKey();
         apiKey.setItemId(UUID.randomUUID().toString());
-        apiKey.setKeyHash(apiKeyHashService.hash(plainTextKey));
-        apiKey.setMaskedKey(apiKeyHashService.mask(plainTextKey));
+        apiKey.setKeyHash(secretHashService.hash(plainTextKey));
+        apiKey.setMaskedKey(ApiKey.maskPlainTextKey(secretHashService, plainTextKey));
         apiKey.setKeyType(keyType);
         apiKey.setCreationDate(new Date());
         if (validityPeriod != null) {

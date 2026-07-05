@@ -16,8 +16,8 @@
  */
 package org.apache.unomi.api.tenants;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.unomi.api.Item;
+import org.apache.unomi.api.security.SecretHashService;
 
 import java.util.Date;
 
@@ -31,6 +31,12 @@ public class ApiKey extends Item {
      * The item type for an API key.
      */
     public static final String ITEM_TYPE = "apiKey";
+
+    /** Prefix prepended to generated API key values. */
+    public static final String KEY_PREFIX = "unomi_v1_";
+
+    /** Number of random bytes used when generating a new API key. */
+    public static final int KEY_RANDOM_BYTES = 32;
 
     /**
      * Enum defining the types of API keys.
@@ -58,15 +64,6 @@ public class ApiKey extends Item {
      * suitable for showing in UIs and logs without exposing the secret.
      */
     private String maskedKey;
-
-    /**
-     * Legacy plaintext key, populated only when deserializing documents created before
-     * API keys were hashed at rest (see UNOMI-938). It is read from the legacy "key" JSON
-     * property so that existing keys keep validating until the hashing migration runs,
-     * but it is never written back out.
-     */
-    @JsonProperty(value = "key", access = JsonProperty.Access.READ_ONLY)
-    String legacyKey;
 
     /**
      * The type of API key (public or private).
@@ -107,6 +104,27 @@ public class ApiKey extends Item {
     }
 
     /**
+     * Generates a new plaintext API key using the shared {@link SecretHashService}.
+     *
+     * @param secretHashService the hash service used to generate random key material
+     * @return a newly generated plaintext API key with the {@link #KEY_PREFIX} prefix
+     */
+    public static String generatePlainTextKey(SecretHashService secretHashService) {
+        return KEY_PREFIX + secretHashService.generateRandomSecret(KEY_RANDOM_BYTES);
+    }
+
+    /**
+     * Produces a display-safe masked representation of a plaintext API key.
+     *
+     * @param secretHashService the hash service used for masking
+     * @param plainTextKey the plaintext API key to mask
+     * @return the masked key (e.g. {@code unomi_v1_****ab12})
+     */
+    public static String maskPlainTextKey(SecretHashService secretHashService, String plainTextKey) {
+        return secretHashService.mask(plainTextKey, KEY_PREFIX);
+    }
+
+    /**
      * Gets the salted hash of the API key.
      * @return the key hash, in the format "iterations:base64(salt):base64(hash)"
      */
@@ -136,16 +154,6 @@ public class ApiKey extends Item {
      */
     public void setMaskedKey(String maskedKey) {
         this.maskedKey = maskedKey;
-    }
-
-    /**
-     * Gets the legacy plaintext key, if this key was created before hashing at rest was
-     * introduced (UNOMI-938) and has not yet been migrated. Returns {@code null} once
-     * {@link #getKeyHash()} is populated.
-     * @return the legacy plaintext key, or {@code null} if not present
-     */
-    public String getLegacyKey() {
-        return legacyKey;
     }
 
     /**

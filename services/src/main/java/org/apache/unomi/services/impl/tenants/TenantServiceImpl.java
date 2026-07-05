@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.services.impl.tenants;
 
-import org.apache.unomi.api.security.ApiKeyHashService;
+import org.apache.unomi.api.security.SecretHashService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.TenantLifecycleListener;
 import org.apache.unomi.api.tenants.ApiKey;
@@ -39,7 +39,7 @@ public class TenantServiceImpl implements TenantService {
     private final List<TenantLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
     private PersistenceService persistenceService;
     private ExecutionContextManager executionContextManager;
-    private ApiKeyHashService apiKeyHashService;
+    private SecretHashService secretHashService;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -49,8 +49,8 @@ public class TenantServiceImpl implements TenantService {
         this.executionContextManager = executionContextManager;
     }
 
-    public void setApiKeyHashService(ApiKeyHashService apiKeyHashService) {
-        this.apiKeyHashService = apiKeyHashService;
+    public void setSecretHashService(SecretHashService secretHashService) {
+        this.secretHashService = secretHashService;
     }
 
     public void bindListener(TenantLifecycleListener listener) {
@@ -123,12 +123,12 @@ public class TenantServiceImpl implements TenantService {
     @Override
     public ApiKeyCreationResult generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod) {
         return executionContextManager.executeAsSystem(() -> {
-            String plainTextKey = apiKeyHashService.generateKey();
+            String plainTextKey = ApiKey.generatePlainTextKey(secretHashService);
 
             ApiKey apiKey = new ApiKey();
             apiKey.setItemId(UUID.randomUUID().toString());
-            apiKey.setKeyHash(apiKeyHashService.hash(plainTextKey));
-            apiKey.setMaskedKey(apiKeyHashService.mask(plainTextKey));
+            apiKey.setKeyHash(secretHashService.hash(plainTextKey));
+            apiKey.setMaskedKey(ApiKey.maskPlainTextKey(secretHashService, plainTextKey));
             apiKey.setKeyType(keyType);
             apiKey.setCreationDate(new Date());
             if (validityPeriod != null) {
@@ -205,19 +205,9 @@ public class TenantServiceImpl implements TenantService {
                         (apiKey.getExpirationDate() == null || apiKey.getExpirationDate().after(new Date())));
     }
 
-    /**
-     * Checks whether the given plaintext key matches the stored key.
-     * Supports both hashed keys (see UNOMI-938) and, transitionally, keys that have not
-     * yet been migrated and still carry their legacy plaintext value.
-     */
     private boolean matchesKey(ApiKey apiKey, String plainTextKey) {
-        if (plainTextKey == null) {
-            return false;
-        }
-        if (apiKey.getKeyHash() != null) {
-            return apiKeyHashService.verify(plainTextKey, apiKey.getKeyHash());
-        }
-        return apiKey.getLegacyKey() != null && apiKey.getLegacyKey().equals(plainTextKey);
+        return plainTextKey != null && apiKey.getKeyHash() != null
+                && secretHashService.verify(plainTextKey, apiKey.getKeyHash());
     }
 
     @Override
