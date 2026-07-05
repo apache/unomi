@@ -20,7 +20,6 @@ package org.apache.unomi.itests.tools.httpclient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.eclipse.jetty.http.HttpStatus;
 
@@ -33,10 +32,14 @@ public class HttpClientThatWaitsForUnomi {
     private static final int MAX_TRIES = 10;
 
     private static Tenant testTenant;
-    private static ApiKey testPublicKey;
-    private static ApiKey testPrivateKey;
+    private static String testPublicKey;
+    private static String testPrivateKey;
 
-    public static void setTestTenant(Tenant tenant, ApiKey publicKey, ApiKey privateKey) {
+    /**
+     * @param publicKey the one-time plaintext value of the tenant's public API key (see UNOMI-938)
+     * @param privateKey the one-time plaintext value of the tenant's private API key (see UNOMI-938)
+     */
+    public static void setTestTenant(Tenant tenant, String publicKey, String privateKey) {
         testTenant = tenant;
         testPublicKey = publicKey;
         testPrivateKey = privateKey;
@@ -57,13 +60,13 @@ public class HttpClientThatWaitsForUnomi {
             if (isPrivateEndpoint(path) || forcePrivate) {
                 // For private endpoints, use Basic auth with tenant ID and private key
                 if (testTenant != null && testPrivateKey != null && request.getFirstHeader("Authorization") == null) {
-                    String credentials = testTenant.getItemId() + ":" + testPrivateKey.getKey();
+                    String credentials = testTenant.getItemId() + ":" + testPrivateKey;
                     request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
                 }
             } else {
                 // For public endpoints, use X-Unomi-Api-Key header
                 if (testPublicKey != null && request.getFirstHeader("X-Unomi-Api-Key") == null) {
-                    request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
+                    request.setHeader("X-Unomi-Api-Key", testPublicKey);
                 }
             }
         }

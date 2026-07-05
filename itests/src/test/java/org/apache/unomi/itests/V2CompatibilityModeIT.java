@@ -207,14 +207,14 @@ public class V2CompatibilityModeIT extends BaseIT {
 
         // Test V3-style request with public API key - should work
         request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(UNOMI_API_KEY_HEADER, testPublicKey.getKey());
+        request.addHeader(UNOMI_API_KEY_HEADER, testPublicKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V3-style request with public API key should work in V3 mode", 200, response.getStatusCode());
 
         // Test V3-style request with private API key - should work
         request = new HttpPost(getFullUrl(CONTEXT_URL));
-        addPrivateTenantAuth(request, testTenant, testPrivateKey);
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V3-style request with private API key should work in V3 mode", 200, response.getStatusCode());
@@ -265,7 +265,7 @@ public class V2CompatibilityModeIT extends BaseIT {
 
         // Test V3-style request with public API key - in V2 mode, V3 API keys are ignored (request succeeds but no events processed)
         request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(UNOMI_API_KEY_HEADER, testPublicKey.getKey());
+        request.addHeader(UNOMI_API_KEY_HEADER, testPublicKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V3-style request with public API key should return 200 in V2 compatibility mode", 200, response.getStatusCode());
@@ -273,7 +273,7 @@ public class V2CompatibilityModeIT extends BaseIT {
 
         // Test V3-style request with private API key - in V2 mode, V3 API keys are ignored (request succeeds but no events processed)
         request = new HttpPost(getFullUrl(CONTEXT_URL));
-        addPrivateTenantAuth(request, testTenant, testPrivateKey);
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V3-style request with private API key should return 200 in V2 compatibility mode", 200, response.getStatusCode());
@@ -495,9 +495,9 @@ public class V2CompatibilityModeIT extends BaseIT {
         }
     }
 
-    private static void addPrivateTenantAuth(HttpPost request, Tenant tenant, ApiKey privateKey) {
+    private static void addPrivateTenantAuth(HttpPost request, Tenant tenant, String privateKeyValue) {
         request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
-            (tenant.getItemId() + ":" + privateKey.getKey()).getBytes()));
+            (tenant.getItemId() + ":" + privateKeyValue).getBytes()));
     }
 
     @Override

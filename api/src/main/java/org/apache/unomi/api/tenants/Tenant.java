@@ -273,7 +273,9 @@ public class Tenant extends Item {
      * This method resolves the active private API key from the API keys list.
      * It returns the most recently created, non-revoked, non-expired private key.
      * This key should be used for secure operations and administrative tasks.
-     * @return the active private API key, or null if no valid private key exists
+     * Since the plaintext key is never persisted (see UNOMI-938), this returns the
+     * display-safe masked key rather than the secret itself.
+     * @return the active private API key (masked), or null if no valid private key exists
      */
     @XmlTransient
     public String getPrivateApiKey() {
@@ -286,7 +288,7 @@ public class Tenant extends Item {
             .filter(key -> !key.isRevoked())
             .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
             .max(Comparator.comparing(ApiKey::getCreationDate))
-            .map(ApiKey::getKey)
+            .map(ApiKey::getMaskedKey)
             .orElse(null);
     }
 
@@ -295,7 +297,9 @@ public class Tenant extends Item {
      * This method resolves the active public API key from the API keys list.
      * It returns the most recently created, non-revoked, non-expired public key.
      * This key can be safely used in client-side applications.
-     * @return the active public API key, or null if no valid public key exists
+     * Since the plaintext key is never persisted (see UNOMI-938), this returns the
+     * display-safe masked key rather than the secret itself.
+     * @return the active public API key (masked), or null if no valid public key exists
      */
     @XmlTransient
     public String getPublicApiKey() {
@@ -308,7 +312,7 @@ public class Tenant extends Item {
             .filter(key -> !key.isRevoked())
             .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
             .max(Comparator.comparing(ApiKey::getCreationDate))
-            .map(ApiKey::getKey)
+            .map(ApiKey::getMaskedKey)
             .orElse(null);
     }
 

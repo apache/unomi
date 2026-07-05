@@ -58,6 +58,9 @@
     <bean id="auditServiceImpl" class="org.apache.unomi.services.common.security.AuditServiceImpl">
     </bean>
 
+    <bean id="apiKeyHashServiceImpl" class="org.apache.unomi.services.common.security.ApiKeyHashServiceImpl">
+    </bean>
+
     <bean id="securityServiceImpl" class="org.apache.unomi.services.common.security.KarafSecurityService"
           init-method="init" destroy-method="destroy">
         <property name="configuration" ref="securityServiceConfiguration"/>
@@ -79,6 +82,12 @@
     <service id="securityService" ref="securityServiceImpl" interface="org.apache.unomi.api.security.SecurityService">
         <service-properties>
             <entry key="service.exported.interfaces" value="org.apache.unomi.api.security.SecurityService"/>
+        </service-properties>
+    </service>
+
+    <service id="apiKeyHashService" ref="apiKeyHashServiceImpl" interface="org.apache.unomi.api.security.ApiKeyHashService">
+        <service-properties>
+            <entry key="service.exported.interfaces" value="org.apache.unomi.api.security.ApiKeyHashService"/>
         </service-properties>
     </service>
 

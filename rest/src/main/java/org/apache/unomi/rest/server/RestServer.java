@@ -34,6 +34,7 @@ import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
@@ -328,6 +329,7 @@ public class RestServer {
 
         // Build the server
         ObjectMapper objectMapper = new CustomObjectMapper(desers);
+        objectMapper.addMixIn(ApiKey.class, ApiKeyRestMixIn.class);
         JAXRSServerFactoryBean jaxrsServerFactoryBean = new JAXRSServerFactoryBean();
         jaxrsServerFactoryBean.setAddress("/");
         jaxrsServerFactoryBean.setBus(serverBus);

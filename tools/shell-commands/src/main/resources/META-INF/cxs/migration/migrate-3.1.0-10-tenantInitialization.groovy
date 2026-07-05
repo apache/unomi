@@ -1,11 +1,14 @@
 import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.MigrationUtils
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.PBEKeySpec
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.SecureRandom
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Base64
 import java.util.UUID
 import static org.apache.unomi.shell.migration.service.MigrationConfig.*
 
@@ -33,6 +36,29 @@ String tenantId = context.getConfigString(TENANT_ID)
 ZonedDateTime unifiedDate = ZonedDateTime.now()
 String isoDate = unifiedDate.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
+// Hashes a plaintext API key the same way ApiKeyHashServiceImpl does (PBKDF2WithHmacSHA512,
+// 600000 iterations, format "iterations:base64(salt):base64(hash)") so it can be verified by
+// TenantServiceImpl after migration without ever persisting the plaintext value (see UNOMI-938).
+def hashApiKey = { String plainTextKey ->
+    int iterations = 600_000
+    int saltLengthBytes = 16
+    int hashLengthBits = 256
+    SecureRandom rng = new SecureRandom()
+    byte[] salt = new byte[saltLengthBytes]
+    rng.nextBytes(salt)
+    PBEKeySpec spec = new PBEKeySpec(plainTextKey.toCharArray(), salt, iterations, hashLengthBits)
+    SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA512")
+    byte[] hash = factory.generateSecret(spec).getEncoded()
+    return "${iterations}:${Base64.encoder.encodeToString(salt)}:${Base64.encoder.encodeToString(hash)}"
+}
+
+// Masks a plaintext API key the same way ApiKeyHashServiceImpl does: "unomi_v1_****LAST4".
+def maskApiKey = { String plainTextKey ->
+    String withoutPrefix = plainTextKey.startsWith("unomi_v1_") ? plainTextKey.substring(9) : plainTextKey
+    String lastFour = withoutPrefix.length() >= 4 ? withoutPrefix.substring(withoutPrefix.length() - 4) : withoutPrefix
+    return "unomi_v1_****${lastFour}"
+}
+
 // Delete API key files older than 24 hours left by previous migration runs
 Path secretsDir = Paths.get(System.getProperty("karaf.data", "data"), "migration", "secrets")
 if (Files.exists(secretsDir)) {
@@ -57,10 +83,17 @@ context.performMigrationStep("3.1.0-create-tenant-index", () -> {
         SecureRandom rng = new SecureRandom()
         byte[] pubBytes  = new byte[32]; rng.nextBytes(pubBytes)
         byte[] privBytes = new byte[32]; rng.nextBytes(privBytes)
-        String generatedPublicKey  = pubBytes.collect  { String.format('%02X', it) }.join()
-        String generatedPrivateKey = privBytes.collect { String.format('%02X', it) }.join()
+        String generatedPublicKey  = "unomi_v1_" + pubBytes.collect  { String.format('%02X', it) }.join()
+        String generatedPrivateKey = "unomi_v1_" + privBytes.collect { String.format('%02X', it) }.join()
         String publicKeyId  = UUID.randomUUID().toString()
         String privateKeyId = UUID.randomUUID().toString()
+
+        // Only the salted hash and a masked, display-safe representation are ever persisted (see UNOMI-938).
+        // The plaintext values below are only available now, at generation time.
+        String publicKeyHash  = hashApiKey(generatedPublicKey)
+        String privateKeyHash = hashApiKey(generatedPrivateKey)
+        String publicKeyMasked  = maskApiKey(generatedPublicKey)
+        String privateKeyMasked = maskApiKey(generatedPrivateKey)
 
         // Write keys to a time-limited file AND print to console — the only opportunity to record them
         Files.createDirectories(secretsDir)
@@ -117,7 +150,8 @@ ${sep}
                   "lastModifiedBy": "system-migration-3.1.0",
                   "creationDate" : "${isoDate}",
                   "lastModificationDate" : "${isoDate}",
-                  "key" : "${generatedPublicKey}",
+                  "keyHash" : "${publicKeyHash}",
+                  "maskedKey" : "${publicKeyMasked}",
                   "keyType" : "PUBLIC",
                   "revoked" : false
                 },
@@ -128,7 +162,8 @@ ${sep}
                   "lastModifiedBy": "system-migration-3.1.0",
                   "creationDate" : "${isoDate}",
                   "lastModificationDate" : "${isoDate}",
-                  "key" : "${generatedPrivateKey}",
+                  "keyHash" : "${privateKeyHash}",
+                  "maskedKey" : "${privateKeyMasked}",
                   "keyType" : "PRIVATE",
                   "revoked" : false
                 }

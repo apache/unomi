@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.api.tenants;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.unomi.api.Item;
 
 import java.util.Date;
@@ -47,9 +48,25 @@ public class ApiKey extends Item {
     }
 
     /**
-     * The API key value.
+     * The salted hash of the API key, in the format "iterations:base64(salt):base64(hash)".
+     * The plaintext key is never persisted; it is only returned once at creation time.
      */
-    private String key;
+    private String keyHash;
+
+    /**
+     * A display-safe, masked representation of the key (e.g. "unomi_v1_****ab12"),
+     * suitable for showing in UIs and logs without exposing the secret.
+     */
+    private String maskedKey;
+
+    /**
+     * Legacy plaintext key, populated only when deserializing documents created before
+     * API keys were hashed at rest (see UNOMI-938). It is read from the legacy "key" JSON
+     * property so that existing keys keep validating until the hashing migration runs,
+     * but it is never written back out.
+     */
+    @JsonProperty(value = "key", access = JsonProperty.Access.READ_ONLY)
+    String legacyKey;
 
     /**
      * The type of API key (public or private).
@@ -90,19 +107,45 @@ public class ApiKey extends Item {
     }
 
     /**
-     * Gets the API key value.
-     * @return the API key value
+     * Gets the salted hash of the API key.
+     * @return the key hash, in the format "iterations:base64(salt):base64(hash)"
      */
-    public String getKey() {
-        return key;
+    public String getKeyHash() {
+        return keyHash;
     }
 
     /**
-     * Sets the API key value.
-     * @param key the API key value to set
+     * Sets the salted hash of the API key.
+     * @param keyHash the key hash to set
      */
-    public void setKey(String key) {
-        this.key = key;
+    public void setKeyHash(String keyHash) {
+        this.keyHash = keyHash;
+    }
+
+    /**
+     * Gets the display-safe masked representation of the key.
+     * @return the masked key (e.g. "unomi_v1_****ab12")
+     */
+    public String getMaskedKey() {
+        return maskedKey;
+    }
+
+    /**
+     * Sets the display-safe masked representation of the key.
+     * @param maskedKey the masked key to set
+     */
+    public void setMaskedKey(String maskedKey) {
+        this.maskedKey = maskedKey;
+    }
+
+    /**
+     * Gets the legacy plaintext key, if this key was created before hashing at rest was
+     * introduced (UNOMI-938) and has not yet been migrated. Returns {@code null} once
+     * {@link #getKeyHash()} is populated.
+     * @return the legacy plaintext key, or {@code null} if not present
+     */
+    public String getLegacyKey() {
+        return legacyKey;
     }
 
     /**

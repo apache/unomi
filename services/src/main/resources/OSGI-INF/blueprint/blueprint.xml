@@ -34,6 +34,7 @@
     <reference id="bundleWatcher" interface="org.apache.unomi.lifecycle.BundleWatcher"/>
     <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager" />
     <reference id="auditService" interface="org.apache.unomi.api.tenants.AuditService" availability="optional"/>
+    <reference id="apiKeyHashService" interface="org.apache.unomi.api.security.ApiKeyHashService"/>
     <reference id="eventAdmin" interface="org.osgi.service.event.EventAdmin"/>
 
     <!-- Reference Lists -->
@@ -459,6 +460,7 @@
     <bean id="tenantServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="executionContextManager" ref="executionContextManager"/>
+        <property name="apiKeyHashService" ref="apiKeyHashService"/>
     </bean>
 
     <bean id="tenantMigrationServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantMigrationService">

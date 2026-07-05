@@ -48,7 +48,7 @@ public class TenantTest {
         List<ApiKey> apiKeys = new ArrayList<>();
         
         ApiKey publicKey = new ApiKey();
-        publicKey.setKey("public-key-1");
+        publicKey.setMaskedKey("public-key-1");
         publicKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         publicKey.setRevoked(false);
         publicKey.setCreationDate(new Date());
@@ -65,7 +65,7 @@ public class TenantTest {
         List<ApiKey> apiKeys = new ArrayList<>();
         
         ApiKey revokedKey = new ApiKey();
-        revokedKey.setKey("private-key-1");
+        revokedKey.setMaskedKey("private-key-1");
         revokedKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         revokedKey.setRevoked(true);
         revokedKey.setCreationDate(new Date());
@@ -82,7 +82,7 @@ public class TenantTest {
         List<ApiKey> apiKeys = new ArrayList<>();
         
         ApiKey expiredKey = new ApiKey();
-        expiredKey.setKey("private-key-1");
+        expiredKey.setMaskedKey("private-key-1");
         expiredKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         expiredKey.setRevoked(false);
         expiredKey.setExpirationDate(new Date(System.currentTimeMillis() - 1000)); // Expired
@@ -100,7 +100,7 @@ public class TenantTest {
         List<ApiKey> apiKeys = new ArrayList<>();
         
         ApiKey validKey = new ApiKey();
-        validKey.setKey("private-key-1");
+        validKey.setMaskedKey("private-key-1");
         validKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         validKey.setRevoked(false);
         validKey.setCreationDate(new Date());
@@ -120,14 +120,14 @@ public class TenantTest {
         Date newDate = new Date();
         
         ApiKey oldKey = new ApiKey();
-        oldKey.setKey("private-key-old");
+        oldKey.setMaskedKey("private-key-old");
         oldKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         oldKey.setRevoked(false);
         oldKey.setCreationDate(oldDate);
         apiKeys.add(oldKey);
         
         ApiKey newKey = new ApiKey();
-        newKey.setKey("private-key-new");
+        newKey.setMaskedKey("private-key-new");
         newKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         newKey.setRevoked(false);
         newKey.setCreationDate(newDate);
@@ -144,7 +144,7 @@ public class TenantTest {
         List<ApiKey> apiKeys = new ArrayList<>();
         
         ApiKey validKey = new ApiKey();
-        validKey.setKey("private-key-1");
+        validKey.setMaskedKey("private-key-1");
         validKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         validKey.setRevoked(false);
         validKey.setCreationDate(new Date());
@@ -193,7 +193,7 @@ public class TenantTest {
         List<ApiKey> apiKeys = new ArrayList<>();
         
         ApiKey privateKey = new ApiKey();
-        privateKey.setKey("private-key-1");
+        privateKey.setMaskedKey("private-key-1");
         privateKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         privateKey.setRevoked(false);
         privateKey.setCreationDate(new Date());
@@ -210,7 +210,7 @@ public class TenantTest {
         List<ApiKey> apiKeys = new ArrayList<>();
         
         ApiKey validKey = new ApiKey();
-        validKey.setKey("public-key-1");
+        validKey.setMaskedKey("public-key-1");
         validKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         validKey.setRevoked(false);
         validKey.setCreationDate(new Date());
@@ -227,7 +227,7 @@ public class TenantTest {
         List<ApiKey> apiKeys = new ArrayList<>();
         
         ApiKey validKey = new ApiKey();
-        validKey.setKey("public-key-1");
+        validKey.setMaskedKey("public-key-1");
         validKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         validKey.setRevoked(false);
         validKey.setCreationDate(new Date());
@@ -261,26 +261,26 @@ public class TenantTest {
         
         // Add various private keys
         ApiKey revokedKey = new ApiKey();
-        revokedKey.setKey("revoked-private");
+        revokedKey.setMaskedKey("revoked-private");
         revokedKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         revokedKey.setRevoked(true);
         apiKeys.add(revokedKey);
         
         ApiKey expiredKey = new ApiKey();
-        expiredKey.setKey("expired-private");
+        expiredKey.setMaskedKey("expired-private");
         expiredKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         expiredKey.setRevoked(false);
         expiredKey.setExpirationDate(new Date(System.currentTimeMillis() - 1000));
         apiKeys.add(expiredKey);
         
         ApiKey validKey1 = new ApiKey();
-        validKey1.setKey("valid-private-1");
+        validKey1.setMaskedKey("valid-private-1");
         validKey1.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         validKey1.setRevoked(false);
         apiKeys.add(validKey1);
         
         ApiKey validKey2 = new ApiKey();
-        validKey2.setKey("valid-private-2");
+        validKey2.setMaskedKey("valid-private-2");
         validKey2.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         validKey2.setRevoked(false);
         apiKeys.add(validKey2);
@@ -289,8 +289,8 @@ public class TenantTest {
         
         List<ApiKey> activeKeys = tenant.getActivePrivateApiKeys();
         assertEquals("Should return 2 active private keys", 2, activeKeys.size());
-        assertTrue("Should contain valid-private-1", activeKeys.stream().anyMatch(key -> "valid-private-1".equals(key.getKey())));
-        assertTrue("Should contain valid-private-2", activeKeys.stream().anyMatch(key -> "valid-private-2".equals(key.getKey())));
+        assertTrue("Should contain valid-private-1", activeKeys.stream().anyMatch(key -> "valid-private-1".equals(key.getMaskedKey())));
+        assertTrue("Should contain valid-private-2", activeKeys.stream().anyMatch(key -> "valid-private-2".equals(key.getMaskedKey())));
     }
 
     @Test
@@ -300,26 +300,26 @@ public class TenantTest {
         
         // Add various public keys
         ApiKey revokedKey = new ApiKey();
-        revokedKey.setKey("revoked-public");
+        revokedKey.setMaskedKey("revoked-public");
         revokedKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         revokedKey.setRevoked(true);
         apiKeys.add(revokedKey);
         
         ApiKey expiredKey = new ApiKey();
-        expiredKey.setKey("expired-public");
+        expiredKey.setMaskedKey("expired-public");
         expiredKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         expiredKey.setRevoked(false);
         expiredKey.setExpirationDate(new Date(System.currentTimeMillis() - 1000));
         apiKeys.add(expiredKey);
         
         ApiKey validKey1 = new ApiKey();
-        validKey1.setKey("valid-public-1");
+        validKey1.setMaskedKey("valid-public-1");
         validKey1.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         validKey1.setRevoked(false);
         apiKeys.add(validKey1);
         
         ApiKey validKey2 = new ApiKey();
-        validKey2.setKey("valid-public-2");
+        validKey2.setMaskedKey("valid-public-2");
         validKey2.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         validKey2.setRevoked(false);
         apiKeys.add(validKey2);
@@ -328,8 +328,8 @@ public class TenantTest {
         
         List<ApiKey> activeKeys = tenant.getActivePublicApiKeys();
         assertEquals("Should return 2 active public keys", 2, activeKeys.size());
-        assertTrue("Should contain valid-public-1", activeKeys.stream().anyMatch(key -> "valid-public-1".equals(key.getKey())));
-        assertTrue("Should contain valid-public-2", activeKeys.stream().anyMatch(key -> "valid-public-2".equals(key.getKey())));
+        assertTrue("Should contain valid-public-1", activeKeys.stream().anyMatch(key -> "valid-public-1".equals(key.getMaskedKey())));
+        assertTrue("Should contain valid-public-2", activeKeys.stream().anyMatch(key -> "valid-public-2".equals(key.getMaskedKey())));
     }
 
     @Test
@@ -339,26 +339,26 @@ public class TenantTest {
         
         // Add various keys
         ApiKey revokedPrivateKey = new ApiKey();
-        revokedPrivateKey.setKey("revoked-private");
+        revokedPrivateKey.setMaskedKey("revoked-private");
         revokedPrivateKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         revokedPrivateKey.setRevoked(true);
         apiKeys.add(revokedPrivateKey);
         
         ApiKey expiredPublicKey = new ApiKey();
-        expiredPublicKey.setKey("expired-public");
+        expiredPublicKey.setMaskedKey("expired-public");
         expiredPublicKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         expiredPublicKey.setRevoked(false);
         expiredPublicKey.setExpirationDate(new Date(System.currentTimeMillis() - 1000));
         apiKeys.add(expiredPublicKey);
         
         ApiKey validPrivateKey = new ApiKey();
-        validPrivateKey.setKey("valid-private");
+        validPrivateKey.setMaskedKey("valid-private");
         validPrivateKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         validPrivateKey.setRevoked(false);
         apiKeys.add(validPrivateKey);
         
         ApiKey validPublicKey = new ApiKey();
-        validPublicKey.setKey("valid-public");
+        validPublicKey.setMaskedKey("valid-public");
         validPublicKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         validPublicKey.setRevoked(false);
         apiKeys.add(validPublicKey);
@@ -367,8 +367,8 @@ public class TenantTest {
         
         List<ApiKey> activeKeys = tenant.getActiveApiKeys();
         assertEquals("Should return 2 active keys", 2, activeKeys.size());
-        assertTrue("Should contain valid-private", activeKeys.stream().anyMatch(key -> "valid-private".equals(key.getKey())));
-        assertTrue("Should contain valid-public", activeKeys.stream().anyMatch(key -> "valid-public".equals(key.getKey())));
+        assertTrue("Should contain valid-private", activeKeys.stream().anyMatch(key -> "valid-private".equals(key.getMaskedKey())));
+        assertTrue("Should contain valid-public", activeKeys.stream().anyMatch(key -> "valid-public".equals(key.getMaskedKey())));
     }
 
     @Test
@@ -407,14 +407,14 @@ public class TenantTest {
         List<ApiKey> apiKeys = new ArrayList<>();
         
         ApiKey privateKey = new ApiKey();
-        privateKey.setKey("private-key");
+        privateKey.setMaskedKey("private-key");
         privateKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         privateKey.setRevoked(false);
         privateKey.setCreationDate(new Date());
         apiKeys.add(privateKey);
         
         ApiKey publicKey = new ApiKey();
-        publicKey.setKey("public-key");
+        publicKey.setMaskedKey("public-key");
         publicKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         publicKey.setRevoked(false);
         publicKey.setCreationDate(new Date());
@@ -433,7 +433,7 @@ public class TenantTest {
         
         // Create a key that expires in the future
         ApiKey futureExpiringKey = new ApiKey();
-        futureExpiringKey.setKey("future-expiring-key");
+        futureExpiringKey.setMaskedKey("future-expiring-key");
         futureExpiringKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         futureExpiringKey.setRevoked(false);
         futureExpiringKey.setExpirationDate(new Date(System.currentTimeMillis() + 10000)); // 10 seconds in future
@@ -442,7 +442,7 @@ public class TenantTest {
         
         // Create a key that has already expired
         ApiKey expiredKey = new ApiKey();
-        expiredKey.setKey("expired-key");
+        expiredKey.setMaskedKey("expired-key");
         expiredKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         expiredKey.setRevoked(false);
         expiredKey.setExpirationDate(new Date(System.currentTimeMillis() - 1000)); // 1 second ago
@@ -461,14 +461,14 @@ public class TenantTest {
         
         // Add various types of keys
         ApiKey revokedPrivateKey = new ApiKey();
-        revokedPrivateKey.setKey("revoked-private");
+        revokedPrivateKey.setMaskedKey("revoked-private");
         revokedPrivateKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         revokedPrivateKey.setRevoked(true);
         revokedPrivateKey.setCreationDate(new Date(System.currentTimeMillis() - 5000));
         apiKeys.add(revokedPrivateKey);
         
         ApiKey expiredPrivateKey = new ApiKey();
-        expiredPrivateKey.setKey("expired-private");
+        expiredPrivateKey.setMaskedKey("expired-private");
         expiredPrivateKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         expiredPrivateKey.setRevoked(false);
         expiredPrivateKey.setExpirationDate(new Date(System.currentTimeMillis() - 1000));
@@ -476,14 +476,14 @@ public class TenantTest {
         apiKeys.add(expiredPrivateKey);
         
         ApiKey validPrivateKey = new ApiKey();
-        validPrivateKey.setKey("valid-private");
+        validPrivateKey.setMaskedKey("valid-private");
         validPrivateKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         validPrivateKey.setRevoked(false);
         validPrivateKey.setCreationDate(new Date());
         apiKeys.add(validPrivateKey);
         
         ApiKey validPublicKey = new ApiKey();
-        validPublicKey.setKey("valid-public");
+        validPublicKey.setMaskedKey("valid-public");
         validPublicKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
         validPublicKey.setRevoked(false);
         validPublicKey.setCreationDate(new Date());
@@ -505,7 +505,7 @@ public class TenantTest {
         
         // Create an older valid key
         ApiKey oldKey = new ApiKey();
-        oldKey.setKey("old-key");
+        oldKey.setMaskedKey("old-key");
         oldKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         oldKey.setRevoked(false);
         oldKey.setCreationDate(oldDate);
@@ -513,7 +513,7 @@ public class TenantTest {
         
         // Create a newer valid key
         ApiKey newKey = new ApiKey();
-        newKey.setKey("new-key");
+        newKey.setMaskedKey("new-key");
         newKey.setKeyType(ApiKey.ApiKeyType.PRIVATE);
         newKey.setRevoked(false);
         newKey.setCreationDate(newDate);

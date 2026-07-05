@@ -45,13 +45,15 @@ public interface TenantService {
 
     /**
      * Generates a new API key for the specified tenant with an optional validity period.
+     * The plaintext key is only ever available on the returned result; it is not persisted
+     * and cannot be retrieved again afterwards (see UNOMI-938).
      *
      * @param tenantId       the ID of the tenant for which to generate the API key
      * @param validityPeriod the period (in milliseconds) for which the API key should be valid, null for no expiration
-     * @return the generated ApiKey object containing the key and associated metadata
+     * @return the generated key metadata together with its one-time plaintext value
      * @throws IllegalArgumentException if tenantId is null or does not exist
      */
-    ApiKey generateApiKey(String tenantId, Long validityPeriod);
+    ApiKeyCreationResult generateApiKey(String tenantId, Long validityPeriod);
 
     /**
      * Retrieves a tenant by its ID.
@@ -97,14 +99,16 @@ public interface TenantService {
 
     /**
      * Generates a new API key of the specified type for the tenant.
+     * The plaintext key is only ever available on the returned result; it is not persisted
+     * and cannot be retrieved again afterwards (see UNOMI-938).
      *
      * @param tenantId       the ID of the tenant for which to generate the API key
      * @param keyType       the type of API key to generate (PUBLIC or PRIVATE)
      * @param validityPeriod the period (in milliseconds) for which the API key should be valid, null for no expiration
-     * @return the generated ApiKey object containing the key and associated metadata
+     * @return the generated key metadata together with its one-time plaintext value
      * @throws IllegalArgumentException if tenantId is null or does not exist
      */
-    ApiKey generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod);
+    ApiKeyCreationResult generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod);
 
     /**
      * Validates an API key for a given tenant and checks if it has the required type.

@@ -22,6 +22,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.ApiKey.ApiKeyType;
+import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -30,6 +31,7 @@ import org.apache.unomi.shell.dev.services.CrudCommand;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -41,7 +43,7 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
 
     private static final ObjectMapper OBJECT_MAPPER = new CustomObjectMapper();
     private static final List<String> PROPERTY_NAMES = List.of(
-        "itemId", "name", "description", "keyType", "key", "tenantId", "validityPeriod"
+        "itemId", "name", "description", "keyType", "tenantId", "validityPeriod"
     );
 
     @Reference
@@ -59,7 +61,7 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
             "Name",
             "Description",
             "Key Type",
-            "Key"
+            "Key (masked)"
         };
     }
 
@@ -91,7 +93,7 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
             apiKey.getName(),
             apiKey.getDescription(),
             apiKey.getKeyType().toString(),
-            apiKey.getKey()
+            apiKey.getMaskedKey()
         };
     }
 
@@ -107,10 +109,16 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
         Long validityPeriod = vpRaw == null ? null
                 : (vpRaw instanceof Number ? ((Number) vpRaw).longValue() : Long.parseLong(vpRaw.toString()));
 
-        ApiKey apiKey = tenantService.generateApiKeyWithType(tenantId, keyType, validityPeriod);
-        if (apiKey == null) {
+        ApiKeyCreationResult creationResult = tenantService.generateApiKeyWithType(tenantId, keyType, validityPeriod);
+        if (creationResult == null || creationResult.getApiKey() == null) {
             throw new IllegalStateException("Failed to generate API key for tenant: " + tenantId);
         }
+        ApiKey apiKey = creationResult.getApiKey();
+
+        PrintStream console = getConsole();
+        console.println("API key created. This is the only time the plaintext key will be shown:");
+        console.println("  " + creationResult.getPlainTextKey());
+
         String name = (String) properties.get("name");
         String description = (String) properties.get("description");
         if (StringUtils.isNotBlank(name) || StringUtils.isNotBlank(description)) {
