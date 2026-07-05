@@ -19,6 +19,7 @@ package org.apache.unomi.services.impl;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.services.security.SecretHashServiceImpl;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -27,12 +28,18 @@ import java.util.List;
 
 /**
  * Test for the TestTenantService to verify it works correctly with API key functionality.
+ * Uses the production {@link SecretHashServiceImpl} so hashing behaviour is validated here;
+ * other tests use the default fast {@link TestSecretHashService} via {@link TestTenantService#TestTenantService()}.
  */
 public class TestTenantServiceTest {
 
+    private TestTenantService newTenantService() {
+        return new TestTenantService(new SecretHashServiceImpl());
+    }
+
     @Test
     public void testCreateTenantWithApiKeys() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
         // Create a tenant
         Tenant tenant = tenantService.createTenant("test-tenant", Collections.emptyMap());
@@ -59,7 +66,7 @@ public class TestTenantServiceTest {
 
     @Test
     public void testGenerateApiKeyWithType() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
         // Create a tenant first
         Tenant tenant = tenantService.createTenant("test-tenant", Collections.emptyMap());
@@ -82,7 +89,7 @@ public class TestTenantServiceTest {
 
     @Test
     public void testValidateApiKey() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
         // Create a tenant, then generate fresh keys to capture their one-time plaintext values
         tenantService.createTenant("test-tenant", Collections.emptyMap());
@@ -98,7 +105,7 @@ public class TestTenantServiceTest {
 
     @Test
     public void testValidateApiKeyWithType() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
         // Create a tenant, then generate fresh keys to capture their one-time plaintext values
         tenantService.createTenant("test-tenant", Collections.emptyMap());
@@ -118,7 +125,7 @@ public class TestTenantServiceTest {
 
     @Test
     public void testGetTenantByApiKey() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
         // Create a tenant, then generate a fresh key to capture its one-time plaintext value
         tenantService.createTenant("test-tenant", Collections.emptyMap());
@@ -140,7 +147,7 @@ public class TestTenantServiceTest {
 
     @Test
     public void testGetApiKey() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
         // Create a tenant
         tenantService.createTenant("test-tenant", Collections.emptyMap());

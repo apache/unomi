@@ -22,7 +22,6 @@ import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.tenants.TenantStatus;
-import org.apache.unomi.services.security.SecretHashServiceImpl;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,7 +31,15 @@ public class TestTenantService implements TenantService {
     private ThreadLocal<String> currentTenantId = new ThreadLocal<>();
     private Map<String, Tenant> tenants = new ConcurrentHashMap<>();
     private ThreadLocal<Boolean> inSystemOperation = new ThreadLocal<>();
-    private final SecretHashService secretHashService = new SecretHashServiceImpl();
+    private final SecretHashService secretHashService;
+
+    public TestTenantService() {
+        this(new TestSecretHashService());
+    }
+
+    public TestTenantService(SecretHashService secretHashService) {
+        this.secretHashService = secretHashService;
+    }
 
     public void setInSystemOperation(boolean inSystemOperation) {
         this.inSystemOperation.set(inSystemOperation);
