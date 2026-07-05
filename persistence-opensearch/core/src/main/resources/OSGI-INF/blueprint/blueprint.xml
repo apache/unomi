@@ -68,8 +68,6 @@
             <cm:property name="sslTrustAllCertificates" value="true" />
             <cm:property name="throwExceptions" value="false" />
             <cm:property name="alwaysOverwrite" value="true" />
-            <cm:property name="errorLogLevelRestClient" value="true" />
-
             <cm:property name="minimalClusterState" value="GREEN" />
 
         </cm:default-properties>
@@ -158,7 +156,6 @@
         <property name="sslTrustAllCertificates" value="${os.sslTrustAllCertificates}" />
         <property name="throwExceptions" value="${os.throwExceptions}" />
         <property name="alwaysOverwrite" value="${os.alwaysOverwrite}" />
-        <property name="logLevelRestClient" value="${os.logLevelRestClient}" />
         <property name="minimalClusterState" value="${os.minimalClusterState}" />
     </bean>
 

@@ -1,0 +1,338 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_platform_upgrade_overview]]
+==== Overview and shared rules
+
+===== Guide index
+
+[cols="1,2,2", options="header"]
+|===
+| Component | Guide | When to use
+
+| Overview
+| This section
+| PR planning, shared OSGi rules, version pins, upgrade ordering
+
+| Apache Karaf
+| <<_upgrade_karaf,Karaf upgrade>>
+| Major vs patch Karaf bumps, feature verify, framework cascade
+
+| JDK
+| <<_upgrade_java,JDK upgrade>>
+| Java version changes (with major Karaf migrations)
+
+| CXF / Jackson / Jetty
+| <<_upgrade_cxf_jackson_jetty,CXF/Jackson/Jetty>>
+| Libraries that cascade from Karaf but are Unomi-pinned
+
+| Elasticsearch
+| <<_upgrade_elasticsearch,Elasticsearch upgrade>>
+| `elasticsearch.version` bump, OSGi embed, Java API changes
+
+| OpenSearch
+| <<_upgrade_opensearch,OpenSearch upgrade>>
+| `opensearch.version` bump, Docker tag verification
+
+| Log4j
+| <<_upgrade_log4j,Log4j upgrade>>
+| `${log4j.version}` — always with persistence embed checks
+
+| Integration tests
+| <<_upgrade_integration_tests,Integration tests>>
+| IT/Docker failures, Pax Exam static init, log reading
+
+| Dependency hygiene
+| <<_upgrade_dependency_hygiene,Dependency hygiene>>
+| npm, kafka, commons — after platform pins are stable
+
+| JIRA reference
+| <<_upgrade_jira_reference,JIRA reference>>
+| Epic UNOMI-875, blockers, ticket-to-guide map, acceptance criteria
+|===
+
+
+===== Platform upgrade workflow
+
+Recommended order when bumping multiple platform components in one release cycle:
+
+[plantuml]
+----
+@startuml
+skinparam activityBackgroundColor #F8F8F8
+skinparam activityBorderColor #333333
+
+start
+:Identify bump scope
+(Karaf major / patch, ES, OS, hygiene);
+if (Karaf version change?) then (yes)
+  :<<_upgrade_karaf,Karaf>>
+Bump karaf.version + setenv.sh;
+  :Compare Karaf feature XMLs
+(Pax Web, pax-logging, Jackson specs);
+  :Align jetty.version + jackson.version
++ feature.xml pins;
+  :Compile + feature verify
+(kar, package, distribution);
+else (no)
+endif
+if (JDK / major Karaf line?) then (yes)
+  :<<_upgrade_java,JDK>>
+java.version with Karaf;
+else (no)
+endif
+if (REST / CXF / Jackson drift?) then (yes)
+  :<<_upgrade_cxf_jackson_jetty,CXF/Jackson/Jetty>>;
+else (no)
+endif
+if (Search client bump?) then (yes)
+  :<<_upgrade_elasticsearch,Elasticsearch>>
++ <<_upgrade_opensearch,OpenSearch>>;
+  :Sync Docker compose + IT image tags
+docker pull both engines;
+else (no)
+endif
+:<<_upgrade_log4j,Log4j>>
+Last among platform pins
+(embed exclusion verified);
+if (Application libs only?) then (yes)
+  :<<_upgrade_dependency_hygiene,Dependency hygiene>>;
+else (no)
+endif
+:./build.sh --ci;
+if (Green?) then (yes)
+  :Open PR with focused commits;
+  stop
+else (no)
+  :Read karaf.log + failsafe reports
+<<_upgrade_integration_tests,Integration tests>>;
+  stop
+endif
+@enduml
+----
+
+===== Platform component relationships
+
+Karaf is the hub: most runtime libraries come from Karaf features, while Unomi Maven properties pin compile-time and feature-verify alignment.
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor<<karaf>> #E8F4E8
+  BackgroundColor<<pin>> #FFF4E6
+  BackgroundColor<<embed>> #E8EEF8
+  BackgroundColor<<external>> #F0F0F0
+}
+
+package "Apache Karaf (karaf.version)" <<karaf>> {
+  [Pax Web / Jetty runtime]
+  [pax-logging-log4j2]
+  [specs: jackson features]
+  [standard: CXF RELEASE ref]
+}
+
+package "Unomi Maven pins" <<pin>> {
+  [cxf.version]
+  [jackson.version]
+  [jetty.version]
+  [log4j.version compile]
+}
+
+package "kar/feature.xml overrides" <<pin>> {
+  [Versioned cxf-jaxrs]
+  [Versioned jackson features]
+}
+
+package "Persistence OSGi bundles" <<embed>> {
+  [ES core embeds client]
+  [OS core embeds client]
+}
+
+cloud "External search engines" <<external>> {
+  [Elasticsearch Docker]
+  [OpenSearch Docker]
+}
+
+[Pax Web / Jetty runtime] ..> [jetty.version] : align compile/test
+[specs: jackson features] ..> [jackson.version] : pin feature version
+[standard: CXF RELEASE ref] ..> [cxf.version] : repo override
+[pax-logging-log4j2] ..> [log4j.version compile] : fragment compiles against
+[ES core embeds client] --> [Elasticsearch Docker] : REST
+[OS core embeds client] --> [OpenSearch Docker] : REST
+[kar/feature.xml overrides] --> [Pax Web / Jetty runtime]
+@enduml
+----
+
+===== Current version pins (Unomi 3.1 baseline)
+
+[cols="1,1,2", options="header"]
+|===
+| Property | Value | Primary files
+
+| `java.version`
+| 17
+| Root `pom.xml`, `package/pom.xml` (`javase`)
+
+| `karaf.version`
+| 4.4.11
+| `pom.xml`, `setenv.sh`, `itests/pom.xml`, `*/karaf-kar/pom.xml`
+
+| `cxf.version`
+| 3.6.8
+| `pom.xml`, `bom/pom.xml`, `kar/.../feature.xml`
+
+| `jackson.version`
+| 2.18.3
+| `pom.xml`, `bom/pom.xml`, `kar/.../feature.xml`
+
+| `jetty.version`
+| 9.4.58.v20250814
+| `pom.xml`, `graphql/karaf-feature/pom.xml`, `itests/pom.xml`
+
+| `elasticsearch.version`
+| 9.4.3
+| `pom.xml`, `bom/pom.xml`, Docker ES compose files
+
+| `elasticsearch.test.version`
+| 9.4.3
+| `pom.xml`, IT Docker ES image in `itests/pom.xml`
+
+| `opensearch.version`
+| 3.7.0
+| `pom.xml`, `bom/pom.xml`, OS Docker compose, IT OS image
+
+| `opensearch.rest.client.version`
+| 3.7.0
+| `pom.xml` (keep in sync with `opensearch.version`)
+
+| `log4j.version`
+| 2.24.0
+| `pom.xml` (compile-time for fragments; runtime from pax-logging)
+|===
+
+IMPORTANT: Maven client version, IT Docker image, and `docker/` compose tags must match for each search engine. Verify with `docker pull` before opening a pull request.
+
+IMPORTANT: `${log4j.version}`, `${jackson.version}`, and `${jetty.version}` are *Unomi Maven pins*. Runtime versions for logging and HTTP come from Karaf/pax-logging/Pax Web — reconcile after every Karaf bump.
+
+===== Shared OSGi rules (Elasticsearch and OpenSearch persistence)
+
+. *Embed* the client and HTTP/JSON stack: `Embed-Dependency *;scope=compile|runtime`, `Embed-Transitive true`.
+. *Exclude log4j from embed:* `!groupId=org.apache.logging.log4j;artifactId=*` (see <<_upgrade_log4j,Log4j upgrade>>).
+. *Optional Import-Package* for codecs (brotli, zstd, netty) after httpclient5 5.6 — do **not** add compile Maven dependencies for native codecs.
+. *Provided* for platform libraries: `slf4j-api`, Jackson 2 (`com.fasterxml.jackson.*`), commons, Unomi API modules.
+. *Export* Elasticsearch query DSL types from the core bundle only; the conditions bundle imports exports — do not re-embed the client.
+. Verify OSGi resolution, not just compilation:
+
+[source,bash]
+----
+mvn -pl persistence-elasticsearch/core,persistence-opensearch/core install -DskipTests
+mvn -pl package -DskipTests package
+./build.sh --ci
+----
+
+===== Recommended pull request structure
+
+Split platform work into focused commits when possible:
+
+[cols="1,2,1", options="header"]
+|===
+| Slice | Contents | Rationale
+
+| Karaf + cascade libs
+| `karaf.version`, `setenv.sh`, `jetty.version`, `jackson.version`, `feature.xml` pins, compile-fix POMs
+| Distribution-wide; isolate from search clients
+
+| ES + OS + Docker
+| Version pins, persistence POMs, compose files, Java API fixes
+| Large OSGi and Docker surface
+
+| Log4j last
+| `${log4j.version}` after embed exclusion verified
+| Log4j-only bump breaks ES bundle without embed fix
+
+| Hygiene
+| npm, kafka, commons (Track E1/E2)
+| Lower OSGi risk once platform is green
+|===
+
+===== Git history reference
+
+[cols="1,1,1,2", options="header"]
+|===
+| Ticket / PR | Commit | Era | Key lesson
+
+| UNOMI-216 | `b873b35a2`
+| Karaf 4.1.7
+| Property placeholders in etc require Karaf >= 4.1.6
+
+| UNOMI-491 | `dda24b66e`
+| Karaf 4.2.11
+| Do not duplicate Jackson in WAB; reactivate features after graph changes
+
+| UNOMI-876 | `da9c57fd2`
+| Karaf 4.4.8 + JDK 17
+| feature.xml v1.6; platform deps `provided`; ~187 POM changes; WAB/Pax Web
+
+| UNOMI-899 | `8cff171ef`
+| CXF 3.6.8
+| Karaf Jackson features; OpenAPI/Swagger path; pin CXF version in feature.xml
+
+| UNOMI-901 | `d3d2d16c4`
+| ES 9 client
+| Export `co.elastic.clients.*`; optional httpclient5 imports
+
+| UNOMI-828 | `078ebceda`
+| OpenSearch module
+| Lean embed + optional imports; dual-engine IT matrix
+
+| UNOMI-921 | `5a5aedba7`
+| Docker IT
+| Replace elasticsearch-maven-plugin with docker-maven-plugin
+
+| UNOMI-919 | `a0a08e4ad`
+| Startup feature
+| Boot feature graph changes — update package verify lists
+
+| PR2 #795 | `ef10dfe15`
+| log4j 2.24
+| Embed without exclusion breaks Felix — reverted
+
+| PR3 #796 | `545f6b8af`…
+| Karaf 4.4.11 / ES 9.4 / OS 3.7
+| slf4j-api; Jackson/Jetty cascade; codec optional imports; IT lazy JSON mapper (no static init in probe)
+|===
+
+===== Pre-merge checklist
+
+* [ ] Compared Karaf feature XMLs for Pax Web, pax-logging, Jackson specs (patch/minor Karaf bumps)
+* [ ] `${jetty.version}` matches Pax Web Jetty bundles for `${karaf.version}`
+* [ ] Jackson features version-pinned in `feature.xml`; `${jackson.version}` exists in Karaf specs
+* [ ] `./build.sh --ci` green (or unit tests + both IT profiles)
+* [ ] After Karaf bump: no static initializers in `BaseIT` that touch Jackson/Unomi types before features are up; IT JSON via lazy instance `getObjectMapper()` (see <<_upgrade_integration_tests_pax_exam_probe,Pax Exam probe & static init>>)
+* [ ] `docker pull` succeeds for ES and OS IT images at pinned versions
+* [ ] ES/OS core manifests: no embedded log4j / brotli4j / zstd-jni JARs
+* [ ] `setenv.sh` `KARAF_VERSION` matches `pom.xml`
+* [ ] Docker README and compose tags match version properties
+
+===== Quick diagnostics
+
+[source,bash]
+----
+rg 'karaf\.version|jackson\.version|jetty\.version|cxf\.version|elasticsearch\.version|opensearch\.version|log4j\.version' pom.xml setenv.sh kar/src/main/feature/feature.xml
+mvn -pl package -DskipTests package 2>&1 | rg -i 'Unable to resolve|BUILD FAILURE'
+docker pull docker.elastic.co/elasticsearch/elasticsearch:9.4.3
+docker pull opensearchproject/opensearch:3.7.0
+----

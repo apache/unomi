@@ -1,0 +1,183 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_upgrade_elasticsearch]]
+==== Upgrading the Elasticsearch client
+
+Unomi does *not* embed the Elasticsearch server. It embeds the *Java API client* and REST transport inside the `unomi-persistence-elasticsearch-core` OSGi bundle, then exports query DSL types for the conditions bundle.
+
+For *data migration* between Elasticsearch major versions, see also <<_migrate_from_elasticsearch_7_to_elasticsearch_9,ES7 to ES9 migration>> (distinct from https://issues.apache.org/jira/browse/UNOMI-884[UNOMI-884] V3 data migration scripts).
+
+Client migration is tracked in https://issues.apache.org/jira/browse/UNOMI-901[UNOMI-901] (supersedes https://issues.apache.org/jira/browse/UNOMI-851[UNOMI-851]). JIRA notes an interim ES 8 client on Java 8 for 2.x branches only — Unomi 3 pairs ES 9 with Karaf 4.4 + JDK 17; see <<_upgrade_jira_reference,JIRA reference>>.
+
+===== Version pins
+
+[cols="1,2", options="header"]
+|===
+| Property | Files
+
+| `elasticsearch.version`
+| Root `pom.xml`, `bom/pom.xml`
+
+| `elasticsearch.test.version`
+| Root `pom.xml`, IT Docker image in `itests/pom.xml`
+|===
+
+Update in the same pull request: `docker/README.md`, `docker/src/main/docker/docker-compose-*.yml`, `itests/docker-compose-snapshot-analysis.yml`.
+
+Image tag example: `docker.elastic.co/elasticsearch/elasticsearch:9.4.3`.
+
+===== Bundle architecture
+
+[cols="1,2", options="header"]
+|===
+| Module | Role
+
+| `persistence-elasticsearch/core`
+| Embeds ES client; exports `co.elastic.clients.*`; provides `PersistenceService`
+
+| `persistence-elasticsearch/conditions`
+| Query builders; imports exported ES types; does not re-embed client
+|===
+
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor<<platform>> #E8F4E8
+  BackgroundColor<<embed>> #E8EEF8
+  BackgroundColor<<external>> #F0F0F0
+}
+
+package "Karaf platform" <<platform>> {
+  [slf4j-api provided]
+  [Jackson 2 provided]
+}
+
+package "unomi-persistence-elasticsearch-core" <<embed>> {
+  [elasticsearch-java embedded]
+  [httpclient5 / parsson embedded]
+  [Exports co.elastic.clients.*]
+}
+
+package "unomi-persistence-elasticsearch-conditions" <<embed>> {
+  [Imports exported ES types]
+  [No client re-embed]
+}
+
+cloud "Elasticsearch cluster" <<external>> {
+  [Docker / external ES (elasticsearch.version)]
+}
+
+[unomi-persistence-elasticsearch-core] --> [Elasticsearch cluster] : REST
+[unomi-persistence-elasticsearch-conditions] --> [unomi-persistence-elasticsearch-core] : Import-Package
+[unomi-persistence-elasticsearch-core] ..> [slf4j-api provided] : provided
+[unomi-persistence-elasticsearch-core] ..> [Jackson 2 provided] : provided
+
+note bottom of [unomi-persistence-elasticsearch-core]
+  Embed-Dependency excludes log4j:*
+  Optional Import-Package for codecs
+end note
+@enduml
+----
+
+OpenSearch follows the same pattern in `persistence-opensearch/core` — see <<_upgrade_opensearch,OpenSearch upgrade>>.
+
+*Embed rules* (`core/pom.xml`):
+
+[source,xml]
+----
+<Embed-Dependency>
+    !groupId=org.apache.logging.log4j;artifactId=*,
+    *;scope=compile|runtime
+</Embed-Dependency>
+<Embed-Transitive>true</Embed-Transitive>
+----
+
+*Embed:* `elasticsearch-java`, `elasticsearch-rest5-client` (9.4+), httpclient5, parsson, OpenTelemetry, etc.
+
+*Do not embed:* log4j JARs (see <<_upgrade_log4j,Log4j>>); optional codecs (brotli, zstd, netty) — use optional Import-Package only.
+
+*Provided:* `slf4j-api`, Jackson 2, commons, Unomi API modules.
+
+*Export from core:* `co.elastic.clients.elasticsearch`, `_types`, `_types.query_dsl`, `util`.
+
+===== Git history (OSGi embedding)
+
+[cols="1,1,2", options="header"]
+|===
+| Commit | Issue | Fix
+
+| `96a018ecb` (UNOMI-70)
+| ES 5 monolithic embed
+| REST client only; optional codec imports
+
+| `838fc1cb9` / `a605e2731` (UNOMI-225)
+| ES 7 resolution
+| Rewrote Import-Package iteratively
+
+| `2e6a6e8f1` (UNOMI-584)
+| Test dep pollution
+| Exclude lucene-core from lucene-test-framework
+
+| `d3d2d16c4` (UNOMI-901)
+| HLRC → Java API
+| Export co.elastic.clients.*; remove ChildFirstClassLoader
+
+| PR2 #795
+| log4j 2.24 embed
+| OSGi failure — exclude log4j from embed in PR3
+
+| PR3 #796
+| ES 9.4.3 / httpclient5 5.6
+| Routing API `List<String>`; optional brotli/zstd/netty imports
+|===
+
+===== httpclient5 5.6+ optional codec imports
+
+ES 9.4+ uses httpclient5 5.6.x. Add to `Import-Package` in core (before `*`):
+
+[source]
+----
+com.aayushatharva.brotli4j.decoder;resolution:=optional,
+com.aayushatharva.brotli4j.encoder;resolution:=optional,
+com.github.luben.zstd;resolution:=optional,
+io.netty.buffer;resolution:=optional,
+io.netty.channel;resolution:=optional,
+io.netty.util;resolution:=optional,
+javax.xml.datatype;resolution:=optional,
+javax.xml.namespace;resolution:=optional,
+javax.xml.transform.dom;resolution:=optional,
+org.newsclub.net.unix;resolution:=optional,
+----
+
+Do **not** add compile Maven dependencies for `brotli4j` / `zstd-jni`.
+
+===== Java API checklist
+
+. `mvn -pl persistence-elasticsearch/core,persistence-elasticsearch/conditions -am -DskipTests compile`
+. Fix API breaks in `ElasticSearchPersistenceServiceImpl.java` (e.g. `UpdateRequest.routing()` → `List<String>` in 9.4).
+. ES 9.4 embeds Jackson 3 (`tools.jackson.core`) inside the bundle; Unomi app code uses Jackson 2 — do not add Jackson 3 as a root dependency.
+. Audit manifest — expect no embedded log4j or native codec JARs.
+
+===== Verification
+
+[source,bash]
+----
+mvn -pl persistence-elasticsearch/core install -DskipTests
+mvn -pl extensions/groovy-actions/karaf-kar -DskipTests package 2>&1 | rg -i 'Unable to resolve|persistence-elasticsearch'
+./build.sh --ci
+----

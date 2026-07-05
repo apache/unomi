@@ -1,0 +1,181 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_upgrade_cxf_jackson_jetty]]
+==== CXF, Jackson, and Jetty (Karaf cascade libraries)
+
+Karaf upgrades change the *runtime* versions of several frameworks even when you only bump `${karaf.version}`. Unomi pins some of these in root `pom.xml` and `kar/src/main/feature/feature.xml` so compile-time, feature verify, and OSGi resolution stay aligned.
+
+This guide covers libraries that *cascade from Karaf* but are *owned by Unomi* for REST, WAB, GraphQL, and ITs.
+
+===== Version pins (Unomi 3.1 baseline)
+
+[cols="1,1,2", options="header"]
+|===
+| Property | Value | Primary consumers
+
+| `cxf.version`
+| 3.6.8
+| `kar/.../feature.xml`, `rest/`, `bom/pom.xml`, OpenAPI/Swagger
+
+| `jackson.version`
+| 2.18.3
+| `bom/pom.xml`, `kar/.../feature.xml` (pinned features + extra modules)
+
+| `jetty.version`
+| 9.4.58.v20250814
+| `graphql/karaf-feature/pom.xml`, `itests/pom.xml` (compile/test only)
+|===
+
+IMPORTANT: `${jetty.version}` must match the Jetty bundles shipped by the Pax Web version bundled in your `${karaf.version}`. Inspect `pax-web-features-*-features.xml` on Maven Central — do not guess from release notes alone.
+
+===== How Karaf supplies vs how Unomi overrides
+
+[cols="1,2,2", options="header"]
+|===
+| Library | Karaf source | Unomi override
+
+| CXF
+| `standard` features reference `apache-cxf/RELEASE`
+| Explicit repo + versioned feature in `feature.xml` (UNOMI-876, UNOMI-899)
+
+| Jackson
+| `specs` features (`jackson`, `jackson-jaxrs`) — multiple versions on 4.4.11+
+| Pin `<feature version="${jackson.version}">` — never unversioned (PR3 lesson)
+
+| Jetty
+| Pax Web bundles (runtime)
+| `${jetty.version}` for Maven compile/test deps only
+
+| Log4j (runtime)
+| pax-logging-log4j2 bundle
+| See <<_upgrade_log4j,Log4j upgrade>> — `${log4j.version}` is compile-time for fragments
+|===
+
+
+===== Karaf supply vs Unomi override (diagram)
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+
+package "Runtime (OSGi inside Karaf)" {
+  [Pax Web Jetty bundles]
+  [Karaf jackson features]
+  [CXF JAX-RS from apache-cxf repo]
+  [pax-logging-log4j2]
+}
+
+package "Build / verify (Maven)" {
+  [(jetty.version) compile deps]
+  [(jackson.version) in feature.xml]
+  [(cxf.version) feature + bom]
+  [(log4j.version) fragment compile]
+}
+
+note right of [Karaf jackson features]
+  4.4.11+ may expose multiple
+  jackson feature versions —
+  always pin version attribute
+end note
+
+note right of [CXF JAX-RS from apache-cxf repo]
+  CXF 4.x has no OSGi support —
+  stay on CXF 3.6.x (UNOMI-876)
+end note
+
+[(jetty.version) compile deps] ..> [Pax Web Jetty bundles] : must match bundle version
+[(jackson.version) in feature.xml] --> [Karaf jackson features]
+[(cxf.version) feature + bom] --> [CXF JAX-RS from apache-cxf repo]
+@enduml
+----
+
+===== CXF upgrade (UNOMI-899, `8cff171ef`)
+
+*When:* REST/OpenAPI breakage, Karaf major jump (4.2 → 4.4), or explicit CXF security release.
+
+*Steps:*
+
+. Bump `<cxf.version>` in root `pom.xml` (managed via `bom/pom.xml`).
+. Confirm `kar/src/main/feature/feature.xml` still has:
+
+[source,xml]
+----
+<repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
+...
+<feature version="${cxf.version}" dependency="true">cxf-jaxrs</feature>
+----
+
+. Rebuild REST modules and run feature verify (`mvn -pl package -DskipTests package`).
+. Regenerate or smoke-test OpenAPI/Swagger UI (`unomi-rest-ui` feature) if JAX-RS annotations changed.
+
+*History:* UNOMI-876 moved CXF 3.3.11 → 3.6.5 with Karaf 4.4.8. UNOMI-899 bumped 3.6.5 → 3.6.8 independently and switched Jackson delivery to Karaf features.
+
+===== Jackson upgrade
+
+*Risk:* Karaf 4.4.11+ ships *multiple* `jackson` feature versions (e.g. 2.18.3 and 2.21.2). An unversioned `<feature>jackson</feature>` may resolve to the newest, while Unomi still installs datatype/jaxb modules at `${jackson.version}` — causing mixed Jackson on the OSGi classpath.
+
+*Required pattern* in `kar/src/main/feature/feature.xml`:
+
+[source,xml]
+----
+<feature version="${jackson.version}">jackson</feature>
+<feature version="${jackson.version}">jackson-jaxrs</feature>
+<bundle>mvn:com.fasterxml.jackson.datatype/jackson-datatype-jsr310/${jackson.version}</bundle>
+<bundle>mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/${jackson.version}</bundle>
+----
+
+*Procedure:*
+
+. Check which `jackson` feature versions exist for your `${karaf.version}`:
+
+[source,bash]
+----
+curl -sL "https://repo1.maven.org/maven2/org/apache/karaf/features/specs/${KARAF_VERSION}/specs-${KARAF_VERSION}-features.xml" \
+  | rg 'feature name="jackson"'
+----
+
+. Set `${jackson.version}` to a version that exists in Karaf *specs* (not necessarily the highest).
+. Bump `bom/pom.xml` managed Jackson artifacts if needed.
+. Do **not** embed Jackson in WABs or persistence bundles — `scope=provided` (UNOMI-491, UNOMI-876).
+
+*Major Karaf migration note:* UNOMI-876 initially listed every Jackson JAR in `feature.xml`; UNOMI-899 moved to Karaf features *with* version pins. Do not revert to unversioned features.
+
+===== Jetty alignment after Karaf bump
+
+Pax Web version is tied to `${karaf.version}`. Example: Karaf 4.4.11 → Pax Web 8.0.35 → Jetty 9.4.58.v20250814.
+
+. Inspect Pax Web features for your Karaf version:
+
+[source,bash]
+----
+curl -sL "https://repo1.maven.org/maven2/org/apache/karaf/features/standard/${KARAF_VERSION}/standard-${KARAF_VERSION}-features.xml" \
+  | rg 'pax-web-features'
+# then open that pax-web version's features XML and rg 'jetty-server'
+----
+
+. Update `${jetty.version}` in root `pom.xml` to match Pax Web's Jetty bundle version.
+. Modules using `${jetty.version}`: `graphql/karaf-feature/pom.xml`, `itests/pom.xml`.
+
+Runtime Jetty comes from Pax Web OSGi bundles — no Jetty bundles in Unomi `feature.xml`.
+
+===== Verification
+
+[source,bash]
+----
+rg 'cxf\.version|jackson\.version|jetty\.version' pom.xml kar/src/main/feature/feature.xml
+mvn -pl kar,package -DskipTests package
+./build.sh --ci
+----

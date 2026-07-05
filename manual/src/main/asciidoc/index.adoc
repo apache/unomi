@@ -147,6 +147,8 @@ include::connectors/salesforce-connector.adoc[]
 
 include::building-and-deploying.adoc[]
 
+include::upgrades/platform-upgrades.adoc[]
+
 include::shell-commands.adoc[]
 
 include::writing-plugins.adoc[]

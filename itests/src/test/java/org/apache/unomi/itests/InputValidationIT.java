@@ -332,7 +332,7 @@ public class InputValidationIT extends BaseIT {
         if (ERROR_MESSAGE_INVALID_DATA_RECEIVED.equals(responseBody)) {
             return;
         }
-        JsonNode json = objectMapper.readTree(responseBody);
+        JsonNode json = getObjectMapper().readTree(responseBody);
         JsonNode errorNode = json.get("errorMessage");
         assertNotNull("Response JSON missing 'errorMessage' field. Body: " + responseBody, errorNode);
         assertEquals("badRequest", errorNode.asText());

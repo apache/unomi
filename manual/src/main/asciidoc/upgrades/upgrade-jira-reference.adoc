@@ -1,0 +1,257 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_upgrade_jira_reference]]
+==== JIRA reference (platform upgrades)
+
+This section maps Apache Unomi JIRA tickets to the upgrade runbooks in this chapter. Use it when you need *why* a constraint exists (Cellar removal, CXF 3.x ceiling, ES client decoupling) or when tracing work under the Unomi 3 epic.
+
+JIRA: https://issues.apache.org/jira/projects/UNOMI[UNOMI project]
+
+===== Unomi 3 epic
+
+https://issues.apache.org/jira/browse/UNOMI-875[UNOMI-875] (*Unomi Version 3*) groups most 3.x platform and product work. Karaf was initially deferred from the first 3.0 release because the cascade (Java 17, CXF, Cellar removal, WAB/Pax Web) would delay shipping again — see comments on https://issues.apache.org/jira/browse/UNOMI-898[UNOMI-898].
+
+Platform-relevant subtasks include:
+
+[cols="1,2,2", options="header"]
+|===
+| Ticket | Summary | Upgrade guide
+
+| https://issues.apache.org/jira/browse/UNOMI-876[UNOMI-876]
+| Karaf 4.4.7+ (major migration)
+| <<_upgrade_karaf,Karaf>>, <<_upgrade_java,JDK>>
+
+| https://issues.apache.org/jira/browse/UNOMI-877[UNOMI-877]
+| Remove Karaf Cellar / Hazelcast → PersistenceService clustering
+| <<_upgrade_karaf,Karaf>> (prerequisite)
+
+| https://issues.apache.org/jira/browse/UNOMI-828[UNOMI-828]
+| OpenSearch persistence module
+| <<_upgrade_opensearch,OpenSearch>>
+
+| https://issues.apache.org/jira/browse/UNOMI-901[UNOMI-901]
+| HLRC → `elasticsearch-java` client
+| <<_upgrade_elasticsearch,Elasticsearch>>
+
+| https://issues.apache.org/jira/browse/UNOMI-921[UNOMI-921]
+| Docker-based ES in ITs (replace elasticsearch-maven-plugin)
+| <<_upgrade_integration_tests,Integration tests>>
+
+| https://issues.apache.org/jira/browse/UNOMI-887[UNOMI-887]
+| Enhanced `build.sh`
+| <<_upgrade_integration_tests,Integration tests>>
+
+| https://issues.apache.org/jira/browse/UNOMI-884[UNOMI-884]
+| V3 *data* migration scripts (audit fields, multi-tenancy)
+| Manual migration chapter — *not* Maven version pins
+
+| https://issues.apache.org/jira/browse/UNOMI-829[UNOMI-829]
+| General dependency upgrade strategy
+| <<_upgrade_dependency_hygiene,Dependency hygiene>>
+|===
+
+IMPORTANT: https://issues.apache.org/jira/browse/UNOMI-884[UNOMI-884] covers *index/data migration* for existing deployments. Platform upgrade guides cover *runtime and client versions* (Karaf, ES/OS clients, Log4j). Do not conflate the two.
+
+===== Ticket map by component
+
+[cols="1,1,2,2", options="header"]
+|===
+| Ticket | Status (2026) | Topic | Maintainer takeaway
+
+| https://issues.apache.org/jira/browse/UNOMI-526[UNOMI-526]
+| Closed
+| Karaf 4.3 / CXF 3.4.5 / Jackson 2.12
+| Blocked by https://issues.apache.org/jira/browse/CXF-8593[CXF-8593] and Karaf Cellar incompatibility with Karaf 4.3
+
+| https://issues.apache.org/jira/browse/UNOMI-829[UNOMI-829]
+| Closed
+| Dependency hygiene
+| 30-minute timebox per library; maintenance-branch strategy; Karaf blocked by https://issues.apache.org/jira/browse/KARAF-7526[KARAF-7526] until Cellar removed
+
+| https://issues.apache.org/jira/browse/UNOMI-838[UNOMI-838]
+| Closed
+| CXF + jakarta.servlet
+| Superseded by Karaf 4.4 migration; GraphQL still on `javax` — see https://issues.apache.org/jira/browse/UNOMI-667[UNOMI-667]
+
+| https://issues.apache.org/jira/browse/UNOMI-851[UNOMI-851]
+| Closed
+| ES HLRC → 7.17
+| Duplicate of https://issues.apache.org/jira/browse/UNOMI-901[UNOMI-901]; shipped as ES 9 + `elasticsearch-java`
+
+| https://issues.apache.org/jira/browse/UNOMI-898[UNOMI-898]
+| Closed
+| Karaf 4.2.15 → 4.4.7
+| Duplicate of https://issues.apache.org/jira/browse/UNOMI-876[UNOMI-876]
+
+| https://issues.apache.org/jira/browse/UNOMI-70[UNOMI-70]
+| Closed
+| ES 5.x externalization
+| Start of external ES server; no embedded ES in modern Unomi
+
+| https://issues.apache.org/jira/browse/UNOMI-225[UNOMI-225]
+| Closed
+| ES 7 / REST HLRC
+| Predecessor path to UNOMI-901
+
+| https://issues.apache.org/jira/browse/UNOMI-531[UNOMI-531]
+| Open
+| IT matrix for multiple ES versions
+| Partially addressed by Docker IT properties; see <<_upgrade_integration_tests,Integration tests>>
+
+| https://issues.apache.org/jira/browse/UNOMI-667[UNOMI-667]
+| In Progress
+| GraphQL OSGi / `java.io` imports
+| Future hygiene risk when bumping graphql-java — not a Karaf blocker today
+
+| https://issues.apache.org/jira/browse/UNOMI-889[UNOMI-889]
+| Sub-task of 875
+| Remove OGNL scripting
+| Called out in https://issues.apache.org/jira/browse/UNOMI-876[UNOMI-876] Karaf plan (Camel 4.x line)
+|===
+
+===== Historical blockers (Karaf)
+
+
+
+===== Karaf upgrade prerequisites (timeline)
+
+Historical JIRA blockers explain why Karaf 4.3+ waited until Unomi 3 clustering changed:
+
+[plantuml]
+----
+@startuml
+skinparam activityBackgroundColor #F8F8F8
+
+title Karaf upgrade path (JIRA milestones)
+
+|UNOMI-526|
+:CXF-8593 + Cellar block Karaf 4.3;
+|UNOMI-829|
+:Dependency pass blocked by KARAF-7526;
+|UNOMI-877|
+:Remove Cellar/Hazelcast
+→ PersistenceService clustering;
+|UNOMI-876|
+:Karaf 4.4.8 + JDK 17 lands;
+|UNOMI-875 PR3|
+:Patch Karaf 4.4.11
++ Jackson/Jetty cascade pins;
+stop
+@enduml
+----
+Before Unomi 3 could move to Karaf 4.3+, two recurring blockers appeared in JIRA:
+
+. *Karaf Cellar* — https://issues.apache.org/jira/browse/KARAF-7526[KARAF-7526] / Cellar 4.2.1 not compatible with Karaf 4.3 (https://issues.apache.org/jira/browse/UNOMI-526[UNOMI-526], https://issues.apache.org/jira/browse/UNOMI-829[UNOMI-829]). Resolved by https://issues.apache.org/jira/browse/UNOMI-877[UNOMI-877] (PersistenceService-based clustering).
+. *CXF OSGi* — https://issues.apache.org/jira/browse/CXF-8593[CXF-8593] blocked Jackson/CXF/Karaf alignment on the 4.3 line. Unomi 3 landed on Karaf 4.4 with *CXF 3.6.x* pinned in `feature.xml` (https://issues.apache.org/jira/browse/UNOMI-899[UNOMI-899]).
+
+https://issues.apache.org/jira/browse/UNOMI-876[UNOMI-876] documents a critical decision repeated in JIRA comments: *CXF 4.x removes OSGi support* and is unsuitable for Karaf. Target CXF 3.6.5+ (Unomi currently pins 3.6.8), not CXF 4.
+
+===== UNOMI-876 planned vs shipped
+
+Serge Huber's Karaf upgrade report on https://issues.apache.org/jira/browse/UNOMI-876[UNOMI-876] compares Karaf 4.2.15 vs 4.4.7 binary contents. Use it as a *checklist*, then verify against the *current* `${karaf.version}` feature XMLs (see <<_upgrade_karaf,Karaf>>).
+
+[cols="1,1,1,2", options="header"]
+|===
+| Component | JIRA target (4.4.7 era) | Unomi 3.1 baseline | Notes
+
+| Java
+| 17
+| 17
+| Shipped — commit `da9c57fd2`
+
+| Karaf
+| 4.4.7 → later 4.4.11
+| 4.4.11
+| Patch bumps need cascade pins (PR3)
+
+| CXF
+| 3.6.5 (not 4.x)
+| 3.6.8
+| Repo override in `feature.xml`
+
+| Pax Web / Jetty
+| 8.0.30 / Jetty 9.4.x
+| Pax Web 8.0.35 / Jetty 9.4.58
+| Align `${jetty.version}` after each Karaf bump
+
+| Camel
+| 4.9.0 (bundled with Karaf 4.4.7)
+| *2.23.1* in `extensions/router/pom.xml`
+| Router extension still ships Camel 2.x OSGi routes; Karaf may expose Camel 4 features — do not assume JIRA matrix matches router code without checking
+
+| Jackson
+| ~2.15.x in report
+| 2.18.3 pinned
+| Pin `<feature version="…">` on 4.4.11+
+
+| Servlet API
+| 4.0.1 (`javax`, not jakarta)
+| javax.servlet in WAB/Pax Web 8
+| https://issues.apache.org/jira/browse/UNOMI-838[UNOMI-838] jakarta migration deferred
+|===
+
+===== Elasticsearch client strategy (UNOMI-901)
+
+https://issues.apache.org/jira/browse/UNOMI-901[UNOMI-901] acceptance criteria: remove HLRC, adopt `co.elastic.clients:elasticsearch-java`, refactor persistence code, green ITs.
+
+JIRA comment (decoupling option): if JDK 17 + Karaf upgrade is too heavy for a *2.x* maintenance branch, Elastic's ES 8 Java API client (Java 8+) can talk to ES 9 clusters as an interim step — but *Karaf upgrades belong on Unomi 3*, not 2.x.
+
+For Unomi 3 platform work, treat ES client, IT Docker tag, and compose files as one atomic bump (<<_upgrade_elasticsearch,Elasticsearch>>).
+
+===== Dependency upgrade strategy (UNOMI-829)
+
+When doing non-platform library bumps (<<_upgrade_dependency_hygiene,Dependency hygiene>>), follow the process documented on https://issues.apache.org/jira/browse/UNOMI-829[UNOMI-829]:
+
+. Prefer removing unused libraries over upgrading.
+. Timebox each failed upgrade to *30 minutes*; if harder, file a follow-up and move on.
+. Prefer latest release; if breaking, use latest on same major maintenance branch and open a ticket for the next major.
+. Do *not* mix complex upgrades (Karaf, CXF, GraphQL OSGi) into a bulk hygiene pass.
+
+===== Integration test tickets
+
+[cols="1,2,2", options="header"]
+|===
+| Ticket | Intent | Runbook
+
+| https://issues.apache.org/jira/browse/UNOMI-921[UNOMI-921]
+| Replace elasticsearch-maven-plugin; remove `default_template` workaround; Docker parity with OpenSearch
+| <<_upgrade_integration_tests,Integration tests>>
+
+| https://issues.apache.org/jira/browse/UNOMI-937[UNOMI-937]
+| Stabilize ITs; align GitHub Actions with `build.sh`
+| <<_upgrade_integration_tests,Integration tests>>
+
+| https://issues.apache.org/jira/browse/UNOMI-944[UNOMI-944]
+| IT developer tooling (archival, diff, live Karaf)
+| `itests/README.md`
+
+| https://issues.apache.org/jira/browse/UNOMI-946[UNOMI-946]
+| Cluster health / replica checks in IT harness
+| Migration and dual-engine IT matrix
+|===
+
+===== Searching JIRA for upgrade context
+
+Useful JQL examples (Apache JIRA → *Advanced* search):
+
+[source,text]
+----
+project = UNOMI AND summary ~ "Karaf" ORDER BY updated DESC
+project = UNOMI AND summary ~ "upgrade" AND status != Closed
+project = UNOMI AND parent = UNOMI-875
+project = UNOMI AND text ~ "elasticsearch-maven-plugin"
+----
+
+When a ticket and git history disagree, prefer *git commits* for exact file changes and *JIRA* for intent, blockers, and acceptance criteria.

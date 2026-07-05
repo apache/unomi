@@ -104,13 +104,13 @@ public class EventsCollectorIT extends BaseIT {
         // Send request with public API key
         HttpPost request = new HttpPost(getFullUrl(EVENTS_URL));
         request.addHeader("Content-Type", "application/json");
-        String requestBody = objectMapper.writeValueAsString(eventsCollectorRequest);
+        String requestBody = getObjectMapper().writeValueAsString(eventsCollectorRequest);
         request.setEntity(new StringEntity(requestBody, ContentType.APPLICATION_JSON));
 
         // Execute request and verify response
         try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request, 200)) {
             String responseContent = EntityUtils.toString(response.getEntity());
-            EventCollectorResponse eventResponse = objectMapper.readValue(responseContent, EventCollectorResponse.class);
+            EventCollectorResponse eventResponse = getObjectMapper().readValue(responseContent, EventCollectorResponse.class);
             Assert.assertNotNull("Event collector response should not be null", eventResponse);
 
             // Check that the response indicates the session and profile were updated

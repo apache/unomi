@@ -25,7 +25,6 @@ import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.PersonaSession;
 import org.apache.unomi.api.PersonaWithSessions;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -101,7 +100,7 @@ public class PersonaIT extends BaseIT {
             Assert.assertEquals("Persona creation should return 200 OK", 200, statusCode);
 
             String responseBody = EntityUtils.toString(createResponse.getEntity());
-            createdPersona = CustomObjectMapper.getObjectMapper().readValue(responseBody, PersonaWithSessions.class);
+            createdPersona = getObjectMapper().readValue(responseBody, PersonaWithSessions.class);
         }
 
         Assert.assertNotNull("Created persona should not be null", createdPersona);
@@ -120,7 +119,7 @@ public class PersonaIT extends BaseIT {
                     try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl(sessionsUrl)), AuthType.JAAS_ADMIN)) {
                         if (response.getStatusLine().getStatusCode() == 200) {
                             String responseBody = EntityUtils.toString(response.getEntity());
-                            PartialList<PersonaSession> result = CustomObjectMapper.getObjectMapper().readValue(
+                            PartialList<PersonaSession> result = getObjectMapper().readValue(
                                 responseBody, new TypeReference<PartialList<PersonaSession>>() {});
                             // Check if the test session is present
                             if (result != null && result.getList() != null && !result.getList().isEmpty()) {

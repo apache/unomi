@@ -1,0 +1,283 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_upgrade_integration_tests]]
+==== Integration tests and Docker
+
+Platform upgrades are validated by *Pax Exam* integration tests plus *Docker-backed* search engines. Failures often appear in Maven Failsafe output, not in `karaf.log`.
+
+See also: `itests/README.md` and <<_using_the_build_script,build.sh>>.
+
+
+
+===== Validation pipeline after a platform bump
+
+[plantuml]
+----
+@startuml
+skinparam activityBackgroundColor #F8F8F8
+
+|Maintainer|
+start
+:mvn -DskipTests compile;
+:mvn -pl kar,package -DskipTests package
+(feature verify);
+|Docker|
+:docker pull ES image
+(elasticsearch.test.version);
+:docker pull OS image
+(opensearch.version);
+|Integration tests|
+:./build.sh --ci
+(or --integration-tests ×2 profiles);
+if (All ITs fail in ~5–10 s
+Failsafe CNFE?) then (yes)
+  :Static init in BaseIT? —
+<<_upgrade_integration_tests_pax_exam_probe,Pax Exam probe & static init>>;
+  :Use lazy getObjectMapper();
+  :Re-run ITs;
+else (no)
+endif
+if (karaf.log clean
+but tests timeout after unomi:start?) then (yes)
+  :Docker ES/OS not up —
+use integration-tests profile / build.sh;
+else (no)
+endif
+if (BundleException
+in karaf.log at startup?) then (yes)
+  :OSGi / embed issue
+<<_upgrade_elasticsearch,ES/OS>> or <<_upgrade_log4j,Log4j>>;
+else (no)
+endif
+:Green CI → merge;
+stop
+@enduml
+----
+===== Architecture
+
+[cols="1,2,2", options="header"]
+|===
+| Layer | Technology | Location
+
+| Test runner
+| Pax Exam + JUnit 4
+| `itests/.../BaseIT.java`
+
+| Karaf under test
+| Unomi distribution tar.gz
+| `itests/pom.xml` — `${karaf.version}`
+
+| Search engine
+| docker-maven-plugin
+| ES port 9400 / OS port 9401
+
+| JSON in IT helpers
+| `BaseIT.getObjectMapper()` → `CustomObjectMapper.getCustomInstance()` (lazy, on first use)
+| `itests/.../BaseIT.java`
+
+| Exam logs
+| Karaf instance
+| `itests/target/exam/*/data/log/karaf.log`
+
+| Reports
+| Failsafe
+| `itests/target/failsafe-reports/`
+|===
+
+===== Docker IT (UNOMI-921)
+
+https://issues.apache.org/jira/browse/UNOMI-921[UNOMI-921] motivation: stop downloading ES binaries in Maven, remove the `default_template` workaround required with elasticsearch-maven-plugin on ES 8/9, and match the OpenSearch Docker pattern.
+
+Shipped: `elasticsearch-maven-plugin` replaced with `io.fabric8:docker-maven-plugin` (`5a5aedba7`, #767). Related stabilization: https://issues.apache.org/jira/browse/UNOMI-937[UNOMI-937], tooling https://issues.apache.org/jira/browse/UNOMI-944[UNOMI-944].
+
+[cols="1,2,1", options="header"]
+|===
+| Engine | Image | Property
+
+| Elasticsearch
+| `docker.elastic.co/elasticsearch/elasticsearch:${elasticsearch.test.version}`
+| `elasticsearch.test.version`
+
+| OpenSearch
+| `opensearchproject/opensearch:${opensearch.version}`
+| `opensearch.version`
+|===
+
+Always run `docker pull` for both images before bumping version properties.
+
+[[_upgrade_integration_tests_pax_exam_probe]]
+===== Pax Exam probe and static initialization (Karaf 4.4.11 / Pax Exam 4.14)
+
+After a Karaf bump, integration tests may fail *before Unomi starts*. `karaf.log` can look healthy or incomplete while Failsafe reports hundreds of errors in a few seconds — that pattern almost always means the *PAXEXAM-PROBE* bundle failed to load test classes, not a Karaf startup crash.
+
+*How the probe works*
+
+* Pax Exam 4.14 builds the probe with `rawBuilder()`: compiled test classes under `target/test-classes` plus `DynamicImport-Package: *` — *not* the full Maven test classpath.
+* Maven `<dependencies>` on `itests/pom.xml` are for *compile-time* only. They are **not** automatically embedded in the probe.
+* Types the probe needs at runtime must be exported by *already resolved* OSGi bundles in the Karaf container, unless you explicitly embed them on `Bundle-ClassPath` (avoid — see <<_upgrade_integration_tests_do_not_embed,Do not embed>>).
+
+*Why static initializers break (UNOMI-875 PR3 lesson)*
+
+A `static { … }` block (or `static final` field initialized with `new …()`) runs when the JVM *loads* the probe class — typically when Pax Exam installs `PAXEXAM-PROBE`, **before** `@Before`, **before** `unomi:start`, and often **before** Unomi features finish installing.
+
+That is too early for types that live in Unomi features, not in Karaf boot:
+
+* `com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule` — **not** in Karaf's `jackson` feature; shipped in Unomi's `unomi-base` (`kar/src/main/feature/feature.xml`).
+* `CustomObjectMapper` and its Jackson modules — same: available only after `unomi-base` bundles are resolved.
+
+On Karaf 4.4.8 this often *appeared* to work because feature boot timing usually left `unomi-base` ready before the probe loaded `BaseIT`. On 4.4.11 (heavier/async feature boot, dual Jackson stacks) the same static block fails reliably with:
+
+[source]
+----
+ClassNotFoundException: com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule
+    not found by PAXEXAM-PROBE-…
+----
+
+*Historical mistake:* `BaseIT` had a static block since UNOMI-568 (May 2022) for a shared `ObjectMapper`; UNOMI-569 (June 2022) added `JaxbAnnotationModule` to mirror production JSON handling. That duplicated `CustomObjectMapper` and forced Jackson types to load at probe install time.
+
+*Do not do this*
+
+[source,java]
+----
+// BAD — runs when probe class loads, before Unomi features are up
+protected static final ObjectMapper objectMapper;
+static {
+    objectMapper = new ObjectMapper();
+    objectMapper.registerModule(new JaxbAnnotationModule());
+}
+----
+
+*Shipped fix (UNOMI-875 PR3, current)*
+
+Use *on-first-use* access after Unomi is running. Delegate to the same mapper as the server:
+
+[source,java]
+----
+/** JSON mapper for IT HTTP/JSON helpers — lazy, after Unomi features are up. */
+protected ObjectMapper getObjectMapper() {
+    return CustomObjectMapper.getCustomInstance();
+}
+----
+
+Call sites use `getObjectMapper()` in test methods (after `@Before` / `waitForStartup()`), not a static field. `CustomObjectMapper.getCustomInstance()` returns the holder singleton — the first call happens when HTTP/JSON helpers run, when `unomi-base` (including `jackson-module-jaxb-annotations`) is already active, so `DynamicImport-Package: *` can wire the types.
+
+[[_upgrade_integration_tests_do_not_embed]]
+*Do not embed (removed anti-patterns)*
+
+An earlier PR3 attempt embedded test JARs on the probe `Bundle-ClassPath` (`copy-probe-lib`, `probe-bundle-classpath.properties`, `getOsgiService()` JDK proxy). That was **more complex than necessary** and caused new failures (`ClassCastException`, Maven phase ordering bugs, `Require-Bundle` wiring races). **Do not reintroduce:**
+
+* `maven-dependency-plugin` copying Unomi JARs into `target/test-classes/lib/`
+* `@ProbeBuilder` setting explicit `Bundle-ClassPath` for embedded libs
+* `Require-Bundle` on the probe for Unomi bundles
+* JDK dynamic proxy on `getOsgiService()` to paper over duplicate embedded API classes
+
+If ITs fail with `ClassNotFoundException` on Jackson or Unomi types, fix *when* the probe touches those types (move off static init), not by embedding the whole test classpath into the probe.
+
+*Rules for probe-safe IT code*
+
+* **No static initializers** in `BaseIT` or IT base classes that reference Jackson modules, `CustomObjectMapper`, or other types from Unomi/Karaf features not in vanilla Karaf boot.
+* **Lazy/on-first-use** for JSON mappers, parsers, and helpers that need Unomi or Jackson JAXB types — call from test methods after `@Before` has started Unomi (or after the relevant OSGi service is known to be up).
+* **Do not** duplicate production mapper setup in the probe; use `CustomObjectMapper.getCustomInstance()` via `BaseIT.getObjectMapper()` (or OSGi services from the running container).
+* **Do not** run `mvn failsafe:integration-test` on `itests` without the `integration-tests` profile unless Docker ES/OS is already listening on the IT port (`9400` / `9401`). A fixed probe can still hang in `waitForStartup()` if persistence is unreachable.
+
+*Symptom → diagnosis*
+
+[cols="2,2,2", options="header"]
+|===
+| Failsafe symptom | Typical cause | Fix
+
+| `ClassNotFoundException: …JaxbAnnotationModule` (all ITs, ~5–10 s)
+| Static init or static field touching Jackson JAXB before `unomi-base` is up
+| Remove static block; use lazy instance `getObjectMapper()` → `CustomObjectMapper.getCustomInstance()`
+
+| `ClassNotFoundException: …PersistenceService` (or other Unomi type) at class load
+| Static init or early reference before Unomi features resolve
+| Move work out of static blocks; ensure `@Before` starts Unomi first
+
+| All tests error in ~5–10 s; `karaf.log` short or still installing features
+| Probe class loading failed early (static init or missing dynamic import)
+| Failsafe + `itests/target/it-run-operator-note.txt`; check for static blocks
+
+| Tests reach `unomi:start` then timeout (~10–20 min)
+| Docker ES/OS not running or persistence blueprint failed
+| `karaf.log` (`elasticSearchPersistenceService`, port `9400`); `docker ps`
+
+| `EOFException` / RMI `Connection refused` after long wait
+| Karaf container died during startup (often ES connectivity)
+| Tail of `karaf.log` in the exam folder
+|===
+
+===== Reading logs
+
+[cols="1,2,2", options="header"]
+|===
+| Artifact | Healthy signal | Failure signal
+
+| `karaf.log`
+| Features install, persistence blueprints start, Pax Web binds
+| `BundleException`, `Unable to resolve`, `elasticSearchPersistenceService` errors
+
+| Failsafe reports
+| Tests pass
+| ClassNotFound in probe (static init), timeouts
+
+| `itests/target/it-run-operator-note.txt`
+| Normal run duration, memory samples
+| ~7 s run with 292 errors → probe failure
+
+| docker-maven-plugin
+| Container starts, HTTP 200 on `:9400` / `:9401`
+| `Unable to pull`, `manifest not found`, connection refused from Unomi
+|===
+
+TIP: A clean or truncated `karaf.log` with all ITs failing in seconds usually indicates probe class loading (often a `static` block in `BaseIT`). A clean log with tests stuck after `unomi:start` usually indicates Docker / persistence — not the probe.
+
+===== Running ITs locally
+
+[source,bash]
+----
+./build.sh --integration-tests
+./build.sh --integration-tests --use-opensearch
+./build.sh --ci --integration-tests --no-karaf
+----
+
+Use Maven profile `ci-build-itests` when building the `itests` module directly. The `integration-tests` profile starts the Docker search container; ad-hoc `mvn -pl itests verify` without that profile (or without `./build.sh --integration-tests`) skips Docker and ITs will hang waiting for Elasticsearch/OpenSearch.
+
+===== Karaf bump side effects (UNOMI-875 PR3)
+
+[cols="1,2,2", options="header"]
+|===
+| Symptom | Cause | Fix
+
+| All ITs fail in ~5–10 s; `ClassNotFoundException: …JaxbAnnotationModule`
+| Static `ObjectMapper` init in `BaseIT` before `unomi-base` is up
+| Lazy instance `getObjectMapper()` → `CustomObjectMapper.getCustomInstance()` — <<_upgrade_integration_tests_pax_exam_probe,Pax Exam probe & static init>>
+
+| IT compile uses Jetty websocket client
+| `${jetty.version}` drift vs Pax Web runtime
+| Align Jetty pin after Karaf bump — <<_upgrade_cxf_jackson_jetty,CXF/Jackson/Jetty>>
+
+| Clean `karaf.log`, tests timeout after `unomi:start`
+| Docker ES/OS not started or wrong image tag
+| `./build.sh --integration-tests`; fix `elasticsearch.test.version` / `opensearch.version`
+|===
+
+===== Build script (UNOMI-887)
+
+Prefer `./build.sh --ci` over ad-hoc Maven invocations — it runs the same gates as GitHub Actions (compile, feature verify path, IT profiles). See <<_using_the_build_script,build.sh>> in the manual.
+
+===== IT developer tooling (UNOMI-944)
+
+For cross-run comparison and live Karaf inspection during upgrade debugging, see `itests/README.md` (run archival, log diff workflows).

@@ -1,0 +1,107 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_upgrade_opensearch]]
+==== Upgrading the OpenSearch client
+
+OpenSearch persistence mirrors Elasticsearch: a fat OSGi bundle embeds the Java client and HTTP stack (UNOMI-828, `078ebceda`).
+
+For switching backends at runtime, see <<_migrate_from_elasticsearch_to_opensearch,Elasticsearch to OpenSearch migration>>.
+
+===== Version pins
+
+[cols="1,2", options="header"]
+|===
+| Property | Files
+
+| `opensearch.version`
+| Root `pom.xml`, `bom/pom.xml`, Docker compose, IT image
+
+| `opensearch.rest.client.version`
+| Root `pom.xml` — keep in sync with `opensearch.version`
+|===
+
+IMPORTANT: `${opensearch.version}` must match a published Docker Hub tag. Verify before bumping:
+
+[source,bash]
+----
+docker pull opensearchproject/opensearch:${opensearch.version}
+----
+
+Latest OpenSearch 3.x line on Docker Hub (as of Unomi 3.1 work): *3.7.0*. Do not assume every Maven Central `opensearch-java` version has a matching Docker image.
+
+===== Dual-engine verification (diagram)
+
+Unomi supports Elasticsearch and OpenSearch persistence modules; platform bumps must keep both IT profiles green.
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+
+component "Unomi Karaf distribution" as unomi
+component "persistence-elasticsearch" as es
+component "persistence-opensearch" as os
+cloud "ES Docker IT image" as esd
+cloud "OS Docker IT image" as osd
+
+unomi --> es
+unomi --> os
+es --> esd
+os --> osd
+
+note bottom of unomi
+  Run both IT profiles after platform bumps
+end note
+@enduml
+----
+
+===== Bundle architecture
+
+Module: `persistence-opensearch/core` (+ `conditions`).
+
+Same embed rules as Elasticsearch core — including log4j embed exclusion and optional codec imports after httpclient5 5.6.
+
+*Export-Package:* `org.opensearch.*`, `org.opensearch.index.query.*`, `org.apache.unomi.persistence.opensearch`.
+
+===== Step-by-step
+
+. Bump `opensearch.version` and `opensearch.rest.client.version` in root `pom.xml`.
+. Update Docker compose files and `docker/README.md`.
+. `mvn -pl persistence-opensearch/core,persistence-opensearch/conditions -am -DskipTests compile`
+. Fix Java API breaks in `OpenSearchPersistenceServiceImpl.java` if any.
+. Sync optional Import-Package with ES core when httpclient version jumps.
+. Confirm log4j embed exclusion on OS core.
+. Feature verify + `./build.sh --ci`; run OpenSearch IT profile.
+
+===== ES vs OS coupling
+
+[cols="1,1", options="header"]
+|===
+| Concern | Keep in sync?
+
+| httpclient5 optional imports
+| **Yes**
+
+| log4j embed exclusion
+| **Yes**
+
+| Docker image tags
+| No — independent server versions
+
+| Java API code changes
+| No — separate impl classes
+|===
+
+You may upgrade ES and OS in one pull request but use separate commits for review clarity.

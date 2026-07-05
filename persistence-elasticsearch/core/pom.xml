@@ -105,6 +105,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
             <scope>provided</scope>
@@ -120,43 +125,6 @@
             <artifactId>joda-time</artifactId>
             <scope>provided</scope>
         </dependency>
-        <!-- The following are optional dependencies from the ElasticSearch that are made mandatory -->
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <scope>compile</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <scope>compile</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.logging.log4j</groupId>
-                    <artifactId>log4j-api</artifactId>
-                </exclusion>
-            </exclusions>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-1.2-api</artifactId>
-            <scope>compile</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.logging.log4j</groupId>
-                    <artifactId>log4j-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.apache.logging.log4j</groupId>
-                    <artifactId>log4j-core</artifactId>
-                </exclusion>
-            </exclusions>
-            <optional>true</optional>
-        </dependency>
-        <!-- End of optional ElasticSearch dependencies -->
-
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -264,6 +232,16 @@
                             org.conscrypt;resolution:=optional,
                             org.glassfish.hk2.osgiresourcelocator;resolution:=optional,
                             org.brotli.dec;resolution:=optional,
+                            com.aayushatharva.brotli4j.decoder;resolution:=optional,
+                            com.aayushatharva.brotli4j.encoder;resolution:=optional,
+                            com.github.luben.zstd;resolution:=optional,
+                            io.netty.buffer;resolution:=optional,
+                            io.netty.channel;resolution:=optional,
+                            io.netty.util;resolution:=optional,
+                            javax.xml.datatype;resolution:=optional,
+                            javax.xml.namespace;resolution:=optional,
+                            javax.xml.transform.dom;resolution:=optional,
+                            org.newsclub.net.unix;resolution:=optional,
                             io.opentelemetry.opentelemetry-api;resolution:=optional,
                             io.opentelemetry.sdk.autoconfigure;resolution:=optional,
                             io.opentelemetry.opentelemetry-context;resolution:=optional,
@@ -289,7 +267,10 @@
                             co.elastic.clients.util;version="${elasticsearch.version}",
                             co.elastic.clients.elasticsearch._types;version="${elasticsearch.version}"
                         </Export-Package>
-                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Embed-Dependency>
+                            !groupId=org.apache.logging.log4j;artifactId=*,
+                            *;scope=compile|runtime
+                        </Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                         <Provide-Capability>
                             osgi.service;objectClass:List&lt;String&gt;="org.apache.unomi.persistence.spi.PersistenceService",

@@ -137,7 +137,7 @@ public class SchedulerIT extends BaseIT {
         try (CloseableHttpResponse response = post("/cxs/tasks/" + testTaskId + "/retry?resetFailureCount=true", null)) {
             assertEquals("Response should be OK", 200, response.getStatusLine().getStatusCode());
             String responseBody = EntityUtils.toString(response.getEntity());
-            ScheduledTask retried = objectMapper.readValue(responseBody, ScheduledTask.class);
+            ScheduledTask retried = getObjectMapper().readValue(responseBody, ScheduledTask.class);
             assertNotNull("Task should not be null", retried);
             assertEquals("Task should be scheduled", ScheduledTask.TaskStatus.SCHEDULED, retried.getStatus());
             assertEquals("Failure count should be reset", 0, retried.getFailureCount());

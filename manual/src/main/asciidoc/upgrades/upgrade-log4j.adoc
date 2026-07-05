@@ -1,0 +1,113 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_upgrade_log4j]]
+==== Upgrading Log4j
+
+Unomi uses *pax-logging-log4j2* as the platform logging implementation. Custom appenders live in `extensions/log4j-extension` as an OSGi *fragment* on pax-logging. Persistence bundles must *never embed* log4j JARs and must not call Log4j APIs at runtime.
+
+===== Version pin vs runtime version
+
+[cols="1,2,2", options="header"]
+|===
+| Pin | Purpose | Notes
+
+| `${log4j.version}` in `pom.xml`
+| Compile-time for `log4j-extension` (`provided`)
+| Managed in `bom/pom.xml`
+
+| pax-logging-log4j2 bundle
+| *Runtime* Log4j inside Karaf
+| Version follows `${karaf.version}` — inspect bundle manifest, do not assume `${log4j.version}` matches
+|===
+
+Example: Karaf 4.4.8 ships pax-logging 2.3.0 (Log4j 2.24.3 inside the bundle). Karaf 4.4.11 ships pax-logging 2.3.3 (Log4j 2.25.4 inside). Unomi `${log4j.version}` 2.24.0 is still valid for fragment compilation if APIs are compatible — but always verify after a <<_upgrade_karaf,Karaf bump>>.
+
+===== Architecture
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+
+package "Karaf runtime" {
+  [pax-logging-log4j2 host] as host
+  [unomi-log4j-extension fragment] as frag
+}
+
+package "Persistence bundles" {
+  [ES core] as escore
+  [OS core] as oscore
+}
+
+frag ..> host : Fragment-Host
+escore ..> host : platform logging
+oscore ..> host : platform logging
+
+note right of escore
+  Do not embed log4j JARs
+  in persistence bundles
+end note
+@enduml
+----
+
+Persistence ES/OS cores must *not* call Log4j APIs at runtime. REST client verbosity is configured in `etc/org.ops4j.pax.logging.cfg` (see <<_upgrade_log4j_rest_client,REST client log levels>>).
+
+[[_upgrade_log4j_rest_client]]
+===== REST client log levels
+
+Elasticsearch and OpenSearch Java clients log through Apache Commons Logging → SLF4J → pax-logging. Do *not* set levels in persistence `start()` methods or persistence CM configs.
+
+*Deploy-time:* `etc/custom.system.properties` (or env vars):
+
+* `org.apache.unomi.elasticsearch.logLevelRestClient` / `UNOMI_ELASTICSEARCH_LOG_LEVEL_REST_CLIENT` (default `ERROR`)
+* `org.apache.unomi.opensearch.logLevelRestClient` / `UNOMI_OPENSEARCH_LOG_LEVEL_REST_CLIENT` (default `ERROR`)
+* `org.apache.unomi.logs.restClientTracer.level` / `UNOMI_LOG_LEVEL_REST_CLIENT_TRACER` — logger `tracer` (curl-style trace; default `ERROR`)
+
+*Runtime:* Karaf shell `log:set org.elasticsearch.client.RestClient DEBUG` (or edit `org.ops4j.pax.logging.cfg` and reload logging).
+
+`etc/org.ops4j.pax.logging.cfg` maps those system properties to `log4j2.logger.*` entries for `org.elasticsearch.client.RestClient`, `org.opensearch.client.RestClient`, and `tracer`.
+
+PR3 embed exclusion removed embedded `log4j-1.2-api`; legacy code that called `org.apache.log4j.Logger` in `ElasticSearchPersistenceServiceImpl.start()` then failed with `ClassNotFoundException` — fixed by moving control to pax-logging (not by re-embedding log4j).
+
+Optional Maven compile deps on log4j in the ES client POM are excluded from embed and unused at runtime. Felix must not see duplicate `Bundle-Activator` entries from embedded `log4j-core`.
+
+===== Git history
+
+* PR2 #795 (`ef10dfe15`): bumped to 2.24.0 — *reverted* after ES OSGi bundle failed feature verify (embedded log4j conflict).
+* PR3 #796 (`a5e6f35d2`): re-applied 2.24.0 *with* persistence embed exclusion.
+* UNOMI-936 (`e9a330052`): log format aligned with Karaf/pax-logging patterns — config in `org.ops4j.pax.logging.cfg`.
+
+Embed exclusion (both persistence cores):
+
+[source,xml]
+----
+<Embed-Dependency>
+    !groupId=org.apache.logging.log4j;artifactId=*,
+    *;scope=compile|runtime
+</Embed-Dependency>
+----
+
+===== Procedure
+
+. Never bump log4j alone without persistence OSGi verification.
+. After a Karaf bump, inspect pax-logging version change — runtime Log4j may jump even if `${log4j.version}` is unchanged.
+. Update `${log4j.version}` in root `pom.xml`.
+. Confirm ES and OS core embed exclusion (see <<_upgrade_elasticsearch,Elasticsearch>> and <<_upgrade_opensearch,OpenSearch>>).
+. Inspect manifests — no `log4j-*.jar` in `Embedded-Artifacts`.
+. `mvn -pl package -DskipTests package` then `./build.sh --ci`.
+
+===== log4j-extension fragment
+
+`extensions/log4j-extension/pom.xml`: `Fragment-Host` = `org.ops4j.pax.logging.pax-logging-log4j2`; `log4j-core` scope = `provided`.
