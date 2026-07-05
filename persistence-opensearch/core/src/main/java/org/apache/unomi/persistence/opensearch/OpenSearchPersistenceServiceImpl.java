@@ -686,6 +686,11 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     @Override
+    public long getAllItemsCount(String itemType, String tenantId) {
+        return queryCount(Query.of(q -> q.matchAll(t -> t)), itemType, tenantId);
+    }
+
+    @Override
     public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy) {
         return getAllItems(clazz, offset, size, sortBy, null);
     }
@@ -1974,12 +1979,16 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     private long queryCount(final Query filter, final String itemType) {
+        return queryCount(filter, itemType, getTenantId());
+    }
+
+    private long queryCount(final Query filter, final String itemType, final String tenantId) {
         return new InClassLoaderExecute<Long>(metricsService, this.getClass().getName() + ".queryCount", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
             protected Long execute(Object... args) throws IOException {
                 CountResponse response = client.count(count -> count.index(getIndexNameForQuery(itemType))
-                        .query(wrapWithTenantAndItemTypeQuery(itemType, filter, getTenantId())));
+                        .query(wrapWithTenantAndItemTypeQuery(itemType, filter, tenantId)));
                 return response.count();
             }
         }.catchingExecuteInClassLoader(true);

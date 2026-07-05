@@ -1359,6 +1359,27 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     }
 
     @Override
+    public long getAllItemsCount(String itemType, String tenantId) {
+        if (itemType == null || tenantId == null) {
+            return 0;
+        }
+
+        LOGGER.debug("Counting all items of type {} for tenant {}", itemType, tenantId);
+
+        Map<String, Item> filteredItems = new HashMap<>();
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            if (item.getItemType().equals(itemType) && tenantId.equals(item.getTenantId())) {
+                String itemKey = entry.getKey();
+                if (isItemAvailableForQuery(itemKey, itemType)) {
+                    filteredItems.put(itemKey, item);
+                }
+            }
+        }
+        return filteredItems.size();
+    }
+
+    @Override
     public Map<String, Double> getSingleValuesMetrics(Condition condition, String[] metrics, String field, String itemType) {
         if (metrics == null || metrics.length == 0 || field == null) {
             return Collections.emptyMap();

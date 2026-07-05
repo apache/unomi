@@ -107,8 +107,8 @@ public class TenantQuotaService {
                 if (shutdownNow) return; // Check shutdown flag during iteration
                 
                 TenantUsage usage = usageCache.get(tenantId);
-                usage.setProfileCount(persistenceService.getAllItemsCount("profile"));
-                usage.setEventCount(persistenceService.getAllItemsCount("event"));
+                usage.setProfileCount(persistenceService.getAllItemsCount("profile", tenantId));
+                usage.setEventCount(persistenceService.getAllItemsCount("event", tenantId));
                 // Note: Storage size calculation would require additional implementation
             }
         } catch (Exception e) {

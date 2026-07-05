@@ -620,6 +620,16 @@ public interface PersistenceService {
     long getAllItemsCount(String itemType);
 
     /**
+     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} for the given tenant.
+     *
+     * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @param tenantId the ID of the tenant whose items should be counted
+     * @return the number of items of the specified type for the given tenant
+     * @see Item Item for a discussion of {@code ITEM_TYPE}
+     */
+    long getAllItemsCount(String itemType, String tenantId);
+
+    /**
      * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} matching the optional specified condition and
      * aggregated according to the specified {@link BaseAggregate}.
      * Also return the global count of document matching the {@code ITEM_TYPE}

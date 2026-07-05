@@ -777,6 +777,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return queryCount(Query.of(q -> q.matchAll(m -> m)), itemType);
     }
 
+    @Override public long getAllItemsCount(String itemType, String tenantId) {
+        return queryCount(Query.of(q -> q.matchAll(m -> m)), itemType, tenantId);
+    }
+
     @Override public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy) {
         return getAllItems(clazz, offset, size, sortBy, null);
     }
@@ -2090,12 +2094,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private long queryCount(final Query query, final String itemType) {
+        return queryCount(query, itemType, getTenantId());
+    }
+
+    private long queryCount(final Query query, final String itemType, final String tenantId) {
         return new InClassLoaderExecute<Long>(metricsService, this.getClass().getName() + ".queryCount", this.bundleContext,
                 this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override protected Long execute(Object... args) throws IOException {
                 CountRequest countRequest = CountRequest.of(
-                        builder -> builder.index(getIndexNameForQuery(itemType)).query(wrapWithTenantAndItemTypeQuery(itemType, query, getTenantId())));
+                        builder -> builder.index(getIndexNameForQuery(itemType)).query(wrapWithTenantAndItemTypeQuery(itemType, query, tenantId)));
                 return esClient.count(countRequest).count();
             }
         }.catchingExecuteInClassLoader(true);
