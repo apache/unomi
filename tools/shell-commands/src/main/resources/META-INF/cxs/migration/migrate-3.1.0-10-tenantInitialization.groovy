@@ -51,7 +51,7 @@ def hashApiKey = { String plainTextKey ->
     return hex.toString()
 }
 
-// Masks a plaintext API key the same way ApiKey.maskPlainTextKey does via SecretHashService: "unomi_v1_****LAST4".
+// Masks a plaintext API key the same way ApiKey.maskPlainTextKey does: "unomi_v1_****LAST4".
 def maskApiKey = { String plainTextKey ->
     String withoutPrefix = plainTextKey.startsWith("unomi_v1_") ? plainTextKey.substring(9) : plainTextKey
     String lastFour = withoutPrefix.length() >= 4 ? withoutPrefix.substring(withoutPrefix.length() - 4) : withoutPrefix

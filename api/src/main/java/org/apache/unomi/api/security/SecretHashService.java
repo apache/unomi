@@ -20,9 +20,8 @@ package org.apache.unomi.api.security;
  * One-way hashing for secrets that must never be stored in plaintext. This is distinct from
  * {@link EncryptionService}, which handles reversible encryption keys.
  * <p>
- * API keys and other machine-generated secrets are hashed with SHA-256 (lowercase hex). Keys are
- * generated with {@link #generateRandomSecret(int)} (256 bits of randomness), so a fast digest is
- * sufficient and safe to run on every HTTP request.
+ * API keys are machine-generated with high entropy and hashed with SHA-256 (lowercase hex) for
+ * storage and online verification.
  */
 public interface SecretHashService {
 
@@ -43,25 +42,4 @@ public interface SecretHashService {
      * @return {@code true} if the secret matches, {@code false} otherwise
      */
     boolean verify(String plaintext, String storedHash);
-
-    /**
-     * Generates cryptographically random secret material as an uppercase hexadecimal string.
-     * Callers add any domain-specific prefix (for example {@code unomi_v1_} for API keys).
-     *
-     * @param randomByteLength number of random bytes to generate before hex encoding
-     * @return uppercase hex string of length {@code randomByteLength * 2}
-     */
-    String generateRandomSecret(int randomByteLength);
-
-    /**
-     * Produces a display-safe masked representation of a plaintext secret, suitable for UIs
-     * and logs. The result is {@code displayPrefix + "****" + lastFour}, where {@code lastFour}
-     * is taken from the secret body after stripping {@code displayPrefix} when present.
-     *
-     * @param plaintext the plaintext secret to mask; may be {@code null}
-     * @param displayPrefix optional prefix shown before the mask (for example {@code unomi_v1_});
-     *                      use an empty string when no prefix is needed
-     * @return the masked value, or {@code null} when {@code plaintext} is {@code null}
-     */
-    String mask(String plaintext, String displayPrefix);
 }

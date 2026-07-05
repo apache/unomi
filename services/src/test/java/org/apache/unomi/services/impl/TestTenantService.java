@@ -131,12 +131,12 @@ public class TestTenantService implements TenantService {
 
     @Override
     public ApiKeyCreationResult generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod) {
-        String plainTextKey = ApiKey.generatePlainTextKey(secretHashService);
+        String plainTextKey = ApiKey.generatePlainTextKey();
 
         ApiKey apiKey = new ApiKey();
         apiKey.setItemId(UUID.randomUUID().toString());
         apiKey.setKeyHash(secretHashService.hash(plainTextKey));
-        apiKey.setMaskedKey(ApiKey.maskPlainTextKey(secretHashService, plainTextKey));
+        apiKey.setMaskedKey(ApiKey.maskPlainTextKey(plainTextKey));
         apiKey.setKeyType(keyType);
         apiKey.setCreationDate(new Date());
         if (validityPeriod != null) {

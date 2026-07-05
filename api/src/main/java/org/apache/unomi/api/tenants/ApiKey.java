@@ -17,8 +17,8 @@
 package org.apache.unomi.api.tenants;
 
 import org.apache.unomi.api.Item;
-import org.apache.unomi.api.security.SecretHashService;
 
+import java.security.SecureRandom;
 import java.util.Date;
 
 /**
@@ -37,6 +37,11 @@ public class ApiKey extends Item {
 
     /** Number of random bytes used when generating a new API key. */
     public static final int KEY_RANDOM_BYTES = 32;
+
+    /** Number of trailing characters shown after the mask marker. */
+    private static final int VISIBLE_SUFFIX_LENGTH = 4;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
      * Enum defining the types of API keys.
@@ -104,24 +109,35 @@ public class ApiKey extends Item {
     }
 
     /**
-     * Generates a new plaintext API key using the shared {@link SecretHashService}.
+     * Generates a new plaintext API key.
      *
-     * @param secretHashService the hash service used to generate random key material
      * @return a newly generated plaintext API key with the {@link #KEY_PREFIX} prefix
      */
-    public static String generatePlainTextKey(SecretHashService secretHashService) {
-        return KEY_PREFIX + secretHashService.generateRandomSecret(KEY_RANDOM_BYTES);
+    public static String generatePlainTextKey() {
+        byte[] randomBytes = new byte[KEY_RANDOM_BYTES];
+        SECURE_RANDOM.nextBytes(randomBytes);
+        StringBuilder hex = new StringBuilder(randomBytes.length * 2);
+        for (byte b : randomBytes) {
+            hex.append(String.format("%02X", b));
+        }
+        return KEY_PREFIX + hex;
     }
 
     /**
      * Produces a display-safe masked representation of a plaintext API key.
      *
-     * @param secretHashService the hash service used for masking
-     * @param plainTextKey the plaintext API key to mask
-     * @return the masked key (e.g. {@code unomi_v1_****ab12})
+     * @param plainTextKey the plaintext API key to mask; may be {@code null}
+     * @return the masked key (e.g. {@code unomi_v1_****ab12}), or {@code null} when {@code plainTextKey} is {@code null}
      */
-    public static String maskPlainTextKey(SecretHashService secretHashService, String plainTextKey) {
-        return secretHashService.mask(plainTextKey, KEY_PREFIX);
+    public static String maskPlainTextKey(String plainTextKey) {
+        if (plainTextKey == null) {
+            return null;
+        }
+        boolean hasPrefix = plainTextKey.startsWith(KEY_PREFIX);
+        String body = hasPrefix ? plainTextKey.substring(KEY_PREFIX.length()) : plainTextKey;
+        int suffixLength = Math.min(VISIBLE_SUFFIX_LENGTH, body.length());
+        String lastVisible = body.substring(body.length() - suffixLength);
+        return (hasPrefix ? KEY_PREFIX : "") + "****" + lastVisible;
     }
 
     /**
@@ -133,7 +149,7 @@ public class ApiKey extends Item {
     }
 
     /**
-     * Sets the salted hash of the API key.
+     * Sets the SHA-256 digest of the API key.
      * @param keyHash the key hash to set
      */
     public void setKeyHash(String keyHash) {

@@ -19,17 +19,13 @@ package org.apache.unomi.services.impl;
 import org.apache.unomi.api.security.SecretHashService;
 
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 import java.util.Base64;
 
 /**
  * Fast {@link SecretHashService} for in-memory test doubles such as {@link TestTenantService}.
- * Uses deterministic hashing so key generation and verification stay consistent without crypto cost.
  * Production-grade hashing is covered by {@link org.apache.unomi.services.security.SecretHashServiceImplTest}.
  */
 public class TestSecretHashService implements SecretHashService {
-
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Override
     public String hash(String plaintext) {
@@ -45,34 +41,5 @@ public class TestSecretHashService implements SecretHashService {
             return false;
         }
         return storedHash.equals(hash(plaintext));
-    }
-
-    @Override
-    public String generateRandomSecret(int randomByteLength) {
-        if (randomByteLength <= 0) {
-            throw new IllegalArgumentException("randomByteLength must be positive");
-        }
-        byte[] randomBytes = new byte[randomByteLength];
-        SECURE_RANDOM.nextBytes(randomBytes);
-        StringBuilder hex = new StringBuilder(randomBytes.length * 2);
-        for (byte b : randomBytes) {
-            hex.append(String.format("%02X", b));
-        }
-        return hex.toString();
-    }
-
-    @Override
-    public String mask(String plaintext, String displayPrefix) {
-        if (plaintext == null) {
-            return null;
-        }
-        String prefix = displayPrefix != null ? displayPrefix : "";
-        String body = prefix.isEmpty() || !plaintext.startsWith(prefix)
-                ? plaintext
-                : plaintext.substring(prefix.length());
-        int suffixLength = Math.min(4, body.length());
-        String lastVisible = body.substring(body.length() - suffixLength);
-        String visiblePrefix = prefix.isEmpty() || !plaintext.startsWith(prefix) ? "" : prefix;
-        return visiblePrefix + "****" + lastVisible;
     }
 }

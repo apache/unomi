@@ -21,20 +21,14 @@ import org.apache.unomi.api.security.SecretHashService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 
 /**
  * Default {@link SecretHashService} implementation using SHA-256 for one-way secret storage.
  */
 public class SecretHashServiceImpl implements SecretHashService {
 
-    /** Digest algorithm for stored API keys and other high-entropy secrets. */
+    /** Digest algorithm for stored API keys. */
     public static final String HASH_ALGORITHM = "SHA-256";
-
-    /** Number of trailing characters shown after the mask marker. */
-    public static final int DEFAULT_VISIBLE_SUFFIX_LENGTH = 4;
-
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     @Override
     public String hash(String plaintext) {
@@ -52,34 +46,6 @@ public class SecretHashServiceImpl implements SecretHashService {
         return MessageDigest.isEqual(
                 sha256Hex(plaintext).getBytes(StandardCharsets.UTF_8),
                 storedHash.getBytes(StandardCharsets.UTF_8));
-    }
-
-    @Override
-    public String generateRandomSecret(int randomByteLength) {
-        if (randomByteLength <= 0) {
-            throw new IllegalArgumentException("randomByteLength must be positive");
-        }
-        byte[] randomBytes = new byte[randomByteLength];
-        SECURE_RANDOM.nextBytes(randomBytes);
-        StringBuilder hex = new StringBuilder(randomBytes.length * 2);
-        for (byte b : randomBytes) {
-            hex.append(String.format("%02X", b));
-        }
-        return hex.toString();
-    }
-
-    @Override
-    public String mask(String plaintext, String displayPrefix) {
-        if (plaintext == null) {
-            return null;
-        }
-        String prefix = displayPrefix != null ? displayPrefix : "";
-        boolean hasPrefix = !prefix.isEmpty() && plaintext.startsWith(prefix);
-        String body = hasPrefix ? plaintext.substring(prefix.length()) : plaintext;
-        int suffixLength = Math.min(DEFAULT_VISIBLE_SUFFIX_LENGTH, body.length());
-        String lastVisible = body.substring(body.length() - suffixLength);
-        String visiblePrefix = hasPrefix ? prefix : "";
-        return visiblePrefix + "****" + lastVisible;
     }
 
     private String sha256Hex(String plaintext) {
