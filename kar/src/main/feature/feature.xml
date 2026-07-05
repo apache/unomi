@@ -39,8 +39,8 @@
         <feature>feature</feature>
         <feature>spifly</feature>
         <feature>shell-compat</feature>
-        <feature>jackson</feature>
-        <feature>jackson-jaxrs</feature>
+        <feature version="${jackson.version}">jackson</feature>
+        <feature version="${jackson.version}">jackson-jaxrs</feature>
         <bundle>mvn:commons-collections/commons-collections/${commons-collections.version}</bundle>
         <bundle>mvn:org.apache.commons/commons-lang3/${commons-lang3.version}</bundle>
         <bundle>mvn:commons-beanutils/commons-beanutils/${commons-beanutils.version}</bundle>
