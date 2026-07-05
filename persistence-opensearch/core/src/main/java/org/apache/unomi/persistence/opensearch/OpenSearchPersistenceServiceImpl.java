@@ -159,7 +159,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     private MetricsService metricsService;
     private boolean useBatchingForSave = false;
     private boolean useBatchingForUpdate = true;
-    private String logLevelRestClient = "ERROR";
     private boolean alwaysOverwrite = true;
     private boolean aggQueryThrowOnMissingDocs = false;
     private Integer aggQueryMaxResponseSizeHttp = null;
@@ -352,10 +351,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     public void setAlwaysOverwrite(boolean alwaysOverwrite) {
         this.alwaysOverwrite = alwaysOverwrite;
-    }
-
-    public void setLogLevelRestClient(String logLevelRestClient) {
-        this.logLevelRestClient = logLevelRestClient;
     }
 
     public void setTaskWaitingTimeout(String taskWaitingTimeout) {
@@ -590,7 +585,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         propertyMappings.put("aggQueryThrowOnMissingDocs", ConfigurationUpdateHelper.booleanProperty(this::setAggQueryThrowOnMissingDocs));
 
         // String properties
-        propertyMappings.put("logLevelRestClient", ConfigurationUpdateHelper.stringProperty(this::setLogLevelRestClient));
         propertyMappings.put("clientSocketTimeout", ConfigurationUpdateHelper.stringProperty(this::setClientSocketTimeout));
         propertyMappings.put("taskWaitingTimeout", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingTimeout));
         propertyMappings.put("taskWaitingPollingInterval", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingPollingInterval));

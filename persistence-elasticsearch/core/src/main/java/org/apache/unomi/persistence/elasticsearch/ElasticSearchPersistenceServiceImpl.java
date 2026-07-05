@@ -61,7 +61,6 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
-import org.apache.log4j.Level;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
@@ -166,7 +165,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private MetricsService metricsService;
     private boolean useBatchingForSave = false;
     private boolean useBatchingForUpdate = true;
-    private String logLevelRestClient = "ERROR";
     private boolean alwaysOverwrite = true;
     private boolean aggQueryThrowOnMissingDocs = false;
     private Integer aggQueryMaxResponseSizeHttp = null;
@@ -370,10 +368,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.alwaysOverwrite = alwaysOverwrite;
     }
 
-    public void setLogLevelRestClient(String logLevelRestClient) {
-        this.logLevelRestClient = logLevelRestClient;
-    }
-
     public void setTaskWaitingTimeout(String taskWaitingTimeout) {
         if (StringUtils.isNumeric(taskWaitingTimeout)) {
             this.taskWaitingTimeout = Integer.parseInt(taskWaitingTimeout);
@@ -456,15 +450,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public void start() throws Exception {
-
-        // Work around to avoid ES Logs regarding the deprecated [ignore_throttled] parameter
-        try {
-            Level lvl = Level.toLevel(logLevelRestClient, Level.ERROR);
-            //TODO ensure this is necessary
-            org.apache.log4j.Logger.getLogger("org.elasticsearch.client.RestClient").setLevel(lvl);
-        } catch (Exception e) {
-            // Never fail because of the set of the logger
-        }
 
         // on startup
         new InClassLoaderExecute<>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
@@ -698,7 +683,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         propertyMappings.put("aggQueryThrowOnMissingDocs", ConfigurationUpdateHelper.booleanProperty(this::setAggQueryThrowOnMissingDocs));
 
         // String properties
-        propertyMappings.put("logLevelRestClient", ConfigurationUpdateHelper.stringProperty(this::setLogLevelRestClient));
         propertyMappings.put("clientSocketTimeout", ConfigurationUpdateHelper.stringProperty(this::setClientSocketTimeout));
         propertyMappings.put("taskWaitingTimeout", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingTimeout));
         propertyMappings.put("taskWaitingPollingInterval", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingPollingInterval));

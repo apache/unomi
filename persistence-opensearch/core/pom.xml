@@ -157,6 +157,17 @@
                             org.apache.avalon.framework.logger;resolution:=optional,
                             org.apache.log;resolution:=optional,
                             org.brotli.dec;resolution:=optional,
+                            com.aayushatharva.brotli4j.decoder;resolution:=optional,
+                            com.aayushatharva.brotli4j.encoder;resolution:=optional,
+                            com.github.luben.zstd;resolution:=optional,
+                            io.netty.buffer;resolution:=optional,
+                            io.netty.channel;resolution:=optional,
+                            io.netty.util;resolution:=optional,
+                            javax.xml.datatype;resolution:=optional,
+                            javax.xml.namespace;resolution:=optional,
+                            javax.xml.transform.dom;resolution:=optional,
+                            org.newsclub.net.unix;resolution:=optional,
+                            org.apache.logging.log4j*;resolution:=optional,
                             org.conscrypt;resolution:=optional,
                             org.glassfish.hk2.osgiresourcelocator;resolution:=optional,
                             org.ietf.jgss;resolution:=optional,
@@ -172,7 +183,10 @@
                             org.opensearch.index.query.*;version="${opensearch.version}",
                             org.apache.unomi.persistence.opensearch;version="${project.version}"
                         </Export-Package>
-                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Embed-Dependency>
+                            !groupId=org.apache.logging.log4j;artifactId=*,
+                            *;scope=compile|runtime
+                        </Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
                         <Provide-Capability>
                             osgi.service;objectClass:List&lt;String&gt;="org.apache.unomi.persistence.spi.PersistenceService",
