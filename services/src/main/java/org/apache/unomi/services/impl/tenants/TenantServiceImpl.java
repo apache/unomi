@@ -100,9 +100,16 @@ public class TenantServiceImpl implements TenantService {
             // Save tenant first to ensure it exists
             persistenceService.save(tenant);
 
-            // Generate both public and private API keys
-            generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
-            generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+            try {
+                // Generate both public and private API keys
+                generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
+                generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+            } catch (RuntimeException e) {
+                // Roll back rather than leave a partially-initialized tenant (e.g. missing its
+                // private key) persisted after a failure partway through key generation.
+                persistenceService.remove(tenant.getItemId(), Tenant.class);
+                throw e;
+            }
 
             persistenceService.refreshIndex(Tenant.class);
 
@@ -127,7 +134,7 @@ public class TenantServiceImpl implements TenantService {
 
             ApiKey apiKey = new ApiKey();
             apiKey.setItemId(UUID.randomUUID().toString());
-            apiKey.setKeyHash(secretHashService.hash(plainTextKey));
+            apiKey.setKeyHash(secretHashService.hashHighEntropySecret(plainTextKey));
             apiKey.setMaskedKey(ApiKey.maskPlainTextKey(secretHashService, plainTextKey));
             apiKey.setKeyType(keyType);
             apiKey.setCreationDate(new Date());
@@ -207,7 +214,7 @@ public class TenantServiceImpl implements TenantService {
 
     private boolean matchesKey(ApiKey apiKey, String plainTextKey) {
         return plainTextKey != null && apiKey.getKeyHash() != null
-                && secretHashService.verify(plainTextKey, apiKey.getKeyHash());
+                && secretHashService.verifyHighEntropySecret(plainTextKey, apiKey.getKeyHash());
     }
 
     @Override
@@ -226,14 +233,7 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     public Tenant getTenantByApiKey(String apiKey) {
-        return executionContextManager.executeAsSystem(() -> {
-            List<Tenant> tenants = persistenceService.getAllItems(Tenant.class);
-            return tenants.stream()
-                .filter(tenant -> tenant.getApiKeys() != null && tenant.getApiKeys().stream()
-                    .anyMatch(key -> matchesKey(key, apiKey)))
-                .findFirst()
-                .orElse(null);
-        });
+        return getTenantByApiKey(apiKey, null);
     }
 
     @Override
@@ -242,7 +242,7 @@ public class TenantServiceImpl implements TenantService {
             List<Tenant> tenants = persistenceService.getAllItems(Tenant.class);
             return tenants.stream()
                 .filter(tenant -> tenant.getApiKeys() != null && tenant.getApiKeys().stream()
-                    .anyMatch(key -> matchesKey(key, apiKey) && key.getKeyType() == keyType))
+                    .anyMatch(key -> (keyType == null || key.getKeyType() == keyType) && matchesKey(key, apiKey)))
                 .findFirst()
                 .orElse(null);
         });

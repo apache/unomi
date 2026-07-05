@@ -48,6 +48,22 @@ public class TestSecretHashService implements SecretHashService {
     }
 
     @Override
+    public String hashHighEntropySecret(String plaintext) {
+        if (plaintext == null) {
+            throw new IllegalArgumentException("plaintext cannot be null");
+        }
+        return "test:" + Base64.getEncoder().encodeToString(plaintext.getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Override
+    public boolean verifyHighEntropySecret(String plaintext, String storedHash) {
+        if (plaintext == null || storedHash == null) {
+            return false;
+        }
+        return storedHash.equals(hashHighEntropySecret(plaintext));
+    }
+
+    @Override
     public String generateRandomSecret(int randomByteLength) {
         if (randomByteLength <= 0) {
             throw new IllegalArgumentException("randomByteLength must be positive");

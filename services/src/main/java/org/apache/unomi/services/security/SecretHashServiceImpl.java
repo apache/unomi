@@ -20,6 +20,7 @@ import org.apache.unomi.api.security.SecretHashService;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -27,28 +28,49 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 
 /**
- * Default {@link SecretHashService} implementation using PBKDF2-HMAC-SHA512.
- * Domain-specific callers (for example {@link org.apache.unomi.api.tenants.ApiKey})
- * use this service for one-way hashing while applying their own key format rules.
+ * Default {@link SecretHashService} implementation.
+ * API keys use fast SHA-256 ({@link #hashHighEntropySecret(String)}); future password hashing
+ * uses PBKDF2-HMAC-SHA512 ({@link #hash(String)}).
  */
 public class SecretHashServiceImpl implements SecretHashService {
 
-    /** PBKDF2 algorithm used for all one-way secret hashes. */
+    /** PBKDF2 algorithm used for low-entropy secrets (passwords). */
     public static final String PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA512";
 
-    /** Default iteration count embedded in stored hashes. */
+    /** Default PBKDF2 iteration count embedded in stored password hashes. */
     public static final int DEFAULT_ITERATIONS = 600_000;
 
-    /** Random salt length in bytes. */
+    /** Random salt length in bytes for PBKDF2. */
     public static final int SALT_LENGTH_BYTES = 16;
 
-    /** Derived key length in bits. */
+    /** Derived key length in bits for PBKDF2. */
     public static final int HASH_LENGTH_BITS = 256;
+
+    /** SHA-256 digest algorithm for high-entropy API keys and tokens. */
+    public static final String HIGH_ENTROPY_HASH_ALGORITHM = "SHA-256";
 
     /** Number of trailing characters shown after the mask marker. */
     public static final int DEFAULT_VISIBLE_SUFFIX_LENGTH = 4;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    @Override
+    public String hashHighEntropySecret(String plaintext) {
+        if (plaintext == null) {
+            throw new IllegalArgumentException("plaintext cannot be null");
+        }
+        return sha256Hex(plaintext);
+    }
+
+    @Override
+    public boolean verifyHighEntropySecret(String plaintext, String storedHash) {
+        if (plaintext == null || storedHash == null) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                sha256Hex(plaintext).getBytes(StandardCharsets.UTF_8),
+                storedHash.getBytes(StandardCharsets.UTF_8));
+    }
 
     @Override
     public String hash(String plaintext) {
@@ -102,13 +124,26 @@ public class SecretHashServiceImpl implements SecretHashService {
             return null;
         }
         String prefix = displayPrefix != null ? displayPrefix : "";
-        String body = prefix.isEmpty() || !plaintext.startsWith(prefix)
-                ? plaintext
-                : plaintext.substring(prefix.length());
+        boolean hasPrefix = !prefix.isEmpty() && plaintext.startsWith(prefix);
+        String body = hasPrefix ? plaintext.substring(prefix.length()) : plaintext;
         int suffixLength = Math.min(DEFAULT_VISIBLE_SUFFIX_LENGTH, body.length());
         String lastVisible = body.substring(body.length() - suffixLength);
-        String visiblePrefix = prefix.isEmpty() || !plaintext.startsWith(prefix) ? "" : prefix;
+        String visiblePrefix = hasPrefix ? prefix : "";
         return visiblePrefix + "****" + lastVisible;
+    }
+
+    private String sha256Hex(String plaintext) {
+        try {
+            byte[] digest = MessageDigest.getInstance(HIGH_ENTROPY_HASH_ALGORITHM)
+                    .digest(plaintext.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("Unable to compute SHA-256 hash", e);
+        }
     }
 
     private byte[] pbkdf2(char[] password, byte[] salt, int iterations) {

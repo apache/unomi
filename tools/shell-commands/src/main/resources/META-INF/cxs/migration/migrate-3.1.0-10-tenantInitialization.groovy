@@ -1,14 +1,13 @@
 import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.MigrationUtils
-import javax.crypto.SecretKeyFactory
-import javax.crypto.spec.PBEKeySpec
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Base64
 import java.util.UUID
 import static org.apache.unomi.shell.migration.service.MigrationConfig.*
 
@@ -36,20 +35,20 @@ String tenantId = context.getConfigString(TENANT_ID)
 ZonedDateTime unifiedDate = ZonedDateTime.now()
 String isoDate = unifiedDate.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
-// Hashes a plaintext API key the same way SecretHashServiceImpl does (PBKDF2WithHmacSHA512,
-// 600000 iterations, format "iterations:base64(salt):base64(hash)") so it can be verified by
-// TenantServiceImpl after migration without ever persisting the plaintext value (see UNOMI-938).
+// Hashes a plaintext API key the same way SecretHashServiceImpl.hashHighEntropySecret does
+// (SHA-256, lowercase hex) so it can be verified by TenantServiceImpl after migration without
+// ever persisting the plaintext value (see UNOMI-938).
+//
+// IMPORTANT: this script cannot depend on the `services` bundle, so the algorithm must match
+// SecretHashServiceImpl.HIGH_ENTROPY_HASH_ALGORITHM ("SHA-256") and UTF-8 encoding.
 def hashApiKey = { String plainTextKey ->
-    int iterations = 600_000
-    int saltLengthBytes = 16
-    int hashLengthBits = 256
-    SecureRandom rng = new SecureRandom()
-    byte[] salt = new byte[saltLengthBytes]
-    rng.nextBytes(salt)
-    PBEKeySpec spec = new PBEKeySpec(plainTextKey.toCharArray(), salt, iterations, hashLengthBits)
-    SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA512")
-    byte[] hash = factory.generateSecret(spec).getEncoded()
-    return "${iterations}:${Base64.encoder.encodeToString(salt)}:${Base64.encoder.encodeToString(hash)}"
+    byte[] digest = MessageDigest.getInstance("SHA-256")
+            .digest(plainTextKey.getBytes(StandardCharsets.UTF_8))
+    StringBuilder hex = new StringBuilder(digest.length * 2)
+    for (byte b : digest) {
+        hex.append(String.format("%02x", b))
+    }
+    return hex.toString()
 }
 
 // Masks a plaintext API key the same way ApiKey.maskPlainTextKey does via SecretHashService: "unomi_v1_****LAST4".

@@ -141,14 +141,35 @@ class SecretHashServiceImplTest {
     @Test
     void apiKeyHashAndVerifyRoundTrip() {
         String key = ApiKey.generatePlainTextKey(service);
-        String stored = service.hash(key);
-        assertTrue(service.verify(key, stored));
-        assertFalse(service.verify(key + "x", stored));
+        String stored = service.hashHighEntropySecret(key);
+        assertTrue(service.verifyHighEntropySecret(key, stored));
+        assertFalse(service.verifyHighEntropySecret(key + "x", stored));
     }
 
     @Test
     void hashEmbedsIterationCountForFutureUpgrades() {
         String stored = service.hash("upgrade-test");
         assertTrue(stored.startsWith(SecretHashServiceImpl.DEFAULT_ITERATIONS + ":"));
+    }
+
+    @Test
+    void hashHighEntropySecretIsDeterministic() {
+        assertEquals(service.hashHighEntropySecret("same-secret"), service.hashHighEntropySecret("same-secret"));
+    }
+
+    @Test
+    void hashHighEntropySecretDiffersForDifferentInputs() {
+        assertNotEquals(service.hashHighEntropySecret("secret-a"), service.hashHighEntropySecret("secret-b"));
+    }
+
+    @Test
+    void hashHighEntropySecretRejectsNullPlaintext() {
+        assertThrows(IllegalArgumentException.class, () -> service.hashHighEntropySecret(null));
+    }
+
+    @Test
+    void highEntropyHashDiffersFromPasswordHash() {
+        String plaintext = "some-api-key";
+        assertNotEquals(service.hashHighEntropySecret(plaintext), service.hash(plaintext));
     }
 }

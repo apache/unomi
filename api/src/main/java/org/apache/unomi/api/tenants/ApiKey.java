@@ -54,7 +54,7 @@ public class ApiKey extends Item {
     }
 
     /**
-     * The salted hash of the API key, in the format "iterations:base64(salt):base64(hash)".
+     * SHA-256 hex digest of the API key ({@link org.apache.unomi.api.security.SecretHashService#hashHighEntropySecret(String)}).
      * The plaintext key is never persisted; it is only returned once at creation time.
      */
     private String keyHash;
@@ -125,8 +125,8 @@ public class ApiKey extends Item {
     }
 
     /**
-     * Gets the salted hash of the API key.
-     * @return the key hash, in the format "iterations:base64(salt):base64(hash)"
+     * Gets the SHA-256 digest of the API key.
+     * @return the key hash as lowercase hex
      */
     public String getKeyHash() {
         return keyHash;

@@ -17,18 +17,42 @@
 package org.apache.unomi.api.security;
 
 /**
- * One-way hashing for secrets that must never be stored in plaintext (API keys, profile
- * passwords, tokens, and similar values). This is distinct from {@link EncryptionService},
- * which handles reversible encryption keys.
+ * One-way hashing for secrets that must never be stored in plaintext. This is distinct from
+ * {@link EncryptionService}, which handles reversible encryption keys.
  * <p>
- * Hashes use PBKDF2-HMAC-SHA512 with a per-value random salt. The persisted form is
- * {@code iterations:base64(salt):base64(hash)} so future algorithm or iteration-count
- * changes remain backward compatible at verification time.
+ * Two strategies are provided:
+ * <ul>
+ *   <li>{@link #hashHighEntropySecret(String)} / {@link #verifyHighEntropySecret(String, String)}
+ *       — fast SHA-256 for machine-generated secrets such as API keys (256 bits of randomness).
+ *       Safe to run on every HTTP request.</li>
+ *   <li>{@link #hash(String)} / {@link #verify(String, String)} — slow PBKDF2-HMAC-SHA512 with
+ *       per-value salt for low-entropy human secrets such as passwords. Not intended for per-request
+ *       API key verification.</li>
+ * </ul>
  */
 public interface SecretHashService {
 
     /**
-     * Hashes a plaintext secret for storage. Each call generates a new random salt.
+     * Hashes a high-entropy secret (API keys, tokens) with SHA-256 for storage and online verification.
+     *
+     * @param plaintext the secret to hash; must not be {@code null}
+     * @return lowercase hex-encoded SHA-256 digest
+     * @throws IllegalArgumentException if {@code plaintext} is {@code null}
+     */
+    String hashHighEntropySecret(String plaintext);
+
+    /**
+     * Verifies a high-entropy secret against a stored SHA-256 digest using a constant-time comparison.
+     *
+     * @param plaintext the plaintext secret to verify
+     * @param storedHash the stored digest, as produced by {@link #hashHighEntropySecret(String)}
+     * @return {@code true} if the secret matches, {@code false} otherwise
+     */
+    boolean verifyHighEntropySecret(String plaintext, String storedHash);
+
+    /**
+     * Hashes a low-entropy secret for storage using PBKDF2-HMAC-SHA512. Each call generates a new
+     * random salt. Do not use for API keys — use {@link #hashHighEntropySecret(String)} instead.
      *
      * @param plaintext the secret to hash; must not be {@code null}
      * @return the salted hash, in the format {@code iterations:base64(salt):base64(hash)}
@@ -37,11 +61,10 @@ public interface SecretHashService {
     String hash(String plaintext);
 
     /**
-     * Verifies a plaintext secret against a previously computed hash, using a constant-time
-     * comparison to reduce timing-attack risk.
+     * Verifies a low-entropy secret against a PBKDF2 hash produced by {@link #hash(String)}.
      *
      * @param plaintext the plaintext secret to verify
-     * @param storedHash the stored hash to verify against, as produced by {@link #hash(String)}
+     * @param storedHash the stored hash to verify against
      * @return {@code true} if the secret matches the hash, {@code false} otherwise
      */
     boolean verify(String plaintext, String storedHash);

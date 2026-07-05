@@ -42,6 +42,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -78,7 +80,7 @@ public class TenantServiceImplTest {
 
         // Treat the "hash" as the plaintext key itself, so tests can assert on plain values
         // without depending on the real PBKDF2 implementation.
-        when(secretHashService.verify(anyString(), anyString()))
+        when(secretHashService.verifyHighEntropySecret(anyString(), anyString()))
                 .thenAnswer(invocation -> Objects.equals(invocation.getArgument(0), invocation.getArgument(1)));
     }
 
@@ -121,6 +123,41 @@ public class TenantServiceImplTest {
         assertEquals("tenant-with-keys", found.getItemId(), "Should find tenant with matching typed API key");
         assertNull(tenantService.getTenantByApiKey("valid-key", ApiKey.ApiKeyType.PUBLIC),
                 "Key type mismatch should return null");
+    }
+
+    @Test
+    public void getTenantByApiKeyRejectsWhenHighEntropyVerifyFails() {
+        Tenant tenant = new Tenant();
+        tenant.setItemId("tenant-with-keys");
+        ApiKey apiKey = new ApiKey();
+        apiKey.setKeyHash("stored-hash");
+        apiKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
+        tenant.setApiKeys(new ArrayList<>(List.of(apiKey)));
+
+        when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenant));
+        when(secretHashService.verifyHighEntropySecret("wrong-key", "stored-hash")).thenReturn(false);
+
+        assertNull(tenantService.getTenantByApiKey("wrong-key"),
+                "A key that fails verification should be rejected");
+        verify(secretHashService).verifyHighEntropySecret("wrong-key", "stored-hash");
+    }
+
+    @Test
+    public void getTenantByApiKeyAcceptsWhenHighEntropyVerifySucceeds() {
+        Tenant tenant = new Tenant();
+        tenant.setItemId("tenant-with-keys");
+        ApiKey apiKey = new ApiKey();
+        apiKey.setKeyHash("stored-hash");
+        apiKey.setKeyType(ApiKey.ApiKeyType.PUBLIC);
+        tenant.setApiKeys(new ArrayList<>(List.of(apiKey)));
+
+        when(persistenceService.getAllItems(Tenant.class)).thenReturn(List.of(tenant));
+        when(secretHashService.verifyHighEntropySecret("candidate-key", "stored-hash")).thenReturn(true);
+
+        Tenant found = tenantService.getTenantByApiKey("candidate-key");
+        assertEquals("tenant-with-keys", found.getItemId(),
+                "A verified key should resolve to its tenant");
+        verify(secretHashService).verifyHighEntropySecret("candidate-key", "stored-hash");
     }
 
     @Test
