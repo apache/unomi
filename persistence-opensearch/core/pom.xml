@@ -156,6 +156,8 @@
                             jdk.net;resolution:=optional,
                             org.apache.avalon.framework.logger;resolution:=optional,
                             org.apache.log;resolution:=optional,
+                            org.apache.commons.compress.compressors;resolution:=optional,
+                            org.apache.commons.compress.utils;resolution:=optional,
                             org.brotli.dec;resolution:=optional,
                             com.aayushatharva.brotli4j.decoder;resolution:=optional,
                             com.aayushatharva.brotli4j.encoder;resolution:=optional,
