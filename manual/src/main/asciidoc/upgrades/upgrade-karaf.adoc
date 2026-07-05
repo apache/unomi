@@ -1,0 +1,301 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_upgrade_karaf]]
+==== Upgrading Apache Karaf
+
+Karaf upgrades touch the *whole distribution*, not a single module. Scope depends on whether you are doing a *major*, *minor*, or *patch* Karaf bump.
+
+TIP: JIRA context for prerequisites (Cellar removal, CXF 3.x ceiling, UNOMI-876 version matrix): <<_upgrade_jira_reference,JIRA reference>>.
+
+[cols="1,1,2", options="header"]
+|===
+| Bump type | Example | Typical Unomi effort
+
+| *Major*
+| 4.2.15 → 4.4.8 (UNOMI-876)
+| JDK, feature namespace, WAB/Pax Web, ~187 POMs, CXF/Jackson/Jetty, full IT matrix
+
+| *Minor / patch*
+| 4.4.8 → 4.4.11 (UNOMI-875 PR3)
+| `karaf.version`, cascade library pins, compile fallout (e.g. slf4j), feature verify, IT probe fixes
+
+| *Config-only*
+| UNOMI-919 startFeatures feature
+| Feature graph / cfg — not a Karaf version bump
+|===
+
+
+===== Choosing major vs patch Karaf path
+
+[plantuml]
+----
+@startuml
+skinparam activityBackgroundColor #F8F8F8
+
+start
+:New target Karaf version;
+if (Crossing Karaf minor/major line?
+e.g. 4.2 → 4.4) then (yes)
+  :Use UNOMI-876 major template;
+  :Bump java.version to 17;
+  :feature.xml v1.6 + specs repo;
+  :WAB → Pax Web 8 WebConfig;
+  :~187 POMs → provided;
+  :Full CXF/Jackson/Jetty alignment;
+else (no)
+  :Use UNOMI-875 PR3 patch template;
+  :Bump karaf.version + setenv.sh;
+  :Compare feature XML cascade only;
+  :Fix compile fallout
+(e.g. slf4j-api);
+  :Pin jackson + jetty versions;
+endif
+:Feature verify
+mvn -pl package -DskipTests package;
+:./build.sh --ci;
+stop
+@enduml
+----
+
+===== Framework cascade from Karaf feature XMLs
+
+When `${karaf.version}` changes, inspect upstream feature repositories before merging — patch releases move Pax Web, pax-logging, and Jackson specs independently of Unomi code.
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+
+rectangle "Karaf (karaf.version) features" {
+  component "standard/features" as std
+  component "specs/features" as specs
+  component "framework/features" as fw
+}
+
+component "Pax Web version" as paxweb
+component "Jetty bundles" as jetty
+component "pax-logging-log4j2" as plog
+component "jackson feature versions" as jackson
+component "CXF RELEASE pointer" as cxfref
+
+component "Unomi pom.xml" as pom
+component "kar/feature.xml" as feat
+component "setenv.sh" as env
+
+std --> paxweb
+paxweb --> jetty
+fw --> plog
+specs --> jackson
+std --> cxfref
+
+jetty ..> pom : (jetty.version)
+jackson ..> pom : (jackson.version)
+jackson ..> feat : version-pinned features
+cxfref ..> feat : (cxf.version) repo
+pom --> env : KARAF_VERSION
+plog ..> pom : runtime Log4j ≠ (log4j.version)
+@enduml
+----
+
+===== Framework cascade (every Karaf bump)
+
+Even patch releases can move platform libraries inside Karaf feature XMLs:
+
+[cols="1,1,1,2", options="header"]
+|===
+| Component | 4.4.8 example | 4.4.11 example | Unomi action
+
+| Pax Web
+| 8.0.33
+| 8.0.35
+| Align `${jetty.version}` — see <<_upgrade_cxf_jackson_jetty,CXF/Jackson/Jetty>>
+
+| pax-logging
+| 2.3.0
+| 2.3.3
+| Runtime Log4j version changes — see <<_upgrade_log4j,Log4j>>
+
+| Jackson specs
+| single 2.18.2 feature
+| 2.18.3 *and* 2.21.2 features
+| Pin `${jackson.version}` on `<feature>` — see <<_upgrade_cxf_jackson_jetty,CXF/Jackson/Jetty>>
+
+| CXF
+| RELEASE pointer
+| RELEASE pointer
+| Keep `${cxf.version}` repo override (UNOMI-899)
+|===
+
+*Compare feature XMLs before merging:*
+
+[source,bash]
+----
+KVER=4.4.11
+for repo in framework standard specs enterprise; do
+  echo "=== $repo ==="
+  curl -sL "https://repo1.maven.org/maven2/org/apache/karaf/features/${repo}/${KVER}/${repo}-${KVER}-features.xml" \
+    | rg -i 'pax-web|pax-logging|jackson-core|jetty-server' | head -8
+done
+----
+
+===== Version pins to update
+
+*Required (every Karaf bump):*
+
+[cols="1,2", options="header"]
+|===
+| File | Property / variable
+
+| Root `pom.xml`
+| `<karaf.version>`
+
+| `setenv.sh`
+| `export KARAF_VERSION=…`
+|===
+
+Everything else should reference `${karaf.version}`: `bom/pom.xml`, `kar/pom.xml`, `package/pom.xml`, `distribution/pom.xml`, `itests/pom.xml`, extension and GraphQL Karaf feature modules.
+
+Search for hardcoded old versions:
+
+[source,bash]
+----
+rg '4\.4\.[0-9]+' --glob '!**/target/**' pom.xml setenv.sh package kar itests extensions graphql
+----
+
+*Co-bump after comparing Karaf feature XMLs (patch/minor):*
+
+* `${jetty.version}` — match Pax Web Jetty bundles
+* `${jackson.version}` — must exist as a Karaf `specs` feature version; pin in `feature.xml`
+* `${cxf.version}` — only if REST/Karaf release notes require it (major jumps usually do)
+
+*Co-bump on major Karaf migration only:*
+
+* `java.version` — see <<_upgrade_java,JDK upgrade>>
+* Feature namespace (`v1.6.0`), specs repository, WAB servlet wiring — UNOMI-876
+
+===== Prerequisites (JIRA)
+
+Karaf bumps were blocked for years until clustering moved off Karaf Cellar:
+
+* https://issues.apache.org/jira/browse/UNOMI-877[UNOMI-877] — replace Cellar/Hazelcast with PersistenceService-backed sync (required before 4.3+).
+* https://issues.apache.org/jira/browse/KARAF-7526[KARAF-7526] — Cellar incompatibility cited in https://issues.apache.org/jira/browse/UNOMI-526[UNOMI-526] and https://issues.apache.org/jira/browse/UNOMI-829[UNOMI-829].
+* https://issues.apache.org/jira/browse/CXF-8593[CXF-8593] — blocked Karaf 4.3 / Jackson 2.12 alignment until the 4.4 + CXF 3.6 path.
+
+Do not target CXF 4.x for Unomi on Karaf — https://issues.apache.org/jira/browse/UNOMI-876[UNOMI-876] notes OSGi support was removed in CXF 4.
+
+===== Major Karaf migration (UNOMI-876 template)
+
+Use this checklist when crossing Karaf minor/major lines (e.g. 4.2 → 4.4):
+
+. Read Karaf release notes and Java requirement.
+. Bump `${karaf.version}` + `java.version` + `setenv.sh`.
+. Update `kar/src/main/feature/feature.xml`:
+** xmlns features `v1.6.0`
+** `<repository>mvn:org.apache.karaf.features/specs/${karaf.version}/xml/features</repository>`
+** CXF repo + versioned `cxf-jaxrs`
+** Version-pinned `jackson` / `jackson-jaxrs`
+. Migrate WAB servlets to Pax Web 8 programmatic registration (`WebConfig.java`).
+. Mass POM update: platform deps → `scope=provided` (~187 modules in UNOMI-876).
+. Update `package/pom.xml` boot/verify feature lists if graph changed (UNOMI-919: `unomi-startup` feature).
+. IT harness: Pax Exam `instanceStartupTimeout`, Jacoco, `javase` in verify config.
+. Full <<_upgrade_cxf_jackson_jetty,CXF/Jackson/Jetty>> alignment.
+. `./build.sh --ci`
+
+===== Minor / patch Karaf migration (UNOMI-875 PR3 template)
+
+Use when staying on the same Karaf line (e.g. 4.4.8 → 4.4.11):
+
+. Bump `${karaf.version}` and `setenv.sh` only as the first commit slice.
+. Run framework cascade comparison (Pax Web, pax-logging, Jackson specs).
+. Update `${jetty.version}` and `${jackson.version}` + pin Jackson features in `feature.xml`.
+. Compile all modules — fix missing `provided` deps (PR3: `slf4j-api` in `lifecycle-watcher`):
+
+[source,bash]
+----
+mvn -DskipTests compile 2>&1 | rg 'cannot find symbol|package .* does not exist|slf4j'
+----
+
+. Feature verify (mandatory):
+
+[source,bash]
+----
+mvn -pl extensions/groovy-actions/karaf-kar -am -DskipTests package
+mvn -pl package -DskipTests package
+mvn -pl kar,distribution -DskipTests package
+----
+
+. Check <<_upgrade_integration_tests,Integration tests>> for probe static-init / Docker image issues.
+. `./build.sh --ci`
+
+Do **not** skip cascade library alignment — patch Karaf releases have changed Pax Web, pax-logging, and Jackson specs without changing Unomi application code.
+
+===== Lessons from past upgrades
+
+*UNOMI-216 (`b873b35a2`) — Karaf 4.1.7:* `${env:…}` placeholders in `custom.system.properties` need Karaf >= 4.1.6. Smoke-test property interpolation after any bump.
+
+*UNOMI-491 (`dda24b66e`) — Karaf 4.2.11:* Moved Jackson YAML out of WAB; reactivated features in package verify. Do not embed platform Jackson in web modules.
+
+*UNOMI-876 (`da9c57fd2`) — Karaf 4.4.8 + JDK 17:* Feature namespace v1.6; removed manual Jackson/Guava/SnakeYAML bundles; WAB → `WebConfig.java`; ~187 POMs to `provided`; CXF 3.3 → 3.6.5.
+
+*UNOMI-899 (`8cff171ef`) — CXF 3.6.8 + Karaf Jackson features:* Independent CXF bump; switched to Karaf `jackson` features (must be version-pinned on 4.4.11+).
+
+*UNOMI-919 (`a0a08e4ad`) — startFeatures:* Refactored startup to a Karaf feature; adjust `package/pom.xml` verify lists when changing boot order.
+
+*PR3 / UNOMI-875 (`545f6b8af`) — 4.4.8 → 4.4.11:* `lifecycle-watcher` lost transitive `slf4j-api`; Pax Web 8.0.35 → Jetty 9.4.58; Jackson specs duplication → pin `${jackson.version}`; Pax Exam IT fix — remove static `ObjectMapper` init in `BaseIT`, use lazy instance `getObjectMapper()` → `CustomObjectMapper.getCustomInstance()` (types from `unomi-base`, not Karaf boot) — see <<_upgrade_integration_tests_pax_exam_probe,Pax Exam probe & static init>>.
+
+===== Files to inspect
+
+[cols="1,2", options="header"]
+|===
+| Area | Paths
+
+| Feature graphs
+| `kar/src/main/feature/feature.xml`, `distribution/src/main/feature/feature.xml`, extension Karaf features
+
+| Package verify
+| `package/pom.xml` — karaf-maven-plugin verify feature list
+
+| Runtime config
+| `package/src/main/resources/etc/*.cfg`, `custom.system.properties`
+
+| Logging
+| `org.ops4j.pax.logging.cfg`, `extensions/log4j-extension/`
+
+| IT container
+| `itests/pom.xml`, `itests/.../BaseIT.java`
+|===
+
+===== Anti-patterns
+
+[cols="1,2,1", options="header"]
+|===
+| Don't | Do instead | History
+
+| Embed platform libs in every bundle
+| `scope=provided` + Karaf features
+| UNOMI-876, PR2 log4j
+
+| Use unversioned `<feature>jackson</feature>` on 4.4.11+
+| `<feature version="${jackson.version}">jackson</feature>`
+| PR3 cascade
+
+| Assume a Karaf patch is "just pom.xml"
+| Cascade pins + compile + feature verify
+| PR3 lifecycle-watcher, Jetty, Jackson
+
+| Skip ITs after Karaf bump
+| Run `./build.sh --ci`
+| UNOMI-876
+|===

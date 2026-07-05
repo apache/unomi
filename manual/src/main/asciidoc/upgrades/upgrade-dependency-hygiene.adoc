@@ -1,0 +1,115 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_upgrade_dependency_hygiene]]
+==== Dependency hygiene (non-platform bumps)
+
+Not every version bump is a Karaf or persistence migration. PR2-style hygiene (UNOMI-875 `#795`, `ef10dfe15`) covers *application* dependencies that must *not* break OSGi rules established in platform upgrades.
+
+The bulk dependency pass https://issues.apache.org/jira/browse/UNOMI-829[UNOMI-829] defines the maintenance strategy: 30-minute timebox per library, maintenance-branch fallback, and separate tickets for Karaf/CXF/GraphQL — see <<_upgrade_jira_reference,JIRA reference>>.
+
+===== Scope
+
+[cols="1,2,2", options="header"]
+|===
+| Track | Examples | OSGi impact
+
+| Frontend / WAB npm
+| `wab/`, `graphql-ui/` yarn lockfiles
+| Build-time only — verify WAB packaging still works
+
+| Messaging
+| `kafka-clients` in `plugins/kafka-injector`
+| Usually embed or declare imports explicitly in bundle
+
+| Commons / utilities
+| `commons-lang3`, `commons-io`, Guava
+| Prefer `provided` if Karaf feature supplies them
+
+| Logging
+| `${log4j.version}`
+| **High** — never without persistence embed exclusion
+|===
+
+===== Recommended order (platform stack)
+
+
+
+===== Hygiene vs platform upgrade scope
+
+[plantuml]
+----
+@startuml
+skinparam activityBackgroundColor #F8F8F8
+
+start
+:Library bump requested;
+if (Touches Karaf features,
+CXF, persistence embed,
+or log4j OSGi?) then (yes)
+  :Stop — use platform upgrade guides
+not bulk hygiene (UNOMI-829);
+  stop
+else (no)
+endif
+:Try upgrade + mvn compile
+(30 min timebox);
+if (Build green?) then (yes)
+  :Commit in hygiene PR slice;
+  stop
+else (no)
+  :File follow-up ticket
+or use maintenance branch version;
+  stop
+endif
+@enduml
+----
+. Karaf (+ JDK if major) — <<_upgrade_karaf,Karaf>>
+. CXF / Jackson / Jetty alignment — <<_upgrade_cxf_jackson_jetty,CXF/Jackson/Jetty>>
+. Elasticsearch + OpenSearch clients — <<_upgrade_elasticsearch,Elasticsearch>>, <<_upgrade_opensearch,OpenSearch>>
+. Log4j — <<_upgrade_log4j,Log4j>> (last among platform pins)
+. Application hygiene (npm, kafka, commons) — this section
+. `./build.sh --ci`
+
+===== npm / frontend (Track E1)
+
+. Bump lockfiles in `wab/` and `graphql-ui/` with `yarn upgrade` or targeted version edits.
+. Rebuild WAB modules: `mvn -pl wab,graphql-ui -am -DskipTests package`
+. Smoke-test tracker and GraphQL UI in a running Karaf if UI behavior changed.
+
+===== Java libraries (Track E2)
+
+. Bump property in root `pom.xml`; confirm `bom/pom.xml` manages the artifact.
+. Check consuming bundle `Import-Package` / embed instructions — do not pull platform libs into compile scope accidentally.
+. Run unit tests for affected modules before full CI.
+
+===== Log4j hygiene trap (PR2 lesson)
+
+Bumping `${log4j.version}` alone caused Elasticsearch core to embed `log4j-core` transitively → Felix duplicate activator → feature verify failure. Always pair log4j bumps with:
+
+[source,xml]
+----
+!groupId=org.apache.logging.log4j;artifactId=*,
+----
+
+in persistence ES/OS `Embed-Dependency` (see <<_upgrade_log4j,Log4j upgrade>>).
+
+===== Verification
+
+[source,bash]
+----
+mvn -DskipTests compile
+mvn -pl package -DskipTests package
+./build.sh --ci
+----
