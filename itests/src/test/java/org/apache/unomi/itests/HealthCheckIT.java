@@ -115,7 +115,7 @@ public class HealthCheckIT extends BaseIT {
             final HttpGet httpGet = new HttpGet(getFullUrl(url));
             response = executeHttpRequest(httpGet, AuthType.CUSTOM_BASIC, HEALTHCHECK_AUTH_USER_NAME, HEALTHCHECK_AUTH_PASSWORD);
             if (response.getStatusLine().getStatusCode() == 200 || response.getStatusLine().getStatusCode() == 206) {
-                return objectMapper.readValue(response.getEntity().getContent(), typeReference);
+                return getObjectMapper().readValue(response.getEntity().getContent(), typeReference);
             } else {
                 return null;
             }

@@ -201,28 +201,28 @@ public class V2CompatibilityModeIT extends BaseIT {
         contextRequest.setSessionId(TEST_SESSION_ID);
 
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID, 401, false);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID, 401, false);
         assertEquals("V2-style request should be rejected in V3 mode", 401, response.getStatusCode());
 
         // Test V3-style request with public API key - should work
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(UNOMI_API_KEY_HEADER, testPublicKey.getKey());
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V3-style request with public API key should work in V3 mode", 200, response.getStatusCode());
 
         // Test V3-style request with private API key - should work
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPrivateTenantAuth(request, testTenant, testPrivateKey);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V3-style request with private API key should work in V3 mode", 200, response.getStatusCode());
 
         // Test V3-style request with JAAS authentication - should work
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(UNOMI_TENANT_ID_HEADER, testTenant.getItemId());
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
 
         BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
         credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
@@ -252,30 +252,30 @@ public class V2CompatibilityModeIT extends BaseIT {
         contextRequest.setSessionId(TEST_SESSION_ID);
 
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V2-style request should work in V2 compatibility mode", 200, response.getStatusCode());
 
         // Test V2-style request with X-Unomi-Peer header (V2 third-party auth) - should work
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(UNOMI_PEER_HEADER, "670c26d1cc413346c3b2fd9ce65dab41");
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V2-style request with X-Unomi-Peer should work in V2 compatibility mode", 200, response.getStatusCode());
 
         // Test V3-style request with public API key - in V2 mode, V3 API keys are ignored (request succeeds but no events processed)
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(UNOMI_API_KEY_HEADER, testPublicKey.getKey());
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V3-style request with public API key should return 200 in V2 compatibility mode", 200, response.getStatusCode());
         assertEquals("V3-style request with public API key should have 0 processed events in V2 mode", 0, response.getContextResponse().getProcessedEvents());
 
         // Test V3-style request with private API key - in V2 mode, V3 API keys are ignored (request succeeds but no events processed)
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPrivateTenantAuth(request, testTenant, testPrivateKey);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V3-style request with private API key should return 200 in V2 compatibility mode", 200, response.getStatusCode());
         assertEquals("V3-style request with private API key should have 0 processed events in V2 mode", 0, response.getContextResponse().getProcessedEvents());
 
@@ -323,24 +323,24 @@ public class V2CompatibilityModeIT extends BaseIT {
         contextRequest.setEvents(Arrays.asList(loginEvent));
 
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID, 200, false);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID, 200, false);
         assertEquals("Protected event without V2 auth should return 200", 200, response.getStatusCode());
         assertEquals("Protected event without V2 auth should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
 
         // Test protected event with V2 third-party authentication - should work
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(UNOMI_PEER_HEADER, "670c26d1cc413346c3b2fd9ce65dab41");
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("Protected event with V2 auth should work", 200, response.getStatusCode());
         assertEquals("Protected event with V2 auth should have 1 processed event", 1, response.getContextResponse().getProcessedEvents());
 
         // Test protected event with empty X-Unomi-Peer header - should be rejected
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(UNOMI_PEER_HEADER, "");
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("Protected event with empty X-Unomi-Peer should return 200", 200, response.getStatusCode());
         assertEquals("Protected event with empty X-Unomi-Peer should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
 
@@ -354,7 +354,7 @@ public class V2CompatibilityModeIT extends BaseIT {
 
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(contextRequestJson, ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("Non-protected event without auth should work in V2 mode", 200, response.getStatusCode());
         assertEquals("Non-protected event without auth should have 1 processed event", 1, response.getContextResponse().getProcessedEvents());
     }
@@ -385,8 +385,8 @@ public class V2CompatibilityModeIT extends BaseIT {
         contextRequest.setSessionId(TEST_SESSION_ID);
 
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V2-style request should work with BaseIT tenant as default", 200, response.getStatusCode());
     }
 
@@ -420,8 +420,8 @@ public class V2CompatibilityModeIT extends BaseIT {
         contextRequest.setSessionId(TEST_SESSION_ID);
 
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("V2-style request should still work after service update", 200, response.getStatusCode());
     }
 
@@ -440,13 +440,13 @@ public class V2CompatibilityModeIT extends BaseIT {
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setSessionId(TEST_SESSION_ID);
         contextRequest.setEvents(Arrays.asList(loginEvent));
-        String requestBody = objectMapper.writeValueAsString(contextRequest);
+        String requestBody = getObjectMapper().writeValueAsString(contextRequest);
 
         // Case 1: protected event with an unknown provider key → rejected (0 processed events)
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(UNOMI_PEER_HEADER, "unknownkey000000000000000000000000");
         request.setEntity(new StringEntity(requestBody, ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("Protected event with unknown provider key should return 200", 200, response.getStatusCode());
         assertEquals("Protected event with unknown provider key should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
 
@@ -467,7 +467,7 @@ public class V2CompatibilityModeIT extends BaseIT {
             request = new HttpPost(getFullUrl(CONTEXT_URL));
             request.addHeader(UNOMI_PEER_HEADER, testProviderKey);
             request.setEntity(new StringEntity(requestBody, ContentType.APPLICATION_JSON));
-            response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+            response = executeContextJSONRequest(request, TEST_SESSION_ID);
             assertEquals("Protected event with valid key but wrong source IP should return 200", 200, response.getStatusCode());
             assertEquals("Protected event with valid key but wrong source IP should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
 
@@ -486,7 +486,7 @@ public class V2CompatibilityModeIT extends BaseIT {
             request = new HttpPost(getFullUrl(CONTEXT_URL));
             request.addHeader(UNOMI_PEER_HEADER, limitedKey);
             request.setEntity(new StringEntity(requestBody, ContentType.APPLICATION_JSON));
-            response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+            response = executeContextJSONRequest(request, TEST_SESSION_ID);
             assertEquals("Protected login event with key that only allows updateProperties should return 200", 200, response.getStatusCode());
             assertEquals("Protected login event with key that only allows updateProperties should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
         } finally {

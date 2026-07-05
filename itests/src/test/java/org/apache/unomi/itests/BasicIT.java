@@ -32,7 +32,6 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -132,7 +131,7 @@ public class BasicIT extends BaseIT {
         LOGGER.info("Start test testContextJSONWithUrlParameter");
         ContextRequest contextRequest = new ContextRequest();
         HttpPost request = new HttpPost(getFullUrl("/cxs/context.json?sessionId=" + SESSION_ID_1));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.create("application/json")));
 
         executeContextJSONRequest(request, SESSION_ID_1);
         LOGGER.info("End test testContextJSONWithUrlParameter");
@@ -144,7 +143,7 @@ public class BasicIT extends BaseIT {
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setSessionId(SESSION_ID_2);
         HttpPost request = new HttpPost(getFullUrl("/cxs/context.json"));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.create("application/json")));
 
         executeContextJSONRequest(request, SESSION_ID_2);
         LOGGER.info("End test testContextJSON");
@@ -155,7 +154,7 @@ public class BasicIT extends BaseIT {
         LOGGER.info("Start test testMultipleLoginOnSameBrowser");
 
         // Add login event condition
-        ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(
+        ConditionType conditionType = getObjectMapper().readValue(
                 new File("data/tmp/testLoginEventCondition.json").toURI().toURL(), ConditionType.class);
         definitionsService.setConditionType(conditionType);
 
@@ -171,7 +170,7 @@ public class BasicIT extends BaseIT {
         );
 
         // Add login rule
-        Rule rule = CustomObjectMapper.getObjectMapper().readValue(new File("data/tmp/testLogin.json").toURI().toURL(),
+        Rule rule = getObjectMapper().readValue(new File("data/tmp/testLogin.json").toURI().toURL(),
                 Rule.class);
         createAndWaitForRule(rule);
 
@@ -181,7 +180,7 @@ public class BasicIT extends BaseIT {
         // First page view with the first visitor aka VISITOR_1 and SESSION_ID_3
         ContextRequest contextRequestPageViewSession1 = getContextRequestWithPageViewEvent(sourceSite, SESSION_ID_3);
         HttpPost requestPageView1 = new HttpPost(getFullUrl("/cxs/context.json"));
-        requestPageView1.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestPageViewSession1),
+        requestPageView1.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestPageViewSession1),
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponsePageView1 = executeContextJSONRequest(requestPageView1, SESSION_ID_3);
         String profileIdVisitor1 = requestResponsePageView1.getContextResponse().getProfileId();
@@ -201,7 +200,7 @@ public class BasicIT extends BaseIT {
         HttpPost requestLoginVisitor1 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestLoginVisitor1.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
         requestLoginVisitor1.addHeader("X-Unomi-Api-Key", testPublicKey.getKey());
-        requestLoginVisitor1.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestLoginVisitor1),
+        requestLoginVisitor1.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestLoginVisitor1),
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponseLoginVisitor1 = executeContextJSONRequest(requestLoginVisitor1, SESSION_ID_3);
         Assert.assertEquals("Context profile id should be the same", profileIdVisitor1,
@@ -214,7 +213,7 @@ public class BasicIT extends BaseIT {
         // Lets add a page view with VISITOR_1 to simulate reloading the page after login and be able to check the profile properties
         HttpPost requestPageView2 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestPageView2.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
-        requestPageView2.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestPageViewSession1),
+        requestPageView2.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestPageViewSession1),
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponsePageView2 = executeContextJSONRequest(requestPageView2, SESSION_ID_3);
         Assert.assertEquals("Context profile id should be the same", profileIdVisitor1,
@@ -229,7 +228,7 @@ public class BasicIT extends BaseIT {
         ContextRequest contextRequestPageViewSession2 = getContextRequestWithPageViewEvent(sourceSite, SESSION_ID_4);
         HttpPost requestPageView3 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestPageView3.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
-        requestPageView3.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestPageViewSession2),
+        requestPageView3.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestPageViewSession2),
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponsePageView3 = executeContextJSONRequest(requestPageView3, SESSION_ID_4);
         Assert.assertEquals("Context profile id should be the same", profileIdVisitor1,
@@ -255,7 +254,7 @@ public class BasicIT extends BaseIT {
         HttpPost requestLoginVisitor2 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestLoginVisitor2.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
         requestLoginVisitor2.addHeader("X-Unomi-Api-Key", testPublicKey.getKey());
-        requestLoginVisitor2.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestLoginVisitor2),
+        requestLoginVisitor2.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestLoginVisitor2),
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponseLoginVisitor2 = executeContextJSONRequest(requestLoginVisitor2, SESSION_ID_4);
         // We should have a new profile id so the session should have been moved from VISITOR_1 to VISITOR_2
@@ -268,7 +267,7 @@ public class BasicIT extends BaseIT {
         // Lets add a page view with VISITOR_2 to simulate reloading the page after login
         HttpPost requestPageView4 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestPageView4.addHeader("Cookie", requestResponseLoginVisitor2.getCookieHeaderValue());
-        requestPageView4.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestPageViewSession2),
+        requestPageView4.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestPageViewSession2),
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponsePageView4 = executeContextJSONRequest(requestPageView4, SESSION_ID_4);
         Assert.assertEquals("Context profile id should be the same", profileIdVisitor2,
@@ -341,9 +340,6 @@ public class BasicIT extends BaseIT {
         return contextRequest;
     }
 
-    private TestUtils.RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
-        return TestUtils.executeContextJSONRequest(request, sessionId);
-    }
 
     private void checkVisitor1ResponseProperties(Map<String, Object> profileProperties) {
         checkVisitorResponseProperties(profileProperties, FIRST_NAME_VISITOR_1, LAST_NAME_VISITOR_1, EMAIL_VISITOR_1);

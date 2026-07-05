@@ -34,7 +34,6 @@ import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
 import org.slf4j.Logger;
@@ -61,7 +60,7 @@ public class TestUtils {
 	 * @return The deserialized resource object, or null if the response or entity is null
 	 * @throws IOException if there is an error reading or parsing the response
 	 */
-	public static <T> T retrieveResourceFromResponse(HttpResponse response, Class<T> clazz) throws IOException {
+	public static <T> T retrieveResourceFromResponse(HttpResponse response, Class<T> clazz, ObjectMapper objectMapper) throws IOException {
 		if (response == null) {
 			return null;
 		}
@@ -69,7 +68,7 @@ public class TestUtils {
 			return null;
 		}
 		String jsonFromResponse = EntityUtils.toString(response.getEntity());
-		ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
+		ObjectMapper mapper = objectMapper;
 		try {
 			T value = mapper.readValue(jsonFromResponse, clazz);
 			return value;
@@ -89,8 +88,8 @@ public class TestUtils {
 	 * @return A RequestResponse object containing the response details
 	 * @throws IOException if there is an error executing the request or processing the response
 	 */
-	public static RequestResponse executeContextJSONRequest(HttpUriRequest request, String sessionId) throws IOException {
-		return executeContextJSONRequest(request, sessionId, -1, true);
+	public static RequestResponse executeContextJSONRequest(HttpUriRequest request, String sessionId, ObjectMapper objectMapper) throws IOException {
+		return executeContextJSONRequest(request, sessionId, -1, true, objectMapper);
 	}
 
 	/**
@@ -101,10 +100,11 @@ public class TestUtils {
 	 * @param sessionId The session ID to use for cookie handling, or null if not needed
 	 * @param expectedStatusCode The expected status code of the response, or -1 if not needed
 	 * @param withAuth Whether to include authentication headers in the request
+	 * @param objectMapper JSON mapper (use {@link BaseIT#getObjectMapper()} from integration tests)
 	 * @return A RequestResponse object containing the response details
 	 * @throws IOException if there is an error executing the request or processing the response
 	 */
-	public static RequestResponse executeContextJSONRequest(HttpUriRequest request, String sessionId, int expectedStatusCode, boolean withAuth) throws IOException {
+	public static RequestResponse executeContextJSONRequest(HttpUriRequest request, String sessionId, int expectedStatusCode, boolean withAuth, ObjectMapper objectMapper) throws IOException {
 		try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request, expectedStatusCode, withAuth, false)) {
 			// validate mimeType
 			HttpEntity entity = response.getEntity();
@@ -131,7 +131,7 @@ public class TestUtils {
 
 			ContextResponse contextResponse = null;
 			if (responseCode == 200) {
-				contextResponse = CustomObjectMapper.getObjectMapper().readValue(responseContent, ContextResponse.class);
+				contextResponse = objectMapper.readValue(responseContent, ContextResponse.class);
 			}
 
 			return new RequestResponse(cookieHeader, responseCode, contextResponse);
@@ -146,8 +146,8 @@ public class TestUtils {
 	 * @return A RequestResponse object containing the response details
 	 * @throws IOException if there is an error executing the request or processing the response
 	 */
-	public static RequestResponse executeContextJSONRequest(HttpPost request) throws IOException {
-		return executeContextJSONRequest(request, null);
+	public static RequestResponse executeContextJSONRequest(HttpPost request, String sessionId, ObjectMapper objectMapper) throws IOException {
+		return executeContextJSONRequest(request, sessionId, -1, true, objectMapper);
 	}
 
 	private static <T extends Item> boolean removeAllItems(DefinitionsService definitionsService, PersistenceService persistenceService,

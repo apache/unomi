@@ -20,7 +20,6 @@ import org.apache.unomi.api.Patch;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import java.util.Objects;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,7 +42,7 @@ public class PatchIT extends BaseIT {
         PropertyType company = profileService.getPropertyType("company");
 
         try {
-            Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch1.json"), Patch.class);
+            Patch patch = getObjectMapper().readValue(bundleContext.getBundle().getResource("patch1.json"), Patch.class);
             PropertyType newCompany = (PropertyType) patchService.patch(patch);
 
             Assert.assertEquals("foo", newCompany.getDefaultValue());
@@ -65,7 +64,7 @@ public class PatchIT extends BaseIT {
         PropertyType gender = profileService.getPropertyType("gender");
 
         try {
-            Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch2.json"), Patch.class);
+            Patch patch = getObjectMapper().readValue(bundleContext.getBundle().getResource("patch2.json"), Patch.class);
             PropertyType newGender = (PropertyType) patchService.patch(patch);
 
             Assert.assertEquals("foo", newGender.getDefaultValue());
@@ -91,7 +90,7 @@ public class PatchIT extends BaseIT {
             executionContextManager.executeAsSystem(() -> {
                 Patch patch = null;
                 try {
-                    patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch3.json"), Patch.class);
+                    patch = getObjectMapper().readValue(bundleContext.getBundle().getResource("patch3.json"), Patch.class);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -130,7 +129,7 @@ public class PatchIT extends BaseIT {
         Assert.assertTrue(formCondition.getMetadata().getSystemTags().contains("profileTags"));
 
         try {
-            Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch4.json"), Patch.class);
+            Patch patch = getObjectMapper().readValue(bundleContext.getBundle().getResource("patch4.json"), Patch.class);
 
             patchService.patch(patch);
 
@@ -157,7 +156,7 @@ public class PatchIT extends BaseIT {
         Assert.assertTrue(mailAction.getMetadata().getSystemTags().contains("availableToEndUser"));
 
         try {
-            Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch5.json"), Patch.class);
+            Patch patch = getObjectMapper().readValue(bundleContext.getBundle().getResource("patch5.json"), Patch.class);
 
             patchService.patch(patch);
 

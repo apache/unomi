@@ -126,7 +126,7 @@ public class RestCreateValidationIT extends BaseIT {
         assertNotNull("Expected a response body for 400 on POST " + url, responseBody);
         JsonNode json;
         try {
-            json = objectMapper.readTree(responseBody);
+            json = getObjectMapper().readTree(responseBody);
         } catch (Exception e) {
             fail("Expected JSON in 400 response for POST " + url + " but got: " + responseBody);
             return;

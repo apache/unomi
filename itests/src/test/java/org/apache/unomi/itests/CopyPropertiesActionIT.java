@@ -24,7 +24,6 @@ import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.itests.tools.LogChecker;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -163,7 +162,7 @@ public class CopyPropertiesActionIT extends BaseIT {
     }
 
     private void createRule(String filename) throws IOException, InterruptedException {
-        Rule rule = CustomObjectMapper.getObjectMapper().readValue(new File(filename).toURI().toURL(), Rule.class);
+        Rule rule = getObjectMapper().readValue(new File(filename).toURI().toURL(), Rule.class);
         createAndWaitForRule(rule);
     }
 

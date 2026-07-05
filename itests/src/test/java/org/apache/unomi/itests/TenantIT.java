@@ -33,7 +33,6 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.ResourceQuota;
 import org.apache.unomi.api.tenants.Tenant;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -51,12 +50,9 @@ import java.util.Base64;
 public class TenantIT extends BaseIT {
 
     private static final String REST_ENDPOINT = "/cxs/tenants";
-    private CustomObjectMapper objectMapper;
 
     @Before
     public void setUp() throws InterruptedException {
-        objectMapper = new CustomObjectMapper();
-
         // Wait for tenant REST endpoint to be available
         keepTrying("Couldn't find tenant endpoint", () -> {
             try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl(REST_ENDPOINT)), AuthType.JAAS_ADMIN)) {
@@ -78,13 +74,13 @@ public class TenantIT extends BaseIT {
         requestBody.put("properties", properties);
 
         HttpPost createRequest = new HttpPost(getFullUrl(REST_ENDPOINT));
-        createRequest.setEntity(new StringEntity(objectMapper.writeValueAsString(requestBody), ContentType.APPLICATION_JSON));
+        createRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(requestBody), ContentType.APPLICATION_JSON));
 
         String createResponse;
         Tenant createdTenant;
         try (CloseableHttpResponse response = executeHttpRequest(createRequest, AuthType.JAAS_ADMIN)) {
             createResponse = EntityUtils.toString(response.getEntity());
-            createdTenant = objectMapper.readValue(createResponse, Tenant.class);
+            createdTenant = getObjectMapper().readValue(createResponse, Tenant.class);
         }
 
         Assert.assertNotNull("Created tenant should not be null", createdTenant);
@@ -99,7 +95,7 @@ public class TenantIT extends BaseIT {
             Tenant retrievedTenant;
             try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl(REST_ENDPOINT + "/" + createdTenant.getItemId())), AuthType.JAAS_ADMIN)) {
                 getResponse = EntityUtils.toString(response.getEntity());
-                retrievedTenant = objectMapper.readValue(getResponse, Tenant.class);
+                retrievedTenant = getObjectMapper().readValue(getResponse, Tenant.class);
             }
 
             Assert.assertEquals("Retrieved tenant should match created tenant", createdTenant.getItemId(), retrievedTenant.getItemId());
@@ -112,13 +108,13 @@ public class TenantIT extends BaseIT {
             retrievedTenant.setResourceQuota(quota);
 
             HttpPut updateRequest = new HttpPut(getFullUrl(REST_ENDPOINT + "/" + retrievedTenant.getItemId()));
-            updateRequest.setEntity(new StringEntity(objectMapper.writeValueAsString(retrievedTenant), ContentType.APPLICATION_JSON));
+            updateRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(retrievedTenant), ContentType.APPLICATION_JSON));
 
             String updateResponse;
             Tenant updatedTenant;
             try (CloseableHttpResponse response = executeHttpRequest(updateRequest, AuthType.JAAS_ADMIN)) {
                 updateResponse = EntityUtils.toString(response.getEntity());
-                updatedTenant = objectMapper.readValue(updateResponse, Tenant.class);
+                updatedTenant = getObjectMapper().readValue(updateResponse, Tenant.class);
             }
 
             Assert.assertEquals("Tenant name should be updated", "Updated Rest Test Tenant", updatedTenant.getName());
@@ -133,7 +129,7 @@ public class TenantIT extends BaseIT {
             ApiKey newApiKey;
             try (CloseableHttpResponse response = executeHttpRequest(generateKeyRequest, AuthType.JAAS_ADMIN)) {
                 generateKeyResponse = EntityUtils.toString(response.getEntity());
-                newApiKey = objectMapper.readValue(generateKeyResponse, ApiKey.class);
+                newApiKey = getObjectMapper().readValue(generateKeyResponse, ApiKey.class);
             }
 
             Assert.assertNotNull("New API key should not be null", newApiKey);
@@ -197,13 +193,13 @@ public class TenantIT extends BaseIT {
             requestBody.put("properties", Collections.emptyMap());
 
             HttpPost createRequest = new HttpPost(getFullUrl(REST_ENDPOINT));
-            createRequest.setEntity(new StringEntity(objectMapper.writeValueAsString(requestBody), ContentType.APPLICATION_JSON));
+            createRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(requestBody), ContentType.APPLICATION_JSON));
 
             String createResponse;
             Tenant tenant;
             try (CloseableHttpResponse response = adminClient.execute(createRequest)) {
                 createResponse = EntityUtils.toString(response.getEntity());
-                tenant = objectMapper.readValue(createResponse, Tenant.class);
+                tenant = getObjectMapper().readValue(createResponse, Tenant.class);
             }
 
             try {

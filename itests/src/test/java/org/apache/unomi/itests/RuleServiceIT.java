@@ -24,7 +24,6 @@ import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.utils.ConditionBuilder;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -296,7 +295,7 @@ public class RuleServiceIT extends BaseIT {
     public void testGetTrackedConditions() throws InterruptedException, IOException {
         // Add custom condition with parameter
         try {
-            ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(
+            ConditionType conditionType = getObjectMapper().readValue(
                     new File("data/tmp/testClickEventCondition.json").toURI().toURL(), ConditionType.class);
             definitionsService.setConditionType(conditionType);
             refreshPersistence(Rule.class);

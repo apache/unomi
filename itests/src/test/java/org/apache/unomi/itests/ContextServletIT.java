@@ -39,7 +39,6 @@ import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.itests.TestUtils.RequestResponse;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -172,8 +171,8 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPrivateTenantAuth(request, testTenant, testPrivateKey);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, sessionId, -1, false);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(request, sessionId, -1, false);
 
         event = keepTrying("Event " + eventId + " not updated in the required time", () -> eventService.getEvent(eventId),
                 savedEvent -> Objects.nonNull(savedEvent) && TEST_EVENT_TYPE.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
@@ -204,8 +203,8 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setEvents(Collections.singletonList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPublicTenantAuth(request);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, sessionId);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(request, sessionId);
 
         Session session = keepTrying("Session with the id " + sessionId + " not saved in the required time",
                 () -> profileService.loadSession(sessionId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
@@ -244,8 +243,8 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(session.getItemId());
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, sessionId);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(request, sessionId);
 
         // Check event type did not changed
         event = shouldBeTrueUntilEnd("Event type should not have changed", () -> eventService.getEvent(eventId),
@@ -276,8 +275,8 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(session.getItemId());
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, sessionId);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(request, sessionId);
 
         // Check event type did not changed
         event = shouldBeTrueUntilEnd("Event type should not have changed", () -> eventService.getEvent(eventId),
@@ -301,8 +300,8 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setRequireSegments(true);
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        String cookieHeaderValue = executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
 
         refreshPersistence(Event.class);
 
@@ -316,8 +315,8 @@ public class ContextServletIT extends BaseIT {
         secondContextRequest.setEvents(Arrays.asList(secondEvent));
         HttpPost secondRequest = new HttpPost(getFullUrl(CONTEXT_URL));
         secondRequest.addHeader("Cookie", cookieHeaderValue);
-        secondRequest.setEntity(new StringEntity(objectMapper.writeValueAsString(secondContextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(secondRequest, sessionId);
+        secondRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(secondContextRequest), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(secondRequest, sessionId);
 
         // Wait for profile to be saved with updated past event counts and segments
         // The SetEventOccurenceCountAction updates pastEvents, then EvaluateProfileSegmentsAction
@@ -334,8 +333,8 @@ public class ContextServletIT extends BaseIT {
                         ContextRequest retryContextRequest = new ContextRequest();
                         retryContextRequest.setSessionId(sessionId);
                         retryContextRequest.setRequireSegments(true);
-                        retryRequest.setEntity(new StringEntity(objectMapper.writeValueAsString(retryContextRequest), ContentType.APPLICATION_JSON));
-                        ContextResponse response = (TestUtils.executeContextJSONRequest(retryRequest, sessionId)).getContextResponse();
+                        retryRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(retryContextRequest), ContentType.APPLICATION_JSON));
+                        ContextResponse response = (executeContextJSONRequest(retryRequest, sessionId)).getContextResponse();
                         // Also refresh to ensure profile is loaded from persistence
                         refreshPersistence(Profile.class);
                         return response;
@@ -372,13 +371,13 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setRequireSegments(true);
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(regularURI);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         //The first event is with a default timestamp (now)
-        String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+        String cookieHeaderValue = executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
         //The second event is with a customized timestamp
         request.setURI(URI.create(customTimestampURI));
         request.addHeader("Cookie", cookieHeaderValue);
-        ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
+        ContextResponse response = (executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
 
         shouldBeTrueUntilEnd("Profile " + response.getProfileId() + " not found in the required time",
                 () -> profileService.load(response.getProfileId()),
@@ -404,14 +403,14 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setRequireSegments(true);
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(regularURI);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         //The first event is with a default timestamp (now)
-        String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+        String cookieHeaderValue = executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
 
         //The second event is with a customized timestamp
         request.setURI(URI.create(customTimestampURI));
         request.addHeader("Cookie", cookieHeaderValue);
-        ContextResponse response = TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse(); //second event
+        ContextResponse response = executeContextJSONRequest(request, sessionId).getContextResponse(); //second event
 
         shouldBeTrueUntilEnd("Profile " + response.getProfileId() + " not found in the required time",
                 () -> profileService.load(response.getProfileId()),
@@ -435,8 +434,8 @@ public class ContextServletIT extends BaseIT {
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPublicTenantAuth(request);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(request);
 
         keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
@@ -462,8 +461,8 @@ public class ContextServletIT extends BaseIT {
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPrivateTenantAuth(request, testTenant, testPrivateKey);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, null, -1, false);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(request, null, -1, false);
 
         //Assert
         event = keepTrying("Event not found", () -> eventService.getEvent(eventId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
@@ -492,8 +491,8 @@ public class ContextServletIT extends BaseIT {
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPrivateTenantAuth(request, testTenant, testPrivateKey);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(request);
 
         //Assert
         shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
@@ -519,8 +518,8 @@ public class ContextServletIT extends BaseIT {
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPrivateTenantAuth(request, testTenant, testPrivateKey);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(request);
 
         //Assert
         shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
@@ -542,7 +541,7 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(
                 new StringEntity(getValidatedBundleJSON("security/mvel-payload-1.json", parameters), ContentType.APPLICATION_JSON));
-        RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
 
         shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
                 exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
@@ -562,7 +561,7 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(
                 new StringEntity(getValidatedBundleJSON("security/mvel-payload-list.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        executeContextJSONRequest(request, TEST_SESSION_ID);
 
         shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
                 exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
@@ -574,7 +573,7 @@ public class ContextServletIT extends BaseIT {
         Map<String, String> parameters = new HashMap<>();
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.APPLICATION_JSON));
-        RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("Invalid response code", 200, response.getStatusCode());
     }
 
@@ -583,7 +582,7 @@ public class ContextServletIT extends BaseIT {
         // Test request before adding interests to current profile.
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
+        TestUtils.RequestResponse response = executeContextJSONRequest(request);
         ContextResponse contextResponse = response.getContextResponse();
         List<String> variants = contextResponse.getPersonalizations().get("perso-by-interest");
         assertEquals("Invalid response code", 200, response.getStatusCode());
@@ -601,7 +600,7 @@ public class ContextServletIT extends BaseIT {
         // check results of the perso now
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request);
+        response = executeContextJSONRequest(request);
         contextResponse = response.getContextResponse();
         variants = contextResponse.getPersonalizations().get("perso-by-interest");
         assertEquals("Invalid response code", 200, response.getStatusCode());
@@ -638,7 +637,7 @@ public class ContextServletIT extends BaseIT {
         // re test now that profiles has interests
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request);
+        response = executeContextJSONRequest(request);
         contextResponse = response.getContextResponse();
         variants = contextResponse.getPersonalizations().get("perso-by-interest");
         assertEquals("Invalid response code", 200, response.getStatusCode());
@@ -666,7 +665,7 @@ public class ContextServletIT extends BaseIT {
 
         Map<String, String> parameters = new HashMap<>();
         String scoringSource = getValidatedBundleJSON("score1.json", parameters);
-        Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(scoringSource, Scoring.class);
+        Scoring scoring = getObjectMapper().readValue(scoringSource, Scoring.class);
         segmentService.setScoringDefinition(scoring);
 
         keepTrying("Profile does not contains scores in the required time", () -> profileService.load(TEST_PROFILE_ID), storedProfile ->
@@ -676,7 +675,7 @@ public class ContextServletIT extends BaseIT {
         parameters = new HashMap<>();
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("withoutRequireScores.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
+        TestUtils.RequestResponse response = executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
 
         assertNotNull("Context response should not be null", response.getContextResponse());
@@ -687,7 +686,7 @@ public class ContextServletIT extends BaseIT {
         parameters = new HashMap<>();
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("withRequireScores.json", parameters), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request);
+        response = executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
 
         assertNotNull("Context response should not be null", response.getContextResponse());
@@ -868,8 +867,8 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(TEST_SESSION_ID);
 
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID, 401, false);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID, 401, false);
         Assert.assertEquals("Unauthenticated request should be rejected", 401, response.getStatusCode());
 
         // Test with JAAS authentication (should succeed)
@@ -887,7 +886,7 @@ public class ContextServletIT extends BaseIT {
                 .build();
 
         request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         // We need to specify which tenant we want to access since we are using the system administrator.
         request.addHeader(UNOMI_TENANT_ID_HEADER, TEST_TENANT_ID);
         CloseableHttpResponse jaasResponse = adminClient.execute(request);
@@ -896,15 +895,15 @@ public class ContextServletIT extends BaseIT {
         // Test with public API key (should succeed)
         contextRequest.setPublicApiKey(publicKey.getKey());
         request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
         Assert.assertEquals("Public API key request should succeed", 200, response.getStatusCode());
 
         // Test with private API key (should fail for public endpoint)
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPrivateTenantAuth(request, tenant, privateKey);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
         Assert.assertEquals("Private API key should be accepted for public endpoint to be able to update events and send restricted events", 200, response.getStatusCode());
 
         // Cleanup
@@ -928,7 +927,7 @@ public class ContextServletIT extends BaseIT {
             request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-no-control-group.json", null), ContentType.APPLICATION_JSON));
         }
 
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
+        TestUtils.RequestResponse response = executeContextJSONRequest(request);
         ContextResponse contextResponse = response.getContextResponse();
 
         // Check variants
@@ -978,23 +977,23 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setProfileId(profile.getItemId());
         contextRequest.setSessionId(sessionId);
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        assertEquals(executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
         // set the property as concealed
         customPropertyType.getMetadata().getSystemTags().add("concealed");
         profileService.deletePropertyType(customPropertyType.getItemId());
         profileService.setPropertyType(customPropertyType);
         // Not in all properties
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        assertNull(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        assertNull(executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"));
         // Got it explicitly
         contextRequest.setRequiredProfileProperties(Arrays.asList("customProperty"));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        assertEquals(executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
         // Got it with all
         contextRequest.setRequiredProfileProperties(Arrays.asList("*", "customProperty"));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        assertEquals(executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
 
         // remove the concealed tag on the property type
         customPropertyType.getMetadata().getSystemTags().remove("concealed");
@@ -1003,8 +1002,8 @@ public class ContextServletIT extends BaseIT {
 
         // Got it from all properties
         contextRequest.setRequiredProfileProperties(Arrays.asList("*"));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        assertEquals(executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
     }
 
     @Test
@@ -1020,8 +1019,8 @@ public class ContextServletIT extends BaseIT {
 
         // Send request
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
 
         // Verify response
         ContextResponse contextResponse = response.getContextResponse();
@@ -1031,8 +1030,8 @@ public class ContextServletIT extends BaseIT {
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         contextRequest.setPublicApiKey("invalid-key");
         request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, "invalid-key");
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID, 401, false);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID, 401, false);
 
         // Verify error response for invalid key
         assertEquals("Should receive unauthorized response", 401, response.getStatusCode());

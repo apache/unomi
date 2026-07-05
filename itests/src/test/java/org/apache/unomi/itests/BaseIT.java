@@ -17,11 +17,8 @@
 
 package org.apache.unomi.itests;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import org.apache.camel.CamelContext;
 import org.apache.camel.Route;
 import org.apache.camel.ServiceStatus;
@@ -143,15 +140,15 @@ public abstract class BaseIT extends KarafTestSupport {
     protected static final String ENABLE_LOG_CHECKING_PROPERTY = "it.unomi.log.checking.enabled";
     protected static final String CAMEL_DEBUG_PROPERTY = "it.unomi.camel.debug";
 
-    protected final static ObjectMapper objectMapper;
     protected static boolean unomiStarted = false;
     protected static String searchEngine = SEARCH_ENGINE_ELASTICSEARCH;
 
-    static {
-        objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JaxbAnnotationModule());
-        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    /**
+     * JSON mapper for IT HTTP/JSON helpers. Initialized on first use (after Unomi features are up),
+     * delegating to the same mapper as the running server.
+     */
+    protected ObjectMapper getObjectMapper() {
+        return CustomObjectMapper.getCustomInstance();
     }
 
     protected PersistenceService persistenceService;
@@ -193,6 +190,9 @@ public abstract class BaseIT extends KarafTestSupport {
     protected LogChecker logChecker;
     private String currentTestName;
 
+
+
+
     public enum AuthType {
         NONE,           // No authentication
         PUBLIC_KEY,     // X-Unomi-Api-Key header with public key
@@ -207,6 +207,20 @@ public abstract class BaseIT extends KarafTestSupport {
      * This method should be called early, before any test setup, to ensure
      * the correct search engine is detected and any necessary fixes are applied.
      */
+
+
+    protected TestUtils.RequestResponse executeContextJSONRequest(org.apache.http.client.methods.HttpUriRequest request, String sessionId) throws IOException {
+        return TestUtils.executeContextJSONRequest(request, sessionId, getObjectMapper());
+    }
+
+    protected TestUtils.RequestResponse executeContextJSONRequest(org.apache.http.client.methods.HttpUriRequest request, String sessionId, int expectedStatusCode, boolean withAuth) throws IOException {
+        return TestUtils.executeContextJSONRequest(request, sessionId, expectedStatusCode, withAuth, getObjectMapper());
+    }
+
+    protected TestUtils.RequestResponse executeContextJSONRequest(org.apache.http.client.methods.HttpPost request) throws IOException {
+        return TestUtils.executeContextJSONRequest(request, null, getObjectMapper());
+    }
+
     protected void checkSearchEngine() {
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
     }
@@ -893,8 +907,8 @@ public abstract class BaseIT extends KarafTestSupport {
                 jsonString = jsonString.replace("###" + parameterEntry.getKey() + "###", parameterEntry.getValue());
             }
         }
-        ObjectMapper objectMapper = CustomObjectMapper.getObjectMapper();
-        return objectMapper.writeValueAsString(objectMapper.readTree(jsonString));
+        ObjectMapper mapper = getObjectMapper();
+        return mapper.writeValueAsString(mapper.readTree(jsonString));
     }
 
     /**
@@ -1129,7 +1143,7 @@ public abstract class BaseIT extends KarafTestSupport {
             final HttpGet httpGet = new HttpGet(getFullUrl(url));
             response = executeHttpRequest(httpGet);
             if (response.getStatusLine().getStatusCode() == 200) {
-                return objectMapper.readValue(response.getEntity().getContent(), clazz);
+                return getObjectMapper().readValue(response.getEntity().getContent(), clazz);
             } else {
                 return null;
             }
@@ -1248,8 +1262,8 @@ public abstract class BaseIT extends KarafTestSupport {
     protected String resourceAsString(final String resource) {
         final java.net.URL url = bundleContext.getBundle().getResource(resource);
         try (InputStream stream = url.openStream()) {
-            JsonNode node = objectMapper.readTree(stream);
-            String value = objectMapper.writeValueAsString(node);
+            JsonNode node = getObjectMapper().readTree(stream);
+            String value = getObjectMapper().writeValueAsString(node);
             return value;
         } catch (final Exception e) {
             throw new RuntimeException(e);

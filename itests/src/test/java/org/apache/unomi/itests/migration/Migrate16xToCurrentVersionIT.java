@@ -498,7 +498,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
     }
     private void getScopeFromEvents(CloseableHttpClient httpClient, String eventIndex) throws IOException {
         String requestBody = resourceAsString(RESOURCE_MATCH_ALL_LOGIN_EVENT);
-        JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + eventIndex + "/_search", requestBody, null));
+        JsonNode jsonNode = getObjectMapper().readTree(HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + eventIndex + "/_search", requestBody, null));
         if (jsonNode.has("hits") && jsonNode.get("hits").has("hits") && !jsonNode.get("hits").get("hits").isEmpty()) {
             jsonNode.get("hits").get("hits").forEach(doc -> {
                 JsonNode event = doc.get("_source");
@@ -522,7 +522,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         if (requestBody == null) {
             requestBody = resourceAsString(RESOURCE_MUST_NOT_MATCH_EVENTTYPE);
         }
-        JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + index + "/_count", requestBody, null));
+        JsonNode jsonNode = getObjectMapper().readTree(HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + index + "/_count", requestBody, null));
         return jsonNode.get("count").asInt();
     }
 
@@ -577,7 +577,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
      */
     private void checkDocumentsInIndex(String indexName, String expectedTenantId, boolean isSystemIndex) throws IOException {
         String query = HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + indexName + "/_search?size=10", null);
-        JsonNode jsonNode = objectMapper.readTree(query);
+        JsonNode jsonNode = getObjectMapper().readTree(query);
         if (jsonNode.has("hits") && jsonNode.get("hits").has("hits") && !jsonNode.get("hits").get("hits").isEmpty()) {
             for (JsonNode hit : jsonNode.get("hits").get("hits")) {
                 JsonNode source = hit.get("_source");
@@ -667,7 +667,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         if (defaultTenant == null) {
             // Check if tenant exists in Elasticsearch directly
             String query = HttpUtils.executeGetRequest(httpClient, getEsBaseUrl() + "/" + INDEX_PREFIX_CONTEXT + "tenant/_search?q=itemId:" + tenantId, null);
-            JsonNode jsonNode = objectMapper.readTree(query);
+            JsonNode jsonNode = getObjectMapper().readTree(query);
             if (jsonNode.has("hits") && jsonNode.get("hits").has("hits") && !jsonNode.get("hits").get("hits").isEmpty()) {
                 JsonNode tenantDoc = jsonNode.get("hits").get("hits").get(0).get("_source");
                 Assert.assertEquals("Default tenant should have correct itemId", tenantId, tenantDoc.get("itemId").asText());
@@ -722,8 +722,8 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         query.set("query", queryWrapper);
         query.put("size", 1000);
 
-        String response = HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_search", objectMapper.writeValueAsString(query), null);
-        JsonNode jsonNode = objectMapper.readTree(response);
+        String response = HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_search", getObjectMapper().writeValueAsString(query), null);
+        JsonNode jsonNode = getObjectMapper().readTree(response);
 
         Set<String> itemIds = new HashSet<>();
         if (jsonNode.has("hits") && jsonNode.get("hits").has("hits")) {
@@ -839,8 +839,8 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         query.set("query", queryWrapper);
         query.put("size", 1000);
 
-        String response = HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_search", objectMapper.writeValueAsString(query), null);
-        JsonNode jsonNode = objectMapper.readTree(response);
+        String response = HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + INDEX_SYSTEMITEMS + "/_search", getObjectMapper().writeValueAsString(query), null);
+        JsonNode jsonNode = getObjectMapper().readTree(response);
 
         int conditionTypesChecked = 0;
         int conditionTypesWithLegacyIds = 0;
@@ -928,8 +928,8 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
             query.put("_source", "condition");
 
             String response = HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + rulesIndex + "/_search",
-                objectMapper.writeValueAsString(query), null);
-            JsonNode jsonNode = objectMapper.readTree(response);
+                getObjectMapper().writeValueAsString(query), null);
+            JsonNode jsonNode = getObjectMapper().readTree(response);
 
             int rulesChecked = 0;
             int rulesWithEmbeddedConditionTypes = 0;
@@ -977,8 +977,8 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
             query.put("_source", "condition");
 
             String response = HttpUtils.executePostRequest(httpClient, getEsBaseUrl() + "/" + segmentsIndex + "/_search",
-                objectMapper.writeValueAsString(query), null);
-            JsonNode jsonNode = objectMapper.readTree(response);
+                getObjectMapper().writeValueAsString(query), null);
+            JsonNode jsonNode = getObjectMapper().readTree(response);
 
             int segmentsChecked = 0;
             int segmentsWithEmbeddedConditionTypes = 0;

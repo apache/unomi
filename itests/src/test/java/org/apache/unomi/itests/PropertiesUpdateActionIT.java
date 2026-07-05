@@ -20,7 +20,6 @@ package org.apache.unomi.itests;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.rules.Rule;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.plugins.baseplugin.actions.UpdatePropertiesAction;
 import org.junit.Assert;
 import org.junit.Before;
@@ -317,7 +316,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         // register test rule
-        Rule rule = CustomObjectMapper.getObjectMapper()
+        Rule rule = getObjectMapper()
                 .readValue(getValidatedBundleJSON("testSetPropertyActionRule.json", new HashMap<>()), Rule.class);
         createAndWaitForRule(rule);
 

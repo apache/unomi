@@ -23,7 +23,6 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.rules.Rule;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -74,7 +73,7 @@ public class GroovyActionsServiceIT extends BaseIT {
     }
 
     private void createRule(String filename) throws IOException, InterruptedException {
-        Rule rule = CustomObjectMapper.getObjectMapper().readValue(new File(filename).toURI().toURL(), Rule.class);
+        Rule rule = getObjectMapper().readValue(new File(filename).toURI().toURL(), Rule.class);
         createAndWaitForRule(rule);
     }
 

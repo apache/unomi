@@ -16,9 +16,7 @@
  */
 package org.apache.unomi.itests.shell;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.unomi.itests.BaseIT;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,18 +37,6 @@ import java.util.regex.Pattern;
 public abstract class ShellCommandsBaseIT extends BaseIT {
 
     protected static final Logger LOGGER = LoggerFactory.getLogger(ShellCommandsBaseIT.class);
-
-    /**
-     * Get ObjectMapper for JSON parsing.
-     * Uses CustomObjectMapper for consistency with Unomi's JSON handling.
-     * This ensures proper deserialization of Unomi Item types and maintains
-     * the same date formatting and configuration as the rest of the system.
-     *
-     * Note: This is lazy-initialized to avoid class loading issues before OSGi is ready.
-     */
-    protected ObjectMapper getJsonMapper() {
-        return CustomObjectMapper.getObjectMapper();
-    }
 
     /**
      * Execute a shell command and capture its output as a string.
@@ -93,10 +79,10 @@ public abstract class ShellCommandsBaseIT extends BaseIT {
             int jsonEnd = output.lastIndexOf('}');
             if (jsonStart >= 0 && jsonEnd > jsonStart) {
                 String jsonStr = output.substring(jsonStart, jsonEnd + 1);
-                return (Map<String, Object>) getJsonMapper().readValue(jsonStr, Map.class);
+                return (Map<String, Object>) getObjectMapper().readValue(jsonStr, Map.class);
             }
             // If no JSON found, try parsing the whole output
-            return (Map<String, Object>) getJsonMapper().readValue(output, Map.class);
+            return (Map<String, Object>) getObjectMapper().readValue(output, Map.class);
         } catch (Exception e) {
             // Don't log here - any logging can be captured by command output stream causing StackOverflow
             // Just throw exception without logging

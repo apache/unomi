@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -141,7 +140,7 @@ public class LegacyQueryBuilderMappingIT extends BaseIT {
      * @throws IOException if the JSON file cannot be read
      */
     private void testLegacyMapping(String jsonFilePath, Map<String, Object> parameters) throws IOException {
-        ConditionType customConditionType = CustomObjectMapper.getObjectMapper().readValue(
+        ConditionType customConditionType = getObjectMapper().readValue(
                 new File(jsonFilePath).toURI().toURL(), ConditionType.class);
         
         definitionsService.setConditionType(customConditionType);
