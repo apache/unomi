@@ -76,6 +76,9 @@ public class MigrationUtils {
 
     public static String getFileWithoutComments(BundleContext bundleContext, final String resource) {
         final URL url = bundleContext.getBundle().getResource(resource);
+        if (url == null) {
+            throw new RuntimeException("Resource not found: " + resource);
+        }
         try {
             // Read the entire file into a string to preserve exact line endings
             String fileContent;

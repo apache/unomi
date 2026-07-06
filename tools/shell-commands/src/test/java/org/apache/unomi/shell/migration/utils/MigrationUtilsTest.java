@@ -27,6 +27,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.*;
 
 public class MigrationUtilsTest {
@@ -198,5 +199,14 @@ public class MigrationUtilsTest {
         String input = "code1\n/* Block with 'single' and \"double\" quotes */\ncode2\n// Inline with 'single' and \"double\" quotes\ncode3";
         String expected = "code1 code2 code3";
         testCommentHandling(input, expected);
+    }
+
+    @Test
+    public void testGetFileWithoutCommentsMissingResource() {
+        when(bundle.getResource("missing.painless")).thenReturn(null);
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> MigrationUtils.getFileWithoutComments(bundleContext, "missing.painless"));
+        assertEquals("Resource not found: missing.painless", ex.getMessage());
     }
 } 
