@@ -269,11 +269,12 @@ public class Tenant extends Item {
     }
 
     /**
-     * Gets the currently active private API key for the tenant.
-     * This method resolves the active private API key from the API keys list.
-     * It returns the most recently created, non-revoked, non-expired private key.
-     * This key should be used for secure operations and administrative tasks.
-     * @return the active private API key, or null if no valid private key exists
+     * Gets a display-safe, masked representation of the tenant's currently active private API
+     * key (e.g. for showing in UIs or audit logs). It resolves the most recently created,
+     * non-revoked, non-expired private key, but since the plaintext key is never persisted (see
+     * UNOMI-938), this cannot be used to authenticate as the tenant; the real plaintext key is
+     * only available once, at creation time, via {@link ApiKeyCreationResult}.
+     * @return the masked private API key, or null if no valid private key exists
      */
     @XmlTransient
     public String getPrivateApiKey() {
@@ -286,16 +287,17 @@ public class Tenant extends Item {
             .filter(key -> !key.isRevoked())
             .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
             .max(Comparator.comparing(ApiKey::getCreationDate))
-            .map(ApiKey::getKey)
+            .map(ApiKey::getMaskedKey)
             .orElse(null);
     }
 
     /**
-     * Gets the currently active public API key for the tenant.
-     * This method resolves the active public API key from the API keys list.
-     * It returns the most recently created, non-revoked, non-expired public key.
-     * This key can be safely used in client-side applications.
-     * @return the active public API key, or null if no valid public key exists
+     * Gets a display-safe, masked representation of the tenant's currently active public API
+     * key (e.g. for showing in UIs or audit logs). It resolves the most recently created,
+     * non-revoked, non-expired public key, but since the plaintext key is never persisted (see
+     * UNOMI-938), this cannot be used in client-side applications; the real plaintext key is
+     * only available once, at creation time, via {@link ApiKeyCreationResult}.
+     * @return the masked public API key, or null if no valid public key exists
      */
     @XmlTransient
     public String getPublicApiKey() {
@@ -308,7 +310,7 @@ public class Tenant extends Item {
             .filter(key -> !key.isRevoked())
             .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
             .max(Comparator.comparing(ApiKey::getCreationDate))
-            .map(ApiKey::getKey)
+            .map(ApiKey::getMaskedKey)
             .orElse(null);
     }
 

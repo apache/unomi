@@ -48,6 +48,7 @@ import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ConditionBuilder;
@@ -176,6 +177,9 @@ public abstract class BaseIT extends KarafTestSupport {
     protected Tenant testTenant;
     protected ApiKey testPublicKey;
     protected ApiKey testPrivateKey;
+    // One-time plaintext values of testPublicKey/testPrivateKey, captured at generation time (UNOMI-938).
+    protected String testPublicKeyValue;
+    protected String testPrivateKeyValue;
     protected SchedulerService schedulerService;
     protected static final String TEST_TENANT_ID = "itTestTenant";
 
@@ -292,9 +296,13 @@ public abstract class BaseIT extends KarafTestSupport {
             if (testTenant == null) {
                 testTenant = tenantService.createTenant(TEST_TENANT_ID, Collections.emptyMap());
             }
-            // Get the API keys
-            testPublicKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
-            testPrivateKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PRIVATE);
+            // Generate fresh API keys and capture their one-time plaintext values (UNOMI-938).
+            ApiKeyCreationResult publicKeyResult = tenantService.generateApiKeyWithType(testTenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
+            ApiKeyCreationResult privateKeyResult = tenantService.generateApiKeyWithType(testTenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+            testPublicKey = publicKeyResult.getApiKey();
+            testPrivateKey = privateKeyResult.getApiKey();
+            testPublicKeyValue = publicKeyResult.getPlainTextKey();
+            testPrivateKeyValue = privateKeyResult.getPlainTextKey();
 
             // Make sure the tenant is available for querying.
             persistenceService.refresh();
@@ -308,7 +316,7 @@ public abstract class BaseIT extends KarafTestSupport {
         enableCamelDebugIfRequested();
 
         // Set up test tenant for HttpClientThatWaitsForUnomi
-        HttpClientThatWaitsForUnomi.setTestTenant(testTenant, testPublicKey, testPrivateKey);
+        HttpClientThatWaitsForUnomi.setTestTenant(testTenant, testPublicKeyValue, testPrivateKeyValue);
 
         // init httpClient without credentials provider - all auth handled via headers
         httpClient = initHttpClient(null);
@@ -376,6 +384,8 @@ public abstract class BaseIT extends KarafTestSupport {
                 testTenant = null;
                 testPublicKey = null;
                 testPrivateKey = null;
+                testPublicKeyValue = null;
+                testPrivateKeyValue = null;
             } catch (Exception e) {
                 LOGGER.error("Error cleaning up test tenant", e);
             }
@@ -1401,16 +1411,16 @@ public abstract class BaseIT extends KarafTestSupport {
                 // Remove any existing auth headers first
                 request.removeHeaders("Authorization");
                 // Only set X-Unomi-Api-Key header if it's not already set
-                if (request.getFirstHeader("X-Unomi-Api-Key") == null && testPublicKey != null) {
-                    request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
+                if (request.getFirstHeader("X-Unomi-Api-Key") == null && testPublicKeyValue != null) {
+                    request.setHeader("X-Unomi-Api-Key", testPublicKeyValue);
                 }
                 break;
             case PRIVATE_KEY:
                 // Remove any existing auth headers first
                 request.removeHeaders("X-Unomi-Api-Key");
                 // Only set Authorization header if it's not already set
-                if (request.getFirstHeader("Authorization") == null && testPrivateKey != null) {
-                    String credentials = TEST_TENANT_ID + ":" + testPrivateKey.getKey();
+                if (request.getFirstHeader("Authorization") == null && testPrivateKeyValue != null) {
+                    String credentials = TEST_TENANT_ID + ":" + testPrivateKeyValue;
                     request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
                 }
                 break;
@@ -1454,8 +1464,8 @@ public abstract class BaseIT extends KarafTestSupport {
                     // Public endpoint - use public key
                     request.removeHeaders("Authorization");
                     // Only set X-Unomi-Api-Key header if it's not already set
-                    if (request.getFirstHeader("X-Unomi-Api-Key") == null && testPublicKey != null) {
-                        request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
+                    if (request.getFirstHeader("X-Unomi-Api-Key") == null && testPublicKeyValue != null) {
+                        request.setHeader("X-Unomi-Api-Key", testPublicKeyValue);
                     }
                 } else if (normalizedPath.startsWith("/tenants")) {
                     // Admin endpoint - use JAAS admin
@@ -1469,8 +1479,8 @@ public abstract class BaseIT extends KarafTestSupport {
                     // Private endpoint - use private key
                     request.removeHeaders("X-Unomi-Api-Key");
                     // Only set Authorization header if it's not already set
-                    if (request.getFirstHeader("Authorization") == null && testPrivateKey != null) {
-                        String privateCredentials = TEST_TENANT_ID + ":" + testPrivateKey.getKey();
+                    if (request.getFirstHeader("Authorization") == null && testPrivateKeyValue != null) {
+                        String privateCredentials = TEST_TENANT_ID + ":" + testPrivateKeyValue;
                         request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(privateCredentials.getBytes()));
                     }
                 }

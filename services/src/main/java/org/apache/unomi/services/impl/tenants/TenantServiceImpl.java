@@ -16,9 +16,11 @@
  */
 package org.apache.unomi.services.impl.tenants;
 
+import org.apache.unomi.api.security.SecretHashService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.TenantLifecycleListener;
 import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.tenants.TenantStatus;
@@ -26,20 +28,18 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.bind.DatatypeConverter;
-import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TenantServiceImpl implements TenantService {
     private static final Logger LOGGER = LoggerFactory.getLogger(TenantServiceImpl.class);
-    private static final SecureRandom secureRandom = new SecureRandom();
     private static final int MAX_TENANT_ID_LENGTH = 32;
     private static final String TENANT_ID_PATTERN = "^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]$";
 
     private final List<TenantLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
     private PersistenceService persistenceService;
     private ExecutionContextManager executionContextManager;
+    private SecretHashService secretHashService;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -47,6 +47,10 @@ public class TenantServiceImpl implements TenantService {
 
     public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
         this.executionContextManager = executionContextManager;
+    }
+
+    public void setSecretHashService(SecretHashService secretHashService) {
+        this.secretHashService = secretHashService;
     }
 
     public void bindListener(TenantLifecycleListener listener) {
@@ -96,29 +100,42 @@ public class TenantServiceImpl implements TenantService {
             // Save tenant first to ensure it exists
             persistenceService.save(tenant);
 
-            // Generate both public and private API keys
-            generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
-            generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+            try {
+                // Generate both public and private API keys
+                generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
+                generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+            } catch (RuntimeException e) {
+                // Roll back rather than leave a partially-initialized tenant (e.g. missing its
+                // private key) persisted after a failure partway through key generation.
+                persistenceService.remove(tenant.getItemId(), Tenant.class);
+                throw e;
+            }
 
             persistenceService.refreshIndex(Tenant.class);
 
             // Reload tenant to get the updated version with API keys
-            return getTenant(tenant.getItemId());
+            Tenant reloadedTenant = getTenant(tenant.getItemId());
+            if (reloadedTenant == null) {
+                throw new IllegalStateException("Failed to reload tenant after creation: " + tenant.getItemId());
+            }
+            return reloadedTenant;
         });
     }
 
     @Override
-    public ApiKey generateApiKey(String tenantId, Long validityPeriod) {
+    public ApiKeyCreationResult generateApiKey(String tenantId, Long validityPeriod) {
         return generateApiKeyWithType(tenantId, ApiKey.ApiKeyType.PUBLIC, validityPeriod);
     }
 
     @Override
-    public ApiKey generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod) {
+    public ApiKeyCreationResult generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod) {
         return executionContextManager.executeAsSystem(() -> {
+            String plainTextKey = ApiKey.generatePlainTextKey();
+
             ApiKey apiKey = new ApiKey();
             apiKey.setItemId(UUID.randomUUID().toString());
-            String key = generateSecureKey();
-            apiKey.setKey(key);
+            apiKey.setKeyHash(secretHashService.hash(plainTextKey));
+            apiKey.setMaskedKey(ApiKey.maskPlainTextKey(plainTextKey));
             apiKey.setKeyType(keyType);
             apiKey.setCreationDate(new Date());
             if (validityPeriod != null) {
@@ -136,7 +153,7 @@ public class TenantServiceImpl implements TenantService {
                 persistenceService.save(tenant);
             }
 
-            return apiKey;
+            return new ApiKeyCreationResult(apiKey, plainTextKey);
         });
     }
 
@@ -150,12 +167,6 @@ public class TenantServiceImpl implements TenantService {
         return executionContextManager.executeAsSystem(() -> persistenceService.load(tenantId, Tenant.class));
     }
 
-    private String generateSecureKey() {
-        byte[] randomBytes = new byte[32];
-        secureRandom.nextBytes(randomBytes);
-        return DatatypeConverter.printHexBinary(randomBytes);
-    }
-
     @Override
     public void saveTenant(Tenant tenant) {
         executionContextManager.executeAsSystem(() -> persistenceService.save(tenant));
@@ -165,17 +176,18 @@ public class TenantServiceImpl implements TenantService {
     public void deleteTenant(String tenantId) {
         executionContextManager.executeAsSystem(() -> {
             Tenant tenant = persistenceService.load(tenantId, Tenant.class);
-            if (tenant != null) {
-                // Notify listeners before deletion
-                for (TenantLifecycleListener listener : lifecycleListeners) {
-                    try {
-                        listener.onTenantRemoved(tenantId);
-                    } catch (Exception e) {
-                        LOGGER.error("Error notifying listener {} of tenant removal: {}", listener.getClass().getName(), tenantId, e);
-                    }
-                }
-                persistenceService.remove(tenantId, Tenant.class);
+            if (tenant == null) {
+                throw new IllegalArgumentException("Tenant not found: " + tenantId);
             }
+            // Notify listeners before deletion
+            for (TenantLifecycleListener listener : lifecycleListeners) {
+                try {
+                    listener.onTenantRemoved(tenantId);
+                } catch (Exception e) {
+                    LOGGER.error("Error notifying listener {} of tenant removal: {}", listener.getClass().getName(), tenantId, e);
+                }
+            }
+            persistenceService.remove(tenantId, Tenant.class);
         });
     }
 
@@ -194,10 +206,15 @@ public class TenantServiceImpl implements TenantService {
             return false;
         }
         return tenant.getApiKeys().stream()
-                .anyMatch(apiKey -> apiKey.getKey().equals(key) &&
+                .anyMatch(apiKey -> matchesKey(apiKey, key) &&
                         !apiKey.isRevoked() &&
                         (requiredType == null || apiKey.getKeyType() == requiredType) &&
                         (apiKey.getExpirationDate() == null || apiKey.getExpirationDate().after(new Date())));
+    }
+
+    private boolean matchesKey(ApiKey apiKey, String plainTextKey) {
+        return plainTextKey != null && apiKey.getKeyHash() != null
+                && secretHashService.verify(plainTextKey, apiKey.getKeyHash());
     }
 
     @Override
@@ -216,14 +233,7 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     public Tenant getTenantByApiKey(String apiKey) {
-        return executionContextManager.executeAsSystem(() -> {
-            List<Tenant> tenants = persistenceService.getAllItems(Tenant.class);
-            return tenants.stream()
-                .filter(tenant -> tenant.getApiKeys().stream()
-                    .anyMatch(key -> key.getKey().equals(apiKey)))
-                .findFirst()
-                .orElse(null);
-        });
+        return getTenantByApiKey(apiKey, null);
     }
 
     @Override
@@ -231,8 +241,8 @@ public class TenantServiceImpl implements TenantService {
         return executionContextManager.executeAsSystem(() -> {
             List<Tenant> tenants = persistenceService.getAllItems(Tenant.class);
             return tenants.stream()
-                .filter(tenant -> tenant.getApiKeys().stream()
-                    .anyMatch(key -> key.getKey().equals(apiKey) && key.getKeyType() == keyType))
+                .filter(tenant -> tenant.getApiKeys() != null && tenant.getApiKeys().stream()
+                    .anyMatch(key -> (keyType == null || key.getKeyType() == keyType) && matchesKey(key, apiKey)))
                 .findFirst()
                 .orElse(null);
         });

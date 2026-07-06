@@ -19,6 +19,7 @@ package org.apache.unomi.rest.tenants;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.rest.security.RequiresRole;
@@ -145,13 +146,13 @@ public class TenantEndpoint {
      * @param tenantId the ID of the tenant
      * @param type the type of API key to generate (PUBLIC or PRIVATE)
      * @param validityDays the validity period in days (0 or null for no expiration)
-     * @return the generated API key
+     * @return the generated key metadata together with its one-time plaintext value
      * @throws WebApplicationException with 404 status if tenant is not found
      */
     @POST
     @Path("/{tenantId}/apikeys")
     @Produces(MediaType.APPLICATION_JSON)
-    public ApiKey generateApiKey(@PathParam("tenantId") String tenantId,
+    public ApiKeyCreationResult generateApiKey(@PathParam("tenantId") String tenantId,
                                @QueryParam("type") ApiKey.ApiKeyType type,
                                @QueryParam("validityDays") Integer validityDays) {
         Tenant tenant = tenantService.getTenant(tenantId);

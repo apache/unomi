@@ -18,6 +18,7 @@ package org.apache.unomi.api.tenants;
 
 import org.apache.unomi.api.Item;
 
+import java.security.SecureRandom;
 import java.util.Date;
 
 /**
@@ -30,6 +31,17 @@ public class ApiKey extends Item {
      * The item type for an API key.
      */
     public static final String ITEM_TYPE = "apiKey";
+
+    /** Prefix prepended to generated API key values. */
+    public static final String KEY_PREFIX = "unomi_v1_";
+
+    /** Number of random bytes used when generating a new API key. */
+    public static final int KEY_RANDOM_BYTES = 32;
+
+    /** Number of trailing characters shown after the mask marker. */
+    private static final int VISIBLE_SUFFIX_LENGTH = 4;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
      * Enum defining the types of API keys.
@@ -47,9 +59,16 @@ public class ApiKey extends Item {
     }
 
     /**
-     * The API key value.
+     * SHA-256 hex digest of the API key ({@link org.apache.unomi.api.security.SecretHashService#hash(String)}).
+     * The plaintext key is never persisted; it is only returned once at creation time.
      */
-    private String key;
+    private String keyHash;
+
+    /**
+     * A display-safe, masked representation of the key (e.g. "unomi_v1_****ab12"),
+     * suitable for showing in UIs and logs without exposing the secret.
+     */
+    private String maskedKey;
 
     /**
      * The type of API key (public or private).
@@ -90,19 +109,67 @@ public class ApiKey extends Item {
     }
 
     /**
-     * Gets the API key value.
-     * @return the API key value
+     * Generates a new plaintext API key.
+     *
+     * @return a newly generated plaintext API key with the {@link #KEY_PREFIX} prefix
      */
-    public String getKey() {
-        return key;
+    public static String generatePlainTextKey() {
+        byte[] randomBytes = new byte[KEY_RANDOM_BYTES];
+        SECURE_RANDOM.nextBytes(randomBytes);
+        StringBuilder hex = new StringBuilder(randomBytes.length * 2);
+        for (byte b : randomBytes) {
+            hex.append(String.format("%02X", b));
+        }
+        return KEY_PREFIX + hex;
     }
 
     /**
-     * Sets the API key value.
-     * @param key the API key value to set
+     * Produces a display-safe masked representation of a plaintext API key.
+     *
+     * @param plainTextKey the plaintext API key to mask; may be {@code null}
+     * @return the masked key (e.g. {@code unomi_v1_****ab12}), or {@code null} when {@code plainTextKey} is {@code null}
      */
-    public void setKey(String key) {
-        this.key = key;
+    public static String maskPlainTextKey(String plainTextKey) {
+        if (plainTextKey == null) {
+            return null;
+        }
+        boolean hasPrefix = plainTextKey.startsWith(KEY_PREFIX);
+        String body = hasPrefix ? plainTextKey.substring(KEY_PREFIX.length()) : plainTextKey;
+        int suffixLength = Math.min(VISIBLE_SUFFIX_LENGTH, body.length());
+        String lastVisible = body.substring(body.length() - suffixLength);
+        return (hasPrefix ? KEY_PREFIX : "") + "****" + lastVisible;
+    }
+
+    /**
+     * Gets the SHA-256 digest of the API key.
+     * @return the key hash as lowercase hex
+     */
+    public String getKeyHash() {
+        return keyHash;
+    }
+
+    /**
+     * Sets the SHA-256 digest of the API key.
+     * @param keyHash the key hash to set
+     */
+    public void setKeyHash(String keyHash) {
+        this.keyHash = keyHash;
+    }
+
+    /**
+     * Gets the display-safe masked representation of the key.
+     * @return the masked key (e.g. "unomi_v1_****ab12")
+     */
+    public String getMaskedKey() {
+        return maskedKey;
+    }
+
+    /**
+     * Sets the display-safe masked representation of the key.
+     * @param maskedKey the masked key to set
+     */
+    public void setMaskedKey(String maskedKey) {
+        this.maskedKey = maskedKey;
     }
 
     /**

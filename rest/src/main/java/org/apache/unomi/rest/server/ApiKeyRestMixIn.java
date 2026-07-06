@@ -14,22 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.rest.security;
+package org.apache.unomi.rest.server;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
- * Marks a JAX-RS resource method as tenant-scoped. {@link SecurityFilter} enforces this by
- * reading the {@code tenantId} {@code @PathParam} from the request URI (e.g.
- * {@code /tenants/{tenantId}/...}) and checking it against the caller's subject via
- * {@link org.apache.unomi.api.security.SecurityService#hasTenantAccess(String)}. The annotated
- * method's resource path must declare a {@code {tenantId}} path segment, or every request will
- * be rejected with a 400.
+ * This mixin is used in {@link RestServer} to prevent the API key hash from ever being
+ * exposed through REST responses (see UNOMI-938). Only the masked key and metadata are
+ * serialized; the plaintext key is only available once, on {@code ApiKeyCreationResult}.
  */
-@Target({ElementType.METHOD, ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-public @interface RequiresTenant {
+public abstract class ApiKeyRestMixIn {
+
+    public ApiKeyRestMixIn() { }
+
+    @JsonIgnore abstract String getKeyHash();
 }

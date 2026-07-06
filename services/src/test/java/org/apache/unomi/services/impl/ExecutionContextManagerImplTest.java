@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.services.impl;
 
+import org.apache.karaf.jaas.boot.principal.UserPrincipal;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.SecurityServiceConfiguration;
@@ -34,6 +35,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -88,6 +90,7 @@ public class ExecutionContextManagerImplTest {
         Set<String> systemPermissions = new HashSet<>(Arrays.asList("READ", "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE, "ADMIN"));
 
         // Mock security service behavior
+        when(securityService.getRequestSubject()).thenReturn(null);
         when(securityService.getSystemSubject()).thenReturn(systemSubject);
         when(securityService.extractRolesFromSubject(systemSubject)).thenReturn(systemRoles);
         when(securityService.getPermissionsForRole(UnomiRoles.ADMINISTRATOR)).thenReturn(systemPermissions);
@@ -106,6 +109,55 @@ public class ExecutionContextManagerImplTest {
         verify(securityService).getSystemSubject();
         verify(securityService).extractRolesFromSubject(systemSubject);
         verify(securityService).getPermissionsForRole(UnomiRoles.ADMINISTRATOR);
+        verify(securityService).clearRequestSubject();
+        verify(securityService, never()).setCurrentSubject(null);
+    }
+
+    @Test
+    public void testExecuteAsSystemRestoresPreviousSubject() {
+        Subject previousSubject = new Subject();
+        previousSubject.getPrincipals().add(new UserPrincipal("previous"));
+        Subject systemSubject = new Subject();
+        systemSubject.getPrincipals().add(new UserPrincipal("system"));
+        Set<String> systemRoles = new HashSet<>(Arrays.asList(UnomiRoles.ADMINISTRATOR));
+        Set<String> systemPermissions = new HashSet<>(Arrays.asList("ADMIN"));
+
+        when(securityService.getRequestSubject()).thenReturn(previousSubject);
+        when(securityService.getSystemSubject()).thenReturn(systemSubject);
+        when(securityService.extractRolesFromSubject(systemSubject)).thenReturn(systemRoles);
+        when(securityService.getPermissionsForRole(UnomiRoles.ADMINISTRATOR)).thenReturn(systemPermissions);
+
+        contextManager.executeAsSystem(() -> "done");
+
+        verify(securityService).setCurrentSubject(systemSubject);
+        verify(securityService).setCurrentSubject(previousSubject);
+        verify(securityService, never()).clearRequestSubject();
+    }
+
+    @Test
+    public void testExecuteAsSystemDoesNotLeakPrivilegedSubjectIntoRequestSubject() {
+        // Regression test: previously, executeAsSystem captured getCurrentSubject() (which
+        // resolves a privileged subject ahead of the request subject) and restored it via
+        // setCurrentSubject(), copying an active privileged subject into the request-subject
+        // slot even though it was never actually stored there.
+        Subject systemSubject = new Subject();
+        systemSubject.getPrincipals().add(new UserPrincipal("system"));
+        Set<String> systemRoles = new HashSet<>(Arrays.asList(UnomiRoles.ADMINISTRATOR));
+        Set<String> systemPermissions = new HashSet<>(Arrays.asList("ADMIN"));
+
+        // The request-subject slot itself is empty; only a privileged subject is active.
+        when(securityService.getRequestSubject()).thenReturn(null);
+        when(securityService.getSystemSubject()).thenReturn(systemSubject);
+        when(securityService.extractRolesFromSubject(systemSubject)).thenReturn(systemRoles);
+        when(securityService.getPermissionsForRole(UnomiRoles.ADMINISTRATOR)).thenReturn(systemPermissions);
+
+        contextManager.executeAsSystem(() -> "done");
+
+        // Restore must clear the request-subject slot, not copy anything into it, and must
+        // never touch the privileged subject at all.
+        verify(securityService).clearRequestSubject();
+        verify(securityService, never()).setCurrentSubject(null);
+        verify(securityService, never()).clearCurrentSubject();
     }
 
     @Test

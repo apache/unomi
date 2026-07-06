@@ -37,6 +37,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.itests.TestUtils.RequestResponse;
 import org.junit.After;
@@ -170,7 +171,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(session.getItemId());
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        addPrivateTenantAuth(request, testTenant, testPrivateKey);
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         executeContextJSONRequest(request, sessionId, -1, false);
 
@@ -181,7 +182,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     private void addPublicTenantAuth(HttpPost request) {
-        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
+        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKeyValue);
     }
 
     @Test
@@ -460,7 +461,7 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        addPrivateTenantAuth(request, testTenant, testPrivateKey);
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         executeContextJSONRequest(request, null, -1, false);
 
@@ -490,7 +491,7 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        addPrivateTenantAuth(request, testTenant, testPrivateKey);
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         executeContextJSONRequest(request);
 
@@ -517,7 +518,7 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        addPrivateTenantAuth(request, testTenant, testPrivateKey);
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         executeContextJSONRequest(request);
 
@@ -859,8 +860,8 @@ public class ContextServletIT extends BaseIT {
     public void testContextEndpointAuthentication() throws Exception {
         // Create a tenant for testing
         Tenant tenant = tenantService.createTenant("TestTenant", Collections.emptyMap());
-        ApiKey publicKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
-        ApiKey privateKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+        ApiKeyCreationResult publicKeyResult = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
+        ApiKeyCreationResult privateKeyResult = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
 
         // Test without any authentication
         ContextRequest contextRequest = new ContextRequest();
@@ -893,7 +894,7 @@ public class ContextServletIT extends BaseIT {
         Assert.assertEquals("JAAS authenticated request should succeed", 200, jaasResponse.getStatusLine().getStatusCode());
 
         // Test with public API key (should succeed)
-        contextRequest.setPublicApiKey(publicKey.getKey());
+        contextRequest.setPublicApiKey(publicKeyResult.getPlainTextKey());
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         response = executeContextJSONRequest(request, TEST_SESSION_ID);
@@ -901,7 +902,7 @@ public class ContextServletIT extends BaseIT {
 
         // Test with private API key (should fail for public endpoint)
         request = new HttpPost(getFullUrl(CONTEXT_URL));
-        addPrivateTenantAuth(request, tenant, privateKey);
+        addPrivateTenantAuth(request, tenant, privateKeyResult.getPlainTextKey());
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         response = executeContextJSONRequest(request, TEST_SESSION_ID);
         Assert.assertEquals("Private API key should be accepted for public endpoint to be able to update events and send restricted events", 200, response.getStatusCode());
@@ -910,9 +911,9 @@ public class ContextServletIT extends BaseIT {
         tenantService.deleteTenant(tenant.getItemId());
     }
 
-    private static void addPrivateTenantAuth(HttpPost request, Tenant tenant, ApiKey privateKey) {
+    private static void addPrivateTenantAuth(HttpPost request, Tenant tenant, String privateKeyValue) {
         request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
-            (tenant.getItemId() + ":" + privateKey.getKey()).getBytes()));
+            (tenant.getItemId() + ":" + privateKeyValue).getBytes()));
     }
 
     private void performPersonalizationWithControlGroup(Map<String, String> controlGroupConfig, List<String> expectedVariants,
@@ -1010,12 +1011,14 @@ public class ContextServletIT extends BaseIT {
     public void testContextRequestWithPublicApiKey() throws Exception {
         // Create tenant with API keys
         Tenant tenant = tenantService.createTenant("ContextApiKeyTest", Collections.emptyMap());
-        ApiKey publicKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
+        // Generate a fresh key to capture its one-time plaintext value (UNOMI-938: getApiKey() only returns
+        // metadata — a hash and a masked key — never the plaintext value).
+        ApiKeyCreationResult publicKeyResult = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
 
         // Create context request with public API key
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setSessionId(TEST_SESSION_ID);
-        contextRequest.setPublicApiKey(publicKey.getKey());
+        contextRequest.setPublicApiKey(publicKeyResult.getPlainTextKey());
 
         // Send request
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));

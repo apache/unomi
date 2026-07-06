@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -47,7 +48,7 @@ public class KarafSecurityService implements SecurityService {
 
     /** The system tenant identifier used for system-wide operations. */
     public static final String SYSTEM_TENANT = "system";
-    private final Subject SYSTEM_SUBJECT;
+    private final AtomicReference<Subject> systemSubject = new AtomicReference<>();
 
     private SecurityServiceConfiguration configuration;
     private EncryptionService encryptionService;
@@ -60,7 +61,7 @@ public class KarafSecurityService implements SecurityService {
      * Creates the security service and initializes the system subject.
      */
     public KarafSecurityService() {
-        SYSTEM_SUBJECT = createSystemSubject();
+        systemSubject.set(createSystemSubject());
     }
 
     private Subject createSystemSubject() {
@@ -90,12 +91,14 @@ public class KarafSecurityService implements SecurityService {
     }
 
     private void updateSystemSubject() {
-        SYSTEM_SUBJECT.getPrincipals().clear();
-        SYSTEM_SUBJECT.getPrincipals().add(new TenantPrincipal(SYSTEM_TENANT));
-        SYSTEM_SUBJECT.getPrincipals().add(new UserPrincipal("system"));
+        Subject subject = new Subject();
+        subject.getPrincipals().add(new TenantPrincipal(SYSTEM_TENANT));
+        subject.getPrincipals().add(new UserPrincipal("system"));
         for (String role : configuration.getSystemRoles()) {
-            SYSTEM_SUBJECT.getPrincipals().add(new RolePrincipal(role));
+            subject.getPrincipals().add(new RolePrincipal(role));
         }
+        subject.setReadOnly();
+        systemSubject.set(subject);
     }
 
     /**
@@ -167,6 +170,16 @@ public class KarafSecurityService implements SecurityService {
     public void clearCurrentSubject() {
         currentSubject.remove();
         privilegedSubject.remove();
+    }
+
+    @Override
+    public Subject getRequestSubject() {
+        return currentSubject.get();
+    }
+
+    @Override
+    public void clearRequestSubject() {
+        currentSubject.remove();
     }
 
     /**
@@ -315,7 +328,7 @@ public class KarafSecurityService implements SecurityService {
 
     @Override
     public Subject getSystemSubject() {
-        return SYSTEM_SUBJECT;
+        return systemSubject.get();
     }
 
     @Override

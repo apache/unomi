@@ -31,6 +31,7 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.ResourceQuota;
 import org.apache.unomi.api.tenants.Tenant;
 import org.junit.Assert;
@@ -126,18 +127,20 @@ public class TenantIT extends BaseIT {
             HttpPost generateKeyRequest = new HttpPost(generateKeyUrl);
 
             String generateKeyResponse;
-            ApiKey newApiKey;
+            ApiKeyCreationResult newApiKeyResult;
             try (CloseableHttpResponse response = executeHttpRequest(generateKeyRequest, AuthType.JAAS_ADMIN)) {
                 generateKeyResponse = EntityUtils.toString(response.getEntity());
-                newApiKey = getObjectMapper().readValue(generateKeyResponse, ApiKey.class);
+                newApiKeyResult = getObjectMapper().readValue(generateKeyResponse, ApiKeyCreationResult.class);
             }
 
-            Assert.assertNotNull("New API key should not be null", newApiKey);
-            Assert.assertEquals("API key type should match requested type", ApiKey.ApiKeyType.PUBLIC, newApiKey.getKeyType());
+            Assert.assertNotNull("New API key result should not be null", newApiKeyResult);
+            Assert.assertNotNull("New API key should not be null", newApiKeyResult.getApiKey());
+            Assert.assertEquals("API key type should match requested type", ApiKey.ApiKeyType.PUBLIC, newApiKeyResult.getApiKey().getKeyType());
+            String newApiKeyValue = newApiKeyResult.getPlainTextKey();
 
             // Test validate API key
             String validateKeyUrl = String.format("%s/%s/apikeys/validate?key=%s&type=%s",
-                getFullUrl(REST_ENDPOINT), updatedTenant.getItemId(), newApiKey.getKey(), ApiKey.ApiKeyType.PUBLIC.name());
+                getFullUrl(REST_ENDPOINT), updatedTenant.getItemId(), newApiKeyValue, ApiKey.ApiKeyType.PUBLIC.name());
             int validateResponse;
             try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(validateKeyUrl), AuthType.JAAS_ADMIN)) {
                 validateResponse = response.getStatusLine().getStatusCode();
@@ -146,7 +149,7 @@ public class TenantIT extends BaseIT {
 
             // Test validate with wrong type
             String validateWrongTypeUrl = String.format("%s/%s/apikeys/validate?key=%s&type=%s",
-                getFullUrl(REST_ENDPOINT), updatedTenant.getItemId(), newApiKey.getKey(), ApiKey.ApiKeyType.PRIVATE.name());
+                getFullUrl(REST_ENDPOINT), updatedTenant.getItemId(), newApiKeyValue, ApiKey.ApiKeyType.PRIVATE.name());
             int validateWrongTypeResponse;
             try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(validateWrongTypeUrl), AuthType.JAAS_ADMIN)) {
                 validateWrongTypeResponse = response.getStatusLine().getStatusCode();
@@ -235,7 +238,12 @@ public class TenantIT extends BaseIT {
     public void testPublicEndpointAuthentication() throws Exception {
         // Create test tenant
         Tenant tenant = tenantService.createTenant("public-test-tenant", Collections.emptyMap());
-        
+
+        // Generate fresh keys to capture their one-time plaintext values (UNOMI-938: tenant.getPublicApiKey()/
+        // getPrivateApiKey() only return masked keys, which cannot be used for authentication).
+        String privateKeyValue = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null).getPlainTextKey();
+        String publicKeyValue = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null).getPlainTextKey();
+
         // Refresh persistence to ensure tenant is immediately available for API key lookup
         persistenceService.refresh();
 
@@ -249,14 +257,14 @@ public class TenantIT extends BaseIT {
             // Test with private API key (should succeed - private keys have higher privileges)
             HttpGet publicRequest = new HttpGet(getFullUrl("/context.json?sessionId=" + sessionId));
             publicRequest.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
-                (tenant.getItemId() + ":" + tenant.getPrivateApiKey()).getBytes()));
+                (tenant.getItemId() + ":" + privateKeyValue).getBytes()));
             try (CloseableHttpResponse response = executeHttpRequest(publicRequest, AuthType.PRIVATE_KEY)) {
                 Assert.assertEquals("Private API key should grant access to public endpoints (higher privileges)", 200, response.getStatusLine().getStatusCode());
             }
 
             // Test with valid public API key (should succeed)
             publicRequest = new HttpGet(getFullUrl("/context.json?sessionId=" + sessionId));
-            publicRequest.setHeader("X-Unomi-Api-Key", tenant.getPublicApiKey());
+            publicRequest.setHeader("X-Unomi-Api-Key", publicKeyValue);
             try (CloseableHttpResponse response = executeHttpRequest(publicRequest, AuthType.PUBLIC_KEY)) {
                 Assert.assertEquals("Valid public API key should grant access to public endpoints", 200, response.getStatusLine().getStatusCode());
             }
@@ -278,6 +286,12 @@ public class TenantIT extends BaseIT {
         // Create test tenant
         Tenant tenant = tenantService.createTenant("private-test-tenant", Collections.emptyMap());
 
+        // Generate fresh keys to capture their one-time plaintext values (UNOMI-938: tenant.getPublicApiKey()
+        // only returns a masked key, which cannot be used for authentication).
+        String publicKeyValue = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null).getPlainTextKey();
+        String privateKeyValue = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null).getPlainTextKey();
+        persistenceService.refresh();
+
         try {
             // Test without any authentication
             try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl("/cxs/profiles/count")), AuthType.NONE)) {
@@ -286,7 +300,7 @@ public class TenantIT extends BaseIT {
 
             // Test with public API key (should fail)
             HttpGet privateRequest = new HttpGet(getFullUrl("/cxs/profiles/count"));
-            privateRequest.setHeader("X-Unomi-Api-Key", tenant.getPublicApiKey());
+            privateRequest.setHeader("X-Unomi-Api-Key", publicKeyValue);
             try (CloseableHttpResponse response = executeHttpRequest(privateRequest, AuthType.PUBLIC_KEY)) {
                 Assert.assertEquals("Public API key should not grant access to private endpoints", 401, response.getStatusLine().getStatusCode());
             }
@@ -302,7 +316,7 @@ public class TenantIT extends BaseIT {
             // Test with valid private API key (should succeed)
             privateRequest = new HttpGet(getFullUrl("/cxs/profiles/count"));
             privateRequest.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
-                (tenant.getItemId() + ":" + tenant.getPrivateApiKey()).getBytes()));
+                (tenant.getItemId() + ":" + privateKeyValue).getBytes()));
             try (CloseableHttpResponse response = executeHttpRequest(privateRequest, AuthType.PRIVATE_KEY)) {
                 Assert.assertEquals("Valid private API key should grant access to private endpoints", 200, response.getStatusLine().getStatusCode());
             }
@@ -352,10 +366,10 @@ public class TenantIT extends BaseIT {
 
         try {
             // Test with private API key (should succeed)
-            ApiKey privateKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+            ApiKeyCreationResult privateKeyResult = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
             HttpGet getRequest = new HttpGet(getFullUrl("/cxs/profiles/count"));
             getRequest.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
-                (tenant.getItemId() + ":" + privateKey.getKey()).getBytes()));
+                (tenant.getItemId() + ":" + privateKeyResult.getPlainTextKey()).getBytes()));
             try (CloseableHttpResponse response = executeHttpRequest(getRequest, AuthType.PRIVATE_KEY)) {
                 Assert.assertEquals("Private API key should grant access to private endpoints", 200, response.getStatusLine().getStatusCode());
             }
@@ -368,9 +382,9 @@ public class TenantIT extends BaseIT {
             }
 
             // Test with public API key (should fail)
-            ApiKey publicKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
+            ApiKeyCreationResult publicKeyResult = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
             getRequest = new HttpGet(getFullUrl("/cxs/profiles/count"));
-            getRequest.setHeader("X-Unomi-Api-Key", publicKey.getKey());
+            getRequest.setHeader("X-Unomi-Api-Key", publicKeyResult.getPlainTextKey());
             try (CloseableHttpResponse response = executeHttpRequest(getRequest, AuthType.PUBLIC_KEY)) {
                 Assert.assertEquals("Public API key should not grant access to private endpoints", 401, response.getStatusLine().getStatusCode());
             }
@@ -390,9 +404,9 @@ public class TenantIT extends BaseIT {
     public void testExpiredApiKey() throws Exception {
         Tenant tenant = tenantService.createTenant("expired-tenant", Collections.emptyMap());
         try {
-            ApiKey apiKey = tenantService.generateApiKey(tenant.getItemId(), 1L); // 1ms validity
+            ApiKeyCreationResult apiKeyResult = tenantService.generateApiKey(tenant.getItemId(), 1L); // 1ms validity
             Thread.sleep(2); // Wait for key to expire
-            Assert.assertFalse(tenantService.validateApiKey(tenant.getItemId(), apiKey.getKey()));
+            Assert.assertFalse(tenantService.validateApiKey(tenant.getItemId(), apiKeyResult.getPlainTextKey()));
         } finally {
             tenantService.deleteTenant(tenant.getItemId());
         }
@@ -454,8 +468,12 @@ public class TenantIT extends BaseIT {
         Tenant tenant = tenantService.createTenant("dual-key-tenant", Collections.emptyMap());
 
         try {
-            ApiKey publicKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
-            ApiKey privateKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE);
+            // Generate fresh keys to capture their one-time plaintext values (UNOMI-938: getApiKey() only
+            // returns metadata — a hash and a masked key — never the plaintext value).
+            ApiKeyCreationResult publicKeyResult = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
+            ApiKeyCreationResult privateKeyResult = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+            ApiKey publicKey = publicKeyResult.getApiKey();
+            ApiKey privateKey = privateKeyResult.getApiKey();
 
             Assert.assertNotNull("Public key should exist", publicKey);
             Assert.assertNotNull("Private key should exist", privateKey);
@@ -463,13 +481,13 @@ public class TenantIT extends BaseIT {
             Assert.assertEquals("Private key should have correct type", ApiKey.ApiKeyType.PRIVATE, privateKey.getKeyType());
 
             Assert.assertTrue("Public key should validate as public",
-                tenantService.validateApiKeyWithType(tenant.getItemId(), publicKey.getKey(), ApiKey.ApiKeyType.PUBLIC));
+                tenantService.validateApiKeyWithType(tenant.getItemId(), publicKeyResult.getPlainTextKey(), ApiKey.ApiKeyType.PUBLIC));
             Assert.assertFalse("Public key should not validate as private",
-                tenantService.validateApiKeyWithType(tenant.getItemId(), publicKey.getKey(), ApiKey.ApiKeyType.PRIVATE));
+                tenantService.validateApiKeyWithType(tenant.getItemId(), publicKeyResult.getPlainTextKey(), ApiKey.ApiKeyType.PRIVATE));
             Assert.assertTrue("Private key should validate as private",
-                tenantService.validateApiKeyWithType(tenant.getItemId(), privateKey.getKey(), ApiKey.ApiKeyType.PRIVATE));
+                tenantService.validateApiKeyWithType(tenant.getItemId(), privateKeyResult.getPlainTextKey(), ApiKey.ApiKeyType.PRIVATE));
             Assert.assertFalse("Private key should not validate as public",
-                tenantService.validateApiKeyWithType(tenant.getItemId(), privateKey.getKey(), ApiKey.ApiKeyType.PUBLIC));
+                tenantService.validateApiKeyWithType(tenant.getItemId(), privateKeyResult.getPlainTextKey(), ApiKey.ApiKeyType.PUBLIC));
         } finally {
             tenantService.deleteTenant(tenant.getItemId());
         }
@@ -480,21 +498,23 @@ public class TenantIT extends BaseIT {
         Tenant tenant = tenantService.createTenant("lookup-tenant", Collections.emptyMap());
 
         try {
-            ApiKey publicKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
-            ApiKey privateKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE);
+            // Generate fresh keys to capture their one-time plaintext values (UNOMI-938: getApiKey() only
+            // returns metadata — a hash and a masked key — never the plaintext value).
+            String publicKeyValue = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null).getPlainTextKey();
+            String privateKeyValue = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null).getPlainTextKey();
 
             persistenceService.refresh();
 
-            Tenant foundByPublic = tenantService.getTenantByApiKey(publicKey.getKey());
-            Tenant foundByPrivate = tenantService.getTenantByApiKey(privateKey.getKey());
+            Tenant foundByPublic = tenantService.getTenantByApiKey(publicKeyValue);
+            Tenant foundByPrivate = tenantService.getTenantByApiKey(privateKeyValue);
 
             Assert.assertEquals("Should find correct tenant by public key", tenant.getItemId(), foundByPublic.getItemId());
             Assert.assertEquals("Should find correct tenant by private key", tenant.getItemId(), foundByPrivate.getItemId());
 
-            Tenant foundByPublicAsPublic = tenantService.getTenantByApiKey(publicKey.getKey(), ApiKey.ApiKeyType.PUBLIC);
-            Tenant foundByPublicAsPrivate = tenantService.getTenantByApiKey(publicKey.getKey(), ApiKey.ApiKeyType.PRIVATE);
-            Tenant foundByPrivateAsPrivate = tenantService.getTenantByApiKey(privateKey.getKey(), ApiKey.ApiKeyType.PRIVATE);
-            Tenant foundByPrivateAsPublic = tenantService.getTenantByApiKey(privateKey.getKey(), ApiKey.ApiKeyType.PUBLIC);
+            Tenant foundByPublicAsPublic = tenantService.getTenantByApiKey(publicKeyValue, ApiKey.ApiKeyType.PUBLIC);
+            Tenant foundByPublicAsPrivate = tenantService.getTenantByApiKey(publicKeyValue, ApiKey.ApiKeyType.PRIVATE);
+            Tenant foundByPrivateAsPrivate = tenantService.getTenantByApiKey(privateKeyValue, ApiKey.ApiKeyType.PRIVATE);
+            Tenant foundByPrivateAsPublic = tenantService.getTenantByApiKey(privateKeyValue, ApiKey.ApiKeyType.PUBLIC);
 
             Assert.assertNotNull("Should find tenant by public key when type matches", foundByPublicAsPublic);
             Assert.assertNull("Should not find tenant by public key when type is private", foundByPublicAsPrivate);

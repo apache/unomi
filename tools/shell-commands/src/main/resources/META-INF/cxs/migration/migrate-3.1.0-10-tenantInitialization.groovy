@@ -3,6 +3,8 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
@@ -33,6 +35,29 @@ String tenantId = context.getConfigString(TENANT_ID)
 ZonedDateTime unifiedDate = ZonedDateTime.now()
 String isoDate = unifiedDate.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
+// Hashes a plaintext API key the same way SecretHashServiceImpl.hash does
+// (SHA-256, lowercase hex) so it can be verified by TenantServiceImpl after migration without
+// ever persisting the plaintext value (see UNOMI-938).
+//
+// IMPORTANT: this script cannot depend on the `services` bundle, so the algorithm must match
+// SecretHashServiceImpl.HASH_ALGORITHM ("SHA-256") and UTF-8 encoding.
+def hashApiKey = { String plainTextKey ->
+    byte[] digest = MessageDigest.getInstance("SHA-256")
+            .digest(plainTextKey.getBytes(StandardCharsets.UTF_8))
+    StringBuilder hex = new StringBuilder(digest.length * 2)
+    for (byte b : digest) {
+        hex.append(String.format("%02x", b))
+    }
+    return hex.toString()
+}
+
+// Masks a plaintext API key the same way ApiKey.maskPlainTextKey does: "unomi_v1_****LAST4".
+def maskApiKey = { String plainTextKey ->
+    String withoutPrefix = plainTextKey.startsWith("unomi_v1_") ? plainTextKey.substring(9) : plainTextKey
+    String lastFour = withoutPrefix.length() >= 4 ? withoutPrefix.substring(withoutPrefix.length() - 4) : withoutPrefix
+    return "unomi_v1_****${lastFour}"
+}
+
 // Delete API key files older than 24 hours left by previous migration runs
 Path secretsDir = Paths.get(System.getProperty("karaf.data", "data"), "migration", "secrets")
 if (Files.exists(secretsDir)) {
@@ -57,10 +82,17 @@ context.performMigrationStep("3.1.0-create-tenant-index", () -> {
         SecureRandom rng = new SecureRandom()
         byte[] pubBytes  = new byte[32]; rng.nextBytes(pubBytes)
         byte[] privBytes = new byte[32]; rng.nextBytes(privBytes)
-        String generatedPublicKey  = pubBytes.collect  { String.format('%02X', it) }.join()
-        String generatedPrivateKey = privBytes.collect { String.format('%02X', it) }.join()
+        String generatedPublicKey  = "unomi_v1_" + pubBytes.collect  { String.format('%02X', it) }.join()
+        String generatedPrivateKey = "unomi_v1_" + privBytes.collect { String.format('%02X', it) }.join()
         String publicKeyId  = UUID.randomUUID().toString()
         String privateKeyId = UUID.randomUUID().toString()
+
+        // Only the salted hash and a masked, display-safe representation are ever persisted (see UNOMI-938).
+        // The plaintext values below are only available now, at generation time.
+        String publicKeyHash  = hashApiKey(generatedPublicKey)
+        String privateKeyHash = hashApiKey(generatedPrivateKey)
+        String publicKeyMasked  = maskApiKey(generatedPublicKey)
+        String privateKeyMasked = maskApiKey(generatedPrivateKey)
 
         // Write keys to a time-limited file AND print to console — the only opportunity to record them
         Files.createDirectories(secretsDir)
@@ -117,7 +149,8 @@ ${sep}
                   "lastModifiedBy": "system-migration-3.1.0",
                   "creationDate" : "${isoDate}",
                   "lastModificationDate" : "${isoDate}",
-                  "key" : "${generatedPublicKey}",
+                  "keyHash" : "${publicKeyHash}",
+                  "maskedKey" : "${publicKeyMasked}",
                   "keyType" : "PUBLIC",
                   "revoked" : false
                 },
@@ -128,7 +161,8 @@ ${sep}
                   "lastModifiedBy": "system-migration-3.1.0",
                   "creationDate" : "${isoDate}",
                   "lastModificationDate" : "${isoDate}",
-                  "key" : "${generatedPrivateKey}",
+                  "keyHash" : "${privateKeyHash}",
+                  "maskedKey" : "${privateKeyMasked}",
                   "keyType" : "PRIVATE",
                   "revoked" : false
                 }

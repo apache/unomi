@@ -16,13 +16,13 @@
  */
 package org.apache.unomi.services.impl;
 
+import org.apache.unomi.api.security.SecretHashService;
 import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.tenants.TenantStatus;
 
-import javax.xml.bind.DatatypeConverter;
-import java.security.SecureRandom;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -31,7 +31,15 @@ public class TestTenantService implements TenantService {
     private ThreadLocal<String> currentTenantId = new ThreadLocal<>();
     private Map<String, Tenant> tenants = new ConcurrentHashMap<>();
     private ThreadLocal<Boolean> inSystemOperation = new ThreadLocal<>();
-    private static final SecureRandom secureRandom = new SecureRandom();
+    private final SecretHashService secretHashService;
+
+    public TestTenantService() {
+        this(new TestSecretHashService());
+    }
+
+    public TestTenantService(SecretHashService secretHashService) {
+        this.secretHashService = secretHashService;
+    }
 
     public void setInSystemOperation(boolean inSystemOperation) {
         this.inSystemOperation.set(inSystemOperation);
@@ -86,10 +94,15 @@ public class TestTenantService implements TenantService {
             return false;
         }
         return tenant.getApiKeys().stream()
-                .anyMatch(apiKey -> apiKey.getKey().equals(key) &&
+                .anyMatch(apiKey -> matchesKey(apiKey, key) &&
                         !apiKey.isRevoked() &&
                         (requiredType == null || apiKey.getKeyType() == requiredType) &&
                         (apiKey.getExpirationDate() == null || apiKey.getExpirationDate().after(new Date())));
+    }
+
+    private boolean matchesKey(ApiKey apiKey, String plainTextKey) {
+        return plainTextKey != null && apiKey.getKeyHash() != null
+                && secretHashService.verify(plainTextKey, apiKey.getKeyHash());
     }
 
     @Override
@@ -112,16 +125,18 @@ public class TestTenantService implements TenantService {
     }
 
     @Override
-    public ApiKey generateApiKey(String tenantId, Long validityPeriod) {
+    public ApiKeyCreationResult generateApiKey(String tenantId, Long validityPeriod) {
         return generateApiKeyWithType(tenantId, ApiKey.ApiKeyType.PUBLIC, validityPeriod);
     }
 
     @Override
-    public ApiKey generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod) {
+    public ApiKeyCreationResult generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod) {
+        String plainTextKey = ApiKey.generatePlainTextKey();
+
         ApiKey apiKey = new ApiKey();
         apiKey.setItemId(UUID.randomUUID().toString());
-        String key = generateSecureKey();
-        apiKey.setKey(key);
+        apiKey.setKeyHash(secretHashService.hash(plainTextKey));
+        apiKey.setMaskedKey(ApiKey.maskPlainTextKey(plainTextKey));
         apiKey.setKeyType(keyType);
         apiKey.setCreationDate(new Date());
         if (validityPeriod != null) {
@@ -139,7 +154,7 @@ public class TestTenantService implements TenantService {
             saveTenant(tenant);
         }
 
-        return apiKey;
+        return new ApiKeyCreationResult(apiKey, plainTextKey);
     }
 
     @Override
@@ -147,7 +162,7 @@ public class TestTenantService implements TenantService {
         return tenants.values().stream()
                 .filter(tenant -> tenant.getApiKeys() != null && 
                         tenant.getApiKeys().stream()
-                                .anyMatch(key -> key.getKey().equals(apiKey)))
+                                .anyMatch(key -> matchesKey(key, apiKey)))
                 .findFirst()
                 .orElse(null);
     }
@@ -157,7 +172,7 @@ public class TestTenantService implements TenantService {
         return tenants.values().stream()
                 .filter(tenant -> tenant.getApiKeys() != null && 
                         tenant.getApiKeys().stream()
-                                .anyMatch(key -> key.getKey().equals(apiKey) && key.getKeyType() == keyType))
+                                .anyMatch(key -> matchesKey(key, apiKey) && key.getKeyType() == keyType))
                 .findFirst()
                 .orElse(null);
     }
@@ -172,11 +187,5 @@ public class TestTenantService implements TenantService {
                 .orElse(null);
         }
         return null;
-    }
-
-    private String generateSecureKey() {
-        byte[] randomBytes = new byte[32];
-        secureRandom.nextBytes(randomBytes);
-        return DatatypeConverter.printHexBinary(randomBytes);
     }
 }

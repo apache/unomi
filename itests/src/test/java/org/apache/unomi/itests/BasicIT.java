@@ -199,7 +199,7 @@ public class BasicIT extends BaseIT {
                 EMAIL_VISITOR_1, SESSION_ID_3);
         HttpPost requestLoginVisitor1 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestLoginVisitor1.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
-        requestLoginVisitor1.addHeader("X-Unomi-Api-Key", testPublicKey.getKey());
+        requestLoginVisitor1.addHeader("X-Unomi-Api-Key", testPublicKeyValue);
         requestLoginVisitor1.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestLoginVisitor1),
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponseLoginVisitor1 = executeContextJSONRequest(requestLoginVisitor1, SESSION_ID_3);
@@ -253,7 +253,7 @@ public class BasicIT extends BaseIT {
                 EMAIL_VISITOR_2, SESSION_ID_4);
         HttpPost requestLoginVisitor2 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestLoginVisitor2.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
-        requestLoginVisitor2.addHeader("X-Unomi-Api-Key", testPublicKey.getKey());
+        requestLoginVisitor2.addHeader("X-Unomi-Api-Key", testPublicKeyValue);
         requestLoginVisitor2.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestLoginVisitor2),
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponseLoginVisitor2 = executeContextJSONRequest(requestLoginVisitor2, SESSION_ID_4);

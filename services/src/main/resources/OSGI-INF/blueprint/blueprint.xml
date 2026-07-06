@@ -456,9 +456,12 @@
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
 
+    <bean id="secretHashServiceImpl" class="org.apache.unomi.services.security.SecretHashServiceImpl"/>
+
     <bean id="tenantServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="executionContextManager" ref="executionContextManager"/>
+        <property name="secretHashService" ref="secretHashServiceImpl"/>
     </bean>
 
     <bean id="tenantMigrationServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantMigrationService">

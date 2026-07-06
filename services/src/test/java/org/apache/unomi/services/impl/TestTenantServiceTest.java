@@ -17,7 +17,9 @@
 package org.apache.unomi.services.impl;
 
 import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.services.security.SecretHashServiceImpl;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,12 +28,18 @@ import java.util.List;
 
 /**
  * Test for the TestTenantService to verify it works correctly with API key functionality.
+ * Uses the production {@link SecretHashServiceImpl} so hashing behaviour is validated here;
+ * other tests use the default fast {@link TestSecretHashService} via {@link TestTenantService#TestTenantService()}.
  */
 public class TestTenantServiceTest {
 
+    private TestTenantService newTenantService() {
+        return new TestTenantService(new SecretHashServiceImpl());
+    }
+
     @Test
     public void testCreateTenantWithApiKeys() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
         // Create a tenant
         Tenant tenant = tenantService.createTenant("test-tenant", Collections.emptyMap());
@@ -58,18 +66,20 @@ public class TestTenantServiceTest {
 
     @Test
     public void testGenerateApiKeyWithType() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
         // Create a tenant first
         Tenant tenant = tenantService.createTenant("test-tenant", Collections.emptyMap());
         
         // Generate a new public API key
-        ApiKey newPublicKey = tenantService.generateApiKeyWithType("test-tenant", ApiKey.ApiKeyType.PUBLIC, null);
+        ApiKeyCreationResult newPublicKeyResult = tenantService.generateApiKeyWithType("test-tenant", ApiKey.ApiKeyType.PUBLIC, null);
         
         // Verify the new key was generated
-        assertNotNull(newPublicKey, "New API key should not be null");
-        assertEquals(ApiKey.ApiKeyType.PUBLIC, newPublicKey.getKeyType(), "Key type should be PUBLIC");
-        assertNotNull(newPublicKey.getKey(), "Key value should not be null");
+        assertNotNull(newPublicKeyResult, "New API key result should not be null");
+        assertNotNull(newPublicKeyResult.getApiKey(), "New API key should not be null");
+        assertEquals(ApiKey.ApiKeyType.PUBLIC, newPublicKeyResult.getApiKey().getKeyType(), "Key type should be PUBLIC");
+        assertNotNull(newPublicKeyResult.getPlainTextKey(), "Plaintext key value should not be null");
+        assertNotNull(newPublicKeyResult.getApiKey().getMaskedKey(), "Masked key should not be null");
         
         // Reload tenant and verify the new key is there
         Tenant reloadedTenant = tenantService.getTenant("test-tenant");
@@ -79,12 +89,12 @@ public class TestTenantServiceTest {
 
     @Test
     public void testValidateApiKey() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
-        // Create a tenant
-        Tenant tenant = tenantService.createTenant("test-tenant", Collections.emptyMap());
-        String publicKey = tenant.getPublicApiKey();
-        String privateKey = tenant.getPrivateApiKey();
+        // Create a tenant, then generate fresh keys to capture their one-time plaintext values
+        tenantService.createTenant("test-tenant", Collections.emptyMap());
+        String publicKey = tenantService.generateApiKeyWithType("test-tenant", ApiKey.ApiKeyType.PUBLIC, null).getPlainTextKey();
+        String privateKey = tenantService.generateApiKeyWithType("test-tenant", ApiKey.ApiKeyType.PRIVATE, null).getPlainTextKey();
         
         // Verify API key validation works
         assertTrue(tenantService.validateApiKey("test-tenant", publicKey), "Public API key should be valid");
@@ -95,12 +105,12 @@ public class TestTenantServiceTest {
 
     @Test
     public void testValidateApiKeyWithType() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
-        // Create a tenant
-        Tenant tenant = tenantService.createTenant("test-tenant", Collections.emptyMap());
-        String publicKey = tenant.getPublicApiKey();
-        String privateKey = tenant.getPrivateApiKey();
+        // Create a tenant, then generate fresh keys to capture their one-time plaintext values
+        tenantService.createTenant("test-tenant", Collections.emptyMap());
+        String publicKey = tenantService.generateApiKeyWithType("test-tenant", ApiKey.ApiKeyType.PUBLIC, null).getPlainTextKey();
+        String privateKey = tenantService.generateApiKeyWithType("test-tenant", ApiKey.ApiKeyType.PRIVATE, null).getPlainTextKey();
         
         // Verify type-specific validation works
         assertTrue(tenantService.validateApiKeyWithType("test-tenant", publicKey, ApiKey.ApiKeyType.PUBLIC), 
@@ -115,11 +125,11 @@ public class TestTenantServiceTest {
 
     @Test
     public void testGetTenantByApiKey() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
-        // Create a tenant
-        Tenant tenant = tenantService.createTenant("test-tenant", Collections.emptyMap());
-        String publicKey = tenant.getPublicApiKey();
+        // Create a tenant, then generate a fresh key to capture its one-time plaintext value
+        tenantService.createTenant("test-tenant", Collections.emptyMap());
+        String publicKey = tenantService.generateApiKeyWithType("test-tenant", ApiKey.ApiKeyType.PUBLIC, null).getPlainTextKey();
         
         // Verify tenant lookup by API key works
         Tenant foundTenant = tenantService.getTenantByApiKey(publicKey);
@@ -137,7 +147,7 @@ public class TestTenantServiceTest {
 
     @Test
     public void testGetApiKey() {
-        TestTenantService tenantService = new TestTenantService();
+        TestTenantService tenantService = newTenantService();
         
         // Create a tenant
         tenantService.createTenant("test-tenant", Collections.emptyMap());
