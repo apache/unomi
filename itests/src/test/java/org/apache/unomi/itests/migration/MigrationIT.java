@@ -36,6 +36,8 @@ public class MigrationIT  extends BaseIT {
     private static final String SUCCESS_SCRIPT_NAME = "migrate-11.0.0-01-successMigration.groovy";
     private static final String FAILING_SCRIPT_RESOURCE = "migration/" + FAILING_SCRIPT_NAME;
     private static final String SUCCESS_SCRIPT_RESOURCE = "migration/" + SUCCESS_SCRIPT_NAME;
+    private static final String NESTED_STEP_SCRIPT_NAME = "migrate-12.0.0-01-nestedStepPitfall.groovy";
+    private static final String NESTED_STEP_SCRIPT_RESOURCE = "migration/" + NESTED_STEP_SCRIPT_NAME;
 
     @Test
     public void checkMigrationRecoverySystem() throws Exception {
@@ -44,6 +46,7 @@ public class MigrationIT  extends BaseIT {
         LOGGER.info("Karaf data directory: {}", karafData);
 
         Path scriptsDirectory = Paths.get(karafData, "migration", "scripts");
+        Path historyFsPath = Paths.get(karafData, "migration", "history.json");
         Path failingScriptFsPath = Paths.get(karafData, "migration", "scripts", FAILING_SCRIPT_NAME);
         Path successScriptFsPath = Paths.get(karafData, "migration", "scripts", SUCCESS_SCRIPT_NAME);
 
@@ -74,6 +77,42 @@ public class MigrationIT  extends BaseIT {
         } finally {
             Files.deleteIfExists(failingScriptFsPath);
             Files.deleteIfExists(successScriptFsPath);
+            Files.deleteIfExists(historyFsPath);
+        }
+    }
+
+    /**
+     * Regression test for UNOMI-943: a step registered inside another step's closure
+     * is never (re-)registered once the outer step is already marked COMPLETED in history.
+     * We simulate that prior state directly by seeding history.json, then verify that the
+     * nested step never runs while a sibling top-level step still does.
+     */
+    @Test
+    public void checkNestedMigrationStepPitfall() throws Exception {
+        String karafData = super.karafData();
+        Path scriptFsPath = Paths.get(karafData, "migration", "scripts", NESTED_STEP_SCRIPT_NAME);
+        Path historyFsPath = Paths.get(karafData, "migration", "history.json");
+
+        try {
+            Files.createDirectories(scriptFsPath.getParent());
+            Files.write(scriptFsPath, bundleResourceAsString(NESTED_STEP_SCRIPT_RESOURCE).getBytes(StandardCharsets.UTF_8));
+
+            // Simulate "outer-step" already COMPLETED from a previous run, before "nested-step" existed.
+            Files.write(historyFsPath, "{\"outer-step\":\"COMPLETED\"}".getBytes(StandardCharsets.UTF_8));
+
+            String result = executeCommand("unomi:migrate 11.0.0 true");
+            System.out.println("Nested migration step pitfall result:");
+            System.out.println(result);
+
+            // Outer step is already COMPLETED, so its closure -- including the nested step
+            // registration -- is never re-entered. This is the bug UNOMI-943 fixed by hoisting.
+            Assert.assertFalse(result.contains("inside outer-step"));
+            Assert.assertFalse(result.contains("inside nested-step"));
+            // A sibling top-level step is unaffected and still runs.
+            Assert.assertTrue(result.contains("inside sibling-step"));
+        } finally {
+            Files.deleteIfExists(scriptFsPath);
+            Files.deleteIfExists(historyFsPath);
         }
     }
 }

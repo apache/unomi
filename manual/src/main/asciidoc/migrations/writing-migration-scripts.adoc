@@ -175,7 +175,7 @@ Log progress with `context.printMessage(...)` so operators can correlate Karaf c
 
 | `MigrationIT`
 | `itests`
-| Step history and recovery when a script fails mid-run
+| Step history recovery (`checkMigrationRecoverySystem`); nested-step pitfall guard (`checkNestedMigrationStepPitfall`, UNOMI-943)
 
 | `Migrate16xToCurrentVersionIT`
 | `itests`

@@ -62,11 +62,16 @@ public class MigrationUtils {
         HttpUtils.executePostRequest(httpClient, url, jsonData, null);
     }
 
-    public static String resourceAsString(BundleContext bundleContext, final String resource) {
+    private static URL requireResource(BundleContext bundleContext, final String resource) {
         final URL url = bundleContext.getBundle().getResource(resource);
         if (url == null) {
             throw new RuntimeException("Resource not found: " + resource);
         }
+        return url;
+    }
+
+    public static String resourceAsString(BundleContext bundleContext, final String resource) {
+        final URL url = requireResource(bundleContext, resource);
         try (InputStream stream = url.openStream()) {
             return IOUtils.toString(stream, StandardCharsets.UTF_8);
         } catch (final Exception e) {
@@ -75,10 +80,7 @@ public class MigrationUtils {
     }
 
     public static String getFileWithoutComments(BundleContext bundleContext, final String resource) {
-        final URL url = bundleContext.getBundle().getResource(resource);
-        if (url == null) {
-            throw new RuntimeException("Resource not found: " + resource);
-        }
+        final URL url = requireResource(bundleContext, resource);
         try {
             // Read the entire file into a string to preserve exact line endings
             String fileContent;
