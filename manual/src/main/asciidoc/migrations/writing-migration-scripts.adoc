@@ -1,0 +1,207 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_writing_migration_scripts]]
+=== Writing migration scripts
+
+This section is for **contributors** who add or change Groovy migration scripts shipped in the `shell-commands` module.
+Operators upgrading a cluster should follow the version-specific guides in this chapter instead.
+
+Migration scripts run with **Apache Unomi stopped**, via `unomi:migrate` (see <<SSH Shell Commands>>).
+They talk directly to Elasticsearch or OpenSearch over HTTP and transform persisted data in place.
+
+==== Script location and naming
+
+Bundled scripts live under:
+
+[source,text]
+----
+tools/shell-commands/src/main/resources/META-INF/cxs/migration/
+----
+
+Each file must match:
+
+[source,text]
+----
+migrate-<version>-<priority>-<name>.groovy
+----
+
+* `<version>` — three-part version the script belongs to (for example `3.1.0`)
+* `<priority>` — two-digit order within that version (`00`, `01`, `05`, …)
+* `<name>` — short camelCase label (for example `tenantDocumentIds`)
+
+Example: `migrate-3.1.0-01-tenantDocumentIds.groovy`.
+
+Scripts are sorted by version, then priority, then name.
+Use gaps in priority (`00`, `05`, `10`) when you may need to insert a step later.
+
+Operators can also drop scripts under `{karaf.data}/migration/scripts/` for one-off fixes; the same naming rules apply.
+
+==== Use `performMigrationStep` for every resumable unit of work
+
+`MigrationContext.performMigrationStep(stepKey, closure)` is the idempotency and **crash-recovery** mechanism:
+
+* Each `stepKey` is persisted in `{karaf.data}/migration/history.json`.
+* If a step is already `COMPLETED`, it is skipped on the next run.
+* If a run fails mid-step, only steps not yet marked complete are executed again.
+
+Rules:
+
+. **One logical outcome per step key** — for example “configure session rollover alias”, not “do everything in one giant step”.
+. **Step keys must be stable** — changing a key after release makes resume behaviour confusing for operators who already have history files.
+. **Prefer many small steps over one large step** — especially when a step can take a long time (reindex, scroll, bulk update).
+
+`MigrationUtils.reIndex(...)` already registers its own sub-steps (clone, recreate index, delete clone, refresh).
+You do not need to wrap those again unless you add work outside `reIndex`.
+
+==== Pitfall: do not nest `performMigrationStep` inside another step
+
+*This was the root cause of https://issues.apache.org/jira/browse/UNOMI-943[UNOMI-943].*
+
+If step B is registered **inside** the closure of step A, then:
+
+* B is only evaluated while A runs.
+* When A is already marked `COMPLETED` in history, A's closure is never entered again.
+* B is never registered and never runs — even if B never completed.
+
+Real impact: rollover **write aliases** for event/session indices were skipped after a failed/resumed migration, so new writes failed silently.
+
+**Wrong** — alias configuration hidden inside `get-all-indices`:
+
+[source,groovy]
+----
+context.performMigrationStep("3.1.0-get-all-indices", () -> {
+    // ... reindex each index ...
+    context.performMigrationStep("3.1.0-configure-rollover-aliases", () -> {
+        // configure aliases — NEVER REACHED on resume if outer step completed
+    })
+})
+----
+
+**Right** — each tracked step at script top level:
+
+[source,groovy]
+----
+context.performMigrationStep("3.1.0-get-all-indices", () -> {
+    // ... reindex each index ...
+})
+
+context.performMigrationStep("3.1.0-configure-rollover-aliases", () -> {
+    // configure aliases — runs independently on resume
+})
+----
+
+==== Pitfall: make data transforms safe to re-run
+
+Step history prevents re-running a **whole** step, but partial failure inside a step can still leave mixed state.
+Design Painless scripts and update queries so a second application does not corrupt data.
+
+Good patterns:
+
+* **Check before mutate** — skip documents that already have the target shape (tenant prefix on `_id`, `tenantId` set, legacy field already renamed).
+* **Copy-once fields** — only copy `nbOfVisits` → `totalNbOfVisits` when `totalNbOfVisits` is null.
+* **Existence guards** — create an index or tenant document only when `MigrationUtils.indexExists(...)` is false.
+* **Scoped queries** — limit `update_by_query` to documents that still match the old state (wildcard on legacy `queryBuilder` IDs, etc.).
+
+Example guard (document ID already tenant-prefixed):
+
+[source,painless]
+----
+if (!ctx._id.startsWith(params.tenantId + '_') && !ctx._id.startsWith(params.systemTenantId + '_')) {
+    // transform ...
+}
+----
+
+==== Pitfall: bundled resources must exist and fail clearly
+
+Scripts load JSON and Painless from the bundle via:
+
+* `MigrationUtils.resourceAsString(bundleContext, "requestBody/...")`
+* `MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/.../script.painless")`
+
+Both throw `RuntimeException("Resource not found: …")` when the path is wrong.
+A missing file used to surface as an opaque `NullPointerException` in `getFileWithoutComments` (fixed in UNOMI-943).
+
+Keep request bodies under `tools/shell-commands/src/main/resources/requestBody/<version>/`.
+After adding a file, run unit tests or a dry migration in a staging cluster — do not rely on compile-only checks.
+
+==== Configuration keys
+
+Prefer constants from `MigrationConfig` instead of raw string literals:
+
+[source,groovy]
+----
+import static org.apache.unomi.shell.migration.service.MigrationConfig.*
+
+String esAddress = context.getConfigString(CONFIG_ES_ADDRESS)
+String indexPrefix = context.getConfigString(INDEX_PREFIX)
+String tenantId = context.getConfigString(TENANT_ID)
+----
+
+Legacy scripts may still use `"esAddress"` and `"indexPrefix"`; new scripts should use the constants.
+
+Optional settings and prompts are documented in `org.apache.unomi.migration.cfg` (see shell command help for `unomi:migrate`).
+
+==== Destructive operations
+
+Reindex and index deletion are intentional but risky:
+
+* `MigrationUtils.reIndex` clones the source index, deletes the original, recreates mappings, then copies data back.
+* Always confirm the index name is not a `-cloned` suffix (the helper rejects reindexing clones).
+* For rollover indices, configure **aliases in a separate top-level step** after all reindex work finishes.
+
+Log progress with `context.printMessage(...)` so operators can correlate Karaf console output with `history.json`.
+
+==== Testing
+
+[cols="1,1,2", options="header"]
+|===
+| Test | Module | What it validates
+
+| `MigrationUtilsTest`
+| `tools/shell-commands`
+| Painless comment stripping, missing resource errors
+
+| `MigrationIT`
+| `itests`
+| Step history and recovery when a script fails mid-run
+
+| `Migrate16xToCurrentVersionIT`
+| `itests`
+| Full chain from 1.6.x snapshot through all bundled scripts (Elasticsearch only)
+|===
+
+When you add or change a 3.x script, extend `Migrate16xToCurrentVersionIT` if the change affects observable data (tenant IDs, aliases, queryBuilder IDs, profile fields, etc.).
+
+Run locally before opening a PR:
+
+[source,bash]
+----
+mvn -pl tools/shell-commands -am test -Dtest=MigrationUtilsTest
+----
+
+Full migration ITs run in CI on the integration matrix (~2 h); they are required for script changes that affect persisted data shape.
+
+==== Pre-merge checklist
+
+Use this before submitting a migration PR:
+
+* [ ] File name matches `migrate-<version>-<priority>-<name>.groovy`
+* [ ] Every resumable unit uses its own **top-level** `performMigrationStep` (no nesting)
+* [ ] Step keys are stable and describe one outcome
+* [ ] Painless / update logic is safe if applied twice inside a step
+* [ ] New `requestBody/` assets are committed and referenced with correct paths
+* [ ] `indexExists` / query filters guard create-only work
+* [ ] Unit or IT coverage updated where behaviour is testable
+* [ ] Version-specific operator doc updated if the upgrade path changes (`migrate-*-to-*.adoc`)

@@ -237,6 +237,8 @@ Before starting the migration, please ensure that:
 
 The migration from 3.0 to 3.1 is primarily a configuration and authentication update:
 
+Contributors maintaining the Groovy scripts that implement this upgrade should follow <<_writing_migration_scripts,Writing migration scripts>> (step tracking, idempotency, and common pitfalls).
+
 1. **Shutdown your Apache Unomi 3.0 cluster**
 2. **Update your client applications** to use the new authentication model
 3. **Configure tenant-specific API keys** for your applications
