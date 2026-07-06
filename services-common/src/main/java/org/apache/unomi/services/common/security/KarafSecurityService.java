@@ -172,6 +172,16 @@ public class KarafSecurityService implements SecurityService {
         privilegedSubject.remove();
     }
 
+    @Override
+    public Subject getRequestSubject() {
+        return currentSubject.get();
+    }
+
+    @Override
+    public void clearRequestSubject() {
+        currentSubject.remove();
+    }
+
     /**
      * Sets a temporary privileged subject for operations that require elevated permissions.
      * This subject will be used in addition to the current subject for permission checks.

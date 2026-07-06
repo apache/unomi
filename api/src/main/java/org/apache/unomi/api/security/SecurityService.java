@@ -71,6 +71,27 @@ public interface SecurityService {
     void clearCurrentSubject();
 
     /**
+     * Returns exactly the subject bound by {@link #setCurrentSubject(Subject)}, ignoring any
+     * active JAAS context or privileged subject override. Unlike {@link #getCurrentSubject()},
+     * this never resolves to a higher-priority subject, so callers that need to snapshot and
+     * later restore only the request-subject slot (e.g. {@code executeAsSystem}) don't
+     * accidentally capture a privileged subject and leak it into the request-subject slot on
+     * restore.
+     *
+     * @return the request subject currently bound via {@link #setCurrentSubject(Subject)}, or
+     *         {@code null} if none is bound
+     */
+    Subject getRequestSubject();
+
+    /**
+     * Clears only the request-subject slot set by {@link #setCurrentSubject(Subject)}, without
+     * affecting any active privileged subject (unlike {@link #clearCurrentSubject()}, which
+     * clears both). Used to restore that slot to "unset" after a save/restore scope such as
+     * {@code executeAsSystem}.
+     */
+    void clearRequestSubject();
+
+    /**
      * Checks if the current context has a specific role by examining subjects in the following order:
      * 1. JAAS context
      * 2. Privileged subject

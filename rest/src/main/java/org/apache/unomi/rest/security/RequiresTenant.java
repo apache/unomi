@@ -21,6 +21,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Marks a JAX-RS resource method as tenant-scoped. {@link SecurityFilter} enforces this by
+ * reading the {@code tenantId} {@code @PathParam} from the request URI (e.g.
+ * {@code /tenants/{tenantId}/...}) and checking it against the caller's subject via
+ * {@link org.apache.unomi.api.security.SecurityService#hasTenantAccess(String)}. The annotated
+ * method's resource path must declare a {@code {tenantId}} path segment, or every request will
+ * be rejected with a 400.
+ */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RequiresTenant {

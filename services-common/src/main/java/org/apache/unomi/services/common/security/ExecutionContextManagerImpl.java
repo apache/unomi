@@ -78,7 +78,12 @@ public class ExecutionContextManagerImpl implements ExecutionContextManager {
     @Override
     public <T> T executeAsSystem(Supplier<T> operation) {
         ExecutionContext previousContext = currentContext.get();
-        Subject previousSubject = securityService.getCurrentSubject();
+        // Snapshot only the request-subject slot this method mutates below (via
+        // setCurrentSubject), not the JAAS/privileged-aware getCurrentSubject(): otherwise, if a
+        // privileged subject is active on this (possibly pooled) thread, it would be captured
+        // here and then copied into the request-subject slot on restore, leaking it there even
+        // after the privileged scope itself ends.
+        Subject previousSubject = securityService.getRequestSubject();
         try {
             if (operation == null) {
                 throw new IllegalArgumentException("System operation cannot be null");
@@ -117,7 +122,7 @@ public class ExecutionContextManagerImpl implements ExecutionContextManager {
                     currentContext.remove();
                 }
                 if (previousSubject == null) {
-                    securityService.clearCurrentSubject();
+                    securityService.clearRequestSubject();
                 } else {
                     securityService.setCurrentSubject(previousSubject);
                 }

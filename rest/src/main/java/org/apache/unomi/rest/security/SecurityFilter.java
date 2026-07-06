@@ -29,6 +29,7 @@ import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.ResourceInfo;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -40,11 +41,17 @@ public class SecurityFilter implements ContainerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityFilter.class);
 
+    /** Name of the {@code @PathParam} that identifies the tenant a {@link RequiresTenant} endpoint operates on. */
+    private static final String TENANT_PATH_PARAM = "tenantId";
+
     @Reference
     private SecurityService securityService;
 
     @Context
     private ResourceInfo resourceInfo;
+
+    @Context
+    private UriInfo uriInfo;
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
@@ -71,16 +78,18 @@ public class SecurityFilter implements ContainerRequestFilter {
                 }
             }
 
-            // Check tenants-based access
+            // Check tenants-based access: the tenant being accessed comes from the request path
+            // (e.g. /tenants/{tenantId}/...), never from the caller's own subject — otherwise the
+            // check would just compare the subject's tenant against itself and always pass.
             if (tenantAnnotation != null) {
-                String tenantId = securityService.getCurrentSubjectTenantId();
-                if (tenantId == null) {
+                String requestedTenantId = uriInfo.getPathParameters().getFirst(TENANT_PATH_PARAM);
+                if (requestedTenantId == null) {
                     requestContext.abortWith(Response.status(Response.Status.BAD_REQUEST)
                             .entity("Tenant ID is required")
                             .build());
                     return;
                 }
-                if (!securityService.hasTenantAccess(tenantId)) {
+                if (!securityService.hasTenantAccess(requestedTenantId)) {
                     requestContext.abortWith(Response.status(Response.Status.FORBIDDEN)
                             .entity("User does not have access to tenant")
                             .build());

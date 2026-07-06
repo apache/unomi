@@ -66,7 +66,16 @@ public class TenantQuotaService {
     }
 
     private ResourceQuota getTenantQuota(String tenantId) {
-        Tenant tenant = persistenceService.load(tenantId, Tenant.class);
+        Tenant tenant;
+        try {
+            tenant = persistenceService.load(tenantId, Tenant.class);
+        } catch (Exception e) {
+            // Distinguish "failed to load" from "tenant has no quota configured" in the logs:
+            // both currently fail open (unlimited) below, but a load failure should be visible
+            // to operators instead of silently looking identical to an unconfigured quota.
+            logger.error("Failed to load tenant {} while checking quota; failing open for this check", tenantId, e);
+            return null;
+        }
         return tenant != null ? tenant.getResourceQuota() : null;
     }
 
@@ -102,17 +111,19 @@ public class TenantQuotaService {
             return; // Skip if shutting down or persistence service is unavailable
         }
         
-        try {
-            for (String tenantId : usageCache.keySet()) {
-                if (shutdownNow) return; // Check shutdown flag during iteration
-                
+        for (String tenantId : usageCache.keySet()) {
+            if (shutdownNow) return; // Check shutdown flag during iteration
+
+            try {
                 TenantUsage usage = usageCache.get(tenantId);
                 usage.setProfileCount(persistenceService.getAllItemsCount("profile", tenantId));
                 usage.setEventCount(persistenceService.getAllItemsCount("event", tenantId));
                 // Note: Storage size calculation would require additional implementation
+            } catch (Exception e) {
+                // Isolate failures per tenant so one tenant's error (e.g. a not-yet-ready index)
+                // doesn't leave every other tenant's usage counts stale for this refresh cycle.
+                logger.error("Error updating usage statistics for tenant {}", tenantId, e);
             }
-        } catch (Exception e) {
-            logger.error("Error updating tenant usage statistics", e);
         }
     }
 
