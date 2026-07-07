@@ -14,6 +14,10 @@
 
 This section contains information and steps to migrate between major Unomi versions.
 
+=== Writing migration scripts
+
+include::writing-migration-scripts.adoc[]
+
 === V2/V3 API Compatibility Guide
 
 include::v2-v3-compatibility.adoc[]

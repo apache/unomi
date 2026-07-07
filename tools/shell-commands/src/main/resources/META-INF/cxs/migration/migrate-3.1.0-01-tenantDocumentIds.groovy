@@ -146,34 +146,35 @@ context.performMigrationStep("3.1.0-get-all-indices", () -> {
         // Execute reindex
         MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexName, newIndexSettings, updateScript, params, context, "3.1.0-${indexName}-update")
     }
-    
-    // Configure aliases for rollover indices after all reindexing is complete
-    // For each rollover alias, find all indices and set the latest one as write index
-    context.performMigrationStep("3.1.0-configure-rollover-aliases", () -> {
-        String configureAliasBody = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.2.0/configure_alias_body.json")
-        
-        // Process each rollover item type
-        indexConfigs.each { itemType, config ->
-            if (config.useRollover) {
-                String alias = config.alias(indexPrefix)
-                // Find all indices that match the rollover pattern (e.g., context-session-000001, context-session-000002)
-                Set<String> rolloverIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, "${indexPrefix}-${itemType}-")
-                
-                if (!rolloverIndices.isEmpty()) {
-                    // Sort indices to find the latest one (highest number)
-                    SortedSet<String> sortedIndices = new TreeSet<>(rolloverIndices)
-                    String writeIndex = sortedIndices.last()
-                    
-                    // All indices except the last one should be read-only
-                    SortedSet<String> readIndices = Collections.emptySortedSet()
-                    if (sortedIndices.size() > 1) {
-                        readIndices = sortedIndices.headSet(sortedIndices.last())
-                    }
-                    
-                    context.printMessage("Configuring alias ${alias}: write index=${writeIndex}, read indices=${readIndices}")
-                    MigrationUtils.configureAlias(context.getHttpClient(), esAddress, alias, writeIndex, readIndices, configureAliasBody, context)
+})
+
+// Configure aliases for rollover indices after all reindexing is complete.
+// Top-level step so resume after failure can run alias configuration even when
+// "3.1.0-get-all-indices" is already marked COMPLETED (UNOMI-943).
+context.performMigrationStep("3.1.0-configure-rollover-aliases", () -> {
+    String configureAliasBody = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.2.0/configure_alias_body.json")
+
+    // Process each rollover item type
+    indexConfigs.each { itemType, config ->
+        if (config.useRollover) {
+            String alias = config.alias(indexPrefix)
+            // Find all indices that match the rollover pattern (e.g., context-session-000001, context-session-000002)
+            Set<String> rolloverIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, "${indexPrefix}-${itemType}-")
+
+            if (!rolloverIndices.isEmpty()) {
+                // Sort indices to find the latest one (highest number)
+                SortedSet<String> sortedIndices = new TreeSet<>(rolloverIndices)
+                String writeIndex = sortedIndices.last()
+
+                // All indices except the last one should be read-only
+                SortedSet<String> readIndices = Collections.emptySortedSet()
+                if (sortedIndices.size() > 1) {
+                    readIndices = sortedIndices.headSet(sortedIndices.last())
                 }
+
+                context.printMessage("Configuring alias ${alias}: write index=${writeIndex}, read indices=${readIndices}")
+                MigrationUtils.configureAlias(context.getHttpClient(), esAddress, alias, writeIndex, readIndices, configureAliasBody, context)
             }
         }
-    })
+    }
 })
