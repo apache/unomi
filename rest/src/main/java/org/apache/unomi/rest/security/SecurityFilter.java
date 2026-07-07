@@ -17,6 +17,7 @@
 package org.apache.unomi.rest.security;
 
 import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.tenants.TenantUsageService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -32,6 +33,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
 @Provider
@@ -42,10 +44,13 @@ public class SecurityFilter implements ContainerRequestFilter {
     private static final Logger logger = LoggerFactory.getLogger(SecurityFilter.class);
 
     /** Name of the {@code @PathParam} that identifies the tenant a {@link RequiresTenant} endpoint operates on. */
-    private static final String TENANT_PATH_PARAM = "tenantId";
+    static final String TENANT_PATH_PARAM = "tenantId";
 
     @Reference
     private SecurityService securityService;
+
+    @Reference(cardinality = org.osgi.service.component.annotations.ReferenceCardinality.OPTIONAL)
+    private TenantUsageService tenantUsageService;
 
     @Context
     private ResourceInfo resourceInfo;
@@ -56,46 +61,22 @@ public class SecurityFilter implements ContainerRequestFilter {
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
         Method method = resourceInfo.getResourceMethod();
-        RequiresRole roleAnnotation = method.getAnnotation(RequiresRole.class);
-        RequiresTenant tenantAnnotation = method.getAnnotation(RequiresTenant.class);
+        RequiresRole roleAnnotation = resolveAnnotation(method, RequiresRole.class);
+        RequiresTenant tenantAnnotation = resolveAnnotation(method, RequiresTenant.class);
 
         try {
-            // Check role-based access
-            if (roleAnnotation != null) {
-                String[] roles = roleAnnotation.value();
-                boolean hasAccess = false;
-                for (String role : roles) {
-                    if (securityService.hasRole(role)) {
-                        hasAccess = true;
-                        break;
-                    }
-                }
-                if (!hasAccess) {
-                    requestContext.abortWith(Response.status(Response.Status.FORBIDDEN)
-                            .entity("User does not have required role")
-                            .build());
-                    return;
-                }
+            if (roleAnnotation != null && !hasRequiredRole(roleAnnotation)) {
+                requestContext.abortWith(Response.status(Response.Status.FORBIDDEN)
+                        .entity("User does not have required role")
+                        .build());
+                return;
             }
 
-            // Check tenants-based access: the tenant being accessed comes from the request path
-            // (e.g. /tenants/{tenantId}/...), never from the caller's own subject — otherwise the
-            // check would just compare the subject's tenant against itself and always pass.
-            if (tenantAnnotation != null) {
-                String requestedTenantId = uriInfo.getPathParameters().getFirst(TENANT_PATH_PARAM);
-                if (requestedTenantId == null) {
-                    requestContext.abortWith(Response.status(Response.Status.BAD_REQUEST)
-                            .entity("Tenant ID is required")
-                            .build());
-                    return;
-                }
-                if (!securityService.hasTenantAccess(requestedTenantId)) {
-                    requestContext.abortWith(Response.status(Response.Status.FORBIDDEN)
-                            .entity("User does not have access to tenant")
-                            .build());
-                    return;
-                }
+            if (tenantAnnotation != null && !hasRequiredTenantAccess(requestContext)) {
+                return;
             }
+
+            recordAuthenticatedRestRequest(tenantAnnotation);
 
         } catch (Exception e) {
             logger.error("Error during security check", e);
@@ -103,5 +84,57 @@ public class SecurityFilter implements ContainerRequestFilter {
                     .entity("Error during security check")
                     .build());
         }
+    }
+
+    private boolean hasRequiredRole(RequiresRole roleAnnotation) {
+        for (String role : roleAnnotation.value()) {
+            if (securityService.hasRole(role)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasRequiredTenantAccess(ContainerRequestContext requestContext) {
+        String requestedTenantId = uriInfo.getPathParameters().getFirst(TENANT_PATH_PARAM);
+        if (requestedTenantId == null) {
+            requestContext.abortWith(Response.status(Response.Status.BAD_REQUEST)
+                    .entity("Tenant ID is required")
+                    .build());
+            return false;
+        }
+        if (!securityService.hasTenantAccess(requestedTenantId)) {
+            requestContext.abortWith(Response.status(Response.Status.FORBIDDEN)
+                    .entity("User does not have access to tenant")
+                    .build());
+            return false;
+        }
+        return true;
+    }
+
+    private void recordAuthenticatedRestRequest(RequiresTenant tenantAnnotation) {
+        if (tenantUsageService == null) {
+            return;
+        }
+        String tenantId = null;
+        if (tenantAnnotation != null) {
+            tenantId = uriInfo.getPathParameters().getFirst(TENANT_PATH_PARAM);
+        }
+        if (tenantId == null || tenantId.isEmpty()) {
+            if (!securityService.isOperatingOnSystemTenant()) {
+                tenantId = securityService.getCurrentSubjectTenantId();
+            }
+        }
+        if (tenantId != null && !tenantId.isEmpty()) {
+            tenantUsageService.recordRestRequest(tenantId);
+        }
+    }
+
+    static <A extends Annotation> A resolveAnnotation(Method method, Class<A> annotationType) {
+        A annotation = method.getAnnotation(annotationType);
+        if (annotation == null) {
+            annotation = method.getDeclaringClass().getAnnotation(annotationType);
+        }
+        return annotation;
     }
 }

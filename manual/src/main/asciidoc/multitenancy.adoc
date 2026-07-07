@@ -28,7 +28,7 @@ Apache Unomi provides robust multi-tenancy support, allowing multiple organizati
 * Complete data isolation between tenants
 * Dual API key system (public and private keys)
 * Tenant-specific configuration
-* Resource quotas and limits
+* Per-tenant usage metrics (quotas enforced upstream)
 * Migration tools for existing data
 * Support for both REST and GraphQL APIs
 
@@ -433,14 +433,16 @@ For complete details on the GraphQL multi-tenancy implementation, refer to the <
 
 === Monitoring API Usage
 
-Track tenant API usage:
+Unomi exposes read-only usage metrics per tenant. Quota enforcement belongs in your upstream gateway or control plane.
 
 [source,bash]
 ----
-curl -X GET http://localhost:8181/cxs/tenants/my-tenant/apiCalls \
+curl -X GET "http://localhost:8181/cxs/tenants/my-tenant/usage?period=24h" \
   --user karaf:karaf \
   -H "Content-Type: application/json"
 ----
+
+The response includes profile, event, segment, and rule counts, storage document count, in-memory REST request count since process start, and `collectedAt` (epoch millis). Values refresh on a background schedule and may be stale until the next collection cycle.
 
 === Data Migration
 

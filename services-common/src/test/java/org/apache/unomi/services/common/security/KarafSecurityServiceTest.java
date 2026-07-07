@@ -118,6 +118,33 @@ public class KarafSecurityServiceTest {
     }
 
     @Test
+    public void testRequestSubjectIsIndependentOfPrivilegedSubject() {
+        Subject requestSubject = createTestSubject("requestUser", UnomiRoles.USER);
+        Subject privileged = createTestSubject("privUser", UnomiRoles.ADMINISTRATOR);
+        securityService.setCurrentSubject(requestSubject);
+        securityService.setPrivilegedSubject(privileged);
+
+        assertEquals("Privileged subject wins for getCurrentSubject()", privileged,
+            securityService.getCurrentSubject());
+        assertEquals("Request slot is unchanged", requestSubject, securityService.getRequestSubject());
+
+        securityService.clearRequestSubject();
+        assertNull("Request slot cleared", securityService.getRequestSubject());
+        assertEquals("Privileged subject still active", privileged, securityService.getCurrentSubject());
+    }
+
+    @Test
+    public void testClearCurrentSubjectClearsRequestAndPrivilegedSlots() {
+        securityService.setCurrentSubject(createTestSubject("user", UnomiRoles.USER));
+        securityService.setPrivilegedSubject(createTestSubject("admin", UnomiRoles.ADMINISTRATOR));
+
+        securityService.clearCurrentSubject();
+
+        assertNull("Request slot cleared", securityService.getRequestSubject());
+        assertNull("No effective subject after full clear", securityService.getCurrentSubject());
+    }
+
+    @Test
     public void testCurrentSubjectManagement() {
         // Test initial state
         assertNull("Initial current subject should be null", securityService.getCurrentSubject());

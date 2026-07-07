@@ -32,7 +32,6 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.ApiKeyCreationResult;
-import org.apache.unomi.api.tenants.ResourceQuota;
 import org.apache.unomi.api.tenants.Tenant;
 import org.junit.Assert;
 import org.junit.Before;
@@ -103,10 +102,7 @@ public class TenantIT extends BaseIT {
 
             // Test update tenant
             retrievedTenant.setName("Updated Rest Test Tenant");
-            ResourceQuota quota = new ResourceQuota();
-            quota.setMaxProfiles(1000L);
-            quota.setMaxEvents(5000L);
-            retrievedTenant.setResourceQuota(quota);
+            retrievedTenant.setDescription("Updated REST test description");
 
             HttpPut updateRequest = new HttpPut(getFullUrl(REST_ENDPOINT + "/" + retrievedTenant.getItemId()));
             updateRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(retrievedTenant), ContentType.APPLICATION_JSON));
@@ -119,7 +115,7 @@ public class TenantIT extends BaseIT {
             }
 
             Assert.assertEquals("Tenant name should be updated", "Updated Rest Test Tenant", updatedTenant.getName());
-            Assert.assertEquals("Tenant quota should be updated", (Long) 1000L, (Long) updatedTenant.getResourceQuota().getMaxProfiles());
+            Assert.assertEquals("Tenant description should be updated", "Updated REST test description", updatedTenant.getDescription());
 
             // Test generate new API key
             String generateKeyUrl = String.format("%s/%s/apikeys?type=%s&validityDays=30",
@@ -624,4 +620,28 @@ public class TenantIT extends BaseIT {
                 200, response.getStatusLine().getStatusCode());
         }
     }
-}
+
+    @Test
+    public void testTenantUsageEndpoint() throws Exception {
+        Tenant tenant = tenantService.createTenant("usage-test-tenant", Collections.emptyMap());
+        try {
+            String usageUrl = getFullUrl(REST_ENDPOINT + "/" + tenant.getItemId() + "/usage");
+            String usageResponse;
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(usageUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Usage endpoint should return 200", 200, response.getStatusLine().getStatusCode());
+                usageResponse = EntityUtils.toString(response.getEntity());
+            }
+            Map<?, ?> usage = getObjectMapper().readValue(usageResponse, Map.class);
+            Assert.assertEquals("Usage tenantId should match", tenant.getItemId(), usage.get("tenantId"));
+            Assert.assertEquals("Default period should be 24h", "24h", usage.get("period"));
+            Assert.assertNotNull("collectedAt should be present", usage.get("collectedAt"));
+
+            String badPeriodUrl = usageUrl + "?period=7d";
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(badPeriodUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Unsupported period should return 400", 400, response.getStatusLine().getStatusCode());
+            }
+        } finally {
+            tenantService.deleteTenant(tenant.getItemId());
+        }
+    }
+

@@ -168,7 +168,7 @@ public class KarafSecurityService implements SecurityService {
 
     @Override
     public void clearCurrentSubject() {
-        currentSubject.remove();
+        clearRequestSubject();
         privilegedSubject.remove();
     }
 
