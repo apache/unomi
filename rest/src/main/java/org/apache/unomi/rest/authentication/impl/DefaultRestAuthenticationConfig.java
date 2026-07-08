@@ -71,6 +71,7 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
         roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.generateApiKey", ADMIN_ROLES);
         roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.validateApiKey", ADMIN_ROLES);
         roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.getTenantUsage", TENANT_ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.purgeTenantEvents", TENANT_ADMIN_ROLES);
         ROLES_MAPPING = Collections.unmodifiableMap(roles);
     }
 

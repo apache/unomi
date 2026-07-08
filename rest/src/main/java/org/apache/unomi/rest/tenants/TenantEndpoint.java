@@ -22,6 +22,7 @@ import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.api.tenants.TenantEventPurgeResult;
 import org.apache.unomi.api.tenants.TenantUsage;
 import org.apache.unomi.api.tenants.TenantUsageService;
 import org.apache.unomi.rest.security.RequiresRole;
@@ -207,7 +208,7 @@ public class TenantEndpoint {
      * this endpoint exposes measured usage for operators and control planes.
      *
      * @param tenantId tenant identifier
-     * @param period reporting window label (currently only {@code 24h} is supported)
+     * @param period reporting window: {@code current-month}, {@code YYYY-MM}, or legacy {@code 24h}
      * @return usage snapshot, 404 if tenant is missing, 400 for unsupported period
      */
     @GET
@@ -223,6 +224,35 @@ public class TenantEndpoint {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
             return Response.ok(usage).build();
+        } catch (IllegalArgumentException e) {
+            throw new WebApplicationException(e.getMessage(), Response.Status.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Deletes events for the tenant older than the given retention window.
+     * Destructive operation; intended for upstream retention jobs.
+     *
+     * @param tenantId tenant identifier
+     * @param retentionDays age cutoff in whole days (minimum {@link TenantUsageService#MIN_EVENT_RETENTION_DAYS})
+     * @return purge summary, 404 if tenant is missing, 400 for invalid retention
+     */
+    @POST
+    @Path("/{tenantId}/purge/events")
+    @RequiresTenant
+    @RequiresRole({UnomiRoles.ADMINISTRATOR, UnomiRoles.TENANT_ADMINISTRATOR})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response purgeTenantEvents(@PathParam("tenantId") String tenantId,
+                                      @QueryParam("retentionDays") int retentionDays) {
+        if (retentionDays <= 0) {
+            throw new WebApplicationException("retentionDays must be positive", Response.Status.BAD_REQUEST);
+        }
+        try {
+            TenantEventPurgeResult result = tenantUsageService.purgeEventsOlderThan(tenantId, retentionDays);
+            if (result == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            return Response.ok(result).build();
         } catch (IllegalArgumentException e) {
             throw new WebApplicationException(e.getMessage(), Response.Status.BAD_REQUEST);
         }

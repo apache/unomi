@@ -16,22 +16,40 @@
  */
 package org.apache.unomi.api.tenants;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Read-only usage snapshot for a tenant. Values are refreshed on a background schedule
  * (see {@link TenantUsageService}) and may be stale until the next collection cycle.
+ *
+ * <p>Profile, scope, segment, and rule counts are point-in-time totals. {@link #eventCount}
+ * counts events whose {@code timeStamp} falls within {@link #periodStart} (inclusive) and
+ * {@link #periodEnd} (exclusive).</p>
  */
 public class TenantUsage {
 
     private String tenantId;
+    /** Normalized period label, e.g. {@code 2026-07} for a calendar month. */
     private String period;
+    /** Inclusive start of the reporting period (epoch millis, UTC). */
+    private long periodStart;
+    /** Exclusive end of the reporting period (epoch millis, UTC). */
+    private long periodEnd;
     private long profileCount;
+    /** Events in the calendar month identified by {@link #period}. */
     private long eventCount;
+    /** Tenant scopes excluding {@code systemscope}. */
+    private long scopeCount;
     private long segmentCount;
     private long ruleCount;
     /** Document count across tenant indices (not byte size). */
     private long storageDocumentCount;
+    /** Active API keys on the tenant record. */
+    private long activeApiKeyCount;
     /** In-memory REST request counter for this tenant since the Unomi process started. */
     private long restRequestCount;
+    private List<TenantScopeUsage> scopeUsages = new ArrayList<>();
     private long collectedAt;
 
     public String getTenantId() {
@@ -50,6 +68,22 @@ public class TenantUsage {
         this.period = period;
     }
 
+    public long getPeriodStart() {
+        return periodStart;
+    }
+
+    public void setPeriodStart(long periodStart) {
+        this.periodStart = periodStart;
+    }
+
+    public long getPeriodEnd() {
+        return periodEnd;
+    }
+
+    public void setPeriodEnd(long periodEnd) {
+        this.periodEnd = periodEnd;
+    }
+
     public long getProfileCount() {
         return profileCount;
     }
@@ -64,6 +98,14 @@ public class TenantUsage {
 
     public void setEventCount(long eventCount) {
         this.eventCount = eventCount;
+    }
+
+    public long getScopeCount() {
+        return scopeCount;
+    }
+
+    public void setScopeCount(long scopeCount) {
+        this.scopeCount = scopeCount;
     }
 
     public long getSegmentCount() {
@@ -90,12 +132,28 @@ public class TenantUsage {
         this.storageDocumentCount = storageDocumentCount;
     }
 
+    public long getActiveApiKeyCount() {
+        return activeApiKeyCount;
+    }
+
+    public void setActiveApiKeyCount(long activeApiKeyCount) {
+        this.activeApiKeyCount = activeApiKeyCount;
+    }
+
     public long getRestRequestCount() {
         return restRequestCount;
     }
 
     public void setRestRequestCount(long restRequestCount) {
         this.restRequestCount = restRequestCount;
+    }
+
+    public List<TenantScopeUsage> getScopeUsages() {
+        return scopeUsages;
+    }
+
+    public void setScopeUsages(List<TenantScopeUsage> scopeUsages) {
+        this.scopeUsages = scopeUsages != null ? scopeUsages : new ArrayList<>();
     }
 
     public long getCollectedAt() {

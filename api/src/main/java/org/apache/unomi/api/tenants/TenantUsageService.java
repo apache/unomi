@@ -17,18 +17,23 @@
 package org.apache.unomi.api.tenants;
 
 /**
- * Provides read-only per-tenant usage metrics for operators and upstream control planes.
- * Unomi does not enforce quotas; callers use these metrics to apply limits upstream.
+ * Provides read-only per-tenant usage metrics and tenant-scoped maintenance operations
+ * for operators and upstream control planes. Unomi does not enforce quotas; callers use
+ * these metrics to apply limits upstream.
  */
 public interface TenantUsageService {
 
-    String DEFAULT_PERIOD = "24h";
+    /** Calendar month containing the current instant (UTC). */
+    String DEFAULT_PERIOD = "current-month";
+
+    /** Minimum retention window accepted by {@link #purgeEventsOlderThan(String, int)}. */
+    int MIN_EVENT_RETENTION_DAYS = 7;
 
     /**
      * Returns cached usage for the tenant, refreshing on demand when no snapshot exists yet.
      *
      * @param tenantId tenant identifier
-     * @param period reporting window label (currently only {@value #DEFAULT_PERIOD} is supported)
+     * @param period reporting window: {@value #DEFAULT_PERIOD}, {@code YYYY-MM}, or legacy {@code 24h}
      * @return usage snapshot, or {@code null} if the tenant does not exist
      */
     TenantUsage getUsage(String tenantId, String period);
@@ -37,4 +42,15 @@ public interface TenantUsageService {
      * Records one authenticated REST request for the tenant (in-memory counter).
      */
     void recordRestRequest(String tenantId);
+
+    /**
+     * Deletes events for the tenant whose {@code timeStamp} is older than {@code retentionDays}.
+     * Runs under an explicit tenant execution context.
+     *
+     * @param tenantId tenant identifier
+     * @param retentionDays age cutoff in whole days (minimum {@value #MIN_EVENT_RETENTION_DAYS})
+     * @return purge summary, or {@code null} if the tenant does not exist
+     * @throws IllegalArgumentException when {@code retentionDays} is below the minimum
+     */
+    TenantEventPurgeResult purgeEventsOlderThan(String tenantId, int retentionDays);
 }

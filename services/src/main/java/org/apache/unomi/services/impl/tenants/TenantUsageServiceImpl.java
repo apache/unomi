@@ -17,7 +17,9 @@
 package org.apache.unomi.services.impl.tenants;
 
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
@@ -25,24 +27,39 @@ import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantEventPurgeResult;
+import org.apache.unomi.api.tenants.TenantScopeUsage;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.tenants.TenantUsage;
 import org.apache.unomi.api.tenants.TenantUsageService;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.xml.bind.DatatypeConverter;
+import java.time.Instant;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collections;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
 
 public class TenantUsageServiceImpl implements TenantUsageService {
 
     private static final Logger logger = LoggerFactory.getLogger(TenantUsageServiceImpl.class);
+    private static final Pattern MONTH_PERIOD = Pattern.compile("^\\d{4}-\\d{2}$");
 
     private PersistenceService persistenceService;
     private DefinitionsService definitionsService;
@@ -82,22 +99,21 @@ public class TenantUsageServiceImpl implements TenantUsageService {
 
     @Override
     public TenantUsage getUsage(String tenantId, String period) {
-        String effectivePeriod = period == null || period.isEmpty() ? DEFAULT_PERIOD : period;
-        if (!DEFAULT_PERIOD.equals(effectivePeriod)) {
-            throw new IllegalArgumentException("Unsupported usage period: " + effectivePeriod);
-        }
-        if (tenantService.getTenant(tenantId) == null) {
+        UsagePeriod usagePeriod = resolvePeriod(period);
+        Tenant tenant = tenantService.getTenant(tenantId);
+        if (tenant == null) {
             return null;
         }
-        UsageSnapshot snapshot = usageCache.get(tenantId);
+        String cacheKey = cacheKey(tenantId, usagePeriod.getLabel());
+        UsageSnapshot snapshot = usageCache.get(cacheKey);
         if (snapshot == null) {
-            refreshTenantUsage(tenantId);
-            snapshot = usageCache.get(tenantId);
+            refreshTenantUsage(tenantId, usagePeriod);
+            snapshot = usageCache.get(cacheKey);
         }
         if (snapshot == null) {
             return null;
         }
-        return toDto(tenantId, effectivePeriod, snapshot);
+        return toDto(tenant, usagePeriod, snapshot);
     }
 
     @Override
@@ -105,6 +121,45 @@ public class TenantUsageServiceImpl implements TenantUsageService {
         if (tenantId != null && !tenantId.isEmpty()) {
             restRequestCounts.computeIfAbsent(tenantId, id -> new AtomicLong()).incrementAndGet();
         }
+    }
+
+    @Override
+    public TenantEventPurgeResult purgeEventsOlderThan(String tenantId, int retentionDays) {
+        if (tenantService.getTenant(tenantId) == null) {
+            return null;
+        }
+        if (retentionDays < MIN_EVENT_RETENTION_DAYS) {
+            throw new IllegalArgumentException(
+                    "retentionDays must be at least " + MIN_EVENT_RETENTION_DAYS + " (requested " + retentionDays + ")");
+        }
+        if (contextManager == null || definitionsService == null || persistenceService == null) {
+            throw new IllegalStateException("Tenant usage service is not fully initialized");
+        }
+
+        return contextManager.executeAsSystem(() -> contextManager.executeAsTenant(tenantId, () -> {
+            ConditionType eventPropertyConditionType = definitionsService.getConditionType("eventPropertyCondition");
+            if (eventPropertyConditionType == null) {
+                throw new IllegalStateException("eventPropertyCondition type is not available");
+            }
+
+            Condition ageCondition = new Condition();
+            ageCondition.setConditionTypeId(eventPropertyConditionType.getItemId());
+            ageCondition.setConditionType(eventPropertyConditionType);
+            ageCondition.setParameter("propertyName", "timeStamp");
+            ageCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+            ageCondition.setParameter("propertyValueDateExpr", "now-" + retentionDays + "d");
+
+            long matched = persistenceService.queryCount(ageCondition, Event.ITEM_TYPE);
+            boolean purgeRequested = persistenceService.removeByQuery(ageCondition, Event.class);
+
+            TenantEventPurgeResult result = new TenantEventPurgeResult();
+            result.setTenantId(tenantId);
+            result.setRetentionDays(retentionDays);
+            result.setEventsMatched(matched);
+            result.setPurgeRequested(purgeRequested);
+            result.setRequestedAt(System.currentTimeMillis());
+            return result;
+        }));
     }
 
     private void startMetricsCollection() {
@@ -147,11 +202,14 @@ public class TenantUsageServiceImpl implements TenantUsageService {
 
         ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
         ConditionType eventPropertyConditionType = definitionsService.getConditionType("eventPropertyCondition");
+        ConditionType booleanConditionType = definitionsService.getConditionType("booleanCondition");
 
-        if (profilePropertyConditionType == null || eventPropertyConditionType == null) {
+        if (profilePropertyConditionType == null || eventPropertyConditionType == null || booleanConditionType == null) {
             logger.debug("Required condition types not available, skipping usage update");
             return;
         }
+
+        UsagePeriod currentMonth = resolvePeriod(DEFAULT_PERIOD);
 
         try {
             List<Tenant> tenants = tenantService.getAllTenants();
@@ -159,49 +217,138 @@ public class TenantUsageServiceImpl implements TenantUsageService {
                 if (shutdownNow) {
                     return;
                 }
-                refreshTenantUsage(tenant.getItemId(), profilePropertyConditionType, eventPropertyConditionType);
+                refreshTenantUsage(tenant.getItemId(), currentMonth, profilePropertyConditionType,
+                        eventPropertyConditionType, booleanConditionType);
             }
         } catch (Exception e) {
             logger.error("Error refreshing tenant usage", e);
         }
     }
 
-    private void refreshTenantUsage(String tenantId) {
+    private void refreshTenantUsage(String tenantId, UsagePeriod usagePeriod) {
         if (definitionsService == null) {
             return;
         }
         ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
         ConditionType eventPropertyConditionType = definitionsService.getConditionType("eventPropertyCondition");
-        if (profilePropertyConditionType == null || eventPropertyConditionType == null) {
+        ConditionType booleanConditionType = definitionsService.getConditionType("booleanCondition");
+        if (profilePropertyConditionType == null || eventPropertyConditionType == null || booleanConditionType == null) {
             return;
         }
-        refreshTenantUsage(tenantId, profilePropertyConditionType, eventPropertyConditionType);
+        refreshTenantUsage(tenantId, usagePeriod, profilePropertyConditionType, eventPropertyConditionType,
+                booleanConditionType);
     }
 
-    private void refreshTenantUsage(String tenantId, ConditionType profilePropertyConditionType,
-                                    ConditionType eventPropertyConditionType) {
+    private void refreshTenantUsage(String tenantId, UsagePeriod usagePeriod,
+                                    ConditionType profilePropertyConditionType,
+                                    ConditionType eventPropertyConditionType,
+                                    ConditionType booleanConditionType) {
         if (shutdownNow || persistenceService == null) {
             return;
         }
 
         UsageSnapshot snapshot = new UsageSnapshot();
         snapshot.profileCount = countByTenantProperty(tenantId, profilePropertyConditionType, Profile.ITEM_TYPE);
-        snapshot.eventCount = countByTenantProperty(tenantId, eventPropertyConditionType, Event.ITEM_TYPE);
+        snapshot.eventCount = countEventsInPeriod(tenantId, eventPropertyConditionType, booleanConditionType,
+                usagePeriod.getStartMillis(), usagePeriod.getEndMillis());
+        snapshot.scopeCount = countCommercialScopes(tenantId);
         snapshot.segmentCount = persistenceService.getAllItemsCount(Segment.ITEM_TYPE, tenantId);
         snapshot.ruleCount = persistenceService.getAllItemsCount(Rule.ITEM_TYPE, tenantId);
         snapshot.storageDocumentCount = persistenceService.calculateStorageSize(tenantId);
+        snapshot.scopeUsages = loadScopeUsages(tenantId);
         snapshot.collectedAt = System.currentTimeMillis();
-        usageCache.put(tenantId, snapshot);
+        usageCache.put(cacheKey(tenantId, usagePeriod.getLabel()), snapshot);
     }
 
-    private long countByTenantProperty(String tenantId, ConditionType conditionType, String itemType) {
+    private List<TenantScopeUsage> loadScopeUsages(String tenantId) {
+        if (contextManager == null) {
+            return Collections.emptyList();
+        }
+
+        Map<String, Long> segmentsByScope = contextManager.executeAsTenant(tenantId, () ->
+                persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("metadata.scope"),
+                        Segment.ITEM_TYPE));
+        Map<String, Long> rulesByScope = contextManager.executeAsTenant(tenantId, () ->
+                persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("metadata.scope"),
+                        Rule.ITEM_TYPE));
+
+        Set<String> scopeIds = new TreeSet<>();
+        if (segmentsByScope != null) {
+            scopeIds.addAll(segmentsByScope.keySet());
+        }
+        if (rulesByScope != null) {
+            scopeIds.addAll(rulesByScope.keySet());
+        }
+        scopeIds.remove("_filtered");
+        scopeIds.remove(Metadata.SYSTEM_SCOPE);
+        scopeIds.removeIf(id -> id == null || id.isEmpty());
+
+        List<TenantScopeUsage> scopeUsages = new ArrayList<>();
+        for (String scopeId : scopeIds) {
+            TenantScopeUsage scopeUsage = new TenantScopeUsage();
+            scopeUsage.setScopeId(scopeId);
+            scopeUsage.setSegmentCount(segmentsByScope != null ? segmentsByScope.getOrDefault(scopeId, 0L) : 0L);
+            scopeUsage.setRuleCount(rulesByScope != null ? rulesByScope.getOrDefault(scopeId, 0L) : 0L);
+            scopeUsages.add(scopeUsage);
+        }
+        return scopeUsages;
+    }
+
+    private long countCommercialScopes(String tenantId) {
+        long total = persistenceService.getAllItemsCount(Scope.ITEM_TYPE, tenantId);
+        if (contextManager == null) {
+            return total;
+        }
+        Scope systemScope = contextManager.executeAsTenant(tenantId,
+                () -> persistenceService.load(Metadata.SYSTEM_SCOPE, Scope.class));
+        if (systemScope != null) {
+            return Math.max(0L, total - 1L);
+        }
+        return total;
+    }
+
+    private long countEventsInPeriod(String tenantId, ConditionType eventPropertyConditionType,
+                                     ConditionType booleanConditionType, long periodStartMillis, long periodEndMillis) {
+        Condition andCondition = new Condition();
+        andCondition.setConditionTypeId(booleanConditionType.getItemId());
+        andCondition.setConditionType(booleanConditionType);
+        andCondition.setParameter("operator", "and");
+
+        List<Condition> subConditions = new ArrayList<>();
+        subConditions.add(tenantEqualsCondition(tenantId, eventPropertyConditionType));
+
+        Condition startCondition = new Condition();
+        startCondition.setConditionTypeId(eventPropertyConditionType.getItemId());
+        startCondition.setConditionType(eventPropertyConditionType);
+        startCondition.setParameter("propertyName", "timeStamp");
+        startCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
+        startCondition.setParameter("propertyValueDate", toIsoDateTime(periodStartMillis));
+        subConditions.add(startCondition);
+
+        Condition endCondition = new Condition();
+        endCondition.setConditionTypeId(eventPropertyConditionType.getItemId());
+        endCondition.setConditionType(eventPropertyConditionType);
+        endCondition.setParameter("propertyName", "timeStamp");
+        endCondition.setParameter("comparisonOperator", "lessThan");
+        endCondition.setParameter("propertyValueDate", toIsoDateTime(periodEndMillis));
+        subConditions.add(endCondition);
+
+        andCondition.setParameter("subConditions", subConditions);
+        return persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
+    }
+
+    private Condition tenantEqualsCondition(String tenantId, ConditionType conditionType) {
         Condition condition = new Condition();
         condition.setConditionTypeId(conditionType.getItemId());
         condition.setConditionType(conditionType);
         condition.setParameter("propertyName", "tenantId");
         condition.setParameter("comparisonOperator", "equals");
         condition.setParameter("propertyValue", tenantId);
-        return persistenceService.queryCount(condition, itemType);
+        return condition;
+    }
+
+    private long countByTenantProperty(String tenantId, ConditionType conditionType, String itemType) {
+        return persistenceService.queryCount(tenantEqualsCondition(tenantId, conditionType), itemType);
     }
 
     private long currentRestRequestCount(String tenantId) {
@@ -209,18 +356,49 @@ public class TenantUsageServiceImpl implements TenantUsageService {
         return counter != null ? counter.get() : 0L;
     }
 
-    private TenantUsage toDto(String tenantId, String period, UsageSnapshot snapshot) {
+    private TenantUsage toDto(Tenant tenant, UsagePeriod usagePeriod, UsageSnapshot snapshot) {
         TenantUsage usage = new TenantUsage();
-        usage.setTenantId(tenantId);
-        usage.setPeriod(period);
+        usage.setTenantId(tenant.getItemId());
+        usage.setPeriod(usagePeriod.getLabel());
+        usage.setPeriodStart(usagePeriod.getStartMillis());
+        usage.setPeriodEnd(usagePeriod.getEndMillis());
         usage.setProfileCount(snapshot.profileCount);
         usage.setEventCount(snapshot.eventCount);
+        usage.setScopeCount(snapshot.scopeCount);
         usage.setSegmentCount(snapshot.segmentCount);
         usage.setRuleCount(snapshot.ruleCount);
         usage.setStorageDocumentCount(snapshot.storageDocumentCount);
-        usage.setRestRequestCount(currentRestRequestCount(tenantId));
+        usage.setActiveApiKeyCount(tenant.getActiveApiKeys().size());
+        usage.setScopeUsages(snapshot.scopeUsages);
+        usage.setRestRequestCount(currentRestRequestCount(tenant.getItemId()));
         usage.setCollectedAt(snapshot.collectedAt);
         return usage;
+    }
+
+    static UsagePeriod resolvePeriod(String period) {
+        String effectivePeriod = (period == null || period.trim().isEmpty()) ? DEFAULT_PERIOD : period.trim();
+        if (DEFAULT_PERIOD.equals(effectivePeriod) || "24h".equals(effectivePeriod)) {
+            return forYearMonth(YearMonth.now(ZoneOffset.UTC));
+        }
+        if (MONTH_PERIOD.matcher(effectivePeriod).matches()) {
+            return forYearMonth(YearMonth.parse(effectivePeriod));
+        }
+        throw new IllegalArgumentException("Unsupported usage period: " + effectivePeriod);
+    }
+
+    private static UsagePeriod forYearMonth(YearMonth yearMonth) {
+        Instant start = yearMonth.atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant end = yearMonth.plusMonths(1).atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        return new UsagePeriod(yearMonth.toString(), start.toEpochMilli(), end.toEpochMilli());
+    }
+
+    private static String toIsoDateTime(long epochMillis) {
+        Calendar calendar = GregorianCalendar.from(Instant.ofEpochMilli(epochMillis).atZone(ZoneOffset.UTC));
+        return DatatypeConverter.printDateTime(calendar);
+    }
+
+    private static String cacheKey(String tenantId, String periodLabel) {
+        return tenantId + ":" + periodLabel;
     }
 
     private void stopMetricsCollection() {
@@ -239,12 +417,38 @@ public class TenantUsageServiceImpl implements TenantUsageService {
         }
     }
 
+    static final class UsagePeriod {
+        private final String label;
+        private final long startMillis;
+        private final long endMillis;
+
+        UsagePeriod(String label, long startMillis, long endMillis) {
+            this.label = label;
+            this.startMillis = startMillis;
+            this.endMillis = endMillis;
+        }
+
+        String getLabel() {
+            return label;
+        }
+
+        long getStartMillis() {
+            return startMillis;
+        }
+
+        long getEndMillis() {
+            return endMillis;
+        }
+    }
+
     private static final class UsageSnapshot {
         private long profileCount;
         private long eventCount;
+        private long scopeCount;
         private long segmentCount;
         private long ruleCount;
         private long storageDocumentCount;
+        private List<TenantScopeUsage> scopeUsages = Collections.emptyList();
         private long collectedAt;
     }
 }
