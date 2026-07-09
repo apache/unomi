@@ -22,6 +22,7 @@ import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.junit.jupiter.api.Test;
 
 import javax.ws.rs.InternalServerErrorException;
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import java.util.Map;
 
@@ -121,6 +122,26 @@ class RestExceptionMapperTest {
                 new IllegalArgumentException("invalid rule"));
         Response response = new InternalServerErrorExceptionMapper().toResponse(exception);
         assertErrorResponse(response, 400, "badRequest");
+    }
+
+    @Test
+    void webApplicationException_withBadRequestStatus_preservesStatusAndMessage() {
+        Response response = new RuntimeExceptionMapper()
+                .toResponse(new WebApplicationException("Tenant ID is required", Response.Status.BAD_REQUEST));
+        assertErrorResponse(response, 400, "Tenant ID is required");
+    }
+
+    @Test
+    void webApplicationException_withNotFoundStatus_preservesStatusAndMessage() {
+        Response response = new RuntimeExceptionMapper()
+                .toResponse(new WebApplicationException("Tenant not found", Response.Status.NOT_FOUND));
+        assertErrorResponse(response, 404, "Tenant not found");
+    }
+
+    @Test
+    void webApplicationException_withUnrecognizedStatusCode_mapsToInternalServerError() {
+        Response response = new RuntimeExceptionMapper().toResponse(new WebApplicationException("weird", 499));
+        assertErrorResponse(response, 500, "internalServerError");
     }
 
     @Test

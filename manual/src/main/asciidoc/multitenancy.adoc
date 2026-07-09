@@ -457,7 +457,7 @@ curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/purge/events?retention
   -H "Content-Type: application/json"
 ----
 
-The response reports how many events matched the cutoff (`eventsMatched`) and whether delete-by-query was accepted (`purgeRequested`). The minimum accepted retention is seven days.
+The response reports how many events matched the retention cutoff before deletion ran (`eventsMatched`) and whether the delete-by-query completed successfully (`purgeRequested`); a `purgeRequested` of `false` means the deletion failed and the request returns HTTP 500 (see server logs for the cause). The minimum accepted retention is seven days, to guard against accidentally purging recent or active event data.
 
 === Data Migration
 

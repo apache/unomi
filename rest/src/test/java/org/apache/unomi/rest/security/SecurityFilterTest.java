@@ -17,6 +17,7 @@
 package org.apache.unomi.rest.security;
 
 import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.tenants.TenantUsageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -45,6 +46,9 @@ class SecurityFilterTest {
     private SecurityService securityService;
 
     @Mock
+    private TenantUsageService tenantUsageService;
+
+    @Mock
     private ResourceInfo resourceInfo;
 
     @Mock
@@ -59,6 +63,7 @@ class SecurityFilterTest {
     void setUp() throws Exception {
         filter = new SecurityFilter();
         setField(filter, "securityService", securityService);
+        setField(filter, "tenantUsageService", tenantUsageService);
         setField(filter, "resourceInfo", resourceInfo);
         setField(filter, "uriInfo", uriInfo);
     }
@@ -113,9 +118,53 @@ class SecurityFilterTest {
         assertEquals("ROLE_TENANT", resolved.value()[0]);
     }
 
+    @Test
+    void recordsRequestAgainstPathTenantForTenantScopedEndpoint() throws Exception {
+        Method method = TenantScopedResource.class.getMethod("tenantOperation");
+        when(resourceInfo.getResourceMethod()).thenReturn(method);
+        MultivaluedHashMap<String, String> pathParams = new MultivaluedHashMap<>();
+        pathParams.add(SecurityFilter.TENANT_PATH_PARAM, "path-tenant");
+        when(uriInfo.getPathParameters()).thenReturn(pathParams);
+        when(securityService.hasTenantAccess("path-tenant")).thenReturn(true);
+
+        filter.filter(requestContext);
+
+        verify(tenantUsageService).recordRestRequest("path-tenant");
+        verify(securityService, never()).getCurrentSubjectTenantId();
+    }
+
+    @Test
+    void recordsRequestAgainstSubjectTenantForNonTenantScopedEndpoint() throws Exception {
+        Method method = UnscopedResource.class.getMethod("anyOperation");
+        when(resourceInfo.getResourceMethod()).thenReturn(method);
+        when(securityService.isOperatingOnSystemTenant()).thenReturn(false);
+        when(securityService.getCurrentSubjectTenantId()).thenReturn("subject-tenant");
+
+        filter.filter(requestContext);
+
+        verify(tenantUsageService).recordRestRequest("subject-tenant");
+    }
+
+    @Test
+    void doesNotRecordRequestWhenOperatingOnSystemTenant() throws Exception {
+        Method method = UnscopedResource.class.getMethod("anyOperation");
+        when(resourceInfo.getResourceMethod()).thenReturn(method);
+        when(securityService.isOperatingOnSystemTenant()).thenReturn(true);
+
+        filter.filter(requestContext);
+
+        verify(securityService, never()).getCurrentSubjectTenantId();
+        verify(tenantUsageService, never()).recordRestRequest(any());
+    }
+
     static class TenantScopedResource {
         @RequiresTenant
         public void tenantOperation() {
+        }
+    }
+
+    static class UnscopedResource {
+        public void anyOperation() {
         }
     }
 

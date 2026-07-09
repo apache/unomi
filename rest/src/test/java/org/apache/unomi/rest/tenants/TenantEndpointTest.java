@@ -100,6 +100,21 @@ class TenantEndpointTest {
     }
 
     @Test
+    void purgeTenantEventsReturnsServerErrorWhenPurgeNotAccepted() {
+        TenantEventPurgeResult result = new TenantEventPurgeResult();
+        result.setTenantId("tenant-a");
+        result.setRetentionDays(90);
+        result.setEventsMatched(10L);
+        result.setPurgeRequested(false);
+        when(tenantUsageService.purgeEventsOlderThan("tenant-a", 90)).thenReturn(result);
+
+        Response response = endpoint.purgeTenantEvents("tenant-a", 90);
+
+        assertEquals(500, response.getStatus());
+        assertEquals(result, response.getEntity());
+    }
+
+    @Test
     void purgeTenantEventsReturnsNotFoundWhenTenantMissing() {
         when(tenantUsageService.purgeEventsOlderThan("missing", 90)).thenReturn(null);
 

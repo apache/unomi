@@ -28,9 +28,9 @@ import javax.xml.bind.annotation.XmlTransient;
  * Represents a tenant in the system.
  * A tenant is an isolated entity within the system with its own users, data, and configuration.
  * Each tenant has its own set of API keys (public and private) for authentication and authorization,
- * resource quotas to limit usage, and event permissions to control access to specific event types.
+ * and event permissions to control access to specific event types.
  * This class extends the base Item class and provides functionality for managing tenant
- * settings, resource quotas, and lifecycle.
+ * settings and lifecycle.
  */
 public class Tenant extends Item {
     /**

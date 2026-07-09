@@ -66,7 +66,6 @@ class TenantUsageServiceImplTest {
 
     private TenantUsageServiceImpl tenantUsageService;
 
-    private ConditionType profilePropertyConditionType;
     private ConditionType eventPropertyConditionType;
     private ConditionType booleanConditionType;
 
@@ -78,8 +77,6 @@ class TenantUsageServiceImplTest {
         tenantUsageService.setTenantService(tenantService);
         tenantUsageService.setContextManager(contextManager);
 
-        profilePropertyConditionType = new ConditionType();
-        profilePropertyConditionType.setItemId("profilePropertyCondition");
         eventPropertyConditionType = new ConditionType();
         eventPropertyConditionType.setItemId("eventPropertyCondition");
         booleanConditionType = new ConditionType();
@@ -105,6 +102,13 @@ class TenantUsageServiceImplTest {
     @Test
     void resolvePeriodRejectsUnsupportedValue() {
         assertThrows(IllegalArgumentException.class, () -> TenantUsageServiceImpl.resolvePeriod("7d"));
+    }
+
+    @Test
+    void resolvePeriodRejectsOutOfRangeMonth() {
+        // "2026-13" matches the YYYY-MM shape but isn't a real month; must surface as a client
+        // error (IllegalArgumentException -> 400), not an unhandled DateTimeParseException -> 500.
+        assertThrows(IllegalArgumentException.class, () -> TenantUsageServiceImpl.resolvePeriod("2026-13"));
     }
 
     @Test
@@ -271,7 +275,7 @@ class TenantUsageServiceImplTest {
         Tenant tenant = tenantWithId("tenant-a");
         when(tenantService.getTenant("tenant-a")).thenReturn(tenant);
         stubConditionTypes();
-        when(persistenceService.queryCount(any(), eq("profile"))).thenReturn(0L);
+        when(persistenceService.getAllItemsCount(eq("profile"), eq("tenant-a"))).thenReturn(0L);
         when(persistenceService.queryCount(any(), eq("event"))).thenReturn(0L);
         when(persistenceService.getAllItemsCount(eq("scope"), eq("tenant-a"))).thenReturn(1L);
         when(persistenceService.getAllItemsCount(eq("segment"), eq("tenant-a"))).thenReturn(1L);
@@ -301,7 +305,7 @@ class TenantUsageServiceImplTest {
         Tenant tenant = tenantWithId("tenant-a");
         when(tenantService.getTenant("tenant-a")).thenReturn(tenant);
         stubConditionTypes();
-        when(persistenceService.queryCount(any(), eq("profile"))).thenReturn(0L);
+        when(persistenceService.getAllItemsCount(eq("profile"), eq("tenant-a"))).thenReturn(0L);
         when(persistenceService.queryCount(any(), eq("event"))).thenReturn(0L);
         when(persistenceService.getAllItemsCount(eq("scope"), eq("tenant-a"))).thenReturn(3L);
         when(persistenceService.getAllItemsCount(eq("segment"), eq("tenant-a"))).thenReturn(0L);
@@ -375,14 +379,13 @@ class TenantUsageServiceImplTest {
     }
 
     private void stubConditionTypes() {
-        when(definitionsService.getConditionType("profilePropertyCondition")).thenReturn(profilePropertyConditionType);
         when(definitionsService.getConditionType("eventPropertyCondition")).thenReturn(eventPropertyConditionType);
         when(definitionsService.getConditionType("booleanCondition")).thenReturn(booleanConditionType);
     }
 
     private void stubRefreshCounts(String tenantId, long profiles, long events, long scopes, long segments,
                                    long rules, long storage) {
-        when(persistenceService.queryCount(any(), eq("profile"))).thenReturn(profiles);
+        when(persistenceService.getAllItemsCount(eq("profile"), eq(tenantId))).thenReturn(profiles);
         when(persistenceService.queryCount(any(), eq("event"))).thenReturn(events);
         when(persistenceService.getAllItemsCount(eq("scope"), eq(tenantId))).thenReturn(scopes);
         when(persistenceService.getAllItemsCount(eq("segment"), eq(tenantId))).thenReturn(segments);

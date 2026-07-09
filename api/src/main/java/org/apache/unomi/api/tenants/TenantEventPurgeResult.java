@@ -23,9 +23,14 @@ public class TenantEventPurgeResult {
 
     private String tenantId;
     private int retentionDays;
-    /** Events matching the retention cutoff before delete-by-query was submitted. */
+    /** Events matching the retention cutoff before delete-by-query was submitted; not a post-delete count. */
     private long eventsMatched;
-    /** {@code true} when delete-by-query was accepted by the persistence layer. */
+    /**
+     * {@code true} if the delete-by-query completed successfully; {@code false} if the
+     * persistence layer reported a failure (see server logs for the cause). This is not a
+     * partial-success indicator: {@link #eventsMatched} is a pre-delete estimate only, so a
+     * {@code true} result does not by itself confirm how many events were actually removed.
+     */
     private boolean purgeRequested;
     private long requestedAt;
 

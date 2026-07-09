@@ -230,12 +230,13 @@ public class TenantEndpoint {
     }
 
     /**
-     * Deletes events for the tenant older than the given retention window.
+     * Deletes events for the tenant at least {@code retentionDays} days old.
      * Destructive operation; intended for upstream retention jobs.
      *
      * @param tenantId tenant identifier
      * @param retentionDays age cutoff in whole days (minimum {@link TenantUsageService#MIN_EVENT_RETENTION_DAYS})
-     * @return purge summary, 404 if tenant is missing, 400 for invalid retention
+     * @return purge summary, 404 if tenant is missing, 400 for invalid retention, 500 if the
+     *         persistence layer failed to complete the deletion (see {@code purgeRequested})
      */
     @POST
     @Path("/{tenantId}/purge/events")
@@ -251,6 +252,12 @@ public class TenantEndpoint {
             TenantEventPurgeResult result = tenantUsageService.purgeEventsOlderThan(tenantId, retentionDays);
             if (result == null) {
                 return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            if (!result.isPurgeRequested()) {
+                // The persistence layer accepted the request but failed to complete the deletion
+                // (see server logs); callers checking only the status code must see a failure here,
+                // not a false-positive 200.
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(result).build();
             }
             return Response.ok(result).build();
         } catch (IllegalArgumentException e) {

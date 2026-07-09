@@ -26,7 +26,10 @@ public interface TenantUsageService {
     /** Calendar month containing the current instant (UTC). */
     String DEFAULT_PERIOD = "current-month";
 
-    /** Minimum retention window accepted by {@link #purgeEventsOlderThan(String, int)}. */
+    /**
+     * Minimum retention window accepted by {@link #purgeEventsOlderThan(String, int)}, guarding
+     * against accidentally purging recent/active event data with a mistakenly small value.
+     */
     int MIN_EVENT_RETENTION_DAYS = 7;
 
     /**
@@ -44,8 +47,9 @@ public interface TenantUsageService {
     void recordRestRequest(String tenantId);
 
     /**
-     * Deletes events for the tenant whose {@code timeStamp} is older than {@code retentionDays}.
-     * Runs under an explicit tenant execution context.
+     * Deletes events for the tenant whose {@code timeStamp} is at least {@code retentionDays}
+     * days old (the boundary day itself is included). Runs under an explicit tenant execution
+     * context.
      *
      * @param tenantId tenant identifier
      * @param retentionDays age cutoff in whole days (minimum {@value #MIN_EVENT_RETENTION_DAYS})

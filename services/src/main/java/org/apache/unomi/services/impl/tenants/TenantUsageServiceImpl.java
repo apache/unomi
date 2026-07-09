@@ -41,6 +41,7 @@ import javax.xml.bind.DatatypeConverter;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -142,9 +143,7 @@ public class TenantUsageServiceImpl implements TenantUsageService {
                 throw new IllegalStateException("eventPropertyCondition type is not available");
             }
 
-            Condition ageCondition = new Condition();
-            ageCondition.setConditionTypeId(eventPropertyConditionType.getItemId());
-            ageCondition.setConditionType(eventPropertyConditionType);
+            Condition ageCondition = newCondition(eventPropertyConditionType);
             ageCondition.setParameter("propertyName", "timeStamp");
             ageCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
             ageCondition.setParameter("propertyValueDateExpr", "now-" + retentionDays + "d");
@@ -200,57 +199,64 @@ public class TenantUsageServiceImpl implements TenantUsageService {
             return;
         }
 
-        ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
         ConditionType eventPropertyConditionType = definitionsService.getConditionType("eventPropertyCondition");
         ConditionType booleanConditionType = definitionsService.getConditionType("booleanCondition");
 
-        if (profilePropertyConditionType == null || eventPropertyConditionType == null || booleanConditionType == null) {
+        if (eventPropertyConditionType == null || booleanConditionType == null) {
             logger.debug("Required condition types not available, skipping usage update");
             return;
         }
 
         UsagePeriod currentMonth = resolvePeriod(DEFAULT_PERIOD);
 
+        List<Tenant> tenants;
         try {
-            List<Tenant> tenants = tenantService.getAllTenants();
-            for (Tenant tenant : tenants) {
-                if (shutdownNow) {
-                    return;
-                }
-                refreshTenantUsage(tenant.getItemId(), currentMonth, profilePropertyConditionType,
-                        eventPropertyConditionType, booleanConditionType);
-            }
+            tenants = tenantService.getAllTenants();
         } catch (Exception e) {
-            logger.error("Error refreshing tenant usage", e);
+            logger.error("Error listing tenants for usage refresh", e);
+            return;
+        }
+        for (Tenant tenant : tenants) {
+            if (shutdownNow) {
+                return;
+            }
+            try {
+                refreshTenantUsage(tenant.getItemId(), currentMonth, eventPropertyConditionType, booleanConditionType);
+            } catch (Exception e) {
+                logger.error("Error refreshing usage for tenant {}", tenant.getItemId(), e);
+            }
         }
     }
 
     private void refreshTenantUsage(String tenantId, UsagePeriod usagePeriod) {
         if (definitionsService == null) {
+            logger.warn("Definitions service not available, skipping usage refresh for tenant {}", tenantId);
             return;
         }
-        ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
         ConditionType eventPropertyConditionType = definitionsService.getConditionType("eventPropertyCondition");
         ConditionType booleanConditionType = definitionsService.getConditionType("booleanCondition");
-        if (profilePropertyConditionType == null || eventPropertyConditionType == null || booleanConditionType == null) {
+        if (eventPropertyConditionType == null || booleanConditionType == null) {
+            logger.debug("Required condition types not available, skipping usage update for tenant {}", tenantId);
             return;
         }
-        refreshTenantUsage(tenantId, usagePeriod, profilePropertyConditionType, eventPropertyConditionType,
-                booleanConditionType);
+        refreshTenantUsage(tenantId, usagePeriod, eventPropertyConditionType, booleanConditionType);
     }
 
     private void refreshTenantUsage(String tenantId, UsagePeriod usagePeriod,
-                                    ConditionType profilePropertyConditionType,
                                     ConditionType eventPropertyConditionType,
                                     ConditionType booleanConditionType) {
-        if (shutdownNow || persistenceService == null) {
+        if (shutdownNow || persistenceService == null || contextManager == null) {
             return;
         }
 
         UsageSnapshot snapshot = new UsageSnapshot();
-        snapshot.profileCount = countByTenantProperty(tenantId, profilePropertyConditionType, Profile.ITEM_TYPE);
-        snapshot.eventCount = countEventsInPeriod(tenantId, eventPropertyConditionType, booleanConditionType,
-                usagePeriod.getStartMillis(), usagePeriod.getEndMillis());
+        snapshot.profileCount = persistenceService.getAllItemsCount(Profile.ITEM_TYPE, tenantId);
+        // queryCount() scopes by the calling thread's execution context, not by any tenantId
+        // parameter inside the Condition, so the count must run under the target tenant's context
+        // (background refreshes run as "system", which would otherwise always match zero events).
+        snapshot.eventCount = contextManager.executeAsTenant(tenantId, () ->
+                countEventsInPeriod(tenantId, eventPropertyConditionType, booleanConditionType,
+                        usagePeriod.getStartMillis(), usagePeriod.getEndMillis()));
         snapshot.scopeCount = countCommercialScopes(tenantId);
         snapshot.segmentCount = persistenceService.getAllItemsCount(Segment.ITEM_TYPE, tenantId);
         snapshot.ruleCount = persistenceService.getAllItemsCount(Rule.ITEM_TYPE, tenantId);
@@ -309,25 +315,19 @@ public class TenantUsageServiceImpl implements TenantUsageService {
 
     private long countEventsInPeriod(String tenantId, ConditionType eventPropertyConditionType,
                                      ConditionType booleanConditionType, long periodStartMillis, long periodEndMillis) {
-        Condition andCondition = new Condition();
-        andCondition.setConditionTypeId(booleanConditionType.getItemId());
-        andCondition.setConditionType(booleanConditionType);
+        Condition andCondition = newCondition(booleanConditionType);
         andCondition.setParameter("operator", "and");
 
         List<Condition> subConditions = new ArrayList<>();
         subConditions.add(tenantEqualsCondition(tenantId, eventPropertyConditionType));
 
-        Condition startCondition = new Condition();
-        startCondition.setConditionTypeId(eventPropertyConditionType.getItemId());
-        startCondition.setConditionType(eventPropertyConditionType);
+        Condition startCondition = newCondition(eventPropertyConditionType);
         startCondition.setParameter("propertyName", "timeStamp");
         startCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
         startCondition.setParameter("propertyValueDate", toIsoDateTime(periodStartMillis));
         subConditions.add(startCondition);
 
-        Condition endCondition = new Condition();
-        endCondition.setConditionTypeId(eventPropertyConditionType.getItemId());
-        endCondition.setConditionType(eventPropertyConditionType);
+        Condition endCondition = newCondition(eventPropertyConditionType);
         endCondition.setParameter("propertyName", "timeStamp");
         endCondition.setParameter("comparisonOperator", "lessThan");
         endCondition.setParameter("propertyValueDate", toIsoDateTime(periodEndMillis));
@@ -338,17 +338,18 @@ public class TenantUsageServiceImpl implements TenantUsageService {
     }
 
     private Condition tenantEqualsCondition(String tenantId, ConditionType conditionType) {
-        Condition condition = new Condition();
-        condition.setConditionTypeId(conditionType.getItemId());
-        condition.setConditionType(conditionType);
+        Condition condition = newCondition(conditionType);
         condition.setParameter("propertyName", "tenantId");
         condition.setParameter("comparisonOperator", "equals");
         condition.setParameter("propertyValue", tenantId);
         return condition;
     }
 
-    private long countByTenantProperty(String tenantId, ConditionType conditionType, String itemType) {
-        return persistenceService.queryCount(tenantEqualsCondition(tenantId, conditionType), itemType);
+    private Condition newCondition(ConditionType conditionType) {
+        Condition condition = new Condition();
+        condition.setConditionTypeId(conditionType.getItemId());
+        condition.setConditionType(conditionType);
+        return condition;
     }
 
     private long currentRestRequestCount(String tenantId) {
@@ -381,7 +382,11 @@ public class TenantUsageServiceImpl implements TenantUsageService {
             return forYearMonth(YearMonth.now(ZoneOffset.UTC));
         }
         if (MONTH_PERIOD.matcher(effectivePeriod).matches()) {
-            return forYearMonth(YearMonth.parse(effectivePeriod));
+            try {
+                return forYearMonth(YearMonth.parse(effectivePeriod));
+            } catch (DateTimeParseException e) {
+                throw new IllegalArgumentException("Unsupported usage period: " + effectivePeriod, e);
+            }
         }
         throw new IllegalArgumentException("Unsupported usage period: " + effectivePeriod);
     }

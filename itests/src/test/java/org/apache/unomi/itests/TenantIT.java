@@ -45,7 +45,9 @@ import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.apache.http.util.EntityUtils;
 
+import java.time.Instant;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.Base64;
 
@@ -684,6 +686,50 @@ public class TenantIT extends BaseIT {
             try (CloseableHttpResponse response = executeHttpRequest(new HttpPost(missingTenantUrl), AuthType.JAAS_ADMIN)) {
                 Assert.assertEquals("Missing tenant should return 404", 404, response.getStatusLine().getStatusCode());
             }
+        } finally {
+            tenantService.deleteTenant(tenant.getItemId());
+        }
+    }
+
+    @Test
+    public void testTenantEventPurgeEndpointDeletesOnlyEventsPastRetention() throws Exception {
+        Tenant tenant = tenantService.createTenant("purge-deletion-tenant", Collections.emptyMap());
+        try {
+            Date oldTimestamp = Date.from(Instant.now().minus(100, ChronoUnit.DAYS));
+            Date recentTimestamp = new Date();
+
+            executionContextManager.executeAsTenant(tenant.getItemId(), () -> {
+                Event oldEvent = new Event();
+                oldEvent.setItemId("purge-old-event");
+                oldEvent.setEventType("pageView");
+                oldEvent.setProfileId("purge-deletion-profile");
+                oldEvent.setScope("purge-scope");
+                oldEvent.setTimeStamp(oldTimestamp);
+                persistenceService.save(oldEvent);
+
+                Event recentEvent = new Event();
+                recentEvent.setItemId("purge-recent-event");
+                recentEvent.setEventType("pageView");
+                recentEvent.setProfileId("purge-deletion-profile");
+                recentEvent.setScope("purge-scope");
+                recentEvent.setTimeStamp(recentTimestamp);
+                persistenceService.save(recentEvent);
+            });
+            persistenceService.refresh();
+
+            String purgeUrl = getFullUrl(REST_ENDPOINT + "/" + tenant.getItemId() + "/purge/events?retentionDays=90");
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpPost(purgeUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Purge endpoint should return 200", 200, response.getStatusLine().getStatusCode());
+            }
+
+            keepTrying("Old event should be deleted by the purge", () ->
+                    executionContextManager.executeAsTenant(tenant.getItemId(), () ->
+                            persistenceService.load("purge-old-event", Event.class)),
+                    Objects::isNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+            executionContextManager.executeAsTenant(tenant.getItemId(), () ->
+                    Assert.assertNotNull("Recent event should survive the purge",
+                            persistenceService.load("purge-recent-event", Event.class)));
         } finally {
             tenantService.deleteTenant(tenant.getItemId());
         }

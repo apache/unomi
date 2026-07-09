@@ -1376,6 +1376,140 @@ public class InMemoryPersistenceServiceImplTest {
                 return null;
             });
         }
+
+        @Test
+        void shouldRespectTenantIsolationInQueryCount() {
+            // Given - profiles for two different tenants, same item type
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                for (int i = 0; i < 4; i++) {
+                    Profile profile = new Profile();
+                    profile.setItemId("tenant1-profile-" + i);
+                    persistenceService.save(profile);
+                }
+                return null;
+            });
+
+            executionContextManager.executeAsTenant("tenant2", () -> {
+                for (int i = 0; i < 6; i++) {
+                    Profile profile = new Profile();
+                    profile.setItemId("tenant2-profile-" + i);
+                    persistenceService.save(profile);
+                }
+                return null;
+            });
+
+            // When - queryCount() is called from each tenant's own context (a plain, unfiltered
+            // condition should never leak the other tenant's items into the count)
+            long tenant1Count = executionContextManager.executeAsTenant("tenant1", () ->
+                TestHelper.retryUntil(
+                    () -> persistenceService.queryCount(null, Profile.ITEM_TYPE),
+                    c -> c == 4L
+                ));
+
+            long tenant2Count = executionContextManager.executeAsTenant("tenant2", () ->
+                TestHelper.retryUntil(
+                    () -> persistenceService.queryCount(null, Profile.ITEM_TYPE),
+                    c -> c == 6L
+                ));
+
+            // Then
+            assertEquals(4, tenant1Count, "Tenant1 should only see its own 4 profiles");
+            assertEquals(6, tenant2Count, "Tenant2 should only see its own 6 profiles");
+        }
+
+        @Test
+        void shouldReturnZeroFromQueryCountWhenCalledUnderAnotherTenantsContext() {
+            // Given - a profile that only exists under tenant1
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                Profile profile = new Profile();
+                profile.setItemId("tenant1-only-profile");
+                persistenceService.save(profile);
+                return null;
+            });
+            TestHelper.retryUntil(
+                () -> executionContextManager.executeAsTenant("tenant1", () -> persistenceService.queryCount(null, Profile.ITEM_TYPE)),
+                c -> c == 1L
+            );
+
+            // When - the same, unfiltered count is requested from a different tenant's context
+            long countFromOtherTenant = executionContextManager.executeAsTenant("tenant2", () ->
+                persistenceService.queryCount(null, Profile.ITEM_TYPE));
+
+            // Then - tenant1's data must not be visible from tenant2's context
+            assertEquals(0, countFromOtherTenant, "queryCount() must not leak items across tenant execution contexts");
+        }
+    }
+
+    @Nested
+    class StorageSizeOperations {
+        @Test
+        void shouldCountItemsAcrossAllTypesForTenant() {
+            // Given - a mix of item types for the same tenant
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                for (int i = 0; i < 3; i++) {
+                    Profile profile = new Profile();
+                    profile.setItemId("storage-profile-" + i);
+                    persistenceService.save(profile);
+                }
+                CustomItem customItem = new CustomItem();
+                customItem.setItemId("storage-custom-item");
+                customItem.setItemType("storage-test-type");
+                persistenceService.save(customItem);
+                return null;
+            });
+
+            // When - retry until refresh delay clears
+            long size = TestHelper.retryUntil(
+                () -> persistenceService.calculateStorageSize("tenant1"),
+                c -> c == 4L
+            );
+
+            // Then
+            assertEquals(4, size, "Should count all item types belonging to the tenant");
+        }
+
+        @Test
+        void shouldRespectTenantIsolationInCalculateStorageSize() {
+            // Given
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                for (int i = 0; i < 2; i++) {
+                    Profile profile = new Profile();
+                    profile.setItemId("tenant1-storage-profile-" + i);
+                    persistenceService.save(profile);
+                }
+                return null;
+            });
+            executionContextManager.executeAsTenant("tenant2", () -> {
+                for (int i = 0; i < 5; i++) {
+                    Profile profile = new Profile();
+                    profile.setItemId("tenant2-storage-profile-" + i);
+                    persistenceService.save(profile);
+                }
+                return null;
+            });
+
+            // When
+            long tenant1Size = TestHelper.retryUntil(
+                () -> persistenceService.calculateStorageSize("tenant1"), c -> c == 2L);
+            long tenant2Size = TestHelper.retryUntil(
+                () -> persistenceService.calculateStorageSize("tenant2"), c -> c == 5L);
+
+            // Then
+            assertEquals(2, tenant1Size, "Tenant1 storage size should only include its own items");
+            assertEquals(5, tenant2Size, "Tenant2 storage size should only include its own items");
+        }
+
+        @Test
+        void shouldReturnZeroForNullTenantId() {
+            assertEquals(0, persistenceService.calculateStorageSize(null),
+                "Should handle null tenantId gracefully");
+        }
+
+        @Test
+        void shouldReturnZeroForUnknownTenant() {
+            assertEquals(0, persistenceService.calculateStorageSize("no-such-tenant"),
+                "Should return 0 for a tenant with no items");
+        }
     }
 
     @Nested

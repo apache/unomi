@@ -20,6 +20,7 @@ import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
@@ -32,6 +33,10 @@ public class RuntimeExceptionMapper extends AbstractRestExceptionMapper implemen
 
     @Override
     public Response toResponse(RuntimeException exception) {
+        if (exception instanceof WebApplicationException) {
+            return webApplicationExceptionResponse((WebApplicationException) exception);
+        }
+
         String requestContext = buildRequestContext();
         Throwable rootCause = getRootCause(exception);
         String rootCauseClassName = LogSanitizer.className(rootCause != null ? rootCause.getClass().getSimpleName() : "Unknown");
@@ -55,5 +60,24 @@ public class RuntimeExceptionMapper extends AbstractRestExceptionMapper implemen
         LOGGER.debug("Full exception details for request: {}", requestContext, exception);
 
         return isClientError ? badRequestResponse() : internalServerErrorResponse();
+    }
+
+    private Response webApplicationExceptionResponse(WebApplicationException exception) {
+        String requestContext = buildRequestContext();
+        int statusCode = exception.getResponse().getStatus();
+        Response.Status status = Response.Status.fromStatusCode(statusCode);
+        if (status == null) {
+            LOGGER.error("Internal server error on {} - Unrecognized status code {} from {}", requestContext, statusCode,
+                    exception.getClass().getSimpleName());
+            return internalServerErrorResponse();
+        }
+
+        String message = LogSanitizer.forLogging(exception.getMessage() != null ? exception.getMessage() : status.getReasonPhrase());
+        if (status.getFamily() == Response.Status.Family.CLIENT_ERROR) {
+            LOGGER.warn("{} {} on {} - {}", status.getStatusCode(), status.getReasonPhrase(), requestContext, message);
+        } else {
+            LOGGER.error("{} {} on {} - {}", status.getStatusCode(), status.getReasonPhrase(), requestContext, message);
+        }
+        return jsonErrorResponse(status, message);
     }
 }

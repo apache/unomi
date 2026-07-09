@@ -17,6 +17,7 @@
 package org.apache.unomi.api.tenants;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -149,11 +150,13 @@ public class TenantUsage {
     }
 
     public List<TenantScopeUsage> getScopeUsages() {
-        return scopeUsages;
+        return Collections.unmodifiableList(scopeUsages);
     }
 
     public void setScopeUsages(List<TenantScopeUsage> scopeUsages) {
-        this.scopeUsages = scopeUsages != null ? scopeUsages : new ArrayList<>();
+        // Copy defensively: callers (including the internal usage cache) must not be able to
+        // mutate this snapshot's state through a shared list reference after construction.
+        this.scopeUsages = scopeUsages != null ? new ArrayList<>(scopeUsages) : new ArrayList<>();
     }
 
     public long getCollectedAt() {

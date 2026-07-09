@@ -20,6 +20,7 @@ import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.tenants.TenantUsageService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +50,7 @@ public class SecurityFilter implements ContainerRequestFilter {
     @Reference
     private SecurityService securityService;
 
-    @Reference(cardinality = org.osgi.service.component.annotations.ReferenceCardinality.OPTIONAL)
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL)
     private TenantUsageService tenantUsageService;
 
     @Context
@@ -96,6 +97,9 @@ public class SecurityFilter implements ContainerRequestFilter {
     }
 
     private boolean hasRequiredTenantAccess(ContainerRequestContext requestContext) {
+        // The tenant being accessed must come from the request path (e.g. /tenants/{tenantId}/...),
+        // never from the caller's own subject — otherwise this check would just compare the
+        // subject's tenant against itself and always pass.
         String requestedTenantId = uriInfo.getPathParameters().getFirst(TENANT_PATH_PARAM);
         if (requestedTenantId == null) {
             requestContext.abortWith(Response.status(Response.Status.BAD_REQUEST)
