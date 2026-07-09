@@ -29,10 +29,12 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.ApiKeyCreationResult;
-import org.apache.unomi.api.tenants.ResourceQuota;
 import org.apache.unomi.api.tenants.Tenant;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,6 +45,9 @@ import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.apache.http.util.EntityUtils;
 
+import java.time.Instant;
+import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.Base64;
 
@@ -103,10 +108,7 @@ public class TenantIT extends BaseIT {
 
             // Test update tenant
             retrievedTenant.setName("Updated Rest Test Tenant");
-            ResourceQuota quota = new ResourceQuota();
-            quota.setMaxProfiles(1000L);
-            quota.setMaxEvents(5000L);
-            retrievedTenant.setResourceQuota(quota);
+            retrievedTenant.setDescription("Updated REST test description");
 
             HttpPut updateRequest = new HttpPut(getFullUrl(REST_ENDPOINT + "/" + retrievedTenant.getItemId()));
             updateRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(retrievedTenant), ContentType.APPLICATION_JSON));
@@ -119,7 +121,7 @@ public class TenantIT extends BaseIT {
             }
 
             Assert.assertEquals("Tenant name should be updated", "Updated Rest Test Tenant", updatedTenant.getName());
-            Assert.assertEquals("Tenant quota should be updated", (Long) 1000L, (Long) updatedTenant.getResourceQuota().getMaxProfiles());
+            Assert.assertEquals("Tenant description should be updated", "Updated REST test description", updatedTenant.getDescription());
 
             // Test generate new API key
             String generateKeyUrl = String.format("%s/%s/apikeys?type=%s&validityDays=30",
@@ -624,4 +626,252 @@ public class TenantIT extends BaseIT {
                 200, response.getStatusLine().getStatusCode());
         }
     }
+
+    @Test
+    public void testTenantUsageEndpoint() throws Exception {
+        Tenant tenant = tenantService.createTenant("usage-test-tenant", Collections.emptyMap());
+        try {
+            String usageUrl = getFullUrl(REST_ENDPOINT + "/" + tenant.getItemId() + "/usage");
+            String usageResponse;
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(usageUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Usage endpoint should return 200", 200, response.getStatusLine().getStatusCode());
+                usageResponse = EntityUtils.toString(response.getEntity());
+            }
+            Map<?, ?> usage = getObjectMapper().readValue(usageResponse, Map.class);
+            Assert.assertEquals("Usage tenantId should match", tenant.getItemId(), usage.get("tenantId"));
+            Assert.assertTrue("Default period should normalize to YYYY-MM", usage.get("period").toString().matches("\\d{4}-\\d{2}"));
+            Assert.assertNotNull("periodStart should be present", usage.get("periodStart"));
+            Assert.assertNotNull("periodEnd should be present", usage.get("periodEnd"));
+            Assert.assertNotNull("scopeCount should be present", usage.get("scopeCount"));
+            Assert.assertNotNull("activeApiKeyCount should be present", usage.get("activeApiKeyCount"));
+            Assert.assertNotNull("scopeUsages should be present", usage.get("scopeUsages"));
+            Assert.assertNotNull("collectedAt should be present", usage.get("collectedAt"));
+
+            String legacyPeriodUrl = usageUrl + "?period=24h";
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(legacyPeriodUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Legacy 24h period should return 200", 200, response.getStatusLine().getStatusCode());
+            }
+
+            String badPeriodUrl = usageUrl + "?period=7d";
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(badPeriodUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Unsupported period should return 400", 400, response.getStatusLine().getStatusCode());
+            }
+        } finally {
+            tenantService.deleteTenant(tenant.getItemId());
+        }
+    }
+
+    @Test
+    public void testTenantEventPurgeEndpoint() throws Exception {
+        Tenant tenant = tenantService.createTenant("purge-test-tenant", Collections.emptyMap());
+        try {
+            String purgeUrl = getFullUrl(REST_ENDPOINT + "/" + tenant.getItemId() + "/purge/events?retentionDays=90");
+            String purgeResponse;
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpPost(purgeUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Purge endpoint should return 200", 200, response.getStatusLine().getStatusCode());
+                purgeResponse = EntityUtils.toString(response.getEntity());
+            }
+            Map<?, ?> purge = getObjectMapper().readValue(purgeResponse, Map.class);
+            Assert.assertEquals("Purge tenantId should match", tenant.getItemId(), purge.get("tenantId"));
+            Assert.assertEquals("Retention days should match", 90, purge.get("retentionDays"));
+            Assert.assertNotNull("eventsMatched should be present", purge.get("eventsMatched"));
+            Assert.assertNotNull("purgeRequested should be present", purge.get("purgeRequested"));
+
+            String lowRetentionUrl = getFullUrl(REST_ENDPOINT + "/" + tenant.getItemId() + "/purge/events?retentionDays=3");
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpPost(lowRetentionUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Retention below minimum should return 400", 400, response.getStatusLine().getStatusCode());
+            }
+
+            String missingTenantUrl = getFullUrl(REST_ENDPOINT + "/missing-tenant/purge/events?retentionDays=90");
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpPost(missingTenantUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Missing tenant should return 404", 404, response.getStatusLine().getStatusCode());
+            }
+        } finally {
+            tenantService.deleteTenant(tenant.getItemId());
+        }
+    }
+
+    @Test
+    public void testTenantEventPurgeEndpointDeletesOnlyEventsPastRetention() throws Exception {
+        Tenant tenant = tenantService.createTenant("purge-deletion-tenant", Collections.emptyMap());
+        try {
+            Date oldTimestamp = Date.from(Instant.now().minus(100, ChronoUnit.DAYS));
+            Date recentTimestamp = new Date();
+
+            executionContextManager.executeAsTenant(tenant.getItemId(), () -> {
+                Event oldEvent = new Event();
+                oldEvent.setItemId("purge-old-event");
+                oldEvent.setEventType("pageView");
+                oldEvent.setProfileId("purge-deletion-profile");
+                oldEvent.setScope("purge-scope");
+                oldEvent.setTimeStamp(oldTimestamp);
+                persistenceService.save(oldEvent);
+
+                Event recentEvent = new Event();
+                recentEvent.setItemId("purge-recent-event");
+                recentEvent.setEventType("pageView");
+                recentEvent.setProfileId("purge-deletion-profile");
+                recentEvent.setScope("purge-scope");
+                recentEvent.setTimeStamp(recentTimestamp);
+                persistenceService.save(recentEvent);
+            });
+            persistenceService.refresh();
+
+            String purgeUrl = getFullUrl(REST_ENDPOINT + "/" + tenant.getItemId() + "/purge/events?retentionDays=90");
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpPost(purgeUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Purge endpoint should return 200", 200, response.getStatusLine().getStatusCode());
+            }
+
+            keepTrying("Old event should be deleted by the purge", () ->
+                    executionContextManager.executeAsTenant(tenant.getItemId(), () ->
+                            persistenceService.load("purge-old-event", Event.class)),
+                    Objects::isNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+            executionContextManager.executeAsTenant(tenant.getItemId(), () ->
+                    Assert.assertNotNull("Recent event should survive the purge",
+                            persistenceService.load("purge-recent-event", Event.class)));
+        } finally {
+            tenantService.deleteTenant(tenant.getItemId());
+        }
+    }
+
+    @Test
+    public void testTenantUsageEndpointNotFound() throws Exception {
+        try (CloseableHttpResponse response = executeHttpRequest(
+                new HttpGet(getFullUrl(REST_ENDPOINT + "/missing-usage-tenant/usage")), AuthType.JAAS_ADMIN)) {
+            Assert.assertEquals("Missing tenant usage request should return 404", 404,
+                    response.getStatusLine().getStatusCode());
+        }
+    }
+
+    @Test
+    public void testTenantUsageEndpointRequiresAuthentication() throws Exception {
+        Tenant tenant = tenantService.createTenant("usage-auth-tenant", Collections.emptyMap());
+        try {
+            String usageUrl = getFullUrl(REST_ENDPOINT + "/" + tenant.getItemId() + "/usage");
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(usageUrl), AuthType.NONE)) {
+                Assert.assertEquals("Unauthenticated usage request should be rejected", 401,
+                        response.getStatusLine().getStatusCode());
+            }
+        } finally {
+            tenantService.deleteTenant(tenant.getItemId());
+        }
+    }
+
+    @Test
+    public void testTenantUsageEndpointWithExplicitPeriod() throws Exception {
+        Tenant tenant = tenantService.createTenant("usage-period-tenant", Collections.emptyMap());
+        try {
+            String period = YearMonth.now(java.time.ZoneOffset.UTC).toString();
+            String usageUrl = getFullUrl(REST_ENDPOINT + "/" + tenant.getItemId() + "/usage?period=" + period);
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(usageUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Explicit period usage request should return 200", 200,
+                        response.getStatusLine().getStatusCode());
+                Map<?, ?> usage = getObjectMapper().readValue(EntityUtils.toString(response.getEntity()), Map.class);
+                Assert.assertEquals("Period should match requested month", period, usage.get("period"));
+            }
+        } finally {
+            tenantService.deleteTenant(tenant.getItemId());
+        }
+    }
+
+    @Test
+    public void testTenantUsageReflectsSeededTenantData() throws Exception {
+        Tenant tenant = tenantService.createTenant("usage-seeded-tenant", Collections.emptyMap());
+        try {
+            executionContextManager.executeAsTenant(tenant.getItemId(), () -> {
+                TestUtils.createScope("usage-scope", "Usage Scope", scopeService);
+                Profile profile = new Profile();
+                profile.setItemId("usage-profile");
+                persistenceService.save(profile);
+                Event event = new Event();
+                event.setItemId("usage-event");
+                event.setEventType("pageView");
+                event.setProfileId(profile.getItemId());
+                event.setScope("usage-scope");
+                event.setTimeStamp(new Date());
+                persistenceService.save(event);
+                Metadata segmentMetadata = new Metadata("usage-segment");
+                segmentMetadata.setScope("usage-scope");
+                segmentMetadata.setEnabled(false);
+                Segment segment = new Segment();
+                segment.setMetadata(segmentMetadata);
+                segment.setCondition(null);
+                segmentService.setSegmentDefinition(segment);
+            });
+
+            String usageUrl = getFullUrl(REST_ENDPOINT + "/" + tenant.getItemId() + "/usage");
+            Map<?, ?> usage = keepTrying("Usage should reflect seeded tenant data", () -> {
+                try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(usageUrl), AuthType.JAAS_ADMIN)) {
+                    if (response.getStatusLine().getStatusCode() != 200) {
+                        return null;
+                    }
+                    Map<?, ?> body = getObjectMapper().readValue(EntityUtils.toString(response.getEntity()), Map.class);
+                    Number profileCount = (Number) body.get("profileCount");
+                    Number eventCount = (Number) body.get("eventCount");
+                    Number scopeCount = (Number) body.get("scopeCount");
+                    if (profileCount == null || profileCount.longValue() < 1L) {
+                        return null;
+                    }
+                    if (eventCount == null || eventCount.longValue() < 1L) {
+                        return null;
+                    }
+                    if (scopeCount == null || scopeCount.longValue() < 1L) {
+                        return null;
+                    }
+                    return body;
+                } catch (Exception e) {
+                    return null;
+                }
+            }, Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+            Assert.assertNotNull("Usage response should be populated", usage);
+            Assert.assertTrue("Active API key count should include tenant keys",
+                    ((Number) usage.get("activeApiKeyCount")).longValue() >= 2L);
+            List<?> scopeUsages = (List<?>) usage.get("scopeUsages");
+            Assert.assertNotNull("scopeUsages should be present", scopeUsages);
+            boolean foundScope = false;
+            for (Object entry : scopeUsages) {
+                Map<?, ?> scopeUsage = (Map<?, ?>) entry;
+                if ("usage-scope".equals(scopeUsage.get("scopeId"))) {
+                    foundScope = true;
+                    Assert.assertTrue("Segment count for scope should be at least 1",
+                            ((Number) scopeUsage.get("segmentCount")).longValue() >= 1L);
+                }
+            }
+            Assert.assertTrue("scopeUsages should include the seeded scope", foundScope);
+        } finally {
+            tenantService.deleteTenant(tenant.getItemId());
+        }
+    }
+
+    @Test
+    public void testTenantEventPurgeEndpointRequiresAuthentication() throws Exception {
+        Tenant tenant = tenantService.createTenant("purge-auth-tenant", Collections.emptyMap());
+        try {
+            String purgeUrl = getFullUrl(REST_ENDPOINT + "/" + tenant.getItemId() + "/purge/events?retentionDays=90");
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpPost(purgeUrl), AuthType.NONE)) {
+                Assert.assertEquals("Unauthenticated purge request should be rejected", 401,
+                        response.getStatusLine().getStatusCode());
+            }
+        } finally {
+            tenantService.deleteTenant(tenant.getItemId());
+        }
+    }
+
+    @Test
+    public void testTenantEventPurgeEndpointRejectsNonPositiveRetention() throws Exception {
+        Tenant tenant = tenantService.createTenant("purge-invalid-tenant", Collections.emptyMap());
+        try {
+            String purgeUrl = getFullUrl(REST_ENDPOINT + "/" + tenant.getItemId() + "/purge/events?retentionDays=0");
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpPost(purgeUrl), AuthType.JAAS_ADMIN)) {
+                Assert.assertEquals("Non-positive retention should return 400", 400,
+                        response.getStatusLine().getStatusCode());
+            }
+        } finally {
+            tenantService.deleteTenant(tenant.getItemId());
+        }
+    }
+
+
 }

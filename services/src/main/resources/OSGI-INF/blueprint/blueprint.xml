@@ -469,17 +469,10 @@
         <property name="tenantService" ref="tenantServiceImpl"/>
     </bean>
 
-    <bean id="tenantMonitoringServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantMonitoringService"
+    <bean id="tenantUsageServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantUsageServiceImpl"
           init-method="activate" destroy-method="deactivate">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
-        <property name="tenantService" ref="tenantServiceImpl"/>
-        <property name="contextManager" ref="executionContextManager"/>
-    </bean>
-
-    <bean id="tenantQuotaServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantQuotaService"
-          init-method="activate">
-        <property name="persistenceService" ref="persistenceService"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="contextManager" ref="executionContextManager"/>
     </bean>
@@ -670,17 +663,10 @@
         </service-properties>
     </service>
 
-    <service id="tenantMonitoringService" ref="tenantMonitoringServiceImpl"
-             interface="org.apache.unomi.services.impl.tenants.TenantMonitoringService">
+    <service id="tenantUsageService" ref="tenantUsageServiceImpl"
+             interface="org.apache.unomi.api.tenants.TenantUsageService">
         <service-properties>
-            <entry key="service.exported.interfaces" value="org.apache.unomi.services.impl.tenants.TenantMonitoringService"/>
-        </service-properties>
-    </service>
-
-    <service id="tenantQuotaService" ref="tenantQuotaServiceImpl"
-             interface="org.apache.unomi.services.impl.tenants.TenantQuotaService">
-        <service-properties>
-            <entry key="service.exported.interfaces" value="org.apache.unomi.services.impl.tenants.TenantQuotaService"/>
+            <entry key="service.exported.interfaces" value="org.apache.unomi.api.tenants.TenantUsageService"/>
         </service-properties>
     </service>
 

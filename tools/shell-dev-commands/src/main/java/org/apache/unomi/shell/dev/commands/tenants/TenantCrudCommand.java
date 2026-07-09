@@ -22,7 +22,6 @@ import org.apache.karaf.shell.support.table.ShellTable;
 import java.io.PrintStream;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.api.tenants.ResourceQuota;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.tenants.TenantStatus;
@@ -47,7 +46,7 @@ public class TenantCrudCommand extends BaseCrudCommand {
     private static final Logger LOGGER = LoggerFactory.getLogger(TenantCrudCommand.class.getName());
     private static final ObjectMapper OBJECT_MAPPER = new CustomObjectMapper();
     private static final List<String> PROPERTY_NAMES = List.of(
-        "itemId", "name", "description", "status", "creationDate", "lastModificationDate", "resourceQuota", "properties", "restrictedEventPermissions", "authorizedIPs"
+        "itemId", "name", "description", "status", "creationDate", "lastModificationDate", "properties", "restrictedEventPermissions", "authorizedIPs"
     );
 
     @Reference
@@ -198,9 +197,6 @@ public class TenantCrudCommand extends BaseCrudCommand {
             if (properties.containsKey("status")) {
                 tenant.setStatus(Enum.valueOf(TenantStatus.class, (String) properties.get("status")));
             }
-            if (properties.containsKey("resourceQuota")) {
-                tenant.setResourceQuota(OBJECT_MAPPER.convertValue(properties.get("resourceQuota"), ResourceQuota.class));
-            }
             if (properties.containsKey("properties")) {
                 @SuppressWarnings("unchecked")
                 Map<String, Object> props = (Map<String, Object>) properties.get("properties");
@@ -248,7 +244,6 @@ public class TenantCrudCommand extends BaseCrudCommand {
             "Optional properties:",
             "- description: A description of the tenant's purpose or usage",
             "- status: The tenant's status (ACTIVE, DISABLED, etc.)",
-            "- resourceQuota: Resource quota limits for the tenant (profiles, events, requests)",
             "- properties: Additional custom properties for the tenant",
             "- restrictedEventPermissions: List of event types that require special permissions",
             "- authorizedIPs: List of IP addresses or CIDR ranges authorized to make requests"

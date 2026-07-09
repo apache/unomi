@@ -22,7 +22,11 @@ import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.ApiKeyCreationResult;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.api.tenants.TenantEventPurgeResult;
+import org.apache.unomi.api.tenants.TenantUsage;
+import org.apache.unomi.api.tenants.TenantUsageService;
 import org.apache.unomi.rest.security.RequiresRole;
+import org.apache.unomi.rest.security.RequiresTenant;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -49,6 +53,9 @@ public class TenantEndpoint {
     @Reference
     private TenantService tenantService;
 
+    @Reference
+    private TenantUsageService tenantUsageService;
+
     /**
      * Retrieves all tenants in the system.
      *
@@ -68,6 +75,7 @@ public class TenantEndpoint {
      */
     @GET
     @Path("/{tenantId}")
+    @RequiresTenant
     @Produces(MediaType.APPLICATION_JSON)
     public Response getTenant(@PathParam("tenantId") String tenantId) {
         Tenant tenant = tenantService.getTenant(tenantId);
@@ -107,6 +115,7 @@ public class TenantEndpoint {
      */
     @PUT
     @Path("/{tenantId}")
+    @RequiresTenant
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Tenant updateTenant(@PathParam("tenantId") String tenantId, Tenant tenant) {
@@ -131,6 +140,7 @@ public class TenantEndpoint {
      */
     @DELETE
     @Path("/{tenantId}")
+    @RequiresTenant
     public Response deleteTenant(@PathParam("tenantId") String tenantId) {
         if (tenantService.getTenant(tenantId) == null) {
             throw new WebApplicationException("Tenant not found", Response.Status.NOT_FOUND);
@@ -151,6 +161,7 @@ public class TenantEndpoint {
      */
     @POST
     @Path("/{tenantId}/apikeys")
+    @RequiresTenant
     @Produces(MediaType.APPLICATION_JSON)
     public ApiKeyCreationResult generateApiKey(@PathParam("tenantId") String tenantId,
                                @QueryParam("type") ApiKey.ApiKeyType type,
@@ -180,6 +191,7 @@ public class TenantEndpoint {
      */
     @GET
     @Path("/{tenantId}/apikeys/validate")
+    @RequiresTenant
     public Response validateApiKey(@PathParam("tenantId") String tenantId,
                                  @QueryParam("key") String apiKey,
                                  @QueryParam("type") ApiKey.ApiKeyType type) {
@@ -188,6 +200,68 @@ public class TenantEndpoint {
             return Response.ok().build();
         } else {
             return Response.status(Response.Status.UNAUTHORIZED).build();
+        }
+    }
+
+    /**
+     * Returns a read-only usage snapshot for the tenant. Quota enforcement is upstream;
+     * this endpoint exposes measured usage for operators and control planes.
+     *
+     * @param tenantId tenant identifier
+     * @param period reporting window: {@code current-month}, {@code YYYY-MM}, or legacy {@code 24h}
+     * @return usage snapshot, 404 if tenant is missing, 400 for unsupported period
+     */
+    @GET
+    @Path("/{tenantId}/usage")
+    @RequiresTenant
+    @RequiresRole({UnomiRoles.ADMINISTRATOR, UnomiRoles.TENANT_ADMINISTRATOR})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getTenantUsage(@PathParam("tenantId") String tenantId,
+                                   @QueryParam("period") @DefaultValue(TenantUsageService.DEFAULT_PERIOD) String period) {
+        try {
+            TenantUsage usage = tenantUsageService.getUsage(tenantId, period);
+            if (usage == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            return Response.ok(usage).build();
+        } catch (IllegalArgumentException e) {
+            throw new WebApplicationException(e.getMessage(), Response.Status.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Deletes events for the tenant at least {@code retentionDays} days old.
+     * Destructive operation; intended for upstream retention jobs.
+     *
+     * @param tenantId tenant identifier
+     * @param retentionDays age cutoff in whole days (minimum {@link TenantUsageService#MIN_EVENT_RETENTION_DAYS})
+     * @return purge summary, 404 if tenant is missing, 400 for invalid retention, 500 if the
+     *         persistence layer failed to complete the deletion (see {@code purgeRequested})
+     */
+    @POST
+    @Path("/{tenantId}/purge/events")
+    @RequiresTenant
+    @RequiresRole({UnomiRoles.ADMINISTRATOR, UnomiRoles.TENANT_ADMINISTRATOR})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response purgeTenantEvents(@PathParam("tenantId") String tenantId,
+                                      @QueryParam("retentionDays") int retentionDays) {
+        if (retentionDays <= 0) {
+            throw new WebApplicationException("retentionDays must be positive", Response.Status.BAD_REQUEST);
+        }
+        try {
+            TenantEventPurgeResult result = tenantUsageService.purgeEventsOlderThan(tenantId, retentionDays);
+            if (result == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            if (!result.isPurgeRequested()) {
+                // The persistence layer accepted the request but failed to complete the deletion
+                // (see server logs); callers checking only the status code must see a failure here,
+                // not a false-positive 200.
+                return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(result).build();
+            }
+            return Response.ok(result).build();
+        } catch (IllegalArgumentException e) {
+            throw new WebApplicationException(e.getMessage(), Response.Status.BAD_REQUEST);
         }
     }
 }

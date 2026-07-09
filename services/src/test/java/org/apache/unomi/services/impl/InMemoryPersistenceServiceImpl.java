@@ -2315,11 +2315,15 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public long queryCount(Condition condition, String itemType) {
+        // Real ES/OS scope every query (including counts) to the calling thread's execution
+        // context tenant on top of whatever the Condition itself matches - mirror that here so
+        // tests exercising the wrong execution context catch the same class of bug production would.
+        String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
         // Filter by refresh status to simulate Elasticsearch/OpenSearch behavior
         long count = 0;
         for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
             Item item = entry.getValue();
-            if (item.getItemType().equals(itemType)) {
+            if (item.getItemType().equals(itemType) && currentTenantId.equals(item.getTenantId())) {
                 String itemKey = entry.getKey();
                 if (isItemAvailableForQuery(itemKey, itemType) && (condition == null || testMatch(condition, item))) {
                     count++;
@@ -2400,8 +2404,22 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     }
 
     @Override
-    public long calculateStorageSize(String itemType) {
-        throw new UnsupportedOperationException("Not implemented");
+    public long calculateStorageSize(String tenantId) {
+        // Real ES/OS implementations report a document count here despite the "storage size"
+        // name (see PersistenceService#calculateStorageSize javadoc vs. actual behavior); mirror
+        // that as a simple tenant-scoped item count across all types, respecting the same
+        // refresh-delay simulation as queryCount()/getAllItemsCount() so tests can exercise it consistently.
+        if (tenantId == null) {
+            return 0;
+        }
+        long count = 0;
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            if (tenantId.equals(item.getTenantId()) && isItemAvailableForQuery(entry.getKey(), item.getItemType())) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private Object getPropertyValue(Item item, String field) {

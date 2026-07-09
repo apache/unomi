@@ -28,7 +28,7 @@ Apache Unomi provides robust multi-tenancy support, allowing multiple organizati
 * Complete data isolation between tenants
 * Dual API key system (public and private keys)
 * Tenant-specific configuration
-* Resource quotas and limits
+* Per-tenant usage metrics (quotas enforced upstream)
 * Migration tools for existing data
 * Support for both REST and GraphQL APIs
 
@@ -433,14 +433,31 @@ For complete details on the GraphQL multi-tenancy implementation, refer to the <
 
 === Monitoring API Usage
 
-Track tenant API usage:
+Unomi exposes read-only usage metrics per tenant. Quota enforcement belongs in your upstream gateway or control plane.
 
 [source,bash]
 ----
-curl -X GET http://localhost:8181/cxs/tenants/my-tenant/apiCalls \
+curl -X GET "http://localhost:8181/cxs/tenants/my-tenant/usage?period=current-month" \
   --user karaf:karaf \
   -H "Content-Type: application/json"
 ----
+
+Supported `period` values are `current-month` (default), `YYYY-MM` (for example `2026-07`), and legacy `24h` (same as the current calendar month).
+
+The response includes profile, scope, segment, and rule totals, per-scope segment/rule breakdown (`scopeUsages`), monthly `eventCount` for the requested period (`periodStart` / `periodEnd` in epoch millis), active API key count, storage document count, in-memory REST request count since process start, and `collectedAt` (epoch millis). Values refresh on a background schedule and may be stale until the next collection cycle.
+
+=== Event retention purge
+
+Upstream control planes can delete old tenant events through Unomi instead of talking to the search cluster directly:
+
+[source,bash]
+----
+curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/purge/events?retentionDays=90" \
+  --user karaf:karaf \
+  -H "Content-Type: application/json"
+----
+
+The response reports how many events matched the retention cutoff before deletion ran (`eventsMatched`) and whether the delete-by-query completed successfully (`purgeRequested`); a `purgeRequested` of `false` means the deletion failed and the request returns HTTP 500 (see server logs for the cause). The minimum accepted retention is seven days, to guard against accidentally purging recent or active event data.
 
 === Data Migration
 
@@ -463,7 +480,7 @@ curl -X POST http://localhost:8181/cxs/tenants/source-tenant/migrate/target-tena
 
 === Resource Management
 * Set appropriate quotas for each tenant
-* Monitor resource usage through the monitoring endpoints
+* Monitor resource usage through the tenant usage API (`GET /cxs/tenants/{tenantId}/usage`)
 * Configure alerts for quota limits
 * Regularly review and adjust limits based on usage patterns
 

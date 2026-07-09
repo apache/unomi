@@ -41,7 +41,7 @@ import java.util.List;
 )
 @Component(service = TaskEndpoint.class, property = "osgi.jaxrs.resource=true")
 @Path("/tasks")
-@RequiresRole(UnomiRoles.ADMINISTRATOR)
+@RequiresRole({UnomiRoles.ADMINISTRATOR, UnomiRoles.TENANT_ADMINISTRATOR})
 public class TaskEndpoint {
 
     @Reference

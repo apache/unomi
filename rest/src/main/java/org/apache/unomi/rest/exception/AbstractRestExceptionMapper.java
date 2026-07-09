@@ -56,7 +56,7 @@ public abstract class AbstractRestExceptionMapper {
         return jsonErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, "internalServerError");
     }
 
-    private Response jsonErrorResponse(Response.Status status, String errorMessage) {
+    protected Response jsonErrorResponse(Response.Status status, String errorMessage) {
         Map<String, Object> body = new HashMap<>();
         body.put(ERROR_MESSAGE_KEY, errorMessage);
         return Response.status(status).header("Content-Type", MediaType.APPLICATION_JSON).entity(body).build();

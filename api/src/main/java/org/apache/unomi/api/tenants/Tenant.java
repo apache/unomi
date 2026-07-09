@@ -20,6 +20,7 @@ import org.apache.unomi.api.Item;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.xml.bind.annotation.XmlTransient;
 
@@ -27,9 +28,9 @@ import javax.xml.bind.annotation.XmlTransient;
  * Represents a tenant in the system.
  * A tenant is an isolated entity within the system with its own users, data, and configuration.
  * Each tenant has its own set of API keys (public and private) for authentication and authorization,
- * resource quotas to limit usage, and event permissions to control access to specific event types.
+ * and event permissions to control access to specific event types.
  * This class extends the base Item class and provides functionality for managing tenant
- * settings, resource quotas, and lifecycle.
+ * settings and lifecycle.
  */
 public class Tenant extends Item {
     /**
@@ -62,11 +63,6 @@ public class Tenant extends Item {
      */
     private Date lastModificationDate;
 
-    /**
-     * The resource quota limits for the tenant.
-     * This includes limits on profiles, events, and requests.
-     */
-    private ResourceQuota resourceQuota;
 
     /**
      * The list of all API keys (both active and historical) associated with the tenant.
@@ -186,22 +182,6 @@ public class Tenant extends Item {
     }
 
     /**
-     * Gets the tenant's resource quota settings.
-     * @return the resource quota settings
-     */
-    public ResourceQuota getResourceQuota() {
-        return resourceQuota;
-    }
-
-    /**
-     * Sets the tenant's resource quota settings.
-     * @param resourceQuota the resource quota settings to set
-     */
-    public void setResourceQuota(ResourceQuota resourceQuota) {
-        this.resourceQuota = resourceQuota;
-    }
-
-    /**
      * Gets the list of all API keys associated with the tenant.
      * This includes both active and historical keys for auditing purposes.
      * @return the list of API keys
@@ -278,17 +258,7 @@ public class Tenant extends Item {
      */
     @XmlTransient
     public String getPrivateApiKey() {
-        if (apiKeys == null) {
-            return null;
-        }
-        
-        return apiKeys.stream()
-            .filter(key -> key.getKeyType() == ApiKey.ApiKeyType.PRIVATE)
-            .filter(key -> !key.isRevoked())
-            .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
-            .max(Comparator.comparing(ApiKey::getCreationDate))
-            .map(ApiKey::getMaskedKey)
-            .orElse(null);
+        return getLatestMaskedActiveKey(ApiKey.ApiKeyType.PRIVATE);
     }
 
     /**
@@ -301,17 +271,7 @@ public class Tenant extends Item {
      */
     @XmlTransient
     public String getPublicApiKey() {
-        if (apiKeys == null) {
-            return null;
-        }
-        
-        return apiKeys.stream()
-            .filter(key -> key.getKeyType() == ApiKey.ApiKeyType.PUBLIC)
-            .filter(key -> !key.isRevoked())
-            .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
-            .max(Comparator.comparing(ApiKey::getCreationDate))
-            .map(ApiKey::getMaskedKey)
-            .orElse(null);
+        return getLatestMaskedActiveKey(ApiKey.ApiKeyType.PUBLIC);
     }
 
     /**
@@ -321,15 +281,7 @@ public class Tenant extends Item {
      */
     @XmlTransient
     public List<ApiKey> getActivePrivateApiKeys() {
-        if (apiKeys == null) {
-            return new ArrayList<>();
-        }
-        
-        return apiKeys.stream()
-            .filter(key -> key.getKeyType() == ApiKey.ApiKeyType.PRIVATE)
-            .filter(key -> !key.isRevoked())
-            .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
-            .collect(Collectors.toList());
+        return streamActiveApiKeysOfType(ApiKey.ApiKeyType.PRIVATE).collect(Collectors.toList());
     }
 
     /**
@@ -339,15 +291,7 @@ public class Tenant extends Item {
      */
     @XmlTransient
     public List<ApiKey> getActivePublicApiKeys() {
-        if (apiKeys == null) {
-            return new ArrayList<>();
-        }
-        
-        return apiKeys.stream()
-            .filter(key -> key.getKeyType() == ApiKey.ApiKeyType.PUBLIC)
-            .filter(key -> !key.isRevoked())
-            .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
-            .collect(Collectors.toList());
+        return streamActiveApiKeysOfType(ApiKey.ApiKeyType.PUBLIC).collect(Collectors.toList());
     }
 
     /**
@@ -360,10 +304,30 @@ public class Tenant extends Item {
         if (apiKeys == null) {
             return new ArrayList<>();
         }
-        
+
         return apiKeys.stream()
-            .filter(key -> !key.isRevoked())
-            .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
+            .filter(this::isActiveApiKey)
             .collect(Collectors.toList());
+    }
+
+    private String getLatestMaskedActiveKey(ApiKey.ApiKeyType keyType) {
+        return streamActiveApiKeysOfType(keyType)
+            .max(Comparator.comparing(ApiKey::getCreationDate))
+            .map(ApiKey::getMaskedKey)
+            .orElse(null);
+    }
+
+    private Stream<ApiKey> streamActiveApiKeysOfType(ApiKey.ApiKeyType keyType) {
+        if (apiKeys == null) {
+            return Stream.empty();
+        }
+        return apiKeys.stream()
+            .filter(key -> key.getKeyType() == keyType)
+            .filter(this::isActiveApiKey);
+    }
+
+    private boolean isActiveApiKey(ApiKey key) {
+        return !key.isRevoked()
+                && (key.getExpirationDate() == null || key.getExpirationDate().after(new Date()));
     }
 }
