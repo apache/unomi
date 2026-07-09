@@ -162,6 +162,8 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
             }
         }
 
+        prepareSearchEngineAfterMigration();
+
         // Call super for starting Unomi and wait for the complete startup
         super.waitForStartup();
     }

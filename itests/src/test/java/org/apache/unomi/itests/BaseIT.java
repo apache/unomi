@@ -1389,46 +1389,60 @@ public abstract class BaseIT extends KarafTestSupport {
     private static final String IT_ZERO_REPLICAS_INDEX_TEMPLATE = "unomi-it-zero-replicas";
 
     /**
-     * Configures the IT search engine container for single-node testing (UNOMI-946).
-     * Uses a composable index template plus per-index settings so replicas stay at zero
-     * on one node (cluster settings do not accept index.number_of_replicas).
+     * Stage 1 (pre-Unomi): index template for new indices and zero replicas on any existing indices.
+     * Safe to call before migration snapshot restore when the cluster is still empty.
      */
     protected void configureSearchEngineForTesting() {
         if (searchEngineConfiguredForTesting) {
             return;
         }
-        searchEngineConfiguredForTesting = true;
         try (CloseableHttpClient client = createSearchEngineHttpClient()) {
             String baseUrl = getSearchEngineBaseUrl();
-            applyZeroReplicaIndexTemplate(client, baseUrl);
+            ensureZeroReplicaIndexTemplate(client, baseUrl);
             zeroReplicasOnExistingIndices(client, baseUrl, false);
             String health = HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health", null);
             LOGGER.info("Search engine baseline cluster health ({}): {}", searchEngine, health);
             System.out.println("==== Search engine baseline cluster health (" + searchEngine + "): " + health);
+            searchEngineConfiguredForTesting = true;
         } catch (Exception e) {
             throw new IllegalStateException("Failed to configure search engine for IT testing", e);
         }
     }
 
     /**
-     * Zeros replica count on all existing indices (migration snapshot restore path).
+     * Stage 2a (post snapshot restore): fix replicas on restored 1.x indices before shell migration.
      */
     protected void fixRestoredIndexReplicas() {
+        enforceZeroReplicasAndWaitForCluster("after snapshot restore");
+    }
+
+    /**
+     * Stage 2b (post shell migration, pre-Unomi start): indices created or reindexed during migration
+     * must also run with zero replicas on the single-node IT cluster.
+     */
+    protected void prepareSearchEngineAfterMigration() {
+        enforceZeroReplicasAndWaitForCluster("after migration");
+    }
+
+    private void enforceZeroReplicasAndWaitForCluster(String context) {
         try (CloseableHttpClient client = createSearchEngineHttpClient()) {
             String baseUrl = getSearchEngineBaseUrl();
-            applyZeroReplicaIndexTemplate(client, baseUrl);
+            ensureZeroReplicaIndexTemplate(client, baseUrl);
             zeroReplicasOnExistingIndices(client, baseUrl, true);
             String health = HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health?wait_for_status=green&timeout=30s", null);
-            LOGGER.info("Cluster health after fixing restored index replicas: {}", health);
+            LOGGER.info("Cluster health ({}): {}", context, health);
+            System.out.println("==== Cluster health (" + context + "): " + health);
             if (health != null && health.contains("\"status\":\"red\"")) {
-                throw new IllegalStateException("Cluster still RED after fixing restored index replicas: " + health);
+                throw new IllegalStateException("Cluster still RED " + context + ": " + health);
             }
+        } catch (RuntimeException e) {
+            throw e;
         } catch (Exception e) {
-            throw new IllegalStateException("Failed to fix restored index replicas", e);
+            throw new IllegalStateException("Failed to enforce zero replicas " + context, e);
         }
     }
 
-    private void applyZeroReplicaIndexTemplate(CloseableHttpClient client, String baseUrl) throws IOException {
+    private void ensureZeroReplicaIndexTemplate(CloseableHttpClient client, String baseUrl) throws IOException {
         String templateBody = "{"
                 + "\"index_patterns\":[\"*\"],"
                 + "\"priority\":1,"
@@ -1448,18 +1462,26 @@ public abstract class BaseIT extends KarafTestSupport {
             return;
         }
         String settingsBody = "{\"index\":{\"number_of_replicas\":\"0\"}}";
-        HttpUtils.executePutRequest(client, baseUrl + "/_all/_settings", settingsBody, null);
+        for (JsonNode index : indices) {
+            String indexName = index.path("index").asText(null);
+            if (indexName == null || indexName.isBlank()) {
+                continue;
+            }
+            HttpUtils.executePutRequest(client, baseUrl + "/" + indexName + "/_settings", settingsBody, null);
+        }
         if (waitForRelocation) {
             HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health?wait_for_no_relocating_shards=true&timeout=30s", null);
         }
     }
 
     /**
-     * Asserts the search cluster is healthy for IT: no index with replicas > 0, cluster GREEN.
+     * Stage 3 (post-Unomi start): assert cluster health for single-node IT (ES and OpenSearch).
      */
     protected void assertClusterHealthy(String context) {
         try (CloseableHttpClient client = createSearchEngineHttpClient()) {
             String baseUrl = getSearchEngineBaseUrl();
+            ensureZeroReplicaIndexTemplate(client, baseUrl);
+            zeroReplicasOnExistingIndices(client, baseUrl, true);
             String indicesJson = HttpUtils.executeGetRequest(client, baseUrl + "/_cat/indices?h=index,rep,health&format=json", null);
             if (indicesJson != null && !indicesJson.isBlank()) {
                 JsonNode indices = getObjectMapper().readTree(indicesJson);
