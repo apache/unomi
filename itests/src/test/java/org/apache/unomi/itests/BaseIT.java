@@ -1386,9 +1386,12 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
 
+    private static final String IT_ZERO_REPLICAS_INDEX_TEMPLATE = "unomi-it-zero-replicas";
+
     /**
      * Configures the IT search engine container for single-node testing (UNOMI-946).
-     * Enforces zero replicas cluster-wide so indices stay GREEN on one node.
+     * Uses a composable index template plus per-index settings so replicas stay at zero
+     * on one node (cluster settings do not accept index.number_of_replicas).
      */
     protected void configureSearchEngineForTesting() {
         if (searchEngineConfiguredForTesting) {
@@ -1397,8 +1400,8 @@ public abstract class BaseIT extends KarafTestSupport {
         searchEngineConfiguredForTesting = true;
         try (CloseableHttpClient client = createSearchEngineHttpClient()) {
             String baseUrl = getSearchEngineBaseUrl();
-            String settingsBody = "{\"persistent\": {\"index.number_of_replicas\": \"0\"}}";
-            HttpUtils.executePutRequest(client, baseUrl + "/_cluster/settings", settingsBody, null);
+            applyZeroReplicaIndexTemplate(client, baseUrl);
+            zeroReplicasOnExistingIndices(client, baseUrl, false);
             String health = HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health", null);
             LOGGER.info("Search engine baseline cluster health ({}): {}", searchEngine, health);
             System.out.println("==== Search engine baseline cluster health (" + searchEngine + "): " + health);
@@ -1413,8 +1416,8 @@ public abstract class BaseIT extends KarafTestSupport {
     protected void fixRestoredIndexReplicas() {
         try (CloseableHttpClient client = createSearchEngineHttpClient()) {
             String baseUrl = getSearchEngineBaseUrl();
-            String settingsBody = "{\"index\": {\"number_of_replicas\": \"0\"}}";
-            HttpUtils.executePutRequest(client, baseUrl + "/_all/_settings", settingsBody, null);
+            applyZeroReplicaIndexTemplate(client, baseUrl);
+            zeroReplicasOnExistingIndices(client, baseUrl, true);
             String health = HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health?wait_for_status=green&timeout=30s", null);
             LOGGER.info("Cluster health after fixing restored index replicas: {}", health);
             if (health != null && health.contains("\"status\":\"red\"")) {
@@ -1422,6 +1425,32 @@ public abstract class BaseIT extends KarafTestSupport {
             }
         } catch (Exception e) {
             throw new IllegalStateException("Failed to fix restored index replicas", e);
+        }
+    }
+
+    private void applyZeroReplicaIndexTemplate(CloseableHttpClient client, String baseUrl) throws IOException {
+        String templateBody = "{"
+                + "\"index_patterns\":[\"*\"],"
+                + "\"priority\":1,"
+                + "\"template\":{\"settings\":{\"index.number_of_replicas\":\"0\"}}"
+                + "}";
+        HttpUtils.executePutRequest(client, baseUrl + "/_index_template/" + IT_ZERO_REPLICAS_INDEX_TEMPLATE, templateBody, null);
+    }
+
+    private void zeroReplicasOnExistingIndices(CloseableHttpClient client, String baseUrl, boolean waitForRelocation)
+            throws IOException {
+        String indicesJson = HttpUtils.executeGetRequest(client, baseUrl + "/_cat/indices?h=index&format=json", null);
+        if (indicesJson == null || indicesJson.isBlank() || "[]".equals(indicesJson.trim())) {
+            return;
+        }
+        JsonNode indices = getObjectMapper().readTree(indicesJson);
+        if (!indices.isArray() || indices.isEmpty()) {
+            return;
+        }
+        String settingsBody = "{\"index\":{\"number_of_replicas\":\"0\"}}";
+        HttpUtils.executePutRequest(client, baseUrl + "/_all/_settings", settingsBody, null);
+        if (waitForRelocation) {
+            HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health?wait_for_no_relocating_shards=true&timeout=30s", null);
         }
     }
 
