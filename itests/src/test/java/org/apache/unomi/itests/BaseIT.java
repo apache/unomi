@@ -23,6 +23,8 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Route;
 import org.apache.camel.ServiceStatus;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
@@ -65,6 +67,7 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.services.UserListService;
+import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.apache.unomi.shell.services.UnomiManagementService;
 import org.junit.After;
 import org.junit.Assert;
@@ -143,6 +146,9 @@ public abstract class BaseIT extends KarafTestSupport {
 
     protected static boolean unomiStarted = false;
     protected static String searchEngine = SEARCH_ENGINE_ELASTICSEARCH;
+
+    private static boolean searchEngineConfiguredForTesting = false;
+    private static boolean searchEngineHealthVerifiedAfterStartup = false;
 
     /**
      * JSON mapper for IT HTTP/JSON helpers. Initialized on first use (after Unomi features are up),
@@ -227,6 +233,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     protected void checkSearchEngine() {
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        configureSearchEngineForTesting();
     }
 
     @Before
@@ -320,6 +327,11 @@ public abstract class BaseIT extends KarafTestSupport {
 
         // init httpClient without credentials provider - all auth handled via headers
         httpClient = initHttpClient(null);
+
+        if (!searchEngineHealthVerifiedAfterStartup) {
+            assertClusterHealthy("after Unomi startup");
+            searchEngineHealthVerifiedAfterStartup = true;
+        }
 
         // Initialize log checker if enabled
         if (isLogCheckingEnabled()) {
@@ -634,6 +646,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:" + getSearchPort()),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.rollover.maxDocs", "300"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.minimalClusterState", "YELLOW"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.cluster.name", "contextElasticSearchITests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.addresses", "localhost:" + getSearchPort()),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.username", "admin"),
@@ -1370,6 +1383,97 @@ public abstract class BaseIT extends KarafTestSupport {
         } catch (IOException e) {
             LOGGER.error("Could not close response", e);
         }
+    }
+
+
+    /**
+     * Configures the IT search engine container for single-node testing (UNOMI-946).
+     * Enforces zero replicas cluster-wide so indices stay GREEN on one node.
+     */
+    protected void configureSearchEngineForTesting() {
+        if (searchEngineConfiguredForTesting) {
+            return;
+        }
+        searchEngineConfiguredForTesting = true;
+        try (CloseableHttpClient client = createSearchEngineHttpClient()) {
+            String baseUrl = getSearchEngineBaseUrl();
+            String settingsBody = "{\"persistent\": {\"index.number_of_replicas\": \"0\"}}";
+            HttpUtils.executePutRequest(client, baseUrl + "/_cluster/settings", settingsBody, null);
+            String health = HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health", null);
+            LOGGER.info("Search engine baseline cluster health ({}): {}", searchEngine, health);
+            System.out.println("==== Search engine baseline cluster health (" + searchEngine + "): " + health);
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to configure search engine for IT testing", e);
+        }
+    }
+
+    /**
+     * Zeros replica count on all existing indices (migration snapshot restore path).
+     */
+    protected void fixRestoredIndexReplicas() {
+        try (CloseableHttpClient client = createSearchEngineHttpClient()) {
+            String baseUrl = getSearchEngineBaseUrl();
+            String settingsBody = "{\"index\": {\"number_of_replicas\": \"0\"}}";
+            HttpUtils.executePutRequest(client, baseUrl + "/_all/_settings", settingsBody, null);
+            String health = HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health?wait_for_status=green&timeout=30s", null);
+            LOGGER.info("Cluster health after fixing restored index replicas: {}", health);
+            if (health != null && health.contains("\"status\":\"red\"")) {
+                throw new IllegalStateException("Cluster still RED after fixing restored index replicas: " + health);
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to fix restored index replicas", e);
+        }
+    }
+
+    /**
+     * Asserts the search cluster is healthy for IT: no index with replicas > 0, cluster GREEN.
+     */
+    protected void assertClusterHealthy(String context) {
+        try (CloseableHttpClient client = createSearchEngineHttpClient()) {
+            String baseUrl = getSearchEngineBaseUrl();
+            String indicesJson = HttpUtils.executeGetRequest(client, baseUrl + "/_cat/indices?h=index,rep,health&format=json", null);
+            if (indicesJson != null && !indicesJson.isBlank()) {
+                JsonNode indices = getObjectMapper().readTree(indicesJson);
+                if (indices.isArray()) {
+                    List<String> violations = new ArrayList<>();
+                    for (JsonNode index : indices) {
+                        String rep = index.path("rep").asText("");
+                        if (!rep.isEmpty() && !"0".equals(rep)) {
+                            violations.add(index.path("index").asText("?") + " rep=" + rep);
+                        }
+                    }
+                    if (!violations.isEmpty()) {
+                        throw new IllegalStateException(context + ": indices with replicas > 0: " + String.join(", ", violations));
+                    }
+                }
+            }
+            String health = HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health", null);
+            LOGGER.info("Cluster health ({}): {}", context, health);
+            if (health == null || (!health.contains("\"status\":\"green\"") && !health.contains("\"status\":\"yellow\""))) {
+                throw new IllegalStateException(context + ": cluster not green/yellow: " + health);
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed cluster health assertion: " + context, e);
+        }
+    }
+
+    protected static String getSearchEngineBaseUrl() {
+        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            return "http://localhost:" + getSearchPort();
+        }
+        return "http://localhost:" + getSearchPort();
+    }
+
+    protected CloseableHttpClient createSearchEngineHttpClient() throws IOException {
+        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+            credentialsProvider.setCredentials(AuthScope.ANY,
+                    new UsernamePasswordCredentials("admin", "Unomi.1ntegrat10n.Tests"));
+            return HttpUtils.initHttpClient(true, credentialsProvider);
+        }
+        return HttpUtils.initHttpClient(true, null);
     }
 
     /**

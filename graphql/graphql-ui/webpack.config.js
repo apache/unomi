@@ -17,6 +17,15 @@
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const path = require('path');
 
+const graphiqlPackages = [
+    path.join(__dirname, 'node_modules/graphiql'),
+    path.join(__dirname, 'node_modules/@graphiql'),
+    path.join(__dirname, 'node_modules/monaco-editor'),
+    path.join(__dirname, 'node_modules/monaco-graphql'),
+    path.join(__dirname, 'node_modules/@codemirror'),
+    path.join(__dirname, 'node_modules/codemirror'),
+];
+
 module.exports = (env, argv) => {
     const isProd = argv.mode === 'production';
 
@@ -32,20 +41,29 @@ module.exports = (env, argv) => {
             path: path.join(__dirname, '/target/assets'),
         },
         resolve: {
-            extensions: ['.js', '.jsx', '.less', '.css'],
+            extensions: ['.js', '.jsx', '.mjs', '.less', '.css'],
         },
         module: {
             rules: [
                 {
-                    test: /\.(js|jsx)$/,
-                    exclude: /node_modules/,
+                    test: /\.(js|jsx|mjs)$/,
+                    include: [
+                        path.join(__dirname, '/src/main/resources/assets'),
+                        ...graphiqlPackages,
+                    ],
                     use: ['babel-loader']
                 },
                 {
-                    test: /\.(png|svg|jpg|gif)$/,
+                    test: /\.(png|svg|jpg|gif|woff|woff2|ttf|eot)$/,
+                    type: 'asset/resource',
+                },
+                {
+                    test: /\.css$/,
+                    include: graphiqlPackages,
                     use: [
-                        'file-loader',
-                    ],
+                        {loader: MiniCssExtractPlugin.loader, options: {publicPath: '../'}},
+                        {loader: 'css-loader', options: {sourceMap: !isProd}},
+                    ]
                 },
                 {
                     test: /\.less$/,

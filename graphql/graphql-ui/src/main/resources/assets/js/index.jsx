@@ -15,28 +15,38 @@
  * limitations under the License.
  */
 
-import {GraphiQL} from 'graphiql';
-import {createGraphiQLFetcher} from '@graphiql/toolkit';
+import 'graphiql/setup-workers/webpack';
+import 'graphiql/graphiql.css';
+import { GraphiQL } from 'graphiql';
+import { createGraphiQLFetcher } from '@graphiql/toolkit';
+import { createClient } from 'graphql-ws';
 import * as React from 'react';
-import * as ReactDOM from 'react-dom';
-import {createClient} from 'graphql-ws';
+import { createRoot } from 'react-dom/client';
+
+function graphqlHttpUrl() {
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+    return protocol + '//' + window.location.host + '/graphql';
+}
+
+function graphqlWsUrl() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return protocol + '//' + window.location.host + '/graphql';
+}
 
 function createFetcher() {
     return createGraphiQLFetcher({
-        url: `http://localhost:8181/graphql`,
-        wsClient: createClient(
-            {
-                url: `ws://localhost:8181/graphql`,
-            }),
+        url: graphqlHttpUrl(),
+        wsClient: createClient({ url: graphqlWsUrl() }),
     });
 }
 
 function QueryPlayground() {
-    return (
-        <GraphiQL fetcher={createFetcher()}></GraphiQL>
-    );
+    return <GraphiQL fetcher={createFetcher()} />;
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    ReactDOM.render(<QueryPlayground/>, document.getElementById('root'));
+    const rootElement = document.getElementById('root');
+    if (rootElement) {
+        createRoot(rootElement).render(<QueryPlayground />);
+    }
 }, false);

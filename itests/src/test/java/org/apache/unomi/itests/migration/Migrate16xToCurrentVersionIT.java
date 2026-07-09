@@ -134,6 +134,8 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
             System.out.println("Snapshot status: " + snapshotStatus);
             LOGGER.info("Snapshot status: {}", snapshotStatus);
 
+            fixRestoredIndexReplicas();
+
             // Get initial counts of items to compare after migration
             initCounts(httpClient);
         } catch (Throwable t) {

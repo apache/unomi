@@ -238,7 +238,7 @@
     </feature>
 
     <feature name="unomi-rest-ui" description="Apache Unomi :: REST API Swagger UI" version="${project.version}">
-        <bundle start="false">mvn:org.webjars/swagger-ui/3.23.8</bundle>
+        <bundle start="false">mvn:org.webjars/swagger-ui/${swagger-ui.version}</bundle>
     </feature>
 
     <feature name="unomi-startup-complete" description="Apache Unomi :: Startup Complete" version="${project.version}">
