@@ -73,6 +73,7 @@ param(
     [switch]$SkipMigrationTests,
     [switch]$ResolverDebug,
     [switch]$KeepContainer,
+    [switch]$SearchEngineLogs,
     [switch]$NoMemorySampler,
     [int]$MemoryInterval = 30,
     [switch]$Javadoc,
@@ -286,6 +287,7 @@ function Show-Usage {
     Write-Host '  -SkipMigrationTests        Skip migration-related tests'
     Write-Host '  -ResolverDebug             Enable Karaf Resolver debug logging for integration tests'
     Write-Host '  -KeepContainer             Keep search engine container running after tests'
+    Write-Host '  -SearchEngineLogs          Stream search engine Docker logs to the Maven console during integration tests'
     Write-Host '  -NoMemorySampler           Disable JVM/system memory sampling during integration tests'
     Write-Host '  -MemoryInterval SEC        Memory sample interval in seconds (default: 30)'
     Write-Host '  -Javadoc                   Build and validate Javadoc after install'
@@ -535,6 +537,10 @@ function Test-Requirements {
         Write-Status 'error' 'ItDebug enabled but integration tests are not enabled. Use -IntegrationTests.'
         $hasErrors = $true
     }
+    if ($SearchEngineLogs -and -not $IntegrationTests) {
+        Write-Status 'error' 'SearchEngineLogs enabled but integration tests are not enabled. Use -IntegrationTests.'
+        $hasErrors = $true
+    }
     if ($ItDebug) {
         if ($ItDebugPort -lt 1024 -or $ItDebugPort -gt 65535) {
             Write-Status 'error' "Integration test debug port: $ItDebugPort (invalid)"
@@ -608,6 +614,10 @@ function Get-MavenArgumentList {
         }
         if ($SkipMigrationTests) { $args += '-Dit.test.exclude.pattern=**/migration/**/*IT.java' }
         if ($KeepContainer) { $args += '-Dit.keepContainer=true' }
+        if ($SearchEngineLogs) {
+            $args += '-Ddocker.showLogs=true'
+            Write-Host 'Search engine Docker logs will stream to the Maven console (also written under itests/target/*0/logs/)'
+        }
         if ($ResolverDebug) { $args += '-Dit.unomi.resolver.debug=true' }
         if ($SkipUnitTests) { $args += '-Pskip-unit-tests' }
     } else {
@@ -669,6 +679,7 @@ function Write-ItRunTraceStart {
         "it.debug.suspend=$ItDebugSuspend"
         "skip.migration.tests=$SkipMigrationTests"
         "it.keep.container=$KeepContainer"
+        "it.search.engine.logs=$SearchEngineLogs"
         "it.memory.sampler=$($script:ItMemorySampler)"
         "it.memory.interval=$MemoryInterval"
         "maven.debug=$MavenDebug"

@@ -35,6 +35,8 @@
         <maven.build.cache.skip>true</maven.build.cache.skip>
         <!-- Set to true to keep the search engine container running after tests (useful for post-failure inspection) -->
         <it.keepContainer>false</it.keepContainer>
+        <!-- Stream search engine Docker logs to the Maven console (default: file only under target/*0/logs/) -->
+        <docker.showLogs>false</docker.showLogs>
     </properties>
 
     <dependencyManagement>
@@ -356,6 +358,9 @@
                                             </http>
                                             <time>120000</time>
                                         </wait>
+                                        <log>
+                                            <file>${project.build.directory}/elasticsearch0/logs/docker-console.log</file>
+                                        </log>
                                         <portPropertyFile>${project.build.directory}/elasticsearch-port.properties</portPropertyFile>
                                     </run>
                                 </image>
@@ -382,7 +387,7 @@
                                     <goal>start</goal>
                                 </goals>
                                 <configuration>
-                                    <showLogs>true</showLogs>
+                                    <showLogs>${docker.showLogs}</showLogs>
                                 </configuration>
                             </execution>
                             <execution>
@@ -478,6 +483,9 @@
                                             </http>
                                             <time>120000</time>
                                         </wait>
+                                        <log>
+                                            <file>${project.build.directory}/opensearch0/logs/docker-console.log</file>
+                                        </log>
                                         <portPropertyFile>${project.build.directory}/opensearch-port.properties</portPropertyFile>
                                     </run>
                                 </image>
@@ -504,7 +512,7 @@
                                     <goal>start</goal>
                                 </goals>
                                 <configuration>
-                                    <showLogs>true</showLogs>
+                                    <showLogs>${docker.showLogs}</showLogs>
                                 </configuration>
                             </execution>
                             <execution>

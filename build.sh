@@ -278,6 +278,7 @@ IT_DEBUG_SUSPEND=false
 SKIP_MIGRATION_TESTS=false
 RESOLVER_DEBUG=false
 KEEP_CONTAINER=false
+IT_SEARCH_ENGINE_LOGS=false
 IT_MEMORY_SAMPLER=true
 IT_MEMORY_INTERVAL=30
 JAVADOC=false
@@ -326,6 +327,7 @@ EOF
         echo -e "  ${CYAN}--skip-migration-tests${NC}     Skip migration-related tests"
         echo -e "  ${CYAN}--resolver-debug${NC}           Enable Karaf Resolver debug logging for integration tests"
         echo -e "  ${CYAN}--keep-container${NC}           Keep search engine container running after tests (for post-failure inspection)"
+        echo -e "  ${CYAN}--search-engine-logs${NC}       Stream search engine Docker logs to the Maven console during integration tests"
         echo -e "  ${CYAN}--no-memory-sampler${NC}        Disable JVM/system memory sampling during integration tests"
         echo -e "  ${CYAN}--memory-interval SEC${NC}    Memory sample interval in seconds (default: 30)"
         echo -e "  ${CYAN}--javadoc${NC}                  Build and validate Javadoc after install (fails on doclint errors)"
@@ -370,6 +372,7 @@ EOF
         echo "  --skip-migration-tests    Skip migration-related tests"
         echo "  --resolver-debug          Enable Karaf Resolver debug logging for integration tests"
         echo "  --keep-container          Keep search engine container running after tests (for post-failure inspection)"
+        echo "  --search-engine-logs      Stream search engine Docker logs to the Maven console during integration tests"
         echo "  --no-memory-sampler       Disable JVM/system memory sampling during integration tests"
         echo "  --memory-interval SEC     Memory sample interval in seconds (default: 30)"
         echo "  --javadoc                 Build and validate Javadoc after install (fails on doclint errors)"
@@ -538,6 +541,9 @@ while [ "$1" != "" ]; do
             ;;
         --keep-container)
             KEEP_CONTAINER=true
+            ;;
+        --search-engine-logs)
+            IT_SEARCH_ENGINE_LOGS=true
             ;;
         --no-memory-sampler)
             IT_MEMORY_SAMPLER=false
@@ -913,6 +919,11 @@ check_requirements() {
         has_errors=true
     fi
 
+    if [ "$IT_SEARCH_ENGINE_LOGS" = true ] && [ "$RUN_INTEGRATION_TESTS" = false ]; then
+        print_status "error" "Search engine logs (--search-engine-logs) enabled but integration tests are not enabled. Use --integration-tests."
+        has_errors=true
+    fi
+
     if [ "$IT_DEBUG" = true ]; then
         if ! [[ "$IT_DEBUG_PORT" =~ ^[0-9]+$ ]] || [ "$IT_DEBUG_PORT" -lt 1024 ] || [ "$IT_DEBUG_PORT" -gt 65535 ]; then
             print_status "error" "✗ Integration test debug port: $IT_DEBUG_PORT (invalid)"
@@ -1137,6 +1148,11 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
         echo "Search engine container will be kept running after tests"
     fi
 
+    if [ "$IT_SEARCH_ENGINE_LOGS" = true ]; then
+        MVN_OPTS="$MVN_OPTS -Ddocker.showLogs=true"
+        echo "Search engine Docker logs will stream to the Maven console (also written under itests/target/*0/logs/)"
+    fi
+
     if [ "$RESOLVER_DEBUG" = true ]; then
         MVN_OPTS="$MVN_OPTS -Dit.unomi.resolver.debug=true"
         echo "Enabling Karaf Resolver debug logging for integration tests"
@@ -1223,6 +1239,7 @@ write_it_run_trace_start() {
         echo "it.debug.suspend=$IT_DEBUG_SUSPEND"
         echo "skip.migration.tests=$SKIP_MIGRATION_TESTS"
         echo "it.keep.container=$KEEP_CONTAINER"
+        echo "it.search.engine.logs=$IT_SEARCH_ENGINE_LOGS"
         echo "it.memory.sampler=$IT_MEMORY_SAMPLER"
         echo "it.memory.interval=$IT_MEMORY_INTERVAL"
         echo "maven.debug=$MAVEN_DEBUG"
