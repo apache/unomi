@@ -57,8 +57,6 @@ param(
     [switch]$Debug,
     [int]$DebugPort = 5005,
     [switch]$DebugSuspend,
-    [switch]$NoMavenCache,
-    [switch]$PurgeMavenCache,
     [string]$KarafHome,
     [switch]$UseOpenSearch,
     [string]$Distribution,
@@ -89,20 +87,14 @@ $PSDefaultParameterValues['*:ErrorAction'] = 'Stop'
 $script:BuildScriptInvocation = @($MyInvocation.Line)
 
 # Defaults aligned with build.sh
-$script:UseMavenCache = -not $NoMavenCache
 $script:ItMemorySampler = -not $NoMemorySampler
 $script:KarafDebugSuspend = if ($DebugSuspend) { 'y' } else { 'n' }
 
 if ($Ci) {
     $NoKaraf = $true
-    $script:UseMavenCache = $false
     $env:BUILD_NON_INTERACTIVE = 'true'
     $MavenQuiet = $true
     $Javadoc = $true
-}
-
-if ($PurgeMavenCache) {
-    $script:UseMavenCache = $false
 }
 
 if ($UseOpenSearch -and [string]::IsNullOrWhiteSpace($Distribution)) {
@@ -271,8 +263,6 @@ function Show-Usage {
     Write-Host '  -Debug                     Run Karaf in debug mode'
     Write-Host '  -DebugPort PORT            Set debug port (default: 5005)'
     Write-Host '  -DebugSuspend              Suspend JVM until debugger connects'
-    Write-Host '  -NoMavenCache              Disable Maven build cache'
-    Write-Host '  -PurgeMavenCache           Purge local Maven cache before building'
     Write-Host '  -KarafHome PATH            Set Karaf home directory for deployment'
     Write-Host '  -UseOpenSearch             Use OpenSearch instead of ElasticSearch'
     Write-Host '  -Distribution DIST         Set Unomi distribution (e.g. unomi-distribution-opensearch)'
@@ -291,7 +281,7 @@ function Show-Usage {
     Write-Host '  -NoMemorySampler           Disable JVM/system memory sampling during integration tests'
     Write-Host '  -MemoryInterval SEC        Memory sample interval in seconds (default: 30)'
     Write-Host '  -Javadoc                   Build and validate Javadoc after install'
-    Write-Host '  -Ci                        CI mode: no Karaf, no Maven cache, non-interactive, Javadoc'
+    Write-Host '  -Ci                        CI mode: no Karaf, non-interactive, Javadoc'
     Write-Host '  -LogFile PATH              Tee all output to PATH (console + file)'
     Write-Host '  -LogFileOnly               With -LogFile: write to file only, suppress console'
     Write-Host ''
@@ -333,15 +323,6 @@ function Initialize-ProjectVersion {
 }
 
 Initialize-ProjectVersion
-
-if ($PurgeMavenCache) {
-    Write-Host 'Purging Maven cache...'
-    $m2 = Join-Path (Get-UserHome) '.m2'
-    foreach ($dir in @('build-cache', 'dependency-cache', 'dependency-cache_v2')) {
-        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue (Join-Path $m2 $dir)
-    }
-    Write-Host 'Maven cache purged.'
-}
 
 function Test-JavaRequirement {
     if (-not (Test-CommandExists 'java')) {
@@ -553,11 +534,6 @@ function Test-Requirements {
         }
     }
 
-    if ($Offline -and $PurgeMavenCache) {
-        Write-Status 'error' 'Cannot use -PurgeMavenCache in offline mode'
-        $hasErrors = $true
-    }
-
     Write-Host ''
     if ($hasErrors) {
         Write-Status 'error' 'Critical requirements not met. Please fix the errors above.'
@@ -577,7 +553,6 @@ function Get-MavenArgumentList {
     $args = @()
     if ($MavenDebug) { $args += '-X' }
     if ($Offline) { $args += '-o' }
-    if (-not $script:UseMavenCache) { $args += '-Dmaven.build.cache.enabled=false' }
     if ($MavenQuiet) { $args += '-ntp' }
     if ($env:MAVEN_EXTRA_OPTS) {
         $args += $env:MAVEN_EXTRA_OPTS.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)

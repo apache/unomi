@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-
 package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -149,6 +148,14 @@ public abstract class BaseIT extends KarafTestSupport {
 
     private static boolean searchEngineConfiguredForTesting = false;
     private static boolean searchEngineHealthVerifiedAfterStartup = false;
+
+    /**
+     * PaxExam invokes {@link #config()} once per test class to build that class's Option[] even
+     * though the {@code PerSuite} reactor strategy means only one container actually gets started
+     * for the whole suite. This flag keeps the informational logging in config() from repeating
+     * for every class.
+     */
+    private static boolean configLogged = false;
 
     /**
      * JSON mapper for IT HTTP/JSON helpers. Initialized on first use (after Unomi features are up),
@@ -482,6 +489,7 @@ public abstract class BaseIT extends KarafTestSupport {
     /**
      * Add a substring to ignore for log checking
      * Useful for tests that expect certain errors/warnings
+     *
      * @param substring Literal substring or regex pattern to match against log messages
      */
     protected void addIgnoredLogSubstring(String substring) {
@@ -492,6 +500,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Add multiple substrings to ignore for log checking
+     *
      * @param substrings List of substrings (literal or regex)
      */
     protected void addIgnoredLogSubstrings(List<String> substrings) {
@@ -540,12 +549,16 @@ public abstract class BaseIT extends KarafTestSupport {
 
     @Configuration
     public Option[] config() {
-        LOGGER.info("==== Configuring container");
-        System.out.println("==== Configuring container");
+        if (!configLogged) {
+            LOGGER.info("==== Configuring container");
+            System.out.println("==== Configuring container");
+        }
 
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
-        LOGGER.info("Search Engine: {}", searchEngine);
-        System.out.println("Search Engine: " + searchEngine);
+        if (!configLogged) {
+            LOGGER.info("Search Engine: {}", searchEngine);
+            System.out.println("Search Engine: " + searchEngine);
+        }
 
         // Define features option based on search engine
         Option featuresOption;
@@ -653,6 +666,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.password", "Unomi.1ntegrat10n.Tests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslEnable", "false"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslTrustAllCertificates", "true"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.rollover.maxDocs", "300"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.migration.tenant.id", TEST_TENANT_ID),
 
@@ -673,8 +687,10 @@ public abstract class BaseIT extends KarafTestSupport {
 
         String karafDebug = System.getProperty("it.karaf.debug");
         if (karafDebug != null) {
-            LOGGER.info("Found system Karaf Debug system property, activating configuration: {}", karafDebug);
-            System.out.println("Found system Karaf Debug system property, activating configuration: " + karafDebug);
+            if (!configLogged) {
+                LOGGER.info("Found system Karaf Debug system property, activating configuration: {}", karafDebug);
+                System.out.println("Found system Karaf Debug system property, activating configuration: " + karafDebug);
+            }
             String port = "5006";
             boolean hold = true;
             if (karafDebug.trim().length() > 0) {
@@ -698,17 +714,21 @@ public abstract class BaseIT extends KarafTestSupport {
         if (Files.exists(path)) {
             final String jacocoOption = "-javaagent:" + agentFile + "=destfile=" + System.getProperty("user.dir")
                     + "/target/jacoco.exec,includes=org.apache.unomi.*";
-            LOGGER.info("set jacoco java agent: {}", jacocoOption);
+            if (!configLogged) {
+                LOGGER.info("set jacoco java agent: {}", jacocoOption);
+            }
             karafOptions.add(new VMOption(jacocoOption));
-        } else {
+        } else if (!configLogged) {
             LOGGER.warn("Unable to set jacoco agent as {} was not found", agentFile);
         }
 
         // Allow overriding the Karaf JVM heap via -Dit.karaf.heap (e.g. 4g)
         String karafHeap = System.getProperty("it.karaf.heap", "");
         if (!karafHeap.isEmpty()) {
-            LOGGER.info("Setting Karaf JVM heap to: {}", karafHeap);
-            System.out.println("Setting Karaf JVM heap to: " + karafHeap);
+            if (!configLogged) {
+                LOGGER.info("Setting Karaf JVM heap to: {}", karafHeap);
+                System.out.println("Setting Karaf JVM heap to: " + karafHeap);
+            }
             karafOptions.add(new VMOption("-Xms" + karafHeap));
             karafOptions.add(new VMOption("-Xmx" + karafHeap));
         }
@@ -730,8 +750,10 @@ public abstract class BaseIT extends KarafTestSupport {
         // Enable debug logging for Karaf Resolver to diagnose bundle refresh issues (default: disabled)
         boolean enableResolverDebug = Boolean.parseBoolean(System.getProperty(RESOLVER_DEBUG_PROPERTY, "false"));
         if (enableResolverDebug) {
-            LOGGER.info("Enabling debug logging for Karaf Resolver and Karaf features service");
-            System.out.println("Enabling debug logging for Karaf Resolver and Karaf features service");
+            if (!configLogged) {
+                LOGGER.info("Enabling debug logging for Karaf Resolver and Karaf features service");
+                System.out.println("Enabling debug logging for Karaf Resolver and Karaf features service");
+            }
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiResolver.name", "org.osgi.service.resolver"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiResolver.level", "DEBUG"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafFeatures.name", "org.apache.karaf.features"));
@@ -744,7 +766,7 @@ public abstract class BaseIT extends KarafTestSupport {
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiPackageAdmin.level", "DEBUG"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafDeployer.name", "org.apache.karaf.features.core"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafDeployer.level", "DEBUG"));
-        } else {
+        } else if (!configLogged) {
             LOGGER.info("Karaf Resolver debug logging is disabled (set -Dit.unomi.resolver.debug=true to enable)");
             System.out.println("Karaf Resolver debug logging is disabled (set -Dit.unomi.resolver.debug=true to enable)");
         }
@@ -752,8 +774,10 @@ public abstract class BaseIT extends KarafTestSupport {
         // Enable Camel debug logging if requested (for test visibility into Camel operations)
         boolean enableCamelDebug = Boolean.parseBoolean(System.getProperty(CAMEL_DEBUG_PROPERTY, "false"));
         if (enableCamelDebug) {
-            LOGGER.info("Enabling debug logging for Apache Camel");
-            System.out.println("Enabling debug logging for Apache Camel (set -Dit.unomi.camel.debug=true to enable)");
+            if (!configLogged) {
+                LOGGER.info("Enabling debug logging for Apache Camel");
+                System.out.println("Enabling debug logging for Apache Camel (set -Dit.unomi.camel.debug=true to enable)");
+            }
             // Enable logging for Camel core, routes, and router components
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelCore.name", "org.apache.camel"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelCore.level", "DEBUG"));
@@ -761,14 +785,10 @@ public abstract class BaseIT extends KarafTestSupport {
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelRouter.level", "DEBUG"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelFile.name", "org.apache.camel.component.file"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelFile.level", "DEBUG"));
-        } else {
+        } else if (!configLogged) {
             LOGGER.info("Camel debug logging is disabled (set -Dit.unomi.camel.debug=true to enable)");
             System.out.println("Camel debug logging is disabled (set -Dit.unomi.camel.debug=true to enable)");
         }
-
-        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
-        LOGGER.info("Search Engine: {}", searchEngine);
-        System.out.println("Search Engine: " + searchEngine);
 
         // Configure in-memory log appender for log checking
         // The InMemoryLogAppender is part of the log4j-extension fragment bundle,
@@ -776,7 +796,9 @@ public abstract class BaseIT extends KarafTestSupport {
         // Log4j2 bundle early in the startup process, ensuring the appender is discoverable.
         // We only configure it for integration tests, not for the default package.
         if (isLogCheckingEnabled()) {
-            LOGGER.info("Configuring in-memory log appender for log checking");
+            if (!configLogged) {
+                LOGGER.info("Configuring in-memory log appender for log checking");
+            }
             // Configure the appender in Log4j2
             // The appender is already available via the log4j-extension fragment bundle
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg",
@@ -787,6 +809,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 "log4j2.rootLogger.appenderRef.inMemory.ref", "InMemoryLogAppender"));
         }
 
+        configLogged = true;
         return Stream.of(super.config(), karafOptions.toArray(new Option[karafOptions.size()])).flatMap(Stream::of).toArray(Option[]::new);
     }
 

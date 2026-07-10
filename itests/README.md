@@ -282,18 +282,6 @@ mvn clean install -P integration-tests -Dit.test=org.apache.unomi.itests.Context
 
 See the [Maven Failsafe plugin docs](https://maven.apache.org/surefire/maven-failsafe-plugin/examples/single-test.html) for more filtering options.
 
-### Bypassing the Maven Build Cache
-
-If a cached build is interfering with test execution, use `--purge-maven-cache` to wipe
-the local Maven cache before building:
-
-```bash
-./build.sh --integration-tests --purge-maven-cache
-```
-
-This removes `~/.m2/build-cache`, `~/.m2/dependency-cache`, and
-`~/.m2/dependency-cache_v2`. It cannot be combined with `--offline`.
-
 ---
 
 ## Debugging Integration Tests

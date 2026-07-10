@@ -21,7 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Parameter;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ValueTypeValidator;
 import org.apache.unomi.scripting.ScriptExecutor;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
@@ -116,25 +116,26 @@ public class ConditionContextHelper {
     }
 
     public static Condition getContextualCondition(Condition condition, Map<String, Object> context, ScriptExecutor scriptExecutor) {
-        return getContextualCondition(condition, context, scriptExecutor, null, null);
+        return getContextualCondition(condition, context, scriptExecutor, false, null, null);
     }
 
     /**
      * Resolves parameter references and script expressions in a condition,
-     * with optional type validation.
+     * with optional resolved-parameter type validation.
      *
      * @param condition the condition to resolve
      * @param context context map for parameter resolution
      * @param scriptExecutor executor for script expressions
-     * @param definitionsService optional service for parameter type information
+     * @param validateParameterTypes when {@code true}, warn on resolved values that do not match the
+     *                               condition type parameter definitions
      * @return resolved condition with all parameter references resolved
      */
     public static Condition getContextualCondition(
         Condition condition,
         Map<String, Object> context,
         ScriptExecutor scriptExecutor,
-        DefinitionsService definitionsService) {
-        return getContextualCondition(condition, context, scriptExecutor, definitionsService, null);
+        boolean validateParameterTypes) {
+        return getContextualCondition(condition, context, scriptExecutor, validateParameterTypes, null, null);
     }
 
     /**
@@ -144,7 +145,7 @@ public class ConditionContextHelper {
      * @param condition the condition to resolve
      * @param context context map for parameter resolution
      * @param scriptExecutor executor for script expressions
-     * @param definitionsService optional service for parameter type information
+     * @param validateParameterTypes when {@code true}, warn on resolved parameter type mismatches
      * @param tracerService optional tracer service for validation warnings
      * @return resolved condition with all parameter references resolved
      */
@@ -152,12 +153,36 @@ public class ConditionContextHelper {
         Condition condition,
         Map<String, Object> context,
         ScriptExecutor scriptExecutor,
-        DefinitionsService definitionsService,
+        boolean validateParameterTypes,
         TracerService tracerService) {
+        return getContextualCondition(condition, context, scriptExecutor, validateParameterTypes, tracerService, null);
+    }
 
-        // Debug logging
+    /**
+     * Resolves parameter references and script expressions in a condition,
+     * with optional type validation, execution tracing, and value-type validators.
+     *
+     * @param condition the condition to resolve
+     * @param context context map for parameter resolution
+     * @param scriptExecutor executor for script expressions
+     * @param validateParameterTypes when {@code true}, warn on resolved parameter type mismatches
+     * @param tracerService optional tracer service for validation warnings
+     * @param valueTypeValidators optional validators keyed by {@link ValueTypeValidator#getValueTypeId()} (lowercase);
+     *                            when {@code null}, uses {@link ValueTypeValidatorRegistry#getValidators()}
+     * @return resolved condition with all parameter references resolved
+     */
+    public static Condition getContextualCondition(
+        Condition condition,
+        Map<String, Object> context,
+        ScriptExecutor scriptExecutor,
+        boolean validateParameterTypes,
+        TracerService tracerService,
+        Map<String, ValueTypeValidator> valueTypeValidators) {
 
-        if (!hasContextualParameter(condition.getParameterValues())) {
+        Map<String, ValueTypeValidator> effectiveValidators = resolveValidators(valueTypeValidators);
+
+        boolean needsResolution = hasContextualParameter(condition.getParameterValues());
+        if (!needsResolution && !validateParameterTypes) {
             return condition;
         }
 
@@ -177,18 +202,20 @@ public class ConditionContextHelper {
             }
         }
 
-        ConditionType conditionType = condition.getConditionType();
         Map<String, Parameter> parameterDefs = null;
-        if (conditionType != null && definitionsService != null) {
-            parameterDefs = new HashMap<>();
-            for (Parameter param : conditionType.getParameters()) {
-                parameterDefs.put(param.getId(), param);
+        if (validateParameterTypes) {
+            ConditionType conditionType = condition.getConditionType();
+            if (conditionType != null && conditionType.getParameters() != null) {
+                parameterDefs = new HashMap<>();
+                for (Parameter param : conditionType.getParameters()) {
+                    parameterDefs.put(param.getId(), param);
+                }
             }
         }
 
         Object rawValues = parseParameterWithValidation(
             context, condition.getParameterValues(), scriptExecutor,
-            parameterDefs, tracerService, condition.getConditionTypeId());
+            parameterDefs, tracerService, condition.getConditionTypeId(), effectiveValidators);
 
         if (rawValues == null || rawValues == RESOLUTION_ERROR) {
             return null;
@@ -203,7 +230,11 @@ public class ConditionContextHelper {
 
     @SuppressWarnings("unchecked")
     private static Object parseParameter(Map<String, Object> context, Object value, ScriptExecutor scriptExecutor) {
-        return parseParameterWithValidation(context, value, scriptExecutor, null, null, null);
+        return parseParameterWithValidation(context, value, scriptExecutor, null, null, null, resolveValidators(null));
+    }
+
+    private static Map<String, ValueTypeValidator> resolveValidators(Map<String, ValueTypeValidator> valueTypeValidators) {
+        return valueTypeValidators != null ? valueTypeValidators : ValueTypeValidatorRegistry.getValidators();
     }
 
     @SuppressWarnings("unchecked")
@@ -213,11 +244,12 @@ public class ConditionContextHelper {
         ScriptExecutor scriptExecutor,
         Map<String, Parameter> parameterDefs,
         TracerService tracerService,
-        String conditionTypeId) {
+        String conditionTypeId,
+        Map<String, ValueTypeValidator> valueTypeValidators) {
 
         return parseParameterWithValidationRecursive(
             context, value, scriptExecutor, parameterDefs,
-            tracerService, conditionTypeId, new HashSet<>(), 0);
+            tracerService, conditionTypeId, valueTypeValidators, new HashSet<>(), 0);
     }
 
     /**
@@ -242,6 +274,7 @@ public class ConditionContextHelper {
         Map<String, Parameter> parameterDefs,
         TracerService tracerService,
         String conditionTypeId,
+        Map<String, ValueTypeValidator> valueTypeValidators,
         Set<String> resolutionChain,
         int depth) {
 
@@ -315,7 +348,7 @@ public class ConditionContextHelper {
                 if (resolvedValue != null && isParameterReference(resolvedValue)) {
                     Object furtherResolved = parseParameterWithValidationRecursive(
                         context, resolvedValue, scriptExecutor, parameterDefs,
-                        tracerService, conditionTypeId, resolutionChain, depth + 1);
+                        tracerService, conditionTypeId, valueTypeValidators, resolutionChain, depth + 1);
                     // If further resolution returns null due to cycle or max depth, propagate it
                     // But if it's just a missing parameter, return null (not a cycle)
                     return furtherResolved;
@@ -336,7 +369,7 @@ public class ConditionContextHelper {
 
                 Object parameter = parseParameterWithValidationRecursive(
                     context, paramValue, scriptExecutor, parameterDefs,
-                    tracerService, conditionTypeId, resolutionChain, depth);
+                    tracerService, conditionTypeId, valueTypeValidators, resolutionChain, depth);
 
                 // If resolution returned an error marker, return null for entire map
                 if (parameter == RESOLUTION_ERROR) {
@@ -346,7 +379,7 @@ public class ConditionContextHelper {
                 // Validate type if parameter definition is available and value is not null
                 if (parameter != null && paramDef != null && paramDef.getType() != null) {
                     validateParameterType(paramName, parameter, paramDef,
-                        conditionTypeId, tracerService);
+                        conditionTypeId, tracerService, valueTypeValidators);
                 }
 
                 // Always put the value, even if null (missing parameter is valid)
@@ -358,7 +391,7 @@ public class ConditionContextHelper {
             for (Object o : ((List<?>) value)) {
                 Object parameter = parseParameterWithValidationRecursive(
                     context, o, scriptExecutor, parameterDefs,
-                    tracerService, conditionTypeId, resolutionChain, depth);
+                    tracerService, conditionTypeId, valueTypeValidators, resolutionChain, depth);
                 // If resolution returned an error marker, skip this element
                 if (parameter == RESOLUTION_ERROR) {
                     continue;
@@ -386,33 +419,108 @@ public class ConditionContextHelper {
         Object resolvedValue,
         Parameter paramDef,
         String conditionTypeId,
-        TracerService tracerService) {
+        TracerService tracerService,
+        Map<String, ValueTypeValidator> valueTypeValidators) {
 
         if (resolvedValue == null || paramDef == null || paramDef.getType() == null) {
             return;
         }
 
-        String expectedType = paramDef.getType().toLowerCase();
+        if (paramDef.isMultivalued()) {
+            if (!(resolvedValue instanceof Collection)) {
+                String message = String.format(
+                    "Parameter '%s' in condition type '%s' must be a collection for multivalued parameter",
+                    paramName, conditionTypeId);
+                LOGGER.warn(message + " (value type: {})", getValueType(resolvedValue));
+                traceParameterTypeMismatch(tracerService, paramName, "collection", getValueType(resolvedValue),
+                    resolvedValue, conditionTypeId);
+                return;
+            }
+            int index = 0;
+            for (Object item : (Collection<?>) resolvedValue) {
+                if (item != null) {
+                    validateSingleParameterValue(
+                        paramName + "[" + index + "]", item, paramDef, conditionTypeId, tracerService, valueTypeValidators);
+                }
+                index++;
+            }
+            return;
+        }
+
+        if (resolvedValue instanceof Collection) {
+            String message = String.format(
+                "Parameter '%s' in condition type '%s' cannot be a collection for non-multivalued parameter",
+                paramName, conditionTypeId);
+            LOGGER.warn(message + " (value: {})", resolvedValue);
+            traceParameterTypeMismatch(tracerService, paramName, paramDef.getType().toLowerCase(Locale.ROOT),
+                "collection", resolvedValue, conditionTypeId);
+            return;
+        }
+
+        validateSingleParameterValue(paramName, resolvedValue, paramDef, conditionTypeId, tracerService, valueTypeValidators);
+    }
+
+    private static void validateSingleParameterValue(
+        String paramName,
+        Object resolvedValue,
+        Parameter paramDef,
+        String conditionTypeId,
+        TracerService tracerService,
+        Map<String, ValueTypeValidator> valueTypeValidators) {
+
+        String expectedType = paramDef.getType().toLowerCase(Locale.ROOT);
+
+        ValueTypeValidator validator = valueTypeValidators.get(expectedType);
+        if (validator != null) {
+            if (!validator.validate(resolvedValue)) {
+                String message = String.format(
+                    "Parameter '%s' in condition type '%s' has invalid value for type '%s'",
+                    paramName, conditionTypeId, expectedType);
+                LOGGER.warn(message + " (value: {}). {}", resolvedValue, validator.getValueTypeDescription());
+                traceParameterTypeMismatch(tracerService, paramName, expectedType, getValueType(resolvedValue),
+                    resolvedValue, conditionTypeId);
+            }
+            return;
+        }
+
         String actualType = getValueType(resolvedValue);
 
-        if (!isTypeCompatible(actualType, expectedType)) {
+        // No registered validator for this type (e.g. plain unit tests with no OSGi container running,
+        // so ValueTypeValidatorRegistry is empty). "date" parameters are almost always ISO-8601 strings
+        // here too, so fall back to the same canonical parser the built-in date validator uses, rather
+        // than the coarser actualType/expectedType string matching below.
+        boolean compatible = "date".equals(expectedType)
+            ? DateUtils.getDate(resolvedValue) != null
+            : isTypeCompatible(actualType, expectedType);
+
+        if (!compatible) {
             String message = String.format(
                 "Parameter '%s' in condition type '%s' resolved to type '%s' but expected '%s'",
                 paramName, conditionTypeId, actualType, expectedType);
 
             LOGGER.warn(message + " (value: {})", resolvedValue);
 
-            if (tracerService != null && tracerService.isTracingEnabled()) {
-                RequestTracer tracer = tracerService.getCurrentTracer();
-                if (tracer != null && tracer.isEnabled()) {
-                    Map<String, Object> traceContext = new HashMap<>();
-                    traceContext.put("parameter", paramName);
-                    traceContext.put("expectedType", expectedType);
-                    traceContext.put("actualType", actualType);
-                    traceContext.put("value", resolvedValue);
-                    traceContext.put("conditionTypeId", conditionTypeId);
-                    tracer.trace("Parameter type mismatch detected", traceContext);
-                }
+            traceParameterTypeMismatch(tracerService, paramName, expectedType, actualType, resolvedValue, conditionTypeId);
+        }
+    }
+
+    private static void traceParameterTypeMismatch(
+        TracerService tracerService,
+        String paramName,
+        String expectedType,
+        String actualType,
+        Object resolvedValue,
+        String conditionTypeId) {
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            RequestTracer tracer = tracerService.getCurrentTracer();
+            if (tracer != null && tracer.isEnabled()) {
+                Map<String, Object> traceContext = new HashMap<>();
+                traceContext.put("parameter", paramName);
+                traceContext.put("expectedType", expectedType);
+                traceContext.put("actualType", actualType);
+                traceContext.put("value", resolvedValue);
+                traceContext.put("conditionTypeId", conditionTypeId);
+                tracer.trace("Parameter type mismatch detected", traceContext);
             }
         }
     }

@@ -74,7 +74,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
      * Sets the TypeResolutionService for automatic type resolution during validation.
      * This allows the validation service to automatically resolve condition types
      * if they haven't been resolved yet, including nested conditions.
-     * 
+     *
      * @param typeResolutionService the type resolution service to use
      */
     public void setTypeResolutionService(TypeResolutionService typeResolutionService) {
@@ -446,7 +446,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             // Parameter reference or script expression - skip all type and value validation;
             // validation happens when the reference is resolved at evaluation time
             if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Skipping type validation for parameter reference: {}={}", 
+                LOGGER.debug("Skipping type validation for parameter reference: {}={}",
                     paramName, value);
             }
             return errors;

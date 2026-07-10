@@ -29,6 +29,34 @@
       "minimum" : 0,
       "description" : "The item's version number"
     },
+    "tenantId" : {
+      "type" : ["null","string"],
+      "description" : "The tenant that owns this item"
+    },
+    "createdBy" : {
+      "type" : ["null","string"],
+      "description" : "The user or system that created this item"
+    },
+    "lastModifiedBy" : {
+      "type" : ["null","string"],
+      "description" : "The user or system that last modified this item"
+    },
+    "creationDate" : {
+      "type" : ["null","string","integer"],
+      "description" : "When this item was created (ISO-8601 string or epoch millis)"
+    },
+    "lastModificationDate" : {
+      "type" : ["null","string","integer"],
+      "description" : "When this item was last modified (ISO-8601 string or epoch millis)"
+    },
+    "sourceInstanceId" : {
+      "type" : ["null","string"],
+      "description" : "The source cluster instance that created this item"
+    },
+    "lastSyncDate" : {
+      "type" : ["null","string","integer"],
+      "description" : "When this item was last synchronized (ISO-8601 string or epoch millis)"
+    },
     "properties": {
       "type": ["null", "object"]
     }

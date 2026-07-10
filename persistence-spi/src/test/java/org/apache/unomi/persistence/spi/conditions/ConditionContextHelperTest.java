@@ -19,15 +19,19 @@ package org.apache.unomi.persistence.spi.conditions;
 import org.apache.unomi.api.Parameter;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ValueTypeValidator;
 import org.apache.unomi.scripting.ScriptExecutor;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -44,8 +48,10 @@ public class ConditionContextHelperTest {
     private ScriptExecutor scriptExecutor;
 
     @Mock
-    private DefinitionsService definitionsService;
+    private TracerService tracerService;
 
+    @Mock
+    private RequestTracer requestTracer;
 
     private Map<String, Object> context;
 
@@ -361,7 +367,7 @@ public class ConditionContextHelperTest {
         condition.setConditionType(conditionType);
         
         Condition resolved = ConditionContextHelper.getContextualCondition(
-            condition, context, scriptExecutor, definitionsService);
+            condition, context, scriptExecutor, true);
         
         assertNotNull("Resolved condition should not be null", resolved);
         assertEquals("Integer parameter should resolve correctly", 42, resolved.getParameterValues().get("testParam"));
@@ -383,7 +389,7 @@ public class ConditionContextHelperTest {
         condition.setConditionType(conditionType);
         
         Condition resolved = ConditionContextHelper.getContextualCondition(
-            condition, context, scriptExecutor, definitionsService);
+            condition, context, scriptExecutor, true);
         
         assertNotNull("Resolved condition should not be null", resolved);
         // Type mismatch should log warning but still resolve
@@ -407,7 +413,7 @@ public class ConditionContextHelperTest {
         condition.setConditionType(conditionType);
         
         Condition resolved = ConditionContextHelper.getContextualCondition(
-            condition, context, scriptExecutor, definitionsService);
+            condition, context, scriptExecutor, true);
         
         assertNotNull("Resolved condition should not be null", resolved);
         assertEquals("Parameter chain should resolve and validate type correctly", 42, resolved.getParameterValues().get("testParam"));
@@ -451,10 +457,8 @@ public class ConditionContextHelperTest {
         Condition condition = createConditionWithParameter("testParam", "directValue");
         Condition resolved = ConditionContextHelper.getContextualCondition(
             condition, context, scriptExecutor);
-        
-        // Should return the same condition instance when no references present
-        assertNotNull("Resolved condition should not be null", resolved);
-        assertEquals("Condition without parameter references should remain unchanged", "directValue", resolved.getParameterValues().get("testParam"));
+
+        assertSame("Condition without contextual parameters should be returned as-is", condition, resolved);
     }
 
     @Test
@@ -528,7 +532,677 @@ public class ConditionContextHelperTest {
         assertNull("getContextualCondition must return null when scriptExecutor is null and a script:: value is present", resolved);
     }
 
+    @Test
+    public void testRegisteredValueTypeValidatorAcceptsComparisonOperator() {
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("eventPropertyCondition");
+        conditionType.setParameters(Arrays.asList(
+            new Parameter("propertyName", "string", false),
+            new Parameter("comparisonOperator", "comparisonOperator", false),
+            new Parameter("propertyValue", "string", false)));
+
+        Condition condition = new Condition(conditionType);
+        Map<String, Object> params = new HashMap<>();
+        params.put("propertyName", "eventType");
+        params.put("comparisonOperator", "equals");
+        params.put("propertyValue", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "eventTypeValue");
+        condition.setParameterValues(params);
+        context.put("eventTypeValue", "view");
+
+        Map<String, ValueTypeValidator> validators = Collections.singletonMap(
+            "comparisonoperator",
+            new ValueTypeValidator() {
+                @Override
+                public String getValueTypeId() {
+                    return "comparisonOperator";
+                }
+
+                @Override
+                public boolean validate(Object value) {
+                    return "equals".equals(value);
+                }
+
+                @Override
+                public String getValueTypeDescription() {
+                    return "Value must be a valid comparison operator";
+                }
+            });
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true, null, validators);
+
+        assertNotNull(resolved);
+        assertEquals("equals", resolved.getParameter("comparisonOperator"));
+        assertEquals("view", resolved.getParameter("propertyValue"));
+    }
+
+    @Test
+    public void testValueTypeValidatorRegistryUsedWhenExplicitMapIsNull() {
+        ValueTypeValidatorRegistry registry = new ValueTypeValidatorRegistry();
+        ValueTypeValidator comparisonValidator = new ValueTypeValidator() {
+            @Override
+            public String getValueTypeId() {
+                return "comparisonOperator";
+            }
+
+            @Override
+            public boolean validate(Object value) {
+                return "equals".equals(value);
+            }
+
+            @Override
+            public String getValueTypeDescription() {
+                return "Value must be a valid comparison operator";
+            }
+        };
+        registry.bindValidator(comparisonValidator);
+        try {
+            ConditionType conditionType = new ConditionType();
+            conditionType.setItemId("eventPropertyCondition");
+            conditionType.setParameters(Arrays.asList(
+                new Parameter("propertyName", "string", false),
+                new Parameter("comparisonOperator", "comparisonOperator", false),
+                new Parameter("propertyValue", "string", false)));
+
+            Condition condition = new Condition(conditionType);
+            Map<String, Object> params = new HashMap<>();
+            params.put("propertyName", "eventType");
+            params.put("comparisonOperator", "equals");
+            params.put("propertyValue", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "eventTypeValue");
+            condition.setParameterValues(params);
+            context.put("eventTypeValue", "view");
+
+            Condition resolved = ConditionContextHelper.getContextualCondition(
+                condition, context, scriptExecutor, true, null);
+
+            assertNotNull(resolved);
+            assertEquals("equals", resolved.getParameter("comparisonOperator"));
+        } finally {
+            registry.unbindValidator(comparisonValidator);
+        }
+    }
+
+    // ========== Public utility API tests ==========
+
+    @Test
+    public void testIsParameterReference() {
+        assertTrue(ConditionContextHelper.isParameterReference(ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "key"));
+        assertTrue(ConditionContextHelper.isParameterReference(ConditionContextHelper.SCRIPT_EXPRESSION_PREFIX + "return 1;"));
+        assertFalse(ConditionContextHelper.isParameterReference("equals"));
+        assertFalse(ConditionContextHelper.isParameterReference(null));
+        assertFalse(ConditionContextHelper.isParameterReference(42));
+        assertFalse(ConditionContextHelper.isParameterReference("parameter:not-a-reference"));
+    }
+
+    @Test
+    public void testHasContextualParameter() {
+        assertFalse(ConditionContextHelper.hasContextualParameter(null));
+        assertFalse(ConditionContextHelper.hasContextualParameter("literal"));
+        assertFalse(ConditionContextHelper.hasContextualParameter(Collections.emptyMap()));
+
+        Map<String, Object> withRef = Collections.singletonMap(
+            "k", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "x");
+        assertTrue(ConditionContextHelper.hasContextualParameter(withRef));
+
+        List<Object> listWithScript = Collections.singletonList(
+            ConditionContextHelper.SCRIPT_EXPRESSION_PREFIX + "return true;");
+        assertTrue(ConditionContextHelper.hasContextualParameter(listWithScript));
+
+        Condition nested = createConditionWithParameter("p", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "x");
+        assertTrue(ConditionContextHelper.hasContextualParameter(nested));
+    }
+
+    @Test
+    public void testFoldToASCII() {
+        assertNull(ConditionContextHelper.foldToASCII((String) null));
+        assertEquals("cafe", ConditionContextHelper.foldToASCII("Caf\u00E9"));
+
+        String[] array = new String[] { "Caf\u00E9" };
+        assertEquals("cafe", ConditionContextHelper.foldToASCII(array)[0]);
+
+        Collection<String> folded = ConditionContextHelper.foldToASCII(
+            new ArrayList<>(Collections.singletonList("Caf\u00E9")));
+        assertEquals("cafe", folded.iterator().next());
+
+        assertEquals("cafe", ConditionContextHelper.forceFoldToASCII("Caf\u00E9"));
+        assertNull(ConditionContextHelper.forceFoldToASCII(null));
+    }
+
+    // ========== Context merge and resolution edge cases ==========
+
+    @Test
+    public void testNullContextIsInitialized() {
+        String value = ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "literalParam";
+        Condition condition = createConditionWithParameter("literalParam", "fromCondition");
+        condition.getParameterValues().put("resolved", value);
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(condition, null, scriptExecutor);
+
+        assertNotNull(resolved);
+        assertEquals("fromCondition", resolved.getParameter("resolved"));
+    }
+
+    @Test
+    public void testConditionLiteralsMergedIntoContextButDoNotOverwrite() {
+        context.put("sharedKey", "contextWins");
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("sharedKey", "conditionValue");
+        params.put("onlyOnCondition", "conditionOnly");
+        params.put("resolved", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "onlyOnCondition");
+
+        Condition condition = new Condition();
+        condition.setParameterValues(params);
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
+
+        assertNotNull(resolved);
+        assertEquals("conditionOnly", resolved.getParameter("resolved"));
+        assertEquals("contextWins", context.get("sharedKey"));
+    }
+
+    @Test
+    public void testReferenceToSiblingLiteralOnSameCondition() {
+        Map<String, Object> params = new HashMap<>();
+        params.put("propertyValue", "view");
+        params.put("propertyName", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "nameKey");
+        params.put("nameKey", "eventType");
+
+        Condition condition = new Condition();
+        condition.setParameterValues(params);
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
+
+        assertNotNull(resolved);
+        assertEquals("eventType", resolved.getParameter("propertyName"));
+    }
+
+    @Test
+    public void testResolutionDepthAtLimitSucceeds() {
+        for (int i = 1; i < 50; i++) {
+            context.put("param" + i, ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "param" + (i + 1));
+        }
+        context.put("param50", "finalValue");
+
+        Condition condition = createConditionWithParameter(
+            "testParam", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "param1");
+        Condition resolved = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
+
+        assertNotNull(resolved);
+        assertEquals("finalValue", resolved.getParameter("testParam"));
+    }
+
+    @Test
+    public void testCyclicReferenceInListSkipsElementButKeepsOthers() {
+        context.put("good", "ok");
+
+        List<Object> list = new ArrayList<>();
+        list.add(ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "good");
+        list.add(ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "bad");
+        list.add("literal");
+        context.put("bad", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "bad");
+
+        Condition condition = new Condition();
+        condition.setParameterValues(Collections.singletonMap("items", list));
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
+
+        assertNotNull(resolved);
+        @SuppressWarnings("unchecked")
+        List<Object> resolvedList = (List<Object>) resolved.getParameter("items");
+        assertEquals(2, resolvedList.size());
+        assertEquals("ok", resolvedList.get(0));
+        assertEquals("literal", resolvedList.get(1));
+    }
+
+    @Test
+    public void testCyclicReferenceInNestedMapNullsInnerMap() {
+        Map<String, Object> nested = new HashMap<>();
+        nested.put("key", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "cycle");
+        context.put("cycle", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "cycle");
+
+        Condition condition = new Condition();
+        condition.setParameterValues(Collections.singletonMap("nested", nested));
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
+
+        assertNotNull(resolved);
+        assertNull(resolved.getParameter("nested"));
+    }
+
+    @Test
+    public void testNestedConditionTriggersResolutionButIsNotDeepResolved() {
+        Condition inner = createConditionWithParameter(
+            "inner", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "value");
+        context.put("value", "resolved");
+
+        Condition outer = new Condition();
+        outer.setParameterValues(Collections.singletonMap("subCondition", inner));
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(outer, context, scriptExecutor);
+
+        assertNotNull(resolved);
+        assertTrue(resolved.getParameter("subCondition") instanceof Condition);
+        Condition resolvedInner = (Condition) resolved.getParameter("subCondition");
+        assertSame(inner, resolvedInner);
+        assertEquals(
+            ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "value",
+            resolvedInner.getParameter("inner"));
+    }
+
+    // ========== Type validation edge cases ==========
+
+    @Test
+    public void testTypeCompatibilityLongForIntegerParameter() {
+        context.put("param1", 42L);
+
+        Condition condition = createIntegerParameterCondition(
+            ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "param1");
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true);
+
+        assertNotNull(resolved);
+        assertEquals(42L, resolved.getParameter("testParam"));
+    }
+
+    @Test
+    public void testTypeCompatibilityDateTypes() {
+        Date now = new Date();
+        context.put("param1", now);
+
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("dateCondition");
+        conditionType.setParameters(Collections.singletonList(new Parameter("testParam", "date", false)));
+
+        Condition condition = createConditionWithParameter(
+            "testParam", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "param1");
+        condition.setConditionType(conditionType);
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true);
+
+        assertNotNull(resolved);
+        assertEquals(now, resolved.getParameter("testParam"));
+    }
+
+    @Test
+    public void testTypeCompatibilityInstantForDateParameter() {
+        Instant instant = Instant.parse("2024-01-15T10:00:00Z");
+        context.put("param1", instant);
+
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("dateCondition");
+        conditionType.setParameters(Collections.singletonList(new Parameter("testParam", "date", false)));
+
+        Condition condition = createConditionWithParameter(
+            "testParam", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "param1");
+        condition.setConditionType(conditionType);
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true);
+
+        assertNotNull(resolved);
+        assertEquals(instant, resolved.getParameter("testParam"));
+    }
+
+    @Test
+    public void testValidateParameterTypesDisabledSkipsValidation() {
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("eventPropertyCondition");
+        conditionType.setParameters(Collections.singletonList(
+            new Parameter("comparisonOperator", "comparisonOperator", false)));
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("comparisonOperator", "equals");
+        params.put("other", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "missing");
+
+        Condition condition = new Condition(conditionType);
+        condition.setParameterValues(params);
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, false);
+
+        assertNotNull(resolved);
+        assertEquals("equals", resolved.getParameter("comparisonOperator"));
+        assertNull(resolved.getParameter("other"));
+    }
+
+    // ========== Multivalued parameter validation ==========
+
+    @Test
+    public void testMultivaluedStringListResolvesReferencesWithoutCollectionWarning() {
+        context.put("tagA", "news");
+        context.put("tagB", "sports");
+
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("eventPropertyCondition");
+        conditionType.setParameters(Collections.singletonList(
+            new Parameter("propertyValues", "string", true)));
+
+        List<Object> values = Arrays.asList(
+            ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "tagA",
+            ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "tagB",
+            "static");
+        Condition condition = createConditionWithParameter("propertyValues", values);
+        condition.setConditionType(conditionType);
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true);
+
+        assertNotNull(resolved);
+        @SuppressWarnings("unchecked")
+        List<Object> resolvedValues = (List<Object>) resolved.getParameter("propertyValues");
+        assertEquals(Arrays.asList("news", "sports", "static"), resolvedValues);
+    }
+
+    @Test
+    public void testMultivaluedStringListValidatesEachElement() {
+        AtomicInteger validationCalls = new AtomicInteger();
+        ValueTypeValidator stringValidator = new ValueTypeValidator() {
+            @Override
+            public String getValueTypeId() {
+                return "string";
+            }
+
+            @Override
+            public boolean validate(Object value) {
+                validationCalls.incrementAndGet();
+                return value instanceof String;
+            }
+
+            @Override
+            public String getValueTypeDescription() {
+                return "Value must be a string";
+            }
+        };
+
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("eventPropertyCondition");
+        conditionType.setParameters(Collections.singletonList(
+            new Parameter("propertyValues", "string", true)));
+
+        List<Object> values = Arrays.asList("a", 42, "c");
+        Condition condition = createConditionWithParameter("propertyValues", values);
+        condition.setConditionType(conditionType);
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true, null,
+            Collections.singletonMap("string", stringValidator));
+
+        assertNotNull(resolved);
+        assertEquals(3, validationCalls.get());
+    }
+
+    @Test
+    public void testMultivaluedScalarValueStillResolvesButIsInvalidShape() {
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("eventPropertyCondition");
+        conditionType.setParameters(Collections.singletonList(
+            new Parameter("propertyValues", "string", true)));
+
+        Condition condition = createConditionWithParameter("propertyValues", "onlyOne");
+        condition.setConditionType(conditionType);
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true);
+
+        assertNotNull(resolved);
+        assertEquals("onlyOne", resolved.getParameter("propertyValues"));
+    }
+
+    @Test
+    public void testNonMultivaluedCollectionStillResolvesButIsInvalidShape() {
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("eventPropertyCondition");
+        conditionType.setParameters(Collections.singletonList(
+            new Parameter("propertyValue", "string", false)));
+
+        Condition condition = createConditionWithParameter(
+            "propertyValue", Collections.singletonList("unexpected-list"));
+        condition.setConditionType(conditionType);
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true);
+
+        assertNotNull(resolved);
+        assertEquals(Collections.singletonList("unexpected-list"), resolved.getParameter("propertyValue"));
+    }
+
+    @Test
+    public void testMultivaluedConditionListValidatesEachElement() {
+        AtomicInteger validationCalls = new AtomicInteger();
+        ValueTypeValidator conditionValidator = new ValueTypeValidator() {
+            @Override
+            public String getValueTypeId() {
+                return "condition";
+            }
+
+            @Override
+            public boolean validate(Object value) {
+                validationCalls.incrementAndGet();
+                return value instanceof Condition;
+            }
+
+            @Override
+            public String getValueTypeDescription() {
+                return "Value must be a condition";
+            }
+        };
+
+        ConditionType innerType = new ConditionType();
+        innerType.setItemId("eventPropertyCondition");
+
+        Condition sub1 = new Condition(innerType);
+        Condition sub2 = new Condition(innerType);
+        List<Object> subConditions = Arrays.asList(sub1, sub2, "not-a-condition");
+
+        ConditionType booleanType = new ConditionType();
+        booleanType.setItemId("booleanCondition");
+        booleanType.setParameters(Collections.singletonList(
+            new Parameter("subConditions", "Condition", true)));
+
+        Condition condition = new Condition(booleanType);
+        condition.setParameterValues(Collections.singletonMap("subConditions", subConditions));
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true, null,
+            Collections.singletonMap("condition", conditionValidator));
+
+        assertNotNull(resolved);
+        assertEquals(3, validationCalls.get());
+        @SuppressWarnings("unchecked")
+        List<Object> resolvedSubs = (List<Object>) resolved.getParameter("subConditions");
+        assertEquals(3, resolvedSubs.size());
+        assertSame(sub1, resolvedSubs.get(0));
+        assertSame(sub2, resolvedSubs.get(1));
+        assertEquals("not-a-condition", resolvedSubs.get(2));
+    }
+
+    @Test
+    public void testMultivaluedConditionListTypeCheckWithoutCustomValidator() {
+        ConditionType innerType = new ConditionType();
+        innerType.setItemId("eventPropertyCondition");
+
+        Condition sub = new Condition(innerType);
+        List<Object> subConditions = Arrays.asList(sub, "invalid");
+
+        ConditionType booleanType = new ConditionType();
+        booleanType.setItemId("booleanCondition");
+        booleanType.setParameters(Collections.singletonList(
+            new Parameter("subConditions", "Condition", true)));
+
+        Condition condition = new Condition(booleanType);
+        condition.setParameterValues(Collections.singletonMap("subConditions", subConditions));
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true, null, Collections.emptyMap());
+
+        assertNotNull(resolved);
+        @SuppressWarnings("unchecked")
+        List<Object> resolvedSubs = (List<Object>) resolved.getParameter("subConditions");
+        assertEquals(2, resolvedSubs.size());
+        assertTrue(resolvedSubs.get(0) instanceof Condition);
+        assertEquals("invalid", resolvedSubs.get(1));
+    }
+
+    @Test
+    public void testInvalidComparisonOperatorStillResolvesWithValidator() {
+        Condition condition = createEventPropertyConditionWithReference(
+            "notARealOperator", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "eventTypeValue");
+        context.put("eventTypeValue", "view");
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true, null,
+            Collections.singletonMap("comparisonoperator", comparisonOperatorValidator()));
+
+        assertNotNull(resolved);
+        assertEquals("notARealOperator", resolved.getParameter("comparisonOperator"));
+    }
+
+    @Test
+    public void testExplicitEmptyValidatorMapDoesNotUseRegistry() {
+        ValueTypeValidator validator = comparisonOperatorValidator();
+        ValueTypeValidatorRegistry registry = new ValueTypeValidatorRegistry();
+        registry.bindValidator(validator);
+        try {
+            Condition condition = createEventPropertyConditionWithReference(
+                "equals", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "eventTypeValue");
+            context.put("eventTypeValue", "view");
+
+            Condition resolved = ConditionContextHelper.getContextualCondition(
+                condition, context, scriptExecutor, true, null,
+                Collections.emptyMap());
+
+            assertNotNull(resolved);
+            assertEquals("equals", resolved.getParameter("comparisonOperator"));
+        } finally {
+            registry.unbindValidator(validator);
+        }
+    }
+
+    @Test
+    public void testExplicitValidatorMapOverridesRegistry() {
+        ValueTypeValidator registryValidator = comparisonOperatorValidator();
+        ValueTypeValidatorRegistry registry = new ValueTypeValidatorRegistry();
+        registry.bindValidator(registryValidator);
+        try {
+            Condition condition = createEventPropertyConditionWithReference(
+                "equals", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "eventTypeValue");
+            context.put("eventTypeValue", "view");
+
+            ValueTypeValidator strictValidator = new ValueTypeValidator() {
+                @Override
+                public String getValueTypeId() {
+                    return "comparisonOperator";
+                }
+
+                @Override
+                public boolean validate(Object value) {
+                    return false;
+                }
+
+                @Override
+                public String getValueTypeDescription() {
+                    return "always invalid";
+                }
+            };
+
+            Condition resolved = ConditionContextHelper.getContextualCondition(
+                condition, context, scriptExecutor, true, null,
+                Collections.singletonMap("comparisonoperator", strictValidator));
+
+            assertNotNull(resolved);
+            assertEquals("equals", resolved.getParameter("comparisonOperator"));
+        } finally {
+            registry.unbindValidator(registryValidator);
+        }
+    }
+
+    @Test
+    public void testValidationMismatchTracedWhenTracingEnabled() {
+        when(tracerService.isTracingEnabled()).thenReturn(true);
+        when(tracerService.getCurrentTracer()).thenReturn(requestTracer);
+        when(requestTracer.isEnabled()).thenReturn(true);
+
+        context.put("param1", "notAnInteger");
+        Condition condition = createIntegerParameterCondition(
+            ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "param1");
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true, tracerService);
+
+        assertNotNull(resolved);
+        verify(requestTracer).trace(eq("Parameter type mismatch detected"), anyMap());
+    }
+
+    @Test
+    public void testNullParameterValueSkipsTypeValidation() {
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("testCondition");
+        conditionType.setParameters(Collections.singletonList(new Parameter("testParam", "integer", false)));
+
+        Map<String, Object> params = new HashMap<>();
+        params.put("testParam", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "missing");
+        params.put("trigger", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "alsoMissing");
+
+        Condition condition = new Condition(conditionType);
+        condition.setParameterValues(params);
+
+        Condition resolved = ConditionContextHelper.getContextualCondition(
+            condition, context, scriptExecutor, true);
+
+        assertNotNull(resolved);
+        assertNull(resolved.getParameter("testParam"));
+    }
+
     // ========== Helper Methods ==========
+
+    private Condition createIntegerParameterCondition(Object testParamValue) {
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("testCondition");
+        conditionType.setParameters(Collections.singletonList(new Parameter("testParam", "integer", false)));
+
+        Condition condition = createConditionWithParameter("testParam", testParamValue);
+        condition.setConditionType(conditionType);
+        return condition;
+    }
+
+    private Condition createEventPropertyConditionWithReference(String comparisonOperator, Object propertyValue) {
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId("eventPropertyCondition");
+        conditionType.setParameters(Arrays.asList(
+            new Parameter("propertyName", "string", false),
+            new Parameter("comparisonOperator", "comparisonOperator", false),
+            new Parameter("propertyValue", "string", false)));
+
+        Condition condition = new Condition(conditionType);
+        Map<String, Object> params = new HashMap<>();
+        params.put("propertyName", "eventType");
+        params.put("comparisonOperator", comparisonOperator);
+        params.put("propertyValue", propertyValue);
+        condition.setParameterValues(params);
+        return condition;
+    }
+
+    private static ValueTypeValidator comparisonOperatorValidator() {
+        return new ValueTypeValidator() {
+            @Override
+            public String getValueTypeId() {
+                return "comparisonOperator";
+            }
+
+            @Override
+            public boolean validate(Object value) {
+                return "equals".equals(value);
+            }
+
+            @Override
+            public String getValueTypeDescription() {
+                return "Value must be a valid comparison operator";
+            }
+        };
+    }
 
     private Condition createConditionWithParameter(String paramName, Object paramValue) {
         Condition condition = new Condition();

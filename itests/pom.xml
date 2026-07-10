@@ -31,8 +31,6 @@
         <unomi.search.engine>elasticsearch</unomi.search.engine>
         <use.opensearch>false</use.opensearch>
         <docker.container.name>itests-opensearch</docker.container.name>
-        <!-- Skip caching for this module only -->
-        <maven.build.cache.skip>true</maven.build.cache.skip>
         <!-- Set to true to keep the search engine container running after tests (useful for post-failure inspection) -->
         <it.keepContainer>false</it.keepContainer>
         <!-- Stream search engine Docker logs to the Maven console (default: file only under target/*0/logs/) -->

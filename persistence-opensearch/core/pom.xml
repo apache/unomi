@@ -178,6 +178,8 @@
                             software.amazon.awssdk.*;resolution:=optional,
                             sun.misc;resolution:=optional,
                             sun.nio.ch;resolution:=optional,
+                            tools.jackson.core*;resolution:=optional,
+                            tools.jackson.databind*;resolution:=optional,
                             *
                         </Import-Package>
                         <Export-Package>
