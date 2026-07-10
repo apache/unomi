@@ -1491,18 +1491,21 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 analyzerBuilder -> analyzerBuilder.custom(CustomAnalyzer.of(
                         customAnalyzer -> customAnalyzer.tokenizer("keyword").filter("lowercase", "asciifolding")))));
 
-        // plugins.index_state_management.rollover_alias and .policy_id are OpenSearch ISM settings with no
-        // typed builder equivalent (they are not the same as the ElasticSearch-only index.lifecycle.*
-        // ILM settings), so they are passed through as raw custom settings. Setting policy_id directly here,
-        // rather than relying solely on the policy's ism_template pattern-matching, mirrors how ES binds
-        // index.lifecycle.name per-template so every rollover index is deterministically attached.
+        // index.plugins.index_state_management.rollover_alias and .policy_id are OpenSearch ISM settings with
+        // no typed builder equivalent (they are not the same as the ElasticSearch-only index.lifecycle.*
+        // ILM settings), so they are passed through as raw custom settings. Unlike ES's index.lifecycle.name,
+        // setting policy_id here does NOT actually cause ISM to manage the index - verified via
+        // GET _plugins/_ism/explain/<index>, which reports total_managed_indices: 0 even though the setting is
+        // present on the index. These are kept as documentation/metadata on the index; actual attachment
+        // happens via the explicit Add Policy call in attachRolloverPolicy(), invoked from
+        // internalCreateRolloverIndex() once the index is confirmed created.
         IndexSettings indexSettings = IndexSettings.of(builder -> builder
                 .numberOfShards(Integer.valueOf(rolloverIndexNumberOfShards))
                 .numberOfReplicas(Integer.valueOf(rolloverIndexNumberOfReplicas))
                 .mapping(m -> m.totalFields(t -> t.limit(Long.valueOf(rolloverIndexMappingTotalFieldsLimit))))
                 .maxDocvalueFieldsSearch(Integer.valueOf(rolloverIndexMaxDocValueFieldsSearch))
-                .customSettings("plugins.index_state_management.rollover_alias", JsonData.of(rolloverAlias))
-                .customSettings("plugins.index_state_management.policy_id", JsonData.of(indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME))
+                .customSettings("index.plugins.index_state_management.rollover_alias", JsonData.of(rolloverAlias))
+                .customSettings("index.plugins.index_state_management.policy_id", JsonData.of(indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME))
                 .analysis(analysis));
 
         IndexTemplateMapping templateMapping = IndexTemplateMapping.of(
@@ -1599,6 +1602,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
             if (hasFoldingAnalyzer && hasDynamicTemplates) {
                 LOGGER.debug("Template successfully applied to index {} - folding analyzer and dynamic templates present", fullIndexName);
+                attachRolloverPolicy(fullIndexName);
                 return;
             } else {
                 LOGGER.warn("Template not applied to index {} - folding analyzer: {}, dynamic templates: {}. Retrying...",
@@ -1612,6 +1616,35 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                             ", Dynamic templates: " + hasDynamicTemplates);
                 }
             }
+        }
+    }
+
+    // Explicitly attaches the rollover policy to a concrete index via ISM's Add Policy API. The
+    // index.plugins.index_state_management.policy_id custom setting (set in internalCreateRolloverTemplate) is
+    // stored on the index but does not cause ISM to actually manage it - this call is the real attachment
+    // mechanism, mirroring what ism_template pattern-matching would do automatically if used instead.
+    private void attachRolloverPolicy(String fullIndexName) throws IOException {
+        String policyName = indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME;
+        JsonObject addPolicyBody = Json.createObjectBuilder().add("policy_id", policyName).build();
+        Response response = client.generic().execute(
+                Requests.builder()
+                        .method("POST")
+                        .endpoint("_plugins/_ism/add/" + fullIndexName)
+                        .json(addPolicyBody)
+                        .build()
+        );
+        // The Add Policy API can return HTTP 200 while still reporting a per-index failure in the body
+        // (e.g. {"updated_indices":1,"failures":false,"failed_indices":[]}), so the body must be checked too.
+        String responseBody = response.getBody().isPresent() ? response.getBody().get().bodyAsString() : "";
+        boolean failures = response.getStatus() != 200;
+        if (!failures && !responseBody.isEmpty()) {
+            Map<String, Object> parsed = new ObjectMapper().readValue(responseBody, Map.class);
+            failures = Boolean.TRUE.equals(parsed.get("failures"))
+                    || Integer.valueOf(0).equals(parsed.get("updated_indices"));
+        }
+        if (failures) {
+            throw new IOException("Failed to attach ISM policy " + policyName + " to index " + fullIndexName +
+                    " - status: " + response.getStatus() + ", body: " + responseBody);
         }
     }
 
