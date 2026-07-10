@@ -26,6 +26,8 @@ import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -42,32 +44,57 @@ import static org.junit.Assert.assertTrue;
  * met is the search engine's own, already-tested responsibility; what Unomi needs to guarantee is that the
  * index/template/policy setup is correct so that engine can do its job, so this test asserts on that setup
  * directly instead of waiting on it.
+ * <p>
+ * The write index is resolved dynamically via the alias's {@code is_write_index} flag rather than assumed
+ * to be {@code context-event-000001}: the IT suite runs with a deliberately low rollover.maxDocs=300 (see
+ * BaseIT) shared by the whole PerSuite container, so by the time this test runs - often after hundreds of
+ * other tests have created events - the index may have already rolled over for real. On OpenSearch, once
+ * that happens ISM has nothing left to transition to (the rollover policy's single state has no further
+ * transitions) and marks that now-rolled-over index's management as completed/disabled, which would make a
+ * hardcoded context-event-000001 check fail even though the rollover machinery worked correctly.
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class RolloverIT extends BaseIT {
 
     private static final String EVENT_ALIAS = "context-event";
-    private static final String EVENT_WRITE_INDEX = "context-event-000001";
     private static final String POLICY_ID = "context-unomi-rollover-policy";
     private static final long EXPECTED_MAX_DOCS = 300;
 
     @Test
     public void testEventIndexRolloverIsProperlyConfigured() throws Exception {
         try (CloseableHttpClient client = createSearchEngineHttpClient()) {
-            JsonNode indexRoot = getJson(client, "/" + EVENT_WRITE_INDEX + "/_settings?flat_settings=true").get(EVENT_WRITE_INDEX);
-            assertTrue("Expected the event write index " + EVENT_WRITE_INDEX + " to already exist", indexRoot != null);
+            String writeIndex = resolveCurrentWriteIndex(client);
+            JsonNode indexRoot = getJson(client, "/" + writeIndex + "/_settings?flat_settings=true").get(writeIndex);
+            assertTrue("Expected the event write index " + writeIndex + " to already exist", indexRoot != null);
             JsonNode settings = indexRoot.get("settings");
 
             if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-                assertOpenSearchRolloverConfigured(client, settings);
+                assertOpenSearchRolloverConfigured(client, settings, writeIndex);
             } else {
-                assertElasticsearchRolloverConfigured(client, settings);
+                assertElasticsearchRolloverConfigured(client, settings, writeIndex);
             }
         }
     }
 
-    private void assertOpenSearchRolloverConfigured(CloseableHttpClient client, JsonNode settings) throws IOException {
+    // Resolves the index currently holding the event alias's write pointer, rather than assuming it is
+    // still context-event-000001 - see the class javadoc for why that assumption doesn't hold on a full
+    // suite run. Mirrors the is_write_index alias lookup OpenSearchPersistenceServiceImpl itself uses for
+    // session rollover indices.
+    private String resolveCurrentWriteIndex(CloseableHttpClient client) throws IOException {
+        JsonNode aliasInfo = getJson(client, "/_alias/" + EVENT_ALIAS);
+        Iterator<Map.Entry<String, JsonNode>> indices = aliasInfo.fields();
+        while (indices.hasNext()) {
+            Map.Entry<String, JsonNode> entry = indices.next();
+            JsonNode isWriteIndex = entry.getValue().path("aliases").path(EVENT_ALIAS).path("is_write_index");
+            if (isWriteIndex.asBoolean(false)) {
+                return entry.getKey();
+            }
+        }
+        throw new AssertionError("Could not find a write index for alias " + EVENT_ALIAS);
+    }
+
+    private void assertOpenSearchRolloverConfigured(CloseableHttpClient client, JsonNode settings, String writeIndex) throws IOException {
         assertEquals("event index should reference the Unomi rollover policy",
                 POLICY_ID, text(settings, "index.plugins.index_state_management.policy_id"));
         assertEquals("event index rollover_alias should be the event write alias",
@@ -77,10 +104,10 @@ public class RolloverIT extends BaseIT {
         // GET _plugins/_ism/explain reported total_managed_indices: 0 despite the setting being present) -
         // ISM only actually manages an index via ism_template pattern-matching or an explicit Add Policy
         // call, so confirm the real attachment here too, not just the setting.
-        JsonNode explain = getJson(client, "/_plugins/_ism/explain/" + EVENT_WRITE_INDEX);
+        JsonNode explain = getJson(client, "/_plugins/_ism/explain/" + writeIndex);
         assertTrue("ISM should actually be managing the event index, not just have an inert policy_id setting",
                 explain.get("total_managed_indices").asInt() >= 1);
-        JsonNode explainIndex = explain.get(EVENT_WRITE_INDEX);
+        JsonNode explainIndex = explain.get(writeIndex);
         assertEquals(POLICY_ID, text(explainIndex, "policy_id"));
         assertTrue("ISM management should be enabled for the event index", explainIndex.get("enabled").asBoolean());
 
@@ -89,13 +116,13 @@ public class RolloverIT extends BaseIT {
         assertEquals(EXPECTED_MAX_DOCS, rolloverAction.get("min_doc_count").asLong());
     }
 
-    private void assertElasticsearchRolloverConfigured(CloseableHttpClient client, JsonNode settings) throws IOException {
+    private void assertElasticsearchRolloverConfigured(CloseableHttpClient client, JsonNode settings, String writeIndex) throws IOException {
         assertEquals("event index should reference the Unomi rollover policy",
                 POLICY_ID, text(settings, "index.lifecycle.name"));
         assertEquals("event index rollover_alias should be the event write alias",
                 EVENT_ALIAS, text(settings, "index.lifecycle.rollover_alias"));
 
-        JsonNode explainIndex = getJson(client, "/" + EVENT_WRITE_INDEX + "/_ilm/explain").get("indices").get(EVENT_WRITE_INDEX);
+        JsonNode explainIndex = getJson(client, "/" + writeIndex + "/_ilm/explain").get("indices").get(writeIndex);
         assertTrue("ILM should actually be managing the event index", explainIndex.get("managed").asBoolean());
         assertEquals(POLICY_ID, text(explainIndex, "policy"));
 
