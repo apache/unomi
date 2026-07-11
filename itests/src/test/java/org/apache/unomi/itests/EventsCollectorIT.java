@@ -127,4 +127,56 @@ public class EventsCollectorIT extends BaseIT {
         }
     }
 
+    @Test
+    public void testEventsCollectorWithExplain() throws Exception {
+        Event event = new Event();
+        event.setEventType(TEST_EVENT_TYPE);
+        event.setScope(TEST_SCOPE);
+        event.setSessionId(TEST_SESSION_ID);
+        event.setProfileId(TEST_PROFILE_ID);
+
+        EventsCollectorRequest eventsCollectorRequest = new EventsCollectorRequest();
+        eventsCollectorRequest.setSessionId(TEST_SESSION_ID);
+        eventsCollectorRequest.setEvents(Collections.singletonList(event));
+
+        HttpPost request = new HttpPost(getFullUrl(EVENTS_URL + "?explain=true"));
+        request.addHeader("Content-Type", "application/json");
+        String requestBody = getObjectMapper().writeValueAsString(eventsCollectorRequest);
+        request.setEntity(new StringEntity(requestBody, ContentType.APPLICATION_JSON));
+
+        try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request, 200, true, true)) {
+            String responseContent = EntityUtils.toString(response.getEntity());
+            EventCollectorResponse eventResponse = getObjectMapper().readValue(responseContent, EventCollectorResponse.class);
+            Assert.assertNotNull("Event collector response should not be null", eventResponse);
+
+            int expectedFlags = EventService.SESSION_UPDATED | EventService.PROFILE_UPDATED;
+            Assert.assertEquals("Response should indicate both session and profile were updated",
+                    expectedFlags, eventResponse.getUpdated());
+            Assert.assertNotNull("Tracing information should be present", eventResponse.getRequestTracing());
+        }
+    }
+
+    @Test
+    public void testEventsCollectorWithExplainUnauthorized() throws Exception {
+        Event event = new Event();
+        event.setEventType(TEST_EVENT_TYPE);
+        event.setScope(TEST_SCOPE);
+        event.setSessionId(TEST_SESSION_ID);
+        event.setProfileId(TEST_PROFILE_ID);
+
+        EventsCollectorRequest eventsCollectorRequest = new EventsCollectorRequest();
+        eventsCollectorRequest.setSessionId(TEST_SESSION_ID);
+        eventsCollectorRequest.setEvents(Collections.singletonList(event));
+
+        HttpPost request = new HttpPost(getFullUrl(EVENTS_URL + "?explain=true"));
+        request.addHeader("Content-Type", "application/json");
+        String requestBody = getObjectMapper().writeValueAsString(eventsCollectorRequest);
+        request.setEntity(new StringEntity(requestBody, ContentType.APPLICATION_JSON));
+
+        try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request, 403)) {
+            Assert.assertEquals("Request with explain parameter but without admin privileges should return 403",
+                    403, response.getStatusLine().getStatusCode());
+        }
+    }
+
 }

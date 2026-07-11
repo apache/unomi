@@ -406,6 +406,17 @@ public class ProfileServiceEndPoint {
     }
 
     /**
+     * Delete the session by specifying its unique identifier.
+     *
+     * @param sessionId the session identifier for the session to delete
+     */
+    @DELETE
+    @Path("/sessions/{sessionId}")
+    public void deleteSession(@PathParam("sessionId") String sessionId) {
+        profileService.deleteSession(sessionId);
+    }
+
+    /**
      * Retrieves {@link Event}s for the {@link Session} identified by the provided session identifier, matching any of the provided event types,
      * ordered according to the specified {@code sortBy} String and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
      * If a {@code query} is provided, a full text search is performed on the matching events to further filter them.

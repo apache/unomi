@@ -2192,6 +2192,42 @@
 					"response": []
 				},
 				{
+					"name": "Delete Session",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/profiles/sessions/{{sessionId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"profiles",
+								"sessions",
+								"{{sessionId}}"
+							]
+						},
+						"description": "Delete a session by its identifier",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Delete Profile",
 					"request": {
 						"method": "DELETE",
@@ -2354,6 +2390,41 @@
 							]
 						},
 						"description": "Search for events using a query condition",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{tenantId}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{privateApiKey}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Event",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/cxs/events/{{eventId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"cxs",
+								"events",
+								"{{eventId}}"
+							]
+						},
+						"description": "Delete an event by its identifier",
 						"auth": {
 							"type": "basic",
 							"basic": [
@@ -2575,6 +2646,11 @@
 		{
 			"key": "profileId",
 			"value": "profile-123",
+			"type": "string"
+		},
+		{
+			"key": "eventId",
+			"value": "event-123",
 			"type": "string"
 		},
 		{

@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.itests;
 
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
@@ -182,6 +183,29 @@ public class EventServiceIT extends BaseIT {
         event.setProperty("outerProperty", innerProperty);
         String value = (String) event.getNestedProperty(nestedProperty);
         Assert.assertEquals(testValue, value);
+    }
+
+    @Test
+    public void test_DeleteEventViaRest() throws InterruptedException {
+        String eventId = "test-delete-event-id-" + System.currentTimeMillis();
+        String profileId = "test-delete-event-profile-id-" + System.currentTimeMillis();
+        String eventType = "test-delete-event-type";
+        Profile profile = new Profile(profileId);
+        Event event = new Event(eventId, eventType, null, profile, null, null, null, new Date());
+
+        profileService.save(profile);
+        keepTrying("Profile with id " + profileId + " not found in the required time", () -> profileService.load(profileId),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        eventService.send(event);
+        keepTrying("Event has not been raised", () -> eventService.getEvent(eventId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
+
+        CloseableHttpResponse response = delete("/cxs/events/" + eventId);
+        Assert.assertEquals("Delete event should return 204 No Content", 204, response.getStatusLine().getStatusCode());
+
+        waitForNullValue("Event still present after deletion via REST", () -> eventService.getEvent(eventId), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
 }

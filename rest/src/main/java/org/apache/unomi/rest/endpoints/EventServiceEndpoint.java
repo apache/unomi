@@ -73,6 +73,17 @@ public class EventServiceEndpoint {
     }
 
     /**
+     * Deletes an event by id.
+     *
+     * @param id the identifier for the event to delete
+     */
+    @DELETE
+    @Path("/{id}")
+    public void deleteEvent(@PathParam("id") final String id) {
+        eventService.deleteEvent(id);
+    }
+
+    /**
      * Retrieves the list of event types identifiers that the server has processed.
      * @return a Set of strings that contain event type identifiers.
      */

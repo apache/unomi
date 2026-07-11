@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.itests.shell;
 
+import org.apache.unomi.api.services.TypeResolutionService;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,8 +31,36 @@ public class OtherCommandsIT extends ShellCommandsBaseIT {
     public void testRuleResetStats() throws Exception {
         String output = executeCommandAndGetOutput("unomi:rule-reset-stats");
         // Should confirm statistics were reset
-        Assert.assertTrue("Should confirm rule statistics reset", 
+        Assert.assertTrue("Should confirm rule statistics reset",
             output.contains("Rule statistics successfully reset"));
+    }
+
+    @Test
+    public void testListInvalidObjects() throws Exception {
+        // Seed a genuinely invalid object directly in the tracking service so the command has
+        // something to report - otherwise this test only ever exercises the "no invalid objects
+        // found" branch and never validates the summary/table rendering. Going through
+        // rulesService.setRule() instead is unreliable here: RulesServiceImpl.ensureRuleResolved()
+        // skips resolution entirely for a rule that's never been seen before (it only resolves
+        // rules that were already tracked invalid or already had missingPlugins set), so a
+        // brand-new invalid rule causes setRule() to throw IllegalArgumentException rather than
+        // being marked invalid.
+        String objectType = "rules";
+        String objectId = "test-invalid-rule-" + System.currentTimeMillis();
+        TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
+
+        try {
+            typeResolutionService.markInvalid(objectType, objectId, "Unresolved condition type: nonExistentConditionType");
+
+            String output = executeCommandAndGetOutput("unomi:list-invalid-objects");
+            Assert.assertTrue("Should show invalid objects summary", output.contains("Invalid Objects Summary"));
+            Assert.assertTrue("Should report at least one invalid object", output.contains("Total invalid objects:"));
+            validateNumericValuesInOutput(output, new String[]{"Total invalid objects:"}, false);
+            validateTableHeaders(output, new String[]{"Object Type", "Object ID"});
+            Assert.assertTrue("Should list the invalid object's id", output.contains(objectId));
+        } finally {
+            typeResolutionService.markValid(objectType, objectId);
+        }
     }
 
     @Test

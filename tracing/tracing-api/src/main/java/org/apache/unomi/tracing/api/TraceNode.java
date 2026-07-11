@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.tracing.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,6 +27,7 @@ import java.util.List;
  * Represents a node in the request tracing tree structure.
  * Each node contains information about an operation, its timing, and any child operations.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TraceNode implements Serializable {
     private String operationType;
     private String description;

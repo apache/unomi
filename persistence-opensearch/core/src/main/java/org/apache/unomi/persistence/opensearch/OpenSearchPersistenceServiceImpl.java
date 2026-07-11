@@ -20,6 +20,7 @@ package org.apache.unomi.persistence.opensearch;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.Json;
+import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import jakarta.json.stream.JsonParser;
@@ -1398,6 +1399,23 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                         rolloverActionBuilder.add("min_index_age", rolloverMaxAge);
                     }
 
+                    // Index patterns for ism_template auto-attachment, using the actual rollover index glob
+                    // (e.g. "context-event-*") rather than raw item type names (e.g. "event") - the latter
+                    // never match real index names, which is why an earlier attempt at ism_template here was
+                    // abandoned in favor of the explicit attachRolloverPolicy() call alone. That explicit call
+                    // only fires when Unomi itself creates the first rollover index (-000001); subsequent
+                    // indices created by ISM's own rollover action never go through Unomi's code path, so they
+                    // only get the inert policy_id setting from the index template and are never actually
+                    // managed. ism_template auto-attaches to any index matching the pattern - including those
+                    // rollover-created indices - so both mechanisms are kept: explicit attach for immediate
+                    // management of the first index, ism_template as the durable fallback for every index after.
+                    JsonArrayBuilder indexPatternsBuilder = Json.createArrayBuilder();
+                    if (rolloverIndices != null) {
+                        for (String rolloverItemType : rolloverIndices) {
+                            indexPatternsBuilder.add(getRolloverIndexForQuery(rolloverItemType));
+                        }
+                    }
+
                     // Build the policy from the inside out
                     JsonObjectBuilder policyBuilder = Json.createObjectBuilder()
                             .add("states", Json.createArrayBuilder()
@@ -1408,13 +1426,10 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                                                             .add("rollover", rolloverActionBuilder)))
                                             .add("transitions", Json.createArrayBuilder())))
                             .add("default_state", "ingest")
-                            .add("description", "Rollover lifecycle policy");
-
-                    // Policy attachment is handled deterministically via the plugins.index_state_management.policy_id
-                    // custom setting on each per-item rollover index template (internalCreateRolloverTemplate),
-                    // not via ism_template pattern-matching: rolloverIndices holds item type names (e.g. "event"),
-                    // which never match real index names (e.g. "context-event-000001"), so an ism_template block
-                    // here would never auto-attach the policy.
+                            .add("description", "Rollover lifecycle policy")
+                            .add("ism_template", Json.createObjectBuilder()
+                                    .add("index_patterns", indexPatternsBuilder)
+                                    .add("priority", 100));
 
                     // Wrap the policy and create
                     JsonObject policyWrapper = Json.createObjectBuilder()
