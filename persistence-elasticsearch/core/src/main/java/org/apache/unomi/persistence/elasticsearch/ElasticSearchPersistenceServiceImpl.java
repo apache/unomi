@@ -1381,7 +1381,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         itemType = customItemType;
                     }
                     String documentId = getDocumentIDForItemType(itemId, itemType);
-                    String index = getIndexNameForQuery(itemType);
+                    // Single-document delete needs a concrete index/alias, not the wildcard
+                    // pattern getIndexNameForQuery() returns for rollover types (e.g. "context-session-*"),
+                    // which ES's Delete API rejects with index_not_found_exception.
+                    String index = getIndex(itemType);
 
                     esClient.delete(DeleteRequest.of(builder -> builder.index(index).id(documentId)));
                     if (MetadataItem.class.isAssignableFrom(clazz)) {

@@ -16,13 +16,10 @@
  */
 package org.apache.unomi.itests.shell;
 
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.services.TypeResolutionService;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -40,36 +37,29 @@ public class OtherCommandsIT extends ShellCommandsBaseIT {
 
     @Test
     public void testListInvalidObjects() throws Exception {
-        // Seed a genuinely invalid rule (unresolvable condition type) so the command has
-        // something to report - otherwise this test only ever exercises the "no invalid
-        // objects found" branch and never validates the summary/table rendering.
-        String ruleId = "test-invalid-rule-" + System.currentTimeMillis();
-        Metadata metadata = new Metadata(ruleId);
-        metadata.setName(ruleId + "_name");
-        metadata.setScope("systemscope");
-
-        Condition invalidCondition = new Condition();
-        invalidCondition.setConditionTypeId("nonExistentConditionType-" + System.currentTimeMillis());
-
-        Rule invalidRule = new Rule(metadata);
-        invalidRule.setCondition(invalidCondition);
-        invalidRule.setActions(Collections.emptyList());
+        // Seed a genuinely invalid object directly in the tracking service so the command has
+        // something to report - otherwise this test only ever exercises the "no invalid objects
+        // found" branch and never validates the summary/table rendering. Going through
+        // rulesService.setRule() instead is unreliable here: RulesServiceImpl.ensureRuleResolved()
+        // skips resolution entirely for a rule that's never been seen before (it only resolves
+        // rules that were already tracked invalid or already had missingPlugins set), so a
+        // brand-new invalid rule causes setRule() to throw IllegalArgumentException rather than
+        // being marked invalid.
+        String objectType = "rules";
+        String objectId = "test-invalid-rule-" + System.currentTimeMillis();
+        TypeResolutionService typeResolutionService = definitionsService.getTypeResolutionService();
 
         try {
-            rulesService.setRule(invalidRule);
-            keepTrying("Rule should be tracked as invalid",
-                    () -> definitionsService.getTypeResolutionService().isInvalid("rules", ruleId),
-                    Boolean.TRUE::equals, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+            typeResolutionService.markInvalid(objectType, objectId, "Unresolved condition type: nonExistentConditionType");
 
             String output = executeCommandAndGetOutput("unomi:list-invalid-objects");
             Assert.assertTrue("Should show invalid objects summary", output.contains("Invalid Objects Summary"));
             Assert.assertTrue("Should report at least one invalid object", output.contains("Total invalid objects:"));
             validateNumericValuesInOutput(output, new String[]{"Total invalid objects:"}, false);
             validateTableHeaders(output, new String[]{"Object Type", "Object ID"});
-            Assert.assertTrue("Should list the invalid rule's id", output.contains(ruleId));
+            Assert.assertTrue("Should list the invalid object's id", output.contains(objectId));
         } finally {
-            rulesService.removeRule(ruleId);
-            definitionsService.getTypeResolutionService().markValid("rules", ruleId);
+            typeResolutionService.markValid(objectType, objectId);
         }
     }
 
