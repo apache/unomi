@@ -2649,6 +2649,11 @@
 			"type": "string"
 		},
 		{
+			"key": "eventId",
+			"value": "event-123",
+			"type": "string"
+		},
+		{
 			"key": "tenantId",
 			"value": "mytenant",
 			"type": "string"

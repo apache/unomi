@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.itests;
 
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
@@ -534,5 +535,26 @@ public class ProfileServiceIT extends BaseIT {
                     (profile) -> (Integer) profile.getProperty("totalNbOfVisits") == 20, 1000, 100);
         }
 
+    }
+
+    @Test
+    public void testDeleteSessionViaRest() throws Exception {
+        String profileId = "test-delete-session-profile-id-" + System.currentTimeMillis();
+        String sessionId = "test-delete-session-id-" + System.currentTimeMillis();
+        Profile profile = new Profile(profileId);
+        profileService.save(profile);
+        keepTrying("Profile with id " + profileId + " not found in the required time", () -> profileService.load(profileId),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        Session session = new Session(sessionId, profile, new Date(), "test-delete-session-scope");
+        profileService.saveSession(session);
+        keepTrying("Session with id " + sessionId + " not found in the required time", () -> profileService.loadSession(sessionId),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        CloseableHttpResponse response = delete("/cxs/profiles/sessions/" + sessionId);
+        assertEquals("Delete session should return 204 No Content", 204, response.getStatusLine().getStatusCode());
+
+        waitForNullValue("Session still present after deletion via REST", () -> profileService.loadSession(sessionId),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 }
