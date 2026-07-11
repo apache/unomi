@@ -51,15 +51,22 @@ Cursor rule: `.cursor/rules/branch-backport.mdc`
 
 ## Backporting `unomi-3-dev` → `master` (UNOMI-875)
 
-**Backport phase complete** (Phase 2 mega-PRs + [#791](https://github.com/apache/unomi/pull/791) final hygiene). **Apply generic rules above** for any future cherry-picks; see
+**Backport phase complete** (Phase 2 mega-PRs + [#791](https://github.com/apache/unomi/pull/791) final hygiene + [#819](https://github.com/apache/unomi/pull/819) 3-dev closure, July 2026). **Apply generic rules above** for any future cherry-picks; see
 `.cursor/rules/unomi-3-dev-backport.mdc` for standing exclusions.
 
 | | |
 |---|---|
-| Source | `unomi-3-dev` (archive/reference only) |
+| Source (archived) | Tag `unomi-3-dev-archive-2026-07` @ `eca005fd8` — remote branch **deleted** |
 | Target | `master` |
 | **Active local plan** | `.local-notes/unomi-3.1-remaining-work-plan.md` |
 | Archived backport plans | `.local-notes/archive/` (Phase 1, Phase 2, #757 stack tracker) |
+
+To inspect the archived tip:
+
+```bash
+git fetch origin tag unomi-3-dev-archive-2026-07
+git diff master...unomi-3-dev-archive-2026-07 -- <path>
+```
 
 Unomi-specific reminders:
 
@@ -68,3 +75,4 @@ Unomi-specific reminders:
 - Safe wholesale adds: new scripts, Postman, docs, new Java classes.
 - Do not port: migration scripts (UNOMI-943), 3-dev REST mappers, security
   WIP, wholesale test harness from 3-dev.
+- Remaining 3.1 work: [UNOMI-960](https://issues.apache.org/jira/browse/UNOMI-960) (Javadoc / PR10) — not a 3-dev backport.
