@@ -28,7 +28,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -137,18 +140,31 @@ public class ProgressListener extends RunListener {
     /** Formatter for human-readable timestamps */
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
+    /** Search engine under test (e.g. "elasticsearch", "opensearch"); timings are cached per engine */
+    private final String searchEngine = System.getProperty(BaseIT.SEARCH_ENGINE_PROPERTY, BaseIT.SEARCH_ENGINE_ELASTICSEARCH);
+    /** Cached per-test durations loaded from {@link TestTimingCache} */
+    private final Map<String, Long> cachedTimings;
+    /** Timing-cache keys for tests not yet completed in this run */
+    private final Set<String> remainingTestKeys;
+
     /**
      * Creates a new ProgressListener instance.
      *
      * @param totalTests the total number of tests that will be executed
      * @param completedTests a thread-safe counter that tracks the number of completed tests
      *                       (this should be shared with the test runner for accurate progress tracking)
+     *
+     * @param testKeys timing-cache keys ("SimpleClassName#methodName") for every test in the run,
+     *                 used to look up historical per-test durations for the ETA calculation
      */
-    public ProgressListener(int totalTests, AtomicInteger completedTests) {
+    public ProgressListener(int totalTests, AtomicInteger completedTests, List<String> testKeys) {
         this.totalTests = totalTests;
         this.completedTests = completedTests;
         this.slowTests = new PriorityQueue<>((t1, t2) -> Long.compare(t1.time, t2.time));
         this.ansiSupported = isAnsiSupported();
+        this.cachedTimings = TestTimingCache.load(searchEngine);
+        this.remainingTestKeys = ConcurrentHashMap.newKeySet();
+        this.remainingTestKeys.addAll(testKeys);
     }
 
     /**
@@ -286,6 +302,12 @@ public class ProgressListener extends RunListener {
             // Remove the smallest time, keeping only the top 5 longest
             slowTests.poll();
         }
+        String testKey = TestTimingCache.keyFor(description);
+        remainingTestKeys.remove(testKey);
+        // Persist immediately (rather than batching until testRunFinished) so a run that gets killed
+        // mid-suite (Ctrl-C, CI timeout, a hung test force-killed) still leaves every test that did
+        // complete recorded in the cache for next time.
+        TestTimingCache.save(searchEngine, Collections.singletonMap(testKey, testDuration));
         // Print test end boundary
         String testName = extractTestName(description);
         String durationStr = formatTime(testDuration);
@@ -327,6 +349,8 @@ public class ProgressListener extends RunListener {
      */
     @Override
     public void testRunFinished(Result result) {
+        // No explicit save here: each test's duration is already persisted as it finishes (see
+        // testFinished), so the cache is up to date even if the run never reaches this point.
         long elapsedTime = System.currentTimeMillis() - startTime;
         String resultMessage = result.wasSuccessful()
                 ? colorize("SUCCESS!", GREEN)
@@ -430,6 +454,35 @@ public class ProgressListener extends RunListener {
     }
 
     /**
+     * Estimates the remaining time for the run by summing, for each test that has not completed yet,
+     * its historical duration from the search-engine-specific {@link TestTimingCache} when one exists,
+     * and falling back to this run's own flat average for any test with no cache entry (e.g. the very
+     * first run on a machine, or a newly added test).
+     *
+     * @param completed the number of tests completed so far
+     * @param elapsedTime the time elapsed since the run started, in milliseconds
+     * @return the estimated remaining time, in milliseconds
+     */
+    private long estimateRemainingTime(int completed, long elapsedTime) {
+        // Avoid division by very low completed count; use a floor value
+        int stableCompleted = Math.max(completed, 1);
+        double averageTestTimeMillis = elapsedTime / (double) stableCompleted;
+
+        long estimate = 0;
+        int uncachedRemaining = 0;
+        for (String key : remainingTestKeys) {
+            Long cached = cachedTimings.get(key);
+            if (cached != null) {
+                estimate += cached;
+            } else {
+                uncachedRemaining++;
+            }
+        }
+        estimate += (long) (averageTestTimeMillis * uncachedRemaining);
+        return estimate;
+    }
+
+    /**
      * Displays the current progress of the test run including progress bar,
      * percentage completion, estimated time remaining, and success/failure counts.
      * Also displays motivational quotes at progress milestones.
@@ -438,12 +491,7 @@ public class ProgressListener extends RunListener {
         int completed = completedTests.get();
         long elapsedTime = System.currentTimeMillis() - startTime;
 
-        // Avoid division by very low completed count; use a floor value
-        int stableCompleted = Math.max(completed, 1);
-        double averageTestTimeMillis = elapsedTime / (double) stableCompleted;
-
-        // Calculate estimated time remaining
-        long estimatedRemainingTime = (long) (averageTestTimeMillis * (totalTests - completed));
+        long estimatedRemainingTime = estimateRemainingTime(completed, elapsedTime);
         String progressBar = generateProgressBar(((double) completed / totalTests) * 100);
         String humanReadableTime = formatTime(estimatedRemainingTime);
 

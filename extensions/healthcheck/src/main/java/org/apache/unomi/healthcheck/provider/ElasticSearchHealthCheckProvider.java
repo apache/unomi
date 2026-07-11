@@ -110,6 +110,12 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
         HealthCheckResponse.Builder builder = new HealthCheckResponse.Builder();
         builder.name(NAME).down();
         if (isActive) {
+            String minimalClusterState = config.get(HealthCheckConfig.CONFIG_ES_MINIMAL_CLUSTER_STATE);
+            if (StringUtils.isEmpty(minimalClusterState)) {
+                minimalClusterState = "green";
+            } else {
+                minimalClusterState = minimalClusterState.toLowerCase();
+            }
             String url = (config.get(HealthCheckConfig.CONFIG_ES_SSL_ENABLED).equals("true") ? "https://" : "http://").concat(
                     config.get(HealthCheckConfig.CONFIG_ES_ADDRESSES).split(",")[0].trim()).concat("/_cluster/health");
             CloseableHttpResponse response = null;
@@ -122,7 +128,8 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
                         String content = EntityUtils.toString(entity);
                         try {
                             JsonNode root = mapper.readTree(content);
-                            if (root.has("status") && "green".equals(root.get("status").asText())) {
+                            String status = root.has("status") ? root.get("status").asText() : null;
+                            if ("green".equals(status) || ("yellow".equals(status) && "yellow".equals(minimalClusterState))) {
                                 builder.live();
                             }
                             if (root.has("cluster_name"))
@@ -147,7 +154,7 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
                                 builder.withData("unassigned_shards", root.get("unassigned_shards").asLong());
                         } catch (Exception parseEx) {
                             // Fallback to simple LIVE detection
-                            if (content.contains("\"status\":\"green\"")) {
+                            if (content.contains("\"status\":\"green\"") || (content.contains("\"status\":\"yellow\"") && "yellow".equals(minimalClusterState))) {
                                 builder.live();
                             }
                         }

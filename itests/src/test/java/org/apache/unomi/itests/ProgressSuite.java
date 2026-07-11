@@ -23,6 +23,8 @@ import org.junit.runners.Suite;
 import org.junit.runners.model.InitializationError;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -45,6 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *
  * <p>Example usage:</p>
  * <pre>{@code
+ *
  * @RunWith(ProgressSuite.class)
  * @Suite.SuiteClasses({
  *     TestClass1.class,
@@ -75,6 +78,8 @@ public class ProgressSuite extends Suite {
 
     /** Total number of test methods across all classes in the suite */
     private final int totalTests;
+    /** Cache keys ("SimpleClassName#methodName") for every test method in the suite */
+    private final List<String> testKeys;
     /** Thread-safe counter for completed tests, shared with ProgressListener */
     private final AtomicInteger completedTests = new AtomicInteger(0);
 
@@ -84,7 +89,7 @@ public class ProgressSuite extends Suite {
      * <p>The constructor initializes the suite by:</p>
      * <ul>
      *   <li>Extracting test classes from the {@code @Suite.SuiteClasses} annotation</li>
-     *   <li>Counting all test methods across the class hierarchies</li>
+     *   <li>Collecting all test methods (as timing-cache keys) across the class hierarchies</li>
      *   <li>Initializing the progress tracking infrastructure</li>
      * </ul>
      *
@@ -94,7 +99,8 @@ public class ProgressSuite extends Suite {
      */
     public ProgressSuite(Class<?> klass) throws InitializationError {
         super(klass, getAnnotatedClasses(klass));
-        this.totalTests = countTestMethods(getAnnotatedClasses(klass));
+        this.testKeys = collectTestKeys(getAnnotatedClasses(klass));
+        this.totalTests = testKeys.size();
     }
 
     /**
@@ -114,42 +120,42 @@ public class ProgressSuite extends Suite {
     }
 
     /**
-     * Counts the total number of test methods across all specified test classes.
+     * Collects the timing-cache keys for all test methods across all specified test classes.
      *
-     * @param testClasses array of test classes to count methods in
-     * @return the total number of methods annotated with {@code @Test}
+     * @param testClasses array of test classes to collect methods from
+     * @return a list of "SimpleClassName#methodName" keys, one per {@code @Test} method
      */
-    private static int countTestMethods(Class<?>[] testClasses) {
-        int count = 0;
+    private static List<String> collectTestKeys(Class<?>[] testClasses) {
+        List<String> keys = new ArrayList<>();
         for (Class<?> testClass : testClasses) {
-            count += countTestMethodsInClassHierarchy(testClass);
+            collectTestKeysInClassHierarchy(testClass, testClass, keys);
         }
-        return count;
+        return keys;
     }
 
     /**
-     * Recursively counts test methods in a class and its entire inheritance hierarchy.
+     * Recursively collects test method keys in a class and its entire inheritance hierarchy.
      *
-     * <p>This method traverses the class hierarchy upward from the given class,
-     * counting all methods annotated with {@code @Test} in each class. It stops
-     * at {@code Object.class} to avoid counting system methods.</p>
+     * <p>This method traverses the class hierarchy upward from the given class, recording a
+     * cache key for every method annotated with {@code @Test} in each class (keyed by the
+     * concrete leaf class, matching how JUnit reports the runtime test class). It stops at
+     * {@code Object.class} to avoid considering system methods.</p>
      *
-     * @param clazz the class to count test methods in (including superclasses)
-     * @return the number of test methods found in this class and its hierarchy
+     * @param declaringClass the class currently being walked (this class or a superclass)
+     * @param leafClass the concrete test class the methods will actually run on
+     * @param keys the list to append discovered test keys to
      */
-    private static int countTestMethodsInClassHierarchy(Class<?> clazz) {
-        int count = 0;
-        if (clazz == null || clazz == Object.class) {
-            return 0; // Stop at the base class
+    private static void collectTestKeysInClassHierarchy(Class<?> declaringClass, Class<?> leafClass, List<String> keys) {
+        if (declaringClass == null || declaringClass == Object.class) {
+            return; // Stop at the base class
         }
-        for (Method method : clazz.getDeclaredMethods()) {
+        for (Method method : declaringClass.getDeclaredMethods()) {
             if (method.isAnnotationPresent(Test.class)) {
-                count++;
+                keys.add(TestTimingCache.keyFor(leafClass, method.getName()));
             }
         }
         // Recurse into the superclass
-        count += countTestMethodsInClassHierarchy(clazz.getSuperclass());
-        return count;
+        collectTestKeysInClassHierarchy(declaringClass.getSuperclass(), leafClass, keys);
     }
 
     /**
@@ -174,12 +180,12 @@ public class ProgressSuite extends Suite {
      */
     @Override
     public void run(RunNotifier notifier) {
-        ProgressListener listener = new ProgressListener(totalTests, completedTests);
+        ProgressListener listener = new ProgressListener(totalTests, completedTests, testKeys);
         Description suiteDescription = getDescription();
         // We call this manually as we register the listener after this event has already been triggered.
         listener.testRunStarted(suiteDescription);
 
-        notifier.addListener(new ProgressListener(totalTests, completedTests));
+        notifier.addListener(new ProgressListener(totalTests, completedTests, testKeys));
         super.run(notifier);
     }
 

@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-
 package org.apache.unomi.itests;
 
 import org.apache.unomi.itests.migration.Migrate16xToCurrentVersionIT;
@@ -81,6 +80,7 @@ import org.junit.runners.Suite.SuiteClasses;
         TenantIT.class,
         SchedulerIT.class,
         EventsCollectorIT.class,
+        RolloverIT.class,
         HealthCheckIT.class
 })
 public class AllITs {

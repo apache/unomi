@@ -1538,8 +1538,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         IndexSettings indexSettings = buildIndexSettings(rolloverAlias, analysis);
         IndexTemplateMapping templateMapping = buildTemplateMapping(itemName, indexSettings);
 
+        // Priority must stay above any generic/catch-all templates (e.g. IT harnesses registering their own
+        // "*"-pattern template) - composable templates reject ambiguous same-priority overlapping patterns.
         PutIndexTemplateRequest request = PutIndexTemplateRequest.of(builder -> builder.name(templateName)
-                .indexPatterns(Collections.singletonList(getRolloverIndexForQuery(itemName))).template(templateMapping).priority(1L));
+                .indexPatterns(Collections.singletonList(getRolloverIndexForQuery(itemName))).template(templateMapping).priority(100L));
 
         PutIndexTemplateResponse response = esClient.indices().putIndexTemplate(request);
         if (!response.acknowledged()) {
@@ -1606,8 +1608,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         long delayMs = 200;
 
         while (retryCount < maxRetries) {
-            // Wait for cluster state to be ready
-            esClient.cluster().health(builder -> builder.waitForStatus(HealthStatus.Green).timeout(t -> t.time("5s")));
+            // Best-effort wait for cluster state to settle; a single-node cluster may legitimately never
+            // reach green (see UNOMI-946), so a timeout here is not fatal - the real correctness check is
+            // the settings/mappings verification below.
+            try {
+                esClient.cluster().health(builder -> builder.waitForStatus(HealthStatus.Green).timeout(t -> t.time("5s")));
+            } catch (Exception e) {
+                LOGGER.debug("Cluster did not reach green before creating rollover index {}, continuing anyway", fullIndexName, e);
+            }
 
             // Delay to allow cluster state to synchronize - increase delay on each retry
             try {

@@ -28,6 +28,7 @@ dependency_tree.txt
 /.local-notes/
 itests/snapshots_repository/
 itests/archives/
+itests/.test-timing-cache-*.properties
 .env.local
 .venv*
 javadoc_*

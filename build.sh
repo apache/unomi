@@ -255,8 +255,6 @@ SKIP_UNIT_TESTS=false
 RUN_INTEGRATION_TESTS=false
 DEPLOY=false
 DEBUG=false
-USE_MAVEN_CACHE=true
-PURGE_MAVEN_CACHE=false
 MAVEN_DEBUG=false
 MAVEN_OFFLINE=false
 KARAF_DEBUG_PORT=5005
@@ -278,6 +276,7 @@ IT_DEBUG_SUSPEND=false
 SKIP_MIGRATION_TESTS=false
 RESOLVER_DEBUG=false
 KEEP_CONTAINER=false
+IT_SEARCH_ENGINE_LOGS=false
 IT_MEMORY_SAMPLER=true
 IT_MEMORY_INTERVAL=30
 JAVADOC=false
@@ -312,8 +311,6 @@ EOF
         echo -e "  ${CYAN}--debug${NC}                    Run Karaf in debug mode"
         echo -e "  ${CYAN}--debug-port PORT${NC}          Set debug port (default: 5005)"
         echo -e "  ${CYAN}--debug-suspend${NC}            Suspend JVM until debugger connects"
-        echo -e "  ${CYAN}--no-maven-cache${NC}           Disable Maven build cache"
-        echo -e "  ${CYAN}--purge-maven-cache${NC}        Purge local Maven cache before building"
         echo -e "  ${CYAN}--karaf-home PATH${NC}          Set Karaf home directory for deployment"
         echo -e "  ${CYAN}--use-opensearch${NC}           Use OpenSearch instead of ElasticSearch"
         echo -e "  ${CYAN}--distribution DIST${NC}        Set Unomi distribution (e.g., unomi-distribution-opensearch)"
@@ -326,10 +323,11 @@ EOF
         echo -e "  ${CYAN}--skip-migration-tests${NC}     Skip migration-related tests"
         echo -e "  ${CYAN}--resolver-debug${NC}           Enable Karaf Resolver debug logging for integration tests"
         echo -e "  ${CYAN}--keep-container${NC}           Keep search engine container running after tests (for post-failure inspection)"
+        echo -e "  ${CYAN}--search-engine-logs${NC}       Stream search engine Docker logs to the Maven console during integration tests"
         echo -e "  ${CYAN}--no-memory-sampler${NC}        Disable JVM/system memory sampling during integration tests"
         echo -e "  ${CYAN}--memory-interval SEC${NC}    Memory sample interval in seconds (default: 30)"
         echo -e "  ${CYAN}--javadoc${NC}                  Build and validate Javadoc after install (fails on doclint errors)"
-        echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, no Maven build cache, non-interactive, includes Javadoc"
+        echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, non-interactive, includes Javadoc"
         echo -e "  ${CYAN}--log-file PATH${NC}            Tee all output to PATH (console + file)"
         echo -e "  ${CYAN}--log-file-only${NC}            With --log-file: write to file only, suppress console"
     else
@@ -356,8 +354,6 @@ EOF
         echo "  --debug                    Run Karaf in debug mode"
         echo "  --debug-port PORT          Set debug port (default: 5005)"
         echo "  --debug-suspend           Suspend JVM until debugger connects"
-        echo "  --no-maven-cache           Disable Maven build cache"
-        echo "  --purge-maven-cache        Purge local Maven cache before building"
         echo "  --karaf-home PATH          Set Karaf home directory for deployment"
         echo "  --use-opensearch          Use OpenSearch instead of ElasticSearch"
         echo "  --distribution DIST       Set Unomi distribution (e.g., unomi-distribution-opensearch)"
@@ -370,10 +366,11 @@ EOF
         echo "  --skip-migration-tests    Skip migration-related tests"
         echo "  --resolver-debug          Enable Karaf Resolver debug logging for integration tests"
         echo "  --keep-container          Keep search engine container running after tests (for post-failure inspection)"
+        echo "  --search-engine-logs      Stream search engine Docker logs to the Maven console during integration tests"
         echo "  --no-memory-sampler       Disable JVM/system memory sampling during integration tests"
         echo "  --memory-interval SEC     Memory sample interval in seconds (default: 30)"
         echo "  --javadoc                 Build and validate Javadoc after install (fails on doclint errors)"
-        echo "  --ci                      CI mode: no Karaf, no Maven build cache, non-interactive, includes Javadoc"
+        echo "  --ci                      CI mode: no Karaf, non-interactive, includes Javadoc"
         echo "  --log-file PATH           Tee all output to PATH (console + file)"
         echo "  --log-file-only           With --log-file: write to file only, suppress console"
     fi
@@ -480,12 +477,6 @@ while [ "$1" != "" ]; do
         --debug-suspend)
             KARAF_DEBUG_SUSPEND=y
             ;;
-        --no-maven-cache)
-            USE_MAVEN_CACHE=false
-            ;;
-        --purge-maven-cache)
-            PURGE_MAVEN_CACHE=true
-            ;;
         --karaf-home)
             shift
             CONTEXT_SERVER_KARAF_HOME=$1
@@ -539,6 +530,9 @@ while [ "$1" != "" ]; do
         --keep-container)
             KEEP_CONTAINER=true
             ;;
+        --search-engine-logs)
+            IT_SEARCH_ENGINE_LOGS=true
+            ;;
         --no-memory-sampler)
             IT_MEMORY_SAMPLER=false
             ;;
@@ -558,7 +552,6 @@ while [ "$1" != "" ]; do
             ;;
         --ci)
             NO_KARAF=true
-            USE_MAVEN_CACHE=false
             BUILD_NON_INTERACTIVE=true
             MAVEN_QUIET=true
             JAVADOC=true
@@ -601,16 +594,6 @@ if [ -f "$DIRNAME/setenv.sh" ]; then
     . "$DIRNAME/setenv.sh"
 fi
 
-# Purge Maven cache if requested
-if [ "$PURGE_MAVEN_CACHE" = true ]; then
-    echo "Purging Maven cache..."
-    rm -rf ~/.m2/build-cache ~/.m2/dependency-cache ~/.m2/dependency-cache_v2
-    echo "Maven cache purged."
-    # Disable the build cache for this run: a cold cache with the extension still active
-    # causes the workspace resolver to return target/classes instead of built JARs,
-    # breaking karaf-maven-plugin:verify. Disabling matches CI behaviour.
-    USE_MAVEN_CACHE=false
-fi
 
 # Function to check if command exists
 command_exists() {
@@ -913,6 +896,11 @@ check_requirements() {
         has_errors=true
     fi
 
+    if [ "$IT_SEARCH_ENGINE_LOGS" = true ] && [ "$RUN_INTEGRATION_TESTS" = false ]; then
+        print_status "error" "Search engine logs (--search-engine-logs) enabled but integration tests are not enabled. Use --integration-tests."
+        has_errors=true
+    fi
+
     if [ "$IT_DEBUG" = true ]; then
         if ! [[ "$IT_DEBUG_PORT" =~ ^[0-9]+$ ]] || [ "$IT_DEBUG_PORT" -lt 1024 ] || [ "$IT_DEBUG_PORT" -gt 65535 ]; then
             print_status "error" "✗ Integration test debug port: $IT_DEBUG_PORT (invalid)"
@@ -928,17 +916,6 @@ check_requirements() {
             has_errors=true
         else
             print_status "success" "✓ Integration test debug port: $IT_DEBUG_PORT available"
-        fi
-    fi
-
-    if [ "$MAVEN_OFFLINE" = true ]; then
-        if [ "$PURGE_MAVEN_CACHE" = true ]; then
-            print_status "error" "Cannot use --purge-maven-cache in offline mode"
-            has_errors=true
-        fi
-        if [ "$USE_MAVEN_CACHE" = false ]; then
-            print_status "warning" "Using --no-maven-cache with offline mode may cause build failures"
-            has_warnings=true
         fi
     fi
 
@@ -981,25 +958,6 @@ fi
 if [ "$MAVEN_OFFLINE" = true ]; then
     MVN_OPTS="$MVN_OPTS -o"
     echo "Maven offline mode enabled"
-
-    # Warn if purge cache is enabled with offline mode
-    if [ "$PURGE_MAVEN_CACHE" = true ]; then
-        echo "Warning: Purging Maven cache while in offline mode may cause build failures"
-        if is_non_interactive; then
-            print_status "warning" "Non-interactive mode: continuing despite purge + offline"
-        else
-            read -p "Continue anyway? (y/N) " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                exit 1
-            fi
-        fi
-    fi
-fi
-
-# Add Maven cache option
-if [ "$USE_MAVEN_CACHE" = false ]; then
-    MVN_OPTS="$MVN_OPTS -Dmaven.build.cache.enabled=false"
 fi
 
 # Add Maven quiet mode (suppress download progress)
@@ -1137,6 +1095,11 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
         echo "Search engine container will be kept running after tests"
     fi
 
+    if [ "$IT_SEARCH_ENGINE_LOGS" = true ]; then
+        MVN_OPTS="$MVN_OPTS -Ddocker.showLogs=true"
+        echo "Search engine Docker logs will stream to the Maven console (also written under itests/target/*0/logs/)"
+    fi
+
     if [ "$RESOLVER_DEBUG" = true ]; then
         MVN_OPTS="$MVN_OPTS -Dit.unomi.resolver.debug=true"
         echo "Enabling Karaf Resolver debug logging for integration tests"
@@ -1223,6 +1186,7 @@ write_it_run_trace_start() {
         echo "it.debug.suspend=$IT_DEBUG_SUSPEND"
         echo "skip.migration.tests=$SKIP_MIGRATION_TESTS"
         echo "it.keep.container=$KEEP_CONTAINER"
+        echo "it.search.engine.logs=$IT_SEARCH_ENGINE_LOGS"
         echo "it.memory.sampler=$IT_MEMORY_SAMPLER"
         echo "it.memory.interval=$IT_MEMORY_INTERVAL"
         echo "maven.debug=$MAVEN_DEBUG"

@@ -238,45 +238,6 @@ mvn jgitflow:feature-finish
 
 To merge the branch into master.
 
-==== Maven Build Cache
-
-Apache Unomi uses the Maven Build Cache extension to significantly improve build efficiency by caching compiled artifacts and avoiding unnecessary recompilation (build time without/with cached artifacts ~2mn/~3s).
-
-The build cache is enabled by default and configured in the `.mvn/maven-build-cache-config.xml` file. The cache configuration includes:
-
-* Local caching with up to 3 builds cached
-* SHA-256 hash algorithm for cache keys
-* Includes all source directories (`src/`)
-* Excludes `pom.xml` files and generated sources (`src/main/javagen/**`)
-
-Command line control:
-
-* Disable cache: `mvn -Dmaven.build.cache.enabled=false clean install`
-  ** Completely turns off the build cache functionality
-  ** Maven will not store or retrieve any build outputs from the cache
-  ** Performs a full build as if the cache were not present
-  ** Use this when you want to ensure no cache influence on the build
-
-* Skip cache (force rebuild): `mvn -Dmaven.build.cache.skipCache=true clean install`
-  ** Skips looking up artifacts in caches but still writes new results to cache
-  ** Forces Maven to rebuild everything without using cached artifacts
-  ** New build results will be stored in cache for future builds
-  ** Use this to force a complete rebuild while keeping cache functionality active
-
-* Enable cache (default): `mvn -Dmaven.build.cache.enabled=true clean install`
-  ** Enables full cache functionality (read and write)
-  ** Maven will use cached artifacts when available and store new results
-  ** This is the default behavior when the cache is enabled
-
-Purging the build cache:
-
-To completely reset the build cache and force a full rebuild, manually delete the cache directory: `rm -rf ~/.m2/build-cache` (Unix/Mac) or `rmdir /s %USERPROFILE%\.m2\build-cache` (Windows)
-
-For more information, see the official documentation:
-
-* https://maven.apache.org/extensions/maven-build-cache-extension/[Maven Build Cache Extension Overview]
-* https://maven.apache.org/extensions/maven-build-cache-extension/parameters.html[Build Cache Parameters Reference]
-
 ==== Installing a Search Engine
 
 Starting with version 1.2, Apache Unomi no longer embeds a search engine server. You will need to install either ElasticSearch or OpenSearch as a standalone service.

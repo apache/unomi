@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License
  */
-
 package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -23,6 +22,8 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Route;
 import org.apache.camel.ServiceStatus;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
@@ -65,6 +66,7 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.services.UserListService;
+import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.apache.unomi.shell.services.UnomiManagementService;
 import org.junit.After;
 import org.junit.Assert;
@@ -143,6 +145,17 @@ public abstract class BaseIT extends KarafTestSupport {
 
     protected static boolean unomiStarted = false;
     protected static String searchEngine = SEARCH_ENGINE_ELASTICSEARCH;
+
+    private static boolean searchEngineConfiguredForTesting = false;
+    private static boolean searchEngineHealthVerifiedAfterStartup = false;
+
+    /**
+     * PaxExam invokes {@link #config()} once per test class to build that class's Option[] even
+     * though the {@code PerSuite} reactor strategy means only one container actually gets started
+     * for the whole suite. This flag keeps the informational logging in config() from repeating
+     * for every class.
+     */
+    private static boolean configLogged = false;
 
     /**
      * JSON mapper for IT HTTP/JSON helpers. Initialized on first use (after Unomi features are up),
@@ -227,6 +240,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     protected void checkSearchEngine() {
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        configureSearchEngineForTesting();
     }
 
     @Before
@@ -320,6 +334,11 @@ public abstract class BaseIT extends KarafTestSupport {
 
         // init httpClient without credentials provider - all auth handled via headers
         httpClient = initHttpClient(null);
+
+        if (!searchEngineHealthVerifiedAfterStartup) {
+            assertClusterHealthy("after Unomi startup");
+            searchEngineHealthVerifiedAfterStartup = true;
+        }
 
         // Initialize log checker if enabled
         if (isLogCheckingEnabled()) {
@@ -470,6 +489,7 @@ public abstract class BaseIT extends KarafTestSupport {
     /**
      * Add a substring to ignore for log checking
      * Useful for tests that expect certain errors/warnings
+     *
      * @param substring Literal substring or regex pattern to match against log messages
      */
     protected void addIgnoredLogSubstring(String substring) {
@@ -480,6 +500,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Add multiple substrings to ignore for log checking
+     *
      * @param substrings List of substrings (literal or regex)
      */
     protected void addIgnoredLogSubstrings(List<String> substrings) {
@@ -528,12 +549,16 @@ public abstract class BaseIT extends KarafTestSupport {
 
     @Configuration
     public Option[] config() {
-        LOGGER.info("==== Configuring container");
-        System.out.println("==== Configuring container");
+        if (!configLogged) {
+            LOGGER.info("==== Configuring container");
+            System.out.println("==== Configuring container");
+        }
 
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
-        LOGGER.info("Search Engine: {}", searchEngine);
-        System.out.println("Search Engine: " + searchEngine);
+        if (!configLogged) {
+            LOGGER.info("Search Engine: {}", searchEngine);
+            System.out.println("Search Engine: " + searchEngine);
+        }
 
         // Define features option based on search engine
         Option featuresOption;
@@ -634,12 +659,14 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:" + getSearchPort()),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.rollover.maxDocs", "300"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.minimalClusterState", "YELLOW"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.cluster.name", "contextElasticSearchITests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.addresses", "localhost:" + getSearchPort()),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.username", "admin"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.password", "Unomi.1ntegrat10n.Tests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslEnable", "false"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslTrustAllCertificates", "true"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.rollover.maxDocs", "300"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.migration.tenant.id", TEST_TENANT_ID),
 
@@ -660,8 +687,10 @@ public abstract class BaseIT extends KarafTestSupport {
 
         String karafDebug = System.getProperty("it.karaf.debug");
         if (karafDebug != null) {
-            LOGGER.info("Found system Karaf Debug system property, activating configuration: {}", karafDebug);
-            System.out.println("Found system Karaf Debug system property, activating configuration: " + karafDebug);
+            if (!configLogged) {
+                LOGGER.info("Found system Karaf Debug system property, activating configuration: {}", karafDebug);
+                System.out.println("Found system Karaf Debug system property, activating configuration: " + karafDebug);
+            }
             String port = "5006";
             boolean hold = true;
             if (karafDebug.trim().length() > 0) {
@@ -685,17 +714,21 @@ public abstract class BaseIT extends KarafTestSupport {
         if (Files.exists(path)) {
             final String jacocoOption = "-javaagent:" + agentFile + "=destfile=" + System.getProperty("user.dir")
                     + "/target/jacoco.exec,includes=org.apache.unomi.*";
-            LOGGER.info("set jacoco java agent: {}", jacocoOption);
+            if (!configLogged) {
+                LOGGER.info("set jacoco java agent: {}", jacocoOption);
+            }
             karafOptions.add(new VMOption(jacocoOption));
-        } else {
+        } else if (!configLogged) {
             LOGGER.warn("Unable to set jacoco agent as {} was not found", agentFile);
         }
 
         // Allow overriding the Karaf JVM heap via -Dit.karaf.heap (e.g. 4g)
         String karafHeap = System.getProperty("it.karaf.heap", "");
         if (!karafHeap.isEmpty()) {
-            LOGGER.info("Setting Karaf JVM heap to: {}", karafHeap);
-            System.out.println("Setting Karaf JVM heap to: " + karafHeap);
+            if (!configLogged) {
+                LOGGER.info("Setting Karaf JVM heap to: {}", karafHeap);
+                System.out.println("Setting Karaf JVM heap to: " + karafHeap);
+            }
             karafOptions.add(new VMOption("-Xms" + karafHeap));
             karafOptions.add(new VMOption("-Xmx" + karafHeap));
         }
@@ -717,8 +750,10 @@ public abstract class BaseIT extends KarafTestSupport {
         // Enable debug logging for Karaf Resolver to diagnose bundle refresh issues (default: disabled)
         boolean enableResolverDebug = Boolean.parseBoolean(System.getProperty(RESOLVER_DEBUG_PROPERTY, "false"));
         if (enableResolverDebug) {
-            LOGGER.info("Enabling debug logging for Karaf Resolver and Karaf features service");
-            System.out.println("Enabling debug logging for Karaf Resolver and Karaf features service");
+            if (!configLogged) {
+                LOGGER.info("Enabling debug logging for Karaf Resolver and Karaf features service");
+                System.out.println("Enabling debug logging for Karaf Resolver and Karaf features service");
+            }
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiResolver.name", "org.osgi.service.resolver"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiResolver.level", "DEBUG"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafFeatures.name", "org.apache.karaf.features"));
@@ -731,7 +766,7 @@ public abstract class BaseIT extends KarafTestSupport {
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.osgiPackageAdmin.level", "DEBUG"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafDeployer.name", "org.apache.karaf.features.core"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.karafDeployer.level", "DEBUG"));
-        } else {
+        } else if (!configLogged) {
             LOGGER.info("Karaf Resolver debug logging is disabled (set -Dit.unomi.resolver.debug=true to enable)");
             System.out.println("Karaf Resolver debug logging is disabled (set -Dit.unomi.resolver.debug=true to enable)");
         }
@@ -739,8 +774,10 @@ public abstract class BaseIT extends KarafTestSupport {
         // Enable Camel debug logging if requested (for test visibility into Camel operations)
         boolean enableCamelDebug = Boolean.parseBoolean(System.getProperty(CAMEL_DEBUG_PROPERTY, "false"));
         if (enableCamelDebug) {
-            LOGGER.info("Enabling debug logging for Apache Camel");
-            System.out.println("Enabling debug logging for Apache Camel (set -Dit.unomi.camel.debug=true to enable)");
+            if (!configLogged) {
+                LOGGER.info("Enabling debug logging for Apache Camel");
+                System.out.println("Enabling debug logging for Apache Camel (set -Dit.unomi.camel.debug=true to enable)");
+            }
             // Enable logging for Camel core, routes, and router components
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelCore.name", "org.apache.camel"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelCore.level", "DEBUG"));
@@ -748,14 +785,10 @@ public abstract class BaseIT extends KarafTestSupport {
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelRouter.level", "DEBUG"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelFile.name", "org.apache.camel.component.file"));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelFile.level", "DEBUG"));
-        } else {
+        } else if (!configLogged) {
             LOGGER.info("Camel debug logging is disabled (set -Dit.unomi.camel.debug=true to enable)");
             System.out.println("Camel debug logging is disabled (set -Dit.unomi.camel.debug=true to enable)");
         }
-
-        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
-        LOGGER.info("Search Engine: {}", searchEngine);
-        System.out.println("Search Engine: " + searchEngine);
 
         // Configure in-memory log appender for log checking
         // The InMemoryLogAppender is part of the log4j-extension fragment bundle,
@@ -763,7 +796,9 @@ public abstract class BaseIT extends KarafTestSupport {
         // Log4j2 bundle early in the startup process, ensuring the appender is discoverable.
         // We only configure it for integration tests, not for the default package.
         if (isLogCheckingEnabled()) {
-            LOGGER.info("Configuring in-memory log appender for log checking");
+            if (!configLogged) {
+                LOGGER.info("Configuring in-memory log appender for log checking");
+            }
             // Configure the appender in Log4j2
             // The appender is already available via the log4j-extension fragment bundle
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg",
@@ -774,6 +809,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 "log4j2.rootLogger.appenderRef.inMemory.ref", "InMemoryLogAppender"));
         }
 
+        configLogged = true;
         return Stream.of(super.config(), karafOptions.toArray(new Option[karafOptions.size()])).flatMap(Stream::of).toArray(Option[]::new);
     }
 
@@ -1370,6 +1406,148 @@ public abstract class BaseIT extends KarafTestSupport {
         } catch (IOException e) {
             LOGGER.error("Could not close response", e);
         }
+    }
+
+
+    private static final String IT_ZERO_REPLICAS_INDEX_TEMPLATE = "unomi-it-zero-replicas";
+
+    /**
+     * Stage 1 (pre-Unomi): index template for new indices and zero replicas on any existing indices.
+     * Safe to call before migration snapshot restore when the cluster is still empty.
+     */
+    protected void configureSearchEngineForTesting() {
+        if (searchEngineConfiguredForTesting) {
+            return;
+        }
+        try (CloseableHttpClient client = createSearchEngineHttpClient()) {
+            String baseUrl = getSearchEngineBaseUrl();
+            ensureZeroReplicaIndexTemplate(client, baseUrl);
+            zeroReplicasOnExistingIndices(client, baseUrl, false);
+            String health = HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health", null);
+            LOGGER.info("Search engine baseline cluster health ({}): {}", searchEngine, health);
+            System.out.println("==== Search engine baseline cluster health (" + searchEngine + "): " + health);
+            searchEngineConfiguredForTesting = true;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to configure search engine for IT testing", e);
+        }
+    }
+
+    /**
+     * Stage 2a (post snapshot restore): fix replicas on restored 1.x indices before shell migration.
+     */
+    protected void fixRestoredIndexReplicas() {
+        enforceZeroReplicasAndWaitForCluster("after snapshot restore");
+    }
+
+    /**
+     * Stage 2b (post shell migration, pre-Unomi start): indices created or reindexed during migration
+     * must also run with zero replicas on the single-node IT cluster.
+     */
+    protected void prepareSearchEngineAfterMigration() {
+        enforceZeroReplicasAndWaitForCluster("after migration");
+    }
+
+    private void enforceZeroReplicasAndWaitForCluster(String context) {
+        try (CloseableHttpClient client = createSearchEngineHttpClient()) {
+            String baseUrl = getSearchEngineBaseUrl();
+            ensureZeroReplicaIndexTemplate(client, baseUrl);
+            zeroReplicasOnExistingIndices(client, baseUrl, true);
+            String health = HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health?wait_for_status=green&timeout=30s", null);
+            LOGGER.info("Cluster health ({}): {}", context, health);
+            System.out.println("==== Cluster health (" + context + "): " + health);
+            if (health != null && health.contains("\"status\":\"red\"")) {
+                throw new IllegalStateException("Cluster still RED " + context + ": " + health);
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to enforce zero replicas " + context, e);
+        }
+    }
+
+    private void ensureZeroReplicaIndexTemplate(CloseableHttpClient client, String baseUrl) throws IOException {
+        String templateBody = "{"
+                + "\"index_patterns\":[\"*\"],"
+                + "\"priority\":1,"
+                + "\"template\":{\"settings\":{\"index.number_of_replicas\":\"0\"}}"
+                + "}";
+        HttpUtils.executePutRequest(client, baseUrl + "/_index_template/" + IT_ZERO_REPLICAS_INDEX_TEMPLATE, templateBody, null);
+    }
+
+    private void zeroReplicasOnExistingIndices(CloseableHttpClient client, String baseUrl, boolean waitForRelocation)
+            throws IOException {
+        String indicesJson = HttpUtils.executeGetRequest(client, baseUrl + "/_cat/indices?h=index&format=json", null);
+        if (indicesJson == null || indicesJson.isBlank() || "[]".equals(indicesJson.trim())) {
+            return;
+        }
+        JsonNode indices = getObjectMapper().readTree(indicesJson);
+        if (!indices.isArray() || indices.isEmpty()) {
+            return;
+        }
+        String settingsBody = "{\"index\":{\"number_of_replicas\":\"0\"}}";
+        for (JsonNode index : indices) {
+            String indexName = index.path("index").asText(null);
+            if (indexName == null || indexName.isBlank()) {
+                continue;
+            }
+            HttpUtils.executePutRequest(client, baseUrl + "/" + indexName + "/_settings", settingsBody, null);
+        }
+        if (waitForRelocation) {
+            HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health?wait_for_no_relocating_shards=true&timeout=30s", null);
+        }
+    }
+
+    /**
+     * Stage 3 (post-Unomi start): assert cluster health for single-node IT (ES and OpenSearch).
+     */
+    protected void assertClusterHealthy(String context) {
+        try (CloseableHttpClient client = createSearchEngineHttpClient()) {
+            String baseUrl = getSearchEngineBaseUrl();
+            ensureZeroReplicaIndexTemplate(client, baseUrl);
+            zeroReplicasOnExistingIndices(client, baseUrl, true);
+            String indicesJson = HttpUtils.executeGetRequest(client, baseUrl + "/_cat/indices?h=index,rep,health&format=json", null);
+            if (indicesJson != null && !indicesJson.isBlank()) {
+                JsonNode indices = getObjectMapper().readTree(indicesJson);
+                if (indices.isArray()) {
+                    List<String> violations = new ArrayList<>();
+                    for (JsonNode index : indices) {
+                        String rep = index.path("rep").asText("");
+                        if (!rep.isEmpty() && !"0".equals(rep)) {
+                            violations.add(index.path("index").asText("?") + " rep=" + rep);
+                        }
+                    }
+                    if (!violations.isEmpty()) {
+                        throw new IllegalStateException(context + ": indices with replicas > 0: " + String.join(", ", violations));
+                    }
+                }
+            }
+            String health = HttpUtils.executeGetRequest(client, baseUrl + "/_cluster/health", null);
+            LOGGER.info("Cluster health ({}): {}", context, health);
+            if (health == null || (!health.contains("\"status\":\"green\"") && !health.contains("\"status\":\"yellow\""))) {
+                throw new IllegalStateException(context + ": cluster not green/yellow: " + health);
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed cluster health assertion: " + context, e);
+        }
+    }
+
+    protected static String getSearchEngineBaseUrl() {
+        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            return "http://localhost:" + getSearchPort();
+        }
+        return "http://localhost:" + getSearchPort();
+    }
+
+    protected CloseableHttpClient createSearchEngineHttpClient() throws IOException {
+        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+            credentialsProvider.setCredentials(AuthScope.ANY,
+                    new UsernamePasswordCredentials("admin", "Unomi.1ntegrat10n.Tests"));
+            return HttpUtils.initHttpClient(true, credentialsProvider);
+        }
+        return HttpUtils.initHttpClient(true, null);
     }
 
     /**

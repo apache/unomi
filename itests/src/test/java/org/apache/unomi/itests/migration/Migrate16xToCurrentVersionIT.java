@@ -134,6 +134,8 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
             System.out.println("Snapshot status: " + snapshotStatus);
             LOGGER.info("Snapshot status: {}", snapshotStatus);
 
+            fixRestoredIndexReplicas();
+
             // Get initial counts of items to compare after migration
             initCounts(httpClient);
         } catch (Throwable t) {
@@ -159,6 +161,8 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
                 System.out.println(commandResults);
             }
         }
+
+        prepareSearchEngineAfterMigration();
 
         // Call super for starting Unomi and wait for the complete startup
         super.waitForStartup();

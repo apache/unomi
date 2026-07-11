@@ -28,7 +28,7 @@
                 "type": "profilePropertyCondition",
                 "parameterValues": {
                   "propertyName": "properties.age",
-                  "propertyValueInteger": "25",
+                  "propertyValueInteger": 25,
                   "comparisonOperator": "greaterThan"
                 }
               }
@@ -46,7 +46,7 @@
                 "type": "profilePropertyCondition",
                 "parameterValues": {
                   "propertyName": "properties.age",
-                  "propertyValueInteger": "35",
+                  "propertyValueInteger": 35,
                   "comparisonOperator": "greaterThan"
                 }
               }
@@ -64,7 +64,7 @@
                 "type": "profilePropertyCondition",
                 "parameterValues": {
                   "propertyName": "properties.age",
-                  "propertyValueInteger": "25",
+                  "propertyValueInteger": 25,
                   "comparisonOperator": "greaterThan"
                 }
               }
@@ -82,7 +82,7 @@
                 "type": "profilePropertyCondition",
                 "parameterValues": {
                   "propertyName": "properties.age",
-                  "propertyValueInteger": "25",
+                  "propertyValueInteger": 25,
                   "comparisonOperator": "greaterThan"
                 }
               }
@@ -100,7 +100,7 @@
                 "type": "profilePropertyCondition",
                 "parameterValues": {
                   "propertyName": "properties.age",
-                  "propertyValueInteger": "25",
+                  "propertyValueInteger": 25,
                   "comparisonOperator": "greaterThan"
                 }
               }
@@ -118,7 +118,7 @@
                 "type": "profilePropertyCondition",
                 "parameterValues": {
                   "propertyName": "properties.age",
-                  "propertyValueInteger": "35",
+                  "propertyValueInteger": 35,
                   "comparisonOperator": "greaterThan"
                 }
               }
@@ -136,7 +136,7 @@
                 "type": "profilePropertyCondition",
                 "parameterValues": {
                   "propertyName": "properties.age",
-                  "propertyValueInteger": "35",
+                  "propertyValueInteger": 35,
                   "comparisonOperator": "greaterThan"
                 }
               },
@@ -157,7 +157,7 @@
                 "type": "profilePropertyCondition",
                 "parameterValues": {
                   "propertyName": "properties.age",
-                  "propertyValueInteger": "25",
+                  "propertyValueInteger": 25,
                   "comparisonOperator": "greaterThan"
                 }
               },

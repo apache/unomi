@@ -17,13 +17,10 @@
 package org.apache.unomi.services.impl.validation.validators;
 
 import org.apache.unomi.api.services.ValueTypeValidator;
-
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
-import java.util.Date;
-
+import org.apache.unomi.persistence.spi.conditions.DateUtils;
+/**
+ * Date value type validator.
+ */
 public class DateValueTypeValidator implements ValueTypeValidator {
     @Override
     public String getValueTypeId() {
@@ -35,16 +32,16 @@ public class DateValueTypeValidator implements ValueTypeValidator {
         if (value == null) {
             return true;
         }
-        // Accept Date and modern date/time types
-        return value instanceof Date
-                || value instanceof OffsetDateTime
-                || value instanceof ZonedDateTime
-                || value instanceof LocalDateTime
-                || value instanceof Instant;
+        // Condition parameters of type "date" are almost always plain ISO-8601 strings (from JSON
+        // condition definitions or persisted event/profile properties), not already-parsed Date
+        // objects, so delegate to the same parser used at actual condition-evaluation time
+        // (e.g. PropertyConditionEvaluator) rather than only accepting typed date/time instances.
+        return DateUtils.getDate(value) != null;
     }
 
     @Override
     public String getValueTypeDescription() {
-        return "Value must be a date (Date, OffsetDateTime, ZonedDateTime, LocalDateTime, or Instant)";
+        return "Value must be a date (Date, OffsetDateTime, ZonedDateTime, LocalDateTime, Instant, "
+                + "or a parseable ISO-8601 / epoch-millis string)";
     }
 }

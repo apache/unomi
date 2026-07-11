@@ -186,7 +186,8 @@ public class ConditionEvaluatorDispatcherImpl
                 final ConditionEvaluatorDispatcher dispatcher = this;
                 try {
                     // Use effective condition for evaluation
-                    Condition contextualCondition = ConditionContextHelper.getContextualCondition(effectiveCondition, context, scriptExecutor, definitionsService, tracerService);
+                    Condition contextualCondition = ConditionContextHelper.getContextualCondition(
+                        effectiveCondition, context, scriptExecutor, true, tracerService);
                     if (contextualCondition == null) {
                         if (tracer != null) {
                             tracer.endOperation(false, "Contextual condition is null");

@@ -41,6 +41,7 @@ public class HealthCheckConfig {
     public static final String CONFIG_ES_LOGIN = "esLogin";
     public static final String CONFIG_ES_PASSWORD = "esPassword";
     public static final String CONFIG_ES_TRUST_ALL_CERTIFICATES = "esHttpClient.trustAllCertificates";
+    public static final String CONFIG_ES_MINIMAL_CLUSTER_STATE = "esMinimalClusterState";
     public static final String CONFIG_OS_ADDRESSES = "osAddresses";
     public static final String CONFIG_OS_SSL_ENABLED = "osSSLEnabled";
     public static final String CONFIG_OS_LOGIN = "osLogin";

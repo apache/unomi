@@ -20,7 +20,6 @@ package org.apache.unomi.persistence.opensearch;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.json.Json;
-import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
 import jakarta.json.stream.JsonParser;
@@ -60,6 +59,7 @@ import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch._types.*;
 import org.opensearch.client.opensearch._types.aggregations.*;
+import org.opensearch.client.opensearch._types.analysis.CustomAnalyzer;
 import org.opensearch.client.opensearch._types.mapping.TypeMapping;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.opensearch.cluster.HealthRequest;
@@ -75,6 +75,7 @@ import org.opensearch.client.opensearch.generic.Requests;
 import org.opensearch.client.opensearch.generic.Response;
 import org.opensearch.client.opensearch.indices.*;
 import org.opensearch.client.opensearch.indices.get_alias.IndexAliases;
+import org.opensearch.client.opensearch.indices.put_index_template.IndexTemplateMapping;
 import org.opensearch.client.opensearch.tasks.GetTasksResponse;
 import org.opensearch.client.transport.OpenSearchTransport;
 import org.opensearch.client.transport.endpoints.BooleanResponse;
@@ -1338,7 +1339,9 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createRolloverLifecyclePolicy", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
                 try {
-                    String policyName = indexPrefix + "-rollover-lifecycle-policy";
+                    // Same name computation as internalCreateRolloverTemplate's policy_id custom setting,
+                    // and mirrors ES's registerRolloverLifecyclePolicy policy naming.
+                    String policyName = indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME;
 
                     // Upon initial OpenSearch startup, the .opendistro-ism-config index may not exist yet
                     // Check if the .opendistro-ism-config index exists
@@ -1407,17 +1410,11 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                             .add("default_state", "ingest")
                             .add("description", "Rollover lifecycle policy");
 
-                    // Add ISM template if rollover indices are specified
-                    if (rolloverIndices != null && !rolloverIndices.isEmpty()) {
-                        JsonArrayBuilder indexPatternsBuilder = Json.createArrayBuilder();
-                        for (String pattern : rolloverIndices) {
-                            indexPatternsBuilder.add(pattern);
-                        }
-
-                        policyBuilder.add("ism_template", Json.createObjectBuilder()
-                                .add("index_patterns", indexPatternsBuilder)
-                                .add("priority", 100));
-                    }
+                    // Policy attachment is handled deterministically via the plugins.index_state_management.policy_id
+                    // custom setting on each per-item rollover index template (internalCreateRolloverTemplate),
+                    // not via ism_template pattern-matching: rolloverIndices holds item type names (e.g. "event"),
+                    // which never match real index names (e.g. "context-event-000001"), so an ism_template block
+                    // here would never auto-attach the policy.
 
                     // Wrap the policy and create
                     JsonObject policyWrapper = Json.createObjectBuilder()
@@ -1488,50 +1485,167 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             LOGGER.warn("Couldn't find mapping for item {}, won't create rollover index template", itemName);
             return;
         }
-        String indexSource =
-                "    {" +
-                "        \"number_of_shards\" : " + rolloverIndexNumberOfShards + "," +
-                "        \"number_of_replicas\" : " + rolloverIndexNumberOfReplicas + "," +
-                "        \"mapping.total_fields.limit\" : " + rolloverIndexMappingTotalFieldsLimit + "," +
-                "        \"max_docvalue_fields_search\" : " + rolloverIndexMaxDocValueFieldsSearch + "," +
-                "        \"plugins.index_state_management.rollover_alias\": \"" + rolloverAlias + "\"" +
-                "    },";
-        String analysisSource =
-                "    {" +
-                "      \"analyzer\": {" +
-                "        \"folding\": {" +
-                "          \"type\":\"custom\"," +
-                "          \"tokenizer\": \"keyword\"," +
-                "          \"filter\":  [ \"lowercase\", \"asciifolding\" ]" +
-                "        }\n" +
-                "      }\n" +
-                "    }\n";
-        Map<String, JsonData> settings = new HashMap<>();
-        settings.put("index", getJsonData(indexSource));
-        settings.put("analysis", getJsonData(analysisSource));
-        client.indices().putTemplate(p->
-                p.name(rolloverAlias + "-rollover-template")
-                        .indexPatterns(Collections.singletonList(getRolloverIndexForQuery(itemName)))
-                        .order(1)
-                        .settings(settings)
-                        .mappings(getTypeMapping(mappings.get(itemName)))
-        );
-    }
+        String templateName = rolloverAlias + "-rollover-template";
 
-    private JsonData getJsonData(String input) {
-        JsonpMapper mapper = client._transport().jsonpMapper();
-        JsonParser parser = mapper
-                .jsonProvider()
-                .createParser(new ByteArrayInputStream(input.getBytes(StandardCharsets.UTF_8)));
-        return  JsonData._DESERIALIZER.deserialize(parser, mapper);
+        IndexSettingsAnalysis analysis = IndexSettingsAnalysis.of(an -> an.analyzer("folding",
+                analyzerBuilder -> analyzerBuilder.custom(CustomAnalyzer.of(
+                        customAnalyzer -> customAnalyzer.tokenizer("keyword").filter("lowercase", "asciifolding")))));
+
+        // index.plugins.index_state_management.rollover_alias and .policy_id are OpenSearch ISM settings with
+        // no typed builder equivalent (they are not the same as the ElasticSearch-only index.lifecycle.*
+        // ILM settings), so they are passed through as raw custom settings. Unlike ES's index.lifecycle.name,
+        // setting policy_id here does NOT actually cause ISM to manage the index - verified via
+        // GET _plugins/_ism/explain/<index>, which reports total_managed_indices: 0 even though the setting is
+        // present on the index. These are kept as documentation/metadata on the index; actual attachment
+        // happens via the explicit Add Policy call in attachRolloverPolicy(), invoked from
+        // internalCreateRolloverIndex() once the index is confirmed created.
+        IndexSettings indexSettings = IndexSettings.of(builder -> builder
+                .numberOfShards(Integer.valueOf(rolloverIndexNumberOfShards))
+                .numberOfReplicas(Integer.valueOf(rolloverIndexNumberOfReplicas))
+                .mapping(m -> m.totalFields(t -> t.limit(Long.valueOf(rolloverIndexMappingTotalFieldsLimit))))
+                .maxDocvalueFieldsSearch(Integer.valueOf(rolloverIndexMaxDocValueFieldsSearch))
+                .customSettings("index.plugins.index_state_management.rollover_alias", JsonData.of(rolloverAlias))
+                .customSettings("index.plugins.index_state_management.policy_id", JsonData.of(indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME))
+                .analysis(analysis));
+
+        IndexTemplateMapping templateMapping = IndexTemplateMapping.of(
+                t -> t.settings(indexSettings).mappings(getTypeMapping(mappings.get(itemName))));
+
+        // Priority must stay above any generic/catch-all templates (e.g. IT harnesses registering their own
+        // "*"-pattern template) - composable templates reject ambiguous same-priority overlapping patterns.
+        PutIndexTemplateRequest request = PutIndexTemplateRequest.of(builder -> builder.name(templateName)
+                .indexPatterns(Collections.singletonList(getRolloverIndexForQuery(itemName))).template(templateMapping)
+                .priority(100));
+
+        PutIndexTemplateResponse response = client.indices().putIndexTemplate(request);
+        if (!response.acknowledged()) {
+            throw new IOException("Failed to create index template " + templateName + " - not acknowledged");
+        }
     }
 
     private void internalCreateRolloverIndex(String indexName) throws IOException {
-        CreateIndexResponse createIndexResponse = client.indices().create(c->c
-                .index(indexName + "-000001")
-                .aliases(indexName, a->a.isWriteIndex(true)));
-        LOGGER.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
-                createIndexResponse.acknowledged(), createIndexResponse.shardsAcknowledged());
+        String fullIndexName = indexName + "-000001";
+
+        // Retry mechanism to ensure the template is actually applied, not just that it exists in metadata
+        // (mirrors ElasticSearchPersistenceServiceImpl.internalCreateRolloverIndex, added there because
+        // cluster state may not be fully synchronized even though the template exists in metadata).
+        int maxRetries = 3;
+        int retryCount = 0;
+        long delayMs = 200;
+
+        while (retryCount < maxRetries) {
+            client.cluster().health(builder -> builder.waitForStatus(getHealthStatus(minimalClusterState)).timeout(t -> t.time("5s")));
+
+            try {
+                Thread.sleep(delayMs * (retryCount + 1));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while waiting for template propagation", e);
+            }
+
+            if (retryCount > 0) {
+                try {
+                    BooleanResponse exists = client.indices().exists(e -> e.index(fullIndexName));
+                    if (exists.value()) {
+                        client.indices().delete(d -> d.index(fullIndexName));
+                        LOGGER.debug("Deleted index {} before retry {}", fullIndexName, retryCount);
+                    }
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to delete index {} before retry: {}", fullIndexName, e.getMessage());
+                }
+            }
+
+            CreateIndexResponse createIndexResponse = client.indices().create(c -> c
+                    .index(fullIndexName)
+                    .aliases(indexName, a -> a.isWriteIndex(true)));
+            LOGGER.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
+                    createIndexResponse.acknowledged(), createIndexResponse.shardsAcknowledged());
+
+            GetIndicesSettingsResponse settingsResponse = client.indices().getSettings(g -> g.index(fullIndexName));
+            GetMappingResponse mappingResponse = client.indices().getMapping(g -> g.index(fullIndexName));
+
+            IndexState indexState = settingsResponse.get(fullIndexName);
+            var indexMappingRecord = mappingResponse.get(fullIndexName);
+
+            if (indexState == null || indexState.settings() == null) {
+                LOGGER.warn("Could not retrieve index settings for {} to verify template application. Retrying...", fullIndexName);
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    continue;
+                } else {
+                    throw new IOException("Could not retrieve index settings for " + fullIndexName + " after " + maxRetries + " attempts");
+                }
+            }
+
+            if (indexMappingRecord == null || indexMappingRecord.mappings() == null) {
+                LOGGER.warn("Could not retrieve index mappings for {} to verify template application. Retrying...", fullIndexName);
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    continue;
+                } else {
+                    throw new IOException("Could not retrieve index mappings for " + fullIndexName + " after " + maxRetries + " attempts");
+                }
+            }
+
+            boolean hasFoldingAnalyzer = false;
+            IndexSettings nestedIndexSettings = indexState.settings().index();
+            IndexSettingsAnalysis analysis = nestedIndexSettings != null ? nestedIndexSettings.analysis() : null;
+            if (analysis != null && analysis.analyzer() != null && analysis.analyzer().get("folding") != null) {
+                hasFoldingAnalyzer = true;
+            }
+
+            boolean hasDynamicTemplates = false;
+            var dynamicTemplates = indexMappingRecord.mappings().dynamicTemplates();
+            if (dynamicTemplates != null && !dynamicTemplates.isEmpty()) {
+                hasDynamicTemplates = true;
+            }
+
+            if (hasFoldingAnalyzer && hasDynamicTemplates) {
+                LOGGER.debug("Template successfully applied to index {} - folding analyzer and dynamic templates present", fullIndexName);
+                attachRolloverPolicy(fullIndexName);
+                return;
+            } else {
+                LOGGER.warn("Template not applied to index {} - folding analyzer: {}, dynamic templates: {}. Retrying...",
+                        fullIndexName, hasFoldingAnalyzer, hasDynamicTemplates);
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    continue;
+                } else {
+                    throw new IOException("Template was not applied to index " + fullIndexName +
+                            " after " + maxRetries + " attempts. Folding analyzer: " + hasFoldingAnalyzer +
+                            ", Dynamic templates: " + hasDynamicTemplates);
+                }
+            }
+        }
+    }
+
+    // Explicitly attaches the rollover policy to a concrete index via ISM's Add Policy API. The
+    // index.plugins.index_state_management.policy_id custom setting (set in internalCreateRolloverTemplate) is
+    // stored on the index but does not cause ISM to actually manage it - this call is the real attachment
+    // mechanism, mirroring what ism_template pattern-matching would do automatically if used instead.
+    private void attachRolloverPolicy(String fullIndexName) throws IOException {
+        String policyName = indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME;
+        JsonObject addPolicyBody = Json.createObjectBuilder().add("policy_id", policyName).build();
+        Response response = client.generic().execute(
+                Requests.builder()
+                        .method("POST")
+                        .endpoint("_plugins/_ism/add/" + fullIndexName)
+                        .json(addPolicyBody)
+                        .build()
+        );
+        // The Add Policy API can return HTTP 200 while still reporting a per-index failure in the body
+        // (e.g. {"updated_indices":1,"failures":false,"failed_indices":[]}), so the body must be checked too.
+        String responseBody = response.getBody().isPresent() ? response.getBody().get().bodyAsString() : "";
+        boolean failures = response.getStatus() != 200;
+        if (!failures && !responseBody.isEmpty()) {
+            Map<String, Object> parsed = new ObjectMapper().readValue(responseBody, Map.class);
+            failures = Boolean.TRUE.equals(parsed.get("failures"))
+                    || Integer.valueOf(0).equals(parsed.get("updated_indices"));
+        }
+        if (failures) {
+            throw new IOException("Failed to attach ISM policy " + policyName + " to index " + fullIndexName +
+                    " - status: " + response.getStatus() + ", body: " + responseBody);
+        }
     }
 
     private void internalCreateIndex(String indexName, String mappingSource) throws IOException {
