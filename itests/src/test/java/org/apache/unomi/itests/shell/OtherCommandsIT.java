@@ -35,6 +35,24 @@ public class OtherCommandsIT extends ShellCommandsBaseIT {
     }
 
     @Test
+    public void testListInvalidObjects() throws Exception {
+        String output = executeCommandAndGetOutput("unomi:list-invalid-objects");
+        assertContainsAny(output, new String[]{
+                "Invalid Objects Summary",
+                "Total invalid objects:",
+                "No invalid objects found"
+        }, "Should show invalid objects summary or indicate none found");
+
+        if (output.contains("Total invalid objects:")) {
+            validateNumericValuesInOutput(output, new String[]{"Total invalid objects:"}, false);
+        }
+
+        if (output.contains("Object Type") && output.contains("Object ID")) {
+            validateTableHeaders(output, new String[]{"Object Type", "Object ID"});
+        }
+    }
+
+    @Test
     public void testDeployDefinition() throws Exception {
         validateCommandExists("unomi:deploy-definition", "deploy", "definition");
     }

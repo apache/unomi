@@ -157,6 +157,7 @@ The collection is organized in a logical demo flow order with 12 main folders:
 
 ### 11. Profile Management
 - Get, create, update, delete profiles
+- Delete sessions
 - Search profiles
 - Get profile segments and sessions
 - **Authentication**: `tenantId:privateApiKey` (Basic Auth)
@@ -168,7 +169,7 @@ The collection is organized in a logical demo flow order with 12 main folders:
 
 ### 12. Additional Useful Requests
 - Event type management
-- Event search
+- Event search and delete
 - Condition and action definitions
 - Property types
 - **Authentication**: `tenantId:privateApiKey` (Basic Auth)
