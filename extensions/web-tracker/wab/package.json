@@ -21,7 +21,7 @@
     "@rollup/plugin-babel": "^5.3.1",
     "@rollup/plugin-commonjs": "^22.0.2",
     "@rollup/plugin-node-resolve": "^14.1.0",
-    "rollup": "^2.79.0",
+    "rollup": "^2.80.0",
     "rollup-plugin-polyfill-node": "^0.10.2",
     "rollup-plugin-sourcemaps": "^0.6.3",
     "rollup-plugin-terser": "^7.0.2"
@@ -29,6 +29,10 @@
   "resolutions": {
     "decode-uri-component": "0.2.2",
     "json5": "2.2.3",
-    "semver": "6.3.1"
+    "semver": "6.3.1",
+    "**/minimatch": "3.1.5",
+    "**/picomatch": "2.3.2",
+    "**/@babel/runtime": "7.29.7",
+    "**/serialize-javascript": "7.0.5"
   }
 }
