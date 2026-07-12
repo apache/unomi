@@ -81,4 +81,21 @@ end note
 
 For tenant API keys, roles (`ROLE_UNOMI_TENANT_USER`, `ROLE_UNOMI_TENANT_ADMIN`, system administrator), and operation permissions, see <<_multitenancy,Multi-tenancy>>.
 
-===== Overview 
+===== Overview
+
+==== Authentication overview
+
+Unomi 3.1 uses a layered authentication model:
+
+* *Public endpoints* (for example `/cxs/context.json`, `/cxs/eventcollector`): require a tenant **public** API key via the `X-Unomi-Api-Key` header.
+* *Private REST endpoints*: require tenant `tenantId:privateApiKey` basic authentication, or JAAS credentials with the `X-Unomi-Tenant-Id` header.
+* *System administrator*: Karaf JAAS user (for example `karaf:karaf`) for tenant management and cluster operations.
+
+Configuration keys live in `etc/org.apache.unomi.rest.authentication.cfg` and `custom.system.properties`. Tenant API key settings are in `etc/org.apache.unomi.tenant.cfg`.
+
+For endpoint lists, auth examples, and migration from 2.x/3.0, see <<_multitenancy,Multi-tenancy>>, <<_configuration,Tenant management in Configuration>>, and <<_v2_compatibility_mode,V2 compatibility mode>>.
+
+==== Request tracing
+
+Administrators with the appropriate roles can enable request tracing with `explain=true` on context and event-collector requests. See <<_request_tracing_explain,Using the explain parameter for request tracing>>.
+

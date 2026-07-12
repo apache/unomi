@@ -240,11 +240,11 @@ To merge the branch into master.
 
 ==== Installing a Search Engine
 
-Starting with version 1.2, Apache Unomi no longer embeds a search engine server. You will need to install either ElasticSearch or OpenSearch as a standalone service.
+Apache Unomi 3.x does not embed a search engine. Install Elasticsearch 9.x or OpenSearch 3.x as a standalone service. See <<_migrate_from_2_x_to_3_0,Migrate from 2.x to 3.0>> for version requirements.
 
 ===== Option 1: Using ElasticSearch
 
-1. Download ElasticSearch 7.17.5 from: https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-5[https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-5]
+1. Download Elasticsearch 9.4.3 from: https://www.elastic.co/downloads/past-releases/elasticsearch-9-4-3[https://www.elastic.co/downloads/past-releases/elasticsearch-9-4-3]
 
 2. Uncompress the downloaded package into a directory
 

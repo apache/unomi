@@ -1001,7 +1001,7 @@ my-custom-plugin/
      ```yaml
      services:
        elasticsearch:
-         image: docker.elastic.co/elasticsearch/elasticsearch:9.15.0
+         image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
        opensearch:
          image: opensearchproject/opensearch:3.4.0
      ```

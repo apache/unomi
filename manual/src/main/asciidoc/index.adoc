@@ -97,6 +97,11 @@ include::clustering.adoc[]
 
 include::scheduler.adoc[]
 
+[[_health_check_chapter]]
+== Health check
+
+The health check endpoint and providers are documented in the Configuration chapter: <<_health_check,Health check extension>>.
+
 == Reference
 
 === Architecture Overview

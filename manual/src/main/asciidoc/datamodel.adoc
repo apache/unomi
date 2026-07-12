@@ -60,6 +60,20 @@ This base structure can be extended, if needed, using properties in the form of 
 These properties are further defined by the `Item`’s type definition which explicits the `Item`’s structure and semantics.
 By defining new types, users specify which properties (including the type of values they accept) are available to items of that specific type.
 
+
+[[_tenant_entity]]
+=== Tenant (Unomi 3.1+)
+
+A *tenant* is the top-level isolation boundary in Unomi 3.1. Each tenant owns its own profiles, events, segments, rules, property types, and JSON schemas. Tenant metadata is stored as an `Item` with `itemType` `tenant`.
+
+Most persisted items carry a `tenantId` (or inherit tenant scope through the execution context). Client requests must establish tenant context through:
+
+* `X-Unomi-Api-Key` (public key resolves the tenant), or
+* Basic authentication `tenantId:privateApiKey`, or
+* JAAS administrator credentials with `X-Unomi-Tenant-Id`.
+
+See <<_multitenancy,Multi-tenancy>> for management and authentication.
+
 Unomi defines default value types: `date`, `email`, `integer` and `string`, all pretty self-explanatory.
 While you can think of these value types as "primitive" types, it is possible to extend Unomi by providing additional value types.
 

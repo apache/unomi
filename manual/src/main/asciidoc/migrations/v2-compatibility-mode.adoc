@@ -45,6 +45,8 @@ Before enabling V2 compatibility mode, ensure that:
 
 === Enable V2 Compatibility Mode
 
+You can also set the environment variable `UNOMI_REST_AUTHENTICATION_V2COMPATIBILITYMODEENABLED=true` (maps to `org.apache.unomi.rest.authentication.v2CompatibilityModeEnabled` in `custom.system.properties`).
+
 1. **Edit the configuration file**:
    ```bash
    # Edit the configuration file
@@ -54,10 +56,10 @@ Before enabling V2 compatibility mode, ensure that:
 2. **Enable V2 compatibility mode**:
    ```properties
    # Enable V2 compatibility mode
-   v2CompatibilityModeEnabled = true
+   v2.compatibilitymode.enabled = true
    
    # Set the default tenant ID (should match the tenant ID used during migration)
-   v2CompatibilityDefaultTenantId = your-migration-tenant-id
+   v2.compatibilitymode.defaultTenantId = your-migration-tenant-id
    ```
 
 3. **Restart the server** to apply the configuration changes:
@@ -95,7 +97,7 @@ Enable V2 compatibility mode by updating the configuration file:
 # Edit the configuration file
 vi etc/org.apache.unomi.rest.authentication.cfg
 
-# Set v2CompatibilityModeEnabled = true
+# Set v2.compatibilitymode.enabled = true
 # Set v2CompatibilityDefaultTenantId = your-tenant-id
 
 # Restart the server to apply changes
@@ -254,7 +256,7 @@ The V2 third-party configuration supports dynamic updates:
 
 **V2 clients still not working**:
 - Check configuration file: `etc/org.apache.unomi.rest.authentication.cfg`
-- Verify `v2CompatibilityModeEnabled = true`
+- Verify `v2.compatibilitymode.enabled = true`
 - Ensure `v2CompatibilityDefaultTenantId` matches the tenant ID used during migration
 - Ensure the tenant exists and is accessible
 
@@ -290,7 +292,7 @@ Once all clients are migrated to V3 authentication:
 
 1. **Update configuration**:
    ```properties
-   v2CompatibilityModeEnabled = false
+   v2.compatibilitymode.enabled = false
    ```
 
 2. **Restart the server**:

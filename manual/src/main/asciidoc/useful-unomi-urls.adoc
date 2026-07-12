@@ -84,7 +84,7 @@ where PROFILE_ID is a profile identifier. This will indeed retrieve all the even
 
 |/cxs/tasks
 |GET
-|Listing scheduled background tasks (filter with `?status=` or `?type=`)
+|Listing scheduled background tasks (see <<_scheduler,Task scheduler>>) (filter with `?status=` or `?type=`)
 
 |/cxs/tasks/{taskId}
 |GET

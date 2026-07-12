@@ -82,6 +82,11 @@ org.apache.unomi.elasticsearch.cluster.name=contextElasticSearch
 # hostA:9200,hostB:9200
 # Note: the port number must be repeated for each host.
 org.apache.unomi.elasticsearch.addresses=localhost:9200
+# Optional Elasticsearch security (when xpack security is enabled)
+org.apache.unomi.elasticsearch.username=elastic
+org.apache.unomi.elasticsearch.password=${env:ELASTIC_PASSWORD}
+org.apache.unomi.elasticsearch.sslEnable=true
+org.apache.unomi.elasticsearch.sslTrustAllCertificates=true
 ----
 
 For OpenSearch:
@@ -111,7 +116,7 @@ To select which search engine to use, you can:
    * For OpenSearch: use `UNOMI_DISTRIBUTION=unomi-distribution-opensearch`
    * For custom configurations: use `UNOMI_DISTRIBUTION=your-custom-distribution-name`
 
-Note: The `UNOMI_DISTRIBUTION` environment variable accepts any karaf feature that is available form Karaf. Two built-in distributions (unomi-distribution-elasticsearch, unomi-distribution-opensearch) are packaged with UNOMI archive but any other can be added, either in the package  or by adding a feature repository that contains the desired one in Karaf.
+Note: The `UNOMI_DISTRIBUTION` environment variable accepts any karaf feature that is available from Karaf. Two built-in distributions (unomi-distribution-elasticsearch, unomi-distribution-opensearch) are packaged with UNOMI archive but any other can be added, either in the package  or by adding a feature repository that contains the desired one in Karaf.
 
 Note: When using OpenSearch 3.x:
  - Security is enabled by default and requires SSL/TLS
@@ -282,10 +287,10 @@ curl -X POST "http://localhost:8181/cxs/tenants" \
   -u karaf:karaf \
   -H "Content-Type: application/json" \
   -d '{
-    "itemId": "mytenant",
-    "name": "My Company",
-    "description": "My Company tenant",
+    "requestedId": "mytenant",
     "properties": {
+      "name": "My Company",
+      "description": "My Company tenant",
       "address": "123 Main St",
       "country": "USA"
     }
@@ -293,7 +298,7 @@ curl -X POST "http://localhost:8181/cxs/tenants" \
 
 # Response (HTTP 201 Created):
 {
-    "itemId": "mytenant",
+    "requestedId": "mytenant",
     "name": "My Company",
     "description": "My Company tenant",
     "properties": {
@@ -322,20 +327,21 @@ curl -X DELETE "http://localhost:8181/cxs/tenants/mytenant" \
   -u karaf:karaf
 ----
 
-Using Karaf shell (requires admin access to Karaf console):
+Using Karaf shell (requires admin access to Karaf console). See <<_shell_commands,Shell commands>> for full syntax:
+
 [source,bash]
 ----
-# Create a tenant
-unomi:tenant-create mytenant "My Company" --description="My Company tenant"
+# Create a tenant (JSON properties)
+unomi:crud create tenant -d '{"itemId":"mytenant","name":"My Company","description":"My Company tenant"}'
 
-# List all tenants
-unomi:tenant-list
+# List tenants
+unomi:crud list tenant
 
 # View tenant details
-unomi:tenant-show mytenant
+unomi:crud read tenant -i mytenant
 
 # Delete a tenant
-unomi:tenant-delete mytenant
+unomi:crud delete tenant -i mytenant
 ----
 
 ==== API Keys and Authentication
@@ -348,7 +354,7 @@ The API keys are automatically generated when creating a tenant. You can view th
 [source,bash]
 ----
 # Using Karaf shell (requires admin access)
-unomi:tenant-show mytenant
+unomi:crud read tenant -i mytenant
 
 # Output example:
 Tenant Details:
@@ -379,7 +385,7 @@ curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PUBLIC&val
 }
 
 # Using Karaf shell (requires admin access)
-unomi:tenant-generate-key mytenant PUBLIC 30
+unomi:crud create apikey -d '{"tenantId":"mytenant","keyType":"PUBLIC","validityPeriod":30}'
 ----
 
 ==== Accessing API Endpoints
@@ -1648,7 +1654,7 @@ services:
     depends_on:
       - elasticsearch
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.15.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -1716,7 +1722,7 @@ services:
     depends_on:
       - elasticsearch
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:9.15.0
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=false
@@ -1767,8 +1773,8 @@ Existing health checks gives information about :
 
 All healthcheck can have a status :
 - DOWN (service is not available)
-- UP (service is up but does not respond to request (starting or misconfigured))
-- LIVE (service is ready to serve request)
+- UP (service is running or starting)
+- LIVE (service is ready to serve requests)
 - ERROR (an error occurred during service health check)
 
 Any subsystem health check have a timeout of 400ms where check is cancelled and will be returned as error.

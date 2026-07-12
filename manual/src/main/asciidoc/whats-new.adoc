@@ -22,7 +22,7 @@ Complete tenant isolation for profiles, events, segments, rules, and schemas. Pu
 
 * Operator guide: <<_multitenancy,Multi-tenancy>>
 * Migration: <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>>
-* Optional 3.0 compatibility mode: <<_v2_compatibility_mode,V2/V3 compatibility mode>> (property `unomi.v3_0.compatibility.mode`)
+* Migrating from Unomi 2.x: <<_v2_compatibility_mode,V2 compatibility mode>> (`v2.compatibilitymode.enabled` in `org.apache.unomi.rest.authentication.cfg`)
 
 ==== Cluster-aware task scheduler
 
@@ -30,9 +30,13 @@ Built-in background job scheduler with persistence, cluster locks, recovery, RES
 
 * <<_scheduler,Task scheduler>>
 
+[[_opensearch_support]]
 ==== OpenSearch 3 support
 
-Official alternative to Elasticsearch, including secured Docker deployments. See <<_configuration,Configuration>> and <<_opensearch_support,OpenSearch support>> (3.0 section below).
+Official alternative to Elasticsearch, including secured Docker deployments.
+
+* Configuration: <<_configuration,Configuration>>
+* Migration from Elasticsearch: <<_migrate_from_elasticsearch_to_opensearch,Migrate from Elasticsearch to OpenSearch>>
 
 ==== Persistence-based clustering
 
@@ -44,59 +48,39 @@ Read-only per-tenant usage metrics and an event retention purge API for upstream
 
 * REST: `/cxs/tenants/{tenantId}/usage` and `/cxs/tenants/{tenantId}/purge/events` (see <<_useful_apache_unomi_urls,Useful URLs>>)
 
+==== Request tracing
+
+Administrators can trace how context and event-collector requests are processed using `explain=true` on supported endpoints.
+
+* <<_request_tracing_explain,Using the explain parameter for request tracing>>
+
 === What's new in Apache Unomi 3.0
 
-Apache Unomi 3 is a new release focused on integrations of the client to support elasticsearch version 9.
-It also include the upgrade of the Karaf version.
+Apache Unomi 3.0 is a major platform release. It upgrades the search-engine client, the OSGi runtime, and the minimum Java version.
 
-==== Elasticsearch client upgrade
+==== Java 17
 
-The official client for Elasticsearch has been added to Apache Unomi in version 3.0 in order to replace the old rest-client which
-is not supported anymore.
+Unomi 3.0 requires **Java 17** or later. Java 11 is no longer supported.
 
-The documentation of the client can be found here: https://www.elastic.co/docs/reference/elasticsearch/clients/java
+==== Karaf 4.4
 
-===  Elasticsearch 7 data migration
+Karaf was upgraded from 4.2.x to **4.4.11** to support current dependencies and Java 17.
 
-A procedure to migrate your data from Elasticsearch 7 to Elasticsearch 9 can be found in the <<_migrate_from_elasticsearch_7_to_elasticsearch_9,Migrate from Elasticsearch 7 to Elasticsearch 9>> section
+==== Elasticsearch 9 Java API client
 
-=== Karaf upgrade
+The legacy Elasticsearch REST high-level client was replaced by the official **Elasticsearch 9** Java API client.
 
-The Karaf version has been upgraded from 4.2.15 to 4.4.11 in order to support the latest versions of the dependencies.
-This upgrade also brings support for Java 17.
+* Client reference: https://www.elastic.co/docs/reference/elasticsearch/clients/java
+* Data migration from Elasticsearch 7: <<_migrate_from_elasticsearch_7_to_elasticsearch_9,Migrate from Elasticsearch 7 to Elasticsearch 9>>
 
-[[_opensearch_support]]
-==== OpenSearch Support
+==== QueryBuilder ID renames
 
-Starting with version 3.1.0, Apache Unomi now officially supports OpenSearch 3 as an alternative to Elasticsearch. This addition gives users more flexibility in choosing their search engine backend. Key features include:
+Built-in condition `queryBuilder` IDs were renamed to remove Elasticsearch-specific suffixes. Custom plugins and JSON definitions must be updated. See the mapping table in <<_migrate_from_2_x_to_3_0,Migrate from 2.x to 3.0>>.
 
-- Full support for OpenSearch 3
-- Seamless integration with existing Unomi features
-- Support for security features enabled by default in OpenSearch
-- Compatible with both standalone and Docker deployments
+==== Persistence-based clustering
 
-===== Configuration Options
+Cluster coordination moved from Karaf Cellar to a persistence-backed node registry (see <<_clustering,Cluster setup>>).
 
-Users can choose between ElasticSearch and OpenSearch through various configuration methods:
+==== Health check extension
 
-1. Using configuration properties
-2. Using Maven profiles during build
-3. Using Docker environment variables
-
-For detailed configuration instructions, see the <<_configuration,configuration section>>.
-
-===== Security Considerations
-
-When using OpenSearch:
-- Security is enabled by default and requires SSL/TLS
-- Default admin credentials are required
-- The initial admin password can be configured via environment variables
-
-===== Migration Notes
-
-For users wanting to migrate from ElasticSearch to OpenSearch:
-- Data migration requires a full cluster shutdown
-- All existing features, including the flattened field type, are supported
-- Existing queries and aggregations work seamlessly with both backends
-
-For detailed migration instructions, refer to the <<_migrations,migration guide>>.
+HTTP health endpoint at `/health/check` with pluggable providers (Karaf, search engine, persistence, cluster, Unomi bundles). See <<_health_check,Health check>>.

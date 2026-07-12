@@ -138,11 +138,11 @@ tenant.default.id=default
 tenant.apikey.validity.period=30
 tenant.apikey.validity.unit=DAYS
 
-# Maximum number of API calls per tenant per day
-tenant.apikey.maxCalls=100000
+# Warn this many days before an API key expires
+tenant.apikey.rotation.warning.days=7
 
-# Enable/disable tenant isolation
-tenant.isolation.enabled=true
+# Prefix for tenant-specific security roles
+tenant.security.roles.prefix=unomi_tenant_
 ----
 
 === Security Provider Configuration

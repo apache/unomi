@@ -36,6 +36,17 @@ Thanks to GraphQL introspection, there is no dedicated documentation per-se as t
 You can easily view the schema by navigrating to `/graphql-ui`, depending on your setup (localhost, public host, ...),
 you might need to adjust the URL to point GraphQL UI to the `/graphql` endpoint.
 
+
+==== Authentication
+
+GraphQL requests follow the same tenant security model as REST:
+
+* *Public read operations* on the `cdp` root field: send `X-Unomi-Api-Key` with a tenant **public** API key.
+* *Mutations and administrative queries*: HTTP Basic authentication with `tenantId:privateApiKey`, or JAAS credentials plus optional `X-Unomi-Tenant-Id`.
+* *Introspection* (`IntrospectionQuery`): allowed without credentials for schema discovery.
+
+See <<_multitenancy,Multi-tenancy>> for key management.
+
 === Multi-Tenancy Support
 
 The GraphQL API includes comprehensive multi-tenancy support, allowing different tenants to have customized GraphQL schemas based on their specific data models and property types.

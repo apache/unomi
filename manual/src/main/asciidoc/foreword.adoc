@@ -24,3 +24,5 @@ This guide covers everything from getting started with your first installation t
 The Apache Unomi community is committed to providing comprehensive, accurate, and up-to-date documentation. We welcome feedback and contributions to help improve this documentation for all users.
 
 Happy reading!
+
+This edition documents Apache Unomi 3.x, which requires Java 17, Elasticsearch 9.x or OpenSearch 3.x, and (from 3.1) tenant API keys for public endpoints.

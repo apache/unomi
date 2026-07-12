@@ -246,64 +246,28 @@ Contributors maintaining the Groovy scripts that implement this upgrade should f
 4. **Start your Apache Unomi 3.1 cluster**
 5. **Test your applications** with the new authentication model
 
-=== 3.0 Compatibility Mode
+=== Transitional authentication options
 
-To facilitate the migration process, Unomi 3.1 includes a **3.0 compatibility mode** that allows 3.0 client applications to work with Unomi 3.1 without immediate code changes.
+Unomi 3.1 does **not** provide a separate "3.0 compatibility mode" system property. Use one of the following approaches while migrating clients:
 
-==== Enabling 3.0 Compatibility Mode
+==== Option 1: Update clients to 3.1 authentication (recommended)
 
-To enable 3.0 compatibility mode, set the following system property when starting Unomi 3.1:
+Adopt tenant public API keys for public endpoints and tenant private keys or JAAS for administrative work. See <<_multitenancy,Multi-tenancy>> and the authentication examples in this guide.
 
-[source,bash]
+==== Option 2: V2 compatibility mode (2.x clients only)
+
+If you are migrating from **Unomi 2.x** (not 3.0), you can enable <<_v2_compatibility_mode,V2 compatibility mode>> so legacy clients work without API keys during a phased rollout:
+
+[source,properties]
 ----
-# Enable 3.0 compatibility mode
--Dunomi.v3_0.compatibility.mode=true
+# etc/org.apache.unomi.rest.authentication.cfg
+v2.compatibilitymode.enabled = true
+v2.compatibilitymode.defaultTenantId = default
 ----
 
-==== 3.0 Compatibility Mode Behavior
+Environment variable equivalent: `UNOMI_REST_AUTHENTICATION_V2COMPATIBILITYMODEENABLED=true`
 
-When 3.0 compatibility mode is enabled:
-
-- **Public endpoints** (e.g., `/context.json`): No authentication required (same as 3.0)
-- **Private endpoints**: JAAS authentication required (same as 3.0)
-- **All API endpoints**: Identical behavior to 3.0
-- **Data isolation**: Still enforced through tenant context
-
-==== Migration Strategy with 3.0 Compatibility Mode
-
-1. **Phase 1: Enable 3.0 Compatibility Mode**
-   - Start Unomi 3.1 with `-Dunomi.v3_0.compatibility.mode=true`
-   - Verify all 3.0 client applications work without changes
-   - Migrate data to tenant structure
-
-2. **Phase 2: Gradual Migration**
-   - Update client applications one by one to use 3.1 authentication
-   - Test each application with 3.1 authentication
-   - Keep 3.0 compatibility mode enabled for remaining applications
-
-3. **Phase 3: Complete Migration**
-   - Update all client applications to 3.1 authentication
-   - Disable 3.0 compatibility mode: `-Dunomi.v3_0.compatibility.mode=false`
-   - Verify all applications work with full 3.1 multi-tenancy
-
-==== Security Considerations
-
-- **3.0 compatibility mode** should only be used during migration
-- **Production environments** should use full 3.1 authentication for security
-- **3.0 compatibility mode** bypasses tenant API key requirements
-- **Data isolation** is still enforced through tenant context
-
-==== Example: Starting Unomi 3.1 with 3.0 Compatibility Mode
-
-[source,bash]
-----
-# Start Unomi 3.1 with 3.0 compatibility mode
-./karaf -Dunomi.v3_0.compatibility.mode=true
-
-# Or set as environment variable
-export KARAF_OPTS="-Dunomi.v3_0.compatibility.mode=true"
-./karaf
-----
+WARNING: V2 compatibility mode is intended for migration from 2.x only. It bypasses tenant API key requirements on public endpoints. Disable it once all clients use 3.1 authentication.
 
 === Post Migration
 

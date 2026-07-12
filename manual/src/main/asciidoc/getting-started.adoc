@@ -37,8 +37,8 @@ them at your own risks.
 
 Apache Unomi supports two search engine backends:
 
-* *ElasticSearch*: Version 7.17.5 is supported starting with Unomi 2.0.0
-* *OpenSearch*: Version 3.x is supported
+* *ElasticSearch*: Version **9.x** (for example 9.4.3) is required for Unomi 3.0 and later. Version 7.17.5 applies only to Unomi 2.x.
+* *OpenSearch*: Version 3.x is supported starting with Unomi 3.1
 
 It is highly recommended to use the versions specified in the documentation. When in doubt, consult the Apache Unomi community
 for the latest compatibility information.
@@ -85,7 +85,7 @@ curl -X POST http://localhost:8181/cxs/tenants \
   }'
 ----
 
-Save the API keys from the response - you'll need them for all subsequent API calls.
+Save the API keys from the response - you'll need them for all subsequent API calls. See <<_multitenancy,Multi-tenancy>> for authentication details.
 
 Now you can:
 

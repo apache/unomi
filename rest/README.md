@@ -15,10 +15,32 @@
   ~ limitations under the License.
   -->
 
-# How to generate the REST API documentation
+# Apache Unomi REST API
 
-- Switch to the `rest-documentation` branch, a different branch is need so that we can add the proper `@Path` annotations on the endpoint and add the Maven plugin configuration 
-for documentation generation. 
-- Make sure that the changes from master are incorporated to the branch by performing a rebase: `git rebase master`.
+## Consumer documentation
+
+The REST API is served under `/cxs` on the default HTTP port (8181).
+
+Unomi 3.1 authentication:
+
+| Access | Credentials |
+|--------|-------------|
+| Public endpoints (`/cxs/context.json`, `/cxs/eventcollector`, …) | `X-Unomi-Api-Key: <tenant-public-key>` |
+| Tenant private endpoints | Basic auth `tenantId:privateApiKey` |
+| System administration (tenants, cluster, tasks, …) | JAAS user (for example `karaf:karaf`) |
+
+Key manual chapters:
+
+* `manual/src/main/asciidoc/multitenancy.adoc` — tenants and API keys
+* `manual/src/main/asciidoc/request-examples.adoc` — curl examples with auth
+* `manual/src/main/asciidoc/useful-unomi-urls.adoc` — endpoint reference
+* `manual/src/main/asciidoc/scheduler.adoc` — `/cxs/tasks` API
+
+Postman collections: see `rest/postman-readme.md`.
+
+## Generating Miredot API documentation (maintainers)
+
+- Switch to the `rest-documentation` branch (adds `@Path` annotations and the Maven plugin for doc generation).
+- Rebase on master: `git rebase master`.
 - Run `mvn test`.
-- The documentation should now be available via `target/miredot/index.html`
+- Open `target/miredot/index.html`.

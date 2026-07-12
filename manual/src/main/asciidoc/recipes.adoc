@@ -137,7 +137,7 @@ defining the corresponding JSON schema and you're ready to update profiles using
 only. Again, prefer the custom events solution because as this is a protected event it will require sending the Unomi
 key as a request header, and as Unomi only supports a single key for the moment it could be problematic if the key is
 intercepted. But at least by using an event you will get the benefits of auditing and historical property modification
-tracing.
+tracing (see <<_request_tracing_explain,request tracing>>).
 
 Let's go into more detail about the preferred way to update a profile. Let's consider the following example of a rule:
 

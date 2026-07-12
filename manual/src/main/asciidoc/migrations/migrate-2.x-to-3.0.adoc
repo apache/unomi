@@ -42,7 +42,7 @@ NOTE: OpenSearch support is introduced in Apache Unomi 3.1. If you plan to use O
 Apache Unomi 3.0 includes an upgrade of the underlying Karaf framework:
 
 - **Previous Version**: Karaf 4.2.15
-- **New Version**: Karaf 4.4.8
+- **New Version**: Karaf 4.4.11
 
 This upgrade brings improved stability and support for the latest dependencies.
 
