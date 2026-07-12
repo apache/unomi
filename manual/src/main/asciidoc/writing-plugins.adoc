@@ -42,7 +42,6 @@ See also:
 * <<_builtin_condition_types,Built-in condition types>> — registration patterns for Unomi 3.0+
 * <<_builtin_action_types,Built-in action types>>
 * <<_condition_validation,Condition validation>> — `validation` metadata on condition parameters
-* <<_samples,Samples>> — working plugin projects in the repository
 
 ==== Types vs instances
 
@@ -81,14 +80,36 @@ Goals and campaigns can be deployed with `unomi:deploy-definition` but are not a
 
 Tags are not separate JSON files — use `systemTags` on metadata inside other definitions.
 
-==== OSGi service registration
+==== OSGi service registration (Declarative Services)
 
-Plugins register Java implementations as OSGi services. Two styles are used in the codebase:
+New plugins must use **OSGi Declarative Services** (`@Component`, `@Reference`) — not Blueprint XML.
+Unomi is migrating away from Blueprint; legacy bundles such as `plugins/baseplugin` and parts of `persistence-*` still ship Blueprint wiring, but that is not a template for new code.
 
-* **Blueprint** — `OSGI-INF/blueprint/blueprint.xml` (for example `plugins/baseplugin`, `samples/trainingplugin`)
-* **Declarative Services** — `@Component` annotations (for example `plugins/advanced-conditions`)
+Enable DS component generation in your bundle POM:
 
-Both are valid. Use Blueprint when you prefer XML wiring; use DS for annotation-driven registration.
+[source,xml]
+----
+<dependency>
+    <groupId>org.osgi</groupId>
+    <artifactId>org.osgi.service.component.annotations</artifactId>
+    <scope>provided</scope>
+</dependency>
+----
+
+[source,xml]
+----
+<plugin>
+    <groupId>org.apache.felix</groupId>
+    <artifactId>maven-bundle-plugin</artifactId>
+    <configuration>
+        <instructions>
+            <_dsannotations>*</_dsannotations>
+        </instructions>
+    </configuration>
+</plugin>
+----
+
+Follow `plugins/advanced-conditions/pom.xml` for a minimal DS-enabled plugin module.
 
 Service property keys:
 
@@ -141,6 +162,11 @@ A minimal plugin is a Maven bundle project. Prefer importing `unomi-bom` rather 
             <artifactId>unomi-api</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -153,6 +179,7 @@ A minimal plugin is a Maven bundle project. Prefer importing `unomi-bom` rather 
                 <configuration>
                     <instructions>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <_dsannotations>*</_dsannotations>
                         <Import-Package>*</Import-Package>
                     </instructions>
                 </configuration>
@@ -161,8 +188,6 @@ A minimal plugin is a Maven bundle project. Prefer importing `unomi-bom` rather 
     </build>
 </project>
 ----
-
-The repository includes a minimal reference: `samples/trainingplugin` (action type + rule + Blueprint executor).
 
 ==== Deployment and updates
 
@@ -271,39 +296,50 @@ Place JSON under `META-INF/cxs/personas/`. Each file can define a persona profil
 ==== Custom action types
 
 1. Add `META-INF/cxs/actions/myAction.json` with an `actionExecutor` ID.
-2. Register an `ActionExecutor` OSGi service with matching `actionExecutorId`.
+2. Implement `ActionExecutor` and register it with `@Component` and matching `actionExecutorId`.
 
-JSON descriptor (`samples/trainingplugin`):
+JSON descriptor (same shape as `extensions/lists-extension/actions/.../addToLists.json`):
 
 [source,json]
 ----
 {
   "metadata": {
-    "id": "trainingNotifAction",
-    "name": "trainingNotifAction",
-    "readOnly": true
+    "id": "myNotifyAction",
+    "name": "myNotifyAction",
+    "readOnly": false
   },
-  "actionExecutor": "training",
-  "parameters": []
+  "actionExecutor": "myNotifyAction",
+  "parameters": [
+    { "id": "message", "type": "string", "multivalued": false }
+  ]
 }
 ----
 
-Blueprint registration (`samples/trainingplugin`):
+Java executor (Declarative Services — write this pattern in your plugin; do not copy Blueprint from older bundles):
 
-[source,xml]
+[source,java]
 ----
-<service interface="org.apache.unomi.api.actions.ActionExecutor">
-    <service-properties>
-        <entry key="actionExecutorId" value="training"/>
-    </service-properties>
-    <bean class="org.apache.unomi.training.TrainedNotificationAction">
-        <property name="profileService" ref="profileService"/>
-    </bean>
-</service>
+@Component(service = ActionExecutor.class, property = {"actionExecutorId=myNotifyAction"})
+public class MyNotifyAction implements ActionExecutor {
+
+    private ProfileService profileService;
+
+    @Reference
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
+
+    @Override
+    public int execute(Action action, Event event) {
+        String message = (String) action.getParameter("message");
+        // use profileService / event as needed
+        return EventService.NO_CHANGE;
+    }
+}
 ----
 
-For a production-style example with service injection, see the lists extension:
-https://github.com/apache/unomi/blob/master/extensions/lists-extension/actions/src/main/java/org/apache/unomi/lists/actions/AddToListsAction.java[`AddToListsAction`]
+For a maintained DS registration pattern in the tree, see `graphql/cxs-impl/.../CDPUpdateListsAction.java`.
+For action business logic (lists), see `extensions/lists-extension/actions/.../AddToListsAction.java` — migrate its Blueprint wiring to DS if you use it as a starting point.
 
 Catalog of built-in actions: <<_builtin_action_types,Built-in action types>>.
 
@@ -319,20 +355,33 @@ Unomi 3.0+ uses **engine-neutral** `queryBuilder` IDs in JSON (for example `bool
 
 Add `validation` blocks on parameters so invalid instances are rejected at save time — see <<_condition_validation,Condition validation>>.
 
-===== Evaluator registration (Blueprint or DS)
+===== Evaluator registration (Declarative Services)
 
-The base plugin registers evaluators in Blueprint; advanced conditions use Declarative Services:
+Reference implementation: `plugins/advanced-conditions` (`SourceEventPropertyConditionEvaluator`, `PastEventConditionEvaluator`).
 
 [source,java]
 ----
 @Component(service = ConditionEvaluator.class,
            property = {"conditionEvaluatorId=sourceEventPropertyConditionEvaluator"})
 public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator {
-    // ...
+
+    private DefinitionsService definitionsService;
+
+    @Reference
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    @Override
+    public boolean eval(Condition condition, Item item, Map<String, Object> context,
+                        ConditionEvaluatorDispatcher dispatcher) {
+        // ...
+        return false;
+    }
 }
 ----
 
-Full registration examples (evaluator + Elasticsearch and OpenSearch query builders): <<_builtin_condition_types,Plugin registration (Unomi 3.0+)>>.
+Registration examples for query builders: <<_builtin_condition_types,Plugin registration (Unomi 3.0+)>>.
 
 ===== Query builders and the persistence split
 
@@ -371,6 +420,18 @@ public class MyCustomESQueryBuilder implements ConditionESQueryBuilder {
 ----
 
 OpenSearch uses the same pattern with `org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder` and `org.opensearch.client.opensearch._types.query_dsl.Query`.
+
+Register the query builder with Declarative Services in your Elasticsearch or OpenSearch bundle:
+
+[source,java]
+----
+@Component(service = ConditionESQueryBuilder.class, property = {"queryBuilderId=myCustomQueryBuilder"})
+public class MyCustomESQueryBuilder implements ConditionESQueryBuilder {
+    // buildQuery implementation ...
+}
+----
+
+Core persistence modules still contain legacy Blueprint registrations for built-in query builders; new plugin code should use DS as above.
 
 Shared condition type JSON:
 
@@ -521,26 +582,33 @@ See <<_scheduler,Task scheduler>> for REST APIs, shell commands, tenant-aware ex
 
 ==== GraphQL provider extensions
 
-For GraphQL schema extensions, see `samples/graphql-providers` and <<_graphql_api,GraphQL API>>.
+For GraphQL schema extensions, see `graphql/cxs-impl` and <<_graphql_api,GraphQL API>>.
 
-==== Repository samples
+==== Reference plugins in the codebase
+
+Use maintained modules in the main tree — not the older `samples/` demos (those predate DS migration and Blueprint removal).
 
 [cols="2,3", options="header"]
 |===
-| Sample | What it demonstrates
+| Module | What to study
 
-| `samples/trainingplugin` | Minimal action + rule + Blueprint (best starting point)
-| `samples/tweet-button-plugin` | Custom action, rule, and web integration
-| `samples/login-integration` | Login rule and profile merge
-| `samples/groovy-actions` | Groovy action scripts in a bundle
-| `samples/graphql-providers` | GraphQL type extensions
+| `plugins/advanced-conditions` | DS `ConditionEvaluator` + `pom.xml` with `_dsannotations` (start here for condition plugins)
+| `plugins/kafka-injector` | DS lifecycle (`@Activate`, `@Deactivate`, `@Reference`)
+| `extensions/lists-extension/actions` | Action type JSON + `AddToListsAction` logic
+| `graphql/cxs-impl/.../actions` | DS `ActionExecutor` registrations
+| `persistence-elasticsearch/core` | Query builder class implementations (study `querybuilders/core/`)
+| `persistence-opensearch/core` | OpenSearch query builder counterparts
 |===
 
-Manual walkthroughs: <<_samples,Samples>>.
+The `samples/` directory holds historical integration demos (Twitter button, login page, etc.).
+They illustrate end-to-end scenarios but are **not** maintained plugin templates — copy patterns from the modules above instead.
+
+Scenario walkthroughs that use samples: <<_samples,Samples>>.
 
 ==== Best practices
 
 * Prefer Groovy actions or JSON-only bundles before writing Java when possible.
+* Register OSGi services with **Declarative Services** (`@Component`); do not add new Blueprint XML.
 * Import `unomi-bom`; use `provided` scope for Unomi artifacts inside Karaf.
 * Use the same `queryBuilder` ID in JSON and in both ES/OS service registrations.
 * Put evaluators and JSON descriptors in the **common** bundle; query builders in engine-specific bundles.
@@ -570,8 +638,8 @@ Study these modules when building persistence-related plugins:
 
 | Elasticsearch persistence | `persistence-elasticsearch/core`
 | OpenSearch persistence | `persistence-opensearch/core`
-| Built-in condition evaluators | `plugins/baseplugin`
-| Advanced evaluators (DS) | `plugins/advanced-conditions`
+| Built-in condition evaluators (legacy Blueprint) | `plugins/baseplugin` — study evaluators only, not wiring
+| Advanced evaluators (DS, preferred) | `plugins/advanced-conditions`
 | Distribution features | `distribution/src/main/feature/feature.xml`
 |===
 

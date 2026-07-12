@@ -62,32 +62,39 @@ Some types use `parentCondition` to specialize a base type (for example `eventTy
 
 ==== Plugin registration (Unomi 3.0+)
 
-[source,xml]
-----
-<!-- Elasticsearch query builder -->
-<service interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
-    <service-properties>
-        <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
-    </service-properties>
-    <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.BooleanConditionESQueryBuilder"/>
-</service>
+New plugins use **Declarative Services** (`@Component`). Legacy Blueprint XML remains in some shipped bundles during migration; do not copy it for new code.
 
-<!-- OpenSearch query builder -->
-<service interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
-    <service-properties>
-        <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
-    </service-properties>
-    <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.BooleanConditionOSQueryBuilder"/>
-</service>
+Condition evaluator (see `plugins/advanced-conditions`):
 
-<!-- Shared evaluator -->
-<service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
-    <service-properties>
-        <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
-    </service-properties>
-    <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionEvaluator"/>
-</service>
+[source,java]
 ----
+@Component(service = ConditionEvaluator.class, property = {"conditionEvaluatorId=booleanConditionEvaluator"})
+public class BooleanConditionEvaluator implements ConditionEvaluator {
+    // ...
+}
+----
+
+Elasticsearch query builder (in your ES-specific bundle):
+
+[source,java]
+----
+@Component(service = ConditionESQueryBuilder.class, property = {"queryBuilderId=booleanConditionQueryBuilder"})
+public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
+    // ...
+}
+----
+
+OpenSearch query builder (in your OS-specific bundle):
+
+[source,java]
+----
+@Component(service = ConditionOSQueryBuilder.class, property = {"queryBuilderId=booleanConditionQueryBuilder"})
+public class BooleanConditionOSQueryBuilder implements ConditionOSQueryBuilder {
+    // ...
+}
+----
+
+Use the same `queryBuilderId` in JSON, Elasticsearch, and OpenSearch registrations. See <<_writing_plugins,Writing plugins>> for module layout and POM setup.
 
 ==== Catalog — base plugin
 
