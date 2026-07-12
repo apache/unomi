@@ -1474,6 +1474,8 @@ Be aware that in distribution's feature, you should only reference other feature
         <feature dependency="true" version="${project.version}">unomi-wab</feature>
         <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
         <feature dependency="true" version="${project.version}">unomi-healthcheck-elasticsearch</feature>
+NOTE: For OpenSearch distributions, use `unomi-healthcheck-opensearch` instead of `unomi-healthcheck-elasticsearch` in custom feature XML.
+
         <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
         <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
         <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>

@@ -746,7 +746,7 @@ The result of a condition is always a boolean value of true or false.
 Apache Unomi provides quite a lot of built-in condition types, including boolean types that make it possible to compose conditions using operators such as `and`, `or` or `not`.
 Composition is an essential element of building more complex conditions.
 
-For a more complete list of available condition types, see the <<_builtin_condition_types,Built-in condition types>> reference section.
+For tutorials and examples, see <<_conditions_guide,Conditions guide>>. For the full catalog, see <<_builtin_condition_types,Built-in condition types>>.
 
 ==== Structure definition
 

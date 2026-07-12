@@ -11,8 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_queries_and_aggregations]]
 Apache Unomi contains a `query` endpoint that is quite powerful. It provides ways to perform queries that can quickly
 get result counts, apply metrics such as sum/min/max/avg or even use powerful aggregations.
+
+Conditions used in queries follow the same JSON shape described in <<_conditions_guide,Conditions guide>>.
 
 In this section we will show examples of requests that may be built using this API.
 

@@ -1,0 +1,335 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_conditions_guide]]
+=== Conditions guide
+
+Conditions are the building blocks of segmentation, personalization, rules, queries, campaigns, and goals in Apache Unomi.
+This guide walks from simple property checks to advanced behavioral conditions with diagrams and REST examples.
+
+See also:
+
+* <<_builtin_condition_types,Built-in condition types>> — full catalog
+* <<_condition_evaluation,Condition evaluation system>> — runtime architecture
+* <<_past_event_conditions,Past event conditions>> — deep dive on behavioral conditions
+* <<_queries_and_aggregations,Queries and aggregations>> — using conditions in search APIs
+
+==== Concepts
+
+* *Condition type* — a reusable definition (JSON descriptor) registered at startup, for example `profilePropertyCondition`.
+* *Condition instance* — a JSON object with `type` and `parameterValues` used in segments, rules, or queries.
+* *Evaluation context* — profile, session, and/or current event, depending on where the condition runs.
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+
+package "Definitions" {
+  [Condition types\n(JSON descriptors)] as CT
+}
+
+package "Consumers" {
+  [Segments] as Seg
+  [Rules] as Rule
+  [Queries] as Q
+  [Goals / Campaigns] as GC
+}
+
+package "Runtime" {
+  [ConditionDispatcher] as CD
+  [ConditionEvaluator] as CE
+  [QueryBuilder\n(ES or OS)] as QB
+}
+
+database "Search index" as IDX
+
+CT --> Seg
+CT --> Rule
+CT --> Q
+CT --> GC
+
+Seg --> CD
+Rule --> CD
+Q --> CD
+
+CD --> CE : direct evaluation\n(profile / session / event)
+CD --> QB : query-based evaluation\n(segments, counts)
+QB --> IDX
+
+@enduml
+----
+
+==== Condition instance JSON shape
+
+Every condition instance uses the same structure:
+
+[source,json]
+----
+{
+  "type": "CONDITION_TYPE_ID",
+  "parameterValues": {
+    "parameterName": "value"
+  }
+}
+----
+
+Nested conditions use the `Condition` parameter type (for example `subConditions` on `booleanCondition`).
+
+==== Comparison operators
+
+Property conditions (`profilePropertyCondition`, `sessionPropertyCondition`, `eventPropertyCondition`) accept a `comparisonOperator` parameter.
+Common values include:
+
+`equals`, `notEquals`, `lessThan`, `greaterThan`, `lessThanOrEqualTo`, `greaterThanOrEqualTo`, `between`, `exists`, `missing`, `contains`, `notContains`, `startsWith`, `endsWith`, `matchesRegex`, `in`, `notIn`, `all`, `hasSomeOf`, `hasNoneOf`, `isDay`, `isNotDay`, `distance`.
+
+Use the typed value parameter that matches your data (`propertyValue`, `propertyValueInteger`, `propertyValues`, and so on).
+
+==== Level 1 — Profile property check
+
+Match profiles where a property equals a value. Used in segments and query counts.
+
+[source,json]
+----
+{
+  "type": "profilePropertyCondition",
+  "parameterValues": {
+    "propertyName": "properties.country",
+    "comparisonOperator": "equals",
+    "propertyValue": "US"
+  }
+}
+----
+
+Test with the query count API:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/query/profile/count \
+  --user "TENANT_ID:PRIVATE_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.country",
+      "comparisonOperator": "equals",
+      "propertyValue": "US"
+    }
+  }'
+----
+
+==== Level 2 — Event type in a rule
+
+Rules evaluate *event conditions* against the incoming event. `eventTypeCondition` is a shortcut over `eventPropertyCondition` on `eventType`.
+
+[source,json]
+----
+{
+  "type": "eventTypeCondition",
+  "parameterValues": {
+    "eventTypeId": "view"
+  }
+}
+----
+
+Use this in a rule `condition` to fire when a `view` event arrives.
+
+[plantuml]
+----
+@startuml
+actor Client
+participant "REST /cxs/eventcollector" as API
+participant "Rule engine" as Rules
+database "Profile + events" as Store
+
+Client -> API : POST event (type=view)
+API -> Rules : evaluate rule condition
+Rules -> Rules : eventTypeCondition matches?
+Rules -> Store : execute actions if true
+@enduml
+----
+
+==== Level 3 — Boolean AND / OR
+
+Combine conditions with `booleanCondition`. This is the main way to build segment definitions.
+
+[source,json]
+----
+{
+  "type": "booleanCondition",
+  "parameterValues": {
+    "operator": "and",
+    "subConditions": [
+      {
+        "type": "profilePropertyCondition",
+        "parameterValues": {
+          "propertyName": "properties.nbOfVisits",
+          "comparisonOperator": "greaterThan",
+          "propertyValueInteger": 1
+        }
+      },
+      {
+        "type": "profilePropertyCondition",
+        "parameterValues": {
+          "propertyName": "properties.country",
+          "comparisonOperator": "equals",
+          "propertyValue": "US"
+        }
+      }
+    ]
+  }
+}
+----
+
+Negate a sub-condition with `notCondition`:
+
+[source,json]
+----
+{
+  "type": "notCondition",
+  "parameterValues": {
+    "subCondition": {
+      "type": "profileSegmentCondition",
+      "parameterValues": {
+        "segments": ["opt-out-segment"],
+        "matchType": "in"
+      }
+    }
+  }
+}
+----
+
+==== Level 4 — Segment membership and session properties
+
+`profileSegmentCondition` checks whether a profile belongs to other segments (useful for segment hierarchies).
+
+[source,json]
+----
+{
+  "type": "profileSegmentCondition",
+  "parameterValues": {
+    "segments": ["high-value-customers"],
+    "matchType": "in"
+  }
+}
+----
+
+`sessionPropertyCondition` evaluates session-scoped properties during event processing:
+
+[source,json]
+----
+{
+  "type": "sessionPropertyCondition",
+  "parameterValues": {
+    "propertyName": "properties.referringCampaign",
+    "comparisonOperator": "exists"
+  }
+}
+----
+
+==== Level 5 — Past events (behavioral)
+
+`pastEventCondition` checks whether events occurred in a time window. See <<_past_event_conditions,Past event conditions>> for caching, auto-rules, and performance notes.
+
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "numberOfDays": 30,
+    "operator": "eventsOccurred",
+    "minimumEventCount": 3,
+    "eventCondition": {
+      "type": "eventTypeCondition",
+      "parameterValues": {
+        "eventTypeId": "purchase"
+      }
+    }
+  }
+}
+----
+
+==== Level 6 — Scoring, geo, and nested data
+
+*Scoring* — compare a profile score from a scoring plan:
+
+[source,json]
+----
+{
+  "type": "scoringCondition",
+  "parameterValues": {
+    "scoringPlanId": "engagement",
+    "comparisonOperator": "greaterThan",
+    "scoreValue": 50
+  }
+}
+----
+
+*Geo (session)* — `geoLocationSessionCondition` filters on country/region/city; `geoLocationByPointSessionCondition` uses map coordinates.
+
+*Nested properties* — `nestedCondition` evaluates a sub-condition on a nested path (for example list items inside profile properties).
+
+==== Using conditions in segments and rules
+
+Segments store a condition on the segment definition. Rules store a condition that is evaluated for each incoming event.
+
+[plantuml]
+----
+@startuml
+|Segment definition|
+start
+:Store condition JSON;
+:Scheduler / manual refresh;
+:QueryBuilder converts condition\nto search index query;
+:Matching profile IDs updated;
+
+|Rule definition|
+start
+:Event arrives;
+:ConditionEvaluator tests\nevent + profile + session;
+if (matches?) then (yes)
+  :Run actions;
+else (no)
+  :Skip rule;
+endif
+@enduml
+----
+
+==== Testing conditions
+
+*Query count* — verify how many profiles match (see Level 1 example).
+
+*Segment membership* — after creating a segment with your condition, test a profile:
+
+[source,bash]
+----
+curl -X GET "http://localhost:8181/cxs/segments/SEGMENT_ID/match/PROFILE_ID" \
+  --user "TENANT_ID:PRIVATE_KEY"
+----
+
+==== Discovering available condition types
+
+List registered condition types (admin or tenant private key):
+
+[source,bash]
+----
+curl -X GET http://localhost:8181/cxs/definitions/conditions \
+  --user "TENANT_ID:PRIVATE_KEY"
+----
+
+Each entry includes parameter definitions, evaluators, and query builder IDs (Unomi 3.0+ uses engine-neutral `*QueryBuilder` names).
+
+==== Custom condition types
+
+To add new condition types, implement a `ConditionEvaluator` and search-engine-specific query builders. See <<_writing_plugins,Writing plugins>> and <<_builtin_condition_types,plugin registration example>>.

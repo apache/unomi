@@ -11,60 +11,96 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 [[_builtin_action_types]]
 === Built-in action types
 
-Unomi comes with quite a lot of built-in action types. Instead of detailing them one by one you will find here an overview of
-what an action type descriptor looks like:
+Actions run when a rule matches. Each action type references an `actionExecutor` OSGi service.
+
+==== Action type descriptor shape
 
 [source,json]
 ----
 {
   "metadata": {
-    "id": "UNIQUE_IDENTIFIER_STRING",
-    "name": "DISPLAYABLE_ACTION_NAME",
-    "description": "DISPLAYABLE_ACTION_DESCRIPTION",
-    "systemTags": [
-      "profileTags",
-      "event",
-      "availableToEndUser",
-      "allowMultipleInstances"
-    ],
+    "id": "setPropertyAction",
+    "name": "setPropertyAction",
+    "systemTags": ["profileTags", "availableToEndUser"],
     "readOnly": true
   },
-  "actionExecutor": "ACTION_EXECUTOR_ID",
+  "actionExecutor": "setProperty",
   "parameters": [
-     ... parameters specific to each action ...
+    { "id": "setPropertyName", "type": "string" },
+    { "id": "setPropertyValue", "type": "string" }
   ]
 }
 ----
 
-The ACTION_EXECUTOR_ID points to a OSGi Blueprint parameter that is defined when implementing the action in a plugin.
-Here's an example of such a registration:
-
-From https://github.com/apache/unomi/blob/master/plugins/mail/src/main/resources/OSGI-INF/blueprint/blueprint.xml
+==== OSGi registration example
 
 [source,xml]
 ----
-    <bean id="sendMailActionImpl" class="org.apache.unomi.plugins.mail.actions.SendMailAction">
-       <!-- ... bean properties ... -->
-    </bean>
-    <service id="sendMailAction" ref="sendMailActionImpl" interface="org.apache.unomi.api.actions.ActionExecutor">
-        <service-properties>
-            <entry key="actionExecutorId" value="sendMail"/>
-        </service-properties>
-    </service>
+<bean id="setPropertyActionImpl" class="org.apache.unomi.plugins.baseplugin.actions.SetPropertyAction"/>
+<service ref="setPropertyActionImpl" interface="org.apache.unomi.api.actions.ActionExecutor">
+    <service-properties>
+        <entry key="actionExecutorId" value="setProperty"/>
+    </service-properties>
+</service>
 ----
 
-In the above example the ACTION_EXECUTOR_ID is `sendMail`
+==== Catalog
 
-==== Existing action types descriptors
+[cols="2,2,2,4", options="header"]
+|===
+| Action type ID | Source | Executor | Parameters / description
 
-Here is a non-exhaustive list of actions built into Apache Unomi. Feel free to browse the source code if you want to
-discover more. But the list below should get you started with the most useful actions:
+| `addToListsAction` | lists-extension | `addToLists` | Params: listIdentifiers
+| `allEventToProfilePropertiesAction` | baseplugin | `allEventToProfileProperties` | Params: —
+| `cdpSessionEventAction` | graphql | `cdp_sessionEvent` | Params: state, sessionId, scope
+| `copyPropertiesAction` | baseplugin | `copyProperties` | Params: setPropertyStrategy, rootProperty, mandatoryPropTypeSystemTag
+| `evaluateProfileAgeAction` | baseplugin | `evaluateProfileAge` | Params: —
+| `evaluateProfileSegmentsAction` | baseplugin | `evaluateProfileSegments` | Params: —
+| `evaluateVisitPropertiesAction` | baseplugin | `evaluateVisitProperties` | Params: —
+| `eventToProfilePropertyAction` | baseplugin | `eventToProfileProperty` | Params: eventPropertyName, profilePropertyName
+| `incrementPropertyAction` | baseplugin | `incrementProperty` | Params: propertyName, propertyTarget, storeInSession
+| `mergeProfilesOnPropertyAction` | baseplugin | `mergeProfilesOnProperty` | Params: mergeProfilePropertyName, forceEventProfileAsMaster
+| `modifyConsentAction` | baseplugin | `modifyConsent` | Modify a profile consent. Params: —
+| `requestHeaderToProfilePropertyAction` | request | `requestHeaderToProfileProperty` | Params: requestHeaderName, profilePropertyName, sessionPropertyName, storeAsList
+| `requestParameterToProfilePropertyAction` | request | `requestParameterToProfileProperty` | Params: requestParameterName, profilePropertyName, sessionPropertyName, storeAsList
+| `sendEventAction` | baseplugin | `sendEvent` | Params: eventType, eventProperties
+| `sendMailAction` | mail | `sendMail` | Params: notificationType, notificationTypeId, notifyOncePerProfile, from, to, cc, bcc, subject, template
+| `setEventOccurenceCountAction` | baseplugin | `setEventOccurenceCount` | Params: pastEventCondition
+| `setPropertyAction` | baseplugin | `setProperty` | Params: setPropertyName, setPropertyValue, setPropertyValueBoolean, setPropertyValueInteger, setPropertyValueMultiple, setPropertyValueCurrentEventTimestamp, setPropertyValueCurrentDate, setPropertyStrategy, storeInSession
+| `setRemoteHostInfoAction` | request | `setRemoteHostInfo` | Params: —
+| `sfdcCreateOrUpdateLeadAction` | salesforce-connector | `sfdcCreateOrUpdateLead` | Params: —
+| `sfdcUpdateProfileFromLeadAction` | salesforce-connector | `sfdcUpdateProfileFromLead` | Params: —
+| `updateConsentEventAction` | graphql | `updateConsent` | Params: type, status, lastUpdate, expiration
+| `updateListsEventAction` | graphql | `updateLists` | Params: join_lists, leave_lists
+| `updatePropertiesAction` | baseplugin | `updateProperties` | Update multiple properties in profile/persona. Params: —
+| `weatherUpdateAction` | weather-update | `weatherUpdate` | This action will retrieve the weather associated with the resolved location of the user (from his IP address). Params: —
+|===
 
-- https://github.com/apache/unomi/tree/master/plugins/baseplugin/src/main/resources/META-INF/cxs/actions
-- https://github.com/apache/unomi/tree/master/plugins/request/src/main/resources/META-INF/cxs/actions
-- https://github.com/apache/unomi/tree/master/plugins/mail/src/main/resources/META-INF/cxs/actions
+==== Common action groups
 
-Of course it is also possible to build your own custom actions by developing custom Unomi plugins/extensions.
+*Profile maintenance* — `setPropertyAction`, `updatePropertiesAction`, `incrementPropertyAction`, `copyPropertiesAction`, `eventToProfilePropertyAction`, `allEventToProfilePropertiesAction`, `mergeProfilesOnPropertyAction`
+
+*Segmentation & scoring* — `evaluateProfileSegmentsAction`, `evaluateProfileAgeAction`, `evaluateVisitPropertiesAction`
+
+*Events & consent* — `sendEventAction`, `modifyConsentAction`, `setEventOccurenceCountAction`
+
+*HTTP request* — `requestHeaderToProfilePropertyAction`, `requestParameterToProfilePropertyAction`, `setRemoteHostInfoAction` (request plugin)
+
+*Notifications* — `sendMailAction` (mail plugin)
+
+*Integrations* — `addToListsAction`, Salesforce actions, `weatherUpdateAction`, GraphQL CDP actions (when GraphQL feature is installed)
+
+==== Source locations
+
+* `plugins/baseplugin/src/main/resources/META-INF/cxs/actions/`
+* `plugins/mail/src/main/resources/META-INF/cxs/actions/`
+* `plugins/request/src/main/resources/META-INF/cxs/actions/`
+* Extension plugins under `extensions/*/src/main/resources/META-INF/cxs/actions/`
+
+List action types at runtime: `GET /cxs/definitions/actions` (tenant private key or admin).
+
+See <<_writing_plugins,Writing plugins>> to implement custom actions.

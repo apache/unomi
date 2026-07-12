@@ -72,6 +72,15 @@ include::graphql-examples.adoc[]
 
 include::migrations/migrations.adoc[]
 
+[[_conditions]]
+== Conditions
+
+include::conditions-guide.adoc[]
+
+include::condition-evaluation.adoc[]
+
+include::past-event-conditions.adoc[]
+
 == Queries and aggregations
 
 include::queries-and-aggregations.adoc[]
@@ -135,7 +144,6 @@ include::builtin-action-types.adoc[]
 
 include::updating-events.adoc[]
 
-include::past-event-conditions.adoc[]
 
 include::web-tracker.adoc[]
 

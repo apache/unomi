@@ -15,8 +15,10 @@
 [[_builtin_condition_types]]
 === Built-in condition types
 
-Apache Unomi comes with an extensive collection of built-in condition types. Instead of detailing them one by one you will
-find here an overview of what a JSON condition descriptor looks like:
+Apache Unomi ships with built-in condition types in the base plugin and optional extensions.
+For a hands-on introduction with examples, see <<_conditions_guide,Conditions guide>>.
+
+==== Condition type descriptor shape
 
 [source,json]
 ----
@@ -24,67 +26,47 @@ find here an overview of what a JSON condition descriptor looks like:
   "metadata": {
     "id": "booleanCondition",
     "name": "booleanCondition",
-    "description": "",
-    "systemTags": [
-      "profileTags",
-      "logical",
-      "condition",
-      "profileCondition",
-      "eventCondition",
-      "sessionCondition",
-      "sourceEventCondition"
-    ],
+    "description": "Combines multiple conditions with a logical operator",
+    "systemTags": ["logical", "profileCondition", "eventCondition"],
     "readOnly": true
   },
   "conditionEvaluator": "booleanConditionEvaluator",
   "queryBuilder": "booleanConditionQueryBuilder",
   "parameters": [
-    {
-      "id": "operator",
-      "type": "String",
-      "multivalued": false,
-      "defaultValue": "and"
-    },
-    {
-      "id": "subConditions",
-      "type": "Condition",
-      "multivalued": true
-    }
+    { "id": "operator", "type": "string", "defaultValue": "and" },
+    { "id": "subConditions", "type": "Condition", "multivalued": true }
   ]
 }
 ----
 
-Note that condition types have three important identifiers:
+Each condition type provides:
 
-- conditionEvaluator: For real-time condition evaluation
-- queryBuilder: For building search engine queries (either ElasticSearch or OpenSearch)
+* `conditionEvaluator` — real-time evaluation against profile, session, and/or event
+* `queryBuilder` — converts the condition to an Elasticsearch or OpenSearch query (Unomi 3.0+ uses generic `*QueryBuilder` IDs)
 
-This is because condition types can be used in three ways:
-1. To evaluate a condition in real time
-2. To build ElasticSearch queries
-3. To build OpenSearch queries
+Some types use `parentCondition` to specialize a base type (for example `eventTypeCondition` extends `eventPropertyCondition`).
 
-When implementing a new condition type, you need to provide implementations for each use case. Here's an example of OSGi Blueprint registrations for the above condition type descriptor:
+==== Plugin registration (Unomi 3.0+)
 
 [source,xml]
 ----
-<!-- ElasticSearch Query Builder -->
+<!-- Elasticsearch query builder -->
 <service interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
     <service-properties>
         <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
     </service-properties>
-    <bean class="org.apache.unomi.persistence.elasticsearch.BooleanConditionESQueryBuilder"/>
+    <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.BooleanConditionESQueryBuilder"/>
 </service>
 
-<!-- OpenSearch Query Builder -->
+<!-- OpenSearch query builder -->
 <service interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
     <service-properties>
         <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
     </service-properties>
-    <bean class="org.apache.unomi.persistence.opensearch.BooleanConditionOSQueryBuilder"/>
+    <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.BooleanConditionOSQueryBuilder"/>
 </service>
 
-<!-- Condition Evaluator (shared between both engines) -->
+<!-- Shared evaluator -->
 <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
     <service-properties>
         <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
@@ -93,19 +75,63 @@ When implementing a new condition type, you need to provide implementations for 
 </service>
 ----
 
-As you can see, three Java classes are used to build a single condition type:
-1. A condition evaluator (shared)
-2. An ElasticSearch query builder
-3. An OpenSearch query builder
+==== Catalog — base plugin
 
-You don't need to understand all these details to use condition types, but this might be interesting if you're building your own condition type implementations. For more details on building custom plugins/extensions with search engine specific implementations, please refer to the corresponding sections.
+[cols="2,3,2,4", options="header"]
+|===
+| Condition type ID | Category | Parent | Key parameters / notes
 
-==== Existing condition type descriptors
+| `booleanCondition` | Event | — | Combines multiple conditions with a logical operator. Params: operator, subConditions
+| `eventPropertyCondition` | Event | — | Params: propertyName, comparisonOperator, propertyValue, propertyValueInteger, propertyValueDouble, propertyValueDate, propertyValueDateExpr, propertyValues
+| `eventTypeCondition` | Event | eventPropertyCondition | Params: eventTypeId
+| `formEventCondition` | Event | booleanCondition | Params: formId, pagePath
+| `geoLocationByPointSessionCondition` | Session | — | Params: type, rectLatitudeNE, rectLongitudeNE, rectLatitudeSW, rectLongitudeSW, circleLatitude, circleLongitude, distance
+| `geoLocationSessionCondition` | Session | booleanCondition | Params: country, admin1, admin2, city
+| `goalMatchCondition` | Profile | profilePropertyCondition | Params: goalId, comparisonOperator
+| `idsCondition` | Other | — | Params: ids, match
+| `matchAllCondition` | Event | — | Params: —
+| `modifyAnyConsentEventCondition` | Event | eventTypeCondition | Used to match any consent modification. Params: —
+| `modifyConsentEventCondition` | Event | booleanCondition | Used to match status modifications on a specific consent. Params: consentTypeId, consentStatus
+| `nestedCondition` | Session | — | Evaluates a condition on nested items within a profile or session property. Params: path, subCondition
+| `newVisitorCondition` | Session | booleanCondition | Params: since
+| `notCondition` | Event | — | Params: subCondition
+| `pastEventCondition` | Profile | — | Evaluates past events that occurred within a specified time range. Params: eventCondition, operator, numberOfDays, fromDate, toDate, minimumEventCount, maximumEventCount
+| `profileAliasesPropertyCondition` | Other | — | Params: propertyName, comparisonOperator, propertyValue
+| `profilePropertyCondition` | Profile | — | Evaluates a profile property against various comparison criteria. Params: propertyName, comparisonOperator, propertyValue, propertyValueInteger, propertyValueDouble, propertyValueDate, propertyValueDateExpr, propertyValues
+| `profileSegmentCondition` | Profile | profilePropertyCondition | Params: segments, matchType
+| `profileUpdatedEventCondition` | Event | eventTypeCondition | Params: —
+| `profileUserListCondition` | Profile | profilePropertyCondition | Params: lists, matchType
+| `returningVisitorCondition` | Session | booleanCondition | Params: since
+| `scoringCondition` | Profile | profilePropertyCondition | Params: scoringPlanId, scoreValue, comparisonOperator
+| `sessionCreatedEventCondition` | Event | eventTypeCondition | Params: —
+| `sessionDurationCondition` | Session | sessionPropertyCondition | Params: minimumDuration, maximumDuration
+| `sessionPropertyCondition` | Session | — | Params: propertyName, comparisonOperator, propertyValue, propertyValueInteger, propertyValueDouble, propertyValueDate, propertyValueDateExpr, propertyValues
+| `topicPropertyCondition` | Other | — | Params: propertyName, comparisonOperator, propertyValue
+| `updatePropertiesEventCondition` | Event | eventTypeCondition | Params: —
+| `videoViewEventCondition` | Event | booleanCondition | Params: videoId, pagePath
+|===
 
-Here is a non-exhaustive list of condition types built into Apache Unomi. Feel free to browse the source code if you want to discover more. The list below should get you started with the most useful conditions:
+==== Catalog — extensions
 
-- https://github.com/apache/unomi/tree/master/plugins/baseplugin/src/main/resources/META-INF/cxs/conditions
+[cols="2,2,4", options="header"]
+|===
+| Condition type ID | Source | Key parameters / notes
+| `cdpSessionEventCondition` | graphql | Params: —
+| `hoverEventCondition` | hover-event | Params: targetId, targetPath
+| `sourceEventPropertyCondition` | advanced-conditions | Params: id, path, scope, type
+| `updateConsentEventCondition` | graphql | Params: —
+| `updateListsEventCondition` | graphql | Params: —
+| `userListPropertyCondition` | graphql | Params: propertyName, comparisonOperator, propertyValue, propertyValues
+|===
 
-Of course it is also possible to build your own custom condition types by developing custom Unomi plugins/extensions.
+==== Source locations
 
-You will also note that some condition types can re-use a `parentCondition`. This is a way to inherit from another condition type to make them more specific.
+Condition descriptors are JSON files under `META-INF/cxs/conditions/` in each plugin, for example:
+
+* `plugins/baseplugin/src/main/resources/META-INF/cxs/conditions/`
+* `plugins/advanced-conditions/src/main/resources/META-INF/cxs/conditions/`
+* `plugins/hover-event/src/main/resources/META-INF/cxs/conditions/`
+
+GraphQL-specific condition types ship with the GraphQL feature (`graphql/cxs-impl/...`).
+
+Custom condition types can be added in your own plugins; see <<_writing_plugins,Writing plugins>>.

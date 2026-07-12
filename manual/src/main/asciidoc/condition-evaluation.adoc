@@ -11,7 +11,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_condition_evaluation]]
 === Condition Evaluation System
+
+For examples and progressive tutorials, see <<_conditions_guide,Conditions guide>>.
 
 The condition evaluation system in Apache Unomi provides flexible and efficient evaluation of conditions across different storage backends.
 
@@ -32,8 +35,8 @@ skinparam component {
 package "Condition Evaluation" {
   [ConditionDispatcher] <<evaluation>>
   [ConditionEvaluator] <<evaluation>>
-  [ConditionESQueryBuilder] <<query>>
-  [ConditionOSQueryBuilder] <<query>>
+  [ConditionQueryBuilder] <<query>>
+  [ConditionQueryBuilder] <<query>>
 }
 
 package "Query Building" {
@@ -50,11 +53,11 @@ package "Storage" {
 [ConditionDispatcher] --> [ConditionEvaluator]
 [ConditionDispatcher] --> QB
 
-QB <|.. [ConditionESQueryBuilder]
-QB <|.. [ConditionOSQueryBuilder]
+QB <|.. [ConditionQueryBuilder]
+QB <|.. [ConditionQueryBuilder]
 
-[ConditionESQueryBuilder] --> [ElasticSearchQueryBuilder]
-[ConditionOSQueryBuilder] --> [OpenSearchQueryBuilder]
+[ConditionQueryBuilder] --> [ElasticSearchQueryBuilder]
+[ConditionQueryBuilder] --> [OpenSearchQueryBuilder]
 
 [ElasticSearchQueryBuilder] --> [ElasticSearch]
 [OpenSearchQueryBuilder] --> [OpenSearch]
