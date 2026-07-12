@@ -21,8 +21,58 @@ Apache Software Foundation
 :toc-title: Table of Contents
 :numbered:
 :homepage: https://unomi.apache.org
+:docinfo: shared-head,shared-footer
+:source-highlighter: highlightjs
 
-image::asf_logo_url.png[pdfwidth=35%,align=center]
+ifndef::backend-pdf[]
+[%passthrough,subs=attributes]
+++++
+<header id="unomi-site-nav" class="sticky-top">
+  <nav class="unomi-navbar" aria-label="Apache Unomi site">
+    <div class="nav-inner">
+      <a class="nav-brand" href="https://unomi.apache.org/">
+        <img src="images/apache-unomi-logo.png" alt="Apache Unomi" height="36">
+      </a>
+      <span class="nav-version" title="Manual version">{revnumber}</span>
+      <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="unomi-nav-menu" aria-label="Open site menu">
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+        <span class="nav-toggle-bar" aria-hidden="true"></span>
+      </button>
+      <div id="unomi-nav-menu" class="nav-menu">
+        <ul class="nav-links">
+          <li><a href="https://unomi.apache.org/get-started.html">Get Started</a></li>
+          <li><a href="https://unomi.apache.org/documentation.html">Documentation</a></li>
+          <li><a href="https://unomi.apache.org/integrations.html">Integrations</a></li>
+          <li><a href="https://unomi.apache.org/download.html">Download</a></li>
+          <li><a class="nav-cta" href="https://unomi.apache.org/community/index.html">Get Help</a></li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+</header>
+++++
+
+[.hero.cover-page]
+--
+[.section-label]
+Apache Unomi™
+
+++++
+<h1 class="display-title">Apache Unomi 3.x<br><span class="text-hero-accent">Documentation</span></h1>
+++++
+
+[.cover-meta.lead]
+Version {revnumber} · link:https://unomi.apache.org[unomi.apache.org] · link:https://github.com/apache/unomi/tree/master/manual/src/main/asciidoc[Edit on GitHub]
+
+[.cover-asf]
+image::asf_logo_url.png[Apache Software Foundation,width=140,align=center]
+--
+endif::[]
+
+ifdef::backend-pdf[]
+image::asf_logo_url.png[Apache Software Foundation,pdfwidth=25%,align=center,role=pdf-asf-mark]
+endif::[]
 
 include::foreword.adoc[]
 
