@@ -31,11 +31,23 @@ public class ExpressionFilter {
     private final Set<Pattern> allowedExpressionPatterns;
     private final Set<Pattern> forbiddenExpressionPatterns;
 
+    /**
+     * Creates an expression filter from allowed and forbidden pattern sets.
+     *
+     * @param allowedExpressionPatterns patterns that must match for acceptance, or {@code null} to skip allow checks
+     * @param forbiddenExpressionPatterns patterns that reject a match, or {@code null} to skip deny checks
+     */
     public ExpressionFilter(Set<Pattern> allowedExpressionPatterns, Set<Pattern> forbiddenExpressionPatterns) {
         this.allowedExpressionPatterns = allowedExpressionPatterns;
         this.forbiddenExpressionPatterns = forbiddenExpressionPatterns;
     }
 
+    /**
+     * Applies allow/deny rules to an expression.
+     *
+     * @param expression the expression to validate
+     * @return the expression when accepted, or {@code null} when filtered out
+     */
     public String filter(String expression) {
         if (forbiddenExpressionPatterns != null && expressionMatches(expression, forbiddenExpressionPatterns)) {
             LOGGER.warn("Expression filtered because forbidden. See debug log level for more information");

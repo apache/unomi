@@ -32,7 +32,8 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /**
- * Default implementation for the unomi authentication on Rest endpoints
+ * Default OSGi-backed implementation of {@link RestAuthenticationConfig} for REST endpoint
+ * authentication, role mappings, and V2 compatibility mode settings.
  */
 @Component(service = { RestAuthenticationConfig.class}, configurationPid = "org.apache.unomi.rest.authentication", immediate = true)
 @Designate(ocd = DefaultRestAuthenticationConfig.Config.class)
@@ -78,7 +79,11 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
     private volatile boolean v2CompatibilityModeEnabled = false;
     private volatile String v2CompatibilityDefaultTenantId = "default";
 
-
+    /**
+     * Updates authentication settings from OSGi configuration.
+     *
+     * @param config the REST authentication configuration
+     */
     @Activate
     @Modified
     public void modified(Config config) {
@@ -127,18 +132,31 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
         return v2CompatibilityDefaultTenantId;
     }
 
+    /**
+     * OSGi configuration for REST authentication.
+     */
     @ObjectClassDefinition(
         name = "Unomi REST Authentication Configuration",
         description = "Configuration for Unomi REST authentication including V2 compatibility mode"
     )
     public @interface Config {
 
+        /**
+         * Whether V2 compatibility mode is enabled.
+         *
+         * @return {@code true} when V2 compatibility mode is enabled
+         */
         @AttributeDefinition(
             name = "V2 Compatibility Mode Enabled",
             description = "Enable V2 compatibility mode to allow V2 clients to use Unomi V3 without API keys"
         )
         boolean v2_compatibilitymode_enabled() default false;
 
+        /**
+         * Default tenant identifier used in V2 compatibility mode.
+         *
+         * @return the default tenant identifier
+         */
         @AttributeDefinition(
             name = "V2 Compatibility Default Tenant ID",
             description = "Default tenant ID to use in V2 compatibility mode"

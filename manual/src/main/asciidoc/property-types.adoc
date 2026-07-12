@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_property_types]]
+[#_property_types]
 == Property Types
 
 Property types define the structure and metadata for properties that can be used in profiles and sessions within Apache Unomi. They specify the data type, display hints (ranges, constraints), default values, and other metadata that help inform UIs and enable rich querying capabilities.

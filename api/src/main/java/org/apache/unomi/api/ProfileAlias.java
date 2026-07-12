@@ -19,8 +19,17 @@ package org.apache.unomi.api;
 
 import java.util.Date;
 
+/**
+ * Cross-application link between a client profile id and a canonical {@link Profile}.
+ * When the same visitor is known under different ids in separate scopes or apps,
+ * aliases let {@link org.apache.unomi.api.services.ProfileService} merge activity
+ * onto one persisted profile record.
+ */
 public class ProfileAlias extends Item {
 
+    /**
+     * Item type identifier for profile aliases.
+     */
     public static final String ITEM_TYPE = "profileAlias";
 
     private String profileID;
@@ -31,37 +40,80 @@ public class ProfileAlias extends Item {
 
     private Date modifiedTime;
 
+    /**
+     * Creates an empty profile alias.
+     */
     public ProfileAlias() {
     }
 
+    /**
+     * Canonical profile id linked by this alias.
+     *
+     * @return profile id
+     */
     public String getProfileID() {
         return profileID;
     }
 
+    /**
+     * Sets the canonical profile id.
+     *
+     * @param profileID profile id
+     */
     public void setProfileID(String profileID) {
         this.profileID = profileID;
     }
 
+    /**
+     * Client-specific profile identifier.
+     *
+     * @return client id, or {@code null} if unset
+     */
     public String getClientID() {
         return clientID;
     }
 
+    /**
+     * Sets the client-specific profile identifier.
+     *
+     * @param clientID client id
+     */
     public void setClientID(String clientID) {
         this.clientID = clientID;
     }
 
+    /**
+     * When this alias was created.
+     *
+     * @return creation time
+     */
     public Date getCreationTime() {
         return creationTime;
     }
 
+    /**
+     * Sets the creation time.
+     *
+     * @param creationTime creation time
+     */
     public void setCreationTime(Date creationTime) {
         this.creationTime = creationTime;
     }
 
+    /**
+     * When this alias was last modified.
+     *
+     * @return last modification time, or {@code null} if unset
+     */
     public Date getModifiedTime() {
         return modifiedTime;
     }
 
+    /**
+     * Sets the last modification time.
+     *
+     * @param modifiedTime last modification time
+     */
     public void setModifiedTime(Date modifiedTime) {
         this.modifiedTime = modifiedTime;
     }

@@ -64,13 +64,13 @@ public class Rule extends MetadataItem implements YamlConvertible {
     private int priority;
 
     /**
-     * Instantiates a new Rule.
+     * Default constructor.
      */
     public Rule() {
     }
 
     /**
-     * Instantiates a new Rule with the specified {@link Metadata}.
+     * Creates a rule with the given metadata.
      *
      * @param metadata the metadata
      */
@@ -79,7 +79,7 @@ public class Rule extends MetadataItem implements YamlConvertible {
     }
 
     /**
-     * Retrieves the condition that, when satisfied, triggers the rule.
+     * Condition that triggers the rule when satisfied.
      *
      * @return the condition that, when satisfied, triggers the rule.
      */
@@ -97,7 +97,7 @@ public class Rule extends MetadataItem implements YamlConvertible {
     }
 
     /**
-     * Retrieves the actions to be performed when this rule triggers.
+     * Actions performed when this rule triggers.
      *
      * @return the actions to be performed when this rule triggers
      */
@@ -115,7 +115,7 @@ public class Rule extends MetadataItem implements YamlConvertible {
     }
 
     /**
-     * Retrieves the linked items.
+     * Identifiers of items linked to this rule.
      *
      * @return the linked items
      */
@@ -142,9 +142,9 @@ public class Rule extends MetadataItem implements YamlConvertible {
     }
 
     /**
-     * Determines whether the event raised when the rule is triggered should only be raised once
+     * Whether the rule-triggered event should be raised only once per incoming event.
      *
-     * @return {@code true} if the rule-triggered event should only be raised once per profile
+     * @return {@code true} if the rule-triggered event should only be raised once per event
      */
     public boolean isRaiseEventOnlyOnce() {
         return raiseEventOnlyOnce;
@@ -187,7 +187,7 @@ public class Rule extends MetadataItem implements YamlConvertible {
     }
 
     /**
-     * Retrieves the priority in case this Rule needs to be executed before other ones when similar conditions match.
+     * Priority when this rule must run before others with similar conditions before other ones when similar conditions match.
      *
      * @return the priority
      */
@@ -209,6 +209,7 @@ public class Rule extends MetadataItem implements YamlConvertible {
      * Implements YamlConvertible interface with circular reference detection.
      *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @param maxDepth maximum recursion depth to prevent stack overflow
      * @return a Map representation of this rule
      */
     @Override

@@ -59,10 +59,22 @@ public class PropertyTypedObjectDeserializer extends UntypedObjectDeserializer {
 
     private Map<String,Set<String>> fieldValuesToMatch = new LinkedHashMap<String,Set<String>>();
 
+    /**
+     * Creates a deserializer with optional list and map types.
+     *
+     * @param listType the list element type
+     * @param mapType the map value type
+     */
     public PropertyTypedObjectDeserializer(JavaType listType, JavaType mapType) {
         super(listType, mapType);
     }
 
+    /**
+     * Registers a property match expression to a target class.
+     *
+     * @param matchExpression expression in {@code field=regex} form
+     * @param mappedClass the class to deserialize to
+     */
     public void registerMapping(String matchExpression,
                                 Class<? extends Object> mappedClass) {
         registry.put(matchExpression, mappedClass);
@@ -75,6 +87,11 @@ public class PropertyTypedObjectDeserializer extends UntypedObjectDeserializer {
         fieldValuesToMatch.put(fieldParts[0], valuesToMatch);
     }
 
+    /**
+     * Removes a property match expression mapping.
+     *
+     * @param matchExpression the expression to remove
+     */
     public void unregisterMapping(String matchExpression) {
         registry.remove(matchExpression);
         String[] fieldParts = matchExpression.split("=");

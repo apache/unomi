@@ -20,7 +20,10 @@ package org.apache.unomi.api;
 import java.util.List;
 
 /**
- * A request for events to be processed.
+ * JSON body accepted by the events collector REST endpoint.
+ * Bundles one or more {@link Event} instances plus optional {@code sessionId}
+ * and {@code profileId} hints so Unomi can attach incoming events to the
+ * correct session and profile before rules run and persistence writes occur.
  */
 public class EventsCollectorRequest {
 
@@ -36,60 +39,64 @@ public class EventsCollectorRequest {
     private String publicApiKey;
 
     /**
-     * Retrieves the events to be processed.
+     * Events submitted for collection and rule evaluation.
      *
-     * @return the events to be processed
+     * @return the event list
      */
     public List<Event> getEvents() {
         return events;
     }
 
+    /**
+     * Sets the events to collect and process.
+     *
+     * @param events the events to submit
+     */
     public void setEvents(List<Event> events) {
         this.events = events;
     }
 
     /**
-     * Retrieve the sessionId passed along with the request. All events will be processed with this sessionId as a
-     * default
+     * Default session id applied to all events in this request when an event does not specify its own.
      *
-     * @return the identifier for the session
+     * @return the session id, or {@code null} if none was provided
      */
     public String getSessionId() {
         return sessionId;
     }
 
     /**
-     * Sets the sessionId in the request. This is the preferred method of passing along a session identifier with the
-     * request, as passing it along in the URL can lead to potential security vulnerabilities.
+     * Sets the default session id for events in this request.
+     * Prefer this over passing the session id in the URL to avoid leaking identifiers in logs or referrers.
      *
-     * @param sessionId an unique identifier for the session
+     * @param sessionId the session id
      */
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
     }
 
     /**
-     * Retrieve the profileId passed along with the request. All events will be processed with this profileId as a
-     * default
+     * Default profile id applied to all events in this request when an event does not specify its own.
      *
-     * @return the identifier for the profile
+     * @return the profile id, or {@code null} if none was provided
      */
     public String getProfileId() {
         return profileId;
     }
 
     /**
-     * Sets the profileId in the request.
+     * Sets the default profile id for events in this request.
      *
-     * @param profileId an unique identifier for the profile
+     * @param profileId the profile id
      */
     public void setProfileId(String profileId) {
         this.profileId = profileId;
     }
 
     /**
-     * Gets the public API key used for tenant authentication.
-     * @return the public API key
+     * Public API key used for tenant authentication.
+     *
+     * @return the public API key, or {@code null} if none was provided
      */
     public String getPublicApiKey() {
         return publicApiKey;
@@ -97,7 +104,8 @@ public class EventsCollectorRequest {
 
     /**
      * Sets the public API key used for tenant authentication.
-     * @param publicApiKey the public API key to set
+     *
+     * @param publicApiKey the public API key
      */
     public void setPublicApiKey(String publicApiKey) {
         this.publicApiKey = publicApiKey;

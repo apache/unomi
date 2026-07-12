@@ -34,11 +34,15 @@ geographic location)
 It is possible to anonymize a profile, meaning it will remove all "identifying" property values from the profile.
 Basically all properties with the tag `personalIdentifierProperties` will be purged from the profile.
 
+
+NOTE: In Unomi 3.1+, `/cxs/privacy/*` endpoints require tenant or administrator authentication. The examples below use a tenant private key; you may also proxy these endpoints and validate the profile cookie server-side as described above.
+
 Here's an example of a request to anonymize a profile:
 
-[source]
+[source,bash]
 ----
-curl -X POST http://localhost:8181/cxs/privacy/profiles/{profileID}/anonymize?scope=ASCOPE
+curl -X POST http://localhost:8181/cxs/privacy/profiles/{profileID}/anonymize?scope=ASCOPE \
+  --user "TENANT_ID:PRIVATE_KEY"
 ----
 
 where `{profileID}` must be replaced by the actual identifier of a profile

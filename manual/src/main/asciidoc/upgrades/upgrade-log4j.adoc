@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_upgrade_log4j]]
+[#_upgrade_log4j]
 ==== Upgrading Log4j
 
 Unomi uses *pax-logging-log4j2* as the platform logging implementation. Custom appenders live in `extensions/log4j-extension` as an OSGi *fragment* on pax-logging. Persistence bundles must *never embed* log4j JARs and must not call Log4j APIs at runtime.
@@ -64,7 +64,7 @@ end note
 
 Persistence ES/OS cores must *not* call Log4j APIs at runtime. REST client verbosity is configured in `etc/org.ops4j.pax.logging.cfg` (see <<_upgrade_log4j_rest_client,REST client log levels>>).
 
-[[_upgrade_log4j_rest_client]]
+[#_upgrade_log4j_rest_client]
 ===== REST client log levels
 
 Elasticsearch and OpenSearch Java clients log through Apache Commons Logging → SLF4J → pax-logging. Do *not* set levels in persistence `start()` methods or persistence CM configs.

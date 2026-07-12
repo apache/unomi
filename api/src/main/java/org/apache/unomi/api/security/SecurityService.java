@@ -35,7 +35,7 @@ public interface SecurityService {
     String SYSTEM_TENANT = "system";
 
     /**
-     * Retrieves the current subject from the security context. The subject is determined in the following order:
+     * Current subject from the security context. The subject is determined in the following order:
      * 1. JAAS context - If a JAAS authentication is active
      * 2. Privileged subject - If a temporary privileged operation is in progress
      * 3. Current request subject - The subject associated with the current request
@@ -45,7 +45,7 @@ public interface SecurityService {
     Subject getCurrentSubject();
 
     /**
-     * Retrieves the current principal from the active subject.
+     * Current principal from the active subject.
      * The principal represents the primary identity of the authenticated entity.
      *
      * @return the current principal or null if no subject is set or the subject has no principals
@@ -128,7 +128,7 @@ public interface SecurityService {
     void executeWithPrivilegedSubject(Subject privilegedSubject, Runnable operation);
 
     /**
-     * Retrieves the current tenant ID based on the active subject context.
+     * Current tenant identifier from the active subject context.
      * The tenant ID is determined from the subject's principal.
      *
      * @return the current tenant ID, or SYSTEM_TENANT if operating in system context
@@ -144,7 +144,7 @@ public interface SecurityService {
     boolean isOperatingOnSystemTenant();
 
     /**
-     * Retrieves the encryption key for a specific tenant.
+     * Encryption key for the specified tenant.
      * This key is used for encrypting sensitive data within the tenant's context.
      *
      * @param tenantId the ID of the tenant whose encryption key should be retrieved
@@ -207,20 +207,23 @@ public interface SecurityService {
     boolean hasSystemAccess();
 
     /**
-     * Get the system subject with administrative privileges
+     * System subject with administrative privileges.
+     *
      * @return the system subject
      */
     Subject getSystemSubject();
 
     /**
-     * Extract roles from a subject
+     * Role names granted to the given subject.
+     *
      * @param subject the subject to extract roles from
      * @return set of role names
      */
     Set<String> extractRolesFromSubject(Subject subject);
 
     /**
-     * Get the security service configuration
+     * Security service configuration.
+     *
      * @return the security configuration
      */
     SecurityServiceConfiguration getConfiguration();

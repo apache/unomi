@@ -30,6 +30,9 @@ import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.regex.Pattern;
 
+/**
+ * Helper for loading localized REST resource bundles from OSGi bundles.
+ */
 @Component(service=ResourceBundleHelper.class)
 public class ResourceBundleHelper {
 
@@ -39,6 +42,11 @@ public class ResourceBundleHelper {
 
     private BundleContext bundleContext;
 
+    /**
+     * Activates the helper and stores the bundle context.
+     *
+     * @param componentContext the OSGi component context
+     */
     @Activate
     public void activate(ComponentContext componentContext) {
         this.bundleContext = componentContext.getBundleContext();
@@ -71,6 +79,13 @@ public class ResourceBundleHelper {
         return Locale.forLanguageTag(lang);
     }
 
+    /**
+     * Returns the resource bundle for the given plugin type and language.
+     *
+     * @param object the plugin type
+     * @param language the requested language
+     * @return the matching resource bundle, or {@code null}
+     */
     public ResourceBundle getResourceBundle(PluginType object, String language) {
         ResourceBundle resourceBundle = null;
 
@@ -101,6 +116,13 @@ public class ResourceBundleHelper {
         return resourceBundle;
     }
 
+    /**
+     * Returns a localized value from the resource bundle.
+     *
+     * @param bundle the resource bundle
+     * @param nameKey the message key
+     * @return the localized value, or the key when missing
+     */
     public String getResourceBundleValue(ResourceBundle bundle, String nameKey) {
         try {
             if (bundle != null) {
@@ -112,6 +134,11 @@ public class ResourceBundleHelper {
         return "???" + nameKey + "???";
     }
 
+    /**
+     * Sets the OSGi bundle context.
+     *
+     * @param bundleContext the bundle context
+     */
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }

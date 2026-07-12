@@ -18,7 +18,10 @@
 package org.apache.unomi.api;
 
 /**
- * TODO: REMOVE
+ * Origin of an {@link Event} in the visitor journey.
+ * Captures scope, item id, path, and type for the page or asset that produced
+ * the event. Client trackers populate this object when posting to the events
+ * collector so rules and analytics can attribute actions to a source context.
  */
 public class EventSource {
     private String scope;
@@ -26,37 +29,80 @@ public class EventSource {
     private String path;
     private String type;
 
+    /**
+     * Creates an empty event source.
+     */
     public EventSource() {
     }
 
+    /**
+     * Scope of the page or asset that originated the event.
+     *
+     * @return scope name
+     */
     public String getScope() {
         return scope;
     }
 
+    /**
+     * Sets the source scope.
+     *
+     * @param scope scope name
+     */
     public void setScope(String scope) {
         this.scope = scope;
     }
 
+    /**
+     * Identifier of the originating page or asset within the scope.
+     *
+     * @return source item id
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Sets the source item id.
+     *
+     * @param id source item id
+     */
     public void setId(String id) {
         this.id = id;
     }
 
+    /**
+     * URL or logical path of the page where the event was triggered.
+     *
+     * @return source path
+     */
     public String getPath() {
         return path;
     }
 
+    /**
+     * Sets the source path.
+     *
+     * @param path source path
+     */
     public void setPath(String path) {
         this.path = path;
     }
 
+    /**
+     * Type label for the source object (for example page, form, or product).
+     *
+     * @return source type
+     */
     public String getType() {
         return type;
     }
 
+    /**
+     * Sets the source type label.
+     *
+     * @param type source type
+     */
     public void setType(String type) {
         this.type = type;
     }

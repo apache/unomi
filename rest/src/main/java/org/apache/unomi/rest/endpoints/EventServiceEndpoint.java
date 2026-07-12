@@ -29,7 +29,7 @@ import javax.ws.rs.core.MediaType;
 import java.util.Set;
 
 /**
- * A JAX-RS endpoint to access information about the context server's events.
+ * JAX-RS endpoint for searching, loading, and deleting stored events.
  */
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -43,16 +43,20 @@ public class EventServiceEndpoint {
     @Reference
     private EventService eventService;
 
+    /**
+     * Sets the event service.
+     *
+     * @param eventService the event service
+     */
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }
 
     /**
-     * Allows to search events using a query.
+     * Searches events using the given query.
      *
-     * @param query the query object to use to search for events. You can specify offset and limits along with a
-     *              condition tree.
-     * @return a partial list containing the events that match the query.
+     * @param query the search query, including optional condition tree, offset, and limit
+     * @return a paged list of matching events
      */
     @POST
     @Path("/search")
@@ -61,10 +65,10 @@ public class EventServiceEndpoint {
     }
 
     /**
-     * Allows to retrieve event by id.
+     * Returns the event with the given ID.
      *
-     * @param id the event id.
-     * @return {@link Event} with the provided id.
+     * @param id the event identifier
+     * @return the event, or {@code null} when it does not exist
      */
     @GET
     @Path("/{id}")
@@ -84,8 +88,9 @@ public class EventServiceEndpoint {
     }
 
     /**
-     * Retrieves the list of event types identifiers that the server has processed.
-     * @return a Set of strings that contain event type identifiers.
+     * Returns event type identifiers known to the server.
+     *
+     * @return the processed event type identifiers
      */
     @GET
     @Path("types")

@@ -52,26 +52,30 @@ public class SegmentServiceEndPoint {
     @Reference
     private SegmentService segmentService;
 
+    /**
+     * Creates the segment service endpoint.
+     */
     public SegmentServiceEndPoint() {
         LOGGER.info("Initializing segment service endpoint...");
     }
 
+    /**
+     * Sets the segment service.
+     *
+     * @param segmentService the segment service
+     */
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }
 
     /**
-     * Retrieves a list of profiles matching the conditions defined by the segment identified by the specified identifier, ordered according to the specified {@code sortBy}
-     * String and and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
+     * Returns profiles that match the segment with the given ID.
      *
-     * @param segmentId the identifier of the segment for which we want to retrieve matching profiles
-     * @param offset    zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
-     * @param size      a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *                  elements according to the property order in the
-     *                  String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of profiles matching the specified segment
+     * @param segmentId the segment identifier
+     * @param offset zero-based index of the first result
+     * @param size maximum number of results to return, or {@code -1} for all matches
+     * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
+     * @return a paged list of matching profiles
      */
     @GET
     @Path("/{segmentID}/match")
@@ -80,10 +84,10 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * Retrieves the number of profiles matching the conditions defined by the segment identified by the specified identifier.
+     * Returns how many profiles match the segment with the given ID.
      *
-     * @param segmentId the identifier of the segment for which we want to retrieve matching profiles
-     * @return the number of profiles matching the conditions defined by the segment identified by the specified identifier
+     * @param segmentId the segment identifier
+     * @return the number of matching profiles
      */
     @GET
     @Path("/{segmentID}/count")
@@ -105,16 +109,12 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * Retrieves the 50 first segment metadatas.
+     * Returns segment metadata with paging and optional sorting.
      *
-     * @param offset zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
-     * @param size   a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *               elements according to the property order in the
-     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     *
-     * @return a List of the 50 first segment metadata
+     * @param offset zero-based index of the first result
+     * @param size maximum number of results to return, or {@code -1} for all matches
+     * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
+     * @return matching segment metadata
      */
     @GET
     @Path("/")
@@ -123,11 +123,12 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * Retrieves the list of Segment and Scoring metadata depending on the specified segment.
-     * A segment or scoring is depending on a segment if it includes a profileSegmentCondition with a test on this segment.
+     * Returns segment and scoring metadata that depend on the given segment.
+     * <p>
+     * A dependent definition includes a profile-segment condition that references this segment.
      *
      * @param segmentId the segment identifier
-     * @return a list of Segment/Scoring Metadata depending on the specified segment
+     * @return metadata for dependent segments and scorings
      */
     @GET
     @Path("/{segmentID}/impacted")
@@ -147,10 +148,10 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * Retrieves the metadata for segments matching the specified {@link Query}.
+     * Returns segment metadata matching the given query.
      *
-     * @param query the query that the segments must match for their metadata to be retrieved
-     * @return a {@link PartialList} of segment metadata
+     * @param query the query segments must match
+     * @return a paged list of matching segment metadata
      */
     @POST
     @Path("/query")
@@ -159,10 +160,10 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * Retrieves the segment identified by the specified identifier.
+     * Returns the segment definition with the given ID.
      *
-     * @param segmentId the identifier of the segment to be retrieved
-     * @return the segment identified by the specified identifier or {@code null} if no such segment exists
+     * @param segmentId the segment identifier
+     * @return the segment, or {@code null} when it does not exist
      */
     @GET
     @Path("/{segmentID}")
@@ -187,7 +188,7 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * TODO: remove
+     * Deprecated maintenance endpoint kept for backward compatibility.
      *
      * @deprecated As of version 1.1.0-incubating, not needed anymore
      */

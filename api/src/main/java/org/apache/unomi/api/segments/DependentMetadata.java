@@ -22,29 +22,60 @@ import org.apache.unomi.api.Metadata;
 import java.io.Serializable;
 import java.util.List;
 
+/**
+ * Holds segment and scoring definitions that depend on each other.
+ * Used when exporting or editing related segment/scoring metadata as one
+ * unit in the segmentation UI.
+ */
 public class DependentMetadata implements Serializable {
 
     private List<Metadata> segments;
 
     private List<Metadata> scorings;
 
+    /**
+     * Creates dependent metadata from segment and scoring definitions.
+     *
+     * @param segments metadata for dependent segments
+     * @param scorings metadata for dependent scorings
+     */
     public DependentMetadata(List<Metadata> segments, List<Metadata> scorings) {
         this.segments = segments;
         this.scorings = scorings;
     }
 
+    /**
+     * Metadata for segments that depend on the edited item.
+     *
+     * @return the dependent segment metadata
+     */
     public List<Metadata> getSegments() {
         return segments;
     }
 
+    /**
+     * Sets the dependent segment metadata.
+     *
+     * @param segments the segment metadata list
+     */
     public void setSegments(List<Metadata> segments) {
         this.segments = segments;
     }
 
+    /**
+     * Metadata for scorings that depend on the edited item.
+     *
+     * @return the dependent scoring metadata
+     */
     public List<Metadata> getScorings() {
         return scorings;
     }
 
+    /**
+     * Sets the dependent scoring metadata.
+     *
+     * @param scorings the scoring metadata list
+     */
     public void setScorings(List<Metadata> scorings) {
         this.scorings = scorings;
     }

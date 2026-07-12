@@ -27,7 +27,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 /**
- * @author Jerome Blanchard
+ * Simple health-style JAX-RS endpoint for manual connectivity checks.
+ * Returns plain text so load balancers or operators can verify the REST
+ * layer is reachable without exercising business services.
  */
 @Produces(MediaType.TEXT_PLAIN + ";charset=UTF-8")
 @Path("/test")
@@ -37,10 +39,18 @@ public class TestEndPoint {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TestEndPoint.class.getName());
 
+    /**
+     * Creates the test endpoint.
+     */
     public TestEndPoint() {
         LOGGER.info("TestEndPoint initialized.");
     }
 
+    /**
+     * Returns a simple health-check response.
+     *
+     * @return the ping response
+     */
     @GET
     @Path("/ping")
     public String ping() {

@@ -36,8 +36,8 @@ The healthcheck is available even if unomi is not started. It gives health infor
 
 All healthcheck can have a status :
   - DOWN (service is not available)
-  - UP (service is up but does not respond to request (starting or misconfigured))
-  - LIVE (service is ready to serve request)
+  - UP (service is running or starting)
+  - LIVE (service is ready to serve requests)
   - ERROR (an error occurred during service health check)
 
 Any subsystem health check have a timeout of 500ms where check is cancelled and will be returned as error.

@@ -20,7 +20,9 @@ package org.apache.unomi.api.actions;
 import org.apache.unomi.api.rules.Rule;
 
 /**
- * An action to be executed after all {@link Rule}-derived have been processed.
+ * Hook executed after all rule actions for an event have run.
+ * Use post-executors for cleanup, logging, or follow-up work that must
+ * happen once per event after the main action chain completes.
  */
 public interface ActionPostExecutor {
     /**

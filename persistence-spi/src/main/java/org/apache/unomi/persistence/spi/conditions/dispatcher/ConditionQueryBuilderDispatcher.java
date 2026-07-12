@@ -70,7 +70,11 @@ public abstract class ConditionQueryBuilderDispatcher {
 
     /**
      * Resolves the final queryBuilder key to use, trying the provided key first, then applying legacy mapping.
-     * The {@code hasBuilder} predicate is used to test the presence of a builder for a given key.
+     *
+     * @param queryBuilderKey the requested query builder key
+     * @param conditionTypeId the condition type id (for deprecation logging)
+     * @param hasBuilder predicate that tests whether a builder exists for a key
+     * @return the resolved key, or {@code null} if none found
      */
     public String findQueryBuilderKey(String queryBuilderKey, String conditionTypeId,
                                       Predicate<String> hasBuilder) {

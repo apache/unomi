@@ -22,7 +22,9 @@ import org.apache.unomi.api.Scope;
 import java.util.List;
 
 /**
- * A service to create, update and delete scope.
+ * Manages {@link Scope} definitions.
+ * Creates, updates, and deletes scopes that partition data between sites
+ * or applications.
  */
 public interface ScopeService {
 
@@ -51,6 +53,7 @@ public interface ScopeService {
     /**
      * Get a scope by its id
      *
+     * @param id scope identifier
      * @return Scope matching the id
      */
     Scope getScope(String id);

@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_upgrade_dependency_hygiene]]
+[#_upgrade_dependency_hygiene]
 ==== Dependency hygiene (non-platform bumps)
 
 Not every version bump is a Karaf or persistence migration. PR2-style hygiene (UNOMI-875 `#795`, `ef10dfe15`) covers *application* dependencies that must *not* break OSGi rules established in platform upgrades.

@@ -42,12 +42,18 @@ public class PatchServiceEndPoint {
     @Reference
     private PatchService patchService;
 
+    /**
+     * Sets the patch service.
+     *
+     * @param patchService the patch service
+     */
     public void setPatchService(PatchService patchService) {
         this.patchService = patchService;
     }
 
     /**
      * Apply a patch on an item
+     *
      * @param patch the patch to apply
      * @param force a boolean to force (or not) the application of the patch even if it was previously applied.
      */

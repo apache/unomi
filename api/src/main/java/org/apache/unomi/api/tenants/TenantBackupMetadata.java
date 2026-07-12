@@ -16,23 +16,51 @@
  */
 package org.apache.unomi.api.tenants;
 
+/**
+ * Bookmark for a tenant backup operation.
+ * Associates a {@code tenantId} with the {@code timestamp} when backup metadata
+ * was recorded so restore and housekeeping jobs can tell which backup generation
+ * applies to which tenant.
+ */
 public class TenantBackupMetadata {
+    /** Tenant that owns this backup record. */
     private String tenantId;
+    /** When this backup metadata was recorded (milliseconds since epoch). */
     private long timestamp;
 
+    /**
+     * Tenant that owns this backup.
+     *
+     * @return tenant id
+     */
     public String getTenantId() {
         return tenantId;
     }
 
+    /**
+     * Sets the tenant id.
+     *
+     * @param tenantId tenant id
+     */
     public void setTenantId(String tenantId) {
         this.tenantId = tenantId;
     }
 
+    /**
+     * When this backup metadata was recorded.
+     *
+     * @return timestamp in milliseconds since epoch
+     */
     public long getTimestamp() {
         return timestamp;
     }
 
+    /**
+     * Sets the backup metadata timestamp.
+     *
+     * @param timestamp timestamp in milliseconds since epoch
+     */
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
-} 
+}

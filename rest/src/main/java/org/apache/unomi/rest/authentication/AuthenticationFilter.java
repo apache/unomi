@@ -88,6 +88,14 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     private final SecurityService securityService;
     private final ExecutionContextManager executionContextManager;
 
+    /**
+     * Creates the authentication filter.
+     *
+     * @param restAuthenticationConfig the REST authentication configuration
+     * @param tenantService the tenant service
+     * @param securityService the security service
+     * @param executionContextManager the execution context manager
+     */
     public AuthenticationFilter(RestAuthenticationConfig restAuthenticationConfig,
                               TenantService tenantService,
                               SecurityService securityService,

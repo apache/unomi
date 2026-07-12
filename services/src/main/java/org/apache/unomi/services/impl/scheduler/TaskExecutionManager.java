@@ -49,40 +49,82 @@ public class TaskExecutionManager {
     private TaskExecutorRegistry executorRegistry;
     private int threadPoolSize = MIN_THREAD_POOL_SIZE;
 
+    /**
+     * Creates the execution manager.
+     */
     public TaskExecutionManager() {
         this.scheduledTasks = new ConcurrentHashMap<>();
         this.executingTasksByType = new ConcurrentHashMap<>();
     }
 
-    // Setter methods for Blueprint dependency injection
+    /**
+     * Sets the cluster node ID.
+     *
+     * @param nodeId the node ID
+     */
     public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
     }
 
+    /**
+     * Sets the scheduler thread pool size.
+     *
+     * @param threadPoolSize the thread pool size
+     */
     public void setThreadPoolSize(int threadPoolSize) {
         this.threadPoolSize = Math.max(MIN_THREAD_POOL_SIZE, threadPoolSize);
     }
 
+    /**
+     * Sets the task state manager.
+     *
+     * @param stateManager the state manager
+     */
     public void setStateManager(TaskStateManager stateManager) {
         this.stateManager = stateManager;
     }
 
+    /**
+     * Sets the task lock manager.
+     *
+     * @param lockManager the lock manager
+     */
     public void setLockManager(TaskLockManager lockManager) {
         this.lockManager = lockManager;
     }
 
+    /**
+     * Sets the task metrics manager.
+     *
+     * @param metricsManager the metrics manager
+     */
     public void setMetricsManager(TaskMetricsManager metricsManager) {
         this.metricsManager = metricsManager;
     }
 
+    /**
+     * Sets the task history manager.
+     *
+     * @param historyManager the history manager
+     */
     public void setHistoryManager(TaskHistoryManager historyManager) {
         this.historyManager = historyManager;
     }
 
+    /**
+     * Sets the task executor registry.
+     *
+     * @param executorRegistry the executor registry
+     */
     public void setExecutorRegistry(TaskExecutorRegistry executorRegistry) {
         this.executorRegistry = executorRegistry;
     }
 
+    /**
+     * Sets the scheduler service reference.
+     *
+     * @param schedulerService the scheduler service
+     */
     public void setSchedulerService(SchedulerServiceImpl schedulerService) {
         this.schedulerService = schedulerService;
     }
@@ -105,7 +147,9 @@ public class TaskExecutionManager {
     }
 
     /**
-     * Starts the task checking service if this is an executor node
+     * Starts the task checking service if this is an executor node.
+     *
+     * @param taskChecker runnable that polls for due tasks
      */
     public void startTaskChecker(Runnable taskChecker) {
         if (running.compareAndSet(false, true)) {
@@ -131,7 +175,10 @@ public class TaskExecutionManager {
     }
 
     /**
-     * Schedules a task for execution based on its configuration
+     * Schedules a task for execution based on its configuration.
+     *
+     * @param task the task to schedule
+     * @param taskRunner runnable invoked when the task is due
      */
     public void scheduleTask(ScheduledTask task, Runnable taskRunner) {
         // Calculate initial execution time if not set
@@ -159,6 +206,9 @@ public class TaskExecutionManager {
     /**
      * Executes a task immediately with the specified executor.
      * This method should only be called when a task is ready to execute.
+     *
+     * @param task the task to execute
+     * @param executor the task executor implementation
      */
     public void executeTask(ScheduledTask task, TaskExecutor executor) {
         try {
@@ -205,7 +255,10 @@ public class TaskExecutionManager {
     }
 
     /**
-     * Prepares a task for execution by validating state and acquiring lock if needed
+     * Prepares a task for execution by validating state and acquiring lock if needed.
+     *
+     * @param task the task to prepare
+     * @return true if the task is ready to run
      */
     public boolean prepareForExecution(ScheduledTask task) {
         if (!task.isEnabled()) {
@@ -497,7 +550,9 @@ public class TaskExecutionManager {
     }
 
     /**
-     * Cancels a running task
+     * Cancels a running task.
+     *
+     * @param taskId the task ID to cancel
      */
     public void cancelTask(String taskId) {
         ScheduledFuture<?> future = scheduledTasks.remove(taskId);
@@ -536,6 +591,11 @@ public class TaskExecutionManager {
         }
     }
 
+    /**
+     * Returns the internal scheduled executor service.
+     *
+     * @return the scheduler executor
+     */
     public ScheduledExecutorService getScheduler() {
         return scheduler;
     }

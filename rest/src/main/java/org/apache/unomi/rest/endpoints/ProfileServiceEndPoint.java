@@ -69,30 +69,53 @@ public class ProfileServiceEndPoint {
     @Reference
     private LocalizationHelper localizationHelper;
 
+    /**
+     * Creates the profile service endpoint.
+     */
     public ProfileServiceEndPoint() {
         LOGGER.info("Initializing profile service endpoint...");
     }
 
+    /**
+     * Sets the profile service.
+     *
+     * @param profileService the profile service
+     */
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
     }
 
+    /**
+     * Sets the event service.
+     *
+     * @param eventService the event service
+     */
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }
 
+    /**
+     * Sets the segment service.
+     *
+     * @param segmentService the segment service
+     */
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }
 
+    /**
+     * Sets the localization helper.
+     *
+     * @param localizationHelper the localization helper
+     */
     public void setLocalizationHelper(LocalizationHelper localizationHelper) {
         this.localizationHelper = localizationHelper;
     }
 
     /**
-     * Retrieves the number of unique profiles.
+     * Returns the total number of unique profiles.
      *
-     * @return the number of unique profiles.
+     * @return the profile count
      */
     @GET
     @Path("/count")
@@ -101,10 +124,10 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves profiles matching the specified query.
+     * Returns profiles matching the given query.
      *
-     * @param query a {@link Query} specifying which elements to retrieve
-     * @return a {@link PartialList} of profiles instances matching the specified query
+     * @param query the search query
+     * @return a paged list of matching profiles
      */
     @POST
     @Path("/search")
@@ -113,10 +136,10 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves an export of profiles matching the specified query as a downloadable file using the comma-separated values (CSV) format.
+     * Exports matching profiles as a downloadable CSV file.
      *
-     * @param query a String JSON representation of the query the profiles to export should match
-     * @return a Response object configured to allow caller to download the CSV export file
+     * @param query JSON query string describing which profiles to export
+     * @return a CSV download response
      */
     @GET
     @Path("/export")
@@ -150,10 +173,10 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves an export of profiles matching the specified query as a downloadable file using the comma-separated values (CSV) format.
+     * Exports matching profiles as a downloadable CSV file.
      *
-     * @param query a String JSON representation of the query the profiles to export should match
-     * @return a Response object configured to allow caller to download the CSV export file
+     * @param query the query describing which profiles to export
+     * @return a CSV download response
      */
     @POST
     @Path("/export")
@@ -167,7 +190,7 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Update all profiles in batch according to the specified {@link BatchUpdate}
+     * Applies a batch update to all matching profiles.
      *
      * @param update the batch update specification
      */
@@ -178,10 +201,10 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves the profile identified by the specified identifier.
+     * Returns the profile with the given ID.
      *
-     * @param profileId the identifier of the profile to retrieve
-     * @return the profile identified by the specified identifier or {@code null} if no such profile exists
+     * @param profileId the profile identifier
+     * @return the profile, or {@code null} when it does not exist
      */
     @GET
     @Path("/{profileId}")
@@ -223,20 +246,16 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves the sessions associated with the profile identified by the specified identifier that match the specified query (if specified), ordered according to the specified
-     * {@code sortBy} String and and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
+     * Returns sessions for the profile with the given ID.
+     * <p>
+     * Results can be filtered with an optional full-text query and paged with offset, size, and sort parameters.
      *
-     * TODO: use a Query object instead of distinct parameter?
-     *
-     * @param profileId the identifier of the profile we want to retrieve sessions from
-     * @param query     a String of text used for fulltext filtering which sessions we are interested in or {@code null} (or an empty String) if we want to retrieve all sessions
-     * @param offset    zero or a positive integer specifying the position of the first session in the total ordered collection of matching sessions
-     * @param size      a positive integer specifying how many matching sessions should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *                  elements according to the property order in the
-     *                  String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of matching sessions
+     * @param profileId the profile identifier
+     * @param query optional full-text filter, or {@code null} for all sessions
+     * @param offset zero-based index of the first result
+     * @param size maximum number of results to return, or {@code -1} for all matches
+     * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
+     * @return a paged list of matching sessions
      */
     @GET
     @Path("/{profileId}/sessions")
@@ -249,10 +268,10 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves the list of segment metadata for the segments the specified profile is a member of.
+     * Returns segment metadata for segments that contain the given profile.
      *
-     * @param profileId the identifier of the profile for which we want to retrieve the segment metadata
-     * @return the (possibly empty) list of segment metadata for the segments the specified profile is a member of
+     * @param profileId the profile identifier
+     * @return segment metadata for memberships of this profile
      */
     @GET
     @Path("/{profileId}/segments")
@@ -262,10 +281,10 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * TODO
+     * Returns the property-type mapping for the given source property type ID.
      *
-     * @param fromPropertyTypeId fromPropertyTypeId
-     * @return property type mapping
+     * @param fromPropertyTypeId the source property type identifier
+     * @return the mapped target property type identifier
      */
     @GET
     @Path("/properties/mappings/{fromPropertyTypeId}")
@@ -274,10 +293,10 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves {@link Persona} matching the specified query.
+     * Returns personas matching the given query.
      *
-     * @param query a {@link Query} specifying which elements to retrieve
-     * @return a {@link PartialList} of Persona instances matching the specified query
+     * @param query the search query
+     * @return a paged list of matching personas
      */
     @POST
     @Path("/personas/search")
@@ -286,10 +305,10 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves the {@link Persona} identified by the specified identifier.
+     * Returns the persona with the given ID.
      *
-     * @param personaId the identifier of the persona to retrieve
-     * @return the persona identified by the specified identifier or {@code null} if no such persona exists
+     * @param personaId the persona identifier
+     * @return the persona, or {@code null} when it does not exist
      */
     @GET
     @Path("/personas/{personaId}")
@@ -298,10 +317,10 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves the persona identified by the specified identifier and all its associated sessions
+     * Returns the persona with the given ID and all associated sessions.
      *
-     * @param personaId the identifier of the persona to retrieve
-     * @return a {@link PersonaWithSessions} instance with the persona identified by the specified identifier and all its associated sessions
+     * @param personaId the persona identifier
+     * @return the persona and its sessions
      */
     @GET
     @Path("/personasWithSessions/{personaId}")
@@ -310,10 +329,10 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Save the posted persona with its sessions
+     * Saves the posted persona together with its sessions.
      *
-     * @param personaWithSessions the persona to save with its sessions.
-     * @return a {@link PersonaWithSessions} instance with the persona identified by the specified identifier and all its associated sessions
+     * @param personaWithSessions the persona and sessions to persist
+     * @return the saved persona and sessions
      */
     @POST
     @Path("/personasWithSessions")
@@ -359,17 +378,13 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves the sessions associated with the persona identified by the specified identifier, ordered according to the specified {@code sortBy} String and and paged: only
-     * {@code size} of them are retrieved, starting with the {@code offset}-th one.
+     * Returns sessions for the persona with the given ID.
      *
-     * @param personaId the persona id
-     * @param offset    zero or a positive integer specifying the position of the first session in the total ordered collection of matching sessions
-     * @param size      a positive integer specifying how many matching sessions should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *                  elements according to the property order in the
-     *                  String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of sessions for the persona identified by the specified identifier
+     * @param personaId the persona identifier
+     * @param offset zero-based index of the first result
+     * @param size maximum number of results to return, or {@code -1} for all matches
+     * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
+     * @return a paged list of persona sessions
      */
     @GET
     @Path("/personas/{personaId}/sessions")
@@ -381,11 +396,11 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves the session identified by the specified identifier.
+     * Returns the session with the given ID.
      *
-     * @param sessionId the identifier of the session to be retrieved
-     * @return the session identified by the specified identifier
-     * @throws ParseException if the date hint cannot be parsed as a proper {@link Date} object
+     * @param sessionId the session identifier
+     * @return the session
+     * @throws ParseException if a stored date hint cannot be parsed
      */
     @GET
     @Path("/sessions/{sessionId}")
@@ -406,9 +421,9 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Delete the session by specifying its unique identifier.
+     * Deletes the session with the given ID.
      *
-     * @param sessionId the session identifier for the session to delete
+     * @param sessionId the session identifier
      */
     @DELETE
     @Path("/sessions/{sessionId}")
@@ -417,20 +432,17 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves {@link Event}s for the {@link Session} identified by the provided session identifier, matching any of the provided event types,
-     * ordered according to the specified {@code sortBy} String and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
-     * If a {@code query} is provided, a full text search is performed on the matching events to further filter them.
+     * Returns events for the session with the given ID.
+     * <p>
+     * Results can be filtered by event type, optional full-text query, and paging parameters.
      *
-     * @param sessionId  the identifier of the user session we're considering
-     * @param eventTypes an array of event type names; the events to retrieve should at least match one of these
-     * @param query      a String to perform full text filtering on events matching the other conditions
-     * @param offset     zero or a positive integer specifying the position of the first event in the total ordered collection of matching events
-     * @param size       a positive integer specifying how many matching events should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy     an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *                   elements according to the property order in
-     *                   the String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *                   a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of matching events
+     * @param sessionId the session identifier
+     * @param eventTypes event types to include; an event must match at least one
+     * @param query optional full-text filter
+     * @param offset zero-based index of the first result
+     * @param size maximum number of results to return, or {@code -1} for all matches
+     * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
+     * @return a paged list of matching events
      */
     @GET
     @Path("/sessions/{sessionId}/events")
@@ -443,26 +455,40 @@ public class ProfileServiceEndPoint {
         return eventService.searchEvents(sessionId, eventTypes, query, offset, size, sortBy);
     }
 
+    /**
+     * Finds sessions for the given profile.
+     *
+     * @param profileId the profile identifier
+     * @return the matching sessions, or {@code null} when not implemented
+     */
     public PartialList<Session> findProfileSessions(String profileId) {
         return null;
     }
 
+    /**
+     * Tests whether a condition matches the given profile and session.
+     *
+     * @param condition the condition to test
+     * @param profile the profile
+     * @param session the session
+     * @return {@code true} when the condition matches
+     */
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
         return profileService.matchCondition(condition, profile, session);
     }
 
     /**
-     * Retrieves the existing property types for the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and with the specified tag or system tag.
+     * Returns property types already in use for the given item type and tag.
      *
-     * TODO: move to a different class
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
      *
-     * @param tag           the tag we're interested in
-     * @param isSystemTag   if we should look in system tags instead of tags
-     * @param itemType      the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
-     * @param language      the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
-     * @param response      the http response object
-     * @return all property types defined for the specified item type and with the specified tag
-     * @throws IOException if there was an error sending the response
+     * @param tag the tag or system tag to match
+     * @param isSystemTag whether {@code tag} is a system tag
+     * @param itemType the item type name from the class {@code ITEM_TYPE} field
+     * @param language the requested locale for property descriptions (currently unused)
+     * @param response the HTTP response used to signal missing query parameters
+     * @return matching property types, or {@code null} when required parameters are missing
+     * @throws IOException if sending the error response fails
      */
     @GET
     @Path("/existingProperties")
@@ -481,12 +507,12 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves all known property types.
+     * Returns all known property types grouped by target.
      *
-     * TODO: move to a different class
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
      *
-     * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
-     * @return a Map associating targets as keys to related {@link PropertyType}s
+     * @param language the requested locale for property descriptions (currently unused)
+     * @return target name to property type mappings
      */
     @GET
     @Path("/properties")
@@ -495,13 +521,13 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves the property type associated with the specified property ID.
+     * Returns the property type for the given property ID.
      *
-     * TODO: move to a different class
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
      *
-     * @param propertyId    the property ID for which we want to retrieve the associated property type
-     * @param language      the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
-     * @return the property type associated with the specified ID
+     * @param propertyId the property identifier
+     * @param language the requested locale for property descriptions (currently unused)
+     * @return the property type
      */
     @GET
     @Path("/properties/{propertyId}")
@@ -510,13 +536,13 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves all the property types associated with the specified target.
+     * Returns property types for the given target.
      *
-     * TODO: move to a different class
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
      *
-     * @param target   the target for which we want to retrieve the associated property types
-     * @param language the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
-     * @return a collection of all the property types associated with the specified target
+     * @param target the property target name
+     * @param language the requested locale for property descriptions (currently unused)
+     * @return property types for the target
      */
     @GET
     @Path("/properties/targets/{target}")
@@ -525,14 +551,14 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves all property types with the specified tags.
+     * Returns property types that match any of the given tags.
      *
-     * TODO: move to a different class
-     * TODO: passing a list of tags via a comma-separated list is not very RESTful
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
+     * Tags are passed as a comma-separated path segment for backward compatibility.
      *
-     * @param tags      a comma-separated list of tag identifiers
-     * @param language  the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
-     * @return a Set of the property types with the specified tag
+     * @param tags comma-separated tag identifiers
+     * @param language the requested locale for property descriptions (currently unused)
+     * @return matching property types
      */
     @GET
     @Path("/properties/tags/{tags}")
@@ -546,14 +572,14 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves all property types with the specified tags.
+     * Returns property types that match any of the given system tags.
      *
-     * TODO: move to a different class
-     * TODO: passing a list of tags via a comma-separated list is not very RESTful
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
+     * Tags are passed as a comma-separated path segment for backward compatibility.
      *
-     * @param tags      a comma-separated list of tag identifiers
-     * @param language  the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
-     * @return a Set of the property types with the specified tag
+     * @param tags comma-separated system tag identifiers
+     * @param language the requested locale for property descriptions (currently unused)
+     * @return matching property types
      */
     @GET
     @Path("/properties/systemTags/{tags}")
@@ -569,7 +595,7 @@ public class ProfileServiceEndPoint {
     /**
      * Persists the specified property type in the context server.
      *
-     * TODO: move to a different class
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
      *
      * @param property the property type to persist
      * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
@@ -583,7 +609,7 @@ public class ProfileServiceEndPoint {
     /**
      * Persists the specified properties type in the context server.
      *
-     * TODO: move to a different class
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
      *
      * @param properties the properties type to persist
      * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
@@ -601,7 +627,7 @@ public class ProfileServiceEndPoint {
     /**
      * Deletes the property type identified by the specified identifier.
      *
-     * TODO: move to a different class
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
      *
      * @param propertyId the identifier of the property type to delete
      * @return {@code true} if the property type was properly deleted, {@code false} otherwise
@@ -613,10 +639,10 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Retrieves sessions matching the specified query.
+     * Returns sessions matching the given query.
      *
-     * @param query a {@link Query} specifying which elements to retrieve
-     * @return a {@link PartialList} of sessions matching the specified query
+     * @param query the search query
+     * @return a paged list of matching sessions
      */
     @POST
     @Path("/search/sessions")
@@ -624,6 +650,13 @@ public class ProfileServiceEndPoint {
         return profileService.searchSessions(query);
     }
 
+    /**
+     * Adds an alias to a profile.
+     *
+     * @param profileId the profile identifier
+     * @param aliasId the alias identifier
+     * @param headerClientID optional client identifier from the request header
+     */
     @POST
     @Path("/{profileId}/aliases/{aliasId}")
     public void addAliasToProfile(final @PathParam("profileId") String profileId,
@@ -633,6 +666,13 @@ public class ProfileServiceEndPoint {
         profileService.addAliasToProfile(profileId, aliasId, clientId);
     }
 
+    /**
+     * Removes an alias from a profile.
+     *
+     * @param profileId the profile identifier
+     * @param aliasId the alias identifier
+     * @param headerClientID optional client identifier from the request header
+     */
     @DELETE
     @Path("/{profileId}/aliases/{aliasId}")
     public void removeAliasFromProfile(final @PathParam("profileId") String profileId,
@@ -642,6 +682,15 @@ public class ProfileServiceEndPoint {
         profileService.removeAliasFromProfile(profileId, aliasId, clientId);
     }
 
+    /**
+     * Lists aliases for the given profile.
+     *
+     * @param profileId the profile identifier
+     * @param offset pagination offset
+     * @param size page size
+     * @param sortBy optional sort field
+     * @return the matching profile aliases
+     */
     @GET
     @Path("/{profileId}/aliases")
     public PartialList<ProfileAlias> listAliasesByProfileId(final @PathParam("profileId") String profileId,

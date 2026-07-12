@@ -57,37 +57,77 @@ public class ConditionEvaluatorDispatcherImpl
     private TracerService tracerService;
     private DefinitionsService definitionsService;
 
+    /**
+     * Default constructor.
+     */
     public ConditionEvaluatorDispatcherImpl() {
     }
 
+    /**
+     * OSGi reference setter for the metrics service.
+     *
+     * @param metricsService the metrics service
+     */
     @Reference
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
     }
 
+    /**
+     * OSGi reference setter for the script executor.
+     *
+     * @param scriptExecutor the script executor
+     */
     @Reference
     public void setScriptExecutor(ScriptExecutor scriptExecutor) {
         this.scriptExecutor = scriptExecutor;
     }
 
+    /**
+     * OSGi reference setter for the definitions service.
+     *
+     * @param definitionsService the definitions service
+     */
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC)
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
+    /**
+     * OSGi reference unsetter for the definitions service.
+     *
+     * @param definitionsService the definitions service being removed
+     */
     public void unsetDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = null;
     }
 
+    /**
+     * OSGi bind callback for condition evaluators.
+     *
+     * @param evaluator the evaluator implementation
+     * @param props service properties including {@code conditionEvaluatorId}
+     */
     @Reference(service = ConditionEvaluator.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void bindEvaluator(ConditionEvaluator evaluator, Map<String, Object> props) {
         evaluators.put((String) props.get("conditionEvaluatorId"), evaluator);
     }
 
+    /**
+     * OSGi unbind callback for condition evaluators.
+     *
+     * @param evaluator the evaluator being removed
+     * @param props service properties including {@code conditionEvaluatorId}
+     */
     public void unbindEvaluator(ConditionEvaluator evaluator, Map<String, Object> props) {
         evaluators.remove((String) props.get("conditionEvaluatorId"));
     }
 
+    /**
+     * OSGi reference setter for the tracer service.
+     *
+     * @param tracerService the tracer service
+     */
     @Reference
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;

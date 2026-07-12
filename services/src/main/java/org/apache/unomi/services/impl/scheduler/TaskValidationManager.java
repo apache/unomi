@@ -30,7 +30,10 @@ public class TaskValidationManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskValidationManager.class);
 
     /**
-     * Validates task configuration and dependencies
+     * Validates task configuration and dependencies.
+     *
+     * @param task the task to validate
+     * @param existingTasks known tasks keyed by ID
      */
     public void validateTask(ScheduledTask task, Map<String, ScheduledTask> existingTasks) {
         validateBasicConfiguration(task);
@@ -137,7 +140,10 @@ public class TaskValidationManager {
     }
 
     /**
-     * Validates a state transition
+     * Validates a state transition.
+     *
+     * @param task the task being updated
+     * @param newStatus the target status
      */
     public void validateStateTransition(ScheduledTask task, ScheduledTask.TaskStatus newStatus) {
         ScheduledTask.TaskStatus currentStatus = task.getStatus();
@@ -173,7 +179,10 @@ public class TaskValidationManager {
     }
 
     /**
-     * Validates task execution prerequisites
+     * Validates task execution prerequisites.
+     *
+     * @param task the task to execute
+     * @param nodeId the executing node ID
      */
     public void validateExecutionPrerequisites(ScheduledTask task, String nodeId) {
         if (task.getStatus() != ScheduledTask.TaskStatus.SCHEDULED &&

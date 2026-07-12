@@ -28,34 +28,74 @@ public class RESTParameter {
     private boolean multivalued = false;
     private Object defaultValue = null;
 
+    /**
+     * Returns the parameter identifier.
+     *
+     * @return the parameter identifier
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Sets the parameter identifier.
+     *
+     * @param id the parameter identifier
+     */
     public void setId(String id) {
         this.id = id;
     }
 
+    /**
+     * Returns the parameter type.
+     *
+     * @return the parameter type
+     */
     public String getType() {
         return type;
     }
 
+    /**
+     * Sets the parameter type.
+     *
+     * @param type the parameter type
+     */
     public void setType(String type) {
         this.type = type;
     }
 
+    /**
+     * Returns whether the parameter accepts multiple values.
+     *
+     * @return {@code true} when the parameter is multivalued
+     */
     public boolean isMultivalued() {
         return multivalued;
     }
 
+    /**
+     * Sets whether the parameter accepts multiple values.
+     *
+     * @param multivalued {@code true} when the parameter is multivalued
+     */
     public void setMultivalued(boolean multivalued) {
         this.multivalued = multivalued;
     }
 
+    /**
+     * Returns the default parameter value.
+     *
+     * @return the default value
+     */
     public Object getDefaultValue() {
         return defaultValue;
     }
 
+    /**
+     * Sets the default parameter value.
+     *
+     * @param defaultValue the default value
+     */
     public void setDefaultValue(Object defaultValue) {
         this.defaultValue = defaultValue;
     }

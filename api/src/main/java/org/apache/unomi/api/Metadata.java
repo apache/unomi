@@ -29,7 +29,9 @@ import java.util.Set;
 import static org.apache.unomi.api.utils.YamlUtils.circularRef;
 
 /**
- * A class providing information about context server entities.
+ * Common descriptive fields shared by Unomi configuration items.
+ * Includes id, name, description, scope, tags, and related attributes that
+ * appear on segments, rules, property types, and other managed entities.
  *
  * @see MetadataItem
  */
@@ -53,27 +55,27 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
     private boolean readOnly = false;
 
     /**
-     * Instantiates a new Metadata.
+     * Default constructor.
      */
     public Metadata() {
     }
 
     /**
-     * Instantiates a new Metadata with the specified identifier.
+     * Creates metadata with the given identifier.
      *
-     * @param id the identifier for this Metadata
+     * @param id the metadata identifier
      */
     public Metadata(String id) {
         this.id = id;
     }
 
     /**
-     * Instantiates a new Metadata with the provided information.
+     * Creates metadata with scope, identifier, name, and description.
      *
-     * @param scope       the scope for this Metadata
-     * @param id          the identifier of the associated {@link Item}
-     * @param name        the name
-     * @param description the description
+     * @param scope       the item scope
+     * @param id          the item identifier
+     * @param name        the display name
+     * @param description the human-readable description
      */
     public Metadata(String scope, String id, String name, String description) {
         this.scope = scope;
@@ -83,25 +85,25 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
     }
 
     /**
-     * Retrieves the identifier for the entity associated with this Metadata
+     * Identifier of the item described by this metadata.
      *
-     * @return the identifier
+     * @return the item id
      */
     public String getId() {
         return id;
     }
 
     /**
-     * Sets the id.
+     * Sets the item identifier.
      *
-     * @param id the id
+     * @param id the item id
      */
     public void setId(String id) {
         this.id = id;
     }
 
     /**
-     * Retrieves the name.
+     * Display name shown in administrative UIs.
      *
      * @return the name
      */
@@ -110,7 +112,7 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
     }
 
     /**
-     * Sets the name.
+     * Sets the display name.
      *
      * @param name the name
      */
@@ -119,7 +121,7 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
     }
 
     /**
-     * Retrieves the description.
+     * Human-readable description of the item.
      *
      * @return the description
      */
@@ -137,9 +139,9 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
     }
 
     /**
-     * Retrieves the scope for the entity associated with this Metadata
+     * Scope that owns this item.
      *
-     * @return the scope for the entity associated with this Metadata
+     * @return the scope id
      * @see Item Item for a deeper discussion of scopes
      */
     public String getScope() {
@@ -147,36 +149,36 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
     }
 
     /**
-     * Sets the scope.
+     * Sets the item scope.
      *
-     * @param scope the scope
+     * @param scope the scope id
      */
     public void setScope(String scope) {
         this.scope = scope;
     }
 
     /**
-     * Retrieves a set of {@link String} tag names associated with this Metadata
+     * User-defined tags for organizing and filtering items.
      *
-     * @return a set of {@link String} tag names associated with this Metadata
+     * @return the tag names
      */
     public Set<String> getTags() {
         return tags;
     }
 
     /**
-     * Sets the tags.
+     * Sets the user-defined tags.
      *
-     * @param tags the tag ids
+     * @param tags the tag names
      */
     public void setTags(Set<String> tags) {
         this.tags = tags;
     }
 
     /**
-     * Retrieves a set of {@link String} system tag names associated with this Metadata
+     * System tags applied by the platform (not editable in UIs).
      *
-     * @return a set of {@link String} system tag names associated with this Metadata
+     * @return the system tag names
      */
     public Set<String> getSystemTags() {
         return systemTags;
@@ -185,32 +187,32 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
     /**
      * Sets the system tags.
      *
-     * @param systemTags the system tag ids
+     * @param systemTags the system tag names
      */
     public void setSystemTags(Set<String> systemTags) {
         this.systemTags = systemTags;
     }
 
     /**
-     * Whether the associated entity is considered active by the context server, in particular to check if rules need to be created / triggered
+     * Whether the associated item is active and eligible for rule evaluation.
      *
-     * @return {@code true} if the associated entity is enabled, {@code false} otherwise
+     * @return {@code true} if enabled, {@code false} otherwise
      */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Specifies whether the associated entity should be active or not.
+     * Sets whether the associated item is active.
      *
-     * @param enabled {@code true} if the associated entity is enabled, {@code false} otherwise
+     * @param enabled {@code true} to enable the item, {@code false} to disable it
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
     /**
-     * Whether the associated entity is waiting on additional plugins to become available to be able to properly perform its function.
+     * Whether required OSGi plugins are missing and the item cannot run yet.
      *
      * @return {@code true} if plugins are missing, {@code false} otherwise
      */
@@ -219,7 +221,7 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
     }
 
     /**
-     * Specifies whether the associated entity is waiting on additional plugins to become available.
+     * Sets whether required plugins are missing.
      *
      * @param missingPlugins {@code true} if plugins are missing, {@code false} otherwise
      */
@@ -228,41 +230,47 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
     }
 
     /**
-     * Whether the associated entity is considered for internal purposes only and should therefore be hidden to accessing UIs.
+     * Whether the item should be hidden from administrative UIs.
      *
-     * @return {@code true} if the associated entity needs to be hidden, {@code false} otherwise
+     * @return {@code true} if hidden, {@code false} otherwise
      */
     public boolean isHidden() {
         return hidden;
     }
 
     /**
-     * Specifies whether the associated entity is hidden.
+     * Sets whether the item is hidden from UIs.
      *
-     * @param hidden {@code true} if the associated entity needs to be hidden, {@code false} otherwise
+     * @param hidden {@code true} to hide the item, {@code false} to show it
      */
     public void setHidden(boolean hidden) {
         this.hidden = hidden;
     }
 
     /**
-     * Whether the associated entity can be accessed but not modified.
+     * Whether the item can be read but not modified.
      *
-     * @return {@code true} if the associated entity can be accessed but not modified, {@code false} otherwise
+     * @return {@code true} if read-only, {@code false} otherwise
      */
     public boolean isReadOnly() {
         return readOnly;
     }
 
     /**
-     * Specifies whether the associated entity should be only accessed and not modified.
+     * Sets whether the item is read-only.
      *
-     * @param readOnly {@code true} if the associated entity can be accessed but not modified, {@code false} otherwise
+     * @param readOnly {@code true} for read-only access, {@code false} to allow updates
      */
     public void setReadOnly(boolean readOnly) {
         this.readOnly = readOnly;
     }
 
+    /**
+     * Compares metadata by item identifier.
+     *
+     * @param o the other metadata
+     * @return a negative, zero, or positive value depending on id ordering
+     */
     public int compareTo(Metadata o) {
         return getId().compareTo(o.getId());
     }

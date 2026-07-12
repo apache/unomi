@@ -63,9 +63,9 @@ public class ContextResponse implements Serializable {
     private TraceNode requestTracing;
 
     /**
-     * Retrieves the profile identifier associated with the profile of the user on behalf of which the client performed the context request.
+     * Profile identifier for the user on whose behalf the context request was made.
      *
-     * @return the profile identifier associated with the profile of the active user
+     * @return the profile identifier
      */
     public String getProfileId() {
         return profileId;
@@ -81,7 +81,7 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * Retrieves the session identifier associated with the processed request.
+     * Session identifier for the processed request.
      *
      * @return the session identifier associated with the processed request
      * @see Session
@@ -100,7 +100,7 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * Retrieves the profile properties that were requested by the client.
+     * Profile properties requested by the client.
      *
      * @return the profile properties that were requested by the client
      * @see ContextRequest#getRequiredProfileProperties()
@@ -119,7 +119,7 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * Retrieves the session properties that were requested by the client.
+     * Session properties requested by the client.
      *
      * @return the session properties that were requested by the client
      * @see ContextRequest#getRequiredSessionProperties()
@@ -138,7 +138,7 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * Retrieves the identifiers of the profile segments associated with the user if they were requested by the client. Note that these segments are evaluated taking potential
+     * Profile segment identifiers for the user if they were requested by the client. Note that these segments are evaluated taking potential
      * overrides as requested by the client or as a result of evaluating overridden properties.
      *
      * @return the profile segments associated with the user accounting for potential overrides
@@ -157,23 +157,25 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * Retrieve the current scores for the profile if they were requested in the request using the requireScores boolean.
-     * @return a map that contains the score identifier as the key and the score value as the value
+     * Profile scores when requested via {@link ContextRequest#isRequireScores()}.
+     *
+     * @return map of scoring identifier to score value
      */
     public Map<String, Integer> getProfileScores() {
         return profileScores;
     }
 
     /**
-     * Stores the scores for the current profile if requested using the requireScores boolean in the request.
-     * @param profileScores a map that contains the score identifier as the key and the score value as the value
+     * Sets profile scores for the response.
+     *
+     * @param profileScores map of scoring identifier to score value
      */
     public void setProfileScores(Map<String, Integer> profileScores) {
         this.profileScores = profileScores;
     }
 
     /**
-     * Retrieves the results of the evaluation content filtering definitions and whether individual definitions match with the associated profile (potentially modified by
+     * Content filtering evaluation results and whether individual definitions match with the associated profile (potentially modified by
      * overridden values).
      *
      * @return a Map associating the filter identifier as key to its evaluation result by the context server
@@ -193,9 +195,9 @@ public class ContextResponse implements Serializable {
 
 
     /**
-     * Returns the number of events processed in this request.
+     * Number of events processed in this request.
      *
-     * @return the number of events processed in this request
+     * @return the processed event count
      */
     public int getProcessedEvents() {
         return processedEvents;
@@ -211,8 +213,9 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: getPersonalizationResults()
-     * @return the personalization results map
+     * @deprecated Personalization results are more complex since 2.1.0; use {@link #getPersonalizationResults()} instead.
+     *
+     * @return the legacy personalization results map
      */
     @Deprecated
     public Map<String, List<String>> getPersonalizations() {
@@ -220,8 +223,9 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: setPersonalizationResults()
-     * @param personalizations the personalization results
+     * @deprecated Personalization results are more complex since 2.1.0; use {@link #setPersonalizationResults(Map)} instead.
+     *
+     * @param personalizations the legacy personalization results
      */
     @Deprecated
     public void setPersonalizations(Map<String, List<String>> personalizations) {
@@ -229,8 +233,9 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * Get the result of the personalization resolutions done during the context request.
-     * @return a Map key/value pair (key:personalization id, value:the result that contains the matching content ids and additional information)
+     * Personalization resolution results from the context request.
+     *
+     * @return map of personalization id to resolution result
      */
     public Map<String, PersonalizationResult> getPersonalizationResults() {
         return personalizationResults;
@@ -246,12 +251,11 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * Retrieves the tracked conditions, if any, associated with the source of the context request that resulted in this ContextResponse. Upon evaluating the incoming request,
-     * the context server will determine if there are any rules marked with the "trackedCondition" tag and which source condition matches the source of the incoming request and
-     * return these tracked conditions to the client that can use them to know that the context server can react to events matching the tracked condition and coming from that
-     * source. This is, in particular, used to implement form mapping (a solution that allows clients to update user profiles based on values provided when a form is submitted).
+     * Tracked conditions associated with the request source.
+     * <p>
+     * Rules tagged with {@code trackedCondition} whose source condition matches the incoming
+     * request source are returned so clients can emit matching events (for example form mapping).
      *
-     * TODO: trackedCondition should be a constant, possibly on the Tag class?
      *
      * @return the tracked conditions
      * @see ContextRequest#getSource()
@@ -271,43 +275,43 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * Retrieves the current status of anonymous browsing, as set by the privacy service
-     * @return anonymous browsing status
+     * Whether anonymous browsing is enabled, as set by the privacy service.
+     *
+     * @return {@code true} if anonymous browsing is active
      */
     public boolean isAnonymousBrowsing() {
         return anonymousBrowsing;
     }
 
     /**
-     * Set the user anonymous browsing status
-     * @param anonymousBrowsing new value for anonymousBrowsing
+     * Sets the anonymous browsing status.
+     *
+     * @param anonymousBrowsing {@code true} to enable anonymous browsing
      */
     public void setAnonymousBrowsing(boolean anonymousBrowsing) {
         this.anonymousBrowsing = anonymousBrowsing;
     }
 
     /**
-     * Retrieves the map of consents for the current profile.
-     * @return a Map where the key is the name of the consent identifier, and the value is a consent object that
-     * contains all the consent data such as whether the consent was granted or deny, the date of granting/denying
-     * the date at which the consent will be revoked automatically.
+     * Consent map for the current profile, keyed by consent identifier.
+     *
+     * @return map of consent identifier to consent details
      */
     public Map<String, Consent> getConsents() {
         return consents;
     }
 
     /**
-     * Sets the map of consents for the current profile.
-     * @param consents a Map where the key is the name of the consent identifier, and the value is a consent object that
-     * contains all the consent data such as whether the consent was granted or deny, the date of granting/denying
-     * the date at which the consent will be revoked automatically.
+     * Sets the consent map for the current profile.
+     *
+     * @param consents map of consent identifier to consent details
      */
     public void setConsents(Map<String, Consent> consents) {
         this.consents = consents;
     }
 
     /**
-     * Returns the request tracing data.
+     * Request tracing tree for this context evaluation.
      *
      * @return the request tracing data
      */

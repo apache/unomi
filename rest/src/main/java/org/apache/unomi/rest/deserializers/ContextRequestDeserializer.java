@@ -42,10 +42,21 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
 
     private final SchemaService schemaService;
 
+    /**
+     * Creates a deserializer for ContextRequest.
+     *
+     * @param schemaRegistry the schema service
+     */
     public ContextRequestDeserializer(SchemaService schemaRegistry) {
         this(null, schemaRegistry);
     }
 
+    /**
+     * Creates a deserializer for ContextRequest.
+     *
+     * @param vc the target class
+     * @param schemaRegistry the schema service
+     */
     public ContextRequestDeserializer(Class<ContextRequest> vc, SchemaService schemaRegistry) {
         super(vc);
         this.schemaService = schemaRegistry;

@@ -112,6 +112,8 @@ public class SchedulerServiceImpl implements SchedulerService {
     /**
      * Finds all persistent tasks that are currently locked (i.e., have a lock owner and are not expired).
      * This is used by the recovery manager to detect tasks that may need to be recovered if their lock has expired.
+     *
+     * @return locked persistent tasks
      */
     public List<ScheduledTask> findLockedTasks() {
         List<ScheduledTask> lockedTasks = new ArrayList<>();
@@ -230,6 +232,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
         /**
          * Checks if a state transition is valid
+         *
          * @param from Current task state
          * @param to Target task state
          * @return true if transition is valid
@@ -243,6 +246,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Checks if all required services are initialized and available
+     *
      * @return true if services are ready, false otherwise
      */
     private boolean areServicesReady() {
@@ -253,6 +257,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Checks if all required services are initialized and available, including persistence provider if required
+     *
      * @param requirePersistenceProvider Whether the operation requires persistence provider to be available
      * @return true if services are ready, false otherwise
      */
@@ -271,6 +276,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Queues an operation to be executed once services are available
+     *
      * @param type The type of operation
      * @param description Human-readable description of the operation
      * @param parameters The parameters for the operation
@@ -281,6 +287,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Queues an operation to be executed once services are available
+     *
      * @param type The type of operation
      * @param description Human-readable description of the operation
      * @param requirePersistenceProvider Whether the operation requires persistence provider to be available
@@ -383,6 +390,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Determines if an operation type requires the persistence provider to be available
+     *
      * @param operation The pending operation
      * @return true if the operation requires persistence provider, false otherwise
      */
@@ -409,6 +417,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Executes a specific pending operation
+     *
      * @param operation The operation to execute
      */
     private void executePendingOperation(PendingOperation operation) {
@@ -459,6 +468,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Updates task state with validation and persistence
+     *
      * @param task The task to update
      * @param newStatus The new status to set
      * @param error Optional error message for failed states
@@ -552,46 +562,98 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     };
 
+    /**
+     * Creates the scheduler service for Blueprint dependency injection.
+     */
     public SchedulerServiceImpl() {
     }
 
+    /**
+     * Sets the OSGi bundle context.
+     *
+     * @param bundleContext the bundle context
+     */
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
 
-    // Setter methods for Blueprint dependency injection
+    /**
+     * Sets the task state manager.
+     *
+     * @param stateManager the state manager
+     */
     public void setStateManager(TaskStateManager stateManager) {
         this.stateManager = stateManager;
     }
 
+    /**
+     * Sets the task lock manager.
+     *
+     * @param lockManager the lock manager
+     */
     public void setLockManager(TaskLockManager lockManager) {
         this.lockManager = lockManager;
     }
 
+    /**
+     * Sets the task execution manager.
+     *
+     * @param executionManager the execution manager
+     */
     public void setExecutionManager(TaskExecutionManager executionManager) {
         this.executionManager = executionManager;
     }
 
+    /**
+     * Sets the task recovery manager.
+     *
+     * @param recoveryManager the recovery manager
+     */
     public void setRecoveryManager(TaskRecoveryManager recoveryManager) {
         this.recoveryManager = recoveryManager;
     }
 
+    /**
+     * Sets the task metrics manager.
+     *
+     * @param metricsManager the metrics manager
+     */
     public void setMetricsManager(TaskMetricsManager metricsManager) {
         this.metricsManager = metricsManager;
     }
 
+    /**
+     * Sets the task history manager.
+     *
+     * @param historyManager the history manager
+     */
     public void setHistoryManager(TaskHistoryManager historyManager) {
         this.historyManager = historyManager;
     }
 
+    /**
+     * Sets the task validation manager.
+     *
+     * @param validationManager the validation manager
+     */
     public void setValidationManager(TaskValidationManager validationManager) {
         this.validationManager = validationManager;
     }
 
+    /**
+     * Sets the task executor registry.
+     *
+     * @param executorRegistry the executor registry
+     */
     public void setExecutorRegistry(TaskExecutorRegistry executorRegistry) {
         this.executorRegistry = executorRegistry;
     }
 
+    /**
+     * Binds the persistence-backed scheduler provider.
+     *
+     * @param persistenceProvider the persistence provider
+     */
     public void setPersistenceProvider(SchedulerProvider persistenceProvider) {
         this.persistenceProvider = persistenceProvider;
         LOGGER.debug("PersistenceSchedulerProvider bound to SchedulerService");
@@ -608,6 +670,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Checks if all remaining operations in the queue require the persistence provider
+     *
      * @return true if all remaining operations require persistence, false otherwise
      */
     private boolean checkIfAllRemainingOperationsRequirePersistence() {
@@ -677,6 +740,11 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
+    /**
+     * Unbinds the persistence-backed scheduler provider.
+     *
+     * @param persistenceProvider the persistence provider being unbound
+     */
     public void unsetPersistenceProvider(SchedulerProvider persistenceProvider) {
         this.persistenceProvider = null;
         LOGGER.debug("PersistenceSchedulerProvider unbound from SchedulerService");
@@ -692,6 +760,9 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
+    /**
+     * Blueprint post-construct hook; starts task checking on executor nodes.
+     */
     public void postConstruct() {
         if (bundleContext == null) {
             LOGGER.error("BundleContext is null, cannot initialize service trackers");
@@ -734,6 +805,9 @@ public class SchedulerServiceImpl implements SchedulerService {
         processPendingOperations();
     }
 
+    /**
+     * Blueprint pre-destroy hook; shuts down task execution and releases locks.
+     */
     public void preDestroy() {
         /**
          * Explicit shutdown sequence to handle the Aries Blueprint bug.
@@ -852,6 +926,7 @@ public class SchedulerServiceImpl implements SchedulerService {
     /**
      * Checks if the scheduler is shutting down.
      * This method is used by TaskExecutionManager to skip task execution during shutdown.
+     *
      * @return true if the scheduler is shutting down, false otherwise
      */
     public boolean isShutdownNow() {
@@ -1105,6 +1180,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Internal method to schedule a task - called when services are ready
+     *
      * @param task The task to schedule
      */
     private void scheduleTaskInternal(ScheduledTask task) {
@@ -1164,6 +1240,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Internal method to cancel a task - called when services are ready
+     *
      * @param taskId The task ID to cancel
      */
     private void cancelTaskInternal(String taskId) {
@@ -1290,6 +1367,11 @@ public class SchedulerServiceImpl implements SchedulerService {
         return executorNode;
     }
 
+    /**
+     * Sets the cluster node ID.
+     *
+     * @param nodeId the node ID
+     */
     public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
     }
@@ -1399,26 +1481,58 @@ public class SchedulerServiceImpl implements SchedulerService {
             totalSize <= offset + (size == -1 ? totalSize : size) ? PartialList.Relation.EQUAL : PartialList.Relation.GREATER_THAN_OR_EQUAL_TO);
     }
 
+    /**
+     * Sets the scheduler thread pool size.
+     *
+     * @param threadPoolSize the thread pool size
+     */
     public void setThreadPoolSize(int threadPoolSize) {
         this.threadPoolSize = threadPoolSize;
     }
 
+    /**
+     * Sets whether this node executes scheduled tasks.
+     *
+     * @param executorNode true if this node runs tasks
+     */
     public void setExecutorNode(boolean executorNode) {
         this.executorNode = executorNode;
     }
 
+    /**
+     * Sets the distributed lock timeout in milliseconds.
+     *
+     * @param lockTimeout lock expiry timeout
+     */
     public void setLockTimeout(long lockTimeout) {
         this.lockTimeout = lockTimeout;
     }
 
+    /**
+     * Sets the TTL in days for purging completed tasks.
+     *
+     * @param completedTaskTtlDays retention period in days
+     */
     public void setCompletedTaskTtlDays(long completedTaskTtlDays) {
         this.completedTaskTtlDays = completedTaskTtlDays;
     }
 
+    /**
+     * Sets whether the purge task is enabled.
+     *
+     * @param purgeTaskEnabled true to enable periodic purge
+     */
     public void setPurgeTaskEnabled(boolean purgeTaskEnabled) {
         this.purgeTaskEnabled = purgeTaskEnabled;
     }
 
+    /**
+     * Returns seconds until the next run at the given UTC hour.
+     *
+     * @param hourInUtc target hour in UTC (0-23)
+     * @param now current time
+     * @return seconds until the next run
+     */
     public static long getTimeDiffInSeconds(int hourInUtc, ZonedDateTime now) {
         ZonedDateTime nextRun = now.withHour(hourInUtc).withMinute(0).withSecond(0);
         if(now.compareTo(nextRun) > 0) {
@@ -1450,6 +1564,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Internal method to retry a task - called when services are ready
+     *
      * @param taskId The task ID to retry
      * @param resetFailureCount Whether to reset the failure count
      */
@@ -1478,6 +1593,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Internal method to resume a task - called when services are ready
+     *
      * @param taskId The task ID to resume
      */
     private void resumeTaskInternal(String taskId) {
@@ -1572,7 +1688,10 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     /**
-     * Builder class to simplify task creation with fluent API
+     * Creates a fluent builder for a new task.
+     *
+     * @param taskType the task type
+     * @return a task builder
      */
     public TaskBuilder newTask(String taskType) {
         return new TaskBuilder(this, taskType);
@@ -1584,6 +1703,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Saves a task to the persistence service if it's persistent.
+     *
      * @param task The task to save
      * @return true if the task was successfully saved, false otherwise
      */
@@ -1764,6 +1884,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Gets the number of pending operations waiting to be processed
+     *
      * @return The number of pending operations
      */
     public int getPendingOperationsCount() {
@@ -1772,6 +1893,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Gets a list of pending operations for debugging purposes
+     *
      * @return List of pending operation descriptions
      */
     public List<String> getPendingOperationsList() {
@@ -1888,10 +2010,18 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
+    /**
+     * Returns the task lock manager.
+     *
+     * @return the lock manager
+     */
     public TaskLockManager getLockManager() {
         return lockManager;
     }
 
+    /**
+     * Fluent builder for creating scheduled tasks.
+     */
     public static class TaskBuilder implements SchedulerService.TaskBuilder {
         private final SchedulerServiceImpl schedulerService;
         private final String taskType;

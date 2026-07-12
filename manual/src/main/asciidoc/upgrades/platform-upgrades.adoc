@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_platform_upgrades]]
+[#_platform_upgrades]
 === Platform upgrades
 
 This section is for Apache Unomi *maintainers* upgrading runtime platform components: Apache Karaf, JDK, CXF/Jackson/Jetty, Elasticsearch and OpenSearch clients, Log4j, integration tests, and application dependency hygiene.

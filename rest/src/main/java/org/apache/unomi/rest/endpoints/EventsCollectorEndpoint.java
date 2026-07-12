@@ -42,6 +42,9 @@ import javax.ws.rs.core.SecurityContext;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * REST endpoint for collecting client events.
+ */
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
@@ -63,12 +66,26 @@ public class EventsCollectorEndpoint {
     @Context
     HttpServletResponse response;
 
+    /**
+     * Handles CORS preflight for the event collector endpoint.
+     *
+     * @return an empty CORS preflight response
+     */
     @OPTIONS
     @Path("/eventcollector")
     public Response options() {
         return Response.status(Response.Status.NO_CONTENT).build();
     }
 
+    /**
+     * Collects events from a GET request.
+     *
+     * @param eventsCollectorRequest the events collector request
+     * @param timestampAsString optional request timestamp
+     * @param explain whether to include tracing details
+     * @param securityContext the security context
+     * @return the event collector response
+     */
     @GET
     @Path("/eventcollector")
     public EventCollectorResponse collectAsGet(@QueryParam("payload") EventsCollectorRequest eventsCollectorRequest,
@@ -78,6 +95,15 @@ public class EventsCollectorEndpoint {
         return doEvent(eventsCollectorRequest, timestampAsString, explain, securityContext);
     }
 
+    /**
+     * Collects events from a POST request.
+     *
+     * @param eventsCollectorRequest the events collector request
+     * @param timestampAsLong optional request timestamp
+     * @param explain whether to include tracing details
+     * @param securityContext the security context
+     * @return the event collector response
+     */
     @POST
     @Path("/eventcollector")
     public EventCollectorResponse collectAsPost(EventsCollectorRequest eventsCollectorRequest,

@@ -12,6 +12,7 @@
 // limitations under the License.
 //
 
+[#_past_event_conditions]
 === Past Event Conditions in Apache Unomi
 :toc: macro
 :toclevels: 4
@@ -405,11 +406,11 @@ skinparam component {
 package "Past Event System" {
   [SetEventOccurenceCountAction] as action
   [PastEventConditionEvaluator] as evaluator
-  [PastEventConditionESQueryBuilder] as queryBuilder
+  [pastEventConditionQueryBuilder] as queryBuilder
   [SegmentServiceImpl] as segmentService
 }
 
-database "Elasticsearch" {
+database "Search index (Elasticsearch or OpenSearch)" as searchIndex {
   [Events] as events
   [Profiles] as profiles
 }
@@ -749,7 +750,7 @@ The past event condition system consists of four main components:
 
 1. `SetEventOccurenceCountAction` - Handles real-time event processing and updates profile event counts
 2. `PastEventConditionEvaluator` - Manages condition evaluation with optimized caching
-3. `PastEventConditionESQueryBuilder` - Constructs optimized Elasticsearch queries
+3. `pastEventConditionQueryBuilder` - Constructs optimized search index queries
 4. `SegmentServiceImpl` - Manages segments and auto-generated rules
 
 == Condition Parameters
@@ -837,7 +838,7 @@ When an event occurs in Unomi, the `SetEventOccurenceCountAction` processes it i
    * The original event condition
    * Time window constraints
    * Profile filters
-3. Queries existing matching events using optimized Elasticsearch queries
+3. Queries existing matching events using optimized search index queries
 4. Updates the profile's past event count in system properties
 5. Triggers profile update events if configured
 
@@ -937,8 +938,8 @@ The evaluation process involves multiple components working together to efficien
      ** For `eventsOccurred`: Verifies count is between `minimumEventCount` and `maximumEventCount`
      ** For `eventsNotOccurred`: Verifies count is exactly 0
 
-2. *Query Builder* (`PastEventConditionESQueryBuilder`)
-   * Responsible for constructing optimized Elasticsearch queries
+2. *Query Builder* (`pastEventConditionQueryBuilder`)
+   * Responsible for constructing optimized search index queries
    * Supports two query strategies:
      ** Property-based queries: Uses cached counts from profile properties
      ** Event-based queries: Aggregates events directly when needed

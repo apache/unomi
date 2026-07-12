@@ -21,7 +21,10 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
- * TODO: REMOVE
+ * Subject of an {@link Event} — what the visitor interacted with.
+ * Stores the target item id and type plus optional properties (for example the
+ * product or content element clicked). Together with {@link EventSource} it
+ * gives rules enough context to personalize, segment, and report on behavior.
  */
 public class EventTarget implements Serializable {
     private static final long serialVersionUID = 6370790894348364803L;
@@ -29,34 +32,73 @@ public class EventTarget implements Serializable {
     private String type;
     private Map<String, Object> properties;
 
+    /**
+     * Default constructor.
+     */
     public EventTarget() {
     }
 
+    /**
+     * Creates an event target with the given identifier and type.
+     *
+     * @param id the unique identifier of the event target
+     * @param type the type associated with this event target
+     */
     public EventTarget(String id, String type) {
         this.id = id;
         this.type = type;
     }
 
+    /**
+     * Unique identifier of this event target.
+     *
+     * @return the event target id
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Sets the unique identifier of this event target.
+     *
+     * @param id the event target id
+     */
     public void setId(String id) {
         this.id = id;
     }
 
+    /**
+     * Type label for this event target.
+     *
+     * @return the event target type
+     */
     public String getType() {
         return type;
     }
 
+    /**
+     * Sets the type label for this event target.
+     *
+     * @param type the event target type
+     */
     public void setType(String type) {
         this.type = type;
     }
 
+    /**
+     * Arbitrary properties associated with this event target.
+     *
+     * @return the property map
+     */
     public Map<String, Object> getProperties() {
         return properties;
     }
 
+    /**
+     * Sets the arbitrary properties for this event target.
+     *
+     * @param properties the property map
+     */
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
     }

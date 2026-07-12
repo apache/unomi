@@ -20,7 +20,9 @@ package org.apache.unomi.api.services;
 import org.apache.unomi.api.Event;
 
 /**
- * A service that gets notified (via {@link #onEvent(Event)}) whenever an event it can handle as decided by {@link #canHandle(Event)} occurs in the context server.
+ * Callback invoked for each {@link Event} the listener chooses to handle.
+ * Plugins implement this interface to react to events in real time alongside
+ * the rules engine.
  */
 public interface EventListenerService {
 

@@ -21,24 +21,28 @@ import org.apache.unomi.api.ExecutionContext;
 import java.util.function.Supplier;
 
 /**
- * Service interface for managing execution contexts in Unomi.
+ * Creates and binds {@link ExecutionContext} instances to the current thread.
+ * Ensures service calls run with the correct tenant and security credentials.
  */
 public interface ExecutionContextManager {
 
     /**
      * Gets the current execution context.
+     *
      * @return the current execution context
      */
     ExecutionContext getCurrentContext();
 
     /**
      * Sets the current execution context.
+     *
      * @param context the context to set as current
      */
     void setCurrentContext(ExecutionContext context);
 
     /**
      * Executes an operation as the system user.
+     *
      * @param operation the operation to execute
      * @param <T> the return type of the operation
      * @return the result of the operation
@@ -47,6 +51,7 @@ public interface ExecutionContextManager {
 
     /**
      * Executes an operation as the system user without return value.
+     *
      * @param operation the operation to execute
      */
     void executeAsSystem(Runnable operation);
@@ -54,6 +59,7 @@ public interface ExecutionContextManager {
     /**
      * Executes an operation as a specific tenant.
      * This method creates a tenant context, executes the operation, and ensures proper cleanup.
+     *
      * @param tenantId the ID of the tenant to execute as
      * @param operation the operation to execute
      * @param <T> the return type of the operation
@@ -64,6 +70,7 @@ public interface ExecutionContextManager {
     /**
      * Executes an operation as a specific tenant without return value.
      * This method creates a tenant context, executes the operation, and ensures proper cleanup.
+     *
      * @param tenantId the ID of the tenant to execute as
      * @param operation the operation to execute
      */
@@ -71,6 +78,7 @@ public interface ExecutionContextManager {
 
     /**
      * Creates a new execution context for the given tenant.
+     *
      * @param tenantId the tenant ID
      * @return the created execution context
      */

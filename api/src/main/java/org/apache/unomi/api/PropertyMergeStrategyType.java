@@ -21,7 +21,9 @@ import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 
 /**
- * A unomi plugin that defines a new property merge strategy.
+ * Plugin declaration for a profile property merge strategy.
+ * Merge strategies decide how conflicting property values are combined when
+ * several updates apply to the same profile field (sum, latest value, etc.).
  */
 public class PropertyMergeStrategyType implements PluginType, Serializable {
 
@@ -31,38 +33,59 @@ public class PropertyMergeStrategyType implements PluginType, Serializable {
     private long pluginId;
 
     /**
-     * Retrieves the identifier for this PropertyMergeStrategyType.
+     * Merge strategy identifier.
      *
-     * @return the identifier for this PropertyMergeStrategyType
+     * @return the strategy id
      */
     public String getId() {
         return id;
     }
 
+    /**
+     * Sets the merge strategy identifier.
+     *
+     * @param id the strategy id
+     */
     public void setId(String id) {
         this.id = id;
     }
 
     /**
-     * Retrieves the OSGi filter used to identify the implementation associated with this PropertyMergeStrategyType. Filters take the following form:
-     * {@code (propertyMergeStrategyExecutorId=&lt;id&gt;)} where {@code id} corresponds to the value of the {@code propertyMergeStrategyExecutorId} service property in the
-     * Blueprint service definition for this PropertyMergeStrategyType.
+     * OSGi LDAP filter that locates the executor for this strategy.
+     * Format: {@code (propertyMergeStrategyExecutorId=<id>)} where {@code id} matches the
+     * {@code propertyMergeStrategyExecutorId} service property in the Blueprint definition.
      *
-     * @return the filter string used to identify the implementation associated with this PropertyMergeStrategyType
+     * @return the OSGi filter string
      */
     public String getFilter() {
         return filter;
     }
 
+    /**
+     * Sets the OSGi filter for locating the strategy executor.
+     *
+     * @param filter the OSGi filter string
+     */
     public void setFilter(String filter) {
         this.filter = filter;
     }
 
+    /**
+     * Returns the OSGi bundle id of the plugin that registered this strategy.
+     * Used internally when resolving merge strategy implementations.
+     *
+     * @return the plugin bundle id
+     */
     @XmlTransient
     public long getPluginId() {
         return pluginId;
     }
 
+    /**
+     * Sets the OSGi bundle id of the plugin that registered this strategy.
+     *
+     * @param pluginId the plugin bundle id
+     */
     public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
     }

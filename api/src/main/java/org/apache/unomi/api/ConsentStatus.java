@@ -17,14 +17,15 @@
 package org.apache.unomi.api;
 
 /**
- * This enum class represents the type of grant a @Consent might have. The revoke grant type is a special one used to
- * remove a consent for a profile.
+ * Allowed grant states for a profile {@link Consent}.
+ * Each constant tells whether consent was granted, denied, or later revoked.
+ * Revoked consents are removed from the profile rather than kept as denied.
  */
 public enum ConsentStatus {
-    // Consent has been granted.
+    /** Consent was explicitly granted by the profile. */
     GRANTED,
-    // Consent has been denied.
+    /** Consent was explicitly denied. */
     DENIED,
-    // Consent has been revoked.
+    /** Consent was revoked and should be removed from the profile. */
     REVOKED
 }

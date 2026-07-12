@@ -40,6 +40,9 @@ public class ValueTypeValidatorRegistry {
 
     private final Map<String, ValueTypeValidator> validatorsByTypeId = new ConcurrentHashMap<>();
 
+    /**
+     * Creates the registry and sets the static instance.
+     */
     public ValueTypeValidatorRegistry() {
         instance = this;
     }
@@ -58,11 +61,21 @@ public class ValueTypeValidatorRegistry {
         return registry.validatorsByTypeId;
     }
 
+    /**
+     * OSGi bind callback for value type validators.
+     *
+     * @param validator the validator to register
+     */
     @Reference(service = ValueTypeValidator.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void bindValidator(ValueTypeValidator validator) {
         validatorsByTypeId.put(validator.getValueTypeId().toLowerCase(Locale.ROOT), validator);
     }
 
+    /**
+     * OSGi unbind callback for value type validators.
+     *
+     * @param validator the validator being removed
+     */
     public void unbindValidator(ValueTypeValidator validator) {
         validatorsByTypeId.remove(validator.getValueTypeId().toLowerCase(Locale.ROOT));
     }

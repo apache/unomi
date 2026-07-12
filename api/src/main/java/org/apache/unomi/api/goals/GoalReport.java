@@ -21,34 +21,60 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * Report information about a {@link Goal}.
+ * Goal conversion report returned by {@link org.apache.unomi.api.services.GoalsService}.
+ * {@link #globalStats} aggregates all traffic; {@link #split} breaks the same
+ * metrics down per experiment or variant key so marketers can compare branches
+ * of a goal or campaign.
  */
 public class GoalReport implements Serializable {
     private static final long serialVersionUID = -9150361970326342064L;
     private Stat globalStats;
     private List<Stat> split;
 
+    /**
+     * Creates an empty goal report.
+     */
     public GoalReport() {
     }
 
+    /**
+     * Aggregated statistics across all traffic.
+     *
+     * @return global statistics
+     */
     public Stat getGlobalStats() {
         return globalStats;
     }
 
+    /**
+     * Sets the global statistics.
+     *
+     * @param globalStats global statistics
+     */
     public void setGlobalStats(Stat globalStats) {
         this.globalStats = globalStats;
     }
 
+    /**
+     * Per-split statistics (for example A/B variants).
+     *
+     * @return split statistics
+     */
     public List<Stat> getSplit() {
         return split;
     }
 
+    /**
+     * Sets the per-split statistics.
+     *
+     * @param split split statistics
+     */
     public void setSplit(List<Stat> split) {
         this.split = split;
     }
 
     /**
-     * Statistics
+     * Counts and rates for one goal report bucket.
      */
     public static class Stat implements Serializable {
         private static final long serialVersionUID = 4306277648074263098L;
@@ -58,45 +84,98 @@ public class GoalReport implements Serializable {
         private double conversionRate;
         private double percentage;
 
+        /**
+         * Creates an empty stat bucket.
+         */
         public Stat() {
         }
 
+        /**
+         * Bucket key (for example a split name).
+         *
+         * @return stat key
+         */
         public String getKey() {
             return key;
         }
 
+        /**
+         * Sets the bucket key.
+         *
+         * @param key stat key
+         */
         public void setKey(String key) {
             this.key = key;
         }
 
+        /**
+         * Number of goal starts.
+         *
+         * @return start count
+         */
         public long getStartCount() {
             return startCount;
         }
 
+        /**
+         * Sets the start count.
+         *
+         * @param startCount start count
+         */
         public void setStartCount(long startCount) {
             this.startCount = startCount;
         }
 
+        /**
+         * Number of goal completions.
+         *
+         * @return target count
+         */
         public long getTargetCount() {
             return targetCount;
         }
 
+        /**
+         * Sets the target count.
+         *
+         * @param targetCount target count
+         */
         public void setTargetCount(long targetCount) {
             this.targetCount = targetCount;
         }
 
+        /**
+         * Conversion rate ({@code targetCount / startCount}).
+         *
+         * @return conversion rate
+         */
         public double getConversionRate() {
             return conversionRate;
         }
 
+        /**
+         * Sets the conversion rate.
+         *
+         * @param conversionRate conversion rate
+         */
         public void setConversionRate(double conversionRate) {
             this.conversionRate = conversionRate;
         }
 
+        /**
+         * Share of the total as a percentage.
+         *
+         * @return percentage value
+         */
         public double getPercentage() {
             return percentage;
         }
 
+        /**
+         * Sets the percentage value.
+         *
+         * @param percentage percentage value
+         */
         public void setPercentage(double percentage) {
             this.percentage = percentage;
         }

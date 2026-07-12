@@ -28,30 +28,46 @@ import java.util.Set;
 import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
- * A superclass for all {@link Item}s that bear {@link Metadata}.
+ * Base {@link Item} for entities that carry {@link Metadata}.
+ * Most user-facing definitions (segments, rules, property types, etc.)
+ * extend this class so they share the same identification and tagging model.
  */
 public abstract class MetadataItem extends Item {
     private static final long serialVersionUID = -2459510107927663510L;
+    /** The associated {@link Metadata} object for this item. */
     protected Metadata metadata;
 
+    /**
+     * Default constructor.
+     */
     public MetadataItem() {
     }
 
+    /**
+     * Creates an item with the given metadata and sets the item id from it.
+     *
+     * @param metadata the item metadata
+     */
     public MetadataItem(Metadata metadata) {
         super(metadata != null ? metadata.getId() : null);
         this.metadata = metadata;
     }
 
     /**
-     * Retrieves the associated Metadata.
+     * Descriptive metadata for this item.
      *
-     * @return the associated Metadata
+     * @return the metadata
      */
     @XmlElement(name = "metadata")
     public Metadata getMetadata() {
         return metadata;
     }
 
+    /**
+     * Sets the metadata and updates the item id when metadata is non-null.
+     *
+     * @param metadata the metadata to assign
+     */
     public void setMetadata(Metadata metadata) {
         if (metadata != null) {
             this.itemId = metadata.getId();
@@ -59,6 +75,12 @@ public abstract class MetadataItem extends Item {
         this.metadata = metadata;
     }
 
+    /**
+     * Returns the scope for this item, taken from {@link Metadata} when present.
+     * Falls back to the item-level scope field otherwise.
+     *
+     * @return the scope id, or {@code null} if none is set
+     */
     @XmlTransient
     public String getScope() {
         if (metadata != null) {

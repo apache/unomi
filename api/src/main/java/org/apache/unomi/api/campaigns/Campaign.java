@@ -26,7 +26,9 @@ import org.apache.unomi.api.goals.Goal;
 import java.util.Date;
 
 /**
- * A goal-oriented, time-limited marketing operation that needs to be evaluated for return on investment performance by tracking the ratio of visits to conversions.
+ * Time-bounded marketing program built around {@link org.apache.unomi.api.goals.Goal}s.
+ * Campaigns track entry conditions, duration, and conversion metrics so teams
+ * can measure ROI for a specific promotion or experiment.
  */
 public class Campaign extends MetadataItem {
     /**
@@ -51,22 +53,22 @@ public class Campaign extends MetadataItem {
     private String timezone;
 
     /**
-     * Instantiates a new Campaign.
+     * Default constructor.
      */
     public Campaign() {
     }
 
     /**
-     * Instantiates a new Campaign with the specified metadata.
+     * Creates a campaign with the given metadata.
      *
-     * @param metadata the metadata
+     * @param metadata the campaign metadata
      */
     public Campaign(Metadata metadata) {
         super(metadata);
     }
 
     /**
-     * Retrieves the start date for this Campaign.
+     * When the campaign becomes active.
      *
      * @return the start date
      */
@@ -75,7 +77,7 @@ public class Campaign extends MetadataItem {
     }
 
     /**
-     * Sets the start date for this Campaign.
+     * Sets the campaign start date.
      *
      * @param startDate the start date
      */
@@ -84,7 +86,7 @@ public class Campaign extends MetadataItem {
     }
 
     /**
-     * Retrieves the end date for this Campaign.
+     * When the campaign stops being active.
      *
      * @return the end date
      */
@@ -93,7 +95,7 @@ public class Campaign extends MetadataItem {
     }
 
     /**
-     * Sets the end date for this Campaign.
+     * Sets the campaign end date.
      *
      * @param endDate the end date
      */
@@ -102,90 +104,90 @@ public class Campaign extends MetadataItem {
     }
 
     /**
-     * Retrieves the entry condition that must be satisfied for users to be considered as taking part of this Campaign.
+     * Condition a profile must satisfy to enter the campaign.
      *
-     * @return the entry condition that must be satisfied for users to be considered as taking part of this Campaign
+     * @return the entry condition
      */
     public Condition getEntryCondition() {
         return entryCondition;
     }
 
     /**
-     * Sets the entry condition that must be satisfied for users to be considered as taking part of this Campaign..
+     * Sets the campaign entry condition.
      *
-     * @param entryCondition the entry condition that must be satisfied for users to be considered as taking part of this Campaign
+     * @param entryCondition the entry condition
      */
     public void setEntryCondition(Condition entryCondition) {
         this.entryCondition = entryCondition;
     }
 
     /**
-     * Retrieves the cost incurred by this Campaign.
+     * Reported cost of running this campaign.
      *
-     * @return the cost incurred by this Campaign
+     * @return the campaign cost
      */
     public Double getCost() {
         return cost;
     }
 
     /**
-     * Sets the cost incurred by this Campaign.
+     * Sets the campaign cost.
      *
-     * @param cost the cost incurred by this Campaign
+     * @param cost the campaign cost
      */
     public void setCost(Double cost) {
         this.cost = cost;
     }
 
     /**
-     * Retrieves the currency associated to the Campaign's cost.
+     * Currency code for {@link #getCost()}.
      *
-     * @return the currency associated to the Campaign's cost
+     * @return the currency code
      */
     public String getCurrency() {
         return currency;
     }
 
     /**
-     * Sets the currency associated to the Campaign's cost.
+     * Sets the currency code for the campaign cost.
      *
-     * @param currency the currency associated to the Campaign's cost
+     * @param currency the currency code
      */
     public void setCurrency(String currency) {
         this.currency = currency;
     }
 
     /**
-     * Retrieves the identifier for this Campaign's primary {@link Goal}.
+     * Identifier of the primary goal tracked for this campaign.
      *
-     * @return the identifier for this Campaign's primary {@link Goal}
+     * @return the primary goal id
      */
     public String getPrimaryGoal() {
         return primaryGoal;
     }
 
     /**
-     * Sets the identifier for this Campaign's primary {@link Goal}.
+     * Sets the primary goal id for this campaign.
      *
-     * @param primaryGoal the identifier for this Campaign's primary {@link Goal}
+     * @param primaryGoal the primary goal id
      */
     public void setPrimaryGoal(String primaryGoal) {
         this.primaryGoal = primaryGoal;
     }
 
     /**
-     * Retrieves the timezone associated with this Campaign's start and end dates.
+     * Time zone used to interpret {@link #getStartDate()} and {@link #getEndDate()}.
      *
-     * @return the timezone associated with this Campaign's start and end dates
+     * @return the time zone id
      */
     public String getTimezone() {
         return timezone;
     }
 
     /**
-     * Sets the timezone associated with this Campaign's start and end dates.
+     * Sets the time zone for campaign start and end dates.
      *
-     * @param timezone the timezone associated with this Campaign's start and end dates
+     * @param timezone the time zone id
      */
     public void setTimezone(String timezone) {
         this.timezone = timezone;

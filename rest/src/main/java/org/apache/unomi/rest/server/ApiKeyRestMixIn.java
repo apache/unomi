@@ -25,6 +25,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
  */
 public abstract class ApiKeyRestMixIn {
 
+    /**
+     * Creates the API key REST mixin.
+     */
     public ApiKeyRestMixIn() { }
 
     @JsonIgnore abstract String getKeyHash();

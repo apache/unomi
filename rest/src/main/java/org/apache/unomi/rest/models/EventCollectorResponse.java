@@ -21,9 +21,9 @@ import org.apache.unomi.tracing.api.TraceNode;
 import java.io.Serializable;
 
 /**
- * Response model for the event collector endpoint.
- * This class provides information about the result of event processing, including
- * which entities were updated and tracing information.
+ * REST response returned after the events collector processes a batch.
+ * Reports bitwise change flags (session/profile updated, errors) and may include
+ * a {@link TraceNode} tree when request tracing is enabled for the call.
  */
 public class EventCollectorResponse implements Serializable {
     /**
@@ -48,6 +48,9 @@ public class EventCollectorResponse implements Serializable {
      */
     private TraceNode requestTracing;
 
+    /**
+     * Creates an empty event collector response.
+     */
     public EventCollectorResponse() {
     }
 

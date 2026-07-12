@@ -17,8 +17,10 @@ limitations under the License.
 # Apache Unomi — CLAUDE.md
 
 Apache Unomi is a Java/OSGi customer data platform running on Apache Karaf. Multi-module Maven
-reactor; most runtime code is packaged as OSGi bundles wired via Blueprint XML
-(`OSGI-INF/blueprint/blueprint.xml` in each module), not Spring/CDI.
+reactor; runtime code is packaged as OSGi bundles. **New code uses OSGi Declarative Services**
+(`@Component`, `@Reference`, `@Activate`). Legacy modules still ship Blueprint XML
+(`OSGI-INF/blueprint/blueprint.xml`) during migration — do not add new Blueprint files; see
+`CODING_GUIDELINES.md` and `manual/.../writing-plugins.adoc`.
 
 ## Dual persistence backends — the #1 thing to know
 

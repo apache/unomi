@@ -30,13 +30,13 @@ public class AggregateQuery implements Serializable {
     private Condition condition;
 
     /**
-     * Instantiates a new Aggregate query.
+     * Default constructor.
      */
     public AggregateQuery() {
     }
 
     /**
-     * Instantiates a new Aggregate query with the specified {@link Aggregate}.
+     * Creates an aggregate query with the given aggregate specification.
      *
      * @param aggregate the aggregate
      */
@@ -45,7 +45,7 @@ public class AggregateQuery implements Serializable {
     }
 
     /**
-     * Instantiates a new Aggregate query with the specified {@link Condition}.
+     * Creates an aggregate query with the given filter condition.
      *
      * @param condition the condition
      */
@@ -54,7 +54,7 @@ public class AggregateQuery implements Serializable {
     }
 
     /**
-     * Instantiates a new Aggregate query with the specified {@link Aggregate} and {@link Condition}
+     * Creates an aggregate query with the given aggregate and filter condition
      *
      * @param aggregate the aggregate
      * @param condition the condition
@@ -65,7 +65,7 @@ public class AggregateQuery implements Serializable {
     }
 
     /**
-     * Retrieves the aggregate.
+     * Aggregate specification for this query.
      *
      * @return the aggregate
      */
@@ -83,7 +83,7 @@ public class AggregateQuery implements Serializable {
     }
 
     /**
-     * Retrieves the condition.
+     * Filter condition for this query.
      *
      * @return the condition
      */

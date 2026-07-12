@@ -23,18 +23,42 @@ package org.apache.unomi.persistence.spi.conditions.datemath;
  * the same semantics without a direct dependency on Elasticsearch.
  */
 public class DateMathParseException extends RuntimeException {
+    /**
+     * Creates an exception with the given message.
+     *
+     * @param message the detail message
+     */
     public DateMathParseException(String message) {
         super(message);
     }
 
+    /**
+     * Creates an exception with message and cause.
+     *
+     * @param message the detail message
+     * @param cause the cause
+     */
     public DateMathParseException(String message, Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * Creates an exception with a formatted message.
+     *
+     * @param message the message format string
+     * @param args format arguments
+     */
     public DateMathParseException(String message, Object... args) {
         super(String.format(message, args));
     }
 
+    /**
+     * Creates an exception with formatted message and cause.
+     *
+     * @param message the message format string
+     * @param cause the cause
+     * @param args format arguments
+     */
     public DateMathParseException(String message, Throwable cause, Object... args) {
         super(String.format(message, args), cause);
     }

@@ -33,21 +33,36 @@ public class TaskHistoryManager {
     private String nodeId;
     private TaskMetricsManager metricsManager;
 
+    /**
+     * Creates the manager for Blueprint dependency injection.
+     */
     public TaskHistoryManager() {
         // Parameterless constructor for Blueprint dependency injection
     }
 
-    // Setter methods for Blueprint dependency injection
+    /**
+     * Sets the cluster node ID.
+     *
+     * @param nodeId the node ID
+     */
     public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
     }
 
+    /**
+     * Sets the task metrics manager.
+     *
+     * @param metricsManager the metrics manager
+     */
     public void setMetricsManager(TaskMetricsManager metricsManager) {
         this.metricsManager = metricsManager;
     }
 
     /**
-     * Records a successful task execution
+     * Records a successful task execution.
+     *
+     * @param task the completed task
+     * @param executionTime execution duration in milliseconds
      */
     public void recordSuccess(ScheduledTask task, long executionTime) {
         Map<String, Object> entry = new HashMap<>();
@@ -55,14 +70,17 @@ public class TaskHistoryManager {
         entry.put("status", "SUCCESS");
         entry.put("nodeId", nodeId);
         entry.put("executionTime", executionTime);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_COMPLETED);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_EXECUTION_TIME, executionTime);
     }
 
     /**
-     * Records a failed task execution
+     * Records a failed task execution.
+     *
+     * @param task the failed task
+     * @param error the error message
      */
     public void recordFailure(ScheduledTask task, String error) {
         Map<String, Object> entry = new HashMap<>();
@@ -70,53 +88,67 @@ public class TaskHistoryManager {
         entry.put("status", "FAILED");
         entry.put("nodeId", nodeId);
         entry.put("error", error);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_FAILED);
     }
 
     /**
-     * Records a task crash
+     * Records a task crash.
+     *
+     * @param task the crashed task
      */
     public void recordCrash(ScheduledTask task) {
         Map<String, Object> entry = new HashMap<>();
         entry.put("timestamp", new Date());
         entry.put("status", "CRASHED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_CRASHED);
     }
 
     /**
-     * Records task cancellation
+     * Records task cancellation.
+     *
+     * @param task the cancelled task
      */
     public void recordCancellation(ScheduledTask task) {
         Map<String, Object> entry = new HashMap<>();
         entry.put("timestamp", new Date());
         entry.put("status", "CANCELLED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_CANCELLED);
     }
 
+    /**
+     * Records task resumption after a crash.
+     *
+     * @param task the resumed task
+     */
     public void recordResume(ScheduledTask task) {
         Map<String, Object> entry = new HashMap<>();
         entry.put("timestamp", new Date());
         entry.put("status", "RESUMED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_RESUMED);
     }
 
+    /**
+     * Records a task retry attempt.
+     *
+     * @param task the retried task
+     */
     public void recordRetry(ScheduledTask task) {
         Map<String, Object> entry = new HashMap<>();
         entry.put("timestamp", new Date());
         entry.put("status", "RETRIED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_RETRIED);
     }
@@ -152,7 +184,10 @@ public class TaskHistoryManager {
     }
 
     /**
-     * Gets execution history for a task
+     * Returns execution history entries stored on the task.
+     *
+     * @param task the task
+     * @return execution history entries, or an empty list when none exist
      */
     public List<Map<String, Object>> getExecutionHistory(ScheduledTask task) {
         Map<String, Object> details = task.getStatusDetails();
@@ -164,4 +199,4 @@ public class TaskHistoryManager {
         List<Map<String, Object>> history = (List<Map<String, Object>>) details.get("executionHistory");
         return history != null ? history : Collections.emptyList();
     }
-} 
+}

@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_migrating_from_elasticsearch_to_opensearch]]
+[#_migrate_from_elasticsearch_to_opensearch]
 ==== Migrating from Elasticsearch to OpenSearch
 :toc: macro
 :toclevels: 4
@@ -32,7 +32,7 @@ Before starting the migration, ensure you have:
 * Running Elasticsearch cluster with your Unomi data
 * Target OpenSearch cluster set up and running
 * Sufficient disk space on the target cluster
-* Java 11 or later installed
+* Java 17 or later installed
 * Network connectivity between source and target clusters
 
 ===== Migration Options

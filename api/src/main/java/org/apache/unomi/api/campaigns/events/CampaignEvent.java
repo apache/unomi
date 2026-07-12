@@ -25,9 +25,7 @@ import org.apache.unomi.api.campaigns.Campaign;
 import java.util.Date;
 
 /**
- * A specific campaign event to help analyzing your key performance indicators by marking specific dates during your campaign.
- *
- * @author : rincevent Created : 17/03/15
+ * A campaign milestone event used to mark dates and costs during a campaign for KPI analysis.
  */
 public class CampaignEvent extends MetadataItem {
     /**
@@ -44,13 +42,13 @@ public class CampaignEvent extends MetadataItem {
     private String timezone;
 
     /**
-     * Instantiates a new Campaign event.
+     * Default constructor.
      */
     public CampaignEvent() {
     }
 
     /**
-     * Instantiates a new Campaign event with the specified metadata.
+     * Creates a campaign event with the given metadata.
      *
      * @param metadata the metadata
      */
@@ -59,9 +57,9 @@ public class CampaignEvent extends MetadataItem {
     }
 
     /**
-     * Retrieves the cost associated with this campaign event.
+     * Cost associated with this campaign event.
      *
-     * @return the cost associated with this campaign event
+     * @return the event cost
      */
     public Double getCost() {
         return cost;
@@ -77,9 +75,9 @@ public class CampaignEvent extends MetadataItem {
     }
 
     /**
-     * Retrieves the currency.
+     * Currency code for the event cost.
      *
-     * @return the currency
+     * @return the currency code
      */
     public String getCurrency() {
         return currency;
@@ -95,7 +93,7 @@ public class CampaignEvent extends MetadataItem {
     }
 
     /**
-     * Retrieves the event date.
+     * Date when this campaign event occurred.
      *
      * @return the event date
      */
@@ -113,9 +111,9 @@ public class CampaignEvent extends MetadataItem {
     }
 
     /**
-     * Retrieves the identifier of the associated {@link Campaign}.
+     * Identifier of the associated {@link Campaign}.
      *
-     * @return the identifier of the associated {@link Campaign}
+     * @return the campaign identifier
      */
     public String getCampaignId() {
         return campaignId;
@@ -131,9 +129,9 @@ public class CampaignEvent extends MetadataItem {
     }
 
     /**
-     * Retrieves the timezone.
+     * Timezone for interpreting the event date.
      *
-     * @return the timezone
+     * @return the timezone identifier
      */
     public String getTimezone() {
         return timezone;

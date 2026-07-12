@@ -89,20 +89,26 @@ public class DateAggregate extends BaseAggregate {
 
     /**
      * Sets the interval; falls back to default when null/empty.
+     *
+     * @param interval the interval, in old or new format
      */
     public void setInterval(String interval) {
         this.interval = (interval != null && !interval.isEmpty()) ? interval : DEFAULT_INTERVAL;
     }
 
     /**
-     * Returns the interval as it was originally defined
+     * Returns the interval as it was originally defined.
+     *
+     * @return the interval string
      */
     public String getInterval() {
         return interval;
     }
 
     /**
-     * Returns the interval in the old format (1M, 1d, etc.)
+     * Returns the interval in the old format (1M, 1d, etc.).
+     *
+     * @return the interval in old format
      */
     public String getIntervalInOldFormat() {
         if (isOldFormat(interval)) {
@@ -112,7 +118,9 @@ public class DateAggregate extends BaseAggregate {
     }
 
     /**
-     * Returns the interval in the new format (Month, Day, etc.)
+     * Returns the interval in the new format (Month, Day, etc.).
+     *
+     * @return the interval in new format
      */
     public String getIntervalInNewFormat() {
         if (isNewFormat(interval)) {
@@ -134,28 +142,40 @@ public class DateAggregate extends BaseAggregate {
     }
 
     /**
-     * Determines if the interval uses the old format
+     * Determines if the interval uses the old format.
+     *
+     * @param value the interval string to check
+     * @return {@code true} if the value uses old format
      */
     public boolean isOldFormat(String value) {
         return OLD_TO_NEW_FORMAT.containsKey(value);
     }
 
     /**
-     * Determines if the interval uses the new format
+     * Determines if the interval uses the new format.
+     *
+     * @param value the interval string to check
+     * @return {@code true} if the value uses new format
      */
     public boolean isNewFormat(String value) {
         return NEW_TO_OLD_FORMAT.containsKey(value);
     }
 
     /**
-     * Converts from old format to new format
+     * Converts from old format to new format.
+     *
+     * @param oldFormat the interval in old format
+     * @return the interval in new format
      */
     public static String convertToNewFormat(String oldFormat) {
         return OLD_TO_NEW_FORMAT.getOrDefault(oldFormat, oldFormat);
     }
 
     /**
-     * Converts from new format to old format
+     * Converts from new format to old format.
+     *
+     * @param newFormat the interval in new format
+     * @return the interval in old format
      */
     public static String convertToOldFormat(String newFormat) {
         return NEW_TO_OLD_FORMAT.getOrDefault(newFormat, newFormat);
@@ -163,6 +183,8 @@ public class DateAggregate extends BaseAggregate {
 
     /**
      * Returns the output format, if any.
+     *
+     * @return the output format, or {@code null}
      */
     public String getFormat() {
         return format;
@@ -170,6 +192,8 @@ public class DateAggregate extends BaseAggregate {
 
     /**
      * Sets the output format.
+     *
+     * @param format the output format
      */
     public void setFormat(String format) {
         this.format = format;

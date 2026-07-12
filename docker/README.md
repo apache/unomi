@@ -83,7 +83,7 @@ docker pull apache/unomi:3.1.0-SNAPSHOT
 docker run -d --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
     -e UNOMI_DISTRIBUTION=unomi-distribution-opensearch \
     -e UNOMI_OPENSEARCH_ADDRESSES=opensearch:9200 \
-    -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} 
+    -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
     apache/unomi:3.1.0-SNAPSHOT
 ```
 
@@ -101,7 +101,7 @@ For OpenSearch:
 
 ```bash
 docker run -d --name unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
-    -e UNOMI_DISTRIBUTION=unomi-distribution-opensearch
+    -e UNOMI_DISTRIBUTION=unomi-distribution-opensearch \
     -e UNOMI_OPENSEARCH_ADDRESSES=host.docker.internal:9200 \
     -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
     apache/unomi:3.1.0-SNAPSHOT
@@ -124,6 +124,23 @@ Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it s
 ### OpenSearch-specific Variables
 - `UNOMI_OPENSEARCH_ADDRESSES`: OpenSearch host:port (default: localhost:9200)
 - `UNOMI_OPENSEARCH_PASSWORD`: Required admin password for OpenSearch (SSL and authentication are mandatory)
+
+
+
+## First steps after startup (Unomi 3.1+)
+
+Multi-tenancy requires a tenant before client endpoints such as `/cxs/context.json` accept traffic:
+
+```bash
+curl -X POST http://localhost:8181/cxs/tenants \
+  --user karaf:karaf \
+  -H "Content-Type: application/json" \
+  -d '{"requestedId":"default","properties":{"name":"Default Tenant"}}'
+```
+
+Save the public and private API keys from the response. Use the public key in the `X-Unomi-Api-Key` header for public endpoints.
+
+See the [Multi-tenancy](https://github.com/apache/unomi/blob/master/manual/src/main/asciidoc/multitenancy.adoc) chapter in the manual for details.
 
 # Using docker build tools
 

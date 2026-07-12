@@ -20,9 +20,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Represents the result of a security validation operation.
- * This class contains information about whether the validation was successful,
- * and if not, what errors were encountered.
+ * Outcome of a tenant security validation step.
+ * Carries a success flag plus structured error messages when authentication,
+ * authorization, or rate-limit checks fail so REST layers can return actionable
+ * feedback without re-running the validation logic.
  */
 public class SecurityValidationResult {
     private boolean valid;
@@ -39,6 +40,7 @@ public class SecurityValidationResult {
 
     /**
      * Gets whether the validation was successful.
+     *
      * @return true if validation passed, false otherwise
      */
     public boolean isValid() {
@@ -47,6 +49,7 @@ public class SecurityValidationResult {
 
     /**
      * Sets the validation status.
+     *
      * @param valid true if validation passed, false otherwise
      */
     public void setValid(boolean valid) {
@@ -55,6 +58,7 @@ public class SecurityValidationResult {
 
     /**
      * Gets the list of validation errors.
+     *
      * @return list of error messages
      */
     public List<String> getErrors() {
@@ -63,6 +67,7 @@ public class SecurityValidationResult {
 
     /**
      * Sets the list of validation errors.
+     *
      * @param errors list of error messages
      */
     public void setErrors(List<String> errors) {
@@ -71,6 +76,7 @@ public class SecurityValidationResult {
 
     /**
      * Adds an error message to the result.
+     *
      * @param error the error message to add
      */
     public void addError(String error) {
@@ -80,6 +86,7 @@ public class SecurityValidationResult {
 
     /**
      * Gets the general message associated with the validation result.
+     *
      * @return the message
      */
     public String getMessage() {
@@ -88,6 +95,7 @@ public class SecurityValidationResult {
 
     /**
      * Sets the general message associated with the validation result.
+     *
      * @param message the message to set
      */
     public void setMessage(String message) {

@@ -37,17 +37,18 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Service to handle V2 third-party configuration for V2 compatibility mode.
- * This service reads the legacy V2 third-party configuration and provides
- * methods to validate protected events and third-party providers.
- * Uses the original V2 configuration file: org.apache.unomi.thirdparty.cfg
+ * OSGi service that loads V2 third-party provider configuration from {@code org.apache.unomi.thirdparty.cfg}
+ * and validates protected events and provider keys in V2 compatibility mode.
  */
 @Component(service = V2ThirdPartyConfigService.class, configurationPid = "org.apache.unomi.thirdparty")
 @Designate(ocd = V2ThirdPartyConfigService.Config.class)
 public class V2ThirdPartyConfigService {
-    
+
     private static final Logger LOGGER = LoggerFactory.getLogger(V2ThirdPartyConfigService.class);
-    
+
+    /**
+     * OSGi configuration for V2 third-party providers.
+     */
     @ObjectClassDefinition(
         name = "Apache Unomi Third-Party Configuration",
         description = "Configuration for third-party providers (V2 compatibility mode). " +
@@ -58,33 +59,43 @@ public class V2ThirdPartyConfigService {
         // No hardcoded attributes - all providers are configured dynamically
         // using the pattern: thirdparty.{providerName}.{property}
     }
-    
+
     /**
-     * Provider configuration data structure
+     * Provider configuration entry parsed from OSGi properties.
      */
     private static class ProviderConfig {
         private final String key;
         private final Set<String> ipAddresses;
         private final Set<String> allowedEvents;
-        
+
         public ProviderConfig(String key, Set<String> ipAddresses, Set<String> allowedEvents) {
             this.key = key;
             this.ipAddresses = ipAddresses;
             this.allowedEvents = allowedEvents;
         }
-        
+
         public String getKey() { return key; }
         public Set<String> getIpAddresses() { return ipAddresses; }
         public Set<String> getAllowedEvents() { return allowedEvents; }
     }
-    
+
     private volatile Map<String, ProviderConfig> providers = new HashMap<>();
-    
+
+    /**
+     * Activates the service and loads third-party provider configuration.
+     *
+     * @param properties the OSGi configuration properties
+     */
     @Activate
     public void activate(Map<String, Object> properties) {
         modified(properties);
     }
-    
+
+    /**
+     * Reloads third-party provider configuration.
+     *
+     * @param properties the OSGi configuration properties
+     */
     @Modified
     public void modified(Map<String, Object> properties) {
         Map<String, ProviderConfig> newProviders = new HashMap<>();
@@ -119,7 +130,7 @@ public class V2ThirdPartyConfigService {
                 }
             }
         }
-        
+
         if (newProviders.isEmpty()) {
             // The fallback key below is the well-known Unomi V2 default key, publicly documented
             // in Apache Unomi changelogs and issue trackers. It provides no confidentiality on its own
@@ -134,36 +145,36 @@ public class V2ThirdPartyConfigService {
                 new HashSet<>(Arrays.asList("login", "updateProperties"))
             ));
         }
-        
+
         this.providers = newProviders;
-        
+
         int totalEvents = newProviders.values().stream()
             .mapToInt(config -> config.getAllowedEvents().size())
             .sum();
-        
-        LOGGER.info("V2 Third-Party Configuration updated - {} providers with {} total protected events", 
+
+        LOGGER.info("V2 Third-Party Configuration updated - {} providers with {} total protected events",
                    newProviders.size(), totalEvents);
     }
-    
+
     /**
-     * Check if an event type is protected (requires third-party authentication).
-     * 
+     * Returns whether the event type requires third-party authentication.
+     *
      * @param eventType the event type to check
-     * @return true if the event type is protected, false otherwise
+     * @return {@code true} when the event type is protected
      */
     public boolean isProtectedEventType(String eventType) {
         if (StringUtils.isBlank(eventType)) {
             return false;
         }
-        
+
         return providers.values().stream()
             .anyMatch(config -> config.getAllowedEvents().contains(eventType));
     }
-    
+
     /**
-     * Get all protected event types from all providers.
-     * 
-     * @return set of all protected event types
+     * Returns all protected event types declared by configured providers.
+     *
+     * @return an unmodifiable set of protected event type names
      */
     public Set<String> getAllProtectedEventTypes() {
         Set<String> allProtectedEvents = new HashSet<>();
@@ -172,22 +183,20 @@ public class V2ThirdPartyConfigService {
         }
         return Collections.unmodifiableSet(allProtectedEvents);
     }
-    
 
     /**
-     * Validate a third-party provider by key for a given event type.
-     * This method is used when the X-Unomi-Peer header contains the provider key.
-     * 
-     * @param providerKey the third-party provider key (from X-Unomi-Peer header)
+     * Validates a provider key from the {@code X-Unomi-Peer} header for an event and source IP.
+     *
+     * @param providerKey the third-party provider key from the request header
      * @param eventType the event type to validate
      * @param sourceIP the source IP address
-     * @return true if the provider is authorized for this event type and IP, false otherwise
+     * @return {@code true} when the provider is authorized for the event and IP
      */
     public boolean validateProviderByKey(String providerKey, String eventType, String sourceIP) {
         if (StringUtils.isBlank(providerKey) || StringUtils.isBlank(eventType) || StringUtils.isBlank(sourceIP)) {
             return false;
         }
-        
+
         // Find the provider that has the matching key
         ProviderConfig config = null;
         String foundProviderId = null;
@@ -198,7 +207,7 @@ public class V2ThirdPartyConfigService {
                 break;
             }
         }
-        
+
         if (config == null) {
             LOGGER.debug("V2 compatibility mode: Unknown provider key: {}", SecurityUtils.maskSecret(providerKey));
             return false;
@@ -213,36 +222,36 @@ public class V2ThirdPartyConfigService {
         if (!ipAuthorized) {
             LOGGER.debug("V2 compatibility mode: IP {} not authorized for provider {} (key: {})", sourceIP, foundProviderId, SecurityUtils.maskSecret(providerKey));
         }
-        
+
         return ipAuthorized;
     }
-    
+
     /**
-     * Get the key for a third-party provider.
-     * 
+     * Returns the authentication key for the given provider ID.
+     *
      * @param providerId the third-party provider ID
-     * @return the provider key, or null if not found
+     * @return the provider key, or {@code null} when the provider is unknown
      */
     public String getProviderKey(String providerId) {
         ProviderConfig config = providers.get(providerId);
         return config != null ? config.getKey() : null;
     }
-    
+
     /**
-     * Check if a provider ID is valid.
-     * 
+     * Returns whether the provider ID is configured.
+     *
      * @param providerId the third-party provider ID
-     * @return true if the provider ID is valid, false otherwise
+     * @return {@code true} when the provider ID is known
      */
     public boolean isValidProvider(String providerId) {
         return providers.containsKey(providerId);
     }
-    
+
     private Set<String> parseCommaSeparatedList(String value) {
         if (StringUtils.isBlank(value)) {
             return new HashSet<>();
         }
-        
+
         Set<String> result = new HashSet<>();
         String[] parts = value.split(",");
         for (String part : parts) {
@@ -253,6 +262,6 @@ public class V2ThirdPartyConfigService {
         }
         return result;
     }
-    
+
 
 }

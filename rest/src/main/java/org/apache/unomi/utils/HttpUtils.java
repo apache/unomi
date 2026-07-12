@@ -37,7 +37,9 @@ import java.util.List;
 
 
 /**
- * This is duplicate of the class from the wab bundle, the original file will be removed once endpoints forwarded
+ * HTTP request helpers shared by REST endpoints.
+ * <p>
+ * Temporary duplicate of the WAB bundle class; the original will be removed once endpoints are fully forwarded.
  */
 public class HttpUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(HttpUtils.class);
@@ -61,6 +63,12 @@ public class HttpUtils {
         return stringBuilder.toString();
     }
 
+    /**
+     * Dumps basic request metadata.
+     *
+     * @param httpServletRequest the HTTP request
+     * @return the request metadata as text
+     */
     public static String dumpBasicRequestInfo(HttpServletRequest httpServletRequest) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(httpServletRequest.getMethod()).append(" ").append(httpServletRequest.getRequestURI());
@@ -71,7 +79,12 @@ public class HttpUtils {
         return stringBuilder.toString();
     }
 
-
+    /**
+     * Dumps request cookies.
+     *
+     * @param cookies the request cookies
+     * @return the cookie dump as text
+     */
     public static String dumpRequestCookies(Cookie[] cookies) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Cookies:\n");
@@ -85,6 +98,12 @@ public class HttpUtils {
         return stringBuilder.toString();
     }
 
+    /**
+     * Dumps request headers.
+     *
+     * @param httpServletRequest the HTTP request
+     * @return the header dump as text
+     */
     public static String dumpRequestHeaders(HttpServletRequest httpServletRequest) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Headers:\n");
@@ -97,12 +116,14 @@ public class HttpUtils {
     }
 
     /**
-     * Return the cookie string for the given profile
-     * We can't use the build in NewCookie jax-rs object as it does not support the SameSite value.
+     * Builds a {@code Set-Cookie} header value for the profile ID cookie.
+     * <p>
+     * Uses a raw header string because JAX-RS {@code NewCookie} does not support {@code SameSite}.
      *
-     * @param profile              to parse
-     * @param configSharingService shared config location.
-     * @return the cookie string to set in the header.
+     * @param profile the profile whose ID is stored in the cookie
+     * @param configSharingService shared configuration for cookie name, domain, and flags
+     * @param isSecure whether the cookie should include the {@code Secure} flag
+     * @return the cookie header value
      */
     public static String getProfileCookieString(Profile profile, ConfigSharingService configSharingService, boolean isSecure) {
         final String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
@@ -118,6 +139,15 @@ public class HttpUtils {
                 (profileIdCookieHttpOnly ? "; HttpOnly" : "");
     }
 
+    /**
+     * Filters event nodes to those that pass schema validation.
+     *
+     * @param eventsNode the event JSON array
+     * @param schemaService the schema service
+     * @param jsonParser the JSON parser
+     * @return the validated events
+     * @throws JsonProcessingException if event deserialization fails
+     */
     public static List<Event> filterValidEvents(ArrayNode eventsNode, SchemaService schemaService, JsonParser jsonParser) throws JsonProcessingException {
         List<Event> filteredEvents = new ArrayList<>();
         for (JsonNode event : eventsNode) {

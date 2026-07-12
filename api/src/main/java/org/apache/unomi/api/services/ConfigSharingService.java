@@ -34,7 +34,7 @@ import java.util.Set;
 public interface ConfigSharingService {
 
     /**
-     * Retrieves the value of the named property.
+     * Value of the named property.
      *
      * @param name the property name
      * @return the property value, or {@code null} if not set
@@ -67,7 +67,7 @@ public interface ConfigSharingService {
     Object removeProperty(String name);
 
     /**
-     * Retrieves the names of all currently known properties.
+     * Names of all currently known properties.
      *
      * @return the property names
      */
@@ -94,7 +94,7 @@ public interface ConfigSharingService {
         private Object newValue;
 
         /**
-         * Instantiates a configuration change event.
+         * Creates a configuration change event.
          *
          * @param eventType the type of change
          * @param name the property name
@@ -109,7 +109,7 @@ public interface ConfigSharingService {
         }
 
         /**
-         * Retrieves the type of configuration change.
+         * Type of configuration change.
          *
          * @return the event type
          */
@@ -118,7 +118,7 @@ public interface ConfigSharingService {
         }
 
         /**
-         * Retrieves the name of the changed property.
+         * Name of the changed property.
          *
          * @return the property name
          */
@@ -127,7 +127,7 @@ public interface ConfigSharingService {
         }
 
         /**
-         * Retrieves the previous value of the property.
+         * Previous value of the property.
          *
          * @return the old value, or {@code null} for {@link ConfigChangeEventType#ADDED} events
          */
@@ -136,7 +136,7 @@ public interface ConfigSharingService {
         }
 
         /**
-         * Retrieves the new value of the property.
+         * New value of the property.
          *
          * @return the new value, or {@code null} for {@link ConfigChangeEventType#REMOVED} events
          */

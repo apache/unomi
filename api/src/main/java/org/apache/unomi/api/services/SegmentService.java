@@ -31,51 +31,46 @@ import org.apache.unomi.api.segments.SegmentsAndScores;
 import java.util.List;
 
 /**
- * A service to access and operate on {@link Segment}s and {@link Scoring}s
+ * Manages {@link org.apache.unomi.api.segments.Segment}s and
+ * {@link org.apache.unomi.api.segments.Scoring} definitions.
+ * Also recalculates segment membership for profiles when definitions change.
  */
 public interface SegmentService {
 
     /**
-     * Retrieves segment metadatas, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them are retrieved, starting with the {@code
-     * offset}-th one.
+     * Returns segment metadata, ordered and paged.
      *
-     * @param offset zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
-     * @param size   a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
-     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of segment metadata
+     * @param offset zero-based index of the first result
+     * @param size maximum results to return, or {@code -1} for all
+     * @param sortBy optional comma-separated property list with optional {@code :asc}/{@code :desc} suffixes
+     * @return segment metadata
      */
     PartialList<Metadata> getSegmentMetadatas(int offset, int size, String sortBy);
 
     /**
-     * Retrieves segment metadatas for segments in the specified scope, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them are
-     * retrieved, starting with the {@code offset}-th one.
-     * TODO: remove?
+     * Returns segment metadata for a scope, ordered and paged.
      *
-     * @param scope  the scope for which we want to retrieve segment metadata
-     * @param offset zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
-     * @param size   a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
-     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of segment metadata
+     * @param scope scope filter
+     * @param offset zero-based index of the first result
+     * @param size maximum results to return, or {@code -1} for all
+     * @param sortBy optional comma-separated property list with optional {@code :asc}/{@code :desc} suffixes
+     * @return segment metadata for the scope
      */
     PartialList<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy);
 
     /**
-     * Retrieves the metadata for segments matching the specified {@link Query}.
+     * Returns segment metadata matching the given query.
      *
-     * @param query the query that the segments must match for their metadata to be retrieved
-     * @return a {@link PartialList} of segment metadata
+     * @param query filter for segments whose metadata should be returned
+     * @return matching segment metadata
      */
     PartialList<Metadata> getSegmentMetadatas(Query query);
 
     /**
-     * Retrieves the segment identified by the specified identifier.
+     * Loads a segment definition by id.
      *
-     * @param segmentId the identifier of the segment to be retrieved
-     * @return the segment identified by the specified identifier or {@code null} if no such segment exists
+     * @param segmentId segment identifier
+     * @return matching segment, or {@code null} if none exists
      */
     Segment getSegmentDefinition(String segmentId);
 
@@ -99,33 +94,30 @@ public interface SegmentService {
     DependentMetadata removeSegmentDefinition(String segmentId, boolean validate);
 
     /**
-     * Retrieves the list of Segment and Scoring metadata depending on the specified segment.
-     * A segment or scoring is depending on a segment if it includes a profileSegmentCondition with a test on this segment.
+     * Returns segment and scoring metadata that depend on the given segment.
+     * A dependent definition references the segment in a profile-segment condition.
      *
-     * @param segmentId the segment identifier
-     * @return a list of Segment/Scoring Metadata depending on the specified segment
+     * @param segmentId segment identifier
+     * @return dependent segment and scoring metadata
      */
     DependentMetadata getSegmentDependentMetadata(String segmentId);
 
     /**
-     * Retrieves a list of profiles matching the conditions defined by the segment identified by the specified identifier, ordered according to the specified {@code sortBy}
-     * String and and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
+     * Lists profiles that match a segment's conditions, ordered and paged.
      *
-     * @param segmentID the identifier of the segment for which we want to retrieve matching profiles
-     * @param offset    zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
-     * @param size      a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
-     *                  String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of profiles matching the specified segment
+     * @param segmentID segment identifier
+     * @param offset zero-based index of the first result
+     * @param size maximum results to return, or {@code -1} for all
+     * @param sortBy optional comma-separated property list with optional {@code :asc}/{@code :desc} suffixes
+     * @return matching profiles
      */
     PartialList<Profile> getMatchingIndividuals(String segmentID, int offset, int size, String sortBy);
 
     /**
-     * Retrieves the number of profiles matching the conditions defined by the segment identified by the specified identifier.
+     * Counts profiles that match a segment's conditions.
      *
-     * @param segmentID the identifier of the segment for which we want to retrieve matching profiles
-     * @return the number of profiles matching the conditions defined by the segment identified by the specified identifier
+     * @param segmentID segment identifier
+     * @return matching profile count
      */
     long getMatchingIndividualsCount(String segmentID);
 
@@ -139,44 +131,44 @@ public interface SegmentService {
     Boolean isProfileInSegment(Profile profile, String segmentId);
 
     /**
-     * Retrieves the segments and scores for the specified profile.
+     * Returns current segment memberships and scores for a profile.
      *
-     * @param profile the profile for which we want to retrieve segments and scores
-     * @return a {@link SegmentsAndScores} instance encapsulating the segments and scores for the specified profile
+     * @param profile profile to evaluate
+     * @return segments and scores for the profile
      */
     SegmentsAndScores getSegmentsAndScoresForProfile(Profile profile);
 
     /**
-     * Retrieves the list of segment metadata for the segments the specified profile is a member of.
+     * Returns metadata for segments the profile belongs to.
      *
-     * @param profile the profile for which we want to retrieve the segment metadata
-     * @return the (possibly empty) list of segment metadata for the segments the specified profile is a member of
+     * @param profile profile to inspect
+     * @return segment metadata for the profile's memberships
      */
     List<Metadata> getSegmentMetadatasForProfile(Profile profile);
 
     /**
-     * Retrieves the set of all scoring metadata.
+     * Returns scoring metadata, ordered and paged.
      *
-     * @param offset the offset
-     * @param size   the size
-     * @param sortBy sort by
-     * @return the set of all scoring metadata
+     * @param offset zero-based index of the first result
+     * @param size maximum results to return, or {@code -1} for all
+     * @param sortBy optional comma-separated property list with optional {@code :asc}/{@code :desc} suffixes
+     * @return scoring metadata
      */
     PartialList<Metadata> getScoringMetadatas(int offset, int size, String sortBy);
 
     /**
-     * Retrieves the set of scoring metadata for scorings matching the specified query.
+     * Returns scoring metadata matching the given query.
      *
-     * @param query the query the scorings must match for their metadata to be retrieved
-     * @return the set of scoring metadata for scorings matching the specified query
+     * @param query filter for scorings whose metadata should be returned
+     * @return matching scoring metadata
      */
     PartialList<Metadata> getScoringMetadatas(Query query);
 
     /**
-     * Retrieves the scoring identified by the specified identifier.
+     * Loads a scoring definition by id.
      *
-     * @param scoringId the identifier of the scoring to be retrieved
-     * @return the scoring identified by the specified identifier or {@code null} if no such scoring exists
+     * @param scoringId scoring identifier
+     * @return matching scoring, or {@code null} if none exists
      */
     Scoring getScoringDefinition(String scoringId);
 
@@ -211,19 +203,20 @@ public interface SegmentService {
     DependentMetadata removeScoringDefinition(String scoringId, boolean validate);
 
     /**
-     * Retrieves the list of Segment and Scoring metadata depending on the specified scoring.
-     * A segment or scoring is depending on a segment if it includes a scoringCondition with a test on this scoring.
+     * Returns segment and scoring metadata that depend on the given scoring.
+     * A dependent definition references the scoring in a scoring condition.
      *
-     * @param scoringId the segment identifier
-     * @return a list of Segment/Scoring Metadata depending on the specified scoring
+     * @param scoringId scoring identifier
+     * @return dependent segment and scoring metadata
      */
     DependentMetadata getScoringDependentMetadata(String scoringId);
 
     /**
-     * Get generated property key for past event condition
-     * @param condition The event condition
-     * @param parentCondition The past event condition
-     * @return a String representing the condition and parent condition uniquelly
+     * Builds a stable property key for a past-event condition pair.
+     *
+     * @param condition nested event condition
+     * @param parentCondition parent past-event condition
+     * @return generated property key
      */
     String getGeneratedPropertyKey(Condition condition, Condition parentCondition);
 

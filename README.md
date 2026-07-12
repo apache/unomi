@@ -39,6 +39,16 @@ Branches
 compile and be stable. These are recommended for users that prefer to work from the source code. Otherwise you can find 
 packaged binaries on the [Apache Unomi website](https://unomi.apache.org). 
 
+
+Apache Unomi 3.x
+--------------
+Unomi 3.0+ requires **Java 17**, **Karaf 4.4**, and **Elasticsearch 9.x**. Unomi 3.1 adds **multi-tenancy**, **OpenSearch 3** support, a cluster-aware **task scheduler**, and persistence-based clustering.
+
+* Build and run: see `manual/src/main/asciidoc/building-and-deploying.adoc` or `manual/src/main/asciidoc/5-min-quickstart.adoc`
+* Docker: see `docker/README.md`
+* Multi-tenancy and API keys: see `manual/src/main/asciidoc/multitenancy.adoc`
+* Migrations: see `manual/src/main/asciidoc/migrations/migrations.adoc`
+
 Documentation
 -------------
 You can find all the updated documentation, including building and deployment instructions, on the [Apache Unomi 

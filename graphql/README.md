@@ -18,6 +18,15 @@
 Apache Unomi GraphQL API
 ========================
 
+
+## Authentication (Unomi 3.1+)
+
+- **Public `cdp` queries**: `X-Unomi-Api-Key` header with a tenant public API key
+- **Mutations / admin queries**: Basic auth `tenantId:privateApiKey` or JAAS + `X-Unomi-Tenant-Id`
+- **Introspection**: allowed without credentials
+
+Enable GraphQL via `unomi-distribution-*-graphql` or the `cdp-graphql-feature` Karaf feature. See `manual/src/main/asciidoc/graphql.adoc`.
+
 Install
 -------
 

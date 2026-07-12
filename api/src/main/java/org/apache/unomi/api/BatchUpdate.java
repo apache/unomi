@@ -20,7 +20,10 @@ package org.apache.unomi.api;
 import org.apache.unomi.api.conditions.Condition;
 
 /**
- * A representation of an operation to update the value of a property on items matching a specific condition.
+ * Bulk property update specification executed as a scroll query.
+ * Selects items with a {@link org.apache.unomi.api.conditions.Condition}, sets one
+ * property (Apache Commons BeanUtils expression) to a new value, and optionally
+ * applies a {@link PropertyMergeStrategyType} when merging complex fields.
  */
 public class BatchUpdate {
     private String propertyName;
@@ -31,11 +34,10 @@ public class BatchUpdate {
     private int scrollBatchSize = 1000;
 
     /**
-     * Retrieves the property name which value needs to be updated. Note that the property name follows the
-     * <a href='https://commons.apache.org/proper/commons-beanutils/apidocs/org/apache/commons/beanutils/expression/DefaultResolver.html'>Apache Commons BeanUtils expression
-     * format</a>
+     * Property to update, as an Apache Commons BeanUtils expression
+     * (see <a href="https://commons.apache.org/proper/commons-beanutils/apidocs/org/apache/commons/beanutils/expression/DefaultResolver.html">BeanUtils expression format</a>).
      *
-     * @return an Apache Commons BeanUtils expression identifying which property we want to update
+     * @return property expression to update
      */
     public String getPropertyName() {
         return propertyName;
@@ -51,7 +53,7 @@ public class BatchUpdate {
     }
 
     /**
-     * Retrieves the new property value.
+     * New value to assign to the property.
      *
      * @return the new property value
      */
@@ -69,7 +71,7 @@ public class BatchUpdate {
     }
 
     /**
-     * Retrieves the condition which items we want to update must satisfy.
+     * Condition that items must match to be updated.
      *
      * @return the condition which items we want to update must satisfy
      */
@@ -87,7 +89,7 @@ public class BatchUpdate {
     }
 
     /**
-     * Retrieves the identifier for the {@link PropertyMergeStrategyType} to use during the update if needed.
+     * {@link PropertyMergeStrategyType} id to use when merging the new value.
      *
      * @return the identifier for the {@link PropertyMergeStrategyType} to use during the update if needed
      */

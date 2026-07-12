@@ -31,19 +31,36 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Jackson deserializer for {@link Item} subclasses keyed by {@code itemType}.
+ */
 public class ItemDeserializer extends StdDeserializer<Item> {
 
     private static final long serialVersionUID = -7040054009670771266L;
     private Map<String, Class<? extends Item>> classes = new ConcurrentHashMap<>();
 
+    /**
+     * Creates a deserializer for {@link Item}.
+     */
     public ItemDeserializer() {
         super(Item.class);
     }
 
+    /**
+     * Registers an item type to class mapping.
+     *
+     * @param type the item type identifier
+     * @param clazz the item class
+     */
     public void registerMapping(String type, Class<? extends Item> clazz) {
         classes.put(type, clazz);
     }
 
+    /**
+     * Removes an item type mapping.
+     *
+     * @param type the item type identifier
+     */
     public void unregisterMapping(String type) {
         classes.remove(type);
     }

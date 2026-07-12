@@ -58,18 +58,18 @@ public class Session extends Item implements TimestampedItem, SystemPropertiesIt
     private List<String> originEventIds = new ArrayList<>();
 
     /**
-     * Instantiates a new Session.
+     * Default constructor.
      */
     public Session() {
     }
 
     /**
-     * Instantiates a new Session.
+     * Creates a session linked to a profile, timestamp, and scope.
      *
-     * @param itemId    the identifier for this Session
-     * @param profile   the associated {@link Profile}
-     * @param timeStamp the time stamp
-     * @param scope     the scope
+     * @param itemId    the session identifier
+     * @param profile   the associated profile
+     * @param timeStamp the session start time
+     * @param scope     the session scope
      */
     public Session(String itemId, Profile profile, Date timeStamp, String scope) {
         super(itemId);
@@ -80,18 +80,18 @@ public class Session extends Item implements TimestampedItem, SystemPropertiesIt
     }
 
     /**
-     * Retrieves the identifier of the associated Profile.
+     * Identifier of the profile linked to this session.
      *
-     * @return the identifier of the associated Profile
+     * @return the profile id
      */
     public String getProfileId() {
         return profileId;
     }
 
     /**
-     * Retrieves the associated Profile.
+     * Profile associated with this session.
      *
-     * @return the associated profile
+     * @return the profile
      */
     public Profile getProfile() {
         return profile;
@@ -119,19 +119,19 @@ public class Session extends Item implements TimestampedItem, SystemPropertiesIt
     }
 
     /**
-     * Retrieves the property identified by the specified name.
+     * Value of the named session property.
      *
-     * @param name the name of the property to retrieve
-     * @return the value of the specified property or {@code null} if no such property exists
+     * @param name the property name
+     * @return the property value, or {@code null} if unset
      */
     public Object getProperty(String name) {
         return properties.get(name);
     }
 
     /**
-     * Retrieves a Map of all property name - value pairs.
+     * All user-visible session properties.
      *
-     * @return a Map of all property name - value pairs
+     * @return the property map
      */
     public Map<String, Object> getProperties() {
         return properties;
@@ -147,10 +147,9 @@ public class Session extends Item implements TimestampedItem, SystemPropertiesIt
     }
 
     /**
-     * Retrieves a Map of system property name - value pairs. System properties can be used by implementations to store non-user visible properties needed for
-     * internal purposes.
+     * Internal properties used by implementations and not shown in UIs.
      *
-     * @return a Map of system property name - value pairs
+     * @return the system property map
      */
     public Map<String, Object> getSystemProperties() {
         return systemProperties;
@@ -166,16 +165,16 @@ public class Session extends Item implements TimestampedItem, SystemPropertiesIt
     }
 
     /**
-     * Retrieves the session creation timestamp.
+     * When this session was created.
      *
-     * @return the session creation timestamp
+     * @return the creation timestamp
      */
     public Date getTimeStamp() {
         return timeStamp;
     }
 
     /**
-     * Retrieves the last event date.
+     * Timestamp of the most recent event in this session.
      *
      * @return the last event date
      */
@@ -196,18 +195,18 @@ public class Session extends Item implements TimestampedItem, SystemPropertiesIt
     }
 
     /**
-     * Retrieves the duration.
+     * Elapsed time between session start and last event, in milliseconds.
      *
-     * @return the duration
+     * @return the session duration
      */
     public int getDuration() {
         return duration;
     }
 
     /**
-     * Retrieves the size.
+     * Number of events recorded in this session.
      *
-     * @return the size
+     * @return the event count
      */
     public int getSize() {
         return size;
@@ -222,45 +221,55 @@ public class Session extends Item implements TimestampedItem, SystemPropertiesIt
         this.size = size;
     }
 
+    /**
+     * Scope this session belongs to.
+     *
+     * @return the scope id
+     */
     public String getScope() {
         return scope;
     }
 
+    /**
+     * Sets the scope this session belongs to.
+     *
+     * @param scope the session scope identifier
+     */
     public void setScope(String scope) {
         this.scope = scope;
     }
 
     /**
-     * Get the events types which causes the session creation
+     * Event types that triggered session creation.
      *
-     * @return List of event types
+     * @return the origin event types
      */
     public List<String> getOriginEventTypes() {
         return originEventTypes;
     }
 
     /**
-     * Set the events types which causes the session creation
+     * Sets the event types that triggered session creation.
      *
-     * @param originEventTypes List of event types
+     * @param originEventTypes the origin event types
      */
     public void setOriginEventTypes(List<String> originEventTypes) {
         this.originEventTypes = originEventTypes;
     }
 
     /**
-     * Get the events ids which causes the session creation
+     * Event ids that triggered session creation.
      *
-     * @return event ids
+     * @return the origin event ids
      */
     public List<String> getOriginEventIds() {
         return originEventIds;
     }
 
     /**
-     * Set the events ids which causes the session creation
+     * Sets the event ids that triggered session creation.
      *
-     * @param originEventIds List of event ids
+     * @param originEventIds the origin event ids
      */
     public void setOriginEventIds(List<String> originEventIds) {
         this.originEventIds = originEventIds;

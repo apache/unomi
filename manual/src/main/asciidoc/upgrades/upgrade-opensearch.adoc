@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_upgrade_opensearch]]
+[#_upgrade_opensearch]
 ==== Upgrading the OpenSearch client
 
 OpenSearch persistence mirrors Elasticsearch: a fat OSGi bundle embeds the Java client and HTTP stack (UNOMI-828, `078ebceda`).

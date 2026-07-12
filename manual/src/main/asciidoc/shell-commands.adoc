@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[#_shell_commands]
 === SSH Shell Commands
 
 Apache Unomi provides its own Apache Karaf Shell commands to make it easy to control the application
@@ -203,4 +204,87 @@ and interactive mode except that it undeploys definitions instead of deploying t
 working on a plugin. For example to remove all the definitions deployed by a plugin you can simply use the following
 command: `undeploy-definition BUNDLE_ID * *` when `BUNDLE_ID` is the identifier of the bundle that contains your plugin.
 
+|===
+
+
+==== Tenant commands
+
+Multi-tenant shell operations (Unomi 3.1+). See <<_multitenancy,Multi-tenancy>> for REST equivalents.
+
+.Table Tenant commands
+|===
+|Command|Arguments|Description
+
+|tenant-get
+|n/a
+|Print the tenant ID stored for this Karaf session.
+
+|tenant-set
+|tenant-id
+|Set the current tenant for this shell session (`system` is allowed). Other CRUD commands use this context.
+
+|crud list tenant
+|[--csv]
+|List tenants (excludes the built-in `system` tenant from normal listings).
+
+|crud read tenant
+|-i tenant-id
+|Show one tenant as JSON.
+
+|crud create tenant
+|-d JSON or --file path
+|Create a tenant. Use `help` on the command for required properties.
+
+|crud update tenant
+|-i tenant-id -d JSON or --file path
+|Update tenant metadata.
+
+|crud delete tenant
+|-i tenant-id
+|Delete a tenant.
+
+|crud list apikey
+|[--csv]
+|List API keys across all tenants (keys are masked in the table).
+
+|crud create apikey
+|-d JSON
+|Create an API key for a tenant (`tenantId`, `keyType`, optional `validityPeriod`).
+
+|cache
+|--tenant ID [--clear]
+|Inspect or clear per-tenant caches (segments, rules, and related types).
+|===
+
+==== Scheduler commands
+
+These commands manage background tasks created by the cluster-aware scheduler (see <<_scheduler,Task scheduler>>).
+
+.Table Scheduler commands
+|===
+|Command|Arguments|Description
+
+|task-list
+|[-s status] [-t type] [--limit N]
+|List scheduled tasks. Filter by status (`SCHEDULED`, `RUNNING`, `FAILED`, …) or task type.
+
+|task-show
+|task-id
+|Show full details for one task (parameters, checkpoint data, errors).
+
+|task-cancel
+|task-id
+|Cancel a task (stops future executions).
+
+|task-retry
+|task-id [-r]
+|Retry a failed task. `-r` / `--reset` clears the failure count.
+
+|task-purge
+|[-d days] [-f]
+|Delete old `COMPLETED` tasks (default: older than 7 days). `-f` skips confirmation.
+
+|task-executor
+|boolean
+|Show whether this node runs tasks and its scheduler `nodeId`.
 |===

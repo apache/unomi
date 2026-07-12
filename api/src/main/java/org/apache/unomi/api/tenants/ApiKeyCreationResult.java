@@ -28,9 +28,23 @@ public class ApiKeyCreationResult {
     private ApiKey apiKey;
     private String plainTextKey;
 
+    /**
+     * Constructs an empty {@link ApiKeyCreationResult}.
+     * This result object must be populated manually with the created API key
+     * metadata and the plaintext key value.
+     */
     public ApiKeyCreationResult() {
     }
 
+    /**
+     * Creates a result containing both the persisted {@link ApiKey} metadata
+     * and the plaintext key value.
+     * The plaintext key is only available at creation time, as
+     * it is not persisted.
+     *
+     * @param apiKey the API key metadata that was successfully persisted.
+     * @param plainTextKey the one-time plaintext key value.
+     */
     public ApiKeyCreationResult(ApiKey apiKey, String plainTextKey) {
         this.apiKey = apiKey;
         this.plainTextKey = plainTextKey;
@@ -38,6 +52,7 @@ public class ApiKeyCreationResult {
 
     /**
      * Gets the persisted API key metadata (type, masked key, dates, etc.), without the secret.
+     *
      * @return the API key metadata
      */
     public ApiKey getApiKey() {
@@ -46,6 +61,7 @@ public class ApiKeyCreationResult {
 
     /**
      * Sets the persisted API key metadata.
+     *
      * @param apiKey the API key metadata to set
      */
     public void setApiKey(ApiKey apiKey) {
@@ -55,6 +71,7 @@ public class ApiKeyCreationResult {
     /**
      * Gets the one-time plaintext key value. This is only available right after creation;
      * it is never persisted and cannot be retrieved again afterwards.
+     *
      * @return the plaintext API key
      */
     public String getPlainTextKey() {
@@ -63,6 +80,7 @@ public class ApiKeyCreationResult {
 
     /**
      * Sets the one-time plaintext key value.
+     *
      * @param plainTextKey the plaintext API key to set
      */
     public void setPlainTextKey(String plainTextKey) {

@@ -326,7 +326,7 @@ EOF
         echo -e "  ${CYAN}--search-engine-logs${NC}       Stream search engine Docker logs to the Maven console during integration tests"
         echo -e "  ${CYAN}--no-memory-sampler${NC}        Disable JVM/system memory sampling during integration tests"
         echo -e "  ${CYAN}--memory-interval SEC${NC}    Memory sample interval in seconds (default: 30)"
-        echo -e "  ${CYAN}--javadoc${NC}                  Build and validate Javadoc after install (fails on doclint errors)"
+        echo -e "  ${CYAN}--javadoc${NC}                  Build and validate Javadoc after install (doclint errors fail; public/protected tag gaps warn)"
         echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, non-interactive, includes Javadoc"
         echo -e "  ${CYAN}--log-file PATH${NC}            Tee all output to PATH (console + file)"
         echo -e "  ${CYAN}--log-file-only${NC}            With --log-file: write to file only, suppress console"
@@ -369,7 +369,7 @@ EOF
         echo "  --search-engine-logs      Stream search engine Docker logs to the Maven console during integration tests"
         echo "  --no-memory-sampler       Disable JVM/system memory sampling during integration tests"
         echo "  --memory-interval SEC     Memory sample interval in seconds (default: 30)"
-        echo "  --javadoc                 Build and validate Javadoc after install (fails on doclint errors)"
+        echo "  --javadoc                 Build and validate Javadoc after install (doclint errors fail; public/protected tag gaps warn)"
         echo "  --ci                      CI mode: no Karaf, non-interactive, includes Javadoc"
         echo "  --log-file PATH           Tee all output to PATH (console + file)"
         echo "  --log-file-only           With --log-file: write to file only, suppress console"
@@ -1161,7 +1161,7 @@ echo "Estimated time: 3-5 minutes for build, 50-60 minutes with integration test
 start_timer
 
 # Build phases with enhanced output
-[ "$JAVADOC" = true ] && total_steps=3 || total_steps=2
+[ "$JAVADOC" = true ] && total_steps=4 || total_steps=2
 current_step=0
 
 write_it_run_trace_start() {
@@ -1276,7 +1276,7 @@ print_status "success" "Build completed in $(get_elapsed_time)"
 
 if [ "$JAVADOC" = true ]; then
     print_section "Javadoc Validation"
-    print_progress $((++current_step)) $total_steps "Generating and validating Javadoc..."
+    print_progress $((++current_step)) $total_steps "Generating Javadoc (doclint: links, HTML, syntax)..."
     if [ "$HAS_COLORS" -eq 1 ]; then
         echo -e "${GRAY}Running: $MVN_CMD javadoc:javadoc -DskipTests $MVN_OPTS${NC}"
     else
@@ -1286,7 +1286,19 @@ if [ "$JAVADOC" = true ]; then
         print_status "error" "Javadoc validation failed — fix doclint errors above before pushing"
         exit 1
     }
-    print_status "success" "Javadoc validated successfully"
+    print_status "success" "Javadoc doclint passed (no broken links, HTML, or syntax errors)"
+
+    print_progress $((++current_step)) $total_steps "Checking public/protected Javadoc tags (warnings only)..."
+    if [ "$HAS_COLORS" -eq 1 ]; then
+        echo -e "${GRAY}Running: $MVN_CMD -Pjavadoc-tags-warn checkstyle:check -DskipTests $MVN_OPTS${NC}"
+    else
+        echo "Running: $MVN_CMD -Pjavadoc-tags-warn checkstyle:check -DskipTests $MVN_OPTS"
+    fi
+    $MVN_CMD -Pjavadoc-tags-warn checkstyle:check -DskipTests $MVN_OPTS || {
+        print_status "error" "Javadoc tag check failed unexpectedly — see output above"
+        exit 1
+    }
+    print_status "success" "Javadoc tag check completed (review any warnings above)"
 fi
 
 # Deployment section with enhanced output

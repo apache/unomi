@@ -49,13 +49,13 @@ public class Segment extends MetadataItem implements YamlConvertible {
     private Condition condition;
 
     /**
-     * Instantiates a new Segment.
+     * Default constructor.
      */
     public Segment() {
     }
 
     /**
-     * Instantiates a new Segment with the specified metadata.
+     * Creates a segment with the given metadata.
      *
      * @param metadata the metadata
      */
@@ -64,9 +64,9 @@ public class Segment extends MetadataItem implements YamlConvertible {
     }
 
     /**
-     * Retrieves the condition that users' {@link Profile} must satisfy in order to be considered member of this Segment.
+     * Condition that profiles must satisfy to belong to this segment.
      *
-     * @return the condition that users must match
+     * @return the membership condition
      */
     public Condition getCondition() {
         return condition;
@@ -86,6 +86,7 @@ public class Segment extends MetadataItem implements YamlConvertible {
      * Implements YamlConvertible interface with circular reference detection.
      *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @param maxDepth maximum recursion depth to prevent stack overflow
      * @return a Map representation of this segment
      */
     @Override

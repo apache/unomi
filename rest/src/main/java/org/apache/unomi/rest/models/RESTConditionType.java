@@ -33,61 +33,134 @@ public class RESTConditionType {
     private List<RESTParameter> parameters = new ArrayList<RESTParameter>();
     protected Long version;
 
+    /**
+     * Creates an empty REST condition type.
+     */
     public RESTConditionType() {
     }
 
+    /**
+     * Returns the condition type identifier.
+     *
+     * @return the condition type identifier
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Sets the condition type identifier.
+     *
+     * @param id the condition type identifier
+     */
     public void setId(String id) {
         this.id = id;
     }
 
+    /**
+     * Returns the condition type name.
+     *
+     * @return the condition type name
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Sets the condition type name.
+     *
+     * @param name the condition type name
+     */
     public void setName(String name) {
         this.name = name;
     }
 
+    /**
+     * Returns the condition type description.
+     *
+     * @return the condition type description
+     */
     public String getDescription() {
         return description;
     }
 
+    /**
+     * Sets the condition type description.
+     *
+     * @param description the condition type description
+     */
     public void setDescription(String description) {
         this.description = description;
     }
 
+    /**
+     * Returns the condition type tags.
+     *
+     * @return the condition type tags
+     */
     public Set<String> getTags() {
         return tags;
     }
 
+    /**
+     * Sets the condition type tags.
+     *
+     * @param tags the condition type tags
+     */
     public void setTags(Set<String> tags) {
         this.tags = tags;
     }
 
+    /**
+     * Returns the condition type system tags.
+     *
+     * @return the condition type system tags
+     */
     public Set<String> getSystemTags() {
         return systemTags;
     }
 
+    /**
+     * Sets the condition type system tags.
+     *
+     * @param systemTags the condition type system tags
+     */
     public void setSystemTags(Set<String> systemTags) {
         this.systemTags = systemTags;
     }
 
+    /**
+     * Returns the condition type parameters.
+     *
+     * @return the condition type parameters
+     */
     public List<RESTParameter> getParameters() {
         return parameters;
     }
 
+    /**
+     * Sets the condition type parameters.
+     *
+     * @param parameters the condition type parameters
+     */
     public void setParameters(List<RESTParameter> parameters) {
         this.parameters = parameters;
     }
 
+    /**
+     * Returns the condition type version.
+     *
+     * @return the condition type version
+     */
     public Long getVersion() {
         return version;
     }
 
+    /**
+     * Sets the condition type version.
+     *
+     * @param version the condition type version
+     */
     public void setVersion(Long version) {
         this.version = version;
     }

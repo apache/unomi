@@ -43,41 +43,78 @@ public class TaskRecoveryManager {
     private SchedulerServiceImpl schedulerService;
     private volatile boolean shutdownNow = false;
 
+    /**
+     * Creates the manager for Blueprint dependency injection.
+     */
     public TaskRecoveryManager() {
         // Parameterless constructor for Blueprint dependency injection
     }
 
-    // Setter methods for Blueprint dependency injection
+    /**
+     * Sets the cluster node ID.
+     *
+     * @param nodeId the node ID
+     */
     public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
     }
 
+    /**
+     * Sets the task state manager.
+     *
+     * @param stateManager the state manager
+     */
     public void setStateManager(TaskStateManager stateManager) {
         this.stateManager = stateManager;
     }
 
+    /**
+     * Sets the task lock manager.
+     *
+     * @param lockManager the lock manager
+     */
     public void setLockManager(TaskLockManager lockManager) {
         this.lockManager = lockManager;
     }
 
+    /**
+     * Sets the task metrics manager.
+     *
+     * @param metricsManager the metrics manager
+     */
     public void setMetricsManager(TaskMetricsManager metricsManager) {
         this.metricsManager = metricsManager;
     }
 
+    /**
+     * Sets the task execution manager.
+     *
+     * @param executionManager the execution manager
+     */
     public void setExecutionManager(TaskExecutionManager executionManager) {
         this.executionManager = executionManager;
     }
 
+    /**
+     * Sets the task executor registry.
+     *
+     * @param executorRegistry the executor registry
+     */
     public void setExecutorRegistry(TaskExecutorRegistry executorRegistry) {
         this.executorRegistry = executorRegistry;
     }
 
+    /**
+     * Sets the scheduler service reference.
+     *
+     * @param schedulerService the scheduler service
+     */
     public void setSchedulerService(SchedulerServiceImpl schedulerService) {
         this.schedulerService = schedulerService;
     }
 
     /**
-     * Set the shutdown flag to prevent operations during shutdown
+     * Marks the manager as shutting down so recovery work is skipped.
      */
     public void prepareForShutdown() {
         this.shutdownNow = true;
@@ -85,12 +122,10 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Recovers tasks that crashed due to node failure or unexpected termination
-     * Process:
-     * 1. Identify tasks with expired locks
-     * 2. Release locks and update states
-     * 3. Attempt to resume tasks with checkpoint data
-     * 4. Reschedule tasks that can't be resumed
+     * Recovers crashed and stale locked tasks after node failure.
+     * <p>
+     * Running tasks with expired locks are marked crashed, then resumed or restarted.
+     * Expired locks on non-running tasks are released and eligible tasks are rescheduled.
      */
     public void recoverCrashedTasks() {
         if (shutdownNow) {
@@ -107,7 +142,7 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Recovers tasks that are marked as running but have expired locks
+     * Recovers running tasks whose locks have expired.
      */
     private void recoverRunningTasks() {
         if (shutdownNow) return;
@@ -125,7 +160,9 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Recovers a single crashed task
+     * Recovers one crashed task by marking it crashed, recording history, and resuming or restarting it.
+     *
+     * @param task the task to recover
      */
     private void recoverCrashedTask(ScheduledTask task) {
         // Skip cancelled tasks - they should not be recovered
@@ -169,7 +206,10 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Records a task crash in its execution history
+     * Appends a crash entry to the task execution history.
+     *
+     * @param task the crashed task
+     * @param previousOwner the node that previously held the lock
      */
     private void recordCrash(ScheduledTask task, String previousOwner) {
         Map<String, Object> crash = new HashMap<>();
@@ -198,7 +238,10 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Attempts to resume a crashed task
+     * Reschedules and executes a crashed task that supports resumption.
+     *
+     * @param task the task to resume
+     * @param executor the executor for the task type
      */
     private void attemptTaskResumption(ScheduledTask task, TaskExecutor executor) {
         LOGGER.info("Node {} resuming crashed task {} : {}", nodeId, task.getTaskType(), task.getItemId());
@@ -210,7 +253,10 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Attempts to restart a task that can't be resumed
+     * Reschedules and executes a crashed task that cannot be resumed.
+     *
+     * @param task the task to restart
+     * @param executor the executor for the task type
      */
     private void attemptTaskRestart(ScheduledTask task, TaskExecutor executor) {
         LOGGER.info("Node {} restarting crashed task: {}", nodeId, task.getItemId());
@@ -221,7 +267,7 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Recovers tasks with expired locks that are not marked as running
+     * Releases expired locks on tasks that are not currently running.
      */
     private void recoverLockedTasks() {
         List<ScheduledTask> lockedTasks = schedulerService.findLockedTasks();
@@ -235,7 +281,9 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Recovers a single locked task
+     * Releases an expired lock and reschedules the task when appropriate.
+     *
+     * @param task the locked task to recover
      */
     private void recoverLockedTask(ScheduledTask task) {
         lockManager.releaseLock(task);
@@ -258,7 +306,10 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Determines if a crashed task should be restarted
+     * Returns whether a crashed task should be restarted instead of abandoned.
+     *
+     * @param task the crashed task
+     * @return {@code true} when the task should be restarted
      */
     private boolean shouldRestartTask(ScheduledTask task) {
         // Don't restart one-shot tasks that have already started
@@ -274,9 +325,11 @@ public class TaskRecoveryManager {
         return task.isEnabled();
     }
 
-
     /**
-     * Gets dependencies for a task
+     * Loads dependency tasks referenced by the given task.
+     *
+     * @param task the task whose dependencies are needed
+     * @return dependency tasks keyed by ID
      */
     private Map<String, ScheduledTask> getTaskDependencies(ScheduledTask task) {
         if (task.getDependsOn() == null || task.getDependsOn().isEmpty()) {
@@ -294,7 +347,9 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Update running task to crashed state
+     * Marks a running task as crashed and releases its lock.
+     *
+     * @param task the task to mark as crashed
      */
     private void markAsCrashed(ScheduledTask task) {
         try {
@@ -324,7 +379,9 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Resets a task that has been in running state for too long
+     * Marks a stalled running task as failed after a timeout.
+     *
+     * @param task the stalled task
      */
     private void resetStalledTask(ScheduledTask task) {
         try {

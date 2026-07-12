@@ -53,18 +53,26 @@ public class CampaignsServiceEndPoint {
     @Reference
     private GoalsService goalsService;
 
+    /**
+     * Creates the campaigns service endpoint.
+     */
     public CampaignsServiceEndPoint() {
         LOGGER.info("Initializing campaigns service endpoint...");
     }
 
+    /**
+     * Sets the goals service.
+     *
+     * @param goalsService the goals service
+     */
     public void setGoalsService(GoalsService goalsService) {
         this.goalsService = goalsService;
     }
 
     /**
-     * Retrieves the set of Metadata associated with existing campaigns.
+     * Returns metadata for all campaigns.
      *
-     * @return the set of Metadata associated with existing campaigns
+     * @return campaign metadata for every stored campaign
      */
     @GET
     @Path("/")
@@ -84,10 +92,10 @@ public class CampaignsServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of Metadata associated with existing campaign matching the specified {@link Query}
+     * Returns campaign metadata matching the given query.
      *
-     * @param query the Query used to filter the campagins which metadata we want to retrieve
-     * @return the set of Metadata associated with existing campaigns matching the specified {@link Query}
+     * @param query the query used to filter campaigns
+     * @return metadata for campaigns that match the query
      */
     @POST
     @Path("/query")
@@ -96,10 +104,10 @@ public class CampaignsServiceEndPoint {
     }
 
     /**
-     * Retrieves campaign details for campaigns matching the specified query.
+     * Returns detailed campaign data matching the given query.
      *
-     * @param query the query specifying which campaigns to retrieve
-     * @return a {@link PartialList} of campaign details for the campaigns matching the specified query
+     * @param query the query specifying which campaigns to include
+     * @return a paged list of campaign details
      */
     @POST
     @Path("/query/detailed")
@@ -108,10 +116,10 @@ public class CampaignsServiceEndPoint {
     }
 
     /**
-     * Retrieves the {@link CampaignDetail} associated with the campaign identified with the specified identifier
+     * Returns detailed data for the campaign with the given ID.
      *
-     * @param campaignID the identifier of the campaign for which we want to retrieve the details
-     * @return the CampaignDetail for the campaign identified by the specified identifier or {@code null} if no such campaign exists
+     * @param campaignID the campaign identifier
+     * @return the campaign detail, or {@code null} when no such campaign exists
      */
     @GET
     @Path("/{campaignID}/detailed")
@@ -120,10 +128,10 @@ public class CampaignsServiceEndPoint {
     }
 
     /**
-     * Retrieves the campaign identified by the specified identifier
+     * Returns the campaign definition for the given ID.
      *
-     * @param campaignID the identifier of the campaign we want to retrieve
-     * @return the campaign associated with the specified identifier or {@code null} if no such campaign exists
+     * @param campaignID the campaign identifier
+     * @return the campaign, or {@code null} when no such campaign exists
      */
     @GET
     @Path("/{campaignID}")
@@ -165,10 +173,10 @@ public class CampaignsServiceEndPoint {
     }
 
     /**
-     * Retrieves {@link CampaignEvent}s matching the specified query.
+     * Returns campaign events matching the given query.
      *
-     * @param query the Query specifying which CampaignEvents to retrieve
-     * @return a {@link PartialList} of campaign events matching the specified query
+     * @param query the query specifying which campaign events to include
+     * @return a paged list of matching campaign events
      */
     @POST
     @Path("/events/query")

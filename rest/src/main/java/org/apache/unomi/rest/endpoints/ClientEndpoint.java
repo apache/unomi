@@ -69,12 +69,25 @@ public class ClientEndpoint {
     @Context
     HttpServletResponse response;
 
+    /**
+     * Handles CORS preflight for the client endpoint.
+     *
+     * @return an empty CORS preflight response
+     */
     @OPTIONS
     @Path("/client/{operation}/{param}")
     public Response options() {
         return Response.status(Response.Status.NO_CONTENT).build();
     }
 
+    /**
+     * Exports profile data for the requested client operation.
+     *
+     * @param operation the export operation
+     * @param param the operation parameter
+     * @return the export response
+     * @throws JsonProcessingException if response serialization fails
+     */
     @GET
     @Path("/client/{operation}/{param}")
     public Response getClient(@PathParam("operation") String operation, @PathParam("param") String param) throws JsonProcessingException {

@@ -23,10 +23,20 @@ import java.util.Collection;
 import java.util.Map;
 
 /**
- * Created by amidani on 30/06/2017.
+ * Helper routines for building router import/export column mappings.
+ * Converts Unomi {@link PropertyType} metadata into header lists and default
+ * values used when CSV or similar files are parsed by router Camel processors.
  */
 public class RouterUtils {
 
+    /**
+     * Appends an execution entry to the configuration history, trimming oldest entries when the limit is reached.
+     *
+     * @param configuration the import/export configuration to update
+     * @param execution the execution metadata to record
+     * @param executionsHistorySize maximum number of execution entries to retain
+     * @return the updated configuration
+     */
     public static ImportExportConfiguration addExecutionEntry(ImportExportConfiguration configuration, Map execution, int executionsHistorySize) {
         if (configuration.getExecutions() == null) {
             configuration.setExecutions(new ArrayList<>());
@@ -47,6 +57,12 @@ public class RouterUtils {
         return configuration;
     }
 
+    /**
+     * Converts a line-separator string to its single-character form.
+     *
+     * @param lineSeparator the configured line separator (for example {@code "\n"} or {@code "\r"})
+     * @return the corresponding line-separator character
+     */
     public static char getCharFromLineSeparator(String lineSeparator) {
         char charLineSep = '\n';
         if ("\r".equals(lineSeparator)) {
@@ -55,6 +71,13 @@ public class RouterUtils {
         return charLineSep;
     }
 
+    /**
+     * Finds a property type by identifier in a collection.
+     *
+     * @param propertyTypes the property types to search
+     * @param propertyTypeId the property type identifier to match
+     * @return the matching property type, or {@code null} if none is found
+     */
     public static PropertyType getPropertyTypeById(Collection<PropertyType> propertyTypes, String propertyTypeId) {
         for (PropertyType propertyType : propertyTypes) {
             if (propertyType.getMetadata().getId().equals(propertyTypeId)) {

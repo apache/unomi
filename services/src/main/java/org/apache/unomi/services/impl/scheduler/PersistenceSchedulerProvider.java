@@ -28,6 +28,9 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+/**
+ * Persistence-backed scheduler provider for durable, cluster-aware tasks.
+ */
 public class PersistenceSchedulerProvider implements SchedulerProvider {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PersistenceSchedulerProvider.class.getName());
@@ -55,38 +58,79 @@ public class PersistenceSchedulerProvider implements SchedulerProvider {
     private TaskLockManager lockManager;
     private ClusterService clusterService;
 
+    /**
+     * Sets the persistence service via Blueprint dependency injection.
+     *
+     * @param persistenceService the persistence service
+     */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
 
+    /**
+     * Sets whether this node executes scheduled tasks.
+     *
+     * @param executorNode true if this node runs tasks
+     */
     public void setExecutorNode(boolean executorNode) {
         this.executorNode = executorNode;
     }
 
+    /**
+     * Sets the cluster node ID for this provider.
+     *
+     * @param nodeId the node ID
+     */
     public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
     }
 
+    /**
+     * Sets the TTL in days for purging completed tasks.
+     *
+     * @param completedTaskTtlDays retention period in days
+     */
     public void setCompletedTaskTtlDays(long completedTaskTtlDays) {
         this.completedTaskTtlDays = completedTaskTtlDays;
     }
 
+    /**
+     * Sets the task lock manager.
+     *
+     * @param lockManager the lock manager
+     */
     public void setLockManager(TaskLockManager lockManager) {
         this.lockManager = lockManager;
     }
 
+    /**
+     * Sets the cluster service for active-node discovery.
+     *
+     * @param clusterService the cluster service
+     */
     public void setClusterService(ClusterService clusterService) {
         this.clusterService = clusterService;
     }
 
+    /**
+     * Clears the cluster service reference on unbind.
+     *
+     * @param clusterService the cluster service being unbound
+     */
     public void unsetClusterService(ClusterService clusterService) {
         this.clusterService = null;
     }
 
+    /**
+     * Blueprint post-construct hook.
+     */
     public void postConstruct() {
 
     }
 
+    /**
+     * Blueprint pre-destroy hook; releases locks held by this node.
+     */
     public void preDestroy() {
         // Check if persistence service is still available before trying to use it
         if (persistenceService == null) {

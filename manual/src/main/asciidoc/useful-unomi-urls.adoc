@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-[[_useful_apache_unomi_urls]]
+[#_useful_apache_unomi_urls]
 === Useful Apache Unomi URLs
 
 In this section we will list some useful URLs that can be used to quickly access parts of Apache Unomi that can help
@@ -81,4 +81,60 @@ where PROFILE_ID is a profile identifier. This will indeed retrieve all the even
 |/cxs/rules/statistics
 |DELETE
 |Reset all rule execution statistics to 0
+
+|/cxs/tasks
+|GET
+|Listing scheduled background tasks (see <<_scheduler,Task scheduler>>) (filter with `?status=` or `?type=`)
+
+|/cxs/tasks/{taskId}
+|GET
+|View a single scheduled task
+
+|/cxs/tasks/{taskId}
+|DELETE
+|Cancel a scheduled task
+
+|/cxs/tasks/{taskId}/retry
+|POST
+|Retry a failed task (`?resetFailureCount=true` optional)
+
+|/cxs/tasks/{taskId}/resume
+|POST
+|Resume a crashed task from checkpoint
+
+|/cxs/tenants
+|GET
+|List all tenants (system administrator only). See <<_multitenancy,Multi-tenancy>>.
+
+|/cxs/tenants/{tenantId}
+|GET
+|Get one tenant (system administrator or tenant administrator for that tenant).
+
+|/cxs/tenants
+|POST
+|Create a tenant (system administrator). Returns generated public and private API keys.
+
+|/cxs/tenants/{tenantId}/apikeys
+|POST
+|Generate a new API key (`?type=PUBLIC` or `PRIVATE`, optional `validityDays`).
+
+|/cxs/tenants/{tenantId}/usage
+|GET
+|Tenant usage snapshot (`?period=current-month` or `YYYY-MM`).
+
+|/cxs/tenants/{tenantId}/purge/events
+|POST
+|Purge events older than `retentionDays` (destructive; tenant administrator).
+
+|/cxs/cluster
+|GET
+|List cluster nodes and statistics. See <<_clustering,Cluster setup>>.
+
+|/health/check
+|GET
+|Health check JSON (role `health`, default user `health`/`health`). See <<_health_check,Health Check extension>>.
+
+|/cxs/context.json?explain=true
+|POST
+|Context request with request tracing (admin roles). See <<_request_tracing_explain,Using the explain parameter for request tracing>>.
 |===

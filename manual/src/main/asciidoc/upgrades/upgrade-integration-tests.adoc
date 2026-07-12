@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_upgrade_integration_tests]]
+[#_upgrade_integration_tests]
 ==== Integration tests and Docker
 
 Platform upgrades are validated by *Pax Exam* integration tests plus *Docker-backed* search engines. Failures often appear in Maven Failsafe output, not in `karaf.log`.
@@ -117,7 +117,7 @@ Shipped: `elasticsearch-maven-plugin` replaced with `io.fabric8:docker-maven-plu
 
 Always run `docker pull` for both images before bumping version properties.
 
-[[_upgrade_integration_tests_pax_exam_probe]]
+[#_upgrade_integration_tests_pax_exam_probe]
 ===== Pax Exam probe and static initialization (Karaf 4.4.11 / Pax Exam 4.14)
 
 After a Karaf bump, integration tests may fail *before Unomi starts*. `karaf.log` can look healthy or incomplete while Failsafe reports hundreds of errors in a few seconds — that pattern almost always means the *PAXEXAM-PROBE* bundle failed to load test classes, not a Karaf startup crash.

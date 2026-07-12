@@ -40,7 +40,7 @@ public interface ConditionValidationService {
      * ({@code script::}). Only literal parameter values are validated.
      *
      * @param condition the condition to validate
-     * @return a list of validation errors, empty when the condition is valid
+     * @return validation errors, or an empty list when valid
      */
     List<ValidationError> validate(Condition condition);
 
@@ -57,7 +57,7 @@ public interface ConditionValidationService {
         private final ValidationError parentError;
 
         /**
-         * Instantiates a validation error for a single parameter.
+         * Creates a validation error for a single parameter.
          *
          * @param parameterName the parameter that caused the error
          * @param message the error description
@@ -68,7 +68,7 @@ public interface ConditionValidationService {
         }
 
         /**
-         * Instantiates a validation error with full condition context and optional parent error.
+         * Creates a validation error with full condition context and optional parent error.
          *
          * @param parameterName the parameter that caused the error
          * @param message the error description
@@ -91,45 +91,45 @@ public interface ConditionValidationService {
         }
 
         /**
-         * Retrieves the name of the parameter that caused the error.
+         * Parameter that failed validation.
          *
-         * @return the parameter name, or {@code null} if not applicable
+         * @return parameter name, or {@code null} if not applicable
          */
         public String getParameterName() {
             return parameterName;
         }
 
         /**
-         * Retrieves the error description message.
+         * Human-readable error description.
          *
-         * @return the error message
+         * @return error message
          */
         public String getMessage() {
             return message;
         }
 
         /**
-         * Retrieves the type of validation error.
+         * Category of validation failure.
          *
-         * @return the error type
+         * @return error type
          */
         public ValidationErrorType getType() {
             return type;
         }
 
         /**
-         * Retrieves the identifier of the condition associated with this error.
+         * Condition instance that failed validation.
          *
-         * @return the condition identifier, or {@code null} if not applicable
+         * @return condition identifier, or {@code null} if not applicable
          */
         public String getConditionId() {
             return conditionId;
         }
 
         /**
-         * Retrieves the identifier of the condition type associated with this error.
+         * Condition type definition that was validated.
          *
-         * @return the condition type identifier, or {@code null} if not applicable
+         * @return condition type identifier, or {@code null} if not applicable
          */
         public String getConditionTypeId() {
             return conditionTypeId;
@@ -137,6 +137,8 @@ public interface ConditionValidationService {
 
         /**
          * @deprecated Use {@link #getConditionTypeId()} instead.
+         *
+         * @return condition type identifier (same as {@link #getConditionTypeId()})
          */
         @Deprecated
         public String getConditionTypeName() {
@@ -144,27 +146,27 @@ public interface ConditionValidationService {
         }
 
         /**
-         * Retrieves a copy of the additional context map for this error.
+         * Defensive copy of supplemental error context.
          *
-         * @return the context map
+         * @return context map
          */
         public Map<String, Object> getContext() {
             return new HashMap<>(context);
         }
 
         /**
-         * Retrieves the parent error that caused this error, if any.
+         * Underlying error that caused this one, when chained.
          *
-         * @return the parent error, or {@code null} if none
+         * @return parent error, or {@code null} if none
          */
         public ValidationError getParentError() {
             return parentError;
         }
 
         /**
-         * Retrieves a detailed error message including condition, parameter, context, and parent error information.
+         * Builds a message with condition, parameter, context, and parent-error details.
          *
-         * @return the detailed error message
+         * @return detailed error message
          */
         public String getDetailedMessage() {
             StringBuilder sb = new StringBuilder();
@@ -231,14 +233,19 @@ public interface ConditionValidationService {
 
         private final String description;
 
+        /**
+         * Associates a human-readable label with this error category.
+         *
+         * @param description descriptive text for this error type
+         */
         ValidationErrorType(String description) {
             this.description = description;
         }
 
         /**
-         * Retrieves the human-readable description of this error type.
+         * Human-readable label for this error category.
          *
-         * @return the error type description
+         * @return error type description
          */
         public String getDescription() {
             return description;

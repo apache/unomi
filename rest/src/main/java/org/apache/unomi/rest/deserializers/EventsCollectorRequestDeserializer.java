@@ -39,10 +39,21 @@ public class EventsCollectorRequestDeserializer extends StdDeserializer<EventsCo
 
     private final SchemaService schemaService;
 
+    /**
+     * Creates a deserializer for EventsCollectorRequest.
+     *
+     * @param schemaRegistry the schema service
+     */
     public EventsCollectorRequestDeserializer(SchemaService schemaRegistry) {
         this(null, schemaRegistry);
     }
 
+    /**
+     * Creates a deserializer for EventsCollectorRequest.
+     *
+     * @param vc the target class
+     * @param schemaService the schema service
+     */
     public EventsCollectorRequestDeserializer(Class<EventsCollectorRequest> vc, SchemaService schemaService) {
         super(vc);
         this.schemaService = schemaService;

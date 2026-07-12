@@ -19,7 +19,9 @@ package org.apache.unomi.api;
 import java.util.Map;
 
 /**
- * An Item that is holding system properties.
+ * {@link Item} that stores system-level properties in a map.
+ * System properties are internal or cross-cutting values kept separately
+ * from visitor profile properties.
  */
 public interface SystemPropertiesItem {
 

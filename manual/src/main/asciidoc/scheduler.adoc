@@ -1,0 +1,695 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== Cluster-aware task scheduler
+
+Apache Unomi 3.1 introduces a built-in **task scheduler** for background work that must run reliably in single-node and clustered deployments.
+
+Use it when you need to:
+
+* Run maintenance jobs on a timer (cache refresh, purge, segment recalculation).
+* Offload heavy work from a request or rule action (for example profile merge follow-up).
+* Coordinate work across cluster nodes with locks, recovery, and optional persistence.
+* Inspect, retry, or cancel tasks through the REST API or Karaf shell.
+
+Tasks are identified by a **task type** string. Each type is handled by a registered `TaskExecutor` implementation (in core services or in a plugin).
+
+==== Quick example: periodic cache refresh
+
+Core services already use the scheduler for in-memory cache refresh. The pattern looks like this:
+
+[source,java]
+----
+schedulerService.newTask("cache-refresh-segment")
+    .nonPersistent()                     // local to this node; not stored in OpenSearch/Elasticsearch
+    .withPeriod(1, TimeUnit.SECONDS)
+    .withFixedDelay()                    // wait for completion before next run
+    .disallowParallelExecution()         // skip overlapping runs
+    .withSimpleExecutor(() -> refreshSegmentCache())
+    .schedule();
+----
+
+==== Architecture overview
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle rectangle
+
+package "REST / Shell" {
+  [TaskEndpoint\n/cxs/tasks] as REST
+  [Karaf commands\nunomi:task-*] as Shell
+}
+
+package "Scheduler API" {
+  [SchedulerService] as SchedAPI
+  [TaskExecutor] as ExecutorAPI
+  [ScheduledTask] as TaskModel
+}
+
+package "Services (per node)" {
+  [SchedulerServiceImpl] as Impl
+  [TaskExecutionManager] as Exec
+  [TaskLockManager] as Lock
+  [TaskRecoveryManager] as Recovery
+  [TaskExecutorRegistry] as Registry
+}
+
+database "Persistence\n(OpenSearch / ES)" as DB
+
+REST --> SchedAPI
+Shell --> SchedAPI
+SchedAPI --> Impl
+Impl --> Exec
+Impl --> Lock
+Impl --> Recovery
+Impl --> Registry
+Registry --> ExecutorAPI
+Impl --> DB : persistent tasks
+Impl --> Impl : in-memory tasks
+
+note right of Impl
+  Only **executor nodes** pick up most tasks.
+  Tasks with runOnAllNodes=true
+  run on every node.
+end note
+@enduml
+----
+
+==== Task lifecycle
+
+A `ScheduledTask` moves through well-defined states. Operators usually see `SCHEDULED`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`, or `CRASHED`.
+
+[plantuml]
+----
+@startuml
+[*] --> SCHEDULED : task created
+
+SCHEDULED --> WAITING : lock held or\ndependency not done
+WAITING --> SCHEDULED : prerequisites met
+
+SCHEDULED --> RUNNING : executor node\nacquires lock
+RUNNING --> COMPLETED : success
+RUNNING --> FAILED : error (retries may apply)
+RUNNING --> CRASHED : node failure
+
+FAILED --> SCHEDULED : manual retry\nor auto-retry
+CRASHED --> RUNNING : resume from\ncheckpoint
+
+SCHEDULED --> CANCELLED : cancel/delete
+RUNNING --> CANCELLED : cancel during run
+COMPLETED --> [*]
+CANCELLED --> [*]
+@enduml
+----
+
+==== Execution flow in a cluster
+
+[plantuml]
+----
+@startuml
+participant "Node A\n(executor)" as A
+participant "SchedulerService" as S
+participant "TaskLockManager" as L
+participant "Persistence" as P
+participant "TaskExecutor" as E
+
+A -> S : check due tasks (every ~1s)
+S -> P : load persistent tasks
+S -> S : load in-memory tasks
+S -> L : try acquire lock
+alt lock acquired
+  L --> S : granted
+  S -> E : execute(task, callback)
+  E --> S : complete() / fail()
+  S -> P : save final state
+else lock held by another node
+  L --> S : denied
+  S -> S : task stays WAITING or retries later
+end
+@enduml
+----
+
+=== Core concepts
+
+[cols="1,3",options="header"]
+|===
+|Concept |Description
+
+|`taskType`
+|Logical name of the work (for example `cache-refresh-segment`, `merge-profiles-reassign-data`). Must match a registered `TaskExecutor`.
+
+|`TaskExecutor`
+|Java component that runs the work. Plugins register executors at activation time.
+
+|`persistent` task
+|Stored in the persistence layer (`scheduledTask` items). Visible on all cluster nodes. Survives restarts.
+
+|In-memory task
+|Exists only on the node that created it (`nonPersistent()`). Typical for local cache refresh.
+
+|Executor node
+|A node configured with `scheduler.executorNode=true` that actually runs tasks. Non-executor nodes can still create and manage tasks.
+
+|`runOnAllNodes`
+|When `true`, the task is eligible on every node (useful for per-node cache maintenance).
+
+|Lock
+|Prevents duplicate execution of the same task (or task type when parallel execution is disallowed) across the cluster.
+
+|Checkpoint / resume
+|Long tasks can save progress and be resumed after a `CRASHED` state via REST or shell.
+|===
+
+=== Task model
+
+Tasks are `ScheduledTask` items (`itemType = scheduledTask`). Important fields:
+
+[cols="1,3",options="header"]
+|===
+|Field |Meaning
+
+|`taskType` |Executor lookup key
+|`parameters` |JSON-serializable map passed to the executor
+|`status` |`SCHEDULED`, `WAITING`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`, `CRASHED`
+|`persistent` |`true` = cluster-visible storage; `false` = node-local memory
+|`oneShot` |Run once then stop
+|`period` / `timeUnit` |Recurrence interval (0 means one-shot)
+|`fixedRate` |`true` = interval from start; `false` = fixed delay from end
+|`allowParallelExecution` |`false` = exclusive lock per task type
+|`maxRetries` / `retryDelay` |Automatic retry policy after failure
+|`dependsOn` |Task IDs that must complete first
+|`checkpointData` / `currentStep` |Progress for resumable work
+|`executingNodeId` / `lockOwner` |Cluster coordination metadata
+|===
+
+.Example task JSON (as returned by REST)
+[source,json]
+----
+{
+  "itemId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "itemType": "scheduledTask",
+  "taskType": "merge-profiles-reassign-data",
+  "status": "COMPLETED",
+  "persistent": true,
+  "oneShot": true,
+  "allowParallelExecution": false,
+  "fixedRate": false,
+  "period": 0,
+  "timeUnit": "MILLISECONDS",
+  "initialDelay": 1000,
+  "failureCount": 0,
+  "successCount": 1,
+  "maxRetries": 3,
+  "retryDelay": 60000,
+  "parameters": {
+    "tenantId": "mytenant",
+    "masterProfileId": "profile-123",
+    "mergedProfileIds": ["profile-456", "profile-789"],
+    "anonymousBrowsing": false
+  },
+  "lastExecutedBy": "unomi-node-1",
+  "lastExecutionDate": "2026-07-12T10:15:30.000Z"
+}
+----
+
+=== Configuration
+
+Scheduler settings live in `etc/org.apache.unomi.services.cfg` (OSGi PID `org.apache.unomi.services`).
+
+[cols="2,2,4",options="header"]
+|===
+|Property |Default |Description
+
+|`scheduler.thread.poolSize` |`5` |Thread pool size for task execution
+|`scheduler.nodeId` |`test-scheduler-node` |Unique ID for this node in scheduler logs and task metadata. Set a stable value per node in production clusters.
+|`scheduler.executorNode` |`true` |Whether this node runs tasks. Set `false` on dedicated REST-only nodes if you split roles.
+|`scheduler.lockTimeout` |`10000` |Lock timeout in milliseconds
+|`scheduler.purgeTaskEnabled` |`true` |Enables the built-in periodic purge of old completed tasks
+|`task.purge.completedTaskTtlDays` |`30` |Age in days after which completed tasks may be purged
+|===
+
+.Example: dedicated executor node in a 3-node cluster
+
+[source,properties]
+----
+# Node 1 and 2: REST + task execution
+scheduler.executorNode=true
+scheduler.nodeId=unomi-executor-1
+
+# Node 3: API only, no task execution
+scheduler.executorNode=false
+scheduler.nodeId=unomi-api-3
+----
+
+After changing configuration, restart the Unomi bundle or the Karaf container.
+
+=== REST API
+
+Base path: `{unomi}/cxs/tasks`
+
+Requires role `ROLE_UNOMI_ADMIN` or `ROLE_UNOMI_TENANT_ADMIN` (same as other administrative REST endpoints).
+
+NOTE: The REST API is for **monitoring and operations** (list, inspect, cancel, retry, resume). **Creating** tasks is done from Java code (`SchedulerService`) inside services or plugins, not via a public REST `POST /tasks` endpoint.
+
+==== List tasks
+
+.List all tasks (paginated)
+[source,bash]
+----
+curl -s -u karaf:karaf \
+  "http://localhost:8181/cxs/tasks?offset=0&limit=20"
+----
+
+.Filter by status
+[source,bash]
+----
+curl -s -u karaf:karaf \
+  "http://localhost:8181/cxs/tasks?status=FAILED&limit=50"
+----
+
+Valid status values: `SCHEDULED`, `WAITING`, `RUNNING`, `COMPLETED`, `FAILED`, `CANCELLED`, `CRASHED`.
+
+.Filter by task type
+[source,bash]
+----
+curl -s -u karaf:karaf \
+  "http://localhost:8181/cxs/tasks?type=cache-refresh-segment&limit=10"
+----
+
+.Example response (truncated)
+[source,json]
+----
+{
+  "list": [
+    {
+      "itemId": "task-uuid-here",
+      "taskType": "cache-refresh-segment",
+      "status": "SCHEDULED",
+      "persistent": false,
+      "nextScheduledExecution": "2026-07-12T10:16:01.000Z"
+    }
+  ],
+  "offset": 0,
+  "pageSize": 20,
+  "totalSize": 42,
+  "totalSizeRelation": "EQUAL"
+}
+----
+
+==== Get one task
+
+[source,bash]
+----
+curl -s -u karaf:karaf \
+  "http://localhost:8181/cxs/tasks/TASK_ID"
+----
+
+==== Cancel a task
+
+Cancellation stops future runs and marks the task `CANCELLED`. The task record remains in storage.
+
+[source,bash]
+----
+curl -s -u karaf:karaf -X DELETE \
+  "http://localhost:8181/cxs/tasks/TASK_ID"
+----
+
+Returns HTTP `204 No Content` on success.
+
+==== Retry a failed task
+
+[source,bash]
+----
+# Retry keeping failure count
+curl -s -u karaf:karaf -X POST \
+  "http://localhost:8181/cxs/tasks/TASK_ID/retry"
+
+# Retry and reset failure count to zero
+curl -s -u karaf:karaf -X POST \
+  "http://localhost:8181/cxs/tasks/TASK_ID/retry?resetFailureCount=true"
+----
+
+==== Resume a crashed task
+
+Use when status is `CRASHED` and the executor supports checkpoint resume.
+
+[source,bash]
+----
+curl -s -u karaf:karaf -X POST \
+  "http://localhost:8181/cxs/tasks/TASK_ID/resume"
+----
+
+=== Karaf shell commands
+
+Connect to the shell (`ssh -p 8102 karaf@localhost`) and use the `unomi:task-*` commands.
+
+[cols="2,4",options="header"]
+|===
+|Command |Description
+
+|`unomi:task-list` |List tasks. Options: `-s/--status`, `-t/--type`, `--limit`
+|`unomi:task-show TASK_ID` |Detailed view including parameters and checkpoint data
+|`unomi:task-cancel TASK_ID` |Cancel a task
+|`unomi:task-retry TASK_ID` |Retry a failed task (`-r` resets failure count)
+|`unomi:task-purge` |Delete old `COMPLETED` tasks (`-d` days, `-f` force)
+|`unomi:task-executor` |Show whether this node is an executor node and its `nodeId`
+|===
+
+.Examples
+
+[source,shell]
+----
+# List running tasks
+unomi:task-list -s RUNNING
+
+# Show tasks created by profile merge follow-up
+unomi:task-list -t merge-profiles-reassign-data
+
+# Inspect a single task
+unomi:task-show a1b2c3d4-e5f6-7890-abcd-ef1234567890
+
+# Retry after fixing upstream data
+unomi:task-retry a1b2c3d4-e5f6-7890-abcd-ef1234567890 --reset
+
+# Purge completed tasks older than 14 days
+unomi:task-purge --days 14 --force
+
+# Check executor configuration on this node
+unomi:task-executor
+----
+
+=== Using the scheduler in plugins
+
+Plugins schedule work by:
+
+1. Injecting `SchedulerService` (OSGi reference).
+2. Registering a `TaskExecutor` for a unique `taskType`.
+3. Creating tasks with `newTask(...)`, `createRecurringTask(...)`, or `createTask(...)`.
+
+==== Pattern A: one-shot async work (real example)
+
+The `mergeProfilesOnProperty` action in `baseplugin` reassigns events and sessions in the background after a profile merge:
+
+[plantuml]
+----
+@startuml
+actor "Rule engine" as R
+participant "MergeProfilesOnPropertyAction" as A
+participant "SchedulerService" as S
+participant "TaskExecutor\nmerge-profiles-reassign-data" as E
+database "Persistence" as P
+
+R -> A : execute merge action
+A -> S : registerTaskExecutor(...)
+A -> S : newTask(...).asOneShot().schedule()
+S -> P : save task (persistent)
+S -> E : execute later on executor node
+E -> P : update sessions/events\nin tenant context
+E --> S : callback.complete()
+@enduml
+----
+
+.Simplified plugin code
+
+[source,java]
+----
+@Reference
+private SchedulerService schedulerService;
+
+@Reference
+private ExecutionContextManager executionContextManager;
+
+private static final String TASK_TYPE = "merge-profiles-reassign-data";
+
+public void activate() {
+    schedulerService.registerTaskExecutor(new TaskExecutor() {
+        @Override
+        public String getTaskType() {
+            return TASK_TYPE;
+        }
+
+        @Override
+        public void execute(ScheduledTask task, TaskStatusCallback callback) {
+            try {
+                String tenantId = (String) task.getParameters().get("tenantId");
+                executionContextManager.executeAsTenant(tenantId, () -> {
+                    // ... reassign sessions/events ...
+                    return null;
+                });
+                callback.complete();
+            } catch (Exception e) {
+                callback.fail(e.getMessage());
+            }
+        }
+    });
+}
+
+public void scheduleReassign(String tenantId, String masterId, List<String> mergedIds) {
+    schedulerService.newTask(TASK_TYPE)
+        .withParameters(Map.of(
+            "tenantId", tenantId,
+            "masterProfileId", masterId,
+            "mergedProfileIds", mergedIds,
+            "anonymousBrowsing", false
+        ))
+        .withInitialDelay(1, TimeUnit.SECONDS)
+        .asOneShot()
+        .disallowParallelExecution()
+        .schedule();
+}
+----
+
+IMPORTANT: When task parameters include a `tenantId`, always run the work inside `executionContextManager.executeAsTenant(...)` (or set the security subject explicitly) so persistence queries respect tenant isolation.
+
+==== Pattern B: simple recurring maintenance
+
+For straightforward periodic code without a custom executor class:
+
+[source,java]
+----
+schedulerService.createRecurringTask(
+    "my-plugin-daily-cleanup",
+    24, TimeUnit.HOURS,
+    () -> cleanupStaleLocalCache(),
+    false   // non-persistent: each node runs its own copy if executor
+);
+----
+
+==== Pattern C: fluent builder (recommended)
+
+The builder covers most scheduling options in one place.
+
+.One-shot task with retries
+[source,java]
+----
+schedulerService.newTask("export-tenant-snapshot")
+    .withParameters(Map.of("tenantId", "mytenant", "destination", "/tmp/export"))
+    .withInitialDelay(5, TimeUnit.SECONDS)
+    .asOneShot()
+    .withMaxRetries(3)
+    .withRetryDelay(2, TimeUnit.MINUTES)
+    .disallowParallelExecution()
+    .withExecutor(myExportExecutor)
+    .schedule();
+----
+
+.Periodic task with fixed delay
+[source,java]
+----
+schedulerService.newTask("refresh-external-lookup")
+    .withPeriod(15, TimeUnit.MINUTES)
+    .withFixedDelay()
+    .disallowParallelExecution()
+    .nonPersistent()
+    .withSimpleExecutor(() -> refreshLookupTable())
+    .schedule();
+----
+
+.Periodic task on every cluster node
+[source,java]
+----
+schedulerService.newTask("local-temp-file-cleanup")
+    .withPeriod(1, TimeUnit.HOURS)
+    .withFixedDelay()
+    .runOnAllNodes()
+    .nonPersistent()
+    .withSimpleExecutor(() -> deleteStaleTempFiles())
+    .schedule();
+----
+
+.Task chain with dependencies
+[source,java]
+----
+ScheduledTask extract = schedulerService.newTask("etl-extract")
+    .asOneShot()
+    .withExecutor(extractExecutor)
+    .schedule();
+
+schedulerService.newTask("etl-load")
+    .asOneShot()
+    .withDependencies(extract.getItemId())
+    .withExecutor(loadExecutor)
+    .schedule();
+----
+
+==== Pattern D: resumable long-running executor
+
+For work that may run longer than a node failover window, save checkpoints and implement `canResume` / `resume`:
+
+[source,java]
+----
+public class BulkReindexExecutor implements TaskExecutor {
+
+    @Override
+    public String getTaskType() {
+        return "bulk-reindex";
+    }
+
+    @Override
+    public void execute(ScheduledTask task, TaskStatusCallback callback) {
+        runFromOffset(task, callback, 0);
+    }
+
+    @Override
+    public boolean canResume(ScheduledTask task) {
+        return task.getCheckpointData() != null
+            && task.getCheckpointData().containsKey("lastOffset");
+    }
+
+    @Override
+    public void resume(ScheduledTask task, TaskStatusCallback callback) {
+        int offset = ((Number) task.getCheckpointData().get("lastOffset")).intValue();
+        runFromOffset(task, callback, offset);
+    }
+
+    private void runFromOffset(ScheduledTask task, TaskStatusCallback callback, int start) {
+        try {
+            for (int i = start; i < total; i += batchSize) {
+                reindexBatch(i, batchSize);
+                callback.updateStep("reindex", Map.of("lastOffset", i + batchSize));
+                callback.checkpoint(Map.of("lastOffset", i + batchSize));
+            }
+            callback.complete();
+        } catch (Exception e) {
+            callback.fail(e.getMessage());
+        }
+    }
+}
+----
+
+After a crash, operators can call `POST /cxs/tasks/{id}/resume` or `unomi:task-retry` depending on the failure mode.
+
+==== OSGi Declarative Services wiring
+
+Inject `SchedulerService` with `@Reference` in your plugin component.
+New plugins use Declarative Services — not Blueprint XML (see <<_writing_plugins,Writing plugins>>).
+
+[source,java]
+----
+@Component(service = MyPluginService.class)
+public class MyPluginService {
+
+    private SchedulerService schedulerService;
+    private TaskExecutor registeredExecutor;
+
+    @Reference
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
+    }
+
+    @Activate
+    public void activate() {
+        registeredExecutor = new MyTaskExecutor();
+        schedulerService.registerTaskExecutor(registeredExecutor);
+    }
+
+    @Deactivate
+    public void deactivate() {
+        if (schedulerService != null && registeredExecutor != null) {
+            schedulerService.unregisterTaskExecutor(registeredExecutor);
+        }
+    }
+}
+----
+
+Register the executor in `activate()` and unregister in `deactivate()` when possible.
+Pattern A above uses the same `@Reference` injection style for `SchedulerService`.
+
+=== Built-in tasks you will see in production
+
+Unomi core and plugins already create scheduler tasks. These are normal and expected:
+
+[cols="2,4",options="header"]
+|===
+|Task type (examples) |Purpose
+
+|`cache-refresh-*` |Reload segments, rules, property types, scopes, etc. from persistence into memory
+|`task-purge` |System task that purges old completed scheduler tasks
+|`merge-profiles-reassign-data` |Async session/event reassignment after profile merge (`baseplugin`)
+|===
+
+Use `unomi:task-list` or `GET /cxs/tasks?type=...` to inspect them.
+
+=== Metrics
+
+`SchedulerService` exposes counters useful for monitoring:
+
+[source,java]
+----
+Map<String, Long> metrics = schedulerService.getAllMetrics();
+// keys include:
+// tasks.completed, tasks.failed, tasks.crashed, tasks.running,
+// tasks.lock.conflicts, tasks.recovery.attempts, ...
+----
+
+In custom code:
+
+[source,java]
+----
+long failures = schedulerService.getMetric("tasks.failed");
+----
+
+=== Choosing persistence and execution settings
+
+[cols="1,1,1,2",options="header"]
+|===
+|Need |persistent? |runOnAllNodes? |Notes
+
+|Cluster-wide job (ETL, merge follow-up) |yes |no |Survives restart; one executor runs it
+|Per-node cache refresh |no |no or yes |`nonPersistent()` + often `runOnAllNodes()` for local caches
+|Fire-and-forget after HTTP request |yes or no |no |One-shot; tune `maxRetries`
+|Must never overlap |any |any |`disallowParallelExecution()`
+|===
+
+=== Troubleshooting
+
+[cols="1,3",options="header"]
+|===
+|Symptom |What to check
+
+|Task stays `SCHEDULED` forever |Is this node an executor (`scheduler.executorNode=true`)? Is a `TaskExecutor` registered for the `taskType`?
+|Task stays `WAITING` |Another run may hold the lock, or a dependency task is not `COMPLETED`
+|Task `FAILED` after retries |Read `lastError` via `task-show` or REST; fix root cause; call retry
+|Task `CRASHED` |Node failure during run; use resume if checkpoints exist
+|Duplicate cache refresh tasks |Use `disallowParallelExecution()` and stable task names (see `AbstractMultiTypeCachingService`)
+|Tenant data wrong in background job |Missing `executeAsTenant` / security subject setup in executor
+|===
+
+=== Related documentation
+
+* <<_request_examples,Tenant REST examples>> — creating tenants whose data background tasks will process
+* <<_shell_commands,Karaf shell>> — operational commands including `unomi:task-*`
+* <<_writing_plugins,Writing plugins>> — DS plugin registration and `META-INF/cxs/` layout
+* <<_multitenancy,Multitenancy>> — tenant isolation rules

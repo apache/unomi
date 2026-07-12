@@ -84,8 +84,11 @@
                             <attributes>
                                 <toc />
                                 <linkcss>true</linkcss>
-                                <stylesheet>apache.css</stylesheet>
+                                <stylesheet>unomi-manual.css</stylesheet>
                                 <imagesdir>images</imagesdir>
+                                <source-highlighter>highlightjs</source-highlighter>
+                                <revnumber>${project.version}</revnumber>
+                                <project-version>${project.version}</project-version>
                             </attributes>
                         </configuration>
                     </execution>
@@ -107,15 +110,17 @@
                             <backend>pdf</backend>
                             <attributes>
                                 <project-version>${project.version}</project-version>
+                                <revnumber>${project.version}</revnumber>
                                 <pdf-stylesdir>${project.basedir}/src/theme</pdf-stylesdir>
-                                <pdf-style>apache</pdf-style>
+                                <pdf-style>unomi</pdf-style>
                                 <pdf-fontsdir>${project.basedir}/src/theme/fonts</pdf-fontsdir>
                                 <imagesdir>images</imagesdir>
+                                <imagesoutdir>${project.build.directory}/generated-images</imagesoutdir>
                                 <icons>font</icons>
                                 <pagenums>true</pagenums>
                                 <toc />
                                 <idprefix />
-                                <idseparator>-</idseparator>
+                                <idseparator>_</idseparator>
                                 <sectnums>true</sectnums>
                             </attributes>
                         </configuration>

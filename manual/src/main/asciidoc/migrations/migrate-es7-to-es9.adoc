@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-[[_migrate_from_elasticsearch_7_to_elasticsearch_9]]
+[#_migrate_from_elasticsearch_7_to_elasticsearch_9]
 ==== Migrate from Elasticsearch 7 to Elasticsearch 9
 
 You can use the *remote reindex* API to upgrade directly from Elasticsearch 7 to Elasticsearch 9. This approach runs both clusters in parallel and uses Elasticsearch's remote reindex feature.

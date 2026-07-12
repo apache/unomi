@@ -12,12 +12,10 @@
 // limitations under the License.
 //
 
-= Apache Unomi Multi-tenancy
-:toc: macro
-:toclevels: 4
-:toc-title: Table of contents
+=== Multi-tenancy guide
 
-toc::[]
+Apache Unomi 3.1+ isolates profiles, events, segments, rules, and schemas per tenant.
+Each tenant has public and private API keys. See also <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> for authentication changes.
 
 == Overview
 
@@ -30,7 +28,7 @@ Apache Unomi provides robust multi-tenancy support, allowing multiple organizati
 * Tenant-specific configuration
 * Per-tenant usage metrics (quotas enforced upstream)
 * Migration tools for existing data
-* Support for both REST and GraphQL APIs
+* Support for REST APIs (and GraphQL when enabled)
 
 == Authentication Methods
 
@@ -140,11 +138,11 @@ tenant.default.id=default
 tenant.apikey.validity.period=30
 tenant.apikey.validity.unit=DAYS
 
-# Maximum number of API calls per tenant per day
-tenant.apikey.maxCalls=100000
+# Warn this many days before an API key expires
+tenant.apikey.rotation.warning.days=7
 
-# Enable/disable tenant isolation
-tenant.isolation.enabled=true
+# Prefix for tenant-specific security roles
+tenant.security.roles.prefix=unomi_tenant_
 ----
 
 === Security Provider Configuration
@@ -257,11 +255,12 @@ To define custom operations:
 Example:
 
 1. Add to `etc/org.apache.unomi.security.cfg`:
++
 [source,properties]
 ----
 operation.roles.CUSTOM_OPERATION=ROLE_UNOMI_TENANT_ADMIN
 ----
-
++
 2. Use in your code:
 [source,java]
 ----
@@ -772,7 +771,7 @@ curl -X POST http://localhost:8181/cxs/context.json \
     }]
   }'
 ----
-
++
 2. Verify profile properties were updated:
 [source,bash]
 ----

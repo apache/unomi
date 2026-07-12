@@ -29,7 +29,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * A service to publish events, notably issued from user interactions with tracked entities, in the context server.
+ * Publishes and retrieves {@link Event}s in the context server.
+ * Client integrations send visitor actions here; rules and listeners
+ * consume the same event stream.
  */
 public interface EventService {
 
@@ -51,112 +53,106 @@ public interface EventService {
     int PROFILE_UPDATED = 4;
 
     /**
-     * Propagates the specified event in the context server, notifying
-     * {@link EventListenerService} instances if needed. If the event is persistent ({@link Event#isPersistent()}, it will be persisted appropriately. Once the event is
-     * propagated, any {@link ActionPostExecutor} the event defined will be executed and the user profile updated if needed.
+     * Publishes an event, notifying listeners and persisting it when marked persistent.
+     * Runs post-actions and updates the profile or session when rules require it.
      *
-     * @param event the Event to be propagated
-     * @return the result of the event handling as combination of EventService flags, to be checked using bitwise AND (&amp;) operator
+     * @param event event to propagate
+     * @return bitmask of {@link #NO_CHANGE}, {@link #ERROR}, {@link #SESSION_UPDATED}, and {@link #PROFILE_UPDATED}
      */
     int send(Event event);
 
     /**
-     * Check if the tenant is allowed to send the specified event. Restricted events must be explicitly allowed for a tenant.
+     * Checks whether the tenant may send the given event.
+     * Restricted event types must be explicitly allowed per tenant.
      *
-     * @param event    event to test
-     * @param tenantId the ID of the tenant
-     * @param sourceIP the IP address from which the event was sent (not persisted for privacy)
-     * @return true if the event is allowed for the tenant
+     * @param event event to test
+     * @param tenantId tenant identifier
+     * @param sourceIP client IP (not persisted for privacy)
+     * @return {@code true} if the event is allowed
      */
     boolean isEventAllowedForTenant(Event event, String tenantId, String sourceIP);
 
     /**
-     * Retrieves the list of available event properties.
+     * Returns known event property definitions.
      *
-     * @return a list of available event properties
+     * @return available event properties
      * @deprecated use event types instead
      */
     List<EventProperty> getEventProperties();
 
     /**
-     * Retrieves the set of known event type identifiers.
+     * Returns ids of all registered event types.
      *
-     * @return the set of known event type identifiers.
+     * @return known event type identifiers
      */
     Set<String> getEventTypeIds();
 
     /**
-     * Retrieves {@link Event}s matching the specified {@link Condition}. Events are ordered according to their time stamp ({@link Event#getTimeStamp()} and paged: only
-     * {@code size} of them are retrieved, starting with the {@code offset}-th one.
+     * Searches events matching a condition, ordered by timestamp and paged.
      *
-     * @param condition the Condition we want the Events to match to be retrieved
-     * @param offset    zero or a positive integer specifying the position of the first event in the total ordered collection of matching events
-     * @param size      a positive integer specifying how many matching events should be retrieved or {@code -1} if all of them should be retrieved
-     * @return a {@link PartialList} of matching events
+     * @param condition filter condition
+     * @param offset zero-based index of the first result
+     * @param size maximum results to return, or {@code -1} for all
+     * @return matching events
      */
     PartialList<Event> searchEvents(Condition condition, int offset, int size);
 
     /**
-     * Retrieves {@link Event}s for the {@link Session} identified by the provided session identifier, matching any of the provided event types,
-     * ordered according to the specified {@code sortBy} String and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
-     * If a {@code query} is provided, a full text search is performed on the matching events to further filter them.
+     * Searches session events by type with optional full-text filtering, ordered and paged.
      *
-     * @param sessionId  the identifier of the user session we're considering
-     * @param eventTypes an array of event type names; the events to retrieve should at least match one of these
-     * @param query      a String to perform full text filtering on events matching the other conditions
-     * @param offset     zero or a positive integer specifying the position of the first event in the total ordered collection of matching events
-     * @param size       a positive integer specifying how many matching events should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy     an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in
-     *                   the String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *                   a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of matching events
+     * @param sessionId session identifier
+     * @param eventTypes event types to include (any match)
+     * @param query optional full-text filter, or {@code null}
+     * @param offset zero-based index of the first result
+     * @param size maximum results to return, or {@code -1} for all
+     * @param sortBy optional comma-separated property list with optional {@code :asc}/{@code :desc} suffixes
+     * @return matching events
      */
     PartialList<Event> searchEvents(String sessionId, String[] eventTypes, String query, int offset, int size, String sortBy);
 
     /**
-     * Retrieves {@link Event}s matching the specified {@link Query}.
+     * Searches events using a structured query.
      *
-     * @param query a {@link Query} specifying which Events to retrieve
-     * @return a {@link PartialList} of {@code Event} instances matching the specified query
+     * @param query query specifying which events to return
+     * @return matching events
      */
     PartialList<Event> search(Query query);
 
-
     /**
-     * Retrieves the {@link Event} by its identifier.
+     * Loads an event by id.
      *
-     * @param id the identifier of the {@link Event} to retrieve
-     * @return the {@link Event} identified by the specified identifier or {@code null} if no such profile exists
+     * @param id event identifier
+     * @return matching event, or {@code null} if none exists
      */
     Event getEvent(final String id);
 
     /**
-     * Checks whether the specified event has already been raised either for the associated session or profile depending on the specified {@code session} parameter.
+     * Checks whether an equivalent event was already raised for the session or profile.
      *
-     * @param event   the event we want to check
-     * @param session {@code true} if we want to check if the specified event has already been raised for the associated session, {@code false} if we want to check
-     *                whether the event has already been raised for the associated profile
-     * @return {@code true} if the event has already been raised, {@code false} otherwise
+     * @param event event to check
+     * @param session {@code true} to check the session history, {@code false} for the profile history
+     * @return {@code true} if a matching event already exists
      */
     boolean hasEventAlreadyBeenRaised(Event event, boolean session);
     /**
-     * Checks whether the specified event has already been raised with the same itemId.
+     * Checks whether an event with the same item id was already raised.
      *
-     * @param event   the event we want to check
-     * @return {@code true} if the event has already been raised, {@code false} otherwise
+     * @param event event to check
+     * @return {@code true} if a matching event already exists
      */
     boolean hasEventAlreadyBeenRaised(Event event);
 
     /**
-     * Removes all events of the specified profile
+     * Deletes all events belonging to the given profile.
      *
-     * @param profileId identifier of the profile that we want to remove it's events
+     * @param profileId profile whose events should be removed
      */
     void removeProfileEvents(String profileId);
 
     /**
-     * Delete an event by specifying its event identifier
-     * @param eventIdentifier the unique identifier for the event
+     * Deletes a single event by id.
+     *
+     * @param eventIdentifier event identifier
      */
     void deleteEvent(String eventIdentifier);
 }

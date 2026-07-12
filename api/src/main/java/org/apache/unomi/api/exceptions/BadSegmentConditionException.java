@@ -18,19 +18,21 @@
 package org.apache.unomi.api.exceptions;
 
 /**
- * Exception thrown when a segment condition is invalid or cannot be used.
+ * Raised when a segment condition is malformed or cannot be evaluated.
+ * Indicates the condition JSON or references are invalid so callers can
+ * surface a clear error to administrators.
  */
 public class BadSegmentConditionException extends RuntimeException {
 
     /**
-     * Instantiates a new BadSegmentConditionException.
+     * Default constructor.
      */
     public BadSegmentConditionException() {
         super();
     }
 
     /**
-     * Constructs with a message.
+     * Creates an exception with the given message.
      *
      * @param message the error message
      */
@@ -39,7 +41,7 @@ public class BadSegmentConditionException extends RuntimeException {
     }
 
     /**
-     * Constructs with a message and cause.
+     * Creates an exception with the given message and cause.
      *
      * @param message the error message
      * @param cause the root cause

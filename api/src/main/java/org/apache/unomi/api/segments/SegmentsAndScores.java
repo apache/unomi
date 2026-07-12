@@ -24,37 +24,39 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * A combination of {@link Segment} and scores (usually associated with a {@link Profile}).
+ * Segment memberships and scoring totals for one {@link org.apache.unomi.api.Profile}.
+ * {@link org.apache.unomi.api.services.ProfileService} returns this snapshot when
+ * clients need both current segment ids and per-scoring-plan scores in a single
+ * response (for example after context resolution or profile reads).
  */
 public class SegmentsAndScores implements Serializable {
     private Set<String> segments;
     private Map<String,Integer> scores;
 
     /**
-     * Instantiates a new SegmentsAndScores.
+     * Creates a snapshot with the given segment memberships and scores.
      *
-     * @param segments the set of segment identifiers
-     * @param scores   the scores as a Map of scoring name - associated score pairs
+     * @param segments segment identifiers
+     * @param scores map of scoring name to score value
      */
     public SegmentsAndScores(Set<String> segments, Map<String, Integer> scores) {
         this.segments = segments;
         this.scores = scores;
     }
 
-
     /**
-     * Retrieves the segments identifiers.
+     * Segment ids the profile belongs to.
      *
-     * @return the segments identifiers
+     * @return segment identifiers
      */
     public Set<String> getSegments() {
         return segments;
     }
 
     /**
-     * Retrieves the scores as a Map of scoring name - associated score pairs.
+     * Scoring totals keyed by scoring plan name.
      *
-     * @return the scores as a Map of scoring name - associated score pairs
+     * @return map of scoring name to score value
      */
     public Map<String, Integer> getScores() {
         return scores;

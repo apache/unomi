@@ -77,7 +77,7 @@ public class ContextRequest {
     private String publicApiKey;
 
     /**
-     * Retrieves the source of the context request.
+     * Source item for this context request.
      *
      * @return the source
      */
@@ -114,7 +114,7 @@ public class ContextRequest {
     }
 
     /**
-     * Retrieves the list of profile properties the context server should return with its context response.
+     * Profile property names the client wants in the response.
      *
      * @return the required profile properties the client requested to be returned with the response
      * @see ContextResponse#getProfileProperties()
@@ -133,7 +133,7 @@ public class ContextRequest {
     }
 
     /**
-     * Retrieves the list of session properties the context server should return with its context response.
+     * Session property names the client wants in the response.
      *
      * @return the required session properties the client requested to be returned with the response
      * @see ContextResponse#getSessionProperties()
@@ -152,26 +152,25 @@ public class ContextRequest {
     }
 
     /**
-     * Specifies whether the profiles scores should be part of the ContextResponse.
-     * @return a boolean indicating if the scores should be part of the response.
+     * Whether profile scores should be included in the response.
+     *
+     * @return {@code true} if scores should be returned
      */
     public boolean isRequireScores() {
         return requireScores;
     }
 
     /**
-     * Setting this value to true indicates that the profile scores should be included in the response. By default this
-     * value is false.
-     * @param requireScores set to true if you want the scores to be part of the context response
+     * Sets whether profile scores should be included in the response.
+     *
+     * @param requireScores {@code true} to include scores in the context response
      */
     public void setRequireScores(boolean requireScores) {
         this.requireScores = requireScores;
     }
 
     /**
-     * Retrieves the filters aimed at content personalization that should be evaluated for the given session and/or profile so that the context server can tell the client
-     * whether the content associated with the filter should be activated for this profile/session. The filter identifier is used in the {@link ContextResponse} with the
-     * associated evaluation result.
+     * Content personalization filters to evaluate for the current session and profile.
      *
      * @return the filters aimed at content personalization that should be evaluated for the given session and/or profile
      * @see ProfileService#matchCondition(Condition, Profile, Session) Details on how the filter conditions are evaluated
@@ -209,7 +208,7 @@ public class ContextRequest {
     }
 
     /**
-     * Retrieves the events that the client has generated as part of its processes and wishes the context server to process.
+     * Client-generated events for the context server to process.
      *
      * @return the client events to be processed by the context server
      * @see Event
@@ -228,7 +227,7 @@ public class ContextRequest {
     }
 
     /**
-     * Retrieves the profile overrides.
+     * Temporary profile overrides for impersonation or preview.
      *
      * @return the profile overrides
      */
@@ -246,7 +245,7 @@ public class ContextRequest {
     }
 
     /**
-     * Retrieves the session properties overrides.
+     * Temporary session property overrides for impersonation or preview.
      *
      * @return the session properties overrides
      */
@@ -264,10 +263,9 @@ public class ContextRequest {
     }
 
     /**
-     * Retrieve the sessionId passed along with the request. All events will be processed with this sessionId as a
-     * default
+     * Session identifier applied as the default for all events in this request.
      *
-     * @return the identifier for the session
+     * @return the session identifier
      */
     public String getSessionId() {
         return sessionId;
@@ -284,10 +282,9 @@ public class ContextRequest {
     }
 
     /**
-     * Retrieve the profileId passed along with the request. All events will be processed with this profileId as a
-     * default
+     * Profile identifier applied as the default for all events in this request.
      *
-     * @return the identifier for the profile
+     * @return the profile identifier
      */
     public String getProfileId() {
         return profileId;
@@ -321,7 +318,8 @@ public class ContextRequest {
     }
 
     /**
-     * Gets the public API key used for tenant authentication.
+     * Public API key used for tenant authentication.
+     *
      * @return the public API key
      */
     public String getPublicApiKey() {
@@ -330,7 +328,8 @@ public class ContextRequest {
 
     /**
      * Sets the public API key used for tenant authentication.
-     * @param publicApiKey the public API key to set
+     *
+     * @param publicApiKey the public API key
      */
     public void setPublicApiKey(String publicApiKey) {
         this.publicApiKey = publicApiKey;

@@ -30,20 +30,22 @@ import static org.apache.unomi.api.utils.YamlUtils.circularRef;
 import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
- * A scoring dimension along profiles can be evaluated and associated value to be assigned.
+ * One dimension of a {@link org.apache.unomi.api.segments.Scoring} model.
+ * Assigns a numeric value along an axis (for example engagement) when a
+ * profile matches the element's condition.
  */
 public class ScoringElement implements Serializable, YamlConvertible {
     private Condition condition;
     private int value;
 
     /**
-     * Instantiates a new Scoring element.
+     * Default constructor.
      */
     public ScoringElement() {
     }
 
     /**
-     * Retrieves the condition.
+     * Condition evaluated to decide whether this scoring element applies.
      *
      * @return the condition
      */
@@ -52,7 +54,7 @@ public class ScoringElement implements Serializable, YamlConvertible {
     }
 
     /**
-     * Sets the condition.
+     * Sets the matching condition.
      *
      * @param condition the condition
      */
@@ -61,18 +63,18 @@ public class ScoringElement implements Serializable, YamlConvertible {
     }
 
     /**
-     * Retrieves the value.
+     * Score contributed when the condition matches.
      *
-     * @return the value
+     * @return the score value
      */
     public int getValue() {
         return value;
     }
 
     /**
-     * Sets the value.
+     * Sets the score value contributed when the condition matches.
      *
-     * @param value the value
+     * @param value the score value
      */
     public void setValue(int value) {
         this.value = value;

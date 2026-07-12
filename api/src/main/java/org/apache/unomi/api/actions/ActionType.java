@@ -31,7 +31,9 @@ import static org.apache.unomi.api.utils.YamlUtils.circularRef;
 import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
- * A type definition for {@link Action}s.
+ * Declarative definition of an action that rules can trigger.
+ * Action types describe parameters and point to the {@link ActionExecutor}
+ * implementation that performs the work at runtime.
  */
 public class ActionType extends MetadataItem implements PluginType, YamlConvertible {
     /** Item type identifier for action types. */
@@ -43,50 +45,51 @@ public class ActionType extends MetadataItem implements PluginType, YamlConverti
     private long pluginId;
 
     /**
-     * Instantiates a new Action type.
+     * Default constructor.
      */
     public ActionType() {
     }
 
     /**
-     * Instantiates a new Action type.
-     * @param metadata the metadata
+     * Creates an action type with the given metadata.
+     *
+     * @param metadata the action type metadata
      */
     public ActionType(Metadata metadata) {
         super(metadata);
     }
 
     /**
-     * Retrieves the action executor.
+     * OSGi executor id that runs this action at runtime.
      *
-     * @return the action executor
+     * @return the action executor id
      */
     public String getActionExecutor() {
         return actionExecutor;
     }
 
     /**
-     * Sets the action executor.
+     * Sets the action executor id.
      *
-     * @param actionExecutor the action executor
+     * @param actionExecutor the executor id
      */
     public void setActionExecutor(String actionExecutor) {
         this.actionExecutor = actionExecutor;
     }
 
     /**
-     * Retrieves the parameters.
+     * Parameters accepted by this action type.
      *
-     * @return the parameters
+     * @return the parameter definitions
      */
     public List<Parameter> getParameters() {
         return parameters;
     }
 
     /**
-     * Sets the parameters.
+     * Sets the parameter definitions.
      *
-     * @param parameters the parameters
+     * @param parameters the parameter list
      */
     public void setParameters(List<Parameter> parameters) {
         this.parameters = parameters;

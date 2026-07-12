@@ -18,9 +18,10 @@
 package org.apache.unomi.api.campaigns;
 
 /**
- * Details about a {@link Campaign}.
- *
- * Created by kevan on 03/06/15.
+ * Live campaign performance snapshot built from profiles, sessions, and goals.
+ * Counts engaged profiles, session views and successes, linked goals, and an
+ * overall conversion rate. {@link org.apache.unomi.api.services.GoalsService} and campaign REST endpoints
+ * return this object for campaign dashboards.
  */
 public class CampaignDetail {
     private long engagedProfiles = 0;
@@ -31,52 +32,52 @@ public class CampaignDetail {
     private Campaign campaign;
 
     /**
-     * Instantiates a new Campaign detail.
+     * Creates campaign performance details for the given campaign.
      *
-     * @param campaign the campaign
+     * @param campaign the campaign being reported on
      */
     public CampaignDetail(Campaign campaign) {
         this.campaign = campaign;
     }
 
     /**
-     * Retrieves the number of engaged profiles.
+     * Number of profiles that engaged with the campaign.
      *
-     * @return the number of engaged profiles
+     * @return the engaged profile count
      */
     public long getEngagedProfiles() {
         return engagedProfiles;
     }
 
     /**
-     * Sets the number of engaged profiles.
+     * Sets the engaged profile count.
      *
-     * @param engagedProfiles the number of engaged profiles
+     * @param engagedProfiles the engaged profile count
      */
     public void setEngagedProfiles(long engagedProfiles) {
         this.engagedProfiles = engagedProfiles;
     }
 
     /**
-     * Retrieves the number of goals.
+     * Number of goals linked to the campaign.
      *
-     * @return the number of goals
+     * @return the goal count
      */
     public long getNumberOfGoals() {
         return numberOfGoals;
     }
 
     /**
-     * Sets the number of goals.
+     * Sets the goal count.
      *
-     * @param numberOfGoals the number of goals
+     * @param numberOfGoals the goal count
      */
     public void setNumberOfGoals(long numberOfGoals) {
         this.numberOfGoals = numberOfGoals;
     }
 
     /**
-     * Retrieves the conversion rate.
+     * Overall conversion rate for the campaign.
      *
      * @return the conversion rate
      */
@@ -94,16 +95,16 @@ public class CampaignDetail {
     }
 
     /**
-     * Retrieves the associated campaign.
+     * Campaign these metrics describe.
      *
-     * @return the associated campaign
+     * @return the campaign
      */
     public Campaign getCampaign() {
         return campaign;
     }
 
     /**
-     * Sets the associated campaign.
+     * Sets the campaign reference.
      *
      * @param campaign the campaign
      */
@@ -112,36 +113,36 @@ public class CampaignDetail {
     }
 
     /**
-     * Retrieves the number of campaign session views.
+     * Number of campaign sessions that recorded a view.
      *
-     * @return the number of campaign session views
+     * @return the session view count
      */
     public long getCampaignSessionViews() {
         return campaignSessionViews;
     }
 
     /**
-     * Sets the number of campaign session views.
+     * Sets the campaign session view count.
      *
-     * @param campaignSessionViews the number of campaign session views
+     * @param campaignSessionViews the session view count
      */
     public void setCampaignSessionViews(long campaignSessionViews) {
         this.campaignSessionViews = campaignSessionViews;
     }
 
     /**
-     * Retrieves the number of campaign session successes.
+     * Number of campaign sessions that reached a success state.
      *
-     * @return the number of campaign session successes
+     * @return the session success count
      */
     public long getCampaignSessionSuccess() {
         return campaignSessionSuccess;
     }
 
     /**
-     * Sets the number of campaign session successes.
+     * Sets the campaign session success count.
      *
-     * @param campaignSessionSuccess the number of campaign session successes
+     * @param campaignSessionSuccess the session success count
      */
     public void setCampaignSessionSuccess(long campaignSessionSuccess) {
         this.campaignSessionSuccess = campaignSessionSuccess;

@@ -1,0 +1,108 @@
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="images/unomi-favicon.png" type="image/png">
+<script defer>
+document.addEventListener('DOMContentLoaded', function () {
+  function isCompactLayout() {
+    return window.matchMedia('(max-width: 1023px)').matches;
+  }
+
+  var nav = document.getElementById('unomi-site-nav');
+  if (nav) {
+    var navToggle = nav.querySelector('.nav-toggle');
+    var menu = document.getElementById('unomi-nav-menu');
+    if (navToggle && menu) {
+      function setNavOpen(open) {
+        nav.classList.toggle('nav-open', open);
+        navToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        navToggle.setAttribute('aria-label', open ? 'Close site menu' : 'Open site menu');
+      }
+
+      navToggle.addEventListener('click', function () {
+        setNavOpen(!nav.classList.contains('nav-open'));
+      });
+
+      menu.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', function () { setNavOpen(false); });
+      });
+
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') { setNavOpen(false); }
+      });
+
+      var desktopNav = window.matchMedia('(min-width: 1024px)');
+      if (typeof desktopNav.addEventListener === 'function') {
+        desktopNav.addEventListener('change', function (event) {
+          if (event.matches) { setNavOpen(false); }
+        });
+      }
+    }
+  }
+
+  var toc = document.getElementById('toc');
+  var tocTitle = document.getElementById('toctitle');
+  if (toc && tocTitle && !toc.dataset.tocMobileReady) {
+    toc.dataset.tocMobileReady = 'true';
+    tocTitle.setAttribute('role', 'button');
+    tocTitle.setAttribute('tabindex', '0');
+    tocTitle.setAttribute('aria-expanded', 'false');
+
+    function setTocOpen(open) {
+      if (!isCompactLayout()) {
+        toc.classList.remove('toc-open');
+        tocTitle.setAttribute('aria-expanded', 'false');
+        return;
+      }
+      toc.classList.toggle('toc-open', open);
+      tocTitle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    }
+
+    function toggleToc() {
+      if (!isCompactLayout()) { return; }
+      setTocOpen(!toc.classList.contains('toc-open'));
+    }
+
+    tocTitle.addEventListener('click', toggleToc);
+    tocTitle.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        toggleToc();
+      }
+    });
+
+    var tocList = toc.querySelector(':scope > ul');
+    if (tocList) {
+      tocList.querySelectorAll('a').forEach(function (link) {
+        link.addEventListener('click', function () {
+          if (isCompactLayout()) { setTocOpen(false); }
+        });
+      });
+    }
+
+    var mobileToc = window.matchMedia('(max-width: 1023px)');
+    if (typeof mobileToc.addEventListener === 'function') {
+      mobileToc.addEventListener('change', function (event) {
+        if (!event.matches) { setTocOpen(false); }
+      });
+    }
+  }
+});
+</script>
+

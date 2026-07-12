@@ -31,6 +31,9 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * Default implementation of {@link TenantService}.
+ */
 public class TenantServiceImpl implements TenantService {
     private static final Logger LOGGER = LoggerFactory.getLogger(TenantServiceImpl.class);
     private static final int MAX_TENANT_ID_LENGTH = 32;
@@ -41,23 +44,48 @@ public class TenantServiceImpl implements TenantService {
     private ExecutionContextManager executionContextManager;
     private SecretHashService secretHashService;
 
+    /**
+     * Sets the persistence service via Blueprint dependency injection.
+     *
+     * @param persistenceService the persistence service
+     */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
 
+    /**
+     * Sets the execution context manager.
+     *
+     * @param executionContextManager the execution context manager
+     */
     public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
         this.executionContextManager = executionContextManager;
     }
 
+    /**
+     * Sets the secret hash service for API key hashing.
+     *
+     * @param secretHashService the secret hash service
+     */
     public void setSecretHashService(SecretHashService secretHashService) {
         this.secretHashService = secretHashService;
     }
 
+    /**
+     * Registers a tenant lifecycle listener.
+     *
+     * @param listener the listener to add
+     */
     public void bindListener(TenantLifecycleListener listener) {
         lifecycleListeners.add(listener);
         LOGGER.debug("Added tenant lifecycle listener: {}", listener.getClass().getName());
     }
 
+    /**
+     * Unregisters a tenant lifecycle listener.
+     *
+     * @param listener the listener to remove
+     */
     public void unbindListener(TenantLifecycleListener listener) {
         if (listener != null) {
             lifecycleListeners.remove(listener);

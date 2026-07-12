@@ -105,7 +105,7 @@ public class ScheduledTask extends Item implements Serializable {
     private Set<String> waitingOnTasks = new HashSet<>();
 
     /**
-     * Instantiates a new scheduled task with default status {@link TaskStatus#SCHEDULED},
+     * Creates a scheduled task with default status {@link TaskStatus#SCHEDULED},
      * {@code maxRetries} of 3, and a default {@code retryDelay} of 60 seconds.
      */
     public ScheduledTask() {
@@ -117,7 +117,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the task type identifier.
+     * Task type identifier that selects the executor.
      * The task type determines which executor will handle this task.
      * 
      * @return the task type identifier
@@ -136,7 +136,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the task parameters.
+     * Parameters passed to the task executor.
      * These parameters are passed to the task executor during execution.
      * 
      * @return map of task parameters
@@ -155,7 +155,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the initial delay before the first execution, expressed in {@link #getTimeUnit()}.
+     * Initial delay before the first execution, expressed in {@link #getTimeUnit()}.
      *
      * @return the initial delay in the configured time unit
      */
@@ -173,7 +173,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the period between successive task executions.
+     * Period between successive task executions.
      * A period of 0 indicates a one-time task and will automatically set oneShot=true.
      * 
      * @return the period between executions in the specified time unit
@@ -204,7 +204,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the time unit for delay and period values.
+     * Time unit for delay and period values.
      * 
      * @return the time unit used for scheduling
      */
@@ -242,7 +242,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the date of the last execution attempt.
+     * Date of the last execution attempt.
      * 
      * @return the last execution date or {@code null} if never executed
      */
@@ -260,7 +260,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the node ID that last executed this task.
+     * Node identifier that last executed this task.
      * 
      * @return the ID of the last executing node
      */
@@ -278,7 +278,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the error message from the last failed execution.
+     * Error message from the last failed execution.
      * 
      * @return the last error message or {@code null} if no error
      */
@@ -315,7 +315,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the ID of the node that currently holds the execution lock.
+     * Node identifier that currently holds the execution lock.
      * 
      * @return the current lock owner's node ID or {@code null} if unlocked
      */
@@ -333,7 +333,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the date when the current lock was acquired.
+     * Date when the current lock was acquired.
      * 
      * @return the lock acquisition date or {@code null} if unlocked
      */
@@ -395,7 +395,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the current task status.
+     * Current task lifecycle status.
      * 
      * @return the current status
      */
@@ -433,7 +433,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the next scheduled execution date for periodic tasks.
+     * Next scheduled execution date for periodic tasks.
      * 
      * @return the next scheduled execution date or {@code null} if not scheduled
      */
@@ -451,7 +451,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the number of consecutive execution failures.
+     * Number of consecutive execution failures.
      * 
      * @return the failure count
      */
@@ -469,7 +469,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the number of successful executions.
+     * Number of successful executions.
      * 
      * @return the success count
      */
@@ -487,7 +487,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the maximum number of retry attempts after failures.
+     * Maximum number of retry attempts after failures.
      * For one-shot tasks:
      * - When a task fails, it will be automatically retried up to this many times
      * - Each retry attempt occurs after waiting for retryDelay
@@ -516,7 +516,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the delay between retry attempts.
+     * Delay between retry attempts.
      * For one-shot tasks:
      * - This delay is applied between each retry attempt after a failure
      * - Helps prevent rapid-fire retries that could overload the system
@@ -541,7 +541,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the name of the current execution step.
+     * Name of the current execution step.
      * This is used to track progress through multi-step tasks.
      * 
      * @return the current step name or {@code null} if not set
@@ -560,7 +560,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the checkpoint data for task resumption.
+     * Checkpoint data for task resumption.
      * This data allows a task to resume from where it left off after a crash.
      * 
      * @return map of checkpoint data or {@code null} if no checkpoint
@@ -642,7 +642,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the task type that this task is waiting for a lock on.
+     * Task type this task is waiting for a lock on.
      * This is used when tasks of the same type cannot run in parallel.
      * 
      * @return the task type being waited on or {@code null} if not waiting
@@ -661,7 +661,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the set of task IDs that this task depends on.
+     * Task identifiers this task depends on.
      * The task will not execute until all dependencies have completed.
      * 
      * @return set of dependency task IDs
@@ -680,7 +680,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the set of task IDs that this task is currently waiting on.
+     * Task identifiers this task is currently waiting on.
      * This represents the subset of dependencies that have not yet completed.
      * 
      * @return set of task IDs being waited on
@@ -746,7 +746,7 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
-     * Retrieves the ID of the node currently executing this task.
+     * Node identifier currently executing this task.
      * This is different from lockOwner as it specifically indicates which node
      * is actively executing the task, not just holding the lock.
      * 

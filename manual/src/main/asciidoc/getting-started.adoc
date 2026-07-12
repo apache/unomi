@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-[[_getting_started_with_unomi]]
+[#_getting_started_with_unomi]
 === Getting started with Unomi
 
 We will first get you up and running with an example. We will then lift the corner of the cover somewhat and explain
@@ -22,7 +22,7 @@ in greater details what just happened.
 This document assumes working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example.
 Additionally, you will require a working Java 17 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 17 or greater.
 
-[[_jdk_compatibility]]
+[#_jdk_compatibility]
 ===== JDK compatibility
 
 Starting with Java 9, Oracle made some big changes to the Java platform releases. This is why Apache Unomi is focused on
@@ -37,8 +37,8 @@ them at your own risks.
 
 Apache Unomi supports two search engine backends:
 
-* *ElasticSearch*: Version 7.17.5 is supported starting with Unomi 2.0.0
-* *OpenSearch*: Version 3.x is supported
+* *ElasticSearch*: Version **9.x** (for example 9.4.3) is required for Unomi 3.0 and later. Version 7.17.5 applies only to Unomi 2.x.
+* *OpenSearch*: Version 3.x is supported starting with Unomi 3.1
 
 It is highly recommended to use the versions specified in the documentation. When in doubt, consult the Apache Unomi community
 for the latest compatibility information.
@@ -85,7 +85,7 @@ curl -X POST http://localhost:8181/cxs/tenants \
   }'
 ----
 
-Save the API keys from the response - you'll need them for all subsequent API calls.
+Save the API keys from the response - you'll need them for all subsequent API calls. See <<_multitenancy,Multi-tenancy>> for authentication details.
 
 Now you can:
 

@@ -34,6 +34,9 @@ import java.net.URL;
 import java.util.*;
 import java.util.regex.Pattern;
 
+/**
+ * OSGi-backed factory that loads allowed and forbidden expression patterns for script execution.
+ */
 public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,BundleListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ExpressionFilterFactoryImpl.class.getName());
@@ -48,13 +51,24 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
 
     private boolean expressionFiltersActivated = Boolean.parseBoolean(System.getProperty("org.apache.unomi.scripting.filter.activated", "true"));
 
+    /**
+     * Sets the OSGi bundle context used to discover expression pattern resources.
+     *
+     * @param bundleContext the bundle context
+     */
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
 
+    /**
+     * Creates the factory instance.
+     */
     public ExpressionFilterFactoryImpl() {
     }
 
+    /**
+     * Loads configured expression patterns and registers bundle listeners.
+     */
     public void init() {
         String initialFilterCollections = System.getProperty("org.apache.unomi.scripting.filter.collections", "mvel");
         String[] initialFilterCollectionParts = initialFilterCollections.split(",");
@@ -94,12 +108,20 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
         return null;
     }
 
+    /**
+     * Unregisters bundle listeners and releases OSGi resources.
+     */
     public void destroy() {
         if (bundleContext != null) {
             bundleContext.removeBundleListener(this);
         }
     }
 
+    /**
+     * Reacts to bundle start and stop events to refresh expression patterns.
+     *
+     * @param event the bundle lifecycle event
+     */
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTED:

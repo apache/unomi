@@ -38,6 +38,12 @@ public class SecurityContextCleanupFilter implements ContainerResponseFilter {
     private final SecurityService securityService;
     private final ExecutionContextManager executionContextManager;
 
+    /**
+     * Creates the cleanup filter.
+     *
+     * @param securityService the security service
+     * @param executionContextManager the execution context manager
+     */
     public SecurityContextCleanupFilter(SecurityService securityService, ExecutionContextManager executionContextManager) {
         this.securityService = securityService;
         this.executionContextManager = executionContextManager;

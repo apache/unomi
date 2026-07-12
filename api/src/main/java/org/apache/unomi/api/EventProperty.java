@@ -19,9 +19,9 @@ package org.apache.unomi.api;
 import java.io.Serializable;
 
 /**
- * An event property.
- *
- * @author Sergiy Shyrkov
+ * Named property attached to an {@link Event}.
+ * Events carry many properties; this type represents one key/value pair
+ * stored with the event for segmentation, personalization, and reporting.
  */
 public class EventProperty implements Serializable {
 
@@ -32,26 +32,26 @@ public class EventProperty implements Serializable {
     private String valueType = "string";
 
     /**
-     * Initializes an instance of this class.
+     * Default constructor.
      */
     public EventProperty() {
         super();
     }
 
     /**
-     * Initializes an instance of an event property with the string value type.
+     * Creates an event property with the default string value type.
      *
-     * @param id the event property id
+     * @param id the property identifier
      */
     public EventProperty(String id) {
         this(id, null);
     }
 
     /**
-     * Initializes an instance of this class.
+     * Creates an event property with the given identifier and value type.
      *
-     * @param id   the event property id
-     * @param type the type of the value for this property
+     * @param id   the property identifier
+     * @param type the value type for this property
      */
     public EventProperty(String id, String type) {
         this();
@@ -62,27 +62,27 @@ public class EventProperty implements Serializable {
     }
 
     /**
-     * Retrieves the identifier for this EventProperty.
+     * Property identifier.
      *
-     * @return the identifier for this EventProperty
+     * @return the property id
      */
     public String getId() {
         return id;
     }
 
     /**
-     * Sets the identifier.
+     * Sets the property identifier.
      *
-     * @param id the id
+     * @param id the property id
      */
     public void setId(String id) {
         this.id = id;
     }
 
     /**
-     * Retrieves the type.
+     * Value type for this property (for example {@code string} or {@code integer}).
      *
-     * @return the value type
+     * @return the value type id
      */
     public String getValueType() {
         return valueType;
@@ -91,7 +91,7 @@ public class EventProperty implements Serializable {
     /**
      * Sets the value type.
      *
-     * @param type the type
+     * @param type the value type id
      */
     public void setValueType(String type) {
         this.valueType = type;

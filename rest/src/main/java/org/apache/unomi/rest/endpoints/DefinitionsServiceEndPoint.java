@@ -36,7 +36,7 @@ import javax.ws.rs.core.MediaType;
 import java.util.*;
 
 /**
- * A JAX-RS endpoint to retrieve definition information about core context server entities such as conditions, actions and values.
+ * JAX-RS endpoint for condition, action, and value type definitions used by the rules engine.
  */
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(
@@ -52,19 +52,29 @@ public class DefinitionsServiceEndPoint {
     @Reference
     private LocalizationHelper localizationHelper;
 
+    /**
+     * Sets the definitions service.
+     *
+     * @param definitionsService the definitions service
+     */
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
+    /**
+     * Sets the localization helper.
+     *
+     * @param localizationHelper the localization helper
+     */
     public void setLocalizationHelper(LocalizationHelper localizationHelper) {
         this.localizationHelper = localizationHelper;
     }
 
     /**
-     * Retrieves all condition types localized using the specified language.
+     * Returns all condition types localized for the requested language.
      *
-     * @param language the language to use to localize.
-     * @return a Collection of all collection types
+     * @param language the locale to use for labels and descriptions
+     * @return all condition types in REST form
      */
     @GET
     @Path("/conditions")
@@ -74,11 +84,11 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of condition types with the specified tags.
+     * Returns condition types that match any of the given tags.
      *
-     * @param language  the language to use to localize.
-     * @param tags      a comma-separated list of tag identifiers
-     * @return the set of condition types with the specified tag
+     * @param language the locale to use for labels and descriptions
+     * @param tags a comma-separated list of tag identifiers
+     * @return matching condition types in REST form
      */
     @GET
     @Path("/conditions/tags/{tags}")
@@ -92,11 +102,11 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of condition types with the specified system tags.
+     * Returns condition types that match any of the given system tags.
      *
-     * @param language  the language to use to localize.
-     * @param tags      a comma-separated list of tag identifiers
-     * @return the set of condition types with the specified tag
+     * @param language the locale to use for labels and descriptions
+     * @param tags a comma-separated list of system tag identifiers
+     * @return matching condition types in REST form
      */
     @GET
     @Path("/conditions/systemTags/{tags}")
@@ -110,11 +120,11 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves the condition type associated with the specified identifier localized using the specified language.
+     * Returns the condition type with the given ID, localized for the requested language.
      *
-     * @param language the language to use to localize.
-     * @param id       the identifier of the condition type to retrieve
-     * @return the condition type associated with the specified identifier or {@code null} if no such condition type exists
+     * @param language the locale to use for labels and descriptions
+     * @param id the condition type identifier
+     * @return the condition type in REST form, or {@code null} when it does not exist
      */
     @GET
     @Path("/conditions/{conditionId}")
@@ -124,7 +134,7 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Stores the condition type
+     * Stores the given condition type definition.
      *
      * @param conditionType the condition type to store
      */
@@ -135,9 +145,9 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Removes the condition type
+     * Deletes the condition type with the given ID.
      *
-     * @param conditionTypeId the identifier of the action type to delete
+     * @param conditionTypeId the condition type identifier
      */
     @DELETE
     @Path("/conditions/{conditionTypeId}")
@@ -146,10 +156,10 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves all known action types localized using the specified language.
+     * Returns all action types localized for the requested language.
      *
-     * @param language the language to use to localize.
-     * @return all known action types
+     * @param language the locale to use for labels and descriptions
+     * @return all action types in REST form
      */
     @GET
     @Path("/actions")
@@ -159,11 +169,11 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of action types with the specified tags.
+     * Returns action types that match any of the given tags.
      *
-     * @param language  the language to use to localize.
-     * @param tags      the tag marking the action types we want to retrieve
-     * @return the set of action types with the specified tag
+     * @param language the locale to use for labels and descriptions
+     * @param tags a comma-separated list of tag identifiers
+     * @return matching action types in REST form
      */
     @GET
     @Path("/actions/tags/{tags}")
@@ -177,11 +187,11 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of action types with the specified system tags.
+     * Returns action types that match any of the given system tags.
      *
-     * @param language  the language to use to localize.
-     * @param tags      the tag marking the action types we want to retrieve
-     * @return the set of action types with the specified tag
+     * @param language the locale to use for labels and descriptions
+     * @param tags a comma-separated list of system tag identifiers
+     * @return matching action types in REST form
      */
     @GET
     @Path("/actions/systemTags/{tags}")
@@ -195,11 +205,11 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves the action type associated with the specified identifier localized using the specified language.
+     * Returns the action type with the given ID, localized for the requested language.
      *
-     * @param language the language to use to localize.
-     * @param id       the identifier of the action type to retrieve
-     * @return the action type associated with the specified identifier or {@code null} if no such action type exists
+     * @param language the locale to use for labels and descriptions
+     * @param id the action type identifier
+     * @return the action type in REST form, or {@code null} when it does not exist
      */
     @GET
     @Path("/actions/{actionId}")
@@ -209,7 +219,7 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Stores the action type
+     * Stores the given action type definition.
      *
      * @param actionType the action type to store
      */
@@ -220,9 +230,9 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Removes the action type
+     * Deletes the action type with the given ID.
      *
-     * @param actionTypeId the identifier of the action type to delete
+     * @param actionTypeId the action type identifier
      */
     @DELETE
     @Path("/actions/{actionTypeId}")
@@ -231,10 +241,10 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves all known value types localized using the specified language.
+     * Returns all value types localized for the requested language.
      *
-     * @param language the language to use to localize.
-     * @return all known value types
+     * @param language the locale to use for labels and descriptions
+     * @return all value types in REST form
      */
     @GET
     @Path("/values")
@@ -243,11 +253,11 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of value types with the specified tags.
+     * Returns value types that match any of the given tags.
      *
-     * @param language  the language to use to localize.
-     * @param tags      the tag marking the value types we want to retrieve
-     * @return the set of value types with the specified tag
+     * @param language the locale to use for labels and descriptions
+     * @param tags a comma-separated list of tag identifiers
+     * @return matching value types in REST form
      */
     @GET
     @Path("/values/tags/{tags}")
@@ -261,11 +271,11 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves the value type associated with the specified identifier localized using the specified language.
+     * Returns the value type with the given ID, localized for the requested language.
      *
-     * @param language the language to use to localize.
-     * @param id       the identifier of the value type to retrieve
-     * @return the value type associated with the specified identifier or {@code null} if no such value type exists
+     * @param language the locale to use for labels and descriptions
+     * @param id the value type identifier
+     * @return the value type in REST form, or {@code null} when it does not exist
      */
     @GET
     @Path("/values/{valueTypeId}")
@@ -275,9 +285,9 @@ public class DefinitionsServiceEndPoint {
     }
 
     /**
-     * Retrieves a Map of plugin identifier to a list of plugin types defined by that particular plugin.
+     * Returns plugin types grouped by plugin identifier.
      *
-     * @return a Map of plugin identifier to a list of plugin types defined by that particular plugin
+     * @return plugin ID to plugin type list mappings
      */
     @GET
     @Path("/typesByPlugin")
@@ -285,6 +295,12 @@ public class DefinitionsServiceEndPoint {
         return definitionsService.getTypesByPlugin();
     }
 
+    /**
+     * Returns the property merge strategy type for the given identifier.
+     *
+     * @param id the property merge strategy type identifier
+     * @return the property merge strategy type
+     */
     public PropertyMergeStrategyType getPropertyMergeStrategyType(String id) {
         return definitionsService.getPropertyMergeStrategyType(id);
     }

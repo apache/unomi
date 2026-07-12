@@ -26,7 +26,9 @@ import java.util.Set;
 import static org.apache.unomi.api.utils.YamlUtils.setToSortedList;
 
 /**
- * Validation metadata for condition parameters
+ * Rules that constrain values allowed in a {@link Condition} parameter.
+ * Segment builders and the validation service use this metadata to reject
+ * invalid parameter values before save.
  */
 public class ConditionValidation implements Serializable, YamlConvertible {
     private static final long serialVersionUID = 1L;
@@ -63,7 +65,7 @@ public class ConditionValidation implements Serializable, YamlConvertible {
     private transient Class<?> customType;
 
     /**
-     * Instantiates a new ConditionValidation.
+     * Default constructor.
      */
     public ConditionValidation() {
     }
@@ -217,6 +219,7 @@ public class ConditionValidation implements Serializable, YamlConvertible {
      * Implements YamlConvertible interface.
      *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @param maxDepth maximum recursion depth to prevent stack overflow
      * @return a Map representation of this validation
      */
     @Override

@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_data_model_overview]]
+[#_data_model_overview]
 === Data Model Overview
 
 Apache Unomi gathers information about users actions, information that is processed and stored by Unomi services.
@@ -59,6 +59,20 @@ This base structure can be extended, if needed, using properties in the form of 
 
 These properties are further defined by the `Item`’s type definition which explicits the `Item`’s structure and semantics.
 By defining new types, users specify which properties (including the type of values they accept) are available to items of that specific type.
+
+
+[#_tenant_entity]
+=== Tenant (Unomi 3.1+)
+
+A *tenant* is the top-level isolation boundary in Unomi 3.1. Each tenant owns its own profiles, events, segments, rules, property types, and JSON schemas. Tenant metadata is stored as an `Item` with `itemType` `tenant`.
+
+Most persisted items carry a `tenantId` (or inherit tenant scope through the execution context). Client requests must establish tenant context through:
+
+* `X-Unomi-Api-Key` (public key resolves the tenant), or
+* Basic authentication `tenantId:privateApiKey`, or
+* JAAS administrator credentials with `X-Unomi-Tenant-Id`.
+
+See <<_multitenancy,Multi-tenancy>> for management and authentication.
 
 Unomi defines default value types: `date`, `email`, `integer` and `string`, all pretty self-explanatory.
 While you can think of these value types as "primitive" types, it is possible to extend Unomi by providing additional value types.
@@ -613,7 +627,7 @@ The visitor’s location is also resolve based on the IP address that was used t
 }
 ----
 
-[[_segment]]
+[#_segment]
 === Segment
 
 Segments are used to group profiles together, and are based on conditions that are executed on profiles to determine
@@ -732,7 +746,7 @@ The result of a condition is always a boolean value of true or false.
 Apache Unomi provides quite a lot of built-in condition types, including boolean types that make it possible to compose conditions using operators such as `and`, `or` or `not`.
 Composition is an essential element of building more complex conditions.
 
-For a more complete list of available condition types, see the <<_builtin_condition_types,Built-in condition types>> reference section.
+For tutorials and examples, see <<_conditions_guide,Conditions guide>>. For the full catalog, see <<_builtin_condition_types,Built-in condition types>>.
 
 ==== Structure definition
 

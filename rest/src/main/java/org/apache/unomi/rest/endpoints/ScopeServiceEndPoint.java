@@ -45,18 +45,26 @@ public class ScopeServiceEndPoint {
     @Reference
     private ScopeService scopeService;
 
+    /**
+     * Creates the scope service endpoint.
+     */
     public ScopeServiceEndPoint() {
         LOGGER.info("Initializing scope service endpoint...");
     }
 
+    /**
+     * Sets the scope service.
+     *
+     * @param scopeService the scope service
+     */
     public void setScopeService(ScopeService scopeService) {
         this.scopeService = scopeService;
     }
 
     /**
-     * Retrieves all known scopes.
+     * Returns all configured scopes.
      *
-     * @return a List of the scopes
+     * @return all known scopes
      */
     @GET
     @Path("/")
@@ -67,6 +75,7 @@ public class ScopeServiceEndPoint {
      * Persists the specified scope.
      *
      * @param scope the scope to be persisted
+     * @return an empty success response
      */
     @POST
     @Path("/")
@@ -76,10 +85,10 @@ public class ScopeServiceEndPoint {
     }
 
     /**
-     * Retrieves the scope identified by the specified identifier.
+     * Returns the scope with the given ID.
      *
-     * @param scopeId the identifier of the scope we want to retrieve
-     * @return the scope identified by the specified identifier or {@code null} if no such scope exists.
+     * @param scopeId the scope identifier
+     * @return the scope, or {@code null} when it does not exist
      */
     @GET
     @Path("/{scopeId}")

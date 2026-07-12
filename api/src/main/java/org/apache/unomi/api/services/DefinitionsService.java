@@ -31,203 +31,203 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * A service to retrieve definition information about core context server entities such as conditions, actions and values.
+ * Registry of built-in and plugin condition, action, and value type definitions.
+ * Used when loading rules from JSON, validating conditions, and resolving
+ * type metadata in the administration UI.
  */
 public interface DefinitionsService {
     /**
-     * Retrieves all condition types.
+     * Returns every registered condition type.
      *
-     * @return a Collection of all collection types
+     * @return all condition types
      */
     Collection<ConditionType> getAllConditionTypes();
 
     /**
-     * Retrieves the set of condition types with the specified tag.
+     * Returns condition types tagged with the given tag, including sub-tags.
      *
-     * @param tag   the tag marking the condition types we want to retrieve
-     * @return the set of condition types with the specified tag (and its sub-tags, if specified)
+     * @param tag tag marking the condition types to include
+     * @return condition types with the specified tag
      */
     Set<ConditionType> getConditionTypesByTag(String tag);
 
     /**
-     * Retrieves the set of condition types with the specified system tag.
+     * Returns condition types with the given system tag, including sub-tags.
      *
-     * @param tag   the system tag marking the condition types we want to retrieve
-     * @return the set of condition types with the specified tag (and its sub-tags, if specified)
+     * @param tag system tag marking the condition types to include
+     * @return condition types with the specified system tag
      */
     Set<ConditionType> getConditionTypesBySystemTag(String tag);
 
     /**
-     * Retrieves the condition type associated with the specified identifier.
+     * Looks up a condition type by id.
      *
-     * @param id the identifier of the condition type to retrieve
-     * @return the condition type associated with the specified identifier or {@code null} if no such condition type exists
+     * @param id condition type identifier
+     * @return matching condition type, or {@code null} if none exists
      */
     ConditionType getConditionType(String id);
 
     /**
-     * Stores the condition type
+     * Registers or updates a condition type definition.
      *
-     * @param conditionType the condition type to store
+     * @param conditionType condition type to store
      */
     void setConditionType(ConditionType conditionType);
 
     /**
-     * Remove the condition type
+     * Removes a condition type definition.
      *
-     * @param id the condition type to remove
+     * @param id identifier of the condition type to remove
      */
     void removeConditionType(String id);
 
     /**
-     * Retrieves all known action types.
+     * Returns every registered action type.
      *
-     * @return all known action types
+     * @return all action types
      */
     Collection<ActionType> getAllActionTypes();
 
     /**
-     * Retrieves the set of action types with the specified tag.
+     * Returns action types tagged with the given tag.
      *
-     * @param tag   the tag marking the action types we want to retrieve
-     * @return the set of action types with the specified tag
+     * @param tag tag marking the action types to include
+     * @return action types with the specified tag
      */
     Set<ActionType> getActionTypeByTag(String tag);
 
     /**
-     * Retrieves the set of action types with the specified system tag.
+     * Returns action types with the given system tag.
      *
-     * @param tag   the system tag marking the action types we want to retrieve
-     * @return the set of action types with the specified tag
+     * @param tag system tag marking the action types to include
+     * @return action types with the specified system tag
      */
     Set<ActionType> getActionTypeBySystemTag(String tag);
 
     /**
-     * Retrieves the action type associated with the specified identifier.
+     * Looks up an action type by id.
      *
-     * @param id the identifier of the action type to retrieve
-     * @return the action type associated with the specified identifier or {@code null} if no such action type exists
+     * @param id action type identifier
+     * @return matching action type, or {@code null} if none exists
      */
     ActionType getActionType(String id);
 
     /**
-     * Stores the action type
+     * Registers or updates an action type definition.
      *
-     * @param actionType the action type to store
+     * @param actionType action type to store
      */
     void setActionType(ActionType actionType);
 
     /**
-     * Remove the action type
+     * Removes an action type definition.
      *
-     * @param id the action type to remove
+     * @param id identifier of the action type to remove
      */
     void removeActionType(String id);
 
     /**
-     * Retrieves all known value types.
+     * Returns every registered value type.
      *
-     * @return all known value types
+     * @return all value types
      */
     Collection<ValueType> getAllValueTypes();
 
     /**
-     * Retrieves the set of value types with the specified tag.
+     * Returns value types tagged with the given tag.
      *
-     * @param tag   the tag marking the value types we want to retrieve
-     * @return the set of value types with the specified tag
+     * @param tag tag marking the value types to include
+     * @return value types with the specified tag
      */
     Set<ValueType> getValueTypeByTag(String tag);
 
     /**
-     * Retrieves the value type associated with the specified identifier.
+     * Looks up a value type by id.
      *
-     * @param id the identifier of the value type to retrieve
-     * @return the value type associated with the specified identifier or {@code null} if no such value type exists
+     * @param id value type identifier
+     * @return matching value type, or {@code null} if none exists
      */
     ValueType getValueType(String id);
 
     /**
-     * Stores the value type
+     * Registers or updates a value type definition.
      *
-     * @param valueType the value type to store
+     * @param valueType value type to store
      */
     void setValueType(ValueType valueType);
 
     /**
-     * Remove the value type
+     * Removes a value type definition.
      *
-     * @param id the value type to remove
+     * @param id identifier of the value type to remove
      */
     void removeValueType(String id);
 
     /**
-     * Retrieves a Map of plugin identifier to a list of plugin types defined by that particular plugin.
+     * Groups registered plugin types by plugin id.
      *
-     * @return a Map of plugin identifier to a list of plugin types defined by that particular plugin
+     * @return map of plugin id to plugin types defined by that plugin
      */
     Map<Long, List<PluginType>> getTypesByPlugin();
 
     /**
-     * Retrieves the property merge strategy type associated with the specified identifier.
+     * Looks up a property merge strategy type by id.
      *
-     * @param id the identifier of the property merge strategy type to retrieve
-     * @return the property merge strategy type associated with the specified identifier or {@code null} if no such property merge strategy type exists
+     * @param id property merge strategy type identifier
+     * @return matching type, or {@code null} if none exists
      */
     PropertyMergeStrategyType getPropertyMergeStrategyType(String id);
 
     /**
-     * Stores the property merge strategy type
+     * Registers or updates a property merge strategy type.
      *
-     * @param propertyMergeStrategyType the property merge strategy type to store
+     * @param propertyMergeStrategyType property merge strategy type to store
      */
     void setPropertyMergeStrategyType(PropertyMergeStrategyType propertyMergeStrategyType);
 
     /**
-     * Remove the property merge strategy type
+     * Removes a property merge strategy type definition.
      *
-     * @param id the property merge strategy type to remove
+     * @param id identifier of the property merge strategy type to remove
      */
     void removePropertyMergeStrategyType(String id);
 
     /**
-     * Retrieves all known property merge strategy types.
+     * Returns every registered property merge strategy type.
      *
-     * @return all known property merge strategy types
+     * @return all property merge strategy types
      */
     Collection<PropertyMergeStrategyType> getAllPropertyMergeStrategyTypes();
 
     /**
-     * Retrieves all conditions of the specified type from the specified root condition.
+     * Collects nested conditions of the given type from a root condition tree.
      *
-     * TODO: remove?
      *
-     * @param rootCondition the condition from which we want to extract all conditions with the specified type
-     * @param typeId the identifier of the condition type we want conditions to extract to match
-     * @return a set of conditions contained in the specified root condition and matching the specified condition type or an empty set if no such condition exists
+     * @param rootCondition condition tree to walk
+     * @param typeId condition type id to match
+     * @return matching nested conditions, or an empty list if none
      */
     List<Condition> extractConditionsByType(Condition rootCondition, String typeId);
 
     /**
-     * Retrieves a condition matching the specified tag identifier from the specified root condition.
+     * Finds the first nested condition tagged with the given tag in a root condition tree.
      *
-     * TODO: remove from API and move to a different class?
-     * TODO: purpose and behavior not clear
+     * Deprecated helper that may move out of this service in a future release.
      *
-     * @param rootCondition the root condition where to start the extraction by class
-     * @param tag the tag to use to extract the condition
-     * @return Condition the condition that has been found matching the tag, or null if none matched
+     * @param rootCondition condition tree to walk
+     * @param tag tag used to select a condition
+     * @return first matching condition, or {@code null} if none
      * @deprecated As of 1.2.0-incubating, please use {@link #extractConditionBySystemTag(Condition, String)} instead
      */
     @Deprecated
     Condition extractConditionByTag(Condition rootCondition, String tag);
 
     /**
-     * Retrieves a condition matching the specified system tag identifier from the specified root condition.
+     * Finds the first nested condition with the given system tag in a root condition tree.
      *
-     * @param rootCondition the root condition where to start the extraction by class
-     * @param systemTag the tag to use to extract the condition
-     * @return Condition the condition that has been found matching the tag, or null if none matched
+     * @param rootCondition condition tree to walk
+     * @param systemTag system tag used to select a condition
+     * @return first matching condition, or {@code null} if none
      */
     Condition extractConditionBySystemTag(Condition rootCondition, String systemTag);
 
@@ -261,26 +261,23 @@ public interface DefinitionsService {
     void refresh();
 
     /**
-     * Gets the condition builder instance.
+     * Returns the shared condition builder for programmatic condition construction.
      *
-     * @return the condition builder instance
+     * @return condition builder instance
      */
     ConditionBuilder getConditionBuilder();
 
     /**
-     * Gets the TypeResolutionService instance.
-     * This service handles type resolution and invalid object tracking.
+     * Returns the type resolution service for condition and action type lookup.
      *
-     * @return the TypeResolutionService instance
+     * @return type resolution service instance
      */
     TypeResolutionService getTypeResolutionService();
 
     /**
-     * Gets the ConditionValidationService instance.
-     * This service validates conditions against their type definitions.
-     * The service automatically resolves condition types if needed before validation.
+     * Returns the condition validation service, which resolves types before validating parameters.
      *
-     * @return the ConditionValidationService instance
+     * @return condition validation service instance
      */
     ConditionValidationService getConditionValidationService();
 }

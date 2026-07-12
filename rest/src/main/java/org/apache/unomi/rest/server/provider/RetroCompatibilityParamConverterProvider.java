@@ -44,6 +44,11 @@ public class RetroCompatibilityParamConverterProvider implements ParamConverterP
     private final ObjectMapper objectMapper;
     private final List<Class<?>> allowedConversionForTypes = new ArrayList<>();
 
+    /**
+     * Creates the retro-compatibility parameter converter provider.
+     *
+     * @param objectMapper the Jackson object mapper
+     */
     public RetroCompatibilityParamConverterProvider(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
 

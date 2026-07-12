@@ -63,6 +63,9 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * OSGi component that assembles and refreshes the JAX-RS server from registered endpoints.
+ */
 @Component
 public class RestServer {
 
@@ -92,46 +95,91 @@ public class RestServer {
 
     private static final QName UNOMI_REST_SERVER_END_POINT_NAME = new QName("http://rest.unomi.apache.org/", "UnomiRestServerEndPoint");
 
+    /**
+     * Sets the the schema service.
+     *
+     * @param schemaService the schema service
+     */
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setSchemaService(SchemaService schemaService) {
         this.schemaService = schemaService;
     }
 
+    /**
+     * Sets the the CXF bus.
+     *
+     * @param serverBus the CXF bus
+     */
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setServerBus(Bus serverBus) {
         this.serverBus = serverBus;
     }
 
+    /**
+     * Sets the the REST authentication configuration.
+     *
+     * @param restAuthenticationConfig the REST authentication configuration
+     */
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setRestAuthenticationConfig(RestAuthenticationConfig restAuthenticationConfig) {
         this.restAuthenticationConfig = restAuthenticationConfig;
     }
 
+    /**
+     * Sets the the config sharing service.
+     *
+     * @param configSharingService the config sharing service
+     */
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setConfigSharingService(ConfigSharingService configSharingService) {
         this.configSharingService = configSharingService;
     }
 
+    /**
+     * Sets the the tenant service.
+     *
+     * @param tenantService the tenant service
+     */
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
     }
 
+    /**
+     * Sets the the security service.
+     *
+     * @param securityService the security service
+     */
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setSecurityService(SecurityService securityService) {
         this.securityService = securityService;
     }
 
+    /**
+     * Sets the the execution context manager.
+     *
+     * @param executionContextManager the execution context manager
+     */
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
         this.executionContextManager = executionContextManager;
     }
 
+    /**
+     * Sets the the security filter.
+     *
+     * @param securityFilter the security filter
+     */
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setSecurityFilter(SecurityFilter securityFilter) {
         this.securityFilter = securityFilter;
     }
 
+    /**
+     * Registers an exception mapper with the JAX-RS server.
+     *
+     * @param exceptionMapper the exception mapper to add
+     */
     @Reference(cardinality = ReferenceCardinality.MULTIPLE)
     public void addExceptionMapper(ExceptionMapper exceptionMapper) {
         this.exceptionMappers.add(exceptionMapper);
@@ -139,12 +187,23 @@ public class RestServer {
         refreshServer();
     }
 
+    /**
+     * Removes an exception mapper from the JAX-RS server.
+     *
+     * @param exceptionMapper the exception mapper to remove
+     */
     public void removeExceptionMapper(ExceptionMapper exceptionMapper) {
         this.exceptionMappers.remove(exceptionMapper);
         timeOfLastUpdate = System.currentTimeMillis();
         refreshServer();
     }
 
+    /**
+     * Activates the REST server and opens the JAX-RS service tracker.
+     *
+     * @param componentContext the OSGi component context
+     * @throws Exception if activation fails
+     */
     @Activate
     public void activate(ComponentContext componentContext) throws Exception {
         this.bundleContext = componentContext.getBundleContext();
@@ -160,6 +219,11 @@ public class RestServer {
         LOGGER.info("RestServer activated and service tracker opened");
     }
 
+    /**
+     * Deactivates the REST server and releases tracked services.
+     *
+     * @throws Exception if deactivation fails
+     */
     @Deactivate
     public void deactivate() throws Exception {
         LOGGER.info("RestServer deactivating...");

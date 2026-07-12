@@ -20,36 +20,72 @@ package org.apache.unomi.api.query;
 import java.io.Serializable;
 
 /**
- * A data range.
+ * Named inclusive date bucket for queries and aggregations.
+ * Combines a display {@code key} with {@code from} and {@code to} bounds so
+ * segment conditions and aggregate queries can group events or profiles inside
+ * a calendar window.
  */
 public class DateRange implements Serializable {
     private String key;
     private Object from;
     private Object to;
 
+    /**
+     * Creates an empty date range.
+     */
     public DateRange() {
     }
 
+    /**
+     * Label for this range in query results.
+     *
+     * @return range key
+     */
     public String getKey() {
         return key;
     }
 
+    /**
+     * Sets the range label.
+     *
+     * @param key range key
+     */
     public void setKey(String key) {
         this.key = key;
     }
 
+    /**
+     * Inclusive lower bound of the interval.
+     *
+     * @return start date or value
+     */
     public Object getFrom() {
         return from;
     }
 
+    /**
+     * Sets the inclusive lower bound.
+     *
+     * @param from start date or value
+     */
     public void setFrom(Object from) {
         this.from = from;
     }
 
+    /**
+     * Inclusive upper bound of the interval.
+     *
+     * @return end date or value
+     */
     public Object getTo() {
         return to;
     }
 
+    /**
+     * Sets the inclusive upper bound.
+     *
+     * @param to end date or value
+     */
     public void setTo(Object to) {
         this.to = to;
     }

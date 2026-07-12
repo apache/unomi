@@ -29,9 +29,20 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
 
+/**
+ * Declarative update packaged as an {@link Item} and applied by {@link org.apache.unomi.api.services.PatchService}.
+ * {@link #PATCHABLE_TYPES} lists supported definition types (segments, rules, etc.).
+ * The {@link #operation} is {@code override} (replace item), {@code patch} (JSON Patch payload),
+ * or {@code remove} (delete target; no payload required).
+ */
 public class Patch extends Item {
     private static final long serialVersionUID = 4171966405850833985L;
 
+    /**
+     * A map containing the types of items that are capable of being patched.
+     * The keys represent item type names, and the values are {@link Class}
+     * objects corresponding to those patchable item types.
+     */
     public final static Map<String, Class<? extends Item>> PATCHABLE_TYPES;
 
     static {
@@ -47,6 +58,9 @@ public class Patch extends Item {
         PATCHABLE_TYPES.put("scoring", Scoring.class);
     }
 
+    /**
+     * The constant string used to identify this class as a "patch" item type.
+     */
     public static final String ITEM_TYPE = "patch";
 
     private String patchedItemId;
@@ -61,36 +75,55 @@ public class Patch extends Item {
 
     /**
      * Get the id of the item that will be concerned by this patch
+     *
      * @return item id
      */
     public String getPatchedItemId() {
         return patchedItemId;
     }
 
+    /**
+     * Sets the ID of the item that will be concerned by this patch.
+     *
+     * @param patchedItemId the id of the item
+     */
     public void setPatchedItemId(String patchedItemId) {
         this.patchedItemId = patchedItemId;
     }
 
     /**
      * Get the item type of the item that will be concerned by this patch
+     *
      * @return item type
      */
     public String getPatchedItemType() {
         return patchedItemType;
     }
 
+    /**
+     * Sets the item type of the item that will be concerned by this patch.
+     *
+     * @param patchedItemType the item type
+     */
     public void setPatchedItemType(String patchedItemType) {
         this.patchedItemType = patchedItemType;
     }
 
     /**
      * Get the type of patch operation : override, patch or remove
+     *
      * @return operation
      */
     public String getOperation() {
         return operation;
     }
 
+    /**
+     * Sets the type of patch operation to perform. This can typically be
+     * 'override', 'patch', or 'remove'.
+     *
+     * @param operation the patch operation type
+     */
     public void setOperation(String operation) {
         this.operation = operation;
     }
@@ -100,24 +133,40 @@ public class Patch extends Item {
      * For override operation, the data is the full item
      * For patch, the data is a JsonPatch object
      * For remove, no data is needed
+     *
      * @return data
      */
     public Object getData() {
         return data;
     }
 
+    /**
+     * Sets the data payload for the patch.
+     * For override operations, this should contain the full
+     * item representation.
+     * For patch operations, this should contain a JsonPatch object.
+     * For remove operations, no data is required.
+     *
+     * @param data the patch data
+     */
     public void setData(Object data) {
         this.data = data;
     }
 
     /**
      * Get the date of the last patch application
+     *
      * @return last application date
      */
     public Date getLastApplication() {
         return lastApplication;
     }
 
+    /**
+     * Sets the date when the patch was last applied.
+     *
+     * @param lastApplication the date of the last application
+     */
     public void setLastApplication(Date lastApplication) {
         this.lastApplication = lastApplication;
     }

@@ -23,7 +23,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Information about an invalid object, including detailed reasons for invalidation.
+ * Accumulated record for a definition that references missing condition or action types.
+ * {@link org.apache.unomi.api.services.TypeResolutionService} creates and updates
+ * these entries when JSON rules, segments, or other items fail type resolution.
+ * Operators use the missing-type lists and encounter counts to fix broken imports.
  */
 public class InvalidObjectInfo {
     private final String objectType;
@@ -36,12 +39,29 @@ public class InvalidObjectInfo {
     private final Set<String> missingActionTypeIds;
     private final Set<String> contextNames;
 
+    /**
+     * Creates a record with type, id, and reason only.
+     *
+     * @param objectType invalid object type
+     * @param objectId invalid object id
+     * @param reason why the object is invalid
+     */
     public InvalidObjectInfo(String objectType, String objectId, String reason) {
         this(objectType, objectId, reason, null, null, null);
     }
 
-    public InvalidObjectInfo(String objectType, String objectId, String reason, 
-                             List<String> missingConditionTypeIds, 
+    /**
+     * Creates a record with initial missing-type and context details.
+     *
+     * @param objectType invalid object type
+     * @param objectId invalid object id
+     * @param reason why the object is invalid
+     * @param missingConditionTypeIds missing condition types from the first encounter, or {@code null}
+     * @param missingActionTypeIds missing action types from the first encounter, or {@code null}
+     * @param contextName context where the object was first seen, or {@code null}
+     */
+    public InvalidObjectInfo(String objectType, String objectId, String reason,
+                             List<String> missingConditionTypeIds,
                              List<String> missingActionTypeIds,
                              String contextName) {
         this.objectType = objectType;
@@ -60,38 +80,83 @@ public class InvalidObjectInfo {
         }
     }
 
+    /**
+     * Invalid object type.
+     *
+     * @return object type
+     */
     public String getObjectType() {
         return objectType;
     }
 
+    /**
+     * Invalid object id.
+     *
+     * @return object id
+     */
     public String getObjectId() {
         return objectId;
     }
 
+    /**
+     * Why the object failed validation.
+     *
+     * @return reason, or {@code null} if unset
+     */
     public String getReason() {
         return reason;
     }
 
+    /**
+     * When this record was first created (milliseconds since epoch).
+     *
+     * @return first-seen timestamp
+     */
     public long getFirstSeenTimestamp() {
         return firstSeenTimestamp;
     }
 
+    /**
+     * When this object was last seen as invalid (milliseconds since epoch).
+     *
+     * @return last-seen timestamp
+     */
     public long getLastSeenTimestamp() {
         return lastSeenTimestamp.get();
     }
 
+    /**
+     * How many times this invalid object has been encountered.
+     *
+     * @return encounter count
+     */
     public int getEncounterCount() {
         return encounterCount.get();
     }
 
+    /**
+     * Condition types that could not be resolved for this object.
+     *
+     * @return unmodifiable list of missing condition type ids
+     */
     public List<String> getMissingConditionTypeIds() {
         return Collections.unmodifiableList(new ArrayList<>(missingConditionTypeIds));
     }
 
+    /**
+     * Action types that could not be resolved for this object.
+     *
+     * @return unmodifiable list of missing action type ids
+     */
     public List<String> getMissingActionTypeIds() {
         return Collections.unmodifiableList(new ArrayList<>(missingActionTypeIds));
     }
 
+    /**
+     * Contexts where this invalid object was seen.
+     *
+     * @return unmodifiable set of context names
+     */
     public Set<String> getContextNames() {
         return Collections.unmodifiableSet(contextNames);
     }
@@ -102,9 +167,9 @@ public class InvalidObjectInfo {
      * {@code getMissingConditionTypeIds()}, {@code getMissingActionTypeIds()}, and
      * {@code getContextNames()} are safe during concurrent writes.
      *
-     * @param missingConditionTypeIds additional missing condition type IDs found in this encounter
-     * @param missingActionTypeIds    additional missing action type IDs found in this encounter
-     * @param contextName             context where this encounter occurred
+     * @param missingConditionTypeIds additional missing condition type ids from this encounter
+     * @param missingActionTypeIds additional missing action type ids from this encounter
+     * @param contextName context where this encounter occurred
      */
     public void updateEncounter(List<String> missingConditionTypeIds,
                                 List<String> missingActionTypeIds,
@@ -160,4 +225,3 @@ public class InvalidObjectInfo {
         return sb.toString();
     }
 }
-

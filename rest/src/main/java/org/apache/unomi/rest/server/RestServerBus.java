@@ -26,6 +26,9 @@ import org.osgi.service.component.annotations.Component;
  */
 @Component(service = Bus.class)
 public class RestServerBus extends ExtensionManagerBus implements Bus {
+    /**
+     * Creates the REST server CXF bus with logging and metrics features.
+     */
     public RestServerBus() {
         this.getFeatures().add(new LoggingFeature());
         this.getFeatures().add(new org.apache.cxf.metrics.MetricsFeature());

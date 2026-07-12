@@ -40,6 +40,8 @@ public class IpRangeAggregate extends BaseAggregate{
 
     /**
      * Returns the configured IP ranges.
+     *
+     * @return the IP ranges
      */
     public List<IpRange> getRanges() {
         return ranges;
@@ -47,6 +49,8 @@ public class IpRangeAggregate extends BaseAggregate{
 
     /**
      * Sets the IP ranges to use for bucketing.
+     *
+     * @param ranges the IP ranges
      */
     public void setRanges(List<IpRange> ranges) {
         this.ranges = ranges;

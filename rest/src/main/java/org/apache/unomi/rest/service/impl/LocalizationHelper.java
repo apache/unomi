@@ -47,6 +47,11 @@ public class LocalizationHelper {
     @Reference
     private ResourceBundleHelper resourceBundleHelper;
 
+    /**
+     * Activates the helper and stores the bundle context.
+     *
+     * @param componentContext the OSGi component context
+     */
     @Activate
     public void activate(ComponentContext componentContext) {
         this.bundleContext = componentContext.getBundleContext();
@@ -192,10 +197,20 @@ public class LocalizationHelper {
         return result;
     }
 
+    /**
+     * Sets the OSGi bundle context.
+     *
+     * @param bundleContext the bundle context
+     */
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
 
+    /**
+     * Sets the resource bundle helper.
+     *
+     * @param resourceBundleHelper the resource bundle helper
+     */
     public void setResourceBundleHelper(ResourceBundleHelper resourceBundleHelper) {
         this.resourceBundleHelper = resourceBundleHelper;
     }

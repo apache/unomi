@@ -17,10 +17,6 @@
 
 package org.apache.unomi.rest.endpoints;
 
-/**
- * Created by amidani on 24/03/2017.
- */
-
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.lists.UserList;
@@ -35,7 +31,9 @@ import javax.ws.rs.core.MediaType;
 import java.util.List;
 
 /**
- * A JAX-RS endpoint to manage {@link UserList}s.
+ * JAX-RS endpoint for static {@link UserList} CRUD and membership management.
+ * Delegates to {@link UserListService} so marketers can maintain fixed audience
+ * lists used by campaigns and exports.
  */
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -52,25 +50,29 @@ public class UserListServiceEndPoint {
     @Reference
     private UserListService userListService;
 
+    /**
+     * Creates the user list service endpoint.
+     */
     public UserListServiceEndPoint() {
         LOGGER.info("Initializing user lists service endpoint...");
     }
 
+    /**
+     * Sets the user list service.
+     *
+     * @param userListService the user list service
+     */
     public void setUserListService(UserListService userListService) {
         this.userListService = userListService;
     }
 
     /**
-     * Retrieves the 50 first {@link UserList} metadatas.
+     * Returns user list metadata with paging and optional sorting.
      *
-     * @param offset zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
-     * @param size   a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *               elements according to the property order in the
-     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     *
-     * @return a List of the 50 first {@link UserList} metadata
+     * @param offset zero-based index of the first result
+     * @param size maximum number of results to return, or {@code -1} for all matches
+     * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
+     * @return matching user list metadata
      */
     @GET
     @Path("/")

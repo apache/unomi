@@ -52,18 +52,28 @@ public class RulesServiceEndPoint {
     @Reference
     private RulesService rulesService;
 
+    /**
+     * Creates the rules service endpoint.
+     */
     public RulesServiceEndPoint() {
         LOGGER.info("Initializing rule service endpoint...");
     }
 
+    /**
+     * Sets the rules service.
+     *
+     * @param rulesService the rules service
+     */
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
     }
 
     /**
-     * Retrieves the metadata for all known rules.
-     * Note that it only includes the rules in memory, not those persisted in storage.
-     * @return the Set of known metadata
+     * Returns metadata for all in-memory rules.
+     * <p>
+     * Note that this includes only rules currently loaded in memory, not every rule in storage.
+     *
+     * @return known rule metadata
      */
     @GET
     @Path("/")
@@ -83,9 +93,9 @@ public class RulesServiceEndPoint {
     }
 
     /**
-     * Retrieves the rule statistics for all known rules.
+     * Returns execution statistics for all known rules.
      *
-     * @return a map that contains the rule key as a key and as the value a @RuleStatistics object.
+     * @return rule ID to statistics mappings
      */
     @GET
     @Path("/statistics")
@@ -94,7 +104,7 @@ public class RulesServiceEndPoint {
     }
 
     /**
-     * Deletes all the rule statistics, which basically resets them to 0.
+     * Resets execution statistics for all rules to zero.
      */
     @DELETE
     @Path("/statistics")
@@ -103,10 +113,10 @@ public class RulesServiceEndPoint {
     }
 
     /**
-     * Retrieves rule metadatas for rules matching the specified {@link Query}.
+     * Returns rule metadata matching the given query.
      *
-     * @param query the query the rules which metadata we want to retrieve must match
-     * @return a {@link PartialList} of rules metadata for the rules matching the specified query
+     * @param query the query rules must match
+     * @return a paged list of matching rule metadata
      */
     @POST
     @Path("/query")
@@ -115,10 +125,10 @@ public class RulesServiceEndPoint {
     }
 
     /**
-     * Retrieves rule details for rules matching the specified query.
+     * Returns full rule definitions matching the given query.
      *
-     * @param query the query specifying which rules to retrieve
-     * @return a {@link PartialList} of rule details for the rules matching the specified query
+     * @param query the query specifying which rules to include
+     * @return a paged list of matching rules
      */
     @POST
     @Path("/query/detailed")
@@ -127,10 +137,10 @@ public class RulesServiceEndPoint {
     }
 
     /**
-     * Retrieves the rule identified by the specified identifier.
+     * Returns the rule with the given ID.
      *
-     * @param ruleId the identifier of the rule we want to retrieve
-     * @return the rule identified by the specified identifier or {@code null} if no such rule exists.
+     * @param ruleId the rule identifier
+     * @return the rule, or {@code null} when it does not exist
      */
     @GET
     @Path("/{ruleId}")
@@ -139,10 +149,10 @@ public class RulesServiceEndPoint {
     }
 
     /**
-     * Retrieves the statistics for the rule with the specified identifier
+     * Returns execution statistics for the rule with the given ID.
      *
-     * @param ruleId the identifier of the rule we want to retrieve
-     * @return the statistics for the specified rule or {@code null} if no such rule exists.
+     * @param ruleId the rule identifier
+     * @return the rule statistics, or {@code null} when the rule does not exist
      */
     @GET
     @Path("/{ruleId}/statistics")
@@ -162,7 +172,7 @@ public class RulesServiceEndPoint {
     }
 
     /**
-     * TODO: remove
+     * Deprecated maintenance endpoint kept for backward compatibility.
      *
      * @deprecated As of version 1.1.0-incubating, not needed anymore
      */

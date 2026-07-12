@@ -18,7 +18,9 @@
 package org.apache.unomi.api;
 
 /**
- * Object representing a scope.
+ * Named isolation boundary for context data in Unomi.
+ * Profiles, sessions, events, and definitions belong to a scope (often a
+ * site or application) so data from one digital property does not mix with another.
  */
 public class Scope extends MetadataItem {
 
@@ -30,7 +32,7 @@ public class Scope extends MetadataItem {
     public static final String ITEM_TYPE = "scope";
 
     /**
-     * Instantiates a new Scope.
+     * Default constructor.
      */
     public Scope() {
     }

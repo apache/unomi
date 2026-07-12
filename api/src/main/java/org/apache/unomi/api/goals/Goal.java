@@ -42,6 +42,7 @@ import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
  * </ul>
  */
 public class Goal extends MetadataItem implements YamlConvertible {
+    /** The constant string used to identify this object as a goal item type. */
     public static final String ITEM_TYPE = "goal";
     private static final long serialVersionUID = 6131648013470949983L;
     private Condition startEvent;
@@ -50,49 +51,72 @@ public class Goal extends MetadataItem implements YamlConvertible {
 
     private String campaignId;
 
+    /**
+     * Default constructor.
+     */
     public Goal() {
     }
 
+    /**
+     * Creates a goal with the given metadata.
+     *
+     * @param metadata the goal metadata
+     */
     public Goal(Metadata metadata) {
         super(metadata);
     }
 
     /**
-     * Retrieves the {@link Condition} determining the goal's start event if any, used for more complex goals where an action has to be accomplished first before evaluating the
-     * success of the final goal (funnel goal for example).
+     * Optional start condition for funnel-style goals.
+     * When set, goal tracking begins only after this condition is met.
      *
-     * @return the condition associated with the start event for this goal or {@code null} if no such event exists
+     * @return the start condition, or {@code null} if none is configured
      */
     public Condition getStartEvent() {
         return startEvent;
     }
 
+    /**
+     * Sets the optional start condition for funnel-style goals.
+     *
+     * @param startEvent the start condition, or {@code null} to clear it
+     */
     public void setStartEvent(Condition startEvent) {
         this.startEvent = startEvent;
     }
 
     /**
-     * Retrieves the {@link Condition} determining the target event which needs to occur to consider the goal accomplished.
+     * Condition that marks the goal as accomplished when it matches.
      *
-     * @return the condition associated with the event determining if the goal is reached or not
+     * @return the target condition
      */
     public Condition getTargetEvent() {
         return targetEvent;
     }
 
+    /**
+     * Sets the condition that marks the goal as accomplished.
+     *
+     * @param targetEvent the target condition, or {@code null} to clear it
+     */
     public void setTargetEvent(Condition targetEvent) {
         this.targetEvent = targetEvent;
     }
 
     /**
-     * Retrieves the identifier of the campaign this goal is part of, if any.
+     * Campaign id when this goal is scoped to a campaign.
      *
-     * @return the identifier of the campaign this goal is part of, or {@code null} if this goal is not part of any campaign
+     * @return the campaign id, or {@code null} for scope-level goals
      */
     public String getCampaignId() {
         return campaignId;
     }
 
+    /**
+     * Sets the campaign id for campaign-scoped goals.
+     *
+     * @param campaignId the campaign id, or {@code null} for scope-level goals
+     */
     public void setCampaignId(String campaignId) {
         this.campaignId = campaignId;
     }

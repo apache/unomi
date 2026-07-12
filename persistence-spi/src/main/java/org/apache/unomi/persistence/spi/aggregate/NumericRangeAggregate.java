@@ -40,6 +40,8 @@ public class NumericRangeAggregate extends BaseAggregate{
 
     /**
      * Returns the configured numeric ranges.
+     *
+     * @return the numeric ranges
      */
     public List<NumericRange> getRanges() {
         return ranges;
@@ -47,6 +49,8 @@ public class NumericRangeAggregate extends BaseAggregate{
 
     /**
      * Sets the numeric ranges to use for bucketing.
+     *
+     * @param ranges the numeric ranges
      */
     public void setRanges(List<NumericRange> ranges) {
         this.ranges = ranges;

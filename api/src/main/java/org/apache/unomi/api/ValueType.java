@@ -23,7 +23,9 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * A value type to be used to constrain property values.
+ * Definition of allowed values for a {@link PropertyType}.
+ * Value types describe validation rules, ranges, and serializers so profile
+ * and session properties stay consistent with their schema.
  */
 public class ValueType implements PluginType, Serializable {
 
@@ -34,42 +36,43 @@ public class ValueType implements PluginType, Serializable {
     private Set<String> tags = new LinkedHashSet<>();
 
     /**
-     * Instantiates a new Value type.
+     * Default constructor.
      */
     public ValueType() {
     }
 
     /**
-     * Instantiates a new Value type with the specified identifier.
+     * Creates a value type with the given identifier.
      *
-     * @param id the identifier
+     * @param id the value type id
      */
     public ValueType(String id) {
         this.id = id;
     }
 
     /**
-     * Retrieves this ValueType's identifier.
+     * Value type identifier.
      *
-     * @return this ValueType's identifier
+     * @return the value type id
      */
     public String getId() {
         return id;
     }
 
     /**
-     * Sets this ValueType's identifier.
+     * Sets the value type identifier.
      *
-     * @param id this ValueType's identifier
+     * @param id the value type id
      */
     public void setId(String id) {
         this.id = id;
     }
 
     /**
-     * Retrieves the {@link java.util.ResourceBundle} key used to localize this ValueType's name.
+     * Resource bundle key for localizing the display name.
+     * Defaults to {@code type.<id>} when unset.
      *
-     * @return the {@link java.util.ResourceBundle} key used to localize this ValueType's name
+     * @return the name localization key
      */
     public String getNameKey() {
         if (nameKey == null) {
@@ -79,18 +82,19 @@ public class ValueType implements PluginType, Serializable {
     }
 
     /**
-     * Sets the name key.
+     * Sets the name localization key.
      *
-     * @param nameKey the name key
+     * @param nameKey the resource bundle key
      */
     public void setNameKey(String nameKey) {
         this.nameKey = nameKey;
     }
 
     /**
-     * Retrieves the {@link java.util.ResourceBundle} key used to localize this ValueType's description.
+     * Resource bundle key for localizing the description.
+     * Defaults to {@code type.<id>.description} when unset.
      *
-     * @return the {@link java.util.ResourceBundle} key used to localize this ValueType's name
+     * @return the description localization key
      */
     public String getDescriptionKey() {
         if (descriptionKey == null) {
@@ -100,36 +104,44 @@ public class ValueType implements PluginType, Serializable {
     }
 
     /**
-     * Sets the description key.
+     * Sets the description localization key.
      *
-     * @param descriptionKey the description key
+     * @param descriptionKey the resource bundle key
      */
     public void setDescriptionKey(String descriptionKey) {
         this.descriptionKey = descriptionKey;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     @XmlTransient
     public long getPluginId() {
         return pluginId;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
     }
 
     /**
-     * Retrieves the tags used by this ValueType.
+     * Tags associated with this value type.
      *
-     * @return the tags used by this ValueType
+     * @return the tag names
      */
     public Set<String> getTags() {
         return tags;
     }
 
     /**
-     * Sets the tags used by this ValueType.
+     * Sets the tags for this value type.
      *
-     * @param tags the tags used by this ValueType
+     * @param tags the tag names
      */
     public void setTags(Set<String> tags) {
         this.tags = tags;

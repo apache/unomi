@@ -29,69 +29,61 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A service to provide persistence and retrieval of context server entities.
+ * Persistence SPI for storing and querying Unomi context-server entities.
  */
 public interface PersistenceService {
 
     /**
-     * A unique name to identify the persistence service.
-     * @return a string containing the unique name for the persistence service.
+     * Returns the unique name of this persistence backend implementation.
+     *
+     * @return the persistence service name
      */
     String getName();
 
     /**
-     * Retrieves all known items of the specified class.
-     * <em>WARNING</em>: this method can be quite computationally intensive and calling the paged version {@link #getAllItems(Class, int, int, String)} is preferred.
+     * Loads all items of the given type.
+     * <em>WARNING</em>: this method can be expensive; prefer the paged overload {@link #getAllItems(Class, int, int, String)}.
      *
-     * @param <T>   the type of the {@link Item}s we want to retrieve
-     * @param clazz the {@link Item} subclass of entities we want to retrieve
-     * @return a list of all known items with the given type
+     * @param <T> the item type
+     * @param clazz the {@link Item} subclass to load
+     * @return all known items of that type
      */
     <T extends Item> List<T> getAllItems(Class<T> clazz);
 
     /**
-     * Retrieves all known items of the specified class, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them are retrieved,
-     * starting with the {@code offset}-th one.
+     * Loads a paged slice of all items of the given type.
      * <p>
-     * TODO: use a Query object instead of distinct parameters?
+     * Future API versions may replace these parameters with a {@link org.apache.unomi.api.query.Query} object.
      *
-     * @param <T>    the type of the {@link Item}s we want to retrieve
-     * @param clazz  the {@link Item} subclass of entities we want to retrieve
-     * @param offset zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
-     * @param size   a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *               elements according to the property order in the
-     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of pages items with the given type
+     * @param <T> the item type
+     * @param clazz the {@link Item} subclass to load
+     * @param offset zero-based index of the first result
+     * @param size maximum number of results to return, or {@code -1} for all matches
+     * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
+     * @return a paged list of items
      */
     <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy);
 
     /**
-     * Retrieves all known items of the specified class, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them are retrieved,
-     * starting with the {@code offset}-th one.
+     * Loads a paged slice of all items of the given type, optionally using a scroll query.
      * <p>
-     * TODO: use a Query object instead of distinct parameters?
+     * Future API versions may replace these parameters with a {@link org.apache.unomi.api.query.Query} object.
      *
-     * @param <T>                the type of the {@link Item}s we want to retrieve
-     * @param clazz              the {@link Item} subclass of entities we want to retrieve
-     * @param offset             zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
-     * @param size               a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy             an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *                           elements according to the property order in the
-     *                           String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *                           a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @param scrollTimeValidity the time the scrolling query should stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
-     *                           *                     the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
-     * @return a {@link PartialList} of pages items with the given type
+     * @param <T> the item type
+     * @param clazz the {@link Item} subclass to load
+     * @param offset zero-based index of the first result
+     * @param size maximum number of results to return, or {@code -1} for all matches
+     * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
+     * @param scrollTimeValidity scroll context lifetime, using Elasticsearch time-unit syntax
+     * @return a paged list of items, with scroll metadata when scrolling is enabled
      */
     <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy, String scrollTimeValidity);
 
     /**
-     * Return true if the item which is saved in the persistence service is consistent
+     * Returns whether the item is consistent with the persistence backend schema.
      *
-     * @param item the item to the check if consistent
-     * @return {@code true} if the item is consistent, false otherwise
+     * @param item the item to validate
+     * @return {@code true} when the item is consistent
      */
     boolean isConsistent(Item item);
 
@@ -109,6 +101,7 @@ public interface PersistenceService {
      * @param item        the item to persist
      * @param useBatching whether to use batching or not for saving the item. If activating there may be a delay between
      *                    the call to this method and the actual saving in the persistence backend.
+     *
      * @return {@code true} if the item was properly persisted, {@code false} otherwise
      */
     boolean save(Item item, boolean useBatching);
@@ -274,20 +267,20 @@ public interface PersistenceService {
     boolean updateWithQueryAndStoredScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions);
 
     /**
-     * Store script in the Database for later usage with updateWithQueryAndStoredScript function for example.
+     * Stores inline scripts in the persistence backend for later scripted updates.
      *
-     * @param scripts inline scripts map indexed by id
-     * @return {@code true} if the update was successful, {@code false} otherwise
+     * @param scripts inline scripts keyed by script ID
+     * @return {@code true} when all scripts are stored successfully
      */
     boolean storeScripts(Map<String, String> scripts);
 
     /**
-     * Retrieves the item identified with the specified identifier and with the specified Item subclass if it exists.
+     * Loads an item by ID and type.
      *
-     * @param <T>    the type of the Item subclass we want to retrieve
-     * @param itemId the identifier of the item we want to retrieve
-     * @param clazz  the {@link Item} subclass of the item we want to retrieve
-     * @return the item identified with the specified identifier and with the specified Item subclass if it exists, {@code null} otherwise
+     * @param <T> the item type
+     * @param itemId the item identifier
+     * @param clazz the {@link Item} subclass to load
+     * @return the item, or {@code null} when it does not exist
      */
     <T extends Item> T load(String itemId, Class<T> clazz);
 
@@ -298,11 +291,11 @@ public interface PersistenceService {
     <T extends Item> T load(String itemId, Date dateHint, Class<T> clazz);
 
     /**
-     * Load a custom item type identified by an identifier, an optional date hint and the identifier of the custom item type
+     * Loads a custom item by ID and custom item type.
      *
-     * @param itemId         the identifier of the custom type we want to retrieve
-     * @param customItemType an identifier of the custom item type to load
-     * @return the CustomItem instance with the specified identifier and the custom item type if it exists, {@code null} otherwise
+     * @param itemId the custom item identifier
+     * @param customItemType the custom item type identifier
+     * @return the custom item, or {@code null} when it does not exist
      */
     default CustomItem loadCustomItem(String itemId, String customItemType) {
         return loadCustomItem(itemId, null, customItemType);
@@ -325,11 +318,11 @@ public interface PersistenceService {
     <T extends Item> boolean remove(String itemId, Class<T> clazz);
 
     /**
-     * Remove a custom item identified by the custom item identifier and the custom item type identifier
+     * Deletes a custom item by ID and custom item type.
      *
-     * @param itemId         the identifier of the custom item to be removed
-     * @param customItemType the name of the custom item type
-     * @return {@code true} if the deletion was successful, {@code false} otherwise
+     * @param itemId the custom item identifier
+     * @param customItemType the custom item type identifier
+     * @return {@code true} when deletion succeeds
      */
     boolean removeCustomItem(String itemId, String customItemType);
 
@@ -344,45 +337,42 @@ public interface PersistenceService {
     <T extends Item> boolean removeByQuery(Condition query, Class<T> clazz);
 
     /**
-     * Retrieve the type mappings for a given itemType. This method queries the persistence service implementation
-     * to retrieve any type mappings it may have for the specified itemType.
-     * <p>
-     * This method may not return any results if the implementation doesn't support property type mappings
+     * Returns property mappings for the given item type, when supported by the backend.
      *
-     * @param itemType the itemType we want to retrieve the mappings for
-     * @return properties mapping
+     * @param itemType the item type name
+     * @return property name to mapping metadata
      */
     Map<String, Map<String, Object>> getPropertiesMapping(String itemType);
 
     /**
-     * Retrieve the mapping for one specific property for a given type.
+     * Returns the mapping metadata for one property on the given item type.
      *
-     * @param property the property name (can use nested dot notation)
-     * @param itemType the itemType we want to retrieve the mappings for
-     * @return property mapping
+     * @param property the property name, including nested dot notation
+     * @param itemType the item type name
+     * @return property mapping metadata
      */
     Map<String, Object> getPropertyMapping(String property, String itemType);
 
     /**
-     * Create the persistence mapping for specific property for a given type.
+     * Creates or updates the persistence mapping for a property on the given item type.
      *
-     * @param property the PropertyType to create mapping for
-     * @param itemType the itemType we want to retrieve the mappings for
+     * @param property the property type definition
+     * @param itemType the item type name
      */
     void setPropertyMapping(PropertyType property, String itemType);
 
     /**
-     * Create mapping
+     * Creates an index mapping from the given source definition.
      *
-     * @param type   the type
-     * @param source the source
+     * @param type the item or index type
+     * @param source the mapping source definition
      */
     void createMapping(String type, String source);
 
     /**
      * Checks whether the specified item satisfies the provided condition.
      * <p>
-     * TODO: rename to isMatching?
+     * The method name may change in a future release.
      *
      * @param query the condition we're testing the specified item against
      * @param item  the item we're checking against the specified condition
@@ -391,11 +381,11 @@ public interface PersistenceService {
     boolean testMatch(Condition query, Item item);
 
     /**
-     * validates if a condition throws exception at query build.
+     * Returns whether the condition can be compiled for the given item without error.
      *
-     * @param condition the condition we're testing the specified item against
-     * @param item      the item we're checking against the specified condition
-     * @return {@code true} if the item satisfies the condition, {@code false} otherwise
+     * @param condition the condition to validate
+     * @param item the sample item used during validation
+     * @return {@code true} when the condition is valid
      */
     boolean isValidCondition(Condition condition, Item item);
 
@@ -416,7 +406,7 @@ public interface PersistenceService {
     <T extends Item> List<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
 
     /**
-     * Retrieves a list of items with the specified field having the specified values.
+     * Queries items whose field matches any of the given values.
      *
      * @param <T>         the type of the Item subclass we want to retrieve
      * @param fieldName   the name of the field which we want items to have the specified values
@@ -431,7 +421,7 @@ public interface PersistenceService {
     <T extends Item> List<T> query(String fieldName, String[] fieldValues, String sortBy, Class<T> clazz);
 
     /**
-     * Retrieves a list of items with the specified field having the specified value.
+     * Queries items whose field matches the given value.
      *
      * @param <T>        the type of the Item subclass we want to retrieve
      * @param fieldName  the name of the field which we want items to have the specified value
@@ -448,7 +438,7 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size);
 
     /**
-     * Retrieves a list of items with the specified field having the specified value and having at least a field with the specified full text value in it, ordered according to the
+     * Queries items by field value and full-text match, with paging and optional sorting.
      * specified {@code sortBy} String and and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
      *
      * @param <T>        the type of the Item subclass we want to retrieve
@@ -467,7 +457,7 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> queryFullText(String fieldName, String fieldValue, String fulltext, String sortBy, Class<T> clazz, int offset, int size);
 
     /**
-     * Retrieves a list of items having at least a field with the specified full text value in it, ordered according to the specified {@code sortBy} String and and paged: only
+     * Queries items that match a full-text search, with paging and optional sorting.
      * {@code size} of them are retrieved, starting with the {@code offset}-th one.
      *
      * @param <T>      the type of the Item subclass we want to retrieve
@@ -499,7 +489,7 @@ public interface PersistenceService {
     <T extends Item> List<T> query(Condition query, String sortBy, Class<T> clazz);
 
     /**
-     * Retrieves a list of items satisfying the specified {@link Condition}, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them
+     * Queries items that satisfy the condition, with paging and optional sorting.
      * are retrieved, starting with the {@code offset}-th one.
      *
      * @param <T>    the type of the Item subclass we want to retrieve
@@ -516,7 +506,7 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> query(Condition query, String sortBy, Class<T> clazz, int offset, int size);
 
     /**
-     * Retrieves a list of items satisfying the specified {@link Condition}, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them
+     * Queries items that satisfy the condition, with paging and optional sorting.
      * are retrieved, starting with the {@code offset}-th one. If a scroll identifier and time validity are specified, they will be used to perform a scrolling query, meaning
      * that only partial results will be returned, but the scrolling can be continued.
      *
@@ -532,6 +522,7 @@ public interface PersistenceService {
      *                           this will be used as the scrolling window size.
      * @param scrollTimeValidity the time the scrolling query should stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
      *                           the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
+     *
      * @return a {@link PartialList} of items matching the specified criteria, with an scroll identifier and the scroll validity used if a scroll query was requested.
      */
     <T extends Item> PartialList<T> query(Condition query, String sortBy, Class<T> clazz, int offset, int size, String scrollTimeValidity);
@@ -550,7 +541,7 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> continueScrollQuery(Class<T> clazz, String scrollIdentifier, String scrollTimeValidity);
 
     /**
-     * Retrieves a list of items satisfying the specified {@link Condition}, ordered according to the specified
+     * Queries items that satisfy the condition, with paging and optional
      * {@code sortBy} String and paged: only {@code size} of them are retrieved, starting with the
      * {@code offset}-th one. If a scroll identifier and time validity are specified, they will be used to perform a
      * scrolling query, meaning that only partial results will be returned, but the scrolling can be continued.
@@ -566,6 +557,7 @@ public interface PersistenceService {
      *                           this will be used as the scrolling window size.
      * @param scrollTimeValidity the time the scrolling query should stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
      *                           the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
+     *
      * @return a {@link PartialList} of items matching the specified criteria, with an scroll identifier and the scroll validity used if a scroll query was requested.
      */
     PartialList<CustomItem> queryCustomItem(Condition query, String sortBy, String customItemType, int offset, int size, String scrollTimeValidity);
@@ -577,13 +569,14 @@ public interface PersistenceService {
      * @param scrollIdentifier   a scroll identifier obtained by the execution of a first query and returned in the {@link PartialList} object
      * @param scrollTimeValidity a scroll time validity value for the scroll query to stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
      *                           the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
+     *
      * @return a {@link PartialList} of items matching the specified criteria, with an scroll identifier and the scroll validity used if a scroll query was requested. Note that if
      * there are no more results the list will be empty but not null.
      */
     PartialList<CustomItem> continueCustomItemScrollQuery(String customItemType, String scrollIdentifier, String scrollTimeValidity);
 
     /**
-     * Retrieves the same items as {@code query(query, sortBy, clazz, 0, -1)} with the added constraints that the matching elements must also have at least a field matching the
+     * Queries items that satisfy the condition and a full-text filter.
      * specified full text query.
      *
      * @param <T>      the type of the Item subclass we want to retrieve
@@ -601,7 +594,7 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> queryFullText(String fulltext, Condition query, String sortBy, Class<T> clazz, int offset, int size);
 
     /**
-     * Retrieves the number of items of the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and matching the specified {@link Condition}.
+     * Counts items of the given type that match the condition.
      *
      * @param query    the condition the items must satisfy
      * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
@@ -611,7 +604,7 @@ public interface PersistenceService {
     long queryCount(Condition query, String itemType);
 
     /**
-     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE}.
+     * Counts all items of the given type.
      *
      * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @return the number of items of the specified type
@@ -620,7 +613,7 @@ public interface PersistenceService {
     long getAllItemsCount(String itemType);
 
     /**
-     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} for the given tenant.
+     * Counts all items of the given type for the tenant.
      *
      * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @param tenantId the ID of the tenant whose items should be counted
@@ -630,7 +623,7 @@ public interface PersistenceService {
     long getAllItemsCount(String itemType, String tenantId);
 
     /**
-     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} matching the optional specified condition and
+     * Aggregates item counts for the given type, optionally filtered by condition and
      * aggregated according to the specified {@link BaseAggregate}.
      * Also return the global count of document matching the {@code ITEM_TYPE}
      *
@@ -644,7 +637,7 @@ public interface PersistenceService {
     Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType);
 
     /**
-     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} matching the optional specified condition and
+     * Aggregates item counts for the given type, optionally filtered by condition and
      * aggregated according to the specified {@link BaseAggregate}.
      * This aggregate won't return the global count and should therefore be much faster than {@link #aggregateQuery(Condition, BaseAggregate, String)}
      *
@@ -656,7 +649,7 @@ public interface PersistenceService {
     Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType);
 
     /**
-     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} matching the optional specified condition and
+     * Aggregates item counts for the given type, optionally filtered by condition and
      * aggregated according to the specified {@link BaseAggregate}.
      *
      * @param filter    the condition the items must match or {@code null} if no filtering is needed
@@ -668,15 +661,15 @@ public interface PersistenceService {
     Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType, int size);
 
     /**
-     * Updates the persistence's engine indices if needed.
+     * Refreshes persistence engine indices when required by the backend.
      */
     void refresh();
 
     /**
-     * Updates the persistence's engine specific index.
+     * Refreshes the index for the item type represented by the given class.
      *
-     * @param clazz    will use an index by class type
-     * @param <T>      a class that extends Item
+     * @param <T> an {@link Item} subclass
+     * @param clazz the item class whose index should be refreshed
      */
     default <T extends Item> void refreshIndex(Class<T> clazz) {
         refreshIndex(clazz, null);
@@ -689,7 +682,7 @@ public interface PersistenceService {
     <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint);
 
     /**
-     * deprecated: (use: purgeTimeBasedItems instead)
+     * @deprecated use {@link #purgeTimeBasedItems(int, Class)} instead
      */
     @Deprecated
     void purge(Date date);
@@ -698,13 +691,14 @@ public interface PersistenceService {
      * Purges time based data in the context server up to the specified days number of existence.
      * (This only works for time based data stored in rolling over indices, it have no effect on other types)
      *
+     * @param <T> the item type
      * @param existsNumberOfDays the number of days
      * @param clazz the item type to be purged
      */
     <T extends Item> void purgeTimeBasedItems(int existsNumberOfDays, Class<T> clazz);
 
     /**
-     * Retrieves all items of the specified Item subclass which specified ranged property is within the specified bounds, ordered according to the specified {@code sortBy} String
+     * Queries items whose ranged property falls within the given bounds, with paging and optional sorting.
      * and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
      * <p>
      * Both bounds are inclusive: items whose property value equals {@code from} or {@code to} are included in the results. Either bound may be {@code null} to leave that side
@@ -725,7 +719,7 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> rangeQuery(String fieldName, String from, String to, String sortBy, Class<T> clazz, int offset, int size);
 
     /**
-     * Retrieves the specified metrics for the specified field of items of the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and matching the
+     * Computes numeric metrics for a field on items that match the condition and type.
      * specified {@link Condition}.
      *
      * @param condition the condition the items must satisfy
@@ -740,7 +734,7 @@ public interface PersistenceService {
     /**
      * Creates an index with for the specified item type in the persistence engine.
      * <p>
-     * TODO: remove from API?
+     * These low-level index operations may be removed from the public API in a future release.
      *
      * @param itemType the item type
      * @return {@code true} if the operation was successful, {@code false} otherwise
@@ -750,7 +744,7 @@ public interface PersistenceService {
     /**
      * Removes the index for the specified item type.
      * <p>
-     * TODO: remove from API?
+     * These low-level index operations may be removed from the public API in a future release.
      *
      * @param itemType the item type
      * @return {@code true} if the operation was successful, {@code false} otherwise
@@ -773,7 +767,7 @@ public interface PersistenceService {
     long calculateStorageSize(String tenantId);
 
     /**
-     * Retrieves the number of API calls made by a specific tenant.
+     * Returns the number of API calls recorded for the tenant.
      *
      * @param tenantId the ID of the tenant
      * @return the number of API calls

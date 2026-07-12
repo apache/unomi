@@ -26,37 +26,39 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A service to fulfill personalization request.
+ * Resolves which content variants to show a visitor.
+ * Evaluates personalization requests against profiles, sessions, and
+ * segments, returning {@link PersonalizationResult} with matching content ids.
  */
 public interface PersonalizationService {
 
     /**
-     * Check if an item is visible for the specified profile and session
+     * Evaluates whether personalized content is visible for the given profile and session.
      *
-     * @param profile The profile
-     * @param session The session
-     * @param personalizedContent Personalized content, containing a list of filters
-     * @return If the content is visible or not
+     * @param profile visitor profile
+     * @param session visitor session
+     * @param personalizedContent content definition with filters to evaluate
+     * @return {@code true} if the content should be shown
      */
     boolean filter(Profile profile, Session session, PersonalizedContent personalizedContent);
 
     /**
-     * Get the best match among a list of items, for the specified profile and session
+     * Selects the best-matching content variant for the given profile and session.
      *
-     * @param profile The profile
-     * @param session The session
-     * @param personalizationRequest Personalization request, containing the list of variants and the required strategy
-     * @return The id of the best-matching variant
+     * @param profile visitor profile
+     * @param session visitor session
+     * @param personalizationRequest request with variants and selection strategy
+     * @return id of the best-matching variant
      */
     String bestMatch(Profile profile, Session session, PersonalizationRequest personalizationRequest);
 
     /**
-     * Get a personalized list, filtered and sorted, based on the profile and session
+     * Filters and ranks content variants for the given profile and session.
      *
-     * @param profile The profile
-     * @param session The session
-     * @param personalizationRequest Personalization request, containing the list of variants and the required strategy
-     * @return List of ids, based on user profile
+     * @param profile visitor profile
+     * @param session visitor session
+     * @param personalizationRequest request with variants and selection strategy
+     * @return ordered personalization result for the visitor
      */
     PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationRequest personalizationRequest);
 
@@ -69,34 +71,74 @@ public interface PersonalizationService {
         private Map<String, Object> strategyOptions;
         private List<PersonalizedContent> contents;
 
+        /**
+         * Request identifier.
+         *
+         * @return request id
+         */
         public String getId() {
             return id;
         }
 
+        /**
+         * Sets the request identifier.
+         *
+         * @param id request id
+         */
         public void setId(String id) {
             this.id = id;
         }
 
+        /**
+         * Personalization strategy name (for example {@code alwaysSet}).
+         *
+         * @return strategy name
+         */
         public String getStrategy() {
             return strategy;
         }
 
+        /**
+         * Sets the personalization strategy name.
+         *
+         * @param strategy strategy name (for example {@code alwaysSet})
+         */
         public void setStrategy(String strategy) {
             this.strategy = strategy;
         }
 
+        /**
+         * Content variants included in this request.
+         *
+         * @return personalized content items
+         */
         public List<PersonalizedContent> getContents() {
             return contents;
         }
 
+        /**
+         * Sets the content variants for this request.
+         *
+         * @param contents personalized content items
+         */
         public void setContents(List<PersonalizedContent> contents) {
             this.contents = contents;
         }
 
+        /**
+         * Strategy-specific options passed to the personalization engine.
+         *
+         * @return strategy options, or {@code null} if none
+         */
         public Map<String, Object> getStrategyOptions() {
             return strategyOptions;
         }
 
+        /**
+         * Sets strategy-specific options for this request.
+         *
+         * @param strategyOptions strategy options map
+         */
         public void setStrategyOptions(Map<String, Object> strategyOptions) {
             this.strategyOptions = strategyOptions;
         }
@@ -111,18 +153,18 @@ public interface PersonalizationService {
         private Map<String,Object> properties;
 
         /**
-         * Retrieves the filter identifier associated with this content filtering definition.
+         * Content variant identifier.
          *
-         * @return the filter identifier associated with this content filtering definition
+         * @return content id
          */
         public String getId() {
             return id;
         }
 
         /**
-         * Sets the filter identifier associated with this content filtering definition.
+         * Sets the content variant identifier.
          *
-         * @param id the filter identifier associated with this content filtering definition
+         * @param id content id
          */
         public void setId(String id) {
             this.id = id;
@@ -130,7 +172,6 @@ public interface PersonalizationService {
 
         /**
          * Sets the filter identifier associated with this content filtering definition.
-         *
          * @param filterid the filter identifier associated with this content filtering definition
          * @deprecated As of version 1.3.0-incubating, please use {@link #setId(String)} instead
          */
@@ -140,27 +181,37 @@ public interface PersonalizationService {
         }
 
         /**
-         * Retrieves the filters.
+         * Filters applied to this content variant.
          *
-         * @return the filters
+         * @return filter definitions
          */
         public List<Filter> getFilters() {
             return filters;
         }
 
         /**
-         * Sets the filters.
+         * Sets the filters for this content variant.
          *
-         * @param filters the filters
+         * @param filters filter definitions
          */
         public void setFilters(List<Filter> filters) {
             this.filters = filters;
         }
 
+        /**
+         * Additional properties attached to this content variant.
+         *
+         * @return content properties
+         */
         public Map<String, Object> getProperties() {
             return properties;
         }
 
+        /**
+         * Sets additional properties for this content variant.
+         *
+         * @param properties content properties
+         */
         public void setProperties(Map<String, Object> properties) {
             this.properties = properties;
         }
@@ -175,45 +226,55 @@ public interface PersonalizationService {
         private Map<String,Object> properties;
 
         /**
-         * Retrieves the list of targets this filter applies on.
+         * Targets this filter should be evaluated against.
          *
-         * @return the applies on
+         * @return applicable targets
          */
         public List<Target> getAppliesOn() {
             return appliesOn;
         }
 
         /**
-         * Specifies which targets this filter applies on.
+         * Sets the targets this filter applies to.
          *
-         * @param appliesOn the list of {@link Target} this filter should be applied on
+         * @param appliesOn applicable targets
          */
         public void setAppliesOn(List<Target> appliesOn) {
             this.appliesOn = appliesOn;
         }
 
         /**
-         * Retrieves the condition associated with this filter.
+         * Condition evaluated when applying this filter.
          *
-         * @return the condition associated with this filter
+         * @return filter condition
          */
         public Condition getCondition() {
             return condition;
         }
 
         /**
-         * Sets the condition associated with this filter.
+         * Sets the condition for this filter.
          *
-         * @param condition the condition associated with this filter
+         * @param condition filter condition
          */
         public void setCondition(Condition condition) {
             this.condition = condition;
         }
 
+        /**
+         * Additional properties for this filter.
+         *
+         * @return filter properties map
+         */
         public Map<String, Object> getProperties() {
             return properties;
         }
 
+        /**
+         * Sets additional properties for this filter.
+         *
+         * @param properties filter properties map
+         */
         public void setProperties(Map<String, Object> properties) {
             this.properties = properties;
         }
@@ -227,36 +288,36 @@ public interface PersonalizationService {
         private List<String> values;
 
         /**
-         * Retrieves the target.
+         * Target dimension name (for example profile property or segment).
          *
-         * @return the target
+         * @return target name
          */
         public String getTarget() {
             return target;
         }
 
         /**
-         * Sets the target.
+         * Sets the target dimension name.
          *
-         * @param target the target
+         * @param target target name
          */
         public void setTarget(String target) {
             this.target = target;
         }
 
         /**
-         * Retrieves the values.
+         * Allowed values for this target dimension.
          *
-         * @return the values
+         * @return target values
          */
         public List<String> getValues() {
             return values;
         }
 
         /**
-         * Sets the values.
+         * Sets allowed values for this target dimension.
          *
-         * @param values the values
+         * @param values target values
          */
         public void setValues(List<String> values) {
             this.values = values;
