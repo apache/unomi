@@ -31,7 +31,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * A service to retrieve definition information about core context server entities such as conditions, actions and values.
+ * Registry of built-in and plugin condition, action, and value type definitions.
+ * Used when loading rules from JSON, validating conditions, and resolving
+ * type metadata in the administration UI.
  */
 public interface DefinitionsService {
     /**

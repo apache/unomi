@@ -23,7 +23,8 @@ import org.apache.unomi.api.ServerInfo;
 import java.util.List;
 
 /**
- * This service regroups all privacy-related operations
+ * Entry point for consent, anonymization, and privacy-related operations.
+ * Wraps profile updates required for GDPR-style requests and consent tracking.
  */
 public interface PrivacyService {
 

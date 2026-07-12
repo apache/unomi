@@ -50,6 +50,15 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     private static final Map<Class,String> itemTypeCache = new ConcurrentHashMap<>();
 
+    /**
+     * Retrieves the type string for a given class by attempting to read a
+     * public static String constant named {@code ITEM_TYPE} from that class.
+     * This method caches the result based on the provided class to improve
+     * performance during repeated calls.
+     * @param clazz The Class object whose item type is required.
+     * @return A string representation of the Item's type, or null if the
+     * {@code ITEM_TYPE} field cannot be found or accessed.
+     */
     public static String getItemType(Class clazz) {
         String itemType = itemTypeCache.get(clazz);
         if (itemType != null) {
@@ -67,10 +76,30 @@ public abstract class Item implements Serializable, YamlConvertible {
         return null;
     }
 
+    /**
+     * Protected field representing the unique identifier used to identify this
+     * Item when persisted or referenced.
+     */
     protected String itemId;
+    /**
+     * Protected field storing the type of this Item. This value is typically
+     * derived from a constant defined within the implementing class.
+     */
     protected String itemType;
+    /**
+     * Protected field defining the scope of this Item, allowing related items
+     * to be grouped together during processing or retrieval.
+     */
     protected String scope;
+    /**
+     * Protected field storing the current version number of this Item. This is
+     * used for tracking changes over time.
+     */
     protected Long version;
+    /**
+     * A protected map used to store additional, non-core metadata about this
+     * Item using string keys and arbitrary object values.
+     */
     protected Map<String, Object> systemMetadata = new HashMap<>();
     private String tenantId;
 
@@ -82,6 +111,12 @@ public abstract class Item implements Serializable, YamlConvertible {
     private String sourceInstanceId;
     private Date lastSyncDate;
 
+    /**
+     * Default constructor that initializes the Item's type by calling
+     * {@link #getItemType(Class)} and sets up initial audit metadata fields.
+     * If the implementing class does not provide a public static String
+     * constant named {@code ITEM_TYPE}, an error is logged.
+     */
     public Item() {
         this.itemType = getItemType(this.getClass());
         if (itemType == null) {
@@ -90,6 +125,11 @@ public abstract class Item implements Serializable, YamlConvertible {
         initializeAuditMetadata();
     }
 
+    /**
+     * Constructor that initializes the Item using the default mechanism and
+     * explicitly sets the item's unique identifier.
+     * @param itemId The unique ID to assign to this Item upon creation.
+     */
     public Item(String itemId) {
         this();
         this.itemId = itemId;
@@ -103,13 +143,17 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Retrieves the Item's identifier used to uniquely identify this Item when persisted or when referred to. An Item's identifier must be unique among Items with the same type.
-     *
      * @return a String representation of the identifier, no particular format is prescribed as long as it is guaranteed unique for this particular Item.
      */
     public String getItemId() {
         return itemId;
     }
 
+    /**
+     * Sets the unique identifier for this Item. This ID is used when persisting
+     * or referencing the item in various contexts (e.g., profiles, sessions).
+     * @param itemId the unique identifier for the Item
+     */
     public void setItemId(String itemId) {
         this.itemId = itemId;
     }
@@ -117,7 +161,6 @@ public abstract class Item implements Serializable, YamlConvertible {
     /**
      * Retrieves the Item's type used to assert metadata and structure common to Items of this type, notably for persistence purposes. The Item's type <strong>must</strong>
      * match the value defined by the implementation's {@code ITEM_TYPE} public constant.
-     *
      * @return a String representation of this Item's type, must equal the {@code ITEM_TYPE} value
      */
     public String getItemType() {
@@ -126,7 +169,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Sets the Item's type.
-     *
      * @param itemType the Item's type
      */
     public void setItemType(String itemType) {
@@ -135,7 +177,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Retrieves the Item's scope.
-     *
      * @return the Item's scope name
      */
     public String getScope() {
@@ -144,7 +185,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Sets the Item's scope.
-     *
      * @param scope the Item's scope
      */
     public void setScope(String scope) {
@@ -166,17 +206,25 @@ public abstract class Item implements Serializable, YamlConvertible {
         return itemId != null ? itemId.hashCode() : 0;
     }
 
+    /**
+     * Retrieves the current version number of the Item.
+     * @return a {@link Long} representing the version of this Item.
+     */
     public Long getVersion() {
         return version;
     }
 
+    /**
+     * Sets the version number of the Item. This is typically used when updating
+     * an existing item's state.
+     * @param version the new version to set
+     */
     public void setVersion(Long version) {
         this.version = version;
     }
 
     /**
      * Returns the system metadata for the given key.
-     *
      * @param key the key
      * @return the system metadata for the given key
      */
@@ -186,7 +234,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Sets the system metadata for the given key.
-     *
      * @param key the key
      * @param value the value
      */
@@ -194,40 +241,51 @@ public abstract class Item implements Serializable, YamlConvertible {
         systemMetadata.put(key, value);
     }
 
+    /**
+     * Retrieves the unique identifier of the tenant associated with this Item,
+     * useful for context management and logging.
+     * @return the tenant ID as a {@link String}.
+     */
     public String getTenantId() {
         return tenantId;
     }
 
     /**
      * Sets the tenant ID.
-     *
      * @param tenantId the tenant ID
      */
     public void setTenantId(String tenantId) {
         this.tenantId = tenantId;
     }
 
-    // Audit metadata getters and setters
+    /**
+     * Retrieves the identifier of the user or system that originally created
+     * this Item. This is part of the item's audit metadata.
+     * @return the creator's ID as a {@link String}.
+     */
     public String getCreatedBy() {
         return createdBy;
     }
 
     /**
      * Sets the created by.
-     *
      * @param createdBy the created by
      */
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
     }
 
+    /**
+     * Retrieves the identifier of the user or system that last modified this
+     * Item. This is part of the item's audit metadata.
+     * @return the last modifier's ID as a {@link String}.
+     */
     public String getLastModifiedBy() {
         return lastModifiedBy;
     }
 
     /**
      * Sets the last modified by.
-     *
      * @param lastModifiedBy the last modified by
      */
     public void setLastModifiedBy(String lastModifiedBy) {
@@ -236,7 +294,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Returns the date when this item was created.
-     *
      * @return the date when this item was created
      */
     public Date getCreationDate() {
@@ -245,7 +302,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Sets the date when this item was created.
-     *
      * @param creationDate the creation date
      */
     public void setCreationDate(Date creationDate) {
@@ -254,7 +310,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Returns the date when this item was last modified.
-     *
      * @return the date when this item was last modified
      */
     public Date getLastModificationDate() {
@@ -263,7 +318,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Sets the date when this item was last modified.
-     *
      * @param lastModificationDate the last modification date
      */
     public void setLastModificationDate(Date lastModificationDate) {
@@ -272,7 +326,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Returns the source instance ID.
-     *
      * @return the source instance ID
      */
     public String getSourceInstanceId() {
@@ -281,7 +334,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Sets the source instance ID.
-     *
      * @param sourceInstanceId the source instance ID
      */
     public void setSourceInstanceId(String sourceInstanceId) {
@@ -290,7 +342,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Returns the last synchronization date.
-     *
      * @return the last synchronization date
      */
     public Date getLastSyncDate() {
@@ -299,7 +350,6 @@ public abstract class Item implements Serializable, YamlConvertible {
 
     /**
      * Sets the last synchronization date.
-     *
      * @param lastSyncDate the last synchronization date
      */
     public void setLastSyncDate(Date lastSyncDate) {
@@ -309,7 +359,6 @@ public abstract class Item implements Serializable, YamlConvertible {
     /**
      * Converts this item to a Map structure for YAML output.
      * Implements YamlConvertible interface with circular reference detection.
-     *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
      * @return a Map representation of this item
      */

@@ -23,13 +23,26 @@ package org.apache.unomi.api;
  */
 public class Persona extends Profile {
 
+    /**
+     * The fixed item type identifier used when representing a persona object.
+     */
     public static final String ITEM_TYPE = "persona";
     private static final long serialVersionUID = -1239061113528609426L;
 
+    /**
+     * Constructs a new, default {@link Persona} instance.
+     * This constructor initializes the persona without an explicit ID,
+     * allowing the item ID to potentially be set subsequently.
+     */
     public Persona() {
         super();
     }
 
+    /**
+     * Constructs a new {@link Persona} instance with the
+     * specified unique identifier.
+     * @param personaId The unique ID to assign to this persona.
+     */
     public Persona(String personaId) {
         super(personaId);
     }

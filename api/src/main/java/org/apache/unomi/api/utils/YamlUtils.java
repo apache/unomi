@@ -210,6 +210,7 @@ public class YamlUtils {
     /**
      * Converts a Set to a sorted List for YAML output.
      *
+     * @param <T> the element type, which must be {@link Comparable}
      * @param set the set to convert
      * @return a sorted list, or null if the set is null or empty
      */
@@ -223,6 +224,8 @@ public class YamlUtils {
     /**
      * Converts a Set to a sorted List using a mapper function.
      *
+     * @param <T> the source element type
+     * @param <R> the mapped element type, which must be {@link Comparable}
      * @param set the set to convert
      * @param mapper the mapper function (must not be null)
      * @return a sorted list, or null if the set is null or empty

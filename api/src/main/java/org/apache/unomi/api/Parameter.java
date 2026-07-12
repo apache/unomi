@@ -44,35 +44,71 @@ public class Parameter implements Serializable, YamlConvertible {
     private Object defaultValue;
     private ConditionValidation validation;
 
+    /**
+     * Constructs a default {@link Parameter} instance.
+     */
     public Parameter() {
     }
 
+    /**
+     * Constructs a {@link Parameter} with specified
+     * identification and type details.
+     * @param id The unique identifier for this parameter.
+     * @param type The data type of the parameter (e.g., "string", "integer").
+     * @param multivalued Indicates if the parameter can hold multiple values.
+     */
     public Parameter(String id, String type, boolean multivalued) {
         this.id = id;
         this.type = type;
         this.multivalued = multivalued;
     }
 
+    /**
+     * Returns the unique identifier assigned to this parameter.
+     * @return The ID string of the parameter.
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Sets the unique identifier for this parameter.
+     * @param id The new ID to assign to the parameter.
+     */
     public void setId(String id) {
         this.id = id;
     }
 
+    /**
+     * Retrieves the data type associated with this parameter.
+     * @return The string representation of the parameter's type.
+     */
     public String getType() {
         return type;
     }
 
+    /**
+     * Sets the data type for this parameter.
+     * @param type The new data type string (e.g., "array", "boolean").
+     */
     public void setType(String type) {
         this.type = type;
     }
 
+    /**
+     * Checks if this parameter is configured to handle multiple values.
+     * @return {@code true} if the parameter is multivalued,
+     * {@code false} otherwise.
+     */
     public boolean isMultivalued() {
         return multivalued;
     }
 
+    /**
+     * Sets whether this parameter can hold multiple values.
+     * @param multivalued If {@code true}, the parameter accepts multiple
+     * values; otherwise, it accepts only one.
+     */
     public void setMultivalued(boolean multivalued) {
         this.multivalued = multivalued;
     }
@@ -86,18 +122,37 @@ public class Parameter implements Serializable, YamlConvertible {
         // Avoid errors when deploying old definitions
     }
 
+    /**
+     * Retrieves the default value configured for this parameter.
+     * @return The stored default value, which may be null if none is set.
+     */
     public Object getDefaultValue() {
         return defaultValue;
     }
 
+    /**
+     * Sets the default value that should be used when evaluating conditions
+     * involving this parameter. This value can be of any type.
+     * @param defaultValue the object to be set as the default value
+     */
     public void setDefaultValue(Object defaultValue) {
         this.defaultValue = defaultValue;
     }
 
+    /**
+     * Gets the condition validation rules associated with this parameter.
+     * @return The {@link ConditionValidation} object defining constraints, or
+     * null if none is configured.
+     */
     public ConditionValidation getValidation() {
         return validation;
     }
 
+    /**
+     * Sets the specific condition validation rules for this parameter. This
+     * allows controlling how the parameter behaves within a condition context.
+     * @param validation the new {@link ConditionValidation} object to apply
+     */
     public void setValidation(ConditionValidation validation) {
         this.validation = validation;
     }
@@ -105,7 +160,6 @@ public class Parameter implements Serializable, YamlConvertible {
     /**
      * Converts this parameter to a Map structure for YAML output.
      * Implements YamlConvertible interface.
-     *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
      * @return a Map representation of this parameter
      */

@@ -18,7 +18,9 @@
 package org.apache.unomi.api;
 
 /**
- * The interface for unomi plugins.
+ * Marker interface for Unomi plugin definition types.
+ * Implementations such as {@link PropertyMergeStrategyType} expose an id
+ * and OSGi filter so the runtime can locate the plugin implementation.
  */
 public interface PluginType {
 

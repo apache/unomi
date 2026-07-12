@@ -23,8 +23,9 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * A service to access information about the context server's cluster.
- *
+ * Access point for cluster topology and node health.
+ * Returns {@link ClusterNode} records and coordinates cluster-wide
+ * operations such as viewing which nodes store data.
  */
 public interface ClusterService {
 

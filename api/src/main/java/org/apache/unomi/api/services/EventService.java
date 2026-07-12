@@ -29,7 +29,9 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * A service to publish events, notably issued from user interactions with tracked entities, in the context server.
+ * Publishes and retrieves {@link Event}s in the context server.
+ * Client integrations send visitor actions here; rules and listeners
+ * consume the same event stream.
  */
 public interface EventService {
 

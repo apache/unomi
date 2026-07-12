@@ -280,6 +280,13 @@ public interface SchedulerService {
      */
     Map<String, Long> getAllMetrics();
 
+    /**
+     * Gets a list of scheduled tasks matching the specified status.
+     * This method allows filtering all managed tasks (both persistent and
+     * in-memory) by their current operational state, such as RUNNING or FAILED.
+     * @param taskStatus the desired {@link ScheduledTask.TaskStatus} to filter by
+     * @return tasks that currently match the given status
+     */
     List<ScheduledTask> findTasksByStatus(ScheduledTask.TaskStatus taskStatus);
 
     /**
@@ -291,6 +298,7 @@ public interface SchedulerService {
         /**
          * Sets task parameters.
          * @param parameters task-specific parameters
+         * @return this builder for method chaining
          */
         TaskBuilder withParameters(Map<String, Object> parameters);
 
@@ -298,6 +306,7 @@ public interface SchedulerService {
          * Sets initial execution delay.
          * @param initialDelay delay before first execution
          * @param timeUnit time unit for delay
+         * @return this builder for method chaining
          */
         TaskBuilder withInitialDelay(long initialDelay, TimeUnit timeUnit);
 
@@ -305,54 +314,63 @@ public interface SchedulerService {
          * Sets execution period.
          * @param period time between executions
          * @param timeUnit time unit for period
+         * @return this builder for method chaining
          */
         TaskBuilder withPeriod(long period, TimeUnit timeUnit);
 
         /**
          * Uses fixed delay scheduling.
          * Period is measured from completion of one execution to start of next.
+         * @return this builder for method chaining
          */
         TaskBuilder withFixedDelay();
 
         /**
          * Uses fixed rate scheduling.
          * Period is measured from start of one execution to start of next.
+         * @return this builder for method chaining
          */
         TaskBuilder withFixedRate();
 
         /**
          * Makes this a one-shot task.
          * Task will execute once and then be disabled.
+         * @return this builder for method chaining
          */
         TaskBuilder asOneShot();
 
         /**
          * Disallows parallel execution.
          * Task will use locking to ensure only one instance runs at a time.
+         * @return this builder for method chaining
          */
         TaskBuilder disallowParallelExecution();
 
         /**
          * Sets the task executor.
          * @param executor the executor to handle this task
+         * @return this builder for method chaining
          */
         TaskBuilder withExecutor(TaskExecutor executor);
 
         /**
          * Sets a simple runnable as the executor.
          * @param runnable the code to execute
+         * @return this builder for method chaining
          */
         TaskBuilder withSimpleExecutor(Runnable runnable);
 
         /**
          * Makes this a non-persistent task.
          * Task will only exist in memory on this node.
+         * @return this builder for method chaining
          */
         TaskBuilder nonPersistent();
 
         /**
          * Runs the task on all nodes in the cluster rather than just executor nodes.
          * This is helpful for distributed cache refreshes or local data maintenance.
+         * @return this builder for method chaining
          */
         TaskBuilder runOnAllNodes();
 
@@ -381,6 +399,7 @@ public interface SchedulerService {
          *
          * @param maxRetries maximum number of retries (must be >= 0)
          * @throws IllegalArgumentException if maxRetries is negative
+         * @return this builder for method chaining
          */
         TaskBuilder withMaxRetries(int maxRetries);
 
@@ -397,6 +416,7 @@ public interface SchedulerService {
          * @param delay delay duration (must be >= 0)
          * @param unit time unit for delay
          * @throws IllegalArgumentException if delay is negative
+         * @return this builder for method chaining
          */
         TaskBuilder withRetryDelay(long delay, TimeUnit unit);
 
@@ -404,6 +424,7 @@ public interface SchedulerService {
          * Sets the task dependencies.
          * The task will not execute until all dependencies have completed.
          * @param taskIds IDs of tasks this task depends on
+         * @return this builder for method chaining
          */
         TaskBuilder withDependencies(String... taskIds);
 

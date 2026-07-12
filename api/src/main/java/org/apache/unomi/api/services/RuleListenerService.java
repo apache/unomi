@@ -21,7 +21,9 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.rules.Rule;
 
 /**
- * A service that gets called when a rule's conditions are evaluated or when a rule's actions are executed.
+ * Observer notified when rules are evaluated or executed.
+ * Lets extensions audit rule firing or add diagnostics without changing
+ * core rule processing.
  */
 public interface RuleListenerService {
 
@@ -29,8 +31,11 @@ public interface RuleListenerService {
      * This enum indicates which type of already raised event we are dealing with
      */
     enum AlreadyRaisedFor {
+        /** Rule was already raised for the session. */
         SESSION,
+        /** Rule was already raised for the profile. */
         PROFILE,
+        /** Rule was already raised for the event. */
         EVENT
     }
 

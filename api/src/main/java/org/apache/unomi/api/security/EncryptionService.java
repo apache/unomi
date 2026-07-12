@@ -17,7 +17,8 @@
 package org.apache.unomi.api.security;
 
 /**
- * Service for handling encryption operations.
+ * Encrypts and decrypts sensitive tenant or configuration values.
+ * Implementations hide key management details from the rest of the API.
  */
 public interface EncryptionService {
     /**

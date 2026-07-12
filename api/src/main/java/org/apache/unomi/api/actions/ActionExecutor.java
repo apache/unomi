@@ -21,7 +21,9 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.services.EventService;
 
 /**
- * A piece of code that performs a specified {@link Action}, given a triggering {@link Event}
+ * Runtime implementation of an {@link org.apache.unomi.api.actions.Action}.
+ * When a rule fires, executors perform the configured action (send email,
+ * set property, etc.) for the triggering {@link Event}.
  */
 public interface ActionExecutor {
 

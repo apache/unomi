@@ -20,7 +20,9 @@ package org.apache.unomi.api;
 import java.util.Map;
 
 /**
- * GeoPoint represents a point in geographical coordinate system using latitude and longitude.
+ * A geographic location expressed as latitude and longitude.
+ * Used on profiles, events, and queries when rules or segments need to
+ * match users or actions by location.
  */
 public class GeoPoint {
 

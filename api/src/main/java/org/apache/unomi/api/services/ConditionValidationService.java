@@ -38,7 +38,6 @@ public interface ConditionValidationService {
      * <p>
      * Skips validation for parameters that contain references ({@code parameter::}) or script expressions
      * ({@code script::}). Only literal parameter values are validated.
-     *
      * @param condition the condition to validate
      * @return a list of validation errors, empty when the condition is valid
      */
@@ -58,7 +57,6 @@ public interface ConditionValidationService {
 
         /**
          * Instantiates a validation error for a single parameter.
-         *
          * @param parameterName the parameter that caused the error
          * @param message the error description
          * @param type the error type
@@ -69,7 +67,6 @@ public interface ConditionValidationService {
 
         /**
          * Instantiates a validation error with full condition context and optional parent error.
-         *
          * @param parameterName the parameter that caused the error
          * @param message the error description
          * @param type the error type
@@ -92,7 +89,6 @@ public interface ConditionValidationService {
 
         /**
          * Retrieves the name of the parameter that caused the error.
-         *
          * @return the parameter name, or {@code null} if not applicable
          */
         public String getParameterName() {
@@ -101,7 +97,6 @@ public interface ConditionValidationService {
 
         /**
          * Retrieves the error description message.
-         *
          * @return the error message
          */
         public String getMessage() {
@@ -110,7 +105,6 @@ public interface ConditionValidationService {
 
         /**
          * Retrieves the type of validation error.
-         *
          * @return the error type
          */
         public ValidationErrorType getType() {
@@ -119,7 +113,6 @@ public interface ConditionValidationService {
 
         /**
          * Retrieves the identifier of the condition associated with this error.
-         *
          * @return the condition identifier, or {@code null} if not applicable
          */
         public String getConditionId() {
@@ -128,7 +121,6 @@ public interface ConditionValidationService {
 
         /**
          * Retrieves the identifier of the condition type associated with this error.
-         *
          * @return the condition type identifier, or {@code null} if not applicable
          */
         public String getConditionTypeId() {
@@ -137,6 +129,7 @@ public interface ConditionValidationService {
 
         /**
          * @deprecated Use {@link #getConditionTypeId()} instead.
+         * @return the condition type identifier (same as {@link #getConditionTypeId()})
          */
         @Deprecated
         public String getConditionTypeName() {
@@ -145,7 +138,6 @@ public interface ConditionValidationService {
 
         /**
          * Retrieves a copy of the additional context map for this error.
-         *
          * @return the context map
          */
         public Map<String, Object> getContext() {
@@ -154,7 +146,6 @@ public interface ConditionValidationService {
 
         /**
          * Retrieves the parent error that caused this error, if any.
-         *
          * @return the parent error, or {@code null} if none
          */
         public ValidationError getParentError() {
@@ -163,7 +154,6 @@ public interface ConditionValidationService {
 
         /**
          * Retrieves a detailed error message including condition, parameter, context, and parent error information.
-         *
          * @return the detailed error message
          */
         public String getDetailedMessage() {
@@ -231,13 +221,20 @@ public interface ConditionValidationService {
 
         private final String description;
 
+        /**
+         * Constructs an error type, setting its descriptive label.
+         * This initializes the {@code ValidationErrorType} constant with a
+         * specific human-readable description used to identify
+         * validation failures.
+         * @param description the descriptive text associated
+         * with this error type.
+         */
         ValidationErrorType(String description) {
             this.description = description;
         }
 
         /**
          * Retrieves the human-readable description of this error type.
-         *
          * @return the error type description
          */
         public String getDescription() {

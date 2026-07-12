@@ -20,7 +20,9 @@ package org.apache.unomi.api;
 import java.util.List;
 
 /**
- * A request for events to be processed.
+ * Payload sent to the events collector endpoint.
+ * Wraps one or more {@link Event} instances that a client wants Unomi to
+ * process, evaluate against rules, and persist.
  */
 public class EventsCollectorRequest {
 
@@ -37,13 +39,17 @@ public class EventsCollectorRequest {
 
     /**
      * Retrieves the events to be processed.
-     *
      * @return the events to be processed
      */
     public List<Event> getEvents() {
         return events;
     }
 
+    /**
+     * Sets the list of events to be processed by this request.
+     * @param events a list containing all events that should be
+     * collected and processed.
+     */
     public void setEvents(List<Event> events) {
         this.events = events;
     }
@@ -51,7 +57,6 @@ public class EventsCollectorRequest {
     /**
      * Retrieve the sessionId passed along with the request. All events will be processed with this sessionId as a
      * default
-     *
      * @return the identifier for the session
      */
     public String getSessionId() {
@@ -61,7 +66,6 @@ public class EventsCollectorRequest {
     /**
      * Sets the sessionId in the request. This is the preferred method of passing along a session identifier with the
      * request, as passing it along in the URL can lead to potential security vulnerabilities.
-     *
      * @param sessionId an unique identifier for the session
      */
     public void setSessionId(String sessionId) {
@@ -71,7 +75,6 @@ public class EventsCollectorRequest {
     /**
      * Retrieve the profileId passed along with the request. All events will be processed with this profileId as a
      * default
-     *
      * @return the identifier for the profile
      */
     public String getProfileId() {
@@ -80,7 +83,6 @@ public class EventsCollectorRequest {
 
     /**
      * Sets the profileId in the request.
-     *
      * @param profileId an unique identifier for the profile
      */
     public void setProfileId(String profileId) {

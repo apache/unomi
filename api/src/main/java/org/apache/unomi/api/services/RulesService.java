@@ -31,7 +31,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * A service to access and operate on {@link Rule}s.
+ * Loads, saves, and searches {@link org.apache.unomi.api.rules.Rule} definitions.
+ * Rules tie conditions to actions and drive most automated behavior when
+ * events arrive.
  */
 public interface RulesService {
 

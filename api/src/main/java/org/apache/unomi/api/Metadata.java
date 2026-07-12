@@ -29,7 +29,9 @@ import java.util.Set;
 import static org.apache.unomi.api.utils.YamlUtils.circularRef;
 
 /**
- * A class providing information about context server entities.
+ * Common descriptive fields shared by Unomi configuration items.
+ * Includes id, name, description, scope, tags, and related attributes that
+ * appear on segments, rules, property types, and other managed entities.
  *
  * @see MetadataItem
  */
@@ -60,7 +62,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Instantiates a new Metadata with the specified identifier.
-     *
      * @param id the identifier for this Metadata
      */
     public Metadata(String id) {
@@ -69,7 +70,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Instantiates a new Metadata with the provided information.
-     *
      * @param scope       the scope for this Metadata
      * @param id          the identifier of the associated {@link Item}
      * @param name        the name
@@ -84,7 +84,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Retrieves the identifier for the entity associated with this Metadata
-     *
      * @return the identifier
      */
     public String getId() {
@@ -93,7 +92,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Sets the id.
-     *
      * @param id the id
      */
     public void setId(String id) {
@@ -102,7 +100,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Retrieves the name.
-     *
      * @return the name
      */
     public String getName() {
@@ -111,7 +108,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Sets the name.
-     *
      * @param name the name
      */
     public void setName(String name) {
@@ -120,7 +116,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Retrieves the description.
-     *
      * @return the description
      */
     public String getDescription() {
@@ -129,7 +124,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Sets the description.
-     *
      * @param description the description
      */
     public void setDescription(String description) {
@@ -138,7 +132,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Retrieves the scope for the entity associated with this Metadata
-     *
      * @return the scope for the entity associated with this Metadata
      * @see Item Item for a deeper discussion of scopes
      */
@@ -148,7 +141,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Sets the scope.
-     *
      * @param scope the scope
      */
     public void setScope(String scope) {
@@ -157,7 +149,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Retrieves a set of {@link String} tag names associated with this Metadata
-     *
      * @return a set of {@link String} tag names associated with this Metadata
      */
     public Set<String> getTags() {
@@ -166,7 +157,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Sets the tags.
-     *
      * @param tags the tag ids
      */
     public void setTags(Set<String> tags) {
@@ -175,7 +165,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Retrieves a set of {@link String} system tag names associated with this Metadata
-     *
      * @return a set of {@link String} system tag names associated with this Metadata
      */
     public Set<String> getSystemTags() {
@@ -184,7 +173,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Sets the system tags.
-     *
      * @param systemTags the system tag ids
      */
     public void setSystemTags(Set<String> systemTags) {
@@ -193,7 +181,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Whether the associated entity is considered active by the context server, in particular to check if rules need to be created / triggered
-     *
      * @return {@code true} if the associated entity is enabled, {@code false} otherwise
      */
     public boolean isEnabled() {
@@ -202,7 +189,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Specifies whether the associated entity should be active or not.
-     *
      * @param enabled {@code true} if the associated entity is enabled, {@code false} otherwise
      */
     public void setEnabled(boolean enabled) {
@@ -211,7 +197,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Whether the associated entity is waiting on additional plugins to become available to be able to properly perform its function.
-     *
      * @return {@code true} if plugins are missing, {@code false} otherwise
      */
     public boolean isMissingPlugins() {
@@ -220,7 +205,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Specifies whether the associated entity is waiting on additional plugins to become available.
-     *
      * @param missingPlugins {@code true} if plugins are missing, {@code false} otherwise
      */
     public void setMissingPlugins(boolean missingPlugins) {
@@ -229,7 +213,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Whether the associated entity is considered for internal purposes only and should therefore be hidden to accessing UIs.
-     *
      * @return {@code true} if the associated entity needs to be hidden, {@code false} otherwise
      */
     public boolean isHidden() {
@@ -238,7 +221,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Specifies whether the associated entity is hidden.
-     *
      * @param hidden {@code true} if the associated entity needs to be hidden, {@code false} otherwise
      */
     public void setHidden(boolean hidden) {
@@ -247,7 +229,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Whether the associated entity can be accessed but not modified.
-     *
      * @return {@code true} if the associated entity can be accessed but not modified, {@code false} otherwise
      */
     public boolean isReadOnly() {
@@ -256,13 +237,20 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
 
     /**
      * Specifies whether the associated entity should be only accessed and not modified.
-     *
      * @param readOnly {@code true} if the associated entity can be accessed but not modified, {@code false} otherwise
      */
     public void setReadOnly(boolean readOnly) {
         this.readOnly = readOnly;
     }
 
+    /**
+     * Compares this Metadata instance to another based on their identifiers.
+     * @param o The other {@link Metadata} object to compare against.
+     * @return An integer representing the comparison result of the IDs: a
+     * negative value if this ID is less than the specified ID, zero
+     * if the IDs are equal, or a positive value if this ID is
+     * greater than the specified ID.
+     */
     public int compareTo(Metadata o) {
         return getId().compareTo(o.getId());
     }
@@ -289,7 +277,6 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
     /**
      * Converts this metadata to a Map structure for YAML output.
      * Implements YamlConvertible interface with circular reference detection.
-     *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
      * @return a Map representation of this metadata
      */

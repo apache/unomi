@@ -22,7 +22,8 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Combined service interface for both item and tenant auditing operations.
+ * Combined facade for item-level and tenant-level audit trails.
+ * Delegates to {@link ItemAuditService} and {@link TenantAuditService}.
  */
 public interface AuditService extends ItemAuditService, TenantAuditService {
     /**
@@ -85,6 +86,12 @@ public interface AuditService extends ItemAuditService, TenantAuditService {
      */
     Date getLastSyncDate(String tenantId, String sourceInstanceId);
 
+    /**
+     * Updates last-modified audit fields on an item.
+     *
+     * @param item the item to update
+     * @param userId the user performing the modification
+     */
     default void updateModificationMetadata(Item item, String userId) {
         item.setLastModifiedBy(userId);
         item.setLastModificationDate(new Date());

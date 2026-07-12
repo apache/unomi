@@ -17,7 +17,8 @@
 package org.apache.unomi.api.tenants;
 
 /**
- * A service to audit tenant-related operations.
+ * Records administrative actions performed in a tenant context.
+ * Complements item audit with tenant-scoped security and operations history.
  */
 public interface TenantAuditService {
     /**

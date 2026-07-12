@@ -20,36 +20,65 @@ package org.apache.unomi.api.query;
 import java.io.Serializable;
 
 /**
- * An IP address range.
+ * Named inclusive IP address interval for geo or network filtering.
+ * Used in segment conditions to match visitors whose IP falls between
+ * the configured lower and upper bounds.
  */
 public class IpRange implements Serializable {
     private String key;
     private String from;
     private String to;
 
+    /**
+     * Constructs an empty {@link IpRange} instance.
+     */
     public IpRange() {
     }
 
+    /**
+     * Retrieves the unique key associated with this IP range.
+     * @return The string key identifying the range.
+     */
     public String getKey() {
         return key;
     }
 
+    /**
+     * Sets the unique identifier (key) for this IP range.
+     * @param key The key to assign to the range.
+     */
     public void setKey(String key) {
         this.key = key;
     }
 
+    /**
+     * Retrieves the starting IP address string of the range.
+     * @return The 'from' boundary of the IP range.
+     */
     public String getFrom() {
         return from;
     }
 
+    /**
+     * Sets the starting IP address string for this range.
+     * @param from The start boundary of the IP range.
+     */
     public void setFrom(String from) {
         this.from = from;
     }
 
+    /**
+     * Retrieves the ending IP address string of the range.
+     * @return The 'to' boundary of the IP range.
+     */
     public String getTo() {
         return to;
     }
 
+    /**
+     * Sets the ending IP address string for this range.
+     * @param to The end boundary of the IP range.
+     */
     public void setTo(String to) {
         this.to = to;
     }

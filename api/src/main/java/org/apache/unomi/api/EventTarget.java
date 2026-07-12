@@ -22,6 +22,10 @@ import java.util.Map;
 
 /**
  * TODO: REMOVE
+ * Describes what an event acted upon.
+ * Holds the target item id and type plus optional properties, for example
+ * the product or content element a user clicked. Used together with
+ * {@link Event} to give rules and analytics full context.
  */
 public class EventTarget implements Serializable {
     private static final long serialVersionUID = 6370790894348364803L;
@@ -29,34 +33,67 @@ public class EventTarget implements Serializable {
     private String type;
     private Map<String, Object> properties;
 
+    /**
+     * Constructs a default {@code EventTarget}.
+     */
     public EventTarget() {
     }
 
+    /**
+     * Constructs an {@code EventTarget} with the specified identifier and type.
+     * @param id The unique identifier of the event target.
+     * @param type The type associated with this event target.
+     */
     public EventTarget(String id, String type) {
         this.id = id;
         this.type = type;
     }
 
+    /**
+     * Returns the unique identifier of this event target.
+     * @return The {@code String} ID.
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Sets the unique identifier of this event target.
+     * @param id The new {@code String} ID.
+     */
     public void setId(String id) {
         this.id = id;
     }
 
+    /**
+     * Returns the type associated with this event target.
+     * @return The {@code String} type.
+     */
     public String getType() {
         return type;
     }
 
+    /**
+     * Sets the type associated with this event target.
+     * @param type The new {@code String} type.
+     */
     public void setType(String type) {
         this.type = type;
     }
 
+    /**
+     * Returns a map containing arbitrary properties associated
+     * with this event target.
+     * @return The {@link java.util.Map} of properties.
+     */
     public Map<String, Object> getProperties() {
         return properties;
     }
 
+    /**
+     * Sets the arbitrary properties associated with this event target.
+     * @param properties The {@link java.util.Map} of properties to set.
+     */
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
     }

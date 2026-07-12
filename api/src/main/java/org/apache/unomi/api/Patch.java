@@ -29,9 +29,21 @@ import java.util.Date;
 import java.util.Map;
 import java.util.TreeMap;
 
+/**
+ * Represents a patch operation applied to an existing {@link Item}.
+ * {@link #PATCHABLE_TYPES} lists the item types that support patching.
+ * The {@link #operation} is one of {@code override}, {@code patch}, or
+ * {@code remove}: {@code override} replaces the full item, {@code patch}
+ * applies a JSON Patch payload, and {@code remove} needs no data.
+ */
 public class Patch extends Item {
     private static final long serialVersionUID = 4171966405850833985L;
 
+    /**
+     * A map containing the types of items that are capable of being patched.
+     * The keys represent item type names, and the values are {@link Class}
+     * objects corresponding to those patchable item types.
+     */
     public final static Map<String, Class<? extends Item>> PATCHABLE_TYPES;
 
     static {
@@ -47,6 +59,9 @@ public class Patch extends Item {
         PATCHABLE_TYPES.put("scoring", Scoring.class);
     }
 
+    /**
+     * The constant string used to identify this class as a "patch" item type.
+     */
     public static final String ITEM_TYPE = "patch";
 
     private String patchedItemId;
@@ -67,6 +82,10 @@ public class Patch extends Item {
         return patchedItemId;
     }
 
+    /**
+     * Sets the ID of the item that will be concerned by this patch.
+     * @param patchedItemId the id of the item
+     */
     public void setPatchedItemId(String patchedItemId) {
         this.patchedItemId = patchedItemId;
     }
@@ -79,6 +98,10 @@ public class Patch extends Item {
         return patchedItemType;
     }
 
+    /**
+     * Sets the item type of the item that will be concerned by this patch.
+     * @param patchedItemType the item type
+     */
     public void setPatchedItemType(String patchedItemType) {
         this.patchedItemType = patchedItemType;
     }
@@ -91,6 +114,11 @@ public class Patch extends Item {
         return operation;
     }
 
+    /**
+     * Sets the type of patch operation to perform. This can typically be
+     * 'override', 'patch', or 'remove'.
+     * @param operation the patch operation type
+     */
     public void setOperation(String operation) {
         this.operation = operation;
     }
@@ -106,6 +134,14 @@ public class Patch extends Item {
         return data;
     }
 
+    /**
+     * Sets the data payload for the patch.
+     * For override operations, this should contain the full
+     * item representation.
+     * For patch operations, this should contain a JsonPatch object.
+     * For remove operations, no data is required.
+     * @param data the patch data
+     */
     public void setData(Object data) {
         this.data = data;
     }
@@ -118,6 +154,10 @@ public class Patch extends Item {
         return lastApplication;
     }
 
+    /**
+     * Sets the date when the patch was last applied.
+     * @param lastApplication the date of the last application
+     */
     public void setLastApplication(Date lastApplication) {
         this.lastApplication = lastApplication;
     }

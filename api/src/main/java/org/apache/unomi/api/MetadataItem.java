@@ -28,15 +28,27 @@ import java.util.Set;
 import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
- * A superclass for all {@link Item}s that bear {@link Metadata}.
+ * Base {@link Item} for entities that carry {@link Metadata}.
+ * Most user-facing definitions (segments, rules, property types, etc.)
+ * extend this class so they share the same identification and tagging model.
  */
 public abstract class MetadataItem extends Item {
     private static final long serialVersionUID = -2459510107927663510L;
+    /** The associated {@link Metadata} object for this item. */
     protected Metadata metadata;
 
+    /**
+     * Constructs a default {@code MetadataItem}.
+     */
     public MetadataItem() {
     }
 
+    /**
+     * Constructs a {@code MetadataItem} initialized with the given metadata.
+     * The parent class ID is set using the ID from the provided metadata, and
+     * the internal metadata field is populated.
+     * @param metadata the initial metadata for this item
+     */
     public MetadataItem(Metadata metadata) {
         super(metadata != null ? metadata.getId() : null);
         this.metadata = metadata;
@@ -44,7 +56,6 @@ public abstract class MetadataItem extends Item {
 
     /**
      * Retrieves the associated Metadata.
-     *
      * @return the associated Metadata
      */
     @XmlElement(name = "metadata")
@@ -52,6 +63,12 @@ public abstract class MetadataItem extends Item {
         return metadata;
     }
 
+    /**
+     * Sets the associated {@link Metadata}.
+     * If the provided metadata is not null, the parent class's ID will be
+     * updated to match the ID of the new metadata object.
+     * @param metadata the metadata to set
+     */
     public void setMetadata(Metadata metadata) {
         if (metadata != null) {
             this.itemId = metadata.getId();
@@ -59,6 +76,12 @@ public abstract class MetadataItem extends Item {
         this.metadata = metadata;
     }
 
+    /**
+     * Returns the scope for this item, taken from {@link Metadata} when present.
+     * Falls back to the item-level scope field otherwise.
+     *
+     * @return the scope id, or {@code null} if none is set
+     */
     @XmlTransient
     public String getScope() {
         if (metadata != null) {
@@ -71,7 +94,6 @@ public abstract class MetadataItem extends Item {
      * Converts this metadata item to a Map structure for YAML output.
      * Merges fields from Item parent class and adds metadata field.
      * Subclasses should override this method, call super.toYaml(visited), and add their specific fields.
-     *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
      * @return a Map representation of this metadata item
      */

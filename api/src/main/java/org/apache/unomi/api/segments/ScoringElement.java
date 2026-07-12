@@ -30,7 +30,9 @@ import static org.apache.unomi.api.utils.YamlUtils.circularRef;
 import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
- * A scoring dimension along profiles can be evaluated and associated value to be assigned.
+ * One dimension of a {@link org.apache.unomi.api.segments.Scoring} model.
+ * Assigns a numeric value along an axis (for example engagement) when a
+ * profile matches the element's condition.
  */
 public class ScoringElement implements Serializable, YamlConvertible {
     private Condition condition;

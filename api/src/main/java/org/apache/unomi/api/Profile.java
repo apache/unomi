@@ -206,6 +206,7 @@ public class Profile extends Item implements SystemPropertiesItem {
 
     /**
      * @deprecated since 2.0.0 merge mechanism is now based on profile aliases, and this property is not used anymore
+     * @return the profile id this profile was merged with, or {@code null}
      */
     @Deprecated
     public String getMergedWith() {
@@ -214,6 +215,7 @@ public class Profile extends Item implements SystemPropertiesItem {
 
     /**
      * @deprecated since 2.0.0 merge mechanism is now based on profile aliases, and this property is not used anymore
+     * @param mergedWith the profile id this profile was merged with
      */
     @Deprecated
     public void setMergedWith(String mergedWith) {

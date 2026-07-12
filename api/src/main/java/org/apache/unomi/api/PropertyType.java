@@ -26,12 +26,13 @@ import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
 /**
- * A user-defined profile or session property, specifying how possible values are constrained, if the value is multi-valued (a vector of values as opposed to a scalar value).
+ * Schema definition for a custom profile or session property.
+ * Declares value type, defaults, allowed ranges, merge strategy, and whether
+ * the property accepts multiple values.
  */
 public class PropertyType extends MetadataItem {
     /**
      * The PropertyType ITEM_TYPE.
-     *
      * @see Item for a discussion of ITEM_TYPE
      */
     public static final String ITEM_TYPE = "propertyType";
@@ -58,7 +59,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Instantiates a new Property type with the specified Metadata.
-     *
      * @param metadata the metadata associated with the specified metadata
      */
     public PropertyType(Metadata metadata) {
@@ -68,9 +68,7 @@ public class PropertyType extends MetadataItem {
     /**
      * Retrieves the target for this property type, indicating the type of elements this property type is defined for. For example, for property types attached to profiles, {@code
      * target} would be {@code "profiles"}.
-     *
      * TODO: deprecated?
-     *
      * @return the target for this property type
      */
     public String getTarget() {
@@ -79,9 +77,7 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Sets the target for this property type.
-     *
      * TODO: deprecated?
-     *
      * @param target the target for this property type, indicating the type of elements this property type is defined for
      */
     public void setTarget(String target) {
@@ -90,7 +86,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Retrieves the identifier of the value type constraining values for properties using this PropertyType.
-     *
      * @return the value type identifier associated with values defined by this PropertyType
      * @see ValueType
      */
@@ -101,7 +96,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Sets the value type identifier.
-     *
      * @param valueTypeId the value type identifier
      */
     public void setValueTypeId(String valueTypeId) {
@@ -110,7 +104,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Retrieves the value type associated with values defined for properties using this PropertyType.
-     *
      * @return the value type associated with values defined for properties using this PropertyType
      */
     @XmlTransient
@@ -120,7 +113,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Sets the value type.
-     *
      * @param valueType the value type associated with values defined for properties using this PropertyType
      */
     public void setValueType(ValueType valueType) {
@@ -129,7 +121,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Retrieves the default value defined for property using this PropertyType.
-     *
      * @return the default value defined for property using this PropertyType
      */
     public String getDefaultValue() {
@@ -138,7 +129,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Sets the default value that properties using this PropertyType will use if no value is specified explicitly.
-     *
      * @param defaultValue the default value that properties using this PropertyType will use if no value is specified explicitly
      */
     public void setDefaultValue(String defaultValue) {
@@ -147,9 +137,7 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Retrieves the set of JCR properties from which properties of this type would be automatically initialized from.
-     *
      * TODO: remove from API?
-     *
      * @return the name of JCR properties properties of this type would be automatically initialized from
      */
     public Set<String> getAutomaticMappingsFrom() {
@@ -159,7 +147,6 @@ public class PropertyType extends MetadataItem {
     /**
      * Specifies the set of JCR properties from which properties of this type would be automatically initialized from.
      * TODO: remove from API?
-     *
      * @param automaticMappingsFrom the set of JCR properties from which properties of this type would be automatically initialized from
      */
     public void setAutomaticMappingsFrom(Set<String> automaticMappingsFrom) {
@@ -168,7 +155,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Retrieves the rank of this PropertyType for ordering purpose.
-     *
      * @return the rank of this PropertyType for ordering purpose
      */
     public Double getRank() {
@@ -177,7 +163,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Specifies the rank of this PropertyType for ordering purpose.
-     *
      * @param rank the rank of this PropertyType for ordering purpose
      */
     public void setRank(Double rank) {
@@ -186,7 +171,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Retrieves the identifier of the {@link PropertyMergeStrategyType} to be used in case profiles with properties using this PropertyType are being merged.
-     *
      * @return the identifier of the {@link PropertyMergeStrategyType} to be used in case profiles with properties using this PropertyType are being merged
      */
     public String getMergeStrategy() {
@@ -195,7 +179,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Sets the identifier of the {@link PropertyMergeStrategyType} to be used in case profiles with properties using this PropertyType are being merged
-     *
      * @param mergeStrategy the identifier of the {@link PropertyMergeStrategyType} to be used in case profiles with properties using this PropertyType are being merged
      */
     public void setMergeStrategy(String mergeStrategy) {
@@ -204,7 +187,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Retrieves the date ranges.
-     *
      * @return the date ranges
      */
     public List<DateRange> getDateRanges() {
@@ -213,7 +195,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Sets the date ranges.
-     *
      * @param dateRanges the date ranges
      */
     public void setDateRanges(List<DateRange> dateRanges) {
@@ -222,7 +203,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Retrieves the numeric ranges.
-     *
      * @return the numeric ranges
      */
     public List<NumericRange> getNumericRanges() {
@@ -231,7 +211,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Sets the numeric ranges.
-     *
      * @param numericRanges the numeric ranges
      */
     public void setNumericRanges(List<NumericRange> numericRanges) {
@@ -240,7 +219,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Retrieves the ip ranges.
-     *
      * @return the ip ranges
      */
     public List<IpRange> getIpRanges() {
@@ -249,7 +227,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Sets the ip ranges.
-     *
      * @param ipRanges the ip ranges
      */
     public void setIpRanges(List<IpRange> ipRanges) {
@@ -258,7 +235,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Whether properties using this property type are multi-valued.
-     *
      * @return {@code true} if properties of this type should be multi-valued, {@code false} otherwise
      */
     public Boolean isMultivalued() {
@@ -267,7 +243,6 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Specifies whether properties using this property type are multi-valued.
-     *
      * @param multivalued {@code true} if properties of this type should be multi-valued, {@code false} otherwise
      */
     public void setMultivalued(Boolean multivalued) {
@@ -276,9 +251,7 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Whether properties with this type are marked as protected. Protected properties can be displayed but their value cannot be changed.
-     *
      * TODO: rename to readOnly?
-     *
      * @return {@code true} if properties of this type are protected, {@code false} otherwise
      */
     public Boolean isProtected() {
@@ -287,17 +260,26 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Specifies whether properties with this type are marked as protected.
-     *
      * @param protekted {@code true} if properties of this type are protected, {@code false} otherwise
      */
     public void setProtected(boolean protekted) {
         this.protekted = protekted;
     }
 
+    /**
+     * Retrieves the set of {@link PropertyType} objects that are considered
+     * children or subtypes of this property type.
+     * @return a set of child property types associated with this instance
+     */
     public Set<PropertyType> getChildPropertyTypes() {
         return childPropertyTypes;
     }
 
+    /**
+     * Sets the collection of child property types for this property type.
+     * @param childPropertyTypes the set of {@link PropertyType} objects that
+     * are children or subtypes
+     */
     public void setChildPropertyTypes(Set<PropertyType> childPropertyTypes) {
         this.childPropertyTypes = childPropertyTypes;
     }

@@ -21,7 +21,9 @@ import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 
 /**
- * A unomi plugin that defines a new property merge strategy.
+ * Plugin declaration for a profile property merge strategy.
+ * Merge strategies decide how conflicting property values are combined when
+ * several updates apply to the same profile field (sum, latest value, etc.).
  */
 public class PropertyMergeStrategyType implements PluginType, Serializable {
 
@@ -32,13 +34,16 @@ public class PropertyMergeStrategyType implements PluginType, Serializable {
 
     /**
      * Retrieves the identifier for this PropertyMergeStrategyType.
-     *
      * @return the identifier for this PropertyMergeStrategyType
      */
     public String getId() {
         return id;
     }
 
+    /**
+     * Sets the identifier for this PropertyMergeStrategyType.
+     * @param id the unique identifier to be set.
+     */
     public void setId(String id) {
         this.id = id;
     }
@@ -47,22 +52,37 @@ public class PropertyMergeStrategyType implements PluginType, Serializable {
      * Retrieves the OSGi filter used to identify the implementation associated with this PropertyMergeStrategyType. Filters take the following form:
      * {@code (propertyMergeStrategyExecutorId=&lt;id&gt;)} where {@code id} corresponds to the value of the {@code propertyMergeStrategyExecutorId} service property in the
      * Blueprint service definition for this PropertyMergeStrategyType.
-     *
      * @return the filter string used to identify the implementation associated with this PropertyMergeStrategyType
      */
     public String getFilter() {
         return filter;
     }
 
+    /**
+     * Sets the OSGi filter used to identify the implementation associated with
+     * this PropertyMergeStrategyType.
+     * @param filter the filter string value.
+     */
     public void setFilter(String filter) {
         this.filter = filter;
     }
 
+    /**
+     * Returns the OSGi bundle id of the plugin that registered this strategy.
+     * Used internally when resolving merge strategy implementations.
+     *
+     * @return the plugin bundle id
+     */
     @XmlTransient
     public long getPluginId() {
         return pluginId;
     }
 
+    /**
+     * Sets the OSGi bundle id of the plugin that registered this strategy.
+     *
+     * @param pluginId the plugin bundle id
+     */
     public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
     }

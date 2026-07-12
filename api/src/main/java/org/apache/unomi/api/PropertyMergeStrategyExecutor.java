@@ -20,7 +20,9 @@ package org.apache.unomi.api;
 import java.util.List;
 
 /**
- * A strategy algorithm to merge profile properties such as "adding integers", "using oldest value", "using most recent value", "merging lists", etc...
+ * Algorithm that merges two values for the same profile property.
+ * Implementations define strategies such as keep latest, sum numbers, or
+ * union lists when events update the same field.
  */
 public interface PropertyMergeStrategyExecutor {
     /**

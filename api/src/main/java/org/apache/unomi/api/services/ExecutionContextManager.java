@@ -21,7 +21,8 @@ import org.apache.unomi.api.ExecutionContext;
 import java.util.function.Supplier;
 
 /**
- * Service interface for managing execution contexts in Unomi.
+ * Creates and binds {@link ExecutionContext} instances to the current thread.
+ * Ensures service calls run with the correct tenant and security credentials.
  */
 public interface ExecutionContextManager {
 

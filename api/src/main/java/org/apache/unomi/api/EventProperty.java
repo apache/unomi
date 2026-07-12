@@ -19,9 +19,9 @@ package org.apache.unomi.api;
 import java.io.Serializable;
 
 /**
- * An event property.
- *
- * @author Sergiy Shyrkov
+ * Named property attached to an {@link Event}.
+ * Events carry many properties; this type represents one key/value pair
+ * stored with the event for segmentation, personalization, and reporting.
  */
 public class EventProperty implements Serializable {
 

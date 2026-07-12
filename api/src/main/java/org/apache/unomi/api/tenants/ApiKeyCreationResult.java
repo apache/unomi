@@ -28,9 +28,22 @@ public class ApiKeyCreationResult {
     private ApiKey apiKey;
     private String plainTextKey;
 
+    /**
+     * Constructs an empty {@link ApiKeyCreationResult}.
+     * This result object must be populated manually with the created API key
+     * metadata and the plaintext key value.
+     */
     public ApiKeyCreationResult() {
     }
 
+    /**
+     * Creates a result containing both the persisted {@link ApiKey} metadata
+     * and the plaintext key value.
+     * The plaintext key is only available at creation time, as
+     * it is not persisted.
+     * @param apiKey the API key metadata that was successfully persisted.
+     * @param plainTextKey the one-time plaintext key value.
+     */
     public ApiKeyCreationResult(ApiKey apiKey, String plainTextKey) {
         this.apiKey = apiKey;
         this.plainTextKey = plainTextKey;

@@ -21,7 +21,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * A generic extension of Item for context server extensions, properties are stored in a Map.
+ * Generic {@link Item} extension for plugin-defined entity types.
+ * Properties live in a flexible map instead of typed fields, which lets
+ * extensions store custom payloads without adding new Java classes.
  */
 public class CustomItem extends Item {
     /**

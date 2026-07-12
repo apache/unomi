@@ -26,13 +26,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A service to fulfill personalization request.
+ * Resolves which content variants to show a visitor.
+ * Evaluates personalization requests against profiles, sessions, and
+ * segments, returning {@link PersonalizationResult} with matching content ids.
  */
 public interface PersonalizationService {
 
     /**
      * Check if an item is visible for the specified profile and session
-     *
      * @param profile The profile
      * @param session The session
      * @param personalizedContent Personalized content, containing a list of filters
@@ -42,7 +43,6 @@ public interface PersonalizationService {
 
     /**
      * Get the best match among a list of items, for the specified profile and session
-     *
      * @param profile The profile
      * @param session The session
      * @param personalizationRequest Personalization request, containing the list of variants and the required strategy
@@ -52,7 +52,6 @@ public interface PersonalizationService {
 
     /**
      * Get a personalized list, filtered and sorted, based on the profile and session
-     *
      * @param profile The profile
      * @param session The session
      * @param personalizationRequest Personalization request, containing the list of variants and the required strategy
@@ -69,34 +68,70 @@ public interface PersonalizationService {
         private Map<String, Object> strategyOptions;
         private List<PersonalizedContent> contents;
 
+        /**
+         * Gets the unique identifier of this personalization request.
+         * @return The ID string.
+         */
         public String getId() {
             return id;
         }
 
+        /**
+         * Sets the unique identifier for this personalization request.
+         * @param id The unique ID to set.
+         */
         public void setId(String id) {
             this.id = id;
         }
 
+        /**
+         * Retrieves the name of the personalization strategy to be used.
+         * @return The configured strategy name string.
+         */
         public String getStrategy() {
             return strategy;
         }
 
+        /**
+         * Sets the personalization strategy that should process this request.
+         * @param strategy The name of the strategy (e.g., "alwaysSet").
+         */
         public void setStrategy(String strategy) {
             this.strategy = strategy;
         }
 
+        /**
+         * Gets the list of personalized content items
+         * associated with this request.
+         * @return A list of {@link PersonalizedContent} objects.
+         */
         public List<PersonalizedContent> getContents() {
             return contents;
         }
 
+        /**
+         * Sets the collection of personalized content that should be processed.
+         * @param contents The list of {@link PersonalizedContent} to set.
+         */
         public void setContents(List<PersonalizedContent> contents) {
             this.contents = contents;
         }
 
+        /**
+         * Retrieves optional configuration parameters specific to the
+         * personalization strategy.
+         * @return A map containing strategy-specific options, or
+         * null if none are set.
+         */
         public Map<String, Object> getStrategyOptions() {
             return strategyOptions;
         }
 
+        /**
+         * Sets the map of optional configuration parameters for the
+         * personalization process.
+         * @param strategyOptions The map of options to apply.
+         */
         public void setStrategyOptions(Map<String, Object> strategyOptions) {
             this.strategyOptions = strategyOptions;
         }
@@ -112,7 +147,6 @@ public interface PersonalizationService {
 
         /**
          * Retrieves the filter identifier associated with this content filtering definition.
-         *
          * @return the filter identifier associated with this content filtering definition
          */
         public String getId() {
@@ -121,7 +155,6 @@ public interface PersonalizationService {
 
         /**
          * Sets the filter identifier associated with this content filtering definition.
-         *
          * @param id the filter identifier associated with this content filtering definition
          */
         public void setId(String id) {
@@ -130,7 +163,6 @@ public interface PersonalizationService {
 
         /**
          * Sets the filter identifier associated with this content filtering definition.
-         *
          * @param filterid the filter identifier associated with this content filtering definition
          * @deprecated As of version 1.3.0-incubating, please use {@link #setId(String)} instead
          */
@@ -141,7 +173,6 @@ public interface PersonalizationService {
 
         /**
          * Retrieves the filters.
-         *
          * @return the filters
          */
         public List<Filter> getFilters() {
@@ -150,17 +181,24 @@ public interface PersonalizationService {
 
         /**
          * Sets the filters.
-         *
          * @param filters the filters
          */
         public void setFilters(List<Filter> filters) {
             this.filters = filters;
         }
 
+        /**
+         * Retrieves the properties associated with this content definition.
+         * @return The map of properties stored in this object.
+         */
         public Map<String, Object> getProperties() {
             return properties;
         }
 
+        /**
+         * Sets the properties associated with this content definition.
+         * @param properties The map containing the properties to set.
+         */
         public void setProperties(Map<String, Object> properties) {
             this.properties = properties;
         }
@@ -176,7 +214,6 @@ public interface PersonalizationService {
 
         /**
          * Retrieves the list of targets this filter applies on.
-         *
          * @return the applies on
          */
         public List<Target> getAppliesOn() {
@@ -185,7 +222,6 @@ public interface PersonalizationService {
 
         /**
          * Specifies which targets this filter applies on.
-         *
          * @param appliesOn the list of {@link Target} this filter should be applied on
          */
         public void setAppliesOn(List<Target> appliesOn) {
@@ -194,7 +230,6 @@ public interface PersonalizationService {
 
         /**
          * Retrieves the condition associated with this filter.
-         *
          * @return the condition associated with this filter
          */
         public Condition getCondition() {
@@ -203,17 +238,27 @@ public interface PersonalizationService {
 
         /**
          * Sets the condition associated with this filter.
-         *
          * @param condition the condition associated with this filter
          */
         public void setCondition(Condition condition) {
             this.condition = condition;
         }
 
+        /**
+         * Retrieves the map of properties associated with this filter.
+         * This method returns a reference to the internal
+         * {@code properties} map.
+         * @return the properties map
+         */
         public Map<String, Object> getProperties() {
             return properties;
         }
 
+        /**
+         * Sets the properties associated with this filter.
+         * The provided map replaces any existing properties.
+         * @param properties the map of properties to set
+         */
         public void setProperties(Map<String, Object> properties) {
             this.properties = properties;
         }
@@ -228,7 +273,6 @@ public interface PersonalizationService {
 
         /**
          * Retrieves the target.
-         *
          * @return the target
          */
         public String getTarget() {
@@ -237,7 +281,6 @@ public interface PersonalizationService {
 
         /**
          * Sets the target.
-         *
          * @param target the target
          */
         public void setTarget(String target) {
@@ -246,7 +289,6 @@ public interface PersonalizationService {
 
         /**
          * Retrieves the values.
-         *
          * @return the values
          */
         public List<String> getValues() {
@@ -255,7 +297,6 @@ public interface PersonalizationService {
 
         /**
          * Sets the values.
-         *
          * @param values the values
          */
         public void setValues(List<String> values) {

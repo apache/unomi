@@ -18,13 +18,17 @@
 package org.apache.unomi.api;
 
 /**
- * Information about a cluster node.
+ * Runtime snapshot of one Apache Unomi node in a cluster.
+ * Stores health and topology flags such as load averages, addresses, uptime,
+ * and whether the node is a master (coordination only) or data node (stores
+ * context data). Cluster services publish these objects so operators can
+ * inspect cluster state.
  */
 public class ClusterNode extends Item {
 
     private static final long serialVersionUID = 1281422346318230514L;
 
-    // Item type identifier for cluster nodes.
+    /** Item type identifier for cluster nodes. */
     public static final String ITEM_TYPE = "clusterNode";
 
     private double cpuLoad;
@@ -50,7 +54,6 @@ public class ClusterNode extends Item {
 
     /**
      * Retrieves the cpu load.
-     *
      * @return the cpu load
      */
     public double getCpuLoad() {
@@ -59,7 +62,6 @@ public class ClusterNode extends Item {
 
     /**
      * Sets the cpu load.
-     *
      * @param cpuLoad the cpu load
      */
     public void setCpuLoad(double cpuLoad) {
@@ -68,7 +70,6 @@ public class ClusterNode extends Item {
 
     /**
      * Retrieves the public host address.
-     *
      * @return the public host address
      */
     public String getPublicHostAddress() {
@@ -77,7 +78,6 @@ public class ClusterNode extends Item {
 
     /**
      * Sets the public host address.
-     *
      * @param publicHostAddress the public host address
      */
     public void setPublicHostAddress(String publicHostAddress) {
@@ -86,7 +86,6 @@ public class ClusterNode extends Item {
 
     /**
      * Retrieves the internal host address which uses the HTTP/HTTPS protocol for communications between clients and the context server.
-     *
      * @return the internal host address
      */
     public String getInternalHostAddress() {
@@ -95,7 +94,6 @@ public class ClusterNode extends Item {
 
     /**
      * Sets the internal host address which uses the HTTP/HTTPS protocol for communications between clients and the context server.
-     *
      * @param internalHostAddress the internal host address
      */
     public void setInternalHostAddress(String internalHostAddress) {
@@ -104,7 +102,6 @@ public class ClusterNode extends Item {
 
     /**
      * Retrieves the load average for the last minute, five minutes and fifteen minutes.
-     *
      * @return an array of {@code double} containing, in order and starting from index {@code 0}, the load average for the last minute, last five minutes and last fifteen minutes
      */
     public double[] getLoadAverage() {
@@ -113,7 +110,6 @@ public class ClusterNode extends Item {
 
     /**
      * Sets the load average for the last minute, five minutes and fifteen minutes.
-     *
      * @param loadAverage an array of {@code double} containing, in order and starting from index {@code 0}, the load average for the last minute, last five minutes and last fifteen minutes
      */
     public void setLoadAverage(double[] loadAverage) {
@@ -122,7 +118,6 @@ public class ClusterNode extends Item {
 
     /**
      * Retrieves the uptime.
-     *
      * @return the uptime
      */
     public long getUptime() {
@@ -131,7 +126,6 @@ public class ClusterNode extends Item {
 
     /**
      * Sets the uptime.
-     *
      * @param uptime the uptime
      */
     public void setUptime(long uptime) {
@@ -140,7 +134,6 @@ public class ClusterNode extends Item {
 
     /**
      * Determines whether this ClusterNode is a master node, i.e. this node doesn't store any data but is only focused on cluster management operations.
-     *
      * @return {@code true} if this node is a master node, {@code false} otherwise
      */
     public boolean isMaster() {
@@ -148,8 +141,7 @@ public class ClusterNode extends Item {
     }
 
     /**
-     * Specifies whether this ClusterNode is a master node, i.e. this node doesn't store any data but is only focused on cluster management operations..
-     *
+     * Specifies whether this ClusterNode is a master node, i.e. this node doesn't store any data but is only focused on cluster management operations.
      * @param master {@code true} if this node is a master node, {@code false} otherwise
      */
     public void setMaster(boolean master) {
@@ -158,7 +150,6 @@ public class ClusterNode extends Item {
 
     /**
      * Determines whether this ClusterNode locally stores data.
-     *
      * @return {@code true} if this node locally stores data, {@code false} otherwise
      */
     public boolean isData() {
@@ -167,7 +158,6 @@ public class ClusterNode extends Item {
 
     /**
      * Specifies whether this ClusterNode locally stores data.
-     *
      * @param data {@code true} if this node locally stores data, {@code false} otherwise
      */
     public void setData(boolean data) {
@@ -176,7 +166,6 @@ public class ClusterNode extends Item {
 
     /**
      * Retrieves the node start time in milliseconds.
-     *
      * @return the start time
      */
     public long getStartTime() {
@@ -185,7 +174,6 @@ public class ClusterNode extends Item {
 
     /**
      * Sets the node start time in milliseconds.
-     *
      * @param startTime the start time
      */
     public void setStartTime(long startTime) {
@@ -194,7 +182,6 @@ public class ClusterNode extends Item {
 
     /**
      * Retrieves the last heartbeat time in milliseconds.
-     *
      * @return the last heartbeat time
      */
     public long getLastHeartbeat() {
@@ -203,7 +190,6 @@ public class ClusterNode extends Item {
 
     /**
      * Sets the last heartbeat time in milliseconds.
-     *
      * @param lastHeartbeat the last heartbeat time
      */
     public void setLastHeartbeat(long lastHeartbeat) {
@@ -212,7 +198,6 @@ public class ClusterNode extends Item {
 
     /**
      * Gets the server information.
-     *
      * @return the server information
      */
     public ServerInfo getServerInfo() {
@@ -221,7 +206,6 @@ public class ClusterNode extends Item {
 
     /**
      * Sets the server information.
-     *
      * @param serverInfo the server information
      */
     public void setServerInfo(ServerInfo serverInfo) {

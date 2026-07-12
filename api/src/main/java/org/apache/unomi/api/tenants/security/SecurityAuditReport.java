@@ -140,50 +140,99 @@ public class SecurityAuditReport {
         private String ipAddress;
         private Map<String, Object> details;
 
+        /**
+         * Retrieves the type identifier of this security event.
+         * @return The string representing the event type.
+         */
         public String getType() {
             return type;
         }
 
+        /**
+         * Sets the type identifier for this security event.
+         * @param type The type string to set.
+         */
         public void setType(String type) {
             this.type = type;
         }
 
+        /**
+         * Retrieves the timestamp when the security event occurred.
+         * @return The {@link java.util.Date} representing the event time.
+         */
         public Date getTimestamp() {
             return timestamp;
         }
 
+        /**
+         * Sets the timestamp for this security event.
+         * @param timestamp The {@link java.util.Date} to set as
+         * the event timestamp.
+         */
         public void setTimestamp(Date timestamp) {
             this.timestamp = timestamp;
         }
 
+        /**
+         * Retrieves a detailed description of the security event.
+         * @return A string containing the event's description.
+         */
         public String getDescription() {
             return description;
         }
 
+        /**
+         * Sets the descriptive text for this security event.
+         * @param description The description string to set.
+         */
         public void setDescription(String description) {
             this.description = description;
         }
 
+        /**
+         * Retrieves the user ID associated with this security event.
+         * @return The unique identifier of the user involved in the event.
+         */
         public String getUserId() {
             return userId;
         }
 
+        /**
+         * Sets the user ID associated with this security event.
+         * @param userId The user ID to set.
+         */
         public void setUserId(String userId) {
             this.userId = userId;
         }
 
+        /**
+         * Gets the IP address associated with this security event.
+         * @return The stored {@link String} IP address.
+         */
         public String getIpAddress() {
             return ipAddress;
         }
 
+        /**
+         * Sets the IP address associated with this security event.
+         * @param ipAddress the IP address to set.
+         */
         public void setIpAddress(String ipAddress) {
             this.ipAddress = ipAddress;
         }
 
+        /**
+         * Gets a map containing additional details about the security event.
+         * @return The {@link java.util.Map} of details.
+         */
         public Map<String, Object> getDetails() {
             return details;
         }
 
+        /**
+         * Sets a map containing additional details about the security event.
+         * @param details the map of details to set.
+         */
         public void setDetails(Map<String, Object> details) {
             this.details = details;
         }

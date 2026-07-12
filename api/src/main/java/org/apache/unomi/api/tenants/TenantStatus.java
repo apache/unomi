@@ -17,8 +17,8 @@
 package org.apache.unomi.api.tenants;
 
 /**
- * Enumeration of possible tenant statuses.
- * This enum defines the various states a tenant can be in within the system.
+ * Lifecycle state of a tenant (for example active, suspended, or pending).
+ * Administrators filter and manage tenants based on these enum values.
  */
 public enum TenantStatus {
     /**

@@ -26,7 +26,9 @@ import java.util.Set;
 import static org.apache.unomi.api.utils.YamlUtils.setToSortedList;
 
 /**
- * Validation metadata for condition parameters
+ * Rules that constrain values allowed in a {@link Condition} parameter.
+ * Segment builders and the validation service use this metadata to reject
+ * invalid parameter values before save.
  */
 public class ConditionValidation implements Serializable, YamlConvertible {
     private static final long serialVersionUID = 1L;

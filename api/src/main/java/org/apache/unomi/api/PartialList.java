@@ -25,7 +25,6 @@ import java.util.List;
 /**
  * A list of elements representing a limited view of a larger list, starting from a given element (offset from the first) and showing only a given number of elements, instead of
  * showing all of them. This is useful to retrieve "pages" of large element collections.
- *
  * @param <T> the generic type of contained elements
  */
 public class PartialList<T> implements Serializable {
@@ -45,7 +44,9 @@ public class PartialList<T> implements Serializable {
      * relation we can understand if we are in the case of an accurate hit or not.
      */
     public enum Relation {
+        /** Total size equals the reported value exactly. */
         EQUAL,
+        /** Total size is at least the reported value (approximate lower bound). */
         GREATER_THAN_OR_EQUAL_TO
     }
 
@@ -62,7 +63,6 @@ public class PartialList<T> implements Serializable {
 
     /**
      * Instantiates a new PartialList.
-     *
      * @param list      the limited view into the bigger List this PartialList is representing
      * @param offset    the offset of the first element in the view
      * @param pageSize  the number of elements this PartialList contains
@@ -79,7 +79,6 @@ public class PartialList<T> implements Serializable {
 
     /**
      * Retrieves the limited list view.
-     *
      * @return a List of the {@code size} elements starting from the {@code offset}-th one from the original, larger list
      */
     public List<T> getList() {
@@ -88,7 +87,6 @@ public class PartialList<T> implements Serializable {
 
     /**
      * Sets the view list.
-     *
      * @param list the view list into the bigger List this PartialList is representing
      */
     public void setList(List<T> list) {
@@ -97,46 +95,56 @@ public class PartialList<T> implements Serializable {
 
     /**
      * Retrieves the offset of the first element of the view.
-     *
      * @return the offset of the first element of the view
      */
     public long getOffset() {
         return offset;
     }
 
+    /**
+     * Sets the offset of the first element in this partial list view.
+     * @param offset the starting index (offset) for the elements in the view.
+     */
     public void setOffset(long offset) {
         this.offset = offset;
     }
 
     /**
      * Retrieves the number of elements this PartialList contains.
-     *
      * @return the number of elements this PartialList contains
      */
     public long getPageSize() {
         return pageSize;
     }
 
+    /**
+     * Sets the maximum number of elements to be returned in
+     * this partial list view.
+     * @param pageSize the size limit for the page view.
+     */
     public void setPageSize(long pageSize) {
         this.pageSize = pageSize;
     }
 
     /**
      * Retrieves the total size of elements in the original List.
-     *
      * @return the total size of elements in the original List
      */
     public long getTotalSize() {
         return totalSize;
     }
 
+    /**
+     * Sets the total count of elements available in the original, full list.
+     * @param totalSize the overall size of the collection represented
+     * by this PartialList.
+     */
     public void setTotalSize(long totalSize) {
         this.totalSize = totalSize;
     }
 
     /**
      * Retrieves the size of this PartialList. Should equal {@link #getPageSize()}.
-     *
      * @return the size of this PartialList
      */
     @XmlTransient
@@ -146,7 +154,6 @@ public class PartialList<T> implements Serializable {
 
     /**
      * Retrieves the element at the specified index
-     *
      * @param index the index of the element to retrieve
      * @return the element at the specified index
      */
@@ -163,6 +170,11 @@ public class PartialList<T> implements Serializable {
         return scrollIdentifier;
     }
 
+    /**
+     * Sets the scroll identifier used to continue a scrolling list query.
+     * @param scrollIdentifier a string containing the unique identifier needed
+     * for subsequent requests in a scroll operation.
+     */
     public void setScrollIdentifier(String scrollIdentifier) {
         this.scrollIdentifier = scrollIdentifier;
     }
@@ -175,6 +187,11 @@ public class PartialList<T> implements Serializable {
         return scrollTimeValidity;
     }
 
+    /**
+     * Sets the time validity period for the scroll query.
+     * @param scrollTimeValidity a string representing how long the scroll
+     * context remains valid (e.g., "10m").
+     */
     public void setScrollTimeValidity(String scrollTimeValidity) {
         this.scrollTimeValidity = scrollTimeValidity;
     }
@@ -188,6 +205,11 @@ public class PartialList<T> implements Serializable {
         return totalSizeRelation;
     }
 
+    /**
+     * Sets the relation describing the total size count.
+     * @param totalSizeRelation the relationship type between the total size and
+     * the actual data set.
+     */
     public void setTotalSizeRelation(Relation totalSizeRelation) {
         this.totalSizeRelation = totalSizeRelation;
     }

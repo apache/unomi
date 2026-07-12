@@ -25,22 +25,26 @@ import java.net.URL;
 import java.util.*;
 
 /**
- * A service to access and operate on {@link Profile}s, {@link Session}s and {@link Persona}s.
+ * Primary API for {@link Profile}s, {@link Session}s, and {@link Persona}s.
+ * Loads and saves visitor data, merges profiles, manages sessions, and
+ * supports persona-based testing workflows.
  */
 public interface ProfileService {
 
+    /**
+     * The system tag name used to identify property types that store
+     * personal identifiers.
+     */
     String PERSONAL_IDENTIFIER_TAG_NAME = "personalIdentifierProperties";
 
     /**
      * Retrieves the number of unique profiles.
-     *
      * @return the number of unique profiles.
      */
     long getAllProfilesCount();
 
     /**
      * Retrieves profiles or personas matching the specified query.
-     *
      * @param <T>   the specific sub-type of {@link Profile} to retrieve
      * @param query a {@link Query} specifying which elements to retrieve
      * @param clazz the class of elements to retrieve
@@ -50,7 +54,6 @@ public interface ProfileService {
 
     /**
      * Retrieves sessions matching the specified query.
-     *
      * @param query a {@link Query} specifying which elements to retrieve
      * @return a {@link PartialList} of sessions matching the specified query
      */
@@ -58,7 +61,6 @@ public interface ProfileService {
 
     /**
      * Creates a String containing comma-separated values (CSV) formatted version of profiles matching the specified query.
-     *
      * @param query the query specifying which profiles to export
      * @return a CSV-formatted String version of the profiles matching the specified query
      */
@@ -67,10 +69,8 @@ public interface ProfileService {
     /**
      * Find profiles which have the specified property with the specified value, ordered according to the specified {@code sortBy} String and paged: only
      * {@code size} of them are retrieved, starting with the {@code offset}-th one.
-     *
      * TODO: replace with version using a query instead of separate parameters
      * TODO: remove as it's unused?
-     *
      * @param propertyName  the name of the property we're interested in
      * @param propertyValue the value of the property we want profiles to have
      * @param offset        zero or a positive integer specifying the position of the first profile in the total ordered collection of matching profiles
@@ -85,7 +85,6 @@ public interface ProfileService {
     /**
      * Merges the specified profiles into the provided so-called master profile, merging properties according to the {@link PropertyMergeStrategyType} specified on their {@link
      * PropertyType}.
-     *
      * @param masterProfile   the profile into which the specified profiles will be merged
      * @param profilesToMerge the list of profiles to merge into the specified master profile
      * @return the merged profile
@@ -94,7 +93,6 @@ public interface ProfileService {
 
     /**
      * Retrieves the profile identified by the specified identifier.
-     *
      * @param profileId the identifier of the profile to retrieve
      * @return the profile identified by the specified identifier or {@code null} if no such profile exists
      */
@@ -102,7 +100,6 @@ public interface ProfileService {
 
     /**
      * Saves the specified profile in the context server.
-     *
      * @param profile the profile to be saved
      * @return the newly saved profile
      */
@@ -110,7 +107,6 @@ public interface ProfileService {
 
     /**
      * Adds the alias to the profile.
-     *
      * @param profileID the identifier of the profile
      * @param alias     the alias which should be linked with of the profile
      * @param clientID  the identifier of the client
@@ -119,7 +115,6 @@ public interface ProfileService {
 
     /**
      * Removes the alias from the profile.
-     *
      * @param profileID the identifier of the profile
      * @param alias     the alias which should be unlinked from the profile
      * @param clientID  the identifier of the client
@@ -130,7 +125,6 @@ public interface ProfileService {
     /**
      * Find profile aliases which have the specified property with the specified value, ordered according to the specified {@code sortBy} String and paged: only
      * {@code size} of them are retrieved, starting with the {@code offset}-th one.
-     *
      * @param profileId the identifier of the profile
      * @param offset    zero or a positive integer specifying the position of the first profile in the total ordered collection of matching profiles
      * @param size      a positive integer specifying how many matching profiles should be retrieved or {@code -1} if all of them should be retrieved
@@ -143,7 +137,6 @@ public interface ProfileService {
 
     /**
      * Merge the specified profile properties in an existing profile,or save new profile if it does not exist yet
-     *
      * @param profile the profile to be saved
      * @return the newly saved or merged profile or null if the save or merge operation failed.
      */
@@ -151,7 +144,6 @@ public interface ProfileService {
 
     /**
      * Removes the profile (or persona if the {@code persona} parameter is set to {@code true}) identified by the specified identifier.
-     *
      * @param profileId the identifier of the profile or persona to delete
      * @param persona   {@code true} if the specified identifier is supposed to refer to a persona, {@code false} if it is supposed to refer to a profile
      */
@@ -160,9 +152,7 @@ public interface ProfileService {
     /**
      * Retrieves the sessions associated with the profile identified by the specified identifier that match the specified query (if specified), ordered according to the specified
      * {@code sortBy} String and and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
-     *
      * TODO: use a Query object instead of distinct parameter
-     *
      * @param profileId the identifier of the profile we want to retrieve sessions from
      * @param query     a String of text used for fulltext filtering which sessions we are interested in or {@code null} (or an empty String) if we want to retrieve all sessions
      * @param offset    zero or a positive integer specifying the position of the first session in the total ordered collection of matching sessions
@@ -177,7 +167,6 @@ public interface ProfileService {
     /**
      * Retrieves the session identified by the specified identifier.
      * @deprecated {@code dateHint} is not supported anymore, please use {@link #loadSession(String)}
-     *
      * @param sessionId the identifier of the session to be retrieved
      * @param dateHint  a Date helping in identifying where the item is located
      * @return the session identified by the specified identifier
@@ -187,7 +176,6 @@ public interface ProfileService {
 
     /**
      * Retrieves the session identified by the specified identifier.
-     *
      * @param sessionId the identifier of the session to be retrieved
      * @return the session identified by the specified identifier
      */
@@ -197,7 +185,6 @@ public interface ProfileService {
 
     /**
      * Saves the specified session.
-     *
      * @param session the session to be saved
      * @return the newly saved session
      */
@@ -205,7 +192,6 @@ public interface ProfileService {
 
     /**
      * Retrieves sessions associated with the profile identified by the specified identifier.
-     *
      * @param profileId the profile id for which we want to retrieve the sessions
      * @return a {@link PartialList} of the profile's sessions
      */
@@ -213,7 +199,6 @@ public interface ProfileService {
 
     /**
      * Removes all sessions of the specified profile
-     *
      * @param profileId identifier of the profile that we want to remove it's sessions
      */
     void removeProfileSessions(String profileId);
@@ -222,14 +207,12 @@ public interface ProfileService {
      * Deletes the session identified by the given identifier from persistence.
      * Note: events belonging to this session are NOT removed; they remain in persistence
      * with a dangling sessionId reference.
-     *
      * @param sessionIdentifier the unique identifier for the session
      */
     void deleteSession(String sessionIdentifier);
 
     /**
      * Checks whether the specified profile and/or session satisfy the specified condition.
-     *
      * @param condition the condition we're testing against which might or might not have profile- or session-specific sub-conditions
      * @param profile   the profile we're testing
      * @param session   the session we're testing
@@ -239,14 +222,12 @@ public interface ProfileService {
 
     /**
      * Update all profiles in batch according to the specified {@link BatchUpdate}
-     *
      * @param update the batch update specification
      */
     void batchProfilesUpdate(BatchUpdate update);
 
     /**
      * Retrieves the persona identified by the specified identifier.
-     *
      * @param personaId the identifier of the persona to retrieve
      * @return the persona associated with the specified identifier or {@code null} if no such persona exists.
      */
@@ -254,7 +235,6 @@ public interface ProfileService {
 
     /**
      * Persists the specified {@link Persona} in the context server.
-     *
      * @param persona the persona to persist
      * @return the newly persisted persona
      */
@@ -262,7 +242,6 @@ public interface ProfileService {
 
     /**
      * Retrieves the persona identified by the specified identifier and all its associated sessions
-     *
      * @param personaId the identifier of the persona to retrieve
      * @return a {@link PersonaWithSessions} instance with the persona identified by the specified identifier and all its associated sessions
      */
@@ -270,7 +249,6 @@ public interface ProfileService {
 
     /**
      * Creates a persona with the specified identifier and automatically creates an associated session with it.
-     *
      * @param personaId the identifier to use for the new persona
      * @return the newly created persona
      */
@@ -279,7 +257,6 @@ public interface ProfileService {
     /**
      * Retrieves the sessions associated with the persona identified by the specified identifier, ordered according to the specified {@code sortBy} String and and paged: only
      * {@code size} of them are retrieved, starting with the {@code offset}-th one.
-     *
      * @param personaId the persona id
      * @param offset    zero or a positive integer specifying the position of the first session in the total ordered collection of matching sessions
      * @param size      a positive integer specifying how many matching sessions should be retrieved or {@code -1} if all of them should be retrieved
@@ -292,7 +269,6 @@ public interface ProfileService {
 
     /**
      * Save a persona with its sessions.
-     *
      * @param personaToSave the persona object containing all the persona information and sessions
      * @return the persona with sessions
      */
@@ -301,9 +277,7 @@ public interface ProfileService {
 
     /**
      * Retrieves all the property types associated with the specified target.
-     *
      * TODO: move to a different class
-     *
      * @param target the target for which we want to retrieve the associated property types
      * @return a collection of all the property types associated with the specified target
      */
@@ -311,19 +285,15 @@ public interface ProfileService {
 
     /**
      * Retrieves all known property types.
-     *
      * TODO: move to a different class
      * TODO: use Map instead of HashMap
-     *
      * @return a Map associating targets as keys to related {@link PropertyType}s
      */
     Map<String, Collection<PropertyType>> getTargetPropertyTypes();
 
     /**
      * Retrieves all property types with the specified tag
-     *
      * TODO: move to a different class
-     *
      * @param tag   the tag name marking property types we want to retrieve
      * @return a Set of the property types with the specified tag
      */
@@ -331,9 +301,7 @@ public interface ProfileService {
 
     /**
      * Retrieves all property types with the specified system tag
-     *
      * TODO: move to a different class
-     *
      * @param tag   the system tag name marking property types we want to retrieve
      * @return a Set of the property types with the specified system tag
      */
@@ -355,9 +323,7 @@ public interface ProfileService {
 
     /**
      * Retrieves the property type identified by the specified identifier.
-     *
      * TODO: move to a different class
-     *
      * @param id the identifier of the property type to retrieve
      * @return the property type identified by the specified identifier or {@code null} if no such property type exists
      */
@@ -365,9 +331,7 @@ public interface ProfileService {
 
     /**
      * Persists the specified property type in the context server.
-     *
      * TODO: move to a different class
-     *
      * @param property the property type to persist
      * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
      */
@@ -375,7 +339,6 @@ public interface ProfileService {
 
     /**
      * This function will try to set the target on the property type if not set already, based on the file URL
-     *
      * @param predefinedPropertyTypeURL the URL to extract the target from if the target is not yet. By default it will
      *                                  use the 5's part after a "/" character
      * @param propertyType the property type to register
@@ -384,9 +347,7 @@ public interface ProfileService {
 
     /**
      * Deletes the property type identified by the specified identifier.
-     *
      * TODO: move to a different class
-     *
      * @param propertyId the identifier of the property type to delete
      * @return {@code true} if the property type was properly deleted, {@code false} otherwise
      */
@@ -394,9 +355,7 @@ public interface ProfileService {
 
     /**
      * Retrieves the existing property types for the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and with the specified tag.
-     *
      * TODO: move to a different class
-     *
      * @param tag      the tag we're interested in
      * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @return all property types defined for the specified item type and with the specified tag
@@ -406,9 +365,7 @@ public interface ProfileService {
     /**
      * Retrieves the existing property types for the specified type as defined by the Item subclass public
      * field {@code ITEM_TYPE} and with the specified tag (system or regular)
-     *
      * TODO: move to a different class
-     *
      * @param tag      the tag we're interested in
      * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @param systemTag whether the specified is a system tag or a regular one
@@ -429,7 +386,6 @@ public interface ProfileService {
      * purgeProfiles(10, 0);
      * example: Purge profile created since 30 days only:
      * purgeProfiles(0, 30);
-     *
      * @param inactiveNumberOfDays will purge profiles with no visits since this number of days (0 or negative value, will have no effect)
      * @param existsNumberOfDays will purge profiles created since this number of days (0 or negative value, will have no effect)
      */

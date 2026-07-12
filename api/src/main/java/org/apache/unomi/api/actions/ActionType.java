@@ -31,7 +31,9 @@ import static org.apache.unomi.api.utils.YamlUtils.circularRef;
 import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
- * A type definition for {@link Action}s.
+ * Declarative definition of an action that rules can trigger.
+ * Action types describe parameters and point to the {@link ActionExecutor}
+ * implementation that performs the work at runtime.
  */
 public class ActionType extends MetadataItem implements PluginType, YamlConvertible {
     /** Item type identifier for action types. */

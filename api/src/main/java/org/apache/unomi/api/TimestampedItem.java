@@ -20,7 +20,9 @@ package org.apache.unomi.api;
 import java.util.Date;
 
 /**
- * A context-server entity that is timestamped.
+ * {@link Item} that records when it was created or last modified.
+ * Event and profile-like types implement this interface so retention,
+ * ordering, and auditing can use consistent timestamps.
  */
 public interface TimestampedItem {
     /**

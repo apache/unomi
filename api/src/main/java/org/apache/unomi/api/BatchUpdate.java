@@ -20,7 +20,10 @@ package org.apache.unomi.api;
 import org.apache.unomi.api.conditions.Condition;
 
 /**
- * A representation of an operation to update the value of a property on items matching a specific condition.
+ * Describes a bulk update operation that changes a property on every item
+ * matching a {@link org.apache.unomi.api.conditions.Condition}.
+ * Used when administrators or imports need to apply the same property change
+ * to many profiles, sessions, or other items at once.
  */
 public class BatchUpdate {
     private String propertyName;

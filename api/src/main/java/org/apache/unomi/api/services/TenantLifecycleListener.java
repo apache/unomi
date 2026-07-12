@@ -17,7 +17,8 @@
 package org.apache.unomi.api.services;
 
 /**
- * Interface for services that need to be notified of tenant lifecycle events.
+ * Extension point notified when tenants are created, updated, or removed.
+ * Implementations run setup or teardown logic for multi-tenant deployments.
  */
 public interface TenantLifecycleListener {
     /**

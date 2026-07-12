@@ -20,11 +20,15 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Topic;
 import org.apache.unomi.api.query.Query;
 
+/**
+ * Persistence API for {@link Topic} items.
+ * Supports load, save, search, and delete of topics used to categorize
+ * entities across the context server.
+ */
 public interface TopicService {
 
     /**
      * Retrieves the topic identified by the specified identifier.
-     *
      * @param topicId the identifier of the topic to retrieve
      * @return the topic identified by the specified identifier or {@code null} if no such topic exists
      */
@@ -32,7 +36,6 @@ public interface TopicService {
 
     /**
      * Saves the specified topic in the context server.
-     *
      * @param topic the topic to be saved
      * @return the newly saved topic if the creation or update was successful, {@code null} otherwise
      */
@@ -40,7 +43,6 @@ public interface TopicService {
 
     /**
      * Retrieves topic matching the specified query.
-     *
      * @param query a {@link Query} specifying which elements to retrieve
      * @return a {@link PartialList} of {@link Topic} metadata
      */
@@ -48,7 +50,6 @@ public interface TopicService {
 
     /**
      * Removes the topic identified by the specified identifier.
-     *
      * @param topicId the identifier of the profile or persona to delete
      * @return {@code true} if the deletion was successful, {@code false} otherwise
      */

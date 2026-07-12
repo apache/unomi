@@ -24,7 +24,8 @@ import org.apache.unomi.api.query.AggregateQuery;
 import java.util.Map;
 
 /**
- * A service to perform queries.
+ * Runs stored queries and aggregations against the persistence layer.
+ * Complements segment search with lower-level query and aggregate access.
  */
 public interface QueryService {
 

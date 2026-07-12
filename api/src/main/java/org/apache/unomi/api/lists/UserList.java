@@ -22,7 +22,9 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 
 /**
- * Created by amidani on 24/03/2017.
+ * Named list of profile identifiers maintained for campaigns or exports.
+ * User lists let marketers target or exclude a fixed audience without
+ * defining a dynamic segment.
  */
 public class UserList extends MetadataItem{
 

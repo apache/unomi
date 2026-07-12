@@ -23,7 +23,9 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * A value type to be used to constrain property values.
+ * Definition of allowed values for a {@link PropertyType}.
+ * Value types describe validation rules, ranges, and serializers so profile
+ * and session properties stay consistent with their schema.
  */
 public class ValueType implements PluginType, Serializable {
 
@@ -108,11 +110,19 @@ public class ValueType implements PluginType, Serializable {
         this.descriptionKey = descriptionKey;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     @XmlTransient
     public long getPluginId() {
         return pluginId;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
     }

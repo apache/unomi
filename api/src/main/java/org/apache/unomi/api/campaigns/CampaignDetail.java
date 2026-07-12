@@ -18,9 +18,9 @@
 package org.apache.unomi.api.campaigns;
 
 /**
- * Details about a {@link Campaign}.
- *
- * Created by kevan on 03/06/15.
+ * Aggregated metrics for a {@link Campaign}.
+ * Summarizes participation and performance figures used in campaign reporting
+ * dashboards.
  */
 public class CampaignDetail {
     private long engagedProfiles = 0;

@@ -26,7 +26,9 @@ import org.apache.unomi.api.goals.Goal;
 import java.util.Date;
 
 /**
- * A goal-oriented, time-limited marketing operation that needs to be evaluated for return on investment performance by tracking the ratio of visits to conversions.
+ * Time-bounded marketing program built around {@link org.apache.unomi.api.goals.Goal}s.
+ * Campaigns track entry conditions, duration, and conversion metrics so teams
+ * can measure ROI for a specific promotion or experiment.
  */
 public class Campaign extends MetadataItem {
     /**

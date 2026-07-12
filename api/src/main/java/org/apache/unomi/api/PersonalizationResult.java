@@ -25,22 +25,39 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * A class to contain the result of a personalization, containing the list of content IDs as well as a changeType to
- * indicate if a profile and/or a session was modified.
+ * Outcome of a personalization request.
+ * Returns matching content ids, optional extra metadata (such as control
+ * group flags), and internal change codes when the resolved experience
+ * updated the profile or session.
  */
 public class PersonalizationResult implements Serializable  {
 
+    /**
+     * Key used in {@link #getAdditionalResultInfos()} to indicate if the
+     * personalization result was generated while running in a control group.
+     */
     public final static String ADDITIONAL_RESULT_INFO_IN_CONTROL_GROUP = "inControlGroup";
 
+    /** Matching content identifiers for the resolved personalization. */
     List<String> contentIds;
 
+    /** Extra key/value metadata returned to the client (for example control group flags). */
     Map<String, Object> additionalResultInfos = new HashMap<>();
 
+    /** Internal change flags when resolution updated the profile or session. */
     int changeType = EventService.NO_CHANGE;
 
+    /**
+     * Constructs an empty PersonalizationResult with default values.
+     */
     public PersonalizationResult() {
     }
 
+    /**
+     * Constructs a PersonalizationResult initialized with a
+     * list of content IDs.
+     * @param contentIds the list of matching ids for current personalization
+     */
     public PersonalizationResult(List<String> contentIds) {
         this.contentIds = contentIds;
     }
@@ -53,6 +70,11 @@ public class PersonalizationResult implements Serializable  {
         return contentIds;
     }
 
+    /**
+     * Sets the list of content IDs associated with this result.
+     * This overwrites any previously set content IDs.
+     * @param contentIds the new list of content IDs
+     */
     public void setContentIds(List<String> contentIds) {
         this.contentIds = contentIds;
     }
@@ -65,6 +87,12 @@ public class PersonalizationResult implements Serializable  {
         return additionalResultInfos;
     }
 
+    /**
+     * Sets the map containing additional result information. This map is useful
+     * for returning extra data to the client.
+     * @param additionalResultInfos a map of key/value pair for additional
+     * information, like: inControlGroup
+     */
     public void setAdditionalResultInfos(Map<String, Object> additionalResultInfos) {
         this.additionalResultInfos = additionalResultInfos;
     }
@@ -74,7 +102,6 @@ public class PersonalizationResult implements Serializable  {
      * Control group are used to identify a profile or a session that should not get personalized results,
      * instead the current profile/session should get a specific result (usually the same for all peoples falling in control group)
      * Note: it's for now the responsibility of the client to decide what to do when the current personalization is under control group.
-     *
      * @return true in case current profile or session is in control group for the personalization.
      */
     @XmlTransient
@@ -83,6 +110,13 @@ public class PersonalizationResult implements Serializable  {
                 (Boolean) additionalResultInfos.get(ADDITIONAL_RESULT_INFO_IN_CONTROL_GROUP);
     }
 
+    /**
+     * Sets whether this personalization result belongs to a control group by
+     * storing the boolean value in the internal additional result info map.
+     * @param inControlGroup true if the current profile or session is in
+     * control group for the
+     * personalization, false otherwise
+     */
     public void setInControlGroup(boolean inControlGroup) {
         this.additionalResultInfos.put(ADDITIONAL_RESULT_INFO_IN_CONTROL_GROUP, inControlGroup);
     }
@@ -90,7 +124,6 @@ public class PersonalizationResult implements Serializable  {
     /**
      * Change code in case the personalization resolution modified the profile or the session
      * Only used internally, and will not be serialized either for storage or response payload.
-     *
      * @return change code
      */
     @XmlTransient
@@ -98,6 +131,13 @@ public class PersonalizationResult implements Serializable  {
         return changeType;
     }
 
+    /**
+     * Adds specified change flags to the current accumulated change type.
+     * This method uses bitwise OR operation to ensure that multiple changes
+     * are recorded without overwriting previous ones.
+     * @param changes The change code or flag(s) to add to the
+     * result's change type.
+     */
     public void addChanges(int changes) {
         this.changeType |= changes;
     }

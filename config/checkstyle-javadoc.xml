@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!--
+  Javadoc tag completeness for public + protected API only.
+  Private and package-private members are intentionally out of scope.
+
+  Run: mvn -pl api -Pjavadoc-tags-warn checkstyle:check
+  (warnings only — does not fail the build)
+-->
+<module name="Checker">
+    <property name="severity" value="warning"/>
+    <module name="TreeWalker">
+        <module name="MissingJavadocMethod">
+            <property name="scope" value="protected"/>
+            <property name="allowedAnnotations" value="Override,Deprecated"/>
+        </module>
+        <module name="MissingJavadocType">
+            <property name="scope" value="protected"/>
+            
+        </module>
+        <module name="JavadocMethod">
+            <property name="accessModifiers" value="public, protected"/>
+            <property name="allowedAnnotations" value="Override,Deprecated"/>
+        </module>
+        <module name="JavadocType">
+            <property name="scope" value="protected"/>
+        </module>
+    </module>
+</module>

@@ -37,7 +37,9 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Helper class to resolve condition, action and values types when loading definitions from JSON files
+ * Utilities for resolving condition, action, and value type references when
+ * importing JSON definitions. Walks condition trees, fills in missing type
+ * metadata, and extracts event types referenced by conditions.
  */
 public class ParserHelper {
 
@@ -54,15 +56,62 @@ public class ParserHelper {
 
     private static final int MAX_RECURSION_DEPTH = 1000;
 
+    /**
+     * A visitor implementation used by {@link ParserHelper} to traverse and
+     * process {@link Condition} nodes found within parsed
+     * definitions (e.g., from JSON).
+     * Subclasses must implement the required methods to define how conditions
+     * are visited upon entry and exited upon completion of processing.
+     */
     public interface ConditionVisitor {
+        /**
+         * Visits a given {@link Condition} object, executing necessary logic
+         * for that specific condition during traversal.
+         * @param condition The condition being visited.
+         */
         void visit(Condition condition);
+        /**
+         * Executes post-visit logic for the specified {@link Condition} object.
+         * This method is called after all descendants of the given condition
+         * have been processed.
+         * @param condition The condition whose children have
+         * finished processing.
+         */
         void postVisit(Condition condition);
     }
 
+    /**
+     * Utility class responsible for extracting and converting raw string values
+     * found in configuration definitions (such as conditions or actions) into
+     * usable Java objects.
+     * This abstract helper requires subclasses to implement the core logic of
+     * value extraction, utilizing both the {@code String} representation of the
+     * value and the associated {@link Event} context for resolution.
+     */
     public interface ValueExtractor {
+        /**
+         * Extracts an object value from a given string representation using the
+         * provided event context.
+         * This method is abstract and must be implemented by
+         * concrete subclasses.
+         * @param valueAsString The string value that needs to be
+         * extracted or parsed.
+         * @param event The {@link Event} providing context for
+         * the extraction process.
+         * @return An object representing the extracted value.
+         * @throws IllegalAccessException if access to a required member fails.
+         * @throws NoSuchMethodException if a necessary method cannot be found.
+         * @throws InvocationTargetException if an exception occurs during
+         * invocation of the target method.
+         */
         Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException;
     }
 
+    /**
+     * Default map containing predefined {@link ValueExtractor} implementations.
+     * These extractors are used to retrieve values from various sources
+     * (profile, session, event) when processing definitions.
+     */
     public static final Map<String,ValueExtractor> DEFAULT_VALUE_EXTRACTORS = new HashMap<>();
     static {
         DEFAULT_VALUE_EXTRACTORS.put("profileProperty", (valueAsString, event) -> PropertyUtils.getProperty(event.getProfile(), "properties." + valueAsString));
@@ -73,6 +122,20 @@ public class ParserHelper {
         DEFAULT_VALUE_EXTRACTORS.put("simpleEventProperty", (valueAsString, event) -> event.getProperty(valueAsString));
     }
 
+    /**
+     * Resolves the condition types recursively starting from a root condition.
+     * This method traverses the parent chain and parameter values of the given
+     * {@code rootCondition} to ensure all nested conditions have their types
+     * resolved against the provided definitions service. It updates the
+     * condition type on the condition object if successful.
+     * {@code false} otherwise.
+     * @param definitionsService service used to resolve condition types.
+     * @param rootCondition the starting condition for resolution.
+     * @param contextObjectName name of the object providing context
+     * (for error messages).
+     * @return {@code true} if all reachable conditions were
+     * successfully resolved,
+     */
     public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition, String contextObjectName) {
         return resolveConditionType(definitionsService, rootCondition, contextObjectName,
                 new HashSet<>(), false, 0);
@@ -158,21 +221,48 @@ public class ParserHelper {
         }
     }
 
+    /**
+     * Collects a list of unique condition type IDs present within the
+     * given root condition.
+     * This method traverses the entire structure of the condition, including
+     * nested parameters and collections, and gathers all associated
+     * condition type ids.
+     * @param rootCondition the condition whose types are to be collected.
+     * @return a list of unique strings representing the condition type IDs
+     * found in the condition tree.
+     */
     public static List<String> getConditionTypeIds(Condition rootCondition) {
         final List<String> result = new ArrayList<String>();
         visitConditions(rootCondition, new ConditionVisitor() {
             @Override
-            public void visit(Condition condition) {
+            /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void visit(Condition condition) {
                 result.add(condition.getConditionTypeId());
             }
 
             @Override
-            public void postVisit(Condition condition) {
+            /**
+         * {@inheritDoc}
+         */
+        @Override
+        public void postVisit(Condition condition) {
             }
         });
         return result;
     }
 
+    /**
+     * Visits every condition within the given condition structure, executing
+     * the provided visitor for each one. This method handles recursive
+     * traversal through parameters and collections that may
+     * contain nested conditions.
+     * @param rootCondition the starting condition to visit.
+     * @param visitor the {@link ConditionVisitor} implementation to execute on
+     * every visited condition.
+     */
     public static void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
         visitor.visit(rootCondition);
         // recursive call for sub-conditions as parameters
@@ -194,6 +284,20 @@ public class ParserHelper {
         visitor.postVisit(rootCondition);
     }
 
+    /**
+     * Resolves action types for all actions contained within a given rule.
+     * This method checks if the rule has null or empty actions. If not, it
+     * attempts to resolve the type of each action using the
+     * {@link DefinitionsService}. It logs warnings if resolution fails and
+     * returns {@code false} if any structural error (null/empty actions) or
+     * resolution failure occurs.
+     * @param definitionsService service used to resolve action types.
+     * @param rule the rule containing actions whose types need resolving.
+     * @param ignoreErrors if {@code true}, warnings about missing or empty
+     * actions are suppressed.
+     * @return {@code true} if all actions were successfully resolved,
+     * {@code false} otherwise.
+     */
     public static boolean resolveActionTypes(DefinitionsService definitionsService, Rule rule, boolean ignoreErrors) {
         boolean result = true;
         String ruleId = rule.getItemId();
@@ -227,6 +331,17 @@ public class ParserHelper {
         return result;
     }
 
+    /**
+     * Attempts to resolve the action type for a single given action.
+     * If the action's type is not already set, this method queries the
+     * definitions service to find and set the correct {@link ActionType}. It
+     * tracks unresolved types internally, logging warnings if resolution fails.
+     * {@code false} otherwise.
+     * @param definitionsService service used to resolve action types.
+     * @param action the action whose type needs resolving.
+     * @return {@code true} if the action's type was successfully
+     * resolved or already set,
+     */
     public static boolean resolveActionType(DefinitionsService definitionsService, Action action) {
         if (definitionsService == null) {
             return false;
@@ -247,6 +362,16 @@ public class ParserHelper {
         return true;
     }
 
+    /**
+     * Resolves the value type for a given property type.
+     * This method first attempts to use the {@link DefinitionsService}'s
+     * internal {@link TypeResolutionService}. If that service is unavailable,
+     * it falls back to resolving the value type directly using the definitions
+     * service's lookup mechanism.
+     * The provided {@code PropertyType} object will be modified if successful.
+     * @param definitionsService service used to resolve property types.
+     * @param propertyType the property type whose value needs resolution.
+     */
     public static void resolveValueType(DefinitionsService definitionsService, PropertyType propertyType) {
         if (definitionsService == null) {
             return;
@@ -268,12 +393,24 @@ public class ParserHelper {
 
     /**
      * @deprecated Use {@link #resolveConditionEventTypes(Condition, DefinitionsService)} instead.
+     * @param rootCondition the condition whose event types are to be resolved
+     * @return a set of unique event type identifiers
      */
     @Deprecated
     public static Set<String> resolveConditionEventTypes(Condition rootCondition) {
         return resolveConditionEventTypes(rootCondition, null);
     }
 
+    /**
+     * Resolves all unique event types associated with a condition structure.
+     * This method traverses the entire condition tree starting from
+     * {@code rootCondition} and collects every distinct event type ID found in
+     * any nested condition or parameter.
+     * @param rootCondition the condition whose event types are to be resolved.
+     * @param definitionsService service used for resolving event types.
+     * @return a set of unique strings representing all event types
+     * associated with the condition.
+     */
     public static Set<String> resolveConditionEventTypes(Condition rootCondition, DefinitionsService definitionsService) {
         if (rootCondition == null) {
             return new HashSet<>();
@@ -283,16 +420,34 @@ public class ParserHelper {
         return eventTypeConditionVisitor.getEventTypeIds();
     }
 
+    /**
+     * A {@link ConditionVisitor} implementation used to traverse condition
+     * definitions within a rule or definition structure. It collects all unique
+     * event type IDs encountered during the traversal of conditions.
+     * This visitor maintains internal state, using a stack to track the current
+     * path of visited conditions and accumulating discovered {@code String}
+     * event type identifiers in a set.
+     */
     public static class EventTypeConditionVisitor implements ConditionVisitor {
 
         private final DefinitionsService definitionsService;
         private Set<String> eventTypeIds = new HashSet<>();
         private Stack<String> conditionTypeStack = new Stack<>();
 
+        /**
+         * Constructs an {@code EventTypeConditionVisitor} and initializes it
+         * with a service used to resolve condition types.
+         * @param definitionsService The service providing definitions necessary
+         * for resolving type information.
+         */
         public EventTypeConditionVisitor(DefinitionsService definitionsService) {
             this.definitionsService = definitionsService;
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void visit(Condition condition) {
             conditionTypeStack.push(condition.getConditionTypeId());
 
@@ -344,15 +499,41 @@ public class ParserHelper {
             }
         }
 
+        /**
+         * {@inheritDoc}
+         */
+        @Override
         public void postVisit(Condition condition) {
             conditionTypeStack.pop();
         }
 
+        /**
+         * Retrieves the set of event type IDs that have been collected by
+         * this visitor instance.
+         * @return A {@link Set} containing all resolved event type identifiers.
+         */
         public Set<String> getEventTypeIds() {
             return eventTypeIds;
         }
     }
 
+    /**
+     * Parses a map of values, resolving any placeholders found within string
+     * values using provided extractors and event context.
+     * This method iterates through the input map. If a value is a String
+     * containing placeholders (e.g., ${placeholder}), it recursively resolves
+     * these placeholders by calling {@link #extractValue(String, Event, Map)}.
+     * The resulting map contains the processed values with resolved objects
+     * instead of placeholder strings.
+     * @param event The current event used for value
+     * extraction during resolution.
+     * @param map The input map containing potentially
+     * placeholder-filled values.
+     * @param valueExtractors A map linking value type names to their
+     * respective extractors.
+     * @return A new {@link Map<String, Object>} with the string placeholders
+     * resolved into actual object values.
+     */
     @SuppressWarnings("unchecked")
     public static Map<String, Object> parseMap(Event event, Map<String, Object> map, Map<String, ValueExtractor> valueExtractors) {
         Map<String, Object> values = new HashMap<>();
@@ -391,6 +572,27 @@ public class ParserHelper {
         return values;
     }
 
+    /**
+     * Extracts an object value from a string that follows a specific
+     * format (type::value).
+     * The method splits the input string using "::" to separate the expected
+     * value type from the raw value content. It then uses the provided
+     * {@link ValueExtractor} to perform the actual extraction based
+     * on the event context.
+     * @param s The input string containing the type and
+     * value separated by "::".
+     * @param event The current event used during value extraction.
+     * @param valueExtractors A map of available extractors
+     * keyed by value type name.
+     * @return The extracted object value, or null if no extractor is found
+     * or extraction fails.
+     * @throws IllegalAccessException If the underlying extractor
+     * throws this exception.
+     * @throws NoSuchMethodException If the underlying extractor
+     * throws this exception.
+     * @throws InvocationTargetException If the underlying extractor
+     * throws this exception.
+     */
     public static Object extractValue(String s, Event event, Map<String, ValueExtractor> valueExtractors) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         Object value = null;
 
@@ -409,6 +611,19 @@ public class ParserHelper {
         return value;
     }
 
+    /**
+     * Determines if any string value within the provided map (including nested
+     * maps) contains a placeholder that references a known
+     * contextual parameter type.
+     * This method recursively checks all values. For strings, it attempts to
+     * extract content from placeholders and validates if the resulting type
+     * name matches an available extractor.
+     * @param values The map of parameters to check for contextual parameters.
+     * @param valueExtractors A map containing all available value extractors,
+     * used to validate parameter types.
+     * @return True if at least one string value represents a contextual
+     * parameter; otherwise, false.
+     */
     @SuppressWarnings("unchecked")
     public static boolean hasContextualParameter(Map<String, Object> values, Map<String, ValueExtractor> valueExtractors) {
         for (Map.Entry<String, Object> entry : values.entrySet()) {
@@ -434,10 +649,8 @@ public class ParserHelper {
 
     /**
      * Gets the full parent chain for a condition type.
-     *
      * This method iteratively collects all parent conditions, detecting
      * circular references.
-     *
      * @param conditionType the condition type
      * @param definitionsService service to resolve types
      * @param contextName name for error messages
@@ -510,7 +723,6 @@ public class ParserHelper {
     /**
      * Deep copies a parameter value, handling Condition objects and collections containing Conditions.
      * This is a helper method to avoid code duplication when merging parameters.
-     *
      * @param value the parameter value to deep copy
      * @return a deep copy of the value, or the original value if it's not a Condition or collection
      */
@@ -535,11 +747,9 @@ public class ParserHelper {
 
     /**
      * Resolves the effective condition to use, following the parent chain.
-     *
      * This method traverses the parent condition chain and returns the condition
      * at the end of the chain (the root parent). It merges parameters from all
      * levels in the chain into the context and the effective condition.
-     *
      * @param condition the condition to resolve
      * @param definitionsService service to resolve condition types
      * @param context context map for parameter merging (will be modified)
@@ -557,7 +767,6 @@ public class ParserHelper {
 
     /**
      * Resolves the effective condition to use, following the parent chain.
-     *
      * @param condition the condition to resolve
      * @param definitionsService service to resolve condition types
      * @param context context map for parameter merging (will be modified)

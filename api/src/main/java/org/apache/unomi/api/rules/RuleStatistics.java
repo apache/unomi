@@ -29,7 +29,6 @@ public class RuleStatistics extends Item {
 
     /**
      * The RuleStatistics ITEM_TYPE.
-     *
      * @see Item for a discussion of ITEM_TYPE
      */
     public static final String ITEM_TYPE = "rulestats";
@@ -43,9 +42,20 @@ public class RuleStatistics extends Item {
     private long localActionsTime = 0;
     private Date lastSyncDate;
 
+    /**
+     * Constructs a new RuleStatistics instance with default values.
+     * This constructor is used when initializing statistics objects without
+     * an associated item ID.
+     */
     public RuleStatistics() {
     }
 
+    /**
+     * Constructs a new RuleStatistics instance, associating it with
+     * the given rule item ID.
+     * @param itemId The unique identifier of the rule item to which
+     * these statistics belong.
+     */
     public RuleStatistics(String itemId) {
         super(itemId);
     }

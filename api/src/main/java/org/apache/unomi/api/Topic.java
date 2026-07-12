@@ -16,26 +16,48 @@
  */
 package org.apache.unomi.api;
 
+/**
+ * Named category tag stored as an {@link Item}.
+ * Topics group configuration or content entities so administrators can
+ * organize and search related objects across the context server.
+ */
 public class Topic extends Item {
 
+    /** Defines the item type string used for Topic entities. */
     public static final String ITEM_TYPE = "topic";
 
     private String topicId;
 
     private String name;
 
+    /**
+     * Retrieves the unique identifier of this topic.
+     * @return The {@link String} ID of the topic.
+     */
     public String getTopicId() {
         return topicId;
     }
 
+    /**
+     * Sets the unique identifier for this topic.
+     * @param topicId the unique ID to set.
+     */
     public void setTopicId(String topicId) {
         this.topicId = topicId;
     }
 
+    /**
+     * Retrieves the name of the topic.
+     * @return The {@link String} name of the topic.
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Sets the display name for this topic.
+     * @param name the new name to set.
+     */
     public void setName(String name) {
         this.name = name;
     }

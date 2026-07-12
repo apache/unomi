@@ -17,7 +17,9 @@
 package org.apache.unomi.api.tenants;
 
 /**
- * Segment and rule counts for one scope within a tenant.
+ * Usage counters for a single scope inside a tenant usage snapshot.
+ * Tracks how many segments and rules exist in that scope when
+ * {@link TenantUsageService} collects statistics.
  */
 public class TenantScopeUsage {
 
@@ -25,26 +27,50 @@ public class TenantScopeUsage {
     private long segmentCount;
     private long ruleCount;
 
+    /**
+     * Retrieves the unique identifier of the scope.
+     * @return The scope ID as a {@link String}.
+     */
     public String getScopeId() {
         return scopeId;
     }
 
+    /**
+     * Sets the unique identifier of the scope.
+     * @param scopeId The new scope ID to set.
+     */
     public void setScopeId(String scopeId) {
         this.scopeId = scopeId;
     }
 
+    /**
+     * Retrieves the count of segments associated with this scope usage.
+     * @return The segment count as a {@link Long}.
+     */
     public long getSegmentCount() {
         return segmentCount;
     }
 
+    /**
+     * Sets the count of segments associated with this scope usage.
+     * @param segmentCount The new segment count to set.
+     */
     public void setSegmentCount(long segmentCount) {
         this.segmentCount = segmentCount;
     }
 
+    /**
+     * Retrieves the count of rules associated with this scope usage.
+     * @return The rule count as a {@link Long}.
+     */
     public long getRuleCount() {
         return ruleCount;
     }
 
+    /**
+     * Sets the count of rules associated with this scope usage.
+     * @param ruleCount The new rule count to set.
+     */
     public void setRuleCount(long ruleCount) {
         this.ruleCount = ruleCount;
     }

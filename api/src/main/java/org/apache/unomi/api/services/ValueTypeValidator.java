@@ -17,7 +17,8 @@
 package org.apache.unomi.api.services;
 
 /**
- * A service interface for validating values against specific types.
+ * Validates a value against a {@link org.apache.unomi.api.ValueType} definition.
+ * Called when saving properties or condition parameters to enforce schema rules.
  */
 public interface ValueTypeValidator {
 

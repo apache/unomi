@@ -31,7 +31,9 @@ import org.apache.unomi.api.rules.Rule;
 import java.util.Set;
 
 /**
- * A service to interact with {@link Goal}s and {@link Campaign}s.
+ * CRUD and reporting API for {@link org.apache.unomi.api.goals.Goal}s and
+ * {@link Campaign}s. Manages goal definitions, campaign lifecycle, and
+ * related statistics.
  */
 public interface GoalsService {
     /**

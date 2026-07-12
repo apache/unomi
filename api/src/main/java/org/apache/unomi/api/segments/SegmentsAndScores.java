@@ -24,7 +24,9 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * A combination of {@link Segment} and scores (usually associated with a {@link Profile}).
+ * Snapshot of segment memberships and scoring values for a profile.
+ * Returned when clients need both which segments apply and the current
+ * score totals in one structure.
  */
 public class SegmentsAndScores implements Serializable {
     private Set<String> segments;

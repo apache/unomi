@@ -22,7 +22,8 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * A service to track and audit changes to items.
+ * Records create, update, and delete operations on configuration items.
+ * Provides an audit trail for who changed segments, rules, and similar entities.
  */
 public interface ItemAuditService {
     /**

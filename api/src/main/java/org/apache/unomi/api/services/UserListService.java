@@ -24,7 +24,8 @@ import org.apache.unomi.api.lists.UserList;
 import java.util.List;
 
 /**
- * Created by amidani on 24/03/2017.
+ * CRUD and membership operations for {@link UserList} instances.
+ * Maintains static audience lists referenced by campaigns and exports.
  */
 public interface UserListService {
     /**

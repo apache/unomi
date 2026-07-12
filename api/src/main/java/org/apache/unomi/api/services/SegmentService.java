@@ -31,7 +31,9 @@ import org.apache.unomi.api.segments.SegmentsAndScores;
 import java.util.List;
 
 /**
- * A service to access and operate on {@link Segment}s and {@link Scoring}s
+ * Manages {@link org.apache.unomi.api.segments.Segment}s and
+ * {@link org.apache.unomi.api.segments.Scoring} definitions.
+ * Also recalculates segment membership for profiles when definitions change.
  */
 public interface SegmentService {
 

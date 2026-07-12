@@ -38,7 +38,9 @@ import static org.apache.unomi.api.utils.YamlUtils.circularRef;
 import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
- * A set of elements that can be evaluated.
+ * Boolean expression evaluated against context (profiles, events, sessions).
+ * Conditions combine parameters and nested sub-conditions; segments, rules,
+ * and queries all use them to decide when logic applies.
  */
 public class Condition implements Serializable, YamlConvertible {
     private static final long serialVersionUID = 7584522402785053206L;

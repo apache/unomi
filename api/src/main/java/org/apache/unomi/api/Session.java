@@ -222,10 +222,20 @@ public class Session extends Item implements TimestampedItem, SystemPropertiesIt
         this.size = size;
     }
 
+    /**
+     * Retrieves the scope this session belongs to.
+     *
+     * @return the session scope identifier
+     */
     public String getScope() {
         return scope;
     }
 
+    /**
+     * Sets the scope this session belongs to.
+     *
+     * @param scope the session scope identifier
+     */
     public void setScope(String scope) {
         this.scope = scope;
     }
