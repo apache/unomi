@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_upgrade_karaf]]
+[#_upgrade_karaf]
 ==== Upgrading Apache Karaf
 
 Karaf upgrades touch the *whole distribution*, not a single module. Scope depends on whether you are doing a *major*, *minor*, or *patch* Karaf bump.

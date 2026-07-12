@@ -12,6 +12,7 @@
 // limitations under the License.
 //
 
+[#_migrate_from_2_x_to_3_0]
 ==== Migration Overview
 
 Apache Unomi 3.0 is a major release that introduces several breaking changes. This document details the steps required to successfully migrate your environment from Apache Unomi 2.x to Apache Unomi 3.0.
@@ -265,7 +266,7 @@ When using Docker, you can specify the search engine backend using the distribut
 
 Apache Unomi 3.1 introduces official support for OpenSearch as an alternative to Elasticsearch. If you want to migrate from Elasticsearch to OpenSearch, you can use the dedicated migration guide located in the 3.0 → 3.1 migration section.
 
-For detailed instructions on migrating your data from Elasticsearch to OpenSearch, please refer to the <<_migrating_from_elasticsearch_to_opensearch,Elasticsearch to OpenSearch migration guide>>.
+For detailed instructions on migrating your data from Elasticsearch to OpenSearch, please refer to the <<_migrate_from_elasticsearch_to_opensearch,Elasticsearch to OpenSearch migration guide>>.
 
 ==== Migration Checklist
 

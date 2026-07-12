@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-[[_condition_evaluation]]
+[#_condition_evaluation]
 === Condition Evaluation System
 
 For examples and progressive tutorials, see <<_conditions_guide,Conditions guide>>.

@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_building]]
+[#_building]
 === Building
 
 Apache Unomi 3.x provides a convenient `build.sh` script that simplifies the build process with
@@ -72,7 +72,7 @@ TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
 +
 . The distributions will be available under "package/target" directory.
 
-[[_using_the_build_script]]
+[#_using_the_build_script]
 ==== Using the build.sh script
 
 Apache Unomi 3.x provides a unified `build.sh` script that simplifies the build, deployment, and execution process.

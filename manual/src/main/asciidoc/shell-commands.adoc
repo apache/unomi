@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[#_shell_commands]
 === SSH Shell Commands
 
 Apache Unomi provides its own Apache Karaf Shell commands to make it easy to control the application
@@ -284,6 +285,6 @@ These commands manage background tasks created by the cluster-aware scheduler (s
 |Delete old `COMPLETED` tasks (default: older than 7 days). `-f` skips confirmation.
 
 |task-executor
-|[true|false]
+|boolean
 |Show whether this node runs tasks and its scheduler `nodeId`.
 |===

@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_migrating_from_elasticsearch_to_opensearch]]
+[#_migrate_from_elasticsearch_to_opensearch]
 ==== Migrating from Elasticsearch to OpenSearch
 :toc: macro
 :toclevels: 4

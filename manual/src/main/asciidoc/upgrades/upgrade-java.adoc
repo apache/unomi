@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_upgrade_java]]
+[#_upgrade_java]
 ==== Upgrading the JDK
 
 A JDK upgrade is almost always bundled with a *major* Karaf migration. Unomi 3.x baseline is *Java 17* (UNOMI-876, `da9c57fd2`).

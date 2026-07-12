@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_builtin_condition_types]]
+[#_builtin_condition_types]
 === Built-in condition types
 
 Apache Unomi ships with built-in condition types in the base plugin and optional extensions.

@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_migrate_from_3_0_to_3_1]]
+[#_migrate_from_3_0_to_3_1]
 === Migration Overview
 
 Apache Unomi 3.1 introduces comprehensive multi-tenancy support, enabling complete data isolation between different tenants. This fundamental architectural change requires a new tenant-based authentication model while keeping all API endpoints unchanged.

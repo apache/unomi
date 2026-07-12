@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-[[_whats_new_3_1]]
+[#_whats_new_3_1]
 === What's new in Apache Unomi 3.1
 
 Apache Unomi 3.1 builds on the 3.0 platform (Elasticsearch 9 client, Karaf 4.4, Java 17) with operator-focused features for multi-tenant production deployments.
@@ -30,7 +30,7 @@ Built-in background job scheduler with persistence, cluster locks, recovery, RES
 
 * <<_scheduler,Task scheduler>>
 
-[[_opensearch_support]]
+[#_opensearch_support]
 ==== OpenSearch 3 support
 
 Official alternative to Elasticsearch, including secured Docker deployments.
@@ -54,6 +54,7 @@ Administrators can trace how context and event-collector requests are processed 
 
 * <<_request_tracing_explain,Using the explain parameter for request tracing>>
 
+[#_whats_new_condition_validation]
 ==== Condition validation
 
 Segments, rules, and queries are validated against condition type definitions at save time.

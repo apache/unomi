@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_platform_upgrade_overview]]
+[#_platform_upgrade_overview]
 ==== Overview and shared rules
 
 ===== Guide index

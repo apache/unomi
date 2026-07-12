@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-[[_salesforce_connector]]
+[#_salesforce_connector]
 === Salesforce Connector
 
 This connectors makes it possible to push and pull data to/from the Salesforce CRM. It can copy information between

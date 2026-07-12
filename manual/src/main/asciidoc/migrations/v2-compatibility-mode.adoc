@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_v2_compatibility_mode]]
+[#_v2_compatibility_mode]
 === V2 compatibility mode
 
 This document explains how to use the V2 compatibility mode in Apache Unomi V3, which allows V2 client applications to work with Unomi V3 without requiring API keys.

@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_five_minutes_quickstart]]
+[#_five_minutes_quickstart]
 === Quick start with Docker
 
 Begin by creating a `docker-compose.yml` file. You can choose between ElasticSearch or OpenSearch:

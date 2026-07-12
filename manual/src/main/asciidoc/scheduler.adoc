@@ -12,7 +12,6 @@
 // limitations under the License.
 //
 
-[[_scheduler]]
 === Cluster-aware task scheduler
 
 Apache Unomi 3.1 introduces a built-in **task scheduler** for background work that must run reliably in single-node and clustered deployments.
@@ -53,8 +52,8 @@ package "REST / Shell" {
   [Karaf commands\nunomi:task-*] as Shell
 }
 
-package "API" {
-  [SchedulerService] as API
+package "Scheduler API" {
+  [SchedulerService] as SchedAPI
   [TaskExecutor] as ExecutorAPI
   [ScheduledTask] as TaskModel
 }
@@ -69,9 +68,9 @@ package "Services (per node)" {
 
 database "Persistence\n(OpenSearch / ES)" as DB
 
-REST --> API
-Shell --> API
-API --> Impl
+REST --> SchedAPI
+Shell --> SchedAPI
+SchedAPI --> Impl
 Impl --> Exec
 Impl --> Lock
 Impl --> Recovery

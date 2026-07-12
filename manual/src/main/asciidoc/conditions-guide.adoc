@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_conditions_guide]]
+[#_conditions_guide]
 === Conditions guide
 
 Conditions are the building blocks of segmentation, personalization, rules, queries, campaigns, and goals in Apache Unomi.
@@ -338,7 +338,7 @@ To add new condition types, implement a `ConditionEvaluator` and search-engine-s
 
 Add `validation` metadata on parameters so invalid instances are rejected at save time — see <<_condition_validation,Condition validation>>.
 
-[[_debugging_conditions]]
+[#_debugging_conditions]
 ==== Debugging conditions
 
 When a segment or rule does not behave as expected, use these approaches in order.

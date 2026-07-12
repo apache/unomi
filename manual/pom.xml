@@ -115,7 +115,7 @@
                                 <pagenums>true</pagenums>
                                 <toc />
                                 <idprefix />
-                                <idseparator>-</idseparator>
+                                <idseparator>_</idseparator>
                                 <sectnums>true</sectnums>
                             </attributes>
                         </configuration>

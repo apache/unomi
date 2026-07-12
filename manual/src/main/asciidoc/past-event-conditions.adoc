@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_past_event_conditions]]
+[#_past_event_conditions]
 === Past Event Conditions in Apache Unomi
 :toc: macro
 :toclevels: 4
@@ -410,8 +410,7 @@ package "Past Event System" {
   [SegmentServiceImpl] as segmentService
 }
 
-database "Search index
-(Elasticsearch or OpenSearch)" {
+database "Search index (Elasticsearch or OpenSearch)" as searchIndex {
   [Events] as events
   [Profiles] as profiles
 }

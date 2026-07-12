@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_builtin_action_types]]
+[#_builtin_action_types]
 === Built-in action types
 
 Actions run when a rule matches. Each action type references an `actionExecutor` OSGi service.

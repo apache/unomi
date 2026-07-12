@@ -255,11 +255,12 @@ To define custom operations:
 Example:
 
 1. Add to `etc/org.apache.unomi.security.cfg`:
++
 [source,properties]
 ----
 operation.roles.CUSTOM_OPERATION=ROLE_UNOMI_TENANT_ADMIN
 ----
-
++
 2. Use in your code:
 [source,java]
 ----
@@ -770,7 +771,7 @@ curl -X POST http://localhost:8181/cxs/context.json \
     }]
   }'
 ----
-
++
 2. Verify profile properties were updated:
 [source,bash]
 ----

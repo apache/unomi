@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_upgrade_cxf_jackson_jetty]]
+[#_upgrade_cxf_jackson_jetty]
 ==== CXF, Jackson, and Jetty (Karaf cascade libraries)
 
 Karaf upgrades change the *runtime* versions of several frameworks even when you only bump `${karaf.version}`. Unomi pins some of these in root `pom.xml` and `kar/src/main/feature/feature.xml` so compile-time, feature verify, and OSGi resolution stay aligned.

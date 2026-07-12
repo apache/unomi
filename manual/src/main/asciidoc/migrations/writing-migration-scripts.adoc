@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_writing_migration_scripts]]
+[#_writing_migration_scripts]
 === Writing migration scripts
 
 This section is for **contributors** who add or change Groovy migration scripts shipped in the `shell-commands` module.

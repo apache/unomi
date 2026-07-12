@@ -18,7 +18,7 @@
 In this section of the documentation we provide quick recipes focused on helping you achieve a specific result with
 Apache Unomi.
 
-[[_enabling_debug_mode]]
+[#_enabling_debug_mode]
 ==== Enabling debug mode
 
 Although the examples provided in this documentation are correct (they will work "as-is"), 

@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_data_model_overview]]
+[#_data_model_overview]
 === Data Model Overview
 
 Apache Unomi gathers information about users actions, information that is processed and stored by Unomi services.
@@ -61,7 +61,7 @@ These properties are further defined by the `Item`’s type definition which exp
 By defining new types, users specify which properties (including the type of values they accept) are available to items of that specific type.
 
 
-[[_tenant_entity]]
+[#_tenant_entity]
 === Tenant (Unomi 3.1+)
 
 A *tenant* is the top-level isolation boundary in Unomi 3.1. Each tenant owns its own profiles, events, segments, rules, property types, and JSON schemas. Tenant metadata is stored as an `Item` with `itemType` `tenant`.
@@ -627,7 +627,7 @@ The visitor’s location is also resolve based on the IP address that was used t
 }
 ----
 
-[[_segment]]
+[#_segment]
 === Segment
 
 Segments are used to group profiles together, and are based on conditions that are executed on profiles to determine

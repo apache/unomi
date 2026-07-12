@@ -1751,7 +1751,7 @@ cd apache-unomi-custom-*
 unomi:start elasticsearch-prod
 ----
 
-[[_health_check]]
+[#_health_check]
 === Health Check Extension
 
 The Health Check extension provides a way to check is required Unomi components are 'live'.

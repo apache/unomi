@@ -71,7 +71,7 @@ curl --location --request POST 'http://localhost:8181/cxs/jsonSchema/query' \
 
 NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. You can obtain these when creating a tenant via the Tenant API (which requires system administrator authentication).
 
-[[_create_update_json_schema]]
+[#_create_update_json_schema]
 ==== Create / update a JSON schema to validate an event
 
 It’s possible to add or update JSON schema by calling the endpoint `POST {{url}}/cxs/jsonSchema` with the JSON schema in the payload of the request.

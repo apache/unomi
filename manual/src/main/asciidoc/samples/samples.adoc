@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-[[_samples]]
+[#_samples]
 === Samples
 
 Apache Unomi provides the following integration demos in `samples/`.

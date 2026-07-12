@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_writing_plugins]]
+[#_writing_plugins]
 === Writing plugins
 
 Apache Unomi is extensible through OSGi plugins (Karaf bundles). Many use cases do **not** need a plugin:
@@ -529,7 +529,7 @@ Install at runtime:
 * Elasticsearch: `feature:install my-plugin-elasticsearch`
 * OpenSearch: `feature:install my-plugin-opensearch`
 
-[[_custom_distribution_feature]]
+[#_custom_distribution_feature]
 ===== Custom distribution feature
 
 For production, add your plugin feature to a custom distribution based on `distribution/src/main/feature/feature.xml`.
@@ -564,7 +564,8 @@ Place event schemas under `META-INF/cxs/schemas/`. See <<_json_schemas,JSON Sche
 
 `META-INF/cxs/expressions/` — JSON descriptors for allowed scripting expressions (MVEL and related filters).
 
-===== Migration patches
+[#_writing_plugins_cxs_patches]
+===== CXS migration patch files
 
 `META-INF/cxs/patches/` — one-time structural updates. See <<_migration_patches,Migration patches>>.
 

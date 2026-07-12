@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_upgrade_jira_reference]]
+[#_upgrade_jira_reference]
 ==== JIRA reference (platform upgrades)
 
 This section maps Apache Unomi JIRA tickets to the upgrade runbooks in this chapter. Use it when you need *why* a constraint exists (Cellar removal, CXF 3.x ceiling, ES client decoupling) or when tracing work under the Unomi 3 epic.

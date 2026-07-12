@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_condition_validation]]
+[#_condition_validation]
 === Condition validation
 
 Apache Unomi validates condition instances against their condition type definitions when you save segments, rules, queries, goals, and related items.

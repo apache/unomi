@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_upgrade_elasticsearch]]
+[#_upgrade_elasticsearch]
 ==== Upgrading the Elasticsearch client
 
 Unomi does *not* embed the Elasticsearch server. It embeds the *Java API client* and REST transport inside the `unomi-persistence-elasticsearch-core` OSGi bundle, then exports query DSL types for the conditions bundle.

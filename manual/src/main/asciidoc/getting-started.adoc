@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-[[_getting_started_with_unomi]]
+[#_getting_started_with_unomi]
 === Getting started with Unomi
 
 We will first get you up and running with an example. We will then lift the corner of the cover somewhat and explain
@@ -22,7 +22,7 @@ in greater details what just happened.
 This document assumes working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example.
 Additionally, you will require a working Java 17 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 17 or greater.
 
-[[_jdk_compatibility]]
+[#_jdk_compatibility]
 ===== JDK compatibility
 
 Starting with Java 9, Oracle made some big changes to the Java platform releases. This is why Apache Unomi is focused on

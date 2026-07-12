@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-[[_foreword]]
+[#_foreword]
 == Foreword
 
 This documentation provides a comprehensive guide to Apache Unomi 3.x, a powerful and flexible Customer Data Platform (CDP) that enables organizations to collect, manage, and leverage customer data for personalization and marketing automation.
