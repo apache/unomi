@@ -35,6 +35,11 @@ public class MvelScriptExecutor implements ScriptExecutor {
     private SecureFilteringClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(getClass().getClassLoader());
     private ExpressionFilterFactory expressionFilterFactory;
 
+    /**
+     * Sets the factory used to obtain expression filters per script language.
+     *
+     * @param expressionFilterFactory the expression filter factory
+     */
     public void setExpressionFilterFactory(ExpressionFilterFactory expressionFilterFactory) {
         this.expressionFilterFactory = expressionFilterFactory;
     }

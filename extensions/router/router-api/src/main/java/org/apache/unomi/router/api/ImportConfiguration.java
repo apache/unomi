@@ -40,6 +40,11 @@ public class ImportConfiguration extends ImportExportConfiguration {
     private boolean hasDeleteColumn = false;
 
 
+    /**
+     * Returns the property used to match existing profiles during import.
+     *
+     * @return the merging property name
+     */
     public String getMergingProperty() {
         return mergingProperty;
     }
@@ -79,6 +84,11 @@ public class ImportConfiguration extends ImportExportConfiguration {
         return propertiesToOverwrite;
     }
 
+    /**
+     * Sets the list of profile properties that may be overwritten during import.
+     *
+     * @param propertiesToOverwrite property names to overwrite
+     */
     public void setPropertiesToOverwrite(List<String> propertiesToOverwrite) {
         this.propertiesToOverwrite = propertiesToOverwrite;
     }

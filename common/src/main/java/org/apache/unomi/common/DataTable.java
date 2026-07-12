@@ -35,13 +35,26 @@ public class DataTable {
 
     public static final EmptyCell EMPTY_CELL = new EmptyCell();
 
+    /**
+     * Creates an empty data table.
+     */
     public DataTable() {
     }
 
+    /**
+     * Returns the rows stored in this table.
+     *
+     * @return the table rows
+     */
     public List<Row> getRows() {
         return rows;
     }
 
+    /**
+     * Appends a row built from the given cell values.
+     *
+     * @param rowData cell values for the new row
+     */
     public void addRow(Comparable... rowData) {
         if (rowData == null) {
             return;
@@ -56,32 +69,63 @@ public class DataTable {
         rows.add(row);
     }
 
+    /**
+     * Returns the maximum number of columns across all rows.
+     *
+     * @return the maximum column count
+     */
     public int getMaxColumns() {
         return maxColumns;
     }
 
+    /**
+     * Sort order used when comparing row values.
+     */
     public static enum SortOrder {
         ASCENDING,
         DESCENDING;
     }
 
+    /**
+     * Defines a column index and sort order for table sorting.
+     */
     public static class SortCriteria {
         Integer columnIndex;
         SortOrder sortOrder;
 
+        /**
+         * Creates a sort criterion for one column.
+         *
+         * @param columnIndex zero-based column index
+         * @param sortOrder sort direction for the column
+         */
         public SortCriteria(Integer columnIndex, SortOrder sortOrder) {
             this.columnIndex = columnIndex;
             this.sortOrder = sortOrder;
         }
     }
 
+    /**
+     * One row of comparable cell values in a {@link DataTable}.
+     */
     public class Row {
         List<Comparable> rowData = new ArrayList<>();
 
+        /**
+         * Appends a cell value to this row.
+         *
+         * @param data the cell value to add
+         */
         public void addData(Comparable data) {
             rowData.add(data);
         }
 
+        /**
+         * Returns the cell value at the given index.
+         *
+         * @param index zero-based column index
+         * @return the cell value, or {@link #EMPTY_CELL} when the row has no value at that index
+         */
         public Comparable getData(int index) {
             if (index >= maxColumns) {
                 throw new ArrayIndexOutOfBoundsException("Index on row data (" + index + ") is larger than max columns (" + maxColumns + ")");
@@ -101,6 +145,11 @@ public class DataTable {
         }
     }
 
+    /**
+     * Sorts table rows using the given criteria in order.
+     *
+     * @param sortCriterias column sort criteria applied left to right
+     */
     public void sort(SortCriteria... sortCriterias) {
         rows.sort(new Comparator<Row>() {
             @Override
@@ -152,6 +201,9 @@ public class DataTable {
         return sb.toString();
     }
 
+    /**
+     * Placeholder value used for missing cells when sorting or exporting.
+     */
     public static class EmptyCell implements Comparable {
         @Override
         public int compareTo(Object o) {
@@ -167,6 +219,12 @@ public class DataTable {
         }
     }
 
+    /**
+     * Serializes the table to CSV text.
+     *
+     * @param headers optional CSV header row
+     * @return CSV representation of the table
+     */
     public String toCSV(String... headers) {
         StringBuilder stringBuilder = new StringBuilder();
         CSVFormat csvFormat = CSVFormat.DEFAULT;

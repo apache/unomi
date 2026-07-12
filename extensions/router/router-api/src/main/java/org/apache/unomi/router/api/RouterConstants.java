@@ -17,9 +17,12 @@
 package org.apache.unomi.router.api;
 
 /**
- * Created by amidani on 13/06/2017.
+ * Constants used by the Unomi router import/export integration.
  */
 public interface RouterConstants {
+    /**
+     * Camel configuration refresh event types.
+     */
     enum CONFIG_CAMEL_REFRESH {
         UPDATED,
         REMOVED

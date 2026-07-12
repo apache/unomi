@@ -23,6 +23,13 @@ import java.util.Map;
  */
 public interface ScriptExecutor {
 
+    /**
+     * Executes a script in the given context.
+     *
+     * @param script the script source to execute
+     * @param context variable bindings available to the script
+     * @return the script result, or {@code null} when execution is blocked or fails
+     */
     Object execute(String script, Map<String,Object> context);
 
 }
