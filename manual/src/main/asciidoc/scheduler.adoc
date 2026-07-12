@@ -592,21 +592,41 @@ public class BulkReindexExecutor implements TaskExecutor {
 
 After a crash, operators can call `POST /cxs/tasks/{id}/resume` or `unomi:task-retry` depending on the failure mode.
 
-==== OSGi Blueprint wiring
+==== OSGi Declarative Services wiring
 
-Reference `SchedulerService` from your plugin blueprint:
+Inject `SchedulerService` with `@Reference` in your plugin component.
+New plugins use Declarative Services — not Blueprint XML (see <<_writing_plugins,Writing plugins>>).
 
-[source,xml]
+[source,java]
 ----
-<reference id="schedulerService"
-             interface="org.apache.unomi.api.services.SchedulerService"/>
+@Component(service = MyPluginService.class)
+public class MyPluginService {
 
-<bean id="myPluginService" class="com.example.MyPluginService">
-    <property name="schedulerService" ref="schedulerService"/>
-</bean>
+    private SchedulerService schedulerService;
+    private TaskExecutor registeredExecutor;
+
+    @Reference
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
+    }
+
+    @Activate
+    public void activate() {
+        registeredExecutor = new MyTaskExecutor();
+        schedulerService.registerTaskExecutor(registeredExecutor);
+    }
+
+    @Deactivate
+    public void deactivate() {
+        if (schedulerService != null && registeredExecutor != null) {
+            schedulerService.unregisterTaskExecutor(registeredExecutor);
+        }
+    }
+}
 ----
 
-Register the executor in your component's `activate()` method and unregister in `deactivate()` when possible.
+Register the executor in `activate()` and unregister in `deactivate()` when possible.
+Pattern A above uses the same `@Reference` injection style for `SchedulerService`.
 
 === Built-in tasks you will see in production
 
@@ -672,5 +692,5 @@ long failures = schedulerService.getMetric("tasks.failed");
 
 * <<_request_examples,Tenant REST examples>> — creating tenants whose data background tasks will process
 * <<_shell_commands,Karaf shell>> — operational commands including `unomi:task-*`
-* <<_writing_plugins,Writing plugins>> — plugin structure and OSGi wiring
+* <<_writing_plugins,Writing plugins>> — DS plugin registration and `META-INF/cxs/` layout
 * <<_multitenancy,Multitenancy>> — tenant isolation rules
