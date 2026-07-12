@@ -234,21 +234,19 @@ public class ParserHelper {
     public static List<String> getConditionTypeIds(Condition rootCondition) {
         final List<String> result = new ArrayList<String>();
         visitConditions(rootCondition, new ConditionVisitor() {
-            @Override
             /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void visit(Condition condition) {
+             * {@inheritDoc}
+             */
+            @Override
+            public void visit(Condition condition) {
                 result.add(condition.getConditionTypeId());
             }
 
-            @Override
             /**
-         * {@inheritDoc}
-         */
-        @Override
-        public void postVisit(Condition condition) {
+             * {@inheritDoc}
+             */
+            @Override
+            public void postVisit(Condition condition) {
             }
         });
         return result;
