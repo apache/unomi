@@ -11,318 +11,134 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-=== Writing Plugins
 
-Apache Unomi is architected to be extensible through plugins. However, it's important to note that plugins are only necessary when custom Java logic is required. Most common needs and use cases can now be covered using:
+[[_writing_plugins]]
+=== Writing plugins
 
-* Groovy actions (for custom action logic without deployment)
-* Complex condition trees (for sophisticated matching logic)
-* Rules (for defining business logic and automation)
-* Apache Unomi's REST API (for configuration and management)
+Apache Unomi is extensible through OSGi plugins (Karaf bundles). Many use cases do **not** need a plugin:
 
-These built-in features allow you to implement most functionality without deploying any code, making the system more maintainable and reducing development overhead. You should only consider developing a plugin when you need to:
+* Groovy actions — custom rule actions stored at runtime (see <<_configuration,Configuration>>)
+* Complex condition trees — combine built-in condition types
+* Rules, segments, and REST configuration — manage through APIs or JSON definitions in a bundle
+* <<_json_schemas,JSON Schemas>> — validate events without Java code
 
-* Implement custom Java-based query builders for search engine integration
-* Add new core system functionality that requires deep integration
-* Optimize performance-critical operations with compiled code
-* Integrate with external systems requiring complex Java libraries
+Build a plugin when you need compiled Java logic, for example:
 
-=== Types vs. instances
+* Custom `ConditionEvaluator` or search-engine `*QueryBuilder` implementations
+* Custom `ActionExecutor` integrations with external systems
+* Index mappings, Painless scripts, or migration patches shipped with your feature
+* Background work through `TaskExecutor` and `SchedulerService` (see <<_scheduler,Task scheduler>>)
 
-Several extension points in Unomi rely on the concept of type: a plugin defines a prototype for what the actual
-items will be once parameterized with values known only at runtime. This is similar to the concept of classes in
-object-oriented programming: types define classes, providing the expected structure and which fields are expected to
-be provided at runtime, that are then instantiated when needed with actual values.
+==== Prerequisites
 
-So for example we have the following types vs instances:
+* **Java 17** or later
+* **Apache Karaf 4.4** (bundled with Unomi distributions)
+* Maven `packaging` set to `bundle` (Felix maven-bundle-plugin)
+* Depend on `unomi-api` and import `unomi-bom` for aligned artifact versions
 
-- ConditionTypes vs Conditions
-- ActionTypes vs Actions
-- PropertyTypes vs Properties (for profiles and sessions)
+See also:
 
-=== Plugin structure
+* <<_data_model_overview,Data model overview>>
+* <<_builtin_condition_types,Built-in condition types>> — registration patterns for Unomi 3.0+
+* <<_builtin_action_types,Built-in action types>>
+* <<_condition_validation,Condition validation>> — `validation` metadata on condition parameters
+* <<_samples,Samples>> — working plugin projects in the repository
 
-Being built on top of Apache Karaf, Unomi leverages OSGi to support plugins. A Unomi plugin is, thus, an OSGi
-bundle specifying some specific metadata to tell Unomi the kind of entities it provides. A plugin can provide the
-following entities to extend Unomi, each with its associated definition (as a JSON file), located in a specific spot
-within the `META-INF/cxs/` directory of the bundle JAR file:
+==== Types vs instances
 
-|====
-|Entity |Location in `cxs` directory
+Extension points follow a type/instance model (like classes and objects):
 
-|ActionType |actions
-|ConditionType |conditions
-|Persona |personas
-|PropertyMergeStrategyType |mergers
-|PropertyType |properties then profiles or sessions subdirectory then `&lt;category name&gt;` directory
-|Rule |rules
-|Scoring |scorings
-|Segment |segments
-|ValueType |values
-|====
+* *ConditionType* → *Condition* instances in segments, rules, and queries
+* *ActionType* → *Action* instances executed by rules
+* *PropertyType* → profile or session property metadata (UI hints; not server-side validation)
 
-http://aries.apache.org/modules/blueprint.html[Blueprint] is used to declare what the plugin provides and inject
-any required dependency. The Blueprint file is located, as usual, at `OSGI-INF/blueprint/blueprint.xml` in the bundle JAR file.
+==== `META-INF/cxs/` layout
 
-=== Scheduling background work
+A Unomi plugin is an OSGi bundle. JSON definitions and bundle resources live under `src/main/resources/META-INF/cxs/` (and related paths below).
 
-Plugins can register `TaskExecutor` implementations and schedule one-shot or recurring tasks through `SchedulerService`.
-This is the recommended way to run maintenance, async follow-up work, or long-running jobs in a cluster-safe way.
+[cols="2,3,2", options="header"]
+|===
+| Entity | Directory under `META-INF/cxs/` | Auto-loaded at bundle start?
 
-See <<_scheduler,Task scheduler>> for architecture, REST operations, shell commands, and copy-paste examples
-(including tenant-aware executors and checkpoint/resume patterns).
+| ActionType | `actions/` | Yes
+| ConditionType | `conditions/` | Yes
+| ValueType | `values/` | Yes
+| PropertyMergeStrategyType | `mergers/` | Yes
+| PropertyType | `properties/profiles/...` or `properties/sessions/...` | Yes
+| Rule | `rules/` | Yes
+| Segment | `segments/` | Yes
+| Scoring | `scoring/` | Yes
+| Persona | `personas/` | Yes
+| Patch | `patches/` | Yes (first run)
+| Index mapping | `mappings/` | Loaded by persistence layer
+| JSON Schema | `schemas/` | Loaded by schema service
+| Expression filter | `expressions/` | Loaded by scripting layer
+| Painless script | `painless/` | Loaded by persistence layer
+| Migration script | `migration/` | Used by shell migration tooling
+|===
 
-=== Search Engine Specific Implementations
+Goals and campaigns can be deployed with `unomi:deploy-definition` but are not auto-loaded from bundles the same way as rules and segments.
 
-When implementing plugins that need to interact with the search engine layer (ElasticSearch or OpenSearch), special consideration must be taken to ensure compatibility and proper deployment.
+Tags are not separate JSON files — use `systemTags` on metadata inside other definitions.
 
-==== Search Engine Specific Bundles
+==== OSGi service registration
 
-For plugins that provide search query builder implementations, you should structure your plugin with three bundles:
-1. A common bundle for shared code and resources
-2. An ElasticSearch-specific implementation bundle
-3. An OpenSearch-specific implementation bundle
+Plugins register Java implementations as OSGi services. Two styles are used in the codebase:
 
-Example structure:
-```
-my-plugin/
-├── common/
-│   ├── src/main/java/.../
-│   │   ├── model/
-│   │   │   └── MyCustomCondition.java
-│   │   └── services/
-│   │       └── MyCustomService.java
-│   ├── src/main/resources/META-INF/cxs/
-│   │   ├── conditions/
-│   │   │   └── my-custom-condition.json
-│   │   └── actions/
-│   │       └── my-custom-action.json
-│   └── pom.xml
-├── elasticsearch/
-│   ├── src/main/java/.../
-│   │   └── impl/
-│   │       └── MyElasticSearchQueryBuilder.java
-│   ├── src/main/resources/META-INF/cxs/
-│   │   └── mappings/
-│   │       └── my-index-mapping.json
-│   └── pom.xml
-├── opensearch/
-│   ├── src/main/java/.../
-│   │   └── impl/
-│   │       └── MyOpenSearchQueryBuilder.java
-│   ├── src/main/resources/META-INF/cxs/
-│   │   └── mappings/
-│   │       └── my-index-mapping.json
-│   └── pom.xml
-└── pom.xml
-```
+* **Blueprint** — `OSGI-INF/blueprint/blueprint.xml` (for example `plugins/baseplugin`, `samples/trainingplugin`)
+* **Declarative Services** — `@Component` annotations (for example `plugins/advanced-conditions`)
 
-Example POM dependencies:
+Both are valid. Use Blueprint when you prefer XML wiring; use DS for annotation-driven registration.
 
-Common Bundle (my-plugin-common):
-[source,xml]
-----
-<dependencies>
-    <dependency>
-        <groupId>org.apache.unomi</groupId>
-        <artifactId>unomi-api</artifactId>
-        <version>${unomi.version}</version>
-        <scope>provided</scope>
-    </dependency>
-</dependencies>
-----
+Service property keys:
 
-ElasticSearch Bundle (my-plugin-elasticsearch):
-[source,xml]
-----
-<dependencies>
-    <dependency>
-        <groupId>my.group.id</groupId>
-        <artifactId>my-plugin-common</artifactId>
-        <version>${project.version}</version>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.unomi</groupId>
-        <artifactId>unomi-persistence-elasticsearch-core</artifactId>
-        <version>${unomi.version}</version>
-        <scope>provided</scope>
-    </dependency>
-</dependencies>
-----
+[cols="2,2,3", options="header"]
+|===
+| Extension | Service interface | OSGi property key
 
-OpenSearch Bundle (my-plugin-opensearch):
-[source,xml]
-----
-<dependencies>
-    <dependency>
-        <groupId>my.group.id</groupId>
-        <artifactId>my-plugin-common</artifactId>
-        <version>${project.version}</version>
-    </dependency>
-    <dependency>
-        <groupId>org.apache.unomi</groupId>
-        <artifactId>unomi-persistence-opensearch-core</artifactId>
-        <version>${unomi.version}</version>
-        <scope>provided</scope>
-    </dependency>
-</dependencies>
-----
+| Condition evaluator | `org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator` | `conditionEvaluatorId`
+| Elasticsearch query builder | `org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder` | `queryBuilderId`
+| OpenSearch query builder | `org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder` | `queryBuilderId`
+| Action executor | `org.apache.unomi.api.actions.ActionExecutor` | `actionExecutorId`
+| Value type validator | `org.apache.unomi.api.services.ValueTypeValidator` | (service type only)
+|===
 
-==== Configuration and Deployment
+The JSON descriptor field (`conditionEvaluator`, `queryBuilder`, `actionExecutor`) must match the OSGi property value.
 
-Administrators can control which search engine implementation to use by setting up a distribution. This distribution 'macro' feature determines which features (including your plugin's bundles) are deployed based on the chosen search engine:
+==== Creating a Maven plugin project
+
+A minimal plugin is a Maven bundle project. Prefer importing `unomi-bom` rather than pinning versions manually.
 
 [source,xml]
 ----
-<features>
-    <feature name="my-plugin-feature" version="${project.version}">
-        <bundle>mvn:my.group.id/my-plugin-common/${project.version}</bundle>
-        <bundle>mvn:my.group.id/my-plugin-${search.engine}/${project.version}</bundle>
-    </feature>
-
-    <feature name="my-unomi-distribution-with-my-plugin" version="${project.version}">
-        <feature dependency="true" version="${project.version}">unomi-base</feature>
-        <feature dependency="true" version="${project.version}">unomi-startup</feature>
-        <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
-        <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
-        <feature dependency="true" version="${project.version}">unomi-services</feature>
-        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
-        <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
-        <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
-        <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
-        <feature dependency="true" version="${project.version}">unomi-wab</feature>
-        <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
-        <feature dependency="true" version="${project.version}">unomi-healthcheck-elasticsearch</feature>
-        <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
-        <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
-        <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
-        <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
-        <feature dependency="true" version="${project.version}">my-plugin-feature</feature>
-    </feature>
-</features>
-----
-
-==== Custom Plugins
-
-The plugin otherwise follows a regular maven project layout and should depend on the Unomi API maven artifact:
-
-[source,xml]
-----
-<dependency>
-    <groupId>org.apache.unomi</groupId>
-    <artifactId>unomi-api</artifactId>
-    <version>...</version>
-</dependency>
-----
-
-Some plugins consists only of JSON definitions that are used to instantiate the appropriate structures at runtime
-while some more involved plugins provide code that extends Unomi in deeper ways.
-
-In both cases, plugins can provide more that one type of extension. For example, a plugin could provide both `ActionType`s and `ConditionType`s.
-
-=== Extension points
-
-In this section the value types that may be used as extension points are presented. Examples of these types will be
-given in the next section with more details.
-
-==== ActionType
-
-`ActionType`s define new actions that can be used as consequences of Rules being triggered. When a rule triggers, it
-creates new actions based on the event data and the rule internal processes, providing values for parameters defined
-in the associated `ActionType`. Example actions include: “Set user property x to value y” or “Send a message to service x”.
-
-==== ConditionType
-
-`ConditionType`s define new conditions that can be applied to items (for example to decide whether a rule needs to be
-triggered or if a profile is considered as taking part in a campaign) or to perform queries against the stored Unomi
-data. They may be implemented in Java when attempting to define a particularly complex test or one that can better be
-optimized by coding it. They may also be defined as combination of other conditions. A simple condition could be:
-“User is male”, while a more generic condition with parameters may test whether a given property has a specific value:
-“User property x has value y”.
-
-==== Persona
-
-A persona is a "virtual" profile used to represent categories of profiles, and may also be used to test how a
-personalized experience would look like using this virtual profile. A persona can define predefined properties and
-sessions. Persona definition make it possible to “emulate” a certain type of profile, e.g : US visitor, non-US visitor, etc.
-
-==== PropertyMergeStrategyType
-
-A strategy to resolve how to merge properties when merging profile together.
-
-==== PropertyType
-
-Definition for a profile, session, or event property, specifying how possible values are constrained, if the value is
-multi-valued (a vector of values as opposed to a scalar value). `PropertyType`s can also be categorized using
-systemTags or file system structure, using sub-directories to organize definition files.
-
-For detailed information about property types, see <<_property_types,Property Types>>.
-
-==== Rule
-
-`Rule`s are conditional sets of actions to be executed in response to incoming events. Triggering of rules is guarded
-by a condition: the rule is only triggered if the associated condition is satisfied. That condition can test the
-event itself, but also the profile or the session. Once a rule triggers, a list of actions can be performed as
-consequences. Also, when rules trigger, a specific event is raised so that other parts of Unomi can react accordingly.
-
-==== Scoring
-
-`Scoring`s are set of conditions associated with a value to assign to profiles when matching so that the associated
-users can be scored along that dimension. Each scoring element is evaluated and matching profiles' scores are
-incremented with the associated value.
-
-==== Segments
-
-`Segment`s represent dynamically evaluated groups of similar profiles in order to categorize the associated users.
-To be considered part of a given segment, users must satisfies the segment’s condition. If they match, users are
-automatically added to the segment. Similarly, if at any given point during, they cease to satisfy the segment’s
-condition, they are automatically removed from it.
-
-==== Tag
-
-`Tag`s are simple labels that are used to classify all other objects inside Unomi.
-
-==== ValueType
-
-Definition for values that can be assigned to properties ("primitive" types).
-
-=== Custom plugins
-
-Apache Unomi is a pluggeable server that may be extended in many ways. This document assumes you are familiar with the
-<<_data_model_overview,Apache Unomi Data Model>> . This document is mostly a reference document on the different things that may
-be used inside an extension. If you are looking for complete samples, please see the <<_samples,samples page>>.
-
-==== Creating a plugin
-
-An plugin is simply a Maven project, with a Maven pom that looks like this:
-
-[source]
-----
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <parent>
-        <groupId>org.apache.unomi</groupId>
-        <artifactId>unomi-plugins</artifactId>
-        <version>${project.version}</version>
-    </parent>
-
+<project xmlns="http://maven.apache.org/POM/4.0.0">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>unomi-plugin-example</artifactId>
-    <name>Apache Unomi :: Plugins :: Example</name>
-    <description>A sample example of a Unomi plugin</description>
-    <version>${project.version}</version>
+    <groupId>com.example</groupId>
+    <artifactId>my-unomi-plugin</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
+    <properties>
+        <unomi.version>3.1.0-SNAPSHOT</unomi.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${unomi.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
-        <!-- This dependency is not required but generally used in plugins -->
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -332,618 +148,11 @@ An plugin is simply a Maven project, with a Maven pom that looks like this:
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
+                <version>5.1.9</version>
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
-                        <Import-Package>
-                            sun.misc;resolution:=optional,
-                            *
-                        </Import-Package>
-                    </instructions>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
-</project>
-----
-
-A plugin may contain many different kinds of Apache Unomi objects, as well as custom OSGi services or anything that
-is needed to build your application.
-
-==== Deployment and custom definition
-
-When you deploy a custom bundle with a custom definition (see "Predefined xxx" chapters under) for the first time, the
-definition will automatically be deployed at your bundle start event *if it does not exist*.
-After that if you redeploy the same bundle, the definition will not be redeployed, but you can redeploy it manually
-using the command `unomi:deploy-definition &lt;bundleId&gt; &lt;fileName&gt;` If you need to modify an existing
-definition when deploying the module, see <<_migration_patches,Migration patches>>.
-
-==== Predefined segments
-
-You may provide pre-defined segments by simply adding a JSON file in the src/main/resources/META-INF/cxs/segments directory of
-your Maven project. Here is an example of a pre-defined segment:
-
-[source]
-----
-{
-  "metadata": {
-    "id": "leads",
-    "name": "Leads",
-    "scope": "systemscope",
-    "description": "You can customize the list below by editing the leads segment.",
-    "readOnly":true
-  },
-  "condition": {
-    "parameterValues": {
-      "subConditions": [
-        {
-          "parameterValues": {
-            "propertyName": "properties.leadAssignedTo",
-            "comparisonOperator": "exists"
-          },
-          "type": "profilePropertyCondition"
-        }
-      ],
-      "operator" : "and"
-    },
-    "type": "booleanCondition"
-  }
-}
-----
-
-Basically this segment uses a condition to test if the profile has a property `leadAssignedTo` that exists. All profiles
-that match this condition will be part of the pre-defined segment.
-
-==== Predefined rules
-
-You may provide pre-defined rules by simply adding a JSON file in the src/main/resources/META-INF/cxs/rules directory of
-your Maven project. Here is an example of a pre-defined rule:
-
-[source]
-----
-{
-    "metadata" : {
-        "id": "evaluateProfileSegments",
-        "name": "Evaluate segments",
-        "description" : "Evaluate segments when a profile is modified",
-        "readOnly":true
-    },
-
-    "condition" : {
-        "type": "profileUpdatedEventCondition",
-        "parameterValues": {
-        }
-    },
-
-    "actions" : [
-        {
-            "type": "evaluateProfileSegmentsAction",
-            "parameterValues": {
-            }
-        }
-    ]
-
-}
-----
-
-In this example we provide a rule that will execute when a predefined composed condition of type
-"profileUpdatedEventCondition" is received. See below to see how predefined composed conditions are declared.
-Once the condition is matched, the actions will be executed in sequence. In this example there is only a single
-action of type "evaluateProfileSegmentsAction" that is defined so it will be executed by Apache Unomi's rule engine.
-You can also see below how custom actions may be defined.
-
-==== Predefined properties
-
-By default Apache Unomi comes with a set of pre-defined properties, but in many cases it is useful to add additional
-predefined property definitions. You can create property definitions for session or profile properties by creating them
-in different directories.
-
-For session properties you must create a JSON file in the following directory in your Maven project:
-
-[source]
-----
-src/main/resources/META-INF/cxs/properties/sessions
-----
-
-For profile properties you must create the JSON file inside the directory in your Maven project:
-
-[source]
-----
-src/main/resources/META-INF/cxs/properties/profiles
-----
-
-Here is an example of a property definition JSON file
-
-[source]
-----
-{
-    "metadata": {
-        "id": "city",
-        "name": "City",
-        "systemTags": ["properties", "profileProperties", "contactProfileProperties"]
-    },
-    "type": "string",
-    "defaultValue": "",
-    "automaticMappingsFrom": [ ],
-    "rank": "304.0"
-}
-----
-
-==== Predefined child conditions
-
-You can define new predefined conditions that are actually conditions inheriting from a parent condition and setting
-pre-defined parameter values. You can do this by creating a JSON file in:
-
-[source]
-----
-src/main/resources/META-INF/cxs/conditions
-----
-
-Here is an example of a JSON file that defines a profileUpdateEventCondition that inherits from a parent condition of
-type eventTypeCondition.
-
-[source]
-----
-{
-  "metadata": {
-    "id": "profileUpdatedEventCondition",
-    "name": "profileUpdatedEventCondition",
-    "description": "",
-    "systemTags": [
-      "event",
-      "eventCondition"
-    ],
-    "readOnly": true
-  },
-  "parentCondition": {
-    "type": "eventTypeCondition",
-    "parameterValues": {
-      "eventTypeId": "profileUpdated"
-    }
-  },
-
-  "parameters": [
-  ]
-}
-----
-
-==== Predefined personas
-
-Personas may also be pre-defined by creating JSON files in the following directory:
-
-[source]
-----
-src/main/resources/META-INF/cxs/personas
-----
-
-Here is an example of a persona definition JSON file:
-
-[source]
-----
-{
-    "persona": {
-        "itemId": "usVisitor",
-        "properties": {
-            "description": "Represents a visitor browsing from inside the continental US",
-            "firstName": "U.S.",
-            "lastName": "Visitor"
-        },
-        "segments": []
-    },
-    "sessions": [
-        {
-            "itemId": "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d9",
-            "profileId": "usVisitor",
-            "properties": {
-                "operatingSystemName": "OS X 10.9 Mavericks",
-                "sessionCountryName": "United States",
-                "location": {
-                    "lat":37.422,
-                    "lon":-122.084058
-                },
-                "userAgentVersion": "37.0.2062.120",
-                "sessionCountryCode": "US",
-                "deviceCategory": "Personal computer",
-                "operatingSystemFamily": "OS X",
-                "userAgentName": "Chrome",
-                "sessionCity": "Mountain View"
-            },
-            "timeStamp": "2014-09-18T11:40:54Z",
-            "lastEventDate": "2014-09-18T11:40:59Z",
-            "duration": 4790
-        }
-    ]
-}
-----
-
-You can see that it's also possible to define sessions for personas.
-
-==== Custom action types
-
-Custom action types are a powerful way to integrate with external systems by being able to define custom logic that will
-be executed by an Apache Unomi rule. An action type is defined by a JSON file created in the following directory:
-
-[source]
-----
-src/main/resources/META-INF/cxs/actions
-----
-
-Here is an example of a JSON action definition:
-
-[source]
-----
-{
-  "metadata": {
-    "id": "addToListsAction",
-    "name": "addToListsAction",
-    "description": "",
-    "systemTags": [
-      "demographic",
-      "availableToEndUser"
-    ],
-    "readOnly": true
-  },
-  "actionExecutor": "addToLists",
-  "parameters": [
-    {
-      "id": "listIdentifiers",
-      "type": "string",
-      "multivalued": true
-    }
-  ]
-}
-----
-
-The `actionExecutor` identifier refers to a service property that is defined in the OSGi Blueprint service registration.
-Note that any OSGi service registration may be used, but in these examples we use OSGi Blueprint. The definition for the
-above JSON file will be found in a file called `src/main/resources/OSGI-INF/blueprint/blueprint.xml` with the following
-content:
-
-[source]
-----
-<?xml version="1.0" encoding="UTF-8"?>
-<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
-           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
-
-    <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
-    <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
-
-    <!-- Action executors -->
-
-    <service interface="org.apache.unomi.api.actions.ActionExecutor">
-        <service-properties>
-            <entry key="actionExecutorId" value="addToLists"/>
-        </service-properties>
-        <bean class="org.apache.unomi.lists.actions.AddToListsAction">
-            <property name="profileService" ref="profileService"/>
-            <property name="eventService" ref="eventService"/>
-        </bean>
-    </service>
-
-</blueprint>
-----
-
-You can note here the `actionExecutorId` that corresponds to the `actionExecutor` in the JSON file.
-
-The implementation of the action is available here : https://github.com/apache/unomi/blob/master/extensions/lists-extension/actions/src/main/java/org/apache/unomi/lists/actions/AddToListsAction.java[org.apache.unomi.lists.actions.AddToListsAction]
-
-==== Custom condition types
-
-Custom condition types are different from predefined child conditions because they implement their logic using Java classes.
-They are also declared by adding a JSON file into the `conditions` directory:
-
-[source]
-----
-src/main/resources/META-INF/cxs/conditions
-----
-
-Here is an example of JSON custom condition type definition:
-
-[source]
-----
-{
-  "metadata": {
-    "id": "matchAllCondition",
-    "name": "matchAllCondition",
-    "description": "",
-    "systemTags": [
-      "logical",
-      "profileCondition",
-      "eventCondition",
-      "sessionCondition",
-      "sourceEventCondition"
-    ],
-    "readOnly": true
-  },
-  "conditionEvaluator": "matchAllConditionEvaluator",
-  "queryBuilder": "matchAllConditionQueryBuilder",
-
-  "parameters": [
-  ]
-}
-----
-
-Note the `conditionEvaluator` and the `queryBuilder` values. These reference OSGi service properties that are declared
-in an OSGi Blueprint configuration file (other service definitions may also be used such as Declarative Services or even
-Java registered services). Here is an example of an OSGi Blueprint definition corresponding to the above JSON condition
-type definition file.
-
-[source]
-----
-src/main/resources/OSGI-INF/blueprint/blueprint.xml
-
-<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
-           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
-
-    <service
-            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="matchAllConditionQueryBuilder"/>
-        </service-properties>
-        <bean class="conditions.org.apache.unomi.persistence.elasticsearch.MatchAllConditionESQueryBuilder"/>
-    </service>
-
-    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="matchAllConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionEvaluator"/>
-    </service>
-
-</blueprint>
-----
-
-You can find the implementation of the two classes here :
-
-* https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionESQueryBuilder.java[conditions.org.apache.unomi.persistence.elasticsearch.MatchAllConditionESQueryBuilder]
-* https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionEvaluator.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionEvaluator]
-
-==== Implementation Examples
-
-Here's a complete example of implementing custom query builders for both search engines following Apache Unomi 3.0 best practices:
-
-**ElasticSearch Implementation:**
-[source,java]
-----
-package org.apache.unomi.plugin.elasticsearch;
-
-import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-
-public class MyCustomQueryBuilder implements ConditionESQueryBuilder {
-
-    @Override
-    public Query buildQuery(Condition condition, Map<String, Object> context,
-                           ConditionESQueryBuilderDispatcher dispatcher) {
-        // Get parameters from the condition
-        String fieldName = (String) condition.getParameter("fieldName");
-        String fieldValue = (String) condition.getParameter("fieldValue");
-
-        // Build Elasticsearch-specific query using the new client
-        return Query.of(q -> q
-            .bool(b -> b
-                .must(m -> m
-                    .term(t -> t
-                        .field(fieldName)
-                        .value(v -> v.stringValue(fieldValue))
-                    )
-                )
-            )
-        );
-    }
-
-    @Override
-    public long count(Condition condition, Map<String, Object> context,
-                     ConditionESQueryBuilderDispatcher dispatcher) {
-        // Implement count logic if needed
-        return 0;
-    }
-}
-----
-
-**OpenSearch Implementation:**
-[source,java]
-----
-package org.apache.unomi.plugin.opensearch;
-
-import org.opensearch.client.opensearch._types.query_dsl.Query;
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
-import org.opensearch.index.query.QueryBuilder;
-import org.opensearch.index.query.QueryBuilders;
-
-public class MyCustomQueryBuilder implements ConditionOSQueryBuilder {
-
-    @Override
-    public Query buildQuery(Condition condition, Map<String, Object> context,
-                           ConditionOSQueryBuilderDispatcher dispatcher) {
-        // Get parameters from the condition
-        String fieldName = (String) condition.getParameter("fieldName");
-        String fieldValue = (String) condition.getParameter("fieldValue");
-
-        // Build OpenSearch-specific query
-        return Query.of(q -> q
-            .bool(b -> b
-                .must(m -> m
-                    .term(t -> t
-                        .field(fieldName)
-                        .value(v -> v.stringValue(fieldValue))
-                    )
-                )
-            )
-        );
-    }
-
-    @Override
-    public long count(Condition condition, Map<String, Object> context,
-                     ConditionOSQueryBuilderDispatcher dispatcher) {
-        // Implement count logic if needed
-        return 0;
-    }
-}
-----
-
-**OSGi Service Registration for ElasticSearch** (`elasticsearch-bundle/src/main/resources/OSGI-INF/blueprint/blueprint.xml`):
-[source,xml]
-----
-<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0">
-    <!-- Register the query builder with the new naming convention -->
-    <service interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="myCustomQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugin.elasticsearch.MyCustomQueryBuilder"/>
-    </service>
-</blueprint>
-----
-
-**OSGi Service Registration for OpenSearch** (`opensearch-bundle/src/main/resources/OSGI-INF/blueprint/blueprint.xml`):
-[source,xml]
-----
-<blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0">
-    <!-- Register the query builder with the new naming convention -->
-    <service interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="myCustomQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugin.opensearch.MyCustomQueryBuilder"/>
-    </service>
-</blueprint>
-----
-
-**Condition Type Definition** (shared between both implementations):
-[source,json]
-----
-{
-  "metadata": {
-    "id": "myCustomCondition",
-    "name": "My Custom Condition",
-    "description": "A custom condition for demonstration purposes",
-    "systemTags": ["custom", "condition"],
-    "readOnly": false
-  },
-  "queryBuilder": "myCustomQueryBuilder",
-  "parameters": [
-    {
-      "id": "fieldName",
-      "type": "string",
-      "multivalued": false
-    },
-    {
-      "id": "fieldValue",
-      "type": "string",
-      "multivalued": false
-    }
-  ]
-}
-----
-
-==== Project Structure and Packaging
-
-For plugins that support both Elasticsearch and OpenSearch, follow this recommended project structure:
-
-```
-my-custom-plugin/
-├── pom.xml                          # Parent POM
-├── my-custom-plugin-common/         # Shared code and interfaces
-│   ├── pom.xml
-│   └── src/main/java/
-│       └── org/apache/unomi/plugin/
-│           └── common/
-│               ├── MyCustomConditionType.java
-│               └── MyCustomConditionEvaluator.java
-├── my-custom-plugin-elasticsearch/  # Elasticsearch-specific implementation
-│   ├── pom.xml
-│   └── src/main/
-│       ├── java/
-│       │   └── org/apache/unomi/plugin/elasticsearch/
-│       │       └── MyCustomQueryBuilder.java
-│       └── resources/
-│           └── OSGI-INF/blueprint/
-│               └── blueprint.xml
-├── my-custom-plugin-opensearch/     # OpenSearch-specific implementation
-│   ├── pom.xml
-│   └── src/main/
-│       ├── java/
-│       │   └── org/apache/unomi/plugin/opensearch/
-│       │       └── MyCustomQueryBuilder.java
-│       └── resources/
-│           └── OSGI-INF/blueprint/
-│               └── blueprint.xml
-└── my-custom-plugin-features/       # Karaf feature definitions
-    ├── pom.xml
-    └── src/main/resources/
-        └── features.xml
-```
-
-**Parent POM Configuration:**
-[source,xml]
-----
-<project>
-    <groupId>org.apache.unomi.plugins</groupId>
-    <artifactId>my-custom-plugin</artifactId>
-    <version>1.0.0</version>
-    <packaging>pom</packaging>
-
-    <modules>
-        <module>my-custom-plugin-common</module>
-        <module>my-custom-plugin-elasticsearch</module>
-        <module>my-custom-plugin-opensearch</module>
-        <module>my-custom-plugin-features</module>
-    </modules>
-
-    <properties>
-        <unomi.version>3.1.0</unomi.version>
-    </properties>
-</project>
-----
-
-**Elasticsearch Bundle POM:**
-[source,xml]
-----
-<project>
-    <parent>
-        <groupId>org.apache.unomi.plugins</groupId>
-        <artifactId>my-custom-plugin</artifactId>
-        <version>1.0.0</version>
-    </parent>
-
-    <artifactId>my-custom-plugin-elasticsearch</artifactId>
-    <packaging>bundle</packaging>
-
-    <dependencies>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-api</artifactId>
-            <version>${unomi.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>persistence-elasticsearch-core</artifactId>
-            <version>${unomi.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi.plugins</groupId>
-            <artifactId>my-custom-plugin-common</artifactId>
-            <version>1.0.0</version>
-        </dependency>
-    </dependencies>
-
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Bundle-SymbolicName>my-custom-plugin-elasticsearch</Bundle-SymbolicName>
-                        <Bundle-Name>My Custom Plugin - Elasticsearch</Bundle-Name>
-                        <Export-Package>org.apache.unomi.plugin.elasticsearch</Export-Package>
                         <Import-Package>*</Import-Package>
                     </instructions>
                 </configuration>
@@ -953,152 +162,417 @@ my-custom-plugin/
 </project>
 ----
 
-**Karaf Feature Definitions:**
+The repository includes a minimal reference: `samples/trainingplugin` (action type + rule + Blueprint executor).
 
-`features.xml` (single file with multiple feature definitions):
+==== Deployment and updates
+
+When a bundle starts, predefined JSON definitions are deployed **once** if they do not already exist.
+Redeploying the same bundle does not overwrite existing definitions.
+
+To force redeploy:
+
+* Karaf shell: `unomi:deploy-definition <bundleId> <type> <fileName>` — see the shell commands chapter in this manual
+* Structural changes to existing definitions: <<_migration_patches,Migration patches>>
+
+Wildcards are supported, for example `unomi:deploy-definition 175 rules *`.
+
+==== JSON-only extensions
+
+===== Predefined segments
+
+Place JSON under `META-INF/cxs/segments/`:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "leads",
+    "name": "Leads",
+    "scope": "systemscope",
+    "description": "Profiles with leadAssignedTo set",
+    "readOnly": true
+  },
+  "condition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator": "and",
+      "subConditions": [
+        {
+          "type": "profilePropertyCondition",
+          "parameterValues": {
+            "propertyName": "properties.leadAssignedTo",
+            "comparisonOperator": "exists"
+          }
+        }
+      ]
+    }
+  }
+}
+----
+
+===== Predefined rules
+
+Place JSON under `META-INF/cxs/rules/`:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "evaluateProfileSegments",
+    "name": "Evaluate segments",
+    "description": "Evaluate segments when a profile is modified",
+    "readOnly": true
+  },
+  "condition": {
+    "type": "profileUpdatedEventCondition",
+    "parameterValues": {}
+  },
+  "actions": [
+    {
+      "type": "evaluateProfileSegmentsAction",
+      "parameterValues": {}
+    }
+  ]
+}
+----
+
+===== Predefined property types
+
+* Profiles: `META-INF/cxs/properties/profiles/`
+* Sessions: `META-INF/cxs/properties/sessions/`
+
+See <<_property_types,Property types>> for the full model.
+
+===== Predefined child conditions
+
+Specialize an existing condition type with `parentCondition` under `META-INF/cxs/conditions/`:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "profileUpdatedEventCondition",
+    "name": "profileUpdatedEventCondition",
+    "systemTags": ["event", "eventCondition"],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "eventTypeCondition",
+    "parameterValues": { "eventTypeId": "profileUpdated" }
+  },
+  "parameters": []
+}
+----
+
+===== Predefined personas
+
+Place JSON under `META-INF/cxs/personas/`. Each file can define a persona profile and optional sessions for testing personalization.
+
+==== Custom action types
+
+1. Add `META-INF/cxs/actions/myAction.json` with an `actionExecutor` ID.
+2. Register an `ActionExecutor` OSGi service with matching `actionExecutorId`.
+
+JSON descriptor (`samples/trainingplugin`):
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "trainingNotifAction",
+    "name": "trainingNotifAction",
+    "readOnly": true
+  },
+  "actionExecutor": "training",
+  "parameters": []
+}
+----
+
+Blueprint registration (`samples/trainingplugin`):
+
 [source,xml]
 ----
-<?xml version="1.0" encoding="UTF-8"?>
-<features name="my-custom-plugin" version="1.0.0">
+<service interface="org.apache.unomi.api.actions.ActionExecutor">
+    <service-properties>
+        <entry key="actionExecutorId" value="training"/>
+    </service-properties>
+    <bean class="org.apache.unomi.training.TrainedNotificationAction">
+        <property name="profileService" ref="profileService"/>
+    </bean>
+</service>
+----
 
-    <!-- Elasticsearch feature -->
-    <feature name="my-custom-plugin-elasticsearch" version="1.0.0">
-        <bundle>mvn:org.apache.unomi.plugins/my-custom-plugin-common/1.0.0</bundle>
-        <bundle>mvn:org.apache.unomi.plugins/my-custom-plugin-elasticsearch/1.0.0</bundle>
-        <feature>unomi-elasticsearch</feature>
+For a production-style example with service injection, see the lists extension:
+https://github.com/apache/unomi/blob/master/extensions/lists-extension/actions/src/main/java/org/apache/unomi/lists/actions/AddToListsAction.java[`AddToListsAction`]
+
+Catalog of built-in actions: <<_builtin_action_types,Built-in action types>>.
+
+==== Custom condition types
+
+Custom condition types combine:
+
+* A JSON descriptor in `META-INF/cxs/conditions/`
+* A `ConditionEvaluator` OSGi service (required for rule and event evaluation)
+* `ConditionESQueryBuilder` / `ConditionOSQueryBuilder` services (required when the condition is used in segments or profile queries)
+
+Unomi 3.0+ uses **engine-neutral** `queryBuilder` IDs in JSON (for example `booleanConditionQueryBuilder`, not `*ESQueryBuilder`).
+
+Add `validation` blocks on parameters so invalid instances are rejected at save time — see <<_condition_validation,Condition validation>>.
+
+===== Evaluator registration (Blueprint or DS)
+
+The base plugin registers evaluators in Blueprint; advanced conditions use Declarative Services:
+
+[source,java]
+----
+@Component(service = ConditionEvaluator.class,
+           property = {"conditionEvaluatorId=sourceEventPropertyConditionEvaluator"})
+public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator {
+    // ...
+}
+----
+
+Full registration examples (evaluator + Elasticsearch and OpenSearch query builders): <<_builtin_condition_types,Plugin registration (Unomi 3.0+)>>.
+
+===== Query builders and the persistence split
+
+In the Apache Unomi distribution, **core** query builders for built-in conditions live in:
+
+* `persistence-elasticsearch/core` — `unomi-elasticsearch-conditions` feature
+* `persistence-opensearch/core` — `unomi-opensearch-conditions` feature
+
+The base plugin bundle registers evaluators only; it does not register query builders.
+
+For **custom** conditions that participate in segment queries, ship search-engine-specific query builder bundles (see next section).
+
+===== Query builder implementation (Elasticsearch Java API Client)
+
+[source,java]
+----
+package com.example.plugin.elasticsearch;
+
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
+import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
+
+import java.util.Map;
+
+public class MyCustomESQueryBuilder implements ConditionESQueryBuilder {
+
+    @Override
+    public Query buildQuery(Condition condition, Map<String, Object> context,
+                            ConditionESQueryBuilderDispatcher dispatcher) {
+        String fieldName = (String) condition.getParameter("fieldName");
+        String fieldValue = (String) condition.getParameter("fieldValue");
+        return Query.of(q -> q.term(t -> t.field(fieldName).value(v -> v.stringValue(fieldValue))));
+    }
+}
+----
+
+OpenSearch uses the same pattern with `org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder` and `org.opensearch.client.opensearch._types.query_dsl.Query`.
+
+Shared condition type JSON:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "myCustomCondition",
+    "name": "My Custom Condition",
+    "systemTags": ["custom", "condition", "profileCondition"],
+    "readOnly": false
+  },
+  "conditionEvaluator": "myCustomConditionEvaluator",
+  "queryBuilder": "myCustomQueryBuilder",
+  "parameters": [
+    { "id": "fieldName", "type": "string", "validation": { "required": true } },
+    { "id": "fieldValue", "type": "string", "validation": { "required": true } }
+  ]
+}
+----
+
+==== Multi-bundle layout for Elasticsearch and OpenSearch
+
+When your condition needs segment/query support on **both** search engines, use three Maven modules:
+
+[source]
+----
+my-plugin/
+├── my-plugin-common/          # JSON descriptors, evaluators, shared code
+├── my-plugin-elasticsearch/   # ConditionESQueryBuilder + ES mappings
+├── my-plugin-opensearch/      # ConditionOSQueryBuilder + OS mappings
+└── my-plugin-features/        # Karaf features.xml
+----
+
+Common bundle dependencies:
+
+[source,xml]
+----
+<dependency>
+    <groupId>org.apache.unomi</groupId>
+    <artifactId>unomi-api</artifactId>
+    <scope>provided</scope>
+</dependency>
+<dependency>
+    <groupId>org.apache.unomi</groupId>
+    <artifactId>unomi-persistence-spi</artifactId>
+    <scope>provided</scope>
+</dependency>
+----
+
+Elasticsearch bundle adds:
+
+[source,xml]
+----
+<dependency>
+    <groupId>org.apache.unomi</groupId>
+    <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+    <scope>provided</scope>
+</dependency>
+----
+
+OpenSearch bundle adds:
+
+[source,xml]
+----
+<dependency>
+    <groupId>org.apache.unomi</groupId>
+    <artifactId>unomi-persistence-opensearch-core</artifactId>
+    <scope>provided</scope>
+</dependency>
+----
+
+===== Karaf features
+
+Define **separate** features per search engine. Use the same `queryBuilderId` in both implementations.
+
+[source,xml]
+----
+<features name="my-plugin" version="1.0.0">
+    <feature name="my-plugin-elasticsearch" version="1.0.0">
+        <bundle>mvn:com.example/my-plugin-common/1.0.0</bundle>
+        <bundle>mvn:com.example/my-plugin-elasticsearch/1.0.0</bundle>
+        <feature version="3.1.0">unomi-elasticsearch-conditions</feature>
     </feature>
-
-    <!-- OpenSearch feature -->
-    <feature name="my-custom-plugin-opensearch" version="1.0.0">
-        <bundle>mvn:org.apache.unomi.plugins/my-custom-plugin-common/1.0.0</bundle>
-        <bundle>mvn:org.apache.unomi.plugins/my-custom-plugin-opensearch/1.0.0</bundle>
-        <feature>unomi-opensearch</feature>
+    <feature name="my-plugin-opensearch" version="1.0.0">
+        <bundle>mvn:com.example/my-plugin-common/1.0.0</bundle>
+        <bundle>mvn:com.example/my-plugin-opensearch/1.0.0</bundle>
+        <feature version="3.1.0">unomi-opensearch-conditions</feature>
     </feature>
 </features>
 ----
 
-==== Best Practices
+Install at runtime:
 
-1. **Naming Conventions**
-   - Use generic queryBuilder IDs (e.g., `myCustomQueryBuilder`) instead of search engine-specific ones
-   - Follow the new naming convention: remove "ES" references, use "QueryBuilder" suffix
-   - Keep the same queryBuilder ID across both implementations for consistency
-
-2. **Code Organization**
-   - Keep shared logic in a common module (condition types, evaluators, utilities)
-   - Implement search engine specific code only where necessary
-   - Use interfaces to define common behavior
-   - Minimize code duplication between implementations
-
-3. **OSGi Service Registration**
-   - Register services only in the appropriate bundle (Elasticsearch vs OpenSearch)
-   - Use the same `queryBuilderId` in service properties for both implementations
-   - Ensure proper dependency management to avoid conflicts
-
-4. **Testing Strategy**
-   - Create test suites for both implementations
-   - Use Docker containers for integration testing:
-     ```yaml
-     services:
-       elasticsearch:
-         image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
-       opensearch:
-         image: opensearchproject/opensearch:3.4.0
-     ```
-   - Test with both search engines to ensure compatibility
-
-5. **Deployment Configuration**
-   - Package search engine specific code in separate bundles
-   - Use a single feature file with multiple feature definitions for better organization
-   - Configure the appropriate feature in your deployment based on the selected search engine:
-     - For Elasticsearch: `feature:install my-custom-plugin-elasticsearch`
-     - For OpenSearch: `feature:install my-custom-plugin-opensearch`
-   - Document dependencies and requirements clearly
+* Elasticsearch: `feature:install my-plugin-elasticsearch`
+* OpenSearch: `feature:install my-plugin-opensearch`
 
 [[_custom_distribution_feature]]
-==== Custom Distribution Feature
+===== Custom distribution feature
 
-For production deployments, you can create a custom distribution's feature file to automatically include your plugin features in the startup configuration. This approach ensures your plugin is automatically deployed when Apache Unomi starts.
+For production, add your plugin feature to a custom distribution based on `distribution/src/main/feature/feature.xml`.
+Extend `unomi-distribution-elasticsearch` or `unomi-distribution-opensearch` and append your plugin feature **last**.
 
-**Creating a Custom Distribution Feature:**
-
-1. **Create the feature file** in a dedicated maven module. You can use the unomi-distribution module as a reference.
-
-2. **Define your custom distribution** by extending the default ones:
+Elasticsearch example (abbreviated — compare with the real file in the repository):
 
 [source,xml]
 ----
-<features name="unomi-distributions" xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0 https://karaf.apache.org/xmlns/features/v1.6.0">
-    <feature name="unomi-distribution-custom" version="${project.version}">
-        <feature dependency="true" version="${project.version}">unomi-base</feature>
-        <feature dependency="true" version="${project.version}">unomi-startup</feature>
-        <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
-        <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
-        <feature dependency="true" version="${project.version}">unomi-services</feature>
-        <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
-        <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
-        <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
-        <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
-        <feature dependency="true" version="${project.version}">unomi-wab</feature>
-        <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
-        <feature dependency="true" version="${project.version}">unomi-healthcheck-elasticsearch</feature>
-        <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
-        <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
-        <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
-        <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
-        <feature dependency="true" version="${project.version}">custom-feature</feature>
-    </feature>
-</features>
+<feature name="unomi-distribution-elasticsearch-custom" version="${project.version}">
+    <feature dependency="true" version="${project.version}">unomi-distribution-elasticsearch</feature>
+    <feature dependency="true" version="${project.version}">my-plugin-elasticsearch</feature>
+</feature>
 ----
 
-**Key Points:**
+OpenSearch deployments use `unomi-distribution-opensearch` and `unomi-healthcheck-opensearch` instead of the Elasticsearch healthcheck feature.
 
-- **Feature ordering**: Your custom plugin features should be added at the end of the feature list, after the core Apache Unomi features
-- **Search engine specific**: Include only the appropriate feature for your selected search engine
-- **Dependency management**: Ensure your plugin features are listed after their dependencies (e.g., after `unomi-elasticsearch-core` or `unomi-opensearch-core`)
+See also <<_building,Building and deploying>> and <<_configuration,Configuration>>.
 
+==== Additional bundle resources
 
-**Benefits of Custom Distribution Feature:**
+===== JSON Schemas for events
 
-- **Automatic deployment**: Your plugin is automatically installed when Apache Unomi starts
-- **Consistent environments**: Ensures the same features are deployed across all environments
-- **Production ready**: No manual feature installation required
-- **Version control**: Configuration can be versioned and managed with your deployment
+Place event schemas under `META-INF/cxs/schemas/`. See <<_json_schemas,JSON Schemas>>.
 
-**Note**: For more detailed information about custom distributions, including environment-specific examples, see the <<_custom_distribution_feature,Custom Distribution Feature>> section or the <<_configuration,Configuration>> section of the documentation.
+===== Index mappings and Painless scripts
 
-+
-6. **Migration from Legacy Implementations**
-   - **DO NOT** use legacy mappings for custom query builders
-   - Rename existing query builders to follow new naming conventions
-   - Update condition type definitions to use new queryBuilder IDs
-   - Test thoroughly after migration
+* `META-INF/cxs/mappings/` — custom index mappings loaded by the persistence service
+* `META-INF/cxs/painless/` — `.painless` scripts used during persistence operations
 
-==== Learning from Core Implementation
+===== Expression filters
 
-You can study the core persistence implementations as references:
+`META-INF/cxs/expressions/` — JSON descriptors for allowed scripting expressions (MVEL and related filters).
 
-1. ElasticSearch Implementation:
-   - Location: `persistence-elasticsearch/core`
-   - Key classes:
-     * ElasticSearchPersistenceServiceImpl
-     * ElasticSearchQueryBuilder
+===== Migration patches
 
-2. OpenSearch Implementation:
-   - Location: `persistence-opensearch/core`
-   - Key classes:
-     * OpenSearchPersistenceServiceImpl
-     * OpenSearchQueryBuilder
+`META-INF/cxs/patches/` — one-time structural updates. See <<_migration_patches,Migration patches>>.
 
-These implementations demonstrate:
-- How to handle search engine specific features
-- Query building patterns
-- Mapping file organization
-- Error handling and retry mechanisms
-- Connection management
-- Security configuration
+==== Custom value types and validation
 
+Register custom parameter types for condition validation by exposing a `ValueTypeValidator` OSGi service.
+`DefinitionsService` forwards validators to `ConditionValidationService`.
+
+Use this when your condition type introduces a non-primitive `type` ID in parameter definitions.
+
+==== Scheduling background work
+
+Plugins can register `TaskExecutor` implementations and schedule tasks through `SchedulerService`.
+See <<_scheduler,Task scheduler>> for REST APIs, shell commands, tenant-aware executors, and checkpoint patterns.
+
+==== GraphQL provider extensions
+
+For GraphQL schema extensions, see `samples/graphql-providers` and <<_graphql_api,GraphQL API>>.
+
+==== Repository samples
+
+[cols="2,3", options="header"]
+|===
+| Sample | What it demonstrates
+
+| `samples/trainingplugin` | Minimal action + rule + Blueprint (best starting point)
+| `samples/tweet-button-plugin` | Custom action, rule, and web integration
+| `samples/login-integration` | Login rule and profile merge
+| `samples/groovy-actions` | Groovy action scripts in a bundle
+| `samples/graphql-providers` | GraphQL type extensions
+|===
+
+Manual walkthroughs: <<_samples,Samples>>.
+
+==== Best practices
+
+* Prefer Groovy actions or JSON-only bundles before writing Java when possible.
+* Import `unomi-bom`; use `provided` scope for Unomi artifacts inside Karaf.
+* Use the same `queryBuilder` ID in JSON and in both ES/OS service registrations.
+* Put evaluators and JSON descriptors in the **common** bundle; query builders in engine-specific bundles.
+* Add `validation` metadata on condition parameters (see <<_condition_validation,Condition validation>>).
+* Test segment conditions against both search engines if you ship both query builder bundles.
+* Use `explain=true` on context requests to debug condition evaluation — see <<_debugging_conditions,Debugging conditions>>.
+* Do not copy legacy `*ESQueryBuilder` class names from Unomi 2.x; follow the 3.0+ naming in <<_builtin_condition_types,Built-in condition types>>.
+
+===== Integration testing with Docker
+
+[source,yaml]
+----
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
+  opensearch:
+    image: opensearchproject/opensearch:3.4.0
+----
+
+==== Reference implementations in the core codebase
+
+Study these modules when building persistence-related plugins:
+
+[cols="2,3", options="header"]
+|===
+| Area | Location
+
+| Elasticsearch persistence | `persistence-elasticsearch/core`
+| OpenSearch persistence | `persistence-opensearch/core`
+| Built-in condition evaluators | `plugins/baseplugin`
+| Advanced evaluators (DS) | `plugins/advanced-conditions`
+| Distribution features | `distribution/src/main/feature/feature.xml`
+|===
+
+These show query building patterns, mapping layout, connection handling, and how built-in condition types are split between evaluators (plugins) and query builders (persistence modules).
