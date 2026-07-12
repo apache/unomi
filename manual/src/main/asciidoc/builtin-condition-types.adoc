@@ -17,6 +17,7 @@
 
 Apache Unomi ships with built-in condition types in the base plugin and optional extensions.
 For a hands-on introduction with examples, see <<_conditions_guide,Conditions guide>>.
+For save-time parameter rules (`required`, `allowedValues`, exclusive groups), see <<_condition_validation,Condition validation>>.
 
 ==== Condition type descriptor shape
 
@@ -33,11 +34,24 @@ For a hands-on introduction with examples, see <<_conditions_guide,Conditions gu
   "conditionEvaluator": "booleanConditionEvaluator",
   "queryBuilder": "booleanConditionQueryBuilder",
   "parameters": [
-    { "id": "operator", "type": "string", "defaultValue": "and" },
-    { "id": "subConditions", "type": "Condition", "multivalued": true }
+    {
+      "id": "operator",
+      "type": "string",
+      "defaultValue": "and",
+      "validation": { "required": true, "allowedValues": ["and", "or"] }
+    },
+    {
+      "id": "subConditions",
+      "type": "Condition",
+      "multivalued": true,
+      "validation": { "required": true }
+    }
   ]
 }
 ----
+
+Parameters may include a `validation` object (see <<_condition_validation,Condition validation>>).
+Real descriptors in the base plugin use this heavily — for example `pastEventCondition` requires an `eventCondition` sub-condition tagged `eventCondition`.
 
 Each condition type provides:
 

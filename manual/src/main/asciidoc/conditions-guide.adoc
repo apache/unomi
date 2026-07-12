@@ -21,9 +21,11 @@ This guide walks from simple property checks to advanced behavioral conditions w
 See also:
 
 * <<_builtin_condition_types,Built-in condition types>> — full catalog
+* <<_condition_validation,Condition validation>> — save-time checks and parameter rules
 * <<_condition_evaluation,Condition evaluation system>> — runtime architecture
 * <<_past_event_conditions,Past event conditions>> — deep dive on behavioral conditions
 * <<_queries_and_aggregations,Queries and aggregations>> — using conditions in search APIs
+* <<_debugging_conditions,Debugging conditions>> — tracing and troubleshooting
 
 ==== Concepts
 
@@ -333,3 +335,66 @@ Each entry includes parameter definitions, evaluators, and query builder IDs (Un
 ==== Custom condition types
 
 To add new condition types, implement a `ConditionEvaluator` and search-engine-specific query builders. See <<_writing_plugins,Writing plugins>> and <<_builtin_condition_types,plugin registration example>>.
+
+Add `validation` metadata on parameters so invalid instances are rejected at save time — see <<_condition_validation,Condition validation>>.
+
+[[_debugging_conditions]]
+==== Debugging conditions
+
+When a segment or rule does not behave as expected, use these approaches in order.
+
+===== Test segment membership
+
+Check whether a specific profile matches a segment condition:
+
+[source,bash]
+----
+curl -X GET "http://localhost:8181/cxs/segments/SEGMENT_ID/match/PROFILE_ID" \
+  --user "TENANT_ID:PRIVATE_KEY"
+----
+
+===== Count matching profiles
+
+Use a query with your condition and read the total hit count (see Level 1 in this guide).
+
+===== Request tracing with explain
+
+For runtime debugging — which rules fired, which conditions matched, how long each step took — add `explain=true` to context or event-collector requests.
+You need an `ADMINISTRATOR` or `TENANT_ADMINISTRATOR` role.
+
+[source,bash]
+----
+curl -X POST "http://localhost:8181/cxs/context.json?sessionId=1234&explain=true" \
+  -H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d @- <<'EOF'
+{
+  "source": { "itemId": "homepage", "itemType": "page", "scope": "mydigital" },
+  "requireSegments": true
+}
+EOF
+----
+
+The response includes a `requestTracing` tree with nodes such as `condition-evaluation`, `rule-evaluation`, and `event-validation`.
+Validation steps during processing appear as `condition-validation` or `rule-condition-validation` children.
+
+Full documentation, sample trace JSON, and sequence diagrams:
+
+* <<_request_tracing_explain,Using the explain parameter for request tracing>>
+
+TIP: Use explain only when debugging.
+It adds overhead and exposes internal processing detail to admin users.
+
+===== Fix save-time validation errors
+
+If creating or updating a segment or rule fails with `Invalid … condition`, the condition JSON does not match its type definition.
+Read the error list in the response, fix the parameter values, and retry.
+
+Common causes:
+
+* Missing `required` parameter
+* Wrong value type (string instead of integer)
+* Two parameters set in the same `exclusiveGroup`
+* Nested condition missing a required tag (for example `eventCondition` inside `pastEventCondition`)
+
+See <<_condition_validation,Condition validation>> for the full rule set and plugin author guide.

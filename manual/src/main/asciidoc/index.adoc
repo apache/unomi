@@ -77,6 +77,8 @@ include::migrations/migrations.adoc[]
 
 include::conditions-guide.adoc[]
 
+include::condition-validation.adoc[]
+
 include::condition-evaluation.adoc[]
 
 include::past-event-conditions.adoc[]

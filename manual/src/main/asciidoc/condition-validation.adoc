@@ -1,0 +1,251 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+[[_condition_validation]]
+=== Condition validation
+
+Apache Unomi validates condition instances against their condition type definitions when you save segments, rules, queries, goals, and related items.
+This catches missing parameters, wrong value types, and invalid nested conditions *before* they reach runtime evaluation.
+
+NOTE: This is separate from <<_json_schemas,JSON Schema event validation>>.
+JSON schemas validate incoming events on public endpoints.
+Condition validation checks the structure of condition JSON used in segments, rules, and queries.
+
+See also:
+
+* <<_conditions_guide,Conditions guide>> — hands-on introduction
+* <<_builtin_condition_types,Built-in condition types>> — descriptor format and catalog
+* <<_request_tracing_explain,Request tracing with explain>> — see validation results in trace output
+
+==== When validation runs
+
+Validation runs on the server when a condition is saved or resolved, not on every profile lookup or event.
+
+Typical entry points:
+
+* *Segments* — saving or updating a segment condition (`SegmentServiceImpl`)
+* *Rules* — saving or updating a rule condition (`RulesServiceImpl`)
+* *Queries* — saving queries used in profiles, events, goals, and campaigns
+* *Goals* — start and target event conditions
+* *Condition type resolution* — when `DefinitionsService` resolves a condition tree (deprecated path still used in some flows)
+
+There is *no* standalone REST endpoint such as `/cxs/conditions/validate`.
+To test a condition, save it on a segment or rule and read the error response, or use <<_debugging_conditions,debugging with explain>> when the condition is evaluated at runtime.
+
+==== Validation metadata on condition types
+
+Each parameter in a condition type descriptor can include a `validation` object.
+The base plugin ships examples in `plugins/baseplugin/src/main/resources/META-INF/cxs/conditions/*.json`.
+
+Supported fields:
+
+[cols="1,2,1", options="header"]
+|===
+| Field | Purpose | Example use
+
+| `required`
+| Parameter must have a literal value at save time
+| `propertyName` on `profilePropertyCondition`
+
+| `recommended`
+| Parameter is optional but advised; produces a warning, not a blocking error
+| `minimumEventCount` on `pastEventCondition`
+
+| `allowedValues`
+| String value must be one of the listed values
+| `operator` on `pastEventCondition` (`eventsOccurred`, `eventsNotOccurred`)
+
+| `exclusive` + `exclusiveGroup`
+| Only one parameter in the group may have a value
+| `propertyValue` vs `propertyValueInteger` on `profilePropertyCondition`
+
+| `allowedConditionTags`
+| Nested condition must carry at least one of these system tags
+| `eventCondition` tag required for `eventCondition` on `pastEventCondition`
+
+| `disallowedConditionTypes`
+| Nested condition type ID must not be in this list
+| Restrict which sub-conditions a composite type accepts
+|===
+
+Example from `pastEventCondition`:
+
+[source,json]
+----
+{
+  "id": "eventCondition",
+  "type": "Condition",
+  "validation": {
+    "required": true,
+    "allowedConditionTags": ["eventCondition"]
+  }
+}
+----
+
+Example of mutually exclusive value parameters from `profilePropertyCondition`:
+
+[source,json]
+----
+{
+  "id": "propertyValue",
+  "type": "string",
+  "validation": {
+    "exclusive": true,
+    "exclusiveGroup": "propertyValue"
+  }
+},
+{
+  "id": "propertyValueInteger",
+  "type": "integer",
+  "validation": {
+    "exclusive": true,
+    "exclusiveGroup": "propertyValue"
+  }
+}
+----
+
+==== Parameter type checks
+
+Before rule-specific checks, the validation service verifies that each literal value matches the parameter `type` and `multivalued` flag.
+
+Built-in type validators cover:
+
+* `string`, `integer`, `long`, `float`, `double`, `boolean`, `date`
+* `condition` — nested condition instances (validated recursively)
+* `comparisonOperator` — custom validator for comparison operators
+
+Plugins can register additional `ValueTypeValidator` OSGi services for custom parameter types.
+
+==== Contextual parameters (partial validation)
+
+Parameters whose values start with `parameter::` or `script::` are resolved at evaluation time, not at save time.
+The validation service skips most checks on these values because the final value is unknown when the item is saved.
+
+Exceptions:
+
+* A *required* parameter that uses a contextual reference still produces a *warning* (`MISSING_RECOMMENDED_PARAMETER`) advising that static validation was skipped.
+* Nested conditions inside contextual values are not validated until runtime.
+
+This lets rules and segments use dynamic values while still validating fully literal condition trees.
+
+==== Error types
+
+Validation returns a list of `ValidationError` objects.
+Each error has a `type`, a human-readable `message`, the `parameterName`, and optional context (location, allowed values, actual value).
+
+[cols="1,2,1", options="header"]
+|===
+| Type | Meaning | Blocks save?
+
+| `MISSING_REQUIRED_PARAMETER`
+| Required parameter is absent or an empty collection
+| Yes
+
+| `INVALID_VALUE`
+| Value has wrong type, shape, or is not in `allowedValues`
+| Yes
+
+| `INVALID_CONDITION_TYPE`
+| Unknown condition type, or nested condition fails tag/type rules
+| Yes
+
+| `EXCLUSIVE_PARAMETER_VIOLATION`
+| More than one parameter in an exclusive group has a value
+| Yes
+
+| `MISSING_RECOMMENDED_PARAMETER`
+| Recommended parameter is missing, or required parameter uses a contextual reference
+| No (logged as warning)
+|===
+
+==== Save-time behavior
+
+On save, services separate *errors* from *warnings*:
+
+* *Errors* — any type except `MISSING_RECOMMENDED_PARAMETER` — cause the save to fail with an `IllegalArgumentException` or domain-specific exception (for example `BadSegmentConditionException` for segments).
+* *Warnings* — `MISSING_RECOMMENDED_PARAMETER` only — are written to the server log but do not block the save.
+
+Example error message when saving a segment with a missing required parameter:
+
+[source]
+----
+Invalid segment condition:
+- Required parameter is missing (parameter: propertyName, condition: profilePropertyCondition, location: condition[profilePropertyCondition].propertyName)
+----
+
+REST clients receive this text in the error response body when the save fails.
+
+==== Rules and invalid conditions
+
+By default, a rule with validation errors cannot be saved.
+During bundle deployment or when a rule references a missing plugin, Unomi may save the rule with `allowInvalidRules` semantics: validation errors are logged and the rule is marked invalid instead of rejected.
+This supports gradual plugin rollout without blocking server startup.
+
+==== Validation in request tracing
+
+When `explain=true` is set on context or event-collector requests, validation steps appear in the `requestTracing` tree.
+Look for operation types such as:
+
+* `condition-validation` — validation during condition type resolution
+* `segment-condition-validation` — segment save path (when triggered in that flow)
+* `rule-condition-validation` — rule condition checks
+
+Trace nodes include validation messages and whether validation passed.
+See <<_request_tracing_explain,Using the explain parameter for request tracing>> for full examples.
+
+==== Adding validation to custom condition types
+
+When you define a new condition type in a plugin:
+
+1. Declare parameters with correct `type` and `multivalued` flags.
+2. Add a `validation` block on parameters that need constraints.
+3. Use `allowedConditionTags` on nested `Condition` parameters to restrict which sub-types users can pick.
+4. Use `exclusive` / `exclusiveGroup` when several parameters represent alternative value shapes (string vs integer vs date).
+5. Register a custom `ValueTypeValidator` OSGi service if you introduce a new parameter type ID.
+
+Condition type descriptors are loaded at startup.
+After deployment, list types to confirm your validation metadata is present:
+
+[source,bash]
+----
+curl -X GET http://localhost:8181/cxs/definitions/conditions \
+  --user "TENANT_ID:PRIVATE_KEY"
+----
+
+Each condition type entry in the response includes parameter definitions with their `validation` objects, which UIs and integrators can use to guide authors before save.
+
+==== Relation to JSON Schema validation
+
+[cols="1,2,2", options="header"]
+|===
+| | Condition validation | JSON Schema validation
+
+| What is validated
+| Condition instances in segments, rules, queries
+| Event payloads on `/cxs/context.json` and `/cxs/eventcollector`
+
+| When
+| Save time (server-side)
+| Request time (public endpoints)
+
+| Defined in
+| Condition type JSON descriptors (`META-INF/cxs/conditions/`)
+| JSON schema definitions (`META-INF/cxs/json-schema/`)
+
+| REST test endpoint
+| None (save the parent item instead)
+| `/cxs/jsonSchema/validateEvent`
+|===
+
+Both systems can appear in the same `explain=true` trace: event schema validation under `event-validation`, condition checks under `condition-evaluation` or `condition-validation`.

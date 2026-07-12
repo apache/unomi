@@ -54,6 +54,14 @@ Administrators can trace how context and event-collector requests are processed 
 
 * <<_request_tracing_explain,Using the explain parameter for request tracing>>
 
+==== Condition validation
+
+Segments, rules, and queries are validated against condition type definitions at save time.
+Invalid parameters are rejected before they reach runtime evaluation.
+
+* <<_condition_validation,Condition validation>>
+* <<_debugging_conditions,Debugging conditions>>
+
 === What's new in Apache Unomi 3.0
 
 Apache Unomi 3.0 is a major platform release. It upgrades the search-engine client, the OSGi runtime, and the minimum Java version.
