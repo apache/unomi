@@ -53,7 +53,7 @@ public interface PersistenceService {
     /**
      * Loads a paged slice of all items of the given type.
      * <p>
-     * Future API versions may replace these parameters with a {@link Query} object.
+     * Future API versions may replace these parameters with a {@link org.apache.unomi.api.query.Query} object.
      *
      * @param <T> the item type
      * @param clazz the {@link Item} subclass to load
@@ -67,7 +67,7 @@ public interface PersistenceService {
     /**
      * Loads a paged slice of all items of the given type, optionally using a scroll query.
      * <p>
-     * Future API versions may replace these parameters with a {@link Query} object.
+     * Future API versions may replace these parameters with a {@link org.apache.unomi.api.query.Query} object.
      *
      * @param <T> the item type
      * @param clazz the {@link Item} subclass to load
