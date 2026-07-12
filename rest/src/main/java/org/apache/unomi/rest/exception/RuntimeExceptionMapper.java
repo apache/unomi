@@ -25,6 +25,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
+/**
+ * Maps unhandled {@link RuntimeException} instances to JSON error responses.
+ */
 @Provider
 @Component(service = ExceptionMapper.class)
 public class RuntimeExceptionMapper extends AbstractRestExceptionMapper implements ExceptionMapper<RuntimeException> {

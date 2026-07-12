@@ -42,20 +42,70 @@ public interface SchedulerProvider {
     ConditionType PROPERTY_CONDITION_TYPE = new ConditionType();
     ConditionType BOOLEAN_CONDITION_TYPE = new ConditionType();
 
+    /**
+     * Finds tasks currently locked by the given owner node.
+     *
+     * @param owner the lock owner node ID
+     * @return tasks locked by the owner
+     */
     List<ScheduledTask> findTasksByLockOwner(String owner);
 
+    /**
+     * Finds enabled tasks in SCHEDULED or WAITING status.
+     *
+     * @return matching tasks
+     */
     List<ScheduledTask> findEnabledScheduledOrWaitingTasks();
 
+    /**
+     * Finds tasks of the given type and status.
+     *
+     * @param taskType the task type
+     * @param status the task status
+     * @return matching tasks
+     */
     List<ScheduledTask> findTasksByTypeAndStatus(String taskType, ScheduledTask.TaskStatus status);
 
+    /**
+     * Loads a task by ID.
+     *
+     * @param taskId the task ID
+     * @return the task, or null if not found
+     */
     ScheduledTask getTask(String taskId);
 
+    /**
+     * Returns all tasks from this provider.
+     *
+     * @return all tasks
+     */
     List<ScheduledTask> getAllTasks();
 
+    /**
+     * Returns a paginated list of tasks with the given status.
+     *
+     * @param status the task status filter
+     * @param offset pagination offset
+     * @param size page size (-1 for all)
+     * @param sortBy sort field
+     * @return paginated task list
+     */
     PartialList<ScheduledTask> getTasksByStatus(ScheduledTask.TaskStatus status, int offset, int size, String sortBy);
 
+    /**
+     * Returns a paginated list of tasks of the given type.
+     *
+     * @param taskType the task type filter
+     * @param offset pagination offset
+     * @param size page size (-1 for all)
+     * @param sortBy sort field
+     * @return paginated task list
+     */
     PartialList<ScheduledTask> getTasksByType(String taskType, int offset, int size, String sortBy);
 
+    /**
+     * Removes completed tasks older than the configured TTL.
+     */
     void purgeOldTasks();
 
     /**
@@ -92,12 +142,17 @@ public interface SchedulerProvider {
     void refreshTasks();
 
     /**
-     * Finds tasks by status
+     * Finds tasks with the given status.
+     *
+     * @param status the task status filter
+     * @return matching tasks
      */
     List<ScheduledTask> findTasksByStatus(ScheduledTask.TaskStatus status);
 
     /**
-     * Finds tasks with locks
+     * Finds tasks that currently hold a lock.
+     *
+     * @return locked tasks
      */
     List<ScheduledTask> findLockedTasks();
 }

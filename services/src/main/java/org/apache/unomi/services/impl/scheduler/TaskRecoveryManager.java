@@ -43,35 +43,72 @@ public class TaskRecoveryManager {
     private SchedulerServiceImpl schedulerService;
     private volatile boolean shutdownNow = false;
 
+    /**
+     * Creates the manager for Blueprint dependency injection.
+     */
     public TaskRecoveryManager() {
         // Parameterless constructor for Blueprint dependency injection
     }
 
-    // Setter methods for Blueprint dependency injection
+    /**
+     * Sets the cluster node ID.
+     *
+     * @param nodeId the node ID
+     */
     public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
     }
 
+    /**
+     * Sets the task state manager.
+     *
+     * @param stateManager the state manager
+     */
     public void setStateManager(TaskStateManager stateManager) {
         this.stateManager = stateManager;
     }
 
+    /**
+     * Sets the task lock manager.
+     *
+     * @param lockManager the lock manager
+     */
     public void setLockManager(TaskLockManager lockManager) {
         this.lockManager = lockManager;
     }
 
+    /**
+     * Sets the task metrics manager.
+     *
+     * @param metricsManager the metrics manager
+     */
     public void setMetricsManager(TaskMetricsManager metricsManager) {
         this.metricsManager = metricsManager;
     }
 
+    /**
+     * Sets the task execution manager.
+     *
+     * @param executionManager the execution manager
+     */
     public void setExecutionManager(TaskExecutionManager executionManager) {
         this.executionManager = executionManager;
     }
 
+    /**
+     * Sets the task executor registry.
+     *
+     * @param executorRegistry the executor registry
+     */
     public void setExecutorRegistry(TaskExecutorRegistry executorRegistry) {
         this.executorRegistry = executorRegistry;
     }
 
+    /**
+     * Sets the scheduler service reference.
+     *
+     * @param schedulerService the scheduler service
+     */
     public void setSchedulerService(SchedulerServiceImpl schedulerService) {
         this.schedulerService = schedulerService;
     }

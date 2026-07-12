@@ -52,14 +52,27 @@ public class ClusterServiceEndPoint {
     @Reference
     private ClusterService clusterService;
 
+    /**
+     * Creates the cluster service endpoint.
+     */
     public ClusterServiceEndPoint() {
         LOGGER.info("Initializing cluster service endpoint...");
     }
 
+    /**
+     * Sets the cluster service.
+     *
+     * @param clusterService the cluster service
+     */
     public void setClusterService(ClusterService clusterService) {
         this.clusterService = clusterService;
     }
 
+    /**
+     * Sets the CXF message context.
+     *
+     * @param messageContext the message context
+     */
     public void setMessageContext(MessageContext messageContext) {
         this.messageContext = messageContext;
     }

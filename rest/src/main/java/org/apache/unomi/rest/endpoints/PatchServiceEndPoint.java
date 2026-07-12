@@ -42,6 +42,11 @@ public class PatchServiceEndPoint {
     @Reference
     private PatchService patchService;
 
+    /**
+     * Sets the patch service.
+     *
+     * @param patchService the patch service
+     */
     public void setPatchService(PatchService patchService) {
         this.patchService = patchService;
     }

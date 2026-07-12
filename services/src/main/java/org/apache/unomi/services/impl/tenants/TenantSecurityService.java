@@ -29,14 +29,29 @@ public class TenantSecurityService {
 
     private ConfigurationAdmin configAdmin;
 
+    /**
+     * Sets the OSGi configuration admin service.
+     *
+     * @param configAdmin the configuration admin
+     */
     public void setConfigAdmin(ConfigurationAdmin configAdmin) {
         this.configAdmin = configAdmin;
     }
 
+    /**
+     * Blueprint activate hook; loads tenant security configuration.
+     */
     public void activate() {
         loadSecurityConfigurations();
     }
 
+    /**
+     * Validates an incoming tenant API request.
+     *
+     * @param tenantId the tenant ID
+     * @param apiKey the API key
+     * @return true if the request is allowed
+     */
     public boolean validateRequest(String tenantId, String apiKey) {
         // Validate API key
         if (!validateApiKey(tenantId, apiKey)) {

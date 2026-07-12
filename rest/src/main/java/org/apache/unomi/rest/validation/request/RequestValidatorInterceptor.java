@@ -41,6 +41,11 @@ public class RequestValidatorInterceptor extends AbstractPhaseInterceptor<Messag
         add("/cxs/context.json");
     }};
 
+    /**
+     * Creates the request validator interceptor.
+     *
+     * @param configSharingService the shared configuration service
+     */
     public RequestValidatorInterceptor(ConfigSharingService configSharingService) {
         super(Phase.RECEIVE);
         this.configSharingService = configSharingService;

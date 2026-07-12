@@ -52,10 +52,20 @@ public class DefinitionsServiceEndPoint {
     @Reference
     private LocalizationHelper localizationHelper;
 
+    /**
+     * Sets the definitions service.
+     *
+     * @param definitionsService the definitions service
+     */
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
+    /**
+     * Sets the localization helper.
+     *
+     * @param localizationHelper the localization helper
+     */
     public void setLocalizationHelper(LocalizationHelper localizationHelper) {
         this.localizationHelper = localizationHelper;
     }
@@ -285,6 +295,12 @@ public class DefinitionsServiceEndPoint {
         return definitionsService.getTypesByPlugin();
     }
 
+    /**
+     * Returns the property merge strategy type for the given identifier.
+     *
+     * @param id the property merge strategy type identifier
+     * @return the property merge strategy type
+     */
     public PropertyMergeStrategyType getPropertyMergeStrategyType(String id) {
         return definitionsService.getPropertyMergeStrategyType(id);
     }

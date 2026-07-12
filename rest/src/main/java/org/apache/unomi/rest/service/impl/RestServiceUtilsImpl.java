@@ -57,6 +57,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Default implementation of {@link org.apache.unomi.rest.service.RestServiceUtils}.
+ */
 @Component(service = RestServiceUtils.class)
 public class RestServiceUtilsImpl implements RestServiceUtils {
 

@@ -48,6 +48,11 @@ public class GoalsServiceEndPoint {
     @Reference
     private GoalsService goalsService;
 
+    /**
+     * Sets the goals service.
+     *
+     * @param goalsService the goals service
+     */
     public void setGoalsService(GoalsService goalsService) {
         this.goalsService = goalsService;
     }

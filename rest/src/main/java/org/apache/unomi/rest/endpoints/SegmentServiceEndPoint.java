@@ -52,11 +52,19 @@ public class SegmentServiceEndPoint {
     @Reference
     private SegmentService segmentService;
 
-    public SegmentServiceEndPoint() {
+    /**
+     * Creates the segment service endpoint.
+     */
+        public SegmentServiceEndPoint() {
         LOGGER.info("Initializing segment service endpoint...");
     }
 
-    public void setSegmentService(SegmentService segmentService) {
+    /**
+     * Sets the segment service.
+     *
+     * @param segmentService the segment service
+     */
+        public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }
 

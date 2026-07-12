@@ -31,37 +31,80 @@ public class RESTValueType {
     private String description;
     private Set<String> tags;
 
+    /**
+     * Creates an empty REST value type.
+     */
     public RESTValueType() {
     }
 
+    /**
+     * Returns the value type identifier.
+     *
+     * @return the value type identifier
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Sets the value type identifier.
+     *
+     * @param id the value type identifier
+     */
     public void setId(String id) {
         this.id = id;
     }
 
+    /**
+     * Returns the value type name.
+     *
+     * @return the value type name
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Sets the value type name.
+     *
+     * @param name the value type name
+     */
     public void setName(String name) {
         this.name = name;
     }
 
+    /**
+     * Returns the value type description.
+     *
+     * @return the value type description
+     */
     public String getDescription() {
         return description;
     }
 
+    /**
+     * Sets the value type description.
+     *
+     * @param description the value type description
+     */
     public void setDescription(String description) {
         this.description = description;
     }
 
+    /**
+     * Returns the value type tags.
+     *
+     * @return the value type tags
+     */
     public Set<String> getTags() {
         return tags;
     }
 
+    /**
+     * Sets the value type tags.
+     *
+     * @param tags the value type tags
+     */
     public void setTags(Set<String> tags) {
         this.tags = tags;
     }

@@ -18,22 +18,45 @@ package org.apache.unomi.rest.tenants;
 
 import java.util.Map;
 
+/**
+ * Request body for tenant create and update operations.
+ */
 public class TenantRequest {
     private String requestedId;
     private Map<String, Object> properties;
 
+    /**
+     * Returns the requested tenant identifier.
+     *
+     * @return the requested tenant identifier
+     */
     public String getRequestedId() {
         return requestedId;
     }
 
+    /**
+     * Sets the requested tenant identifier.
+     *
+     * @param requestedId the requested tenant identifier
+     */
     public void setRequestedId(String requestedId) {
         this.requestedId = requestedId;
     }
 
+    /**
+     * Returns the tenant properties.
+     *
+     * @return the tenant properties
+     */
     public Map<String, Object> getProperties() {
         return properties;
     }
 
+    /**
+     * Sets the tenant properties.
+     *
+     * @param properties the tenant properties
+     */
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
     }

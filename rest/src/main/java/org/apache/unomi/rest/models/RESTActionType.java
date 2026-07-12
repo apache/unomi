@@ -34,58 +34,128 @@ public class RESTActionType {
     private List<RESTParameter> parameters;
     protected Long version;
 
+    /**
+     * Returns the action type identifier.
+     *
+     * @return the action type identifier
+     */
     public String getId() {
         return id;
     }
 
+    /**
+     * Sets the action type identifier.
+     *
+     * @param id the action type identifier
+     */
     public void setId(String id) {
         this.id = id;
     }
 
+    /**
+     * Returns the action type name.
+     *
+     * @return the action type name
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Sets the action type name.
+     *
+     * @param name the action type name
+     */
     public void setName(String name) {
         this.name = name;
     }
 
+    /**
+     * Returns the action type description.
+     *
+     * @return the action type description
+     */
     public String getDescription() {
         return description;
     }
 
+    /**
+     * Sets the action type description.
+     *
+     * @param description the action type description
+     */
     public void setDescription(String description) {
         this.description = description;
     }
 
+    /**
+     * Returns the action type tags.
+     *
+     * @return the action type tags
+     */
     public Set<String> getTags() {
         return tags;
     }
 
+    /**
+     * Sets the action type tags.
+     *
+     * @param tags the action type tags
+     */
     public void setTags(Set<String> tags) {
         this.tags = tags;
     }
 
+    /**
+     * Returns the action type system tags.
+     *
+     * @return the action type system tags
+     */
     public Set<String> getSystemTags() {
         return systemTags;
     }
 
+    /**
+     * Sets the action type system tags.
+     *
+     * @param systemTags the action type system tags
+     */
     public void setSystemTags(Set<String> systemTags) {
         this.systemTags = systemTags;
     }
 
+    /**
+     * Returns the action type parameters.
+     *
+     * @return the action type parameters
+     */
     public List<RESTParameter> getParameters() {
         return parameters;
     }
 
+    /**
+     * Sets the action type parameters.
+     *
+     * @param parameters the action type parameters
+     */
     public void setParameters(List<RESTParameter> parameters) {
         this.parameters = parameters;
     }
 
+    /**
+     * Returns the action type version.
+     *
+     * @return the action type version
+     */
     public Long getVersion() {
         return version;
     }
 
+    /**
+     * Sets the action type version.
+     *
+     * @param version the action type version
+     */
     public void setVersion(Long version) {
         this.version = version;
     }

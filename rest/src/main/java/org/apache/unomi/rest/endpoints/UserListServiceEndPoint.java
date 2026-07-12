@@ -52,10 +52,18 @@ public class UserListServiceEndPoint {
     @Reference
     private UserListService userListService;
 
+    /**
+     * Creates the user list service endpoint.
+     */
     public UserListServiceEndPoint() {
         LOGGER.info("Initializing user lists service endpoint...");
     }
 
+    /**
+     * Sets the user list service.
+     *
+     * @param userListService the user list service
+     */
     public void setUserListService(UserListService userListService) {
         this.userListService = userListService;
     }

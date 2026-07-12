@@ -26,6 +26,11 @@ import java.util.List;
  */
 public class AuthorizingInterceptor extends SimpleAuthorizingInterceptor {
 
+    /**
+     * Creates the interceptor using the REST authentication configuration.
+     *
+     * @param restAuthenticationConfig the REST authentication configuration
+     */
     public AuthorizingInterceptor(RestAuthenticationConfig restAuthenticationConfig) {
         super();
         setGlobalRoles(restAuthenticationConfig.getGlobalRoles());

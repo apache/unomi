@@ -51,6 +51,9 @@ import javax.ws.rs.core.SecurityContext;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * REST endpoint for context.js and context.json requests.
+ */
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
 @Path("/")
@@ -83,18 +86,42 @@ public class ContextJsonEndpoint {
     @Reference
     private TracerService tracerService;
 
+    /**
+     * Handles CORS preflight for context.js.
+     *
+     * @return an empty CORS preflight response
+     */
     @OPTIONS
     @Path("/context.js")
     public Response contextJSAsOptions() {
         return Response.status(Response.Status.NO_CONTENT).header("Access-Control-Allow-Origin", "*").build();
     }
 
+    /**
+     * Handles CORS preflight for context.json.
+     *
+     * @return an empty CORS preflight response
+     */
     @OPTIONS
     @Path("/context.json")
     public Response contextJSONAsOptions() {
         return contextJSAsOptions();
     }
 
+    /**
+     * Processes a context.js POST request.
+     *
+     * @param contextRequest the context request payload
+     * @param personaId optional persona identifier
+     * @param sessionId optional session identifier
+     * @param timestampAsLong optional request timestamp
+     * @param invalidateProfile whether to invalidate the profile
+     * @param invalidateSession whether to invalidate the session
+     * @param explain whether to include tracing details
+     * @param securityContext the security context
+     * @return the context response wrapped as JavaScript
+     * @throws JsonProcessingException if response serialization fails
+     */
     @POST
     @Produces(MediaType.TEXT_PLAIN)
     @Path("/context.js")
@@ -109,6 +136,20 @@ public class ContextJsonEndpoint {
         return contextJSAsGet(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession, explain, securityContext);
     }
 
+    /**
+     * Processes a context.js GET request.
+     *
+     * @param contextRequest the context request payload
+     * @param personaId optional persona identifier
+     * @param sessionId optional session identifier
+     * @param timestampAsLong optional request timestamp
+     * @param invalidateProfile whether to invalidate the profile
+     * @param invalidateSession whether to invalidate the session
+     * @param explain whether to include tracing details
+     * @param securityContext the security context
+     * @return the context response wrapped as JavaScript
+     * @throws JsonProcessingException if response serialization fails
+     */
     @GET
     @Produces(MediaType.TEXT_PLAIN)
     @Path("/context.js")
@@ -129,6 +170,19 @@ public class ContextJsonEndpoint {
         return Response.ok(responseAsString.toString()).build();
     }
 
+    /**
+     * Processes a context.json GET request.
+     *
+     * @param contextRequest the context request payload
+     * @param personaId optional persona identifier
+     * @param sessionId optional session identifier
+     * @param timestampAsLong optional request timestamp
+     * @param invalidateProfile whether to invalidate the profile
+     * @param invalidateSession whether to invalidate the session
+     * @param explain whether to include tracing details
+     * @param securityContext the security context
+     * @return the context response
+     */
     @GET
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Path("/context.json")
@@ -143,6 +197,19 @@ public class ContextJsonEndpoint {
         return contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession, explain, securityContext);
     }
 
+    /**
+     * Processes a context.json POST request.
+     *
+     * @param contextRequest the context request payload
+     * @param personaId optional persona identifier
+     * @param sessionId optional session identifier
+     * @param timestampAsLong optional request timestamp
+     * @param invalidateProfile whether to invalidate the profile
+     * @param invalidateSession whether to invalidate the session
+     * @param explain whether to include tracing details
+     * @param securityContext the security context
+     * @return the context response
+     */
     @POST
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Path("/context.json")
@@ -336,6 +403,9 @@ public class ContextJsonEndpoint {
         }
     }
 
+    /**
+     * Shuts down the endpoint.
+     */
     public void destroy() {
         LOGGER.info("Context servlet shutdown.");
     }

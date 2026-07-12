@@ -48,6 +48,9 @@ public class EventCollectorResponse implements Serializable {
      */
     private TraceNode requestTracing;
 
+    /**
+     * Creates an empty event collector response.
+     */
     public EventCollectorResponse() {
     }
 

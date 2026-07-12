@@ -52,10 +52,18 @@ public class RulesServiceEndPoint {
     @Reference
     private RulesService rulesService;
 
+    /**
+     * Creates the rules service endpoint.
+     */
     public RulesServiceEndPoint() {
         LOGGER.info("Initializing rule service endpoint...");
     }
 
+    /**
+     * Sets the rules service.
+     *
+     * @param rulesService the rules service
+     */
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
     }

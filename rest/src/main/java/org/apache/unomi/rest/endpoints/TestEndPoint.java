@@ -37,10 +37,18 @@ public class TestEndPoint {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TestEndPoint.class.getName());
 
+    /**
+     * Creates the test endpoint.
+     */
     public TestEndPoint() {
         LOGGER.info("TestEndPoint initialized.");
     }
 
+    /**
+     * Returns a simple health-check response.
+     *
+     * @return the ping response
+     */
     @GET
     @Path("/ping")
     public String ping() {

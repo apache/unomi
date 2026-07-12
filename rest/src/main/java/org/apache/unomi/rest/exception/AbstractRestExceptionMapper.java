@@ -56,6 +56,13 @@ public abstract class AbstractRestExceptionMapper {
         return jsonErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, "internalServerError");
     }
 
+    /**
+     * Builds a JSON error response with the given status and message key.
+     *
+     * @param status the HTTP status
+     * @param errorMessage the error message key
+     * @return the JSON error response
+     */
     protected Response jsonErrorResponse(Response.Status status, String errorMessage) {
         Map<String, Object> body = new HashMap<>();
         body.put(ERROR_MESSAGE_KEY, errorMessage);
@@ -63,6 +70,7 @@ public abstract class AbstractRestExceptionMapper {
     }
 
     /**
+     * @param rootCause the throwable to inspect
      * @return {@code true} when the given root cause is a Jackson deserialization failure, i.e. a
      * client error (malformed/mistyped request body) rather than a genuine server fault.
      */
@@ -71,6 +79,7 @@ public abstract class AbstractRestExceptionMapper {
     }
 
     /**
+     * @param throwable the throwable to inspect
      * @return {@code true} when the throwable represents invalid client input rejected by domain
      * validation (e.g. rule or segment condition checks), rather than a server fault.
      */
@@ -78,6 +87,12 @@ public abstract class AbstractRestExceptionMapper {
         return throwable instanceof IllegalArgumentException || throwable instanceof BadSegmentConditionException;
     }
 
+    /**
+     * Returns the root cause of the given throwable.
+     *
+     * @param throwable the throwable to inspect
+     * @return the root cause, or {@code null} when the input is {@code null}
+     */
     protected Throwable getRootCause(Throwable throwable) {
         if (throwable == null) {
             return null;
@@ -93,6 +108,7 @@ public abstract class AbstractRestExceptionMapper {
     }
 
     /**
+     * @param throwable the throwable to inspect
      * @return the throwable's message, or its simple class name when no message is available.
      */
     protected String messageOrType(Throwable throwable) {
@@ -106,6 +122,8 @@ public abstract class AbstractRestExceptionMapper {
     /**
      * Builds a sanitized "METHOD /path?query" description of the current request for logging.
      * Never throws: returns a placeholder when the request context cannot be resolved.
+     *
+     * @return the sanitized request context string
      */
     protected String buildRequestContext() {
         StringBuilder context = new StringBuilder();

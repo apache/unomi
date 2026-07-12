@@ -25,6 +25,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
+/**
+ * Maps {@link InvalidRequestException} to HTTP 400 responses.
+ */
 @Provider
 @Component(service = ExceptionMapper.class)
 public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidRequestException> {

@@ -45,10 +45,18 @@ public class ScopeServiceEndPoint {
     @Reference
     private ScopeService scopeService;
 
+    /**
+     * Creates the scope service endpoint.
+     */
     public ScopeServiceEndPoint() {
         LOGGER.info("Initializing scope service endpoint...");
     }
 
+    /**
+     * Sets the scope service.
+     *
+     * @param scopeService the scope service
+     */
     public void setScopeService(ScopeService scopeService) {
         this.scopeService = scopeService;
     }
@@ -67,6 +75,7 @@ public class ScopeServiceEndPoint {
      * Persists the specified scope.
      *
      * @param scope the scope to be persisted
+     * @return an empty success response
      */
     @POST
     @Path("/")

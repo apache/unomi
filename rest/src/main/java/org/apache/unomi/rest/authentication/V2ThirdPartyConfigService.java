@@ -48,6 +48,9 @@ public class V2ThirdPartyConfigService {
     
     private static final Logger LOGGER = LoggerFactory.getLogger(V2ThirdPartyConfigService.class);
     
+    /**
+     * OSGi configuration for V2 third-party providers.
+     */
     @ObjectClassDefinition(
         name = "Apache Unomi Third-Party Configuration",
         description = "Configuration for third-party providers (V2 compatibility mode). " +
@@ -80,11 +83,21 @@ public class V2ThirdPartyConfigService {
     
     private volatile Map<String, ProviderConfig> providers = new HashMap<>();
     
+    /**
+     * Activates the service and loads third-party provider configuration.
+     *
+     * @param properties the OSGi configuration properties
+     */
     @Activate
     public void activate(Map<String, Object> properties) {
         modified(properties);
     }
     
+    /**
+     * Reloads third-party provider configuration.
+     *
+     * @param properties the OSGi configuration properties
+     */
     @Modified
     public void modified(Map<String, Object> properties) {
         Map<String, ProviderConfig> newProviders = new HashMap<>();

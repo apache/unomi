@@ -43,6 +43,11 @@ public class EventServiceEndpoint {
     @Reference
     private EventService eventService;
 
+    /**
+     * Sets the event service.
+     *
+     * @param eventService the event service
+     */
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }

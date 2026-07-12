@@ -75,23 +75,45 @@ public class TaskLockManager {
     private TaskMetricsManager metricsManager;
     private SchedulerServiceImpl schedulerService;
 
+    /**
+     * Creates the manager for Blueprint dependency injection.
+     */
     public TaskLockManager() {
         // Parameterless constructor for Blueprint dependency injection
     }
 
-    // Setter methods for Blueprint dependency injection
+    /**
+     * Sets the cluster node ID.
+     *
+     * @param nodeId the node ID
+     */
     public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
     }
 
+    /**
+     * Sets the lock timeout in milliseconds.
+     *
+     * @param lockTimeout lock expiry timeout
+     */
     public void setLockTimeout(long lockTimeout) {
         this.lockTimeout = lockTimeout;
     }
 
+    /**
+     * Sets the task metrics manager.
+     *
+     * @param metricsManager the metrics manager
+     */
     public void setMetricsManager(TaskMetricsManager metricsManager) {
         this.metricsManager = metricsManager;
     }
 
+    /**
+     * Sets the scheduler service reference.
+     *
+     * @param schedulerService the scheduler service
+     */
     public void setSchedulerService(SchedulerServiceImpl schedulerService) {
         this.schedulerService = schedulerService;
     }

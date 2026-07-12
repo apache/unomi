@@ -36,6 +36,11 @@ public class InvalidRequestException extends RuntimeException {
         this.responseMessage = responseMessage;
     }
 
+    /**
+     * Returns the message sent to the client.
+     *
+     * @return the client-facing response message
+     */
     public String getResponseMessage() {
         return responseMessage;
     }

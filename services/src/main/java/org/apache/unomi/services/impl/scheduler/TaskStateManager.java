@@ -54,6 +54,13 @@ public class TaskStateManager {
             this.validStartStates = validStartStates;
         }
 
+        /**
+         * Returns whether a transition from one status to another is allowed.
+         *
+         * @param from the current status
+         * @param to the target status
+         * @return true if the transition is valid
+         */
         public static boolean isValidTransition(TaskStatus from, TaskStatus to) {
             // Allow same state transitions during recovery
             if (from == to && from == TaskStatus.RUNNING) {
@@ -66,7 +73,12 @@ public class TaskStateManager {
     }
 
     /**
-     * Updates task state with validation and state-specific updates
+     * Updates task state with validation and state-specific updates.
+     *
+     * @param task the task to update
+     * @param newStatus the target status
+     * @param error optional error message
+     * @param nodeId the node performing the update
      */
     public void updateTaskState(ScheduledTask task, TaskStatus newStatus, String error, String nodeId) {
         TaskStatus currentStatus = task.getStatus();
@@ -159,7 +171,11 @@ public class TaskStateManager {
     }
 
     /**
-     * Checks if a task can be rescheduled based on its dependencies
+     * Checks if a task can be rescheduled based on its dependencies.
+     *
+     * @param task the task to check
+     * @param dependencies dependency tasks keyed by ID
+     * @return true if all dependencies are completed
      */
     public boolean canRescheduleTask(ScheduledTask task, Map<String, ScheduledTask> dependencies) {
         if (task.getWaitingOnTasks() == null || task.getWaitingOnTasks().isEmpty()) {
@@ -176,7 +192,9 @@ public class TaskStateManager {
     }
 
     /**
-     * Resets a task's waiting state and marks it as scheduled
+     * Resets a task's waiting state and marks it as scheduled.
+     *
+     * @param task the task to reset
      */
     public void resetTaskToScheduled(ScheduledTask task) {
         task.setStatus(TaskStatus.SCHEDULED);
@@ -185,7 +203,10 @@ public class TaskStateManager {
     }
 
     /**
-     * Validates task configuration
+     * Validates task configuration.
+     *
+     * @param task the task to validate
+     * @param existingTasks known tasks keyed by ID
      */
     public void validateTask(ScheduledTask task, Map<String, ScheduledTask> existingTasks) {
         if (task.getTaskType() == null || task.getTaskType().trim().isEmpty()) {

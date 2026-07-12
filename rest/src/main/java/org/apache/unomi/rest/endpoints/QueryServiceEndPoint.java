@@ -55,10 +55,20 @@ public class QueryServiceEndPoint {
     @Reference
     private LocalizationHelper localizationHelper;
 
+    /**
+     * Sets the query service.
+     *
+     * @param queryService the query service
+     */
     public void setQueryService(QueryService queryService) {
         this.queryService = queryService;
     }
 
+    /**
+     * Sets the localization helper.
+     *
+     * @param localizationHelper the localization helper
+     */
     public void setLocalizationHelper(LocalizationHelper localizationHelper) {
         this.localizationHelper = localizationHelper;
     }

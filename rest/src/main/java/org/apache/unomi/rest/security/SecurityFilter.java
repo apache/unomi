@@ -37,6 +37,9 @@ import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 
+/**
+ * Request filter that enforces role and tenant access rules on REST endpoints.
+ */
 @Provider
 @Component(service = SecurityFilter.class)
 @Priority(Priorities.AUTHORIZATION)

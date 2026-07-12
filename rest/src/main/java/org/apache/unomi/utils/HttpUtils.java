@@ -61,6 +61,12 @@ public class HttpUtils {
         return stringBuilder.toString();
     }
 
+    /**
+     * Dumps basic request metadata.
+     *
+     * @param httpServletRequest the HTTP request
+     * @return the request metadata as text
+     */
     public static String dumpBasicRequestInfo(HttpServletRequest httpServletRequest) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(httpServletRequest.getMethod()).append(" ").append(httpServletRequest.getRequestURI());
@@ -72,6 +78,12 @@ public class HttpUtils {
     }
 
 
+    /**
+     * Dumps request cookies.
+     *
+     * @param cookies the request cookies
+     * @return the cookie dump as text
+     */
     public static String dumpRequestCookies(Cookie[] cookies) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Cookies:\n");
@@ -85,6 +97,12 @@ public class HttpUtils {
         return stringBuilder.toString();
     }
 
+    /**
+     * Dumps request headers.
+     *
+     * @param httpServletRequest the HTTP request
+     * @return the header dump as text
+     */
     public static String dumpRequestHeaders(HttpServletRequest httpServletRequest) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("Headers:\n");
@@ -102,6 +120,7 @@ public class HttpUtils {
      *
      * @param profile              to parse
      * @param configSharingService shared config location.
+     * @param isSecure whether the cookie should include the Secure flag
      * @return the cookie string to set in the header.
      */
     public static String getProfileCookieString(Profile profile, ConfigSharingService configSharingService, boolean isSecure) {
@@ -118,6 +137,15 @@ public class HttpUtils {
                 (profileIdCookieHttpOnly ? "; HttpOnly" : "");
     }
 
+    /**
+     * Filters event nodes to those that pass schema validation.
+     *
+     * @param eventsNode the event JSON array
+     * @param schemaService the schema service
+     * @param jsonParser the JSON parser
+     * @return the validated events
+     * @throws JsonProcessingException if event deserialization fails
+     */
     public static List<Event> filterValidEvents(ArrayNode eventsNode, SchemaService schemaService, JsonParser jsonParser) throws JsonProcessingException {
         List<Event> filteredEvents = new ArrayList<>();
         for (JsonNode event : eventsNode) {

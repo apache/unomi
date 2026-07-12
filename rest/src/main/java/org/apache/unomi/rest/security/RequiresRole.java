@@ -21,8 +21,16 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+/**
+ * Declares the roles required to access a REST endpoint or method.
+ */
 @Target({ElementType.METHOD, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface RequiresRole {
+    /**
+     * Required role names.
+     *
+     * @return the required roles
+     */
     String[] value();
 }

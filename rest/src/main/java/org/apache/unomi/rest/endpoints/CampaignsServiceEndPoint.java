@@ -53,10 +53,18 @@ public class CampaignsServiceEndPoint {
     @Reference
     private GoalsService goalsService;
 
+    /**
+     * Creates the campaigns service endpoint.
+     */
     public CampaignsServiceEndPoint() {
         LOGGER.info("Initializing campaigns service endpoint...");
     }
 
+    /**
+     * Sets the goals service.
+     *
+     * @param goalsService the goals service
+     */
     public void setGoalsService(GoalsService goalsService) {
         this.goalsService = goalsService;
     }

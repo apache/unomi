@@ -57,6 +57,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
+/**
+ * Default implementation of {@link TenantUsageService}.
+ */
 public class TenantUsageServiceImpl implements TenantUsageService {
 
     private static final Logger logger = LoggerFactory.getLogger(TenantUsageServiceImpl.class);
@@ -72,27 +75,53 @@ public class TenantUsageServiceImpl implements TenantUsageService {
     private ScheduledExecutorService executor;
     private volatile boolean shutdownNow = false;
 
+    /**
+     * Sets the persistence service via Blueprint dependency injection.
+     *
+     * @param persistenceService the persistence service
+     */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
 
+    /**
+     * Sets the tenant service.
+     *
+     * @param tenantService the tenant service
+     */
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
     }
 
+    /**
+     * Sets the definitions service.
+     *
+     * @param definitionsService the definitions service
+     */
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
+    /**
+     * Sets the execution context manager.
+     *
+     * @param contextManager the execution context manager
+     */
     public void setContextManager(ExecutionContextManager contextManager) {
         this.contextManager = contextManager;
     }
 
+    /**
+     * Blueprint activate hook; starts usage metrics collection.
+     */
     public void activate() {
         shutdownNow = false;
         startMetricsCollection();
     }
 
+    /**
+     * Blueprint deactivate hook; stops usage metrics collection.
+     */
     public void deactivate() {
         shutdownNow = true;
         stopMetricsCollection();

@@ -25,6 +25,9 @@ import org.slf4j.LoggerFactory;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Service for migrating tenant data between tenants.
+ */
 public class TenantMigrationService {
 
     private static final Logger logger = LoggerFactory.getLogger(TenantMigrationService.class);
@@ -32,14 +35,31 @@ public class TenantMigrationService {
     private PersistenceService persistenceService;
     private TenantService tenantService;
 
+    /**
+     * Sets the persistence service via Blueprint dependency injection.
+     *
+     * @param persistenceService the persistence service
+     */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
 
+    /**
+     * Sets the tenant service.
+     *
+     * @param tenantService the tenant service
+     */
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
     }
 
+    /**
+     * Migrates data from one tenant to another.
+     *
+     * @param sourceTenantId the source tenant ID
+     * @param targetTenantId the target tenant ID
+     * @return true if migration succeeded
+     */
     public boolean migrateTenant(String sourceTenantId, String targetTenantId) {
         try {
             // Verify tenants exist

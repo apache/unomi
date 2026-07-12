@@ -46,6 +46,15 @@ public class EventsRequestContext {
     private EventsRequestContext() {
     }
 
+    /**
+     * Creates a request context for event processing.
+     *
+     * @param timestamp the request timestamp
+     * @param profile the current profile
+     * @param session the current session
+     * @param request the HTTP request
+     * @param response the HTTP response
+     */
     public EventsRequestContext(Date timestamp, Profile profile, Session session, HttpServletRequest request, HttpServletResponse response) {
         this.timestamp = timestamp;
         this.profile = profile;
@@ -57,74 +66,164 @@ public class EventsRequestContext {
         this.processedItems = 0;
     }
 
+    /**
+     * Returns the request timestamp.
+     *
+     * @return the request timestamp
+     */
     public Date getTimestamp() {
         return timestamp;
     }
 
+    /**
+     * Sets the request timestamp.
+     *
+     * @param timestamp the request timestamp
+     */
     public void setTimestamp(Date timestamp) {
         this.timestamp = timestamp;
     }
 
+    /**
+     * Returns the current profile.
+     *
+     * @return the current profile
+     */
     public Profile getProfile() {
         return profile;
     }
 
+    /**
+     * Sets the current profile.
+     *
+     * @param profile the current profile
+     */
     public void setProfile(Profile profile) {
         this.profile = profile;
     }
 
+    /**
+     * Returns the current session.
+     *
+     * @return the current session
+     */
     public Session getSession() {
         return session;
     }
 
+    /**
+     * Sets the current session.
+     *
+     * @param session the current session
+     */
     public void setSession(Session session) {
         this.session = session;
     }
 
+    /**
+     * Returns whether a new session was created for this request.
+     *
+     * @return {@code true} when a new session was created
+     */
     public boolean isNewSession() {
         return newSession;
     }
 
+    /**
+     * Sets whether a new session was created for this request.
+     *
+     * @param newSession {@code true} when a new session was created
+     */
     public void setNewSession(boolean newSession) {
         this.newSession = newSession;
     }
 
+    /**
+     * Returns the accumulated event-processing change flags.
+     *
+     * @return the bitwise change flags
+     */
     public int getChanges() {
         return changes;
     }
 
+    /**
+     * Adds event-processing change flags.
+     *
+     * @param changes the flags to add
+     */
     public void addChanges(int changes) {
         this.changes |= changes;
     }
 
+    /**
+     * Returns the total number of events in the request.
+     *
+     * @return the total event count
+     */
     public int getTotalItems() {
         return totalItems;
     }
 
+    /**
+     * Sets the total number of events in the request.
+     *
+     * @param totalItems the total event count
+     */
     public void setTotalItems(int totalItems) {
         this.totalItems = totalItems;
     }
 
+    /**
+     * Returns the number of events processed so far.
+     *
+     * @return the processed event count
+     */
     public int getProcessedItems() {
         return processedItems;
     }
 
+    /**
+     * Sets the number of events processed so far.
+     *
+     * @param processedItems the processed event count
+     */
     public void setProcessedItems(int processedItems) {
         this.processedItems = processedItems;
     }
 
+    /**
+     * Returns the HTTP request.
+     *
+     * @return the HTTP request
+     */
     public HttpServletRequest getRequest() {
         return request;
     }
 
+    /**
+     * Sets the HTTP request.
+     *
+     * @param request the HTTP request
+     */
     public void setRequest(HttpServletRequest request) {
         this.request = request;
     }
 
+    /**
+     * Returns the HTTP response.
+     *
+     * @return the HTTP response
+     */
     public HttpServletResponse getResponse() {
         return response;
     }
 
+    /**
+     * Sets the HTTP response.
+     *
+     * @param response the HTTP response
+     */
     public void setResponse(HttpServletResponse response) {
         this.response = response;
     }

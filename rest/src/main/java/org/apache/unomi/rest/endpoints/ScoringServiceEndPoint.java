@@ -52,11 +52,19 @@ public class ScoringServiceEndPoint {
     @Reference
     private SegmentService segmentService;
 
-    public ScoringServiceEndPoint() {
+    /**
+     * Creates the scoring service endpoint.
+     */
+        public ScoringServiceEndPoint() {
         LOGGER.info("Initializing scoring service endpoint...");
     }
 
-    public void setSegmentService(SegmentService segmentService) {
+    /**
+     * Sets the segment service.
+     *
+     * @param segmentService the segment service
+     */
+        public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }
 

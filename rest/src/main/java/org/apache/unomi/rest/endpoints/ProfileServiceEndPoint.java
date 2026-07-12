@@ -69,22 +69,45 @@ public class ProfileServiceEndPoint {
     @Reference
     private LocalizationHelper localizationHelper;
 
+    /**
+     * Creates the profile service endpoint.
+     */
     public ProfileServiceEndPoint() {
         LOGGER.info("Initializing profile service endpoint...");
     }
 
+    /**
+     * Sets the profile service.
+     *
+     * @param profileService the profile service
+     */
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
     }
 
+    /**
+     * Sets the event service.
+     *
+     * @param eventService the event service
+     */
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }
 
+    /**
+     * Sets the segment service.
+     *
+     * @param segmentService the segment service
+     */
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }
 
+    /**
+     * Sets the localization helper.
+     *
+     * @param localizationHelper the localization helper
+     */
     public void setLocalizationHelper(LocalizationHelper localizationHelper) {
         this.localizationHelper = localizationHelper;
     }
@@ -443,10 +466,24 @@ public class ProfileServiceEndPoint {
         return eventService.searchEvents(sessionId, eventTypes, query, offset, size, sortBy);
     }
 
+    /**
+     * Finds sessions for the given profile.
+     *
+     * @param profileId the profile identifier
+     * @return the matching sessions, or {@code null} when not implemented
+     */
     public PartialList<Session> findProfileSessions(String profileId) {
         return null;
     }
 
+    /**
+     * Tests whether a condition matches the given profile and session.
+     *
+     * @param condition the condition to test
+     * @param profile the profile
+     * @param session the session
+     * @return {@code true} when the condition matches
+     */
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
         return profileService.matchCondition(condition, profile, session);
     }
@@ -624,6 +661,13 @@ public class ProfileServiceEndPoint {
         return profileService.searchSessions(query);
     }
 
+    /**
+     * Adds an alias to a profile.
+     *
+     * @param profileId the profile identifier
+     * @param aliasId the alias identifier
+     * @param headerClientID optional client identifier from the request header
+     */
     @POST
     @Path("/{profileId}/aliases/{aliasId}")
     public void addAliasToProfile(final @PathParam("profileId") String profileId,
@@ -633,6 +677,13 @@ public class ProfileServiceEndPoint {
         profileService.addAliasToProfile(profileId, aliasId, clientId);
     }
 
+    /**
+     * Removes an alias from a profile.
+     *
+     * @param profileId the profile identifier
+     * @param aliasId the alias identifier
+     * @param headerClientID optional client identifier from the request header
+     */
     @DELETE
     @Path("/{profileId}/aliases/{aliasId}")
     public void removeAliasFromProfile(final @PathParam("profileId") String profileId,
@@ -642,6 +693,15 @@ public class ProfileServiceEndPoint {
         profileService.removeAliasFromProfile(profileId, aliasId, clientId);
     }
 
+    /**
+     * Lists aliases for the given profile.
+     *
+     * @param profileId the profile identifier
+     * @param offset pagination offset
+     * @param size page size
+     * @param sortBy optional sort field
+     * @return the matching profile aliases
+     */
     @GET
     @Path("/{profileId}/aliases")
     public PartialList<ProfileAlias> listAliasesByProfileId(final @PathParam("profileId") String profileId,

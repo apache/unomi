@@ -26,6 +26,9 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 
+/**
+ * Maps Bean Validation {@link javax.validation.ConstraintViolationException} to HTTP 400 responses.
+ */
 @Provider
 @Component(service = ExceptionMapper.class)
 public class ValidationExceptionMapper implements ExceptionMapper<ConstraintViolationException> {
