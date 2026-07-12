@@ -55,7 +55,7 @@ public class ScoringServiceEndPoint {
     /**
      * Creates the scoring service endpoint.
      */
-        public ScoringServiceEndPoint() {
+    public ScoringServiceEndPoint() {
         LOGGER.info("Initializing scoring service endpoint...");
     }
 
@@ -64,7 +64,7 @@ public class ScoringServiceEndPoint {
      *
      * @param segmentService the segment service
      */
-        public void setSegmentService(SegmentService segmentService) {
+    public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }
 
@@ -164,7 +164,8 @@ public class ScoringServiceEndPoint {
     }
 
     /**
-     * Deprecated maintenance endpoint kept for backward compatibility.     *
+     * Deprecated maintenance endpoint kept for backward compatibility.
+     *
      * @deprecated As of version 1.1.0-incubating, not needed anymore
      */
     @Deprecated

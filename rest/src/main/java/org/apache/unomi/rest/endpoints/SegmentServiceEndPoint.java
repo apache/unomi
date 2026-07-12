@@ -55,7 +55,7 @@ public class SegmentServiceEndPoint {
     /**
      * Creates the segment service endpoint.
      */
-        public SegmentServiceEndPoint() {
+    public SegmentServiceEndPoint() {
         LOGGER.info("Initializing segment service endpoint...");
     }
 
@@ -64,7 +64,7 @@ public class SegmentServiceEndPoint {
      *
      * @param segmentService the segment service
      */
-        public void setSegmentService(SegmentService segmentService) {
+    public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }
 
@@ -188,7 +188,8 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * Deprecated maintenance endpoint kept for backward compatibility.     *
+     * Deprecated maintenance endpoint kept for backward compatibility.
+     *
      * @deprecated As of version 1.1.0-incubating, not needed anymore
      */
     @Deprecated

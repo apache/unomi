@@ -269,7 +269,8 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Whether properties with this type are marked as protected. Protected properties can be displayed but their value cannot be changed.
-     * The { protected} flag name may change to { readOnly} in a future release.     *
+     * The {@code protected} flag name may change to {@code readOnly} in a future release.
+     *
      * @return {@code true} if properties of this type are protected, {@code false} otherwise
      */
     public Boolean isProtected() {

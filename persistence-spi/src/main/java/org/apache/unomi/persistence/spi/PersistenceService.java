@@ -53,7 +53,8 @@ public interface PersistenceService {
     /**
      * Loads a paged slice of all items of the given type.
      * <p>
-     * Future API versions may replace these parameters with a { Query} object.     *
+     * Future API versions may replace these parameters with a {@link Query} object.
+     *
      * @param <T> the item type
      * @param clazz the {@link Item} subclass to load
      * @param offset zero-based index of the first result
@@ -66,7 +67,8 @@ public interface PersistenceService {
     /**
      * Loads a paged slice of all items of the given type, optionally using a scroll query.
      * <p>
-     * Future API versions may replace these parameters with a { Query} object.     *
+     * Future API versions may replace these parameters with a {@link Query} object.
+     *
      * @param <T> the item type
      * @param clazz the {@link Item} subclass to load
      * @param offset zero-based index of the first result
@@ -370,7 +372,8 @@ public interface PersistenceService {
     /**
      * Checks whether the specified item satisfies the provided condition.
      * <p>
-     * The method name may change in a future release.     *
+     * The method name may change in a future release.
+     *
      * @param query the condition we're testing the specified item against
      * @param item  the item we're checking against the specified condition
      * @return {@code true} if the item satisfies the condition, {@code false} otherwise
@@ -731,7 +734,8 @@ public interface PersistenceService {
     /**
      * Creates an index with for the specified item type in the persistence engine.
      * <p>
-     * These low-level index operations may be removed from the public API in a future release.     *
+     * These low-level index operations may be removed from the public API in a future release.
+     *
      * @param itemType the item type
      * @return {@code true} if the operation was successful, {@code false} otherwise
      */
@@ -740,7 +744,8 @@ public interface PersistenceService {
     /**
      * Removes the index for the specified item type.
      * <p>
-     * These low-level index operations may be removed from the public API in a future release.     *
+     * These low-level index operations may be removed from the public API in a future release.
+     *
      * @param itemType the item type
      * @return {@code true} if the operation was successful, {@code false} otherwise
      */

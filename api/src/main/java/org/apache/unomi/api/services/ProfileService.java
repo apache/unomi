@@ -73,7 +73,8 @@ public interface ProfileService {
     /**
      * Finds profiles with a given property value, ordered and paged.
      *
-     * Prefer { #search(Query)} for new code; this overload remains for backward compatibility.     *
+     * Prefer {@link #search(Query)} for new code; this overload remains for backward compatibility.
+     *
      * @param propertyName property name to match
      * @param propertyValue required property value
      * @param offset zero-based index of the first result

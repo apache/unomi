@@ -62,7 +62,8 @@ public interface GoalsService {
     /**
      * Saves a goal and creates associated rules when the goal is enabled.
      *
-     * The { setGoal} name is historical; a { saveGoal} alias may be added later.     *
+     * The {@code setGoal} name is historical; a {@code saveGoal} alias may be added later.
+     *
      * @param goal goal to save
      */
     void setGoal(Goal goal);
@@ -133,7 +134,8 @@ public interface GoalsService {
     /**
      * Saves a campaign and creates associated rules when the campaign is enabled.
      *
-     * The { setCampaign} name is historical; a { saveCampaign} alias may be added later.     *
+     * The {@code setCampaign} name is historical; a {@code saveCampaign} alias may be added later.
+     *
      * @param campaign campaign to save
      */
     void setCampaign(Campaign campaign);
@@ -156,7 +158,8 @@ public interface GoalsService {
     /**
      * Saves a campaign event.
      *
-     * The { setEvent} name is historical; a { saveCampaignEvent} alias may be added later.     *
+     * The {@code setEvent} name is historical; a {@code saveCampaignEvent} alias may be added later.
+     *
      * @param event campaign event to save
      */
     void setCampaignEvent(CampaignEvent event);

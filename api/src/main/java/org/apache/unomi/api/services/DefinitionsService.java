@@ -212,7 +212,8 @@ public interface DefinitionsService {
     /**
      * Finds the first nested condition tagged with the given tag in a root condition tree.
      *
-     * Deprecated helper that may move out of this service in a future release.     *
+     * Deprecated helper that may move out of this service in a future release.
+     *
      * @param rootCondition condition tree to walk
      * @param tag tag used to select a condition
      * @return first matching condition, or {@code null} if none

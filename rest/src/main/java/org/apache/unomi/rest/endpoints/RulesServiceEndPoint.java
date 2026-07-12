@@ -172,7 +172,8 @@ public class RulesServiceEndPoint {
     }
 
     /**
-     * Deprecated maintenance endpoint kept for backward compatibility.     *
+     * Deprecated maintenance endpoint kept for backward compatibility.
+     *
      * @deprecated As of version 1.1.0-incubating, not needed anymore
      */
     @Deprecated

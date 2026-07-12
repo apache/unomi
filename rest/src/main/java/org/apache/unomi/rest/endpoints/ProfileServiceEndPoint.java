@@ -480,7 +480,8 @@ public class ProfileServiceEndPoint {
     /**
      * Returns property types already in use for the given item type and tag.
      *
-     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.     *
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
+     *
      * @param tag the tag or system tag to match
      * @param isSystemTag whether {@code tag} is a system tag
      * @param itemType the item type name from the class {@code ITEM_TYPE} field
@@ -508,7 +509,8 @@ public class ProfileServiceEndPoint {
     /**
      * Returns all known property types grouped by target.
      *
-     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.     *
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
+     *
      * @param language the requested locale for property descriptions (currently unused)
      * @return target name to property type mappings
      */
@@ -521,7 +523,8 @@ public class ProfileServiceEndPoint {
     /**
      * Returns the property type for the given property ID.
      *
-     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.     *
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
+     *
      * @param propertyId the property identifier
      * @param language the requested locale for property descriptions (currently unused)
      * @return the property type
@@ -535,7 +538,8 @@ public class ProfileServiceEndPoint {
     /**
      * Returns property types for the given target.
      *
-     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.     *
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
+     *
      * @param target the property target name
      * @param language the requested locale for property descriptions (currently unused)
      * @return property types for the target
@@ -549,7 +553,9 @@ public class ProfileServiceEndPoint {
     /**
      * Returns property types that match any of the given tags.
      *
-     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.     * Tags are passed as a comma-separated path segment for backward compatibility.     *
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
+     * Tags are passed as a comma-separated path segment for backward compatibility.
+     *
      * @param tags comma-separated tag identifiers
      * @param language the requested locale for property descriptions (currently unused)
      * @return matching property types
@@ -568,7 +574,9 @@ public class ProfileServiceEndPoint {
     /**
      * Returns property types that match any of the given system tags.
      *
-     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.     * Tags are passed as a comma-separated path segment for backward compatibility.     *
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
+     * Tags are passed as a comma-separated path segment for backward compatibility.
+     *
      * @param tags comma-separated system tag identifiers
      * @param language the requested locale for property descriptions (currently unused)
      * @return matching property types
@@ -587,7 +595,8 @@ public class ProfileServiceEndPoint {
     /**
      * Persists the specified property type in the context server.
      *
-     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.     *
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
+     *
      * @param property the property type to persist
      * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
      */
@@ -600,7 +609,8 @@ public class ProfileServiceEndPoint {
     /**
      * Persists the specified properties type in the context server.
      *
-     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.     *
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
+     *
      * @param properties the properties type to persist
      * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
      */
@@ -617,7 +627,8 @@ public class ProfileServiceEndPoint {
     /**
      * Deletes the property type identified by the specified identifier.
      *
-     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.     *
+     * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
+     *
      * @param propertyId the identifier of the property type to delete
      * @return {@code true} if the property type was properly deleted, {@code false} otherwise
      */

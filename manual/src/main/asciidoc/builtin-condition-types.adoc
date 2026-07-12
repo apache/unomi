@@ -62,14 +62,14 @@ Some types use `parentCondition` to specialize a base type (for example `eventTy
 
 ==== Plugin registration (Unomi 3.0+)
 
-New plugins use **Declarative Services** (`@Component`). Legacy Blueprint XML remains in some shipped bundles during migration; do not copy it for new code.
+New plugins use **Declarative Services** (`@Component`). Legacy Blueprint XML remains in some shipped bundles during migration; do not copy it for new code. In particular, the built-in `BooleanConditionEvaluator`, `BooleanConditionESQueryBuilder`, and `BooleanConditionOSQueryBuilder` classes are themselves still registered via Blueprint XML today — the snippets below illustrate how a **new** condition type should be registered, not the current state of those specific built-in classes.
 
 Condition evaluator (see `plugins/advanced-conditions`):
 
 [source,java]
 ----
-@Component(service = ConditionEvaluator.class, property = {"conditionEvaluatorId=booleanConditionEvaluator"})
-public class BooleanConditionEvaluator implements ConditionEvaluator {
+@Component(service = ConditionEvaluator.class, property = {"conditionEvaluatorId=myCustomConditionEvaluator"})
+public class MyCustomConditionEvaluator implements ConditionEvaluator {
     // ...
 }
 ----
@@ -78,8 +78,8 @@ Elasticsearch query builder (in your ES-specific bundle):
 
 [source,java]
 ----
-@Component(service = ConditionESQueryBuilder.class, property = {"queryBuilderId=booleanConditionQueryBuilder"})
-public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
+@Component(service = ConditionESQueryBuilder.class, property = {"queryBuilderId=myCustomConditionQueryBuilder"})
+public class MyCustomConditionESQueryBuilder implements ConditionESQueryBuilder {
     // ...
 }
 ----
@@ -88,8 +88,8 @@ OpenSearch query builder (in your OS-specific bundle):
 
 [source,java]
 ----
-@Component(service = ConditionOSQueryBuilder.class, property = {"queryBuilderId=booleanConditionQueryBuilder"})
-public class BooleanConditionOSQueryBuilder implements ConditionOSQueryBuilder {
+@Component(service = ConditionOSQueryBuilder.class, property = {"queryBuilderId=myCustomConditionQueryBuilder"})
+public class MyCustomConditionOSQueryBuilder implements ConditionOSQueryBuilder {
     // ...
 }
 ----

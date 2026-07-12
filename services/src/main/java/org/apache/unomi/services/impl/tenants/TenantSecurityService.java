@@ -21,8 +21,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Core tenant security service that handles tenant-specific security operations.
+ * Tenant security helper intended to handle tenant-specific security operations.
  * Rate limiting and IP filtering are handled by Apache CXF.
+ * <p>
+ * This class is not currently registered as an OSGi service (no {@code @Component}
+ * annotation, no Blueprint bean) and is not instantiated anywhere in the runtime.
+ * Live API key validation for incoming requests is performed instead by
+ * {@code org.apache.unomi.rest.authentication.AuthenticationFilter}.
  */
 public class TenantSecurityService {
     private static final Logger logger = LoggerFactory.getLogger(TenantSecurityService.class);
@@ -39,7 +44,8 @@ public class TenantSecurityService {
     }
 
     /**
-     * Blueprint activate hook; loads tenant security configuration.
+     * Activation hook that loads tenant security configuration.
+     * Not currently invoked by the OSGi container; see the class-level note.
      */
     public void activate() {
         loadSecurityConfigurations();
@@ -63,8 +69,10 @@ public class TenantSecurityService {
     }
 
     private boolean validateApiKey(String tenantId, String apiKey) {
-        // Implementation of API key validation
-        return true; // Stub: full API key validation is handled by CXF tenant filters
+        // TODO: Implement actual validation. This method is currently unreachable since
+        // TenantSecurityService is not wired into the OSGi runtime (see class-level Javadoc);
+        // do not treat this stub as evidence that API key validation happens here.
+        return true;
     }
 
     private void loadSecurityConfigurations() {
