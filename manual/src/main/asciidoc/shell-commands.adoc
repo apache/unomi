@@ -204,3 +204,36 @@ working on a plugin. For example to remove all the definitions deployed by a plu
 command: `undeploy-definition BUNDLE_ID * *` when `BUNDLE_ID` is the identifier of the bundle that contains your plugin.
 
 |===
+
+==== Scheduler commands
+
+These commands manage background tasks created by the cluster-aware scheduler (see <<_scheduler,Task scheduler>>).
+
+.Table Scheduler commands
+|===
+|Command|Arguments|Description
+
+|task-list
+|[-s status] [-t type] [--limit N]
+|List scheduled tasks. Filter by status (`SCHEDULED`, `RUNNING`, `FAILED`, …) or task type.
+
+|task-show
+|task-id
+|Show full details for one task (parameters, checkpoint data, errors).
+
+|task-cancel
+|task-id
+|Cancel a task (stops future executions).
+
+|task-retry
+|task-id [-r]
+|Retry a failed task. `-r` / `--reset` clears the failure count.
+
+|task-purge
+|[-d days] [-f]
+|Delete old `COMPLETED` tasks (default: older than 7 days). `-f` skips confirmation.
+
+|task-executor
+|[true|false]
+|Show whether this node runs tasks and its scheduler `nodeId`.
+|===

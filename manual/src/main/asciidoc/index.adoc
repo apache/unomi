@@ -87,6 +87,11 @@ include::privacy.adoc[]
 
 include::clustering.adoc[]
 
+[[_scheduler]]
+== Task scheduler
+
+include::scheduler.adoc[]
+
 == Reference
 
 === Architecture Overview

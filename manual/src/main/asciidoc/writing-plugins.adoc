@@ -64,6 +64,14 @@ within the `META-INF/cxs/` directory of the bundle JAR file:
 http://aries.apache.org/modules/blueprint.html[Blueprint] is used to declare what the plugin provides and inject
 any required dependency. The Blueprint file is located, as usual, at `OSGI-INF/blueprint/blueprint.xml` in the bundle JAR file.
 
+=== Scheduling background work
+
+Plugins can register `TaskExecutor` implementations and schedule one-shot or recurring tasks through `SchedulerService`.
+This is the recommended way to run maintenance, async follow-up work, or long-running jobs in a cluster-safe way.
+
+See <<_scheduler,Task scheduler>> for architecture, REST operations, shell commands, and copy-paste examples
+(including tenant-aware executors and checkpoint/resume patterns).
+
 === Search Engine Specific Implementations
 
 When implementing plugins that need to interact with the search engine layer (ElasticSearch or OpenSearch), special consideration must be taken to ensure compatibility and proper deployment.

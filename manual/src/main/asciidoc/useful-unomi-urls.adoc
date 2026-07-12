@@ -81,4 +81,24 @@ where PROFILE_ID is a profile identifier. This will indeed retrieve all the even
 |/cxs/rules/statistics
 |DELETE
 |Reset all rule execution statistics to 0
+
+|/cxs/tasks
+|GET
+|Listing scheduled background tasks (filter with `?status=` or `?type=`)
+
+|/cxs/tasks/{taskId}
+|GET
+|View a single scheduled task
+
+|/cxs/tasks/{taskId}
+|DELETE
+|Cancel a scheduled task
+
+|/cxs/tasks/{taskId}/retry
+|POST
+|Retry a failed task (`?resetFailureCount=true` optional)
+
+|/cxs/tasks/{taskId}/resume
+|POST
+|Resume a crashed task from checkpoint
 |===
