@@ -53,9 +53,9 @@ public class TenantUsage {
     private long collectedAt;
 
     /**
-     * Retrieves the unique identifier for the tenant associated with
-     * this usage snapshot.
-     * @return The tenant ID string.
+     * Tenant this usage snapshot describes.
+     *
+     * @return tenant id
      */
     public String getTenantId() {
         return tenantId;
@@ -64,6 +64,7 @@ public class TenantUsage {
     /**
      * Sets the unique identifier for the tenant associated with
      * this usage snapshot.
+     *
      * @param tenantId The ID of the tenant.
      */
     public void setTenantId(String tenantId) {
@@ -73,6 +74,7 @@ public class TenantUsage {
     /**
      * Returns the normalized period label, e.g., {@code 2026-07}
      * for a calendar month.
+     *
      * @return The period label string.
      */
     public String getPeriod() {
@@ -82,6 +84,7 @@ public class TenantUsage {
     /**
      * Sets the normalized period label, e.g., {@code 2026-07}
      * for a calendar month.
+     *
      * @param period The desired period label.
      */
     public void setPeriod(String period) {
@@ -90,6 +93,7 @@ public class TenantUsage {
 
     /**
      * Returns the inclusive start of the reporting period (epoch millis, UTC).
+     *
      * @return The starting epoch millisecond value.
      */
     public long getPeriodStart() {
@@ -98,6 +102,7 @@ public class TenantUsage {
 
     /**
      * Sets the inclusive start of the reporting period (epoch millis, UTC).
+     *
      * @param periodStart The starting epoch millisecond value.
      */
     public void setPeriodStart(long periodStart) {
@@ -106,6 +111,7 @@ public class TenantUsage {
 
     /**
      * Returns the exclusive end of the reporting period (epoch millis, UTC).
+     *
      * @return The ending epoch millisecond value.
      */
     public long getPeriodEnd() {
@@ -114,6 +120,7 @@ public class TenantUsage {
 
     /**
      * Sets the exclusive end of the reporting period (epoch millis, UTC).
+     *
      * @param periodEnd The ending epoch millisecond value.
      */
     public void setPeriodEnd(long periodEnd) {
@@ -121,9 +128,9 @@ public class TenantUsage {
     }
 
     /**
-     * Retrieves the number of profiles associated with this
-     * tenant usage snapshot.
-     * @return The profile count.
+     * Total profile count at collection time.
+     *
+     * @return profile count
      */
     public long getProfileCount() {
         return profileCount;
@@ -131,6 +138,7 @@ public class TenantUsage {
 
     /**
      * Sets the number of profiles for this tenant usage snapshot.
+     *
      * @param profileCount The total count of profiles.
      */
     public void setProfileCount(long profileCount) {
@@ -151,6 +159,7 @@ public class TenantUsage {
 
     /**
      * Sets the count of events for this tenant usage snapshot.
+     *
      * @param eventCount The total number of events.
      */
     public void setEventCount(long eventCount) {
@@ -158,9 +167,9 @@ public class TenantUsage {
     }
 
     /**
-     * Retrieves the count of tenant scopes excluding
-     * {@code systemscope} for this period.
-     * @return The scope count.
+     * Tenant scope count excluding {@code systemscope}.
+     *
+     * @return scope count
      */
     public long getScopeCount() {
         return scopeCount;
@@ -168,6 +177,7 @@ public class TenantUsage {
 
     /**
      * Sets the count of tenant scopes excluding {@code systemscope}.
+     *
      * @param scopeCount The total number of scopes.
      */
     public void setScopeCount(long scopeCount) {
@@ -175,9 +185,9 @@ public class TenantUsage {
     }
 
     /**
-     * Retrieves the count of segments associated with this
-     * tenant usage snapshot.
-     * @return The segment count.
+     * Segment count at collection time.
+     *
+     * @return segment count
      */
     public long getSegmentCount() {
         return segmentCount;
@@ -185,6 +195,7 @@ public class TenantUsage {
 
     /**
      * Sets the count of segments for this tenant usage snapshot.
+     *
      * @param segmentCount The total number of segments.
      */
     public void setSegmentCount(long segmentCount) {
@@ -192,8 +203,9 @@ public class TenantUsage {
     }
 
     /**
-     * Retrieves the count of rules associated with this tenant usage snapshot.
-     * @return The number of rules.
+     * Rule count at collection time.
+     *
+     * @return rule count
      */
     public long getRuleCount() {
         return ruleCount;
@@ -201,6 +213,7 @@ public class TenantUsage {
 
     /**
      * Sets the count of rules associated with this tenant usage snapshot.
+     *
      * @param ruleCount The total number of rules.
      */
     public void setRuleCount(long ruleCount) {
@@ -208,9 +221,9 @@ public class TenantUsage {
     }
 
     /**
-     * Retrieves the document count across all tenant indices
-     * recorded in this snapshot.
-     * @return The total document count.
+     * Document count across all tenant indices at collection time.
+     *
+     * @return total document count
      */
     public long getStorageDocumentCount() {
         return storageDocumentCount;
@@ -219,6 +232,7 @@ public class TenantUsage {
     /**
      * Sets the document count across all tenant indices
      * recorded in this snapshot.
+     *
      * @param storageDocumentCount The total number of documents.
      */
     public void setStorageDocumentCount(long storageDocumentCount) {
@@ -226,9 +240,9 @@ public class TenantUsage {
     }
 
     /**
-     * Retrieves the count of active API keys on the tenant record
-     * for this usage period.
-     * @return The number of active API keys.
+     * Active API key count on the tenant record.
+     *
+     * @return active API key count
      */
     public long getActiveApiKeyCount() {
         return activeApiKeyCount;
@@ -237,6 +251,7 @@ public class TenantUsage {
     /**
      * Sets the count of active API keys on the tenant record
      * for this usage period.
+     *
      * @param activeApiKeyCount The total number of active API keys.
      */
     public void setActiveApiKeyCount(long activeApiKeyCount) {
@@ -244,9 +259,9 @@ public class TenantUsage {
     }
 
     /**
-     * Retrieves the in-memory REST request counter for this tenant since the
-     * Unomi process started.
-     * @return The count of REST requests.
+     * In-memory REST request counter for this tenant since process start.
+     *
+     * @return REST request count
      */
     public long getRestRequestCount() {
         return restRequestCount;
@@ -255,6 +270,7 @@ public class TenantUsage {
     /**
      * Sets the in-memory REST request counter for this tenant since the
      * Unomi process started.
+     *
      * @param restRequestCount The total number of REST requests recorded.
      */
     public void setRestRequestCount(long restRequestCount) {
@@ -262,9 +278,9 @@ public class TenantUsage {
     }
 
     /**
-     * Retrieves an unmodifiable list of usage details for all tenant scopes.
-     * @return An unmodifiable {@link List<TenantScopeUsage>} containing
-     * scope usage snapshots.
+     * Per-scope usage breakdown for this snapshot.
+     *
+     * @return unmodifiable scope usage list
      */
     public List<TenantScopeUsage> getScopeUsages() {
         return Collections.unmodifiableList(scopeUsages);
@@ -274,6 +290,7 @@ public class TenantUsage {
      * Sets the list of usage details for all tenant scopes. This method
      * performs a defensive copy of the provided list to ensure
      * internal state immutability.
+     *
      * @param scopeUsages The list of {@link TenantScopeUsage} objects.
      */
     public void setScopeUsages(List<TenantScopeUsage> scopeUsages) {
@@ -284,6 +301,7 @@ public class TenantUsage {
 
     /**
      * Gets the timestamp (epoch millis) when this usage snapshot was collected.
+     *
      * @return The collection time in epoch milliseconds.
      */
     public long getCollectedAt() {
@@ -293,6 +311,7 @@ public class TenantUsage {
     /**
      * Sets the timestamp (epoch millis) indicating when this usage
      * snapshot was collected.
+     *
      * @param collectedAt The collection time in epoch milliseconds.
      */
     public void setCollectedAt(long collectedAt) {

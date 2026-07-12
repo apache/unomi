@@ -64,7 +64,7 @@ public class TenantSecurityService {
 
     private boolean validateApiKey(String tenantId, String apiKey) {
         // Implementation of API key validation
-        return true; // TODO: Implement actual validation
+        return true; // Stub: full API key validation is handled by CXF tenant filters
     }
 
     private void loadSecurityConfigurations() {

@@ -65,7 +65,7 @@ public class ConditionValidation implements Serializable, YamlConvertible {
     private transient Class<?> customType;
 
     /**
-     * Instantiates a new ConditionValidation.
+     * Default constructor.
      */
     public ConditionValidation() {
     }
@@ -219,6 +219,7 @@ public class ConditionValidation implements Serializable, YamlConvertible {
      * Implements YamlConvertible interface.
      *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @param maxDepth maximum recursion depth to prevent stack overflow
      * @return a Map representation of this validation
      */
     @Override

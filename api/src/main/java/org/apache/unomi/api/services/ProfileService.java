@@ -38,374 +38,387 @@ public interface ProfileService {
     String PERSONAL_IDENTIFIER_TAG_NAME = "personalIdentifierProperties";
 
     /**
-     * Retrieves the number of unique profiles.
-     * @return the number of unique profiles.
+     * Returns the total number of profiles.
+     *
+     * @return profile count
      */
     long getAllProfilesCount();
 
     /**
-     * Retrieves profiles or personas matching the specified query.
-     * @param <T>   the specific sub-type of {@link Profile} to retrieve
-     * @param query a {@link Query} specifying which elements to retrieve
-     * @param clazz the class of elements to retrieve
-     * @return a {@link PartialList} of {@code T} instances matching the specified query
+     * Searches profiles or personas using a structured query.
+     *
+     * @param <T> profile subtype to return
+     * @param query search query
+     * @param clazz profile class to load
+     * @return matching profiles or personas
      */
     <T extends Profile> PartialList<T> search(Query query, Class<T> clazz);
 
     /**
-     * Retrieves sessions matching the specified query.
-     * @param query a {@link Query} specifying which elements to retrieve
-     * @return a {@link PartialList} of sessions matching the specified query
+     * Searches sessions using a structured query.
+     *
+     * @param query search query
+     * @return matching sessions
      */
     PartialList<Session> searchSessions(Query query);
 
     /**
-     * Creates a String containing comma-separated values (CSV) formatted version of profiles matching the specified query.
-     * @param query the query specifying which profiles to export
-     * @return a CSV-formatted String version of the profiles matching the specified query
+     * Exports matching profile properties as a CSV string.
+     *
+     * @param query search query selecting profiles to export
+     * @return CSV representation of matching profile properties
      */
     String exportProfilesPropertiesToCsv(Query query);
 
     /**
-     * Find profiles which have the specified property with the specified value, ordered according to the specified {@code sortBy} String and paged: only
-     * {@code size} of them are retrieved, starting with the {@code offset}-th one.
-     * TODO: replace with version using a query instead of separate parameters
-     * TODO: remove as it's unused?
-     * @param propertyName  the name of the property we're interested in
-     * @param propertyValue the value of the property we want profiles to have
-     * @param offset        zero or a positive integer specifying the position of the first profile in the total ordered collection of matching profiles
-     * @param size          a positive integer specifying how many matching profiles should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy        an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to  the property order in
-     *                      the String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally
-     *                      followed by a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of matching profiles
+     * Finds profiles with a given property value, ordered and paged.
+     *
+     * Prefer { #search(Query)} for new code; this overload remains for backward compatibility.     *
+     * @param propertyName property name to match
+     * @param propertyValue required property value
+     * @param offset zero-based index of the first result
+     * @param size maximum results to return, or {@code -1} for all
+     * @param sortBy optional comma-separated property list with optional {@code :asc}/{@code :desc} suffixes
+     * @return matching profiles
      */
     PartialList<Profile> findProfilesByPropertyValue(String propertyName, String propertyValue, int offset, int size, String sortBy);
 
     /**
-     * Merges the specified profiles into the provided so-called master profile, merging properties according to the {@link PropertyMergeStrategyType} specified on their {@link
-     * PropertyType}.
-     * @param masterProfile   the profile into which the specified profiles will be merged
-     * @param profilesToMerge the list of profiles to merge into the specified master profile
-     * @return the merged profile
+     * Merges profiles into a master profile using each property's merge strategy.
+     *
+     * @param masterProfile profile that receives merged data
+     * @param profilesToMerge profiles to merge into the master
+     * @return merged master profile
      */
     Profile mergeProfiles(Profile masterProfile, List<Profile> profilesToMerge);
 
     /**
-     * Retrieves the profile identified by the specified identifier.
-     * @param profileId the identifier of the profile to retrieve
-     * @return the profile identified by the specified identifier or {@code null} if no such profile exists
+     * Loads a profile by id.
+     *
+     * @param profileId profile identifier
+     * @return matching profile, or {@code null} if none exists
      */
     Profile load(String profileId);
 
     /**
-     * Saves the specified profile in the context server.
-     * @param profile the profile to be saved
-     * @return the newly saved profile
+     * Persists a profile.
+     *
+     * @param profile profile to save
+     * @return saved profile
      */
     Profile save(Profile profile);
 
     /**
-     * Adds the alias to the profile.
-     * @param profileID the identifier of the profile
-     * @param alias     the alias which should be linked with of the profile
-     * @param clientID  the identifier of the client
+     * Links an alias to a profile for the given client.
+     *
+     * @param profileID profile identifier
+     * @param alias alias to link
+     * @param clientID client identifier
      */
     void addAliasToProfile(String profileID, String alias, String clientID);
 
     /**
-     * Removes the alias from the profile.
-     * @param profileID the identifier of the profile
-     * @param alias     the alias which should be unlinked from the profile
-     * @param clientID  the identifier of the client
-     * @return the removed ProfileAlias, or null if not found
+     * Unlinks an alias from a profile for the given client.
+     *
+     * @param profileID profile identifier
+     * @param alias alias to unlink
+     * @param clientID client identifier
+     * @return removed alias, or {@code null} if not found
      */
     ProfileAlias removeAliasFromProfile(String profileID, String alias, String clientID);
 
     /**
-     * Find profile aliases which have the specified property with the specified value, ordered according to the specified {@code sortBy} String and paged: only
-     * {@code size} of them are retrieved, starting with the {@code offset}-th one.
-     * @param profileId the identifier of the profile
-     * @param offset    zero or a positive integer specifying the position of the first profile in the total ordered collection of matching profiles
-     * @param size      a positive integer specifying how many matching profiles should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to  the property order in
-     *                  the String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally
-     *                  followed by a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of matching profiles
+     * Lists aliases linked to a profile, ordered and paged.
+     *
+     * @param profileId profile identifier
+     * @param offset zero-based index of the first result
+     * @param size maximum results to return, or {@code -1} for all
+     * @param sortBy optional comma-separated property list with optional {@code :asc}/{@code :desc} suffixes
+     * @return matching profile aliases
      */
     PartialList<ProfileAlias> findProfileAliases(String profileId, int offset, int size, String sortBy);
 
     /**
-     * Merge the specified profile properties in an existing profile,or save new profile if it does not exist yet
-     * @param profile the profile to be saved
-     * @return the newly saved or merged profile or null if the save or merge operation failed.
+     * Saves a new profile or merges properties into an existing one.
+     *
+     * @param profile profile to save or merge
+     * @return saved or merged profile, or {@code null} on failure
      */
     Profile saveOrMerge(Profile profile);
 
     /**
-     * Removes the profile (or persona if the {@code persona} parameter is set to {@code true}) identified by the specified identifier.
-     * @param profileId the identifier of the profile or persona to delete
-     * @param persona   {@code true} if the specified identifier is supposed to refer to a persona, {@code false} if it is supposed to refer to a profile
+     * Deletes a profile or persona by id.
+     *
+     * @param profileId profile or persona identifier
+     * @param persona {@code true} when deleting a persona, {@code false} for a profile
      */
     void delete(String profileId, boolean persona);
 
     /**
-     * Retrieves the sessions associated with the profile identified by the specified identifier that match the specified query (if specified), ordered according to the specified
-     * {@code sortBy} String and and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
-     * TODO: use a Query object instead of distinct parameter
-     * @param profileId the identifier of the profile we want to retrieve sessions from
-     * @param query     a String of text used for fulltext filtering which sessions we are interested in or {@code null} (or an empty String) if we want to retrieve all sessions
-     * @param offset    zero or a positive integer specifying the position of the first session in the total ordered collection of matching sessions
-     * @param size      a positive integer specifying how many matching sessions should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
-     *                  String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of matching sessions
+     * Lists a profile's sessions with optional full-text filtering, ordered and paged.
+     *
+     * @param profileId profile identifier
+     * @param query optional full-text filter, or {@code null} for all sessions
+     * @param offset zero-based index of the first result
+     * @param size maximum results to return, or {@code -1} for all
+     * @param sortBy optional comma-separated property list with optional {@code :asc}/{@code :desc} suffixes
+     * @return matching sessions
      */
     PartialList<Session> getProfileSessions(String profileId, String query, int offset, int size, String sortBy);
 
     /**
-     * Retrieves the session identified by the specified identifier.
-     * @deprecated {@code dateHint} is not supported anymore, please use {@link #loadSession(String)}
-     * @param sessionId the identifier of the session to be retrieved
-     * @param dateHint  a Date helping in identifying where the item is located
-     * @return the session identified by the specified identifier
+     * Loads a session by id.
+     *
+     * @deprecated {@code dateHint} is not supported anymore; use {@link #loadSession(String)}
+     * @param sessionId session identifier
+     * @param dateHint unused date hint
+     * @return matching session
      */
     @Deprecated
     Session loadSession(String sessionId, Date dateHint);
 
     /**
-     * Retrieves the session identified by the specified identifier.
-     * @param sessionId the identifier of the session to be retrieved
-     * @return the session identified by the specified identifier
+     * Loads a session by id.
+     *
+     * @param sessionId session identifier
+     * @return matching session
      */
     default Session loadSession(String sessionId) {
         return loadSession(sessionId, null);
     };
 
     /**
-     * Saves the specified session.
-     * @param session the session to be saved
-     * @return the newly saved session
+     * Persists a session.
+     *
+     * @param session session to save
+     * @return saved session
      */
     Session saveSession(Session session);
 
     /**
-     * Retrieves sessions associated with the profile identified by the specified identifier.
-     * @param profileId the profile id for which we want to retrieve the sessions
-     * @return a {@link PartialList} of the profile's sessions
+     * Returns all sessions linked to a profile.
+     *
+     * @param profileId profile identifier
+     * @return profile sessions
      */
     PartialList<Session> findProfileSessions(String profileId);
 
     /**
-     * Removes all sessions of the specified profile
-     * @param profileId identifier of the profile that we want to remove it's sessions
+     * Deletes all sessions belonging to a profile.
+     *
+     * @param profileId profile identifier
      */
     void removeProfileSessions(String profileId);
 
     /**
-     * Deletes the session identified by the given identifier from persistence.
-     * Note: events belonging to this session are NOT removed; they remain in persistence
-     * with a dangling sessionId reference.
-     * @param sessionIdentifier the unique identifier for the session
+     * Deletes a session by id.
+     * Events for the session remain in persistence with a dangling session id.
+     *
+     * @param sessionIdentifier session identifier
      */
     void deleteSession(String sessionIdentifier);
 
     /**
-     * Checks whether the specified profile and/or session satisfy the specified condition.
-     * @param condition the condition we're testing against which might or might not have profile- or session-specific sub-conditions
-     * @param profile   the profile we're testing
-     * @param session   the session we're testing
-     * @return {@code true} if the profile and/or sessions match the specified condition, {@code false} otherwise
+     * Evaluates whether a profile and/or session satisfy a condition.
+     *
+     * @param condition condition to test (may include profile- or session-specific parts)
+     * @param profile profile to evaluate
+     * @param session session to evaluate
+     * @return {@code true} when the condition matches
      */
     boolean matchCondition(Condition condition, Profile profile, Session session);
 
     /**
-     * Update all profiles in batch according to the specified {@link BatchUpdate}
-     * @param update the batch update specification
+     * Applies a batch update to matching profiles.
+     *
+     * @param update batch update specification
      */
     void batchProfilesUpdate(BatchUpdate update);
 
     /**
-     * Retrieves the persona identified by the specified identifier.
-     * @param personaId the identifier of the persona to retrieve
-     * @return the persona associated with the specified identifier or {@code null} if no such persona exists.
+     * Loads a persona by id.
+     *
+     * @param personaId persona identifier
+     * @return matching persona, or {@code null} if none exists
      */
     Persona loadPersona(String personaId);
 
     /**
-     * Persists the specified {@link Persona} in the context server.
-     * @param persona the persona to persist
-     * @return the newly persisted persona
+     * Persists a persona.
+     *
+     * @param persona persona to save
+     * @return saved persona
      */
     Persona savePersona(Persona persona);
 
     /**
-     * Retrieves the persona identified by the specified identifier and all its associated sessions
-     * @param personaId the identifier of the persona to retrieve
-     * @return a {@link PersonaWithSessions} instance with the persona identified by the specified identifier and all its associated sessions
+     * Loads a persona and all of its sessions.
+     *
+     * @param personaId persona identifier
+     * @return persona with associated sessions
      */
     PersonaWithSessions loadPersonaWithSessions(String personaId);
 
     /**
-     * Creates a persona with the specified identifier and automatically creates an associated session with it.
-     * @param personaId the identifier to use for the new persona
-     * @return the newly created persona
+     * Creates a persona and an initial session for it.
+     *
+     * @param personaId identifier for the new persona
+     * @return newly created persona
      */
     Persona createPersona(String personaId);
 
     /**
-     * Retrieves the sessions associated with the persona identified by the specified identifier, ordered according to the specified {@code sortBy} String and and paged: only
-     * {@code size} of them are retrieved, starting with the {@code offset}-th one.
-     * @param personaId the persona id
-     * @param offset    zero or a positive integer specifying the position of the first session in the total ordered collection of matching sessions
-     * @param size      a positive integer specifying how many matching sessions should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
-     *                  String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *                  a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a {@link PartialList} of sessions for the persona identified by the specified identifier
+     * Lists persona sessions, ordered and paged.
+     *
+     * @param personaId persona identifier
+     * @param offset zero-based index of the first result
+     * @param size maximum results to return, or {@code -1} for all
+     * @param sortBy optional comma-separated property list with optional {@code :asc}/{@code :desc} suffixes
+     * @return matching persona sessions
      */
     PartialList<PersonaSession> getPersonaSessions(String personaId, int offset, int size, String sortBy);
 
     /**
-     * Save a persona with its sessions.
-     * @param personaToSave the persona object containing all the persona information and sessions
-     * @return the persona with sessions
+     * Persists a persona together with its sessions.
+     *
+     * @param personaToSave persona and session data to save
+     * @return saved persona with sessions
      */
     PersonaWithSessions savePersonaWithSessions(PersonaWithSessions personaToSave);
 
-
     /**
-     * Retrieves all the property types associated with the specified target.
-     * TODO: move to a different class
-     * @param target the target for which we want to retrieve the associated property types
-     * @return a collection of all the property types associated with the specified target
+     * Returns property types registered for the given target.
+     *
+     * @param target target name (for example profiles or events)
+     * @return property types for the target
      */
     Collection<PropertyType> getTargetPropertyTypes(String target);
 
     /**
-     * Retrieves all known property types.
-     * TODO: move to a different class
-     * TODO: use Map instead of HashMap
-     * @return a Map associating targets as keys to related {@link PropertyType}s
+     * Returns all property types grouped by target.
+     *
+     * @return map of target name to property types
      */
     Map<String, Collection<PropertyType>> getTargetPropertyTypes();
 
     /**
-     * Retrieves all property types with the specified tag
-     * TODO: move to a different class
-     * @param tag   the tag name marking property types we want to retrieve
-     * @return a Set of the property types with the specified tag
+     * Returns property types tagged with the given tag.
+     *
+     * @param tag tag name
+     * @return matching property types
      */
     Set<PropertyType> getPropertyTypeByTag(String tag);
 
     /**
-     * Retrieves all property types with the specified system tag
-     * TODO: move to a different class
-     * @param tag   the system tag name marking property types we want to retrieve
-     * @return a Set of the property types with the specified system tag
+     * Returns property types with the given system tag.
+     *
+     * @param tag system tag name
+     * @return matching property types
      */
     Set<PropertyType> getPropertyTypeBySystemTag(String tag);
 
     /**
-     * TODO
-     * @param fromPropertyTypeId fromPropertyTypeId
-     * @return property type mapping
+     * Returns the persistence mapping for a property type.
+     *
+     * @param fromPropertyTypeId source property type id
+     * @return mapped property type id
      */
     String getPropertyTypeMapping(String fromPropertyTypeId);
 
     /**
-     * TODO
-     * @param propertyName the property name
-     * @return list of property types
+     * Returns property types mapped to the given property name.
+     *
+     * @param propertyName property name to look up
+     * @return matching property types
      */
     Collection<PropertyType> getPropertyTypeByMapping(String propertyName);
 
     /**
-     * Retrieves the property type identified by the specified identifier.
-     * TODO: move to a different class
-     * @param id the identifier of the property type to retrieve
-     * @return the property type identified by the specified identifier or {@code null} if no such property type exists
+     * Looks up a property type by id.
+     *
+     * @param id property type identifier
+     * @return matching property type, or {@code null} if none exists
      */
     PropertyType getPropertyType(String id);
 
     /**
-     * Persists the specified property type in the context server.
-     * TODO: move to a different class
-     * @param property the property type to persist
-     * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
+     * Registers or updates a property type definition.
+     *
+     * @param property property type to persist
+     * @return {@code true} when created, {@code false} when it already existed
      */
     boolean setPropertyType(PropertyType property);
 
     /**
-     * This function will try to set the target on the property type if not set already, based on the file URL
-     * @param predefinedPropertyTypeURL the URL to extract the target from if the target is not yet. By default it will
-     *                                  use the 5's part after a "/" character
-     * @param propertyType the property type to register
+     * Infers and sets the property type target from a definition URL when missing.
+     * By default uses the fifth path segment after {@code /}.
+     *
+     * @param predefinedPropertyTypeURL URL of the property type definition
+     * @param propertyType property type to update
      */
     void setPropertyTypeTarget(URL predefinedPropertyTypeURL, PropertyType propertyType);
 
     /**
-     * Deletes the property type identified by the specified identifier.
-     * TODO: move to a different class
-     * @param propertyId the identifier of the property type to delete
-     * @return {@code true} if the property type was properly deleted, {@code false} otherwise
+     * Deletes a property type by id.
+     *
+     * @param propertyId property type identifier
+     * @return {@code true} when deleted successfully
      */
     boolean deletePropertyType(String propertyId);
 
     /**
-     * Retrieves the existing property types for the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and with the specified tag.
-     * TODO: move to a different class
-     * @param tag      the tag we're interested in
-     * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
-     * @return all property types defined for the specified item type and with the specified tag
+     * Returns property types defined for an item type that carry the given tag.
+     *
+     * @param tag tag to match
+     * @param itemType item type name from the item class {@code ITEM_TYPE} field
+     * @return matching property types
      */
     Set<PropertyType> getExistingProperties(String tag, String itemType);
 
     /**
-     * Retrieves the existing property types for the specified type as defined by the Item subclass public
-     * field {@code ITEM_TYPE} and with the specified tag (system or regular)
-     * TODO: move to a different class
-     * @param tag      the tag we're interested in
-     * @param itemType the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
-     * @param systemTag whether the specified is a system tag or a regular one
-     * @return all property types defined for the specified item type and with the specified tag
+     * Returns property types defined for an item type that carry the given tag or system tag.
+     *
+     * @param tag tag to match
+     * @param itemType item type name from the item class {@code ITEM_TYPE} field
+     * @param systemTag {@code true} when {@code tag} is a system tag
+     * @return matching property types
      */
     Set<PropertyType> getExistingProperties(String tag, String itemType, boolean systemTag);
 
     /**
-     * Forces a refresh of the profile service, to load data from persistence immediately instead of waiting for
-     * scheduled tasks to execute. Warning : this may have serious impacts on performance so it should only be used
-     * in specific scenarios such as integration tests.
+     * Reloads profile service state from persistence immediately.
+     * Expensive; intended for integration tests and similar scenarios.
      */
     void refresh();
 
     /**
-     * Purge (delete) profiles
-     * example: Purge profile inactive since 10 days only:
-     * purgeProfiles(10, 0);
-     * example: Purge profile created since 30 days only:
-     * purgeProfiles(0, 30);
-     * @param inactiveNumberOfDays will purge profiles with no visits since this number of days (0 or negative value, will have no effect)
-     * @param existsNumberOfDays will purge profiles created since this number of days (0 or negative value, will have no effect)
+     * Deletes profiles by inactivity and/or age criteria.
+     * Example: purge profiles inactive for 10 days only: {@code purgeProfiles(10, 0)}.
+     * Example: purge profiles created within the last 30 days: {@code purgeProfiles(0, 30)}.
+     *
+     * @param inactiveNumberOfDays purge profiles with no visits since this many days (ignored when {@code <= 0})
+     * @param existsNumberOfDays purge profiles created within this many days (ignored when {@code <= 0})
      */
     void purgeProfiles(int inactiveNumberOfDays, int existsNumberOfDays);
 
     /**
-     * Purge (delete) session items
-     * @param existsNumberOfDays will purge sessions created since this number of days (0 or negative value, will have no effect)
+     * Deletes session items older than the given age threshold.
+     *
+     * @param existsNumberOfDays purge sessions created within this many days (ignored when {@code <= 0})
      */
     void purgeSessionItems(int existsNumberOfDays);
 
     /**
-     * Purge (delete) event items
-     * @param existsNumberOfDays will purge events created since this number of days (0 or negative value, will have no effect)
+     * Deletes event items older than the given age threshold.
+     *
+     * @param existsNumberOfDays purge events created within this many days (ignored when {@code <= 0})
      */
     void purgeEventItems(int existsNumberOfDays);
 
     /**
-     * Use purgeSessionItems and purgeEventItems to remove rollover items instead
-     * @param existsNumberOfMonths used to remove monthly indices older than this number of months
+     * @deprecated Use {@link #purgeSessionItems(int)} and {@link #purgeEventItems(int)} for rollover cleanup.
+     *
+     * @param existsNumberOfMonths remove monthly indices older than this many months
      */
     @Deprecated
     void purgeMonthlyItems(int existsNumberOfMonths);

@@ -38,18 +38,19 @@ public class Consent implements Serializable {
     private Date revokeDate;
 
     /**
-     * Empty constructor mostly used for JSON (de-) serialization
+     * Default constructor for JSON (de)serialization.
      */
     public Consent() {
     }
 
     /**
-     * A constructor to directly build a consent with all it's properties
+     * Creates a consent with all properties set.
+     *
      * @param scope the scope for this consent
      * @param typeIdentifier the identifier of the type this consent applies to
-     * @param status the type of status that we are storing for this consent. May be one of @ConsentStatus.DENIED, @ConsentStatus.GRANTED, @ConsentStatus.REVOKED
-     * @param statusDate the starting date at which this consent was given
-     * @param revokeDate the date at which this consent will (automatically) revoke
+     * @param status the consent status ({@link ConsentStatus#DENIED}, {@link ConsentStatus#GRANTED}, or {@link ConsentStatus#REVOKED})
+     * @param statusDate the date when this consent was given
+     * @param revokeDate the date when this consent will be automatically revoked
      */
     public Consent(String scope, String typeIdentifier, ConsentStatus status, Date statusDate, Date revokeDate) {
         this.scope = scope;
@@ -60,12 +61,12 @@ public class Consent implements Serializable {
     }
 
     /**
-     * A constructor from a map used for example when we use the deserialized data from event
-     * properties.
-     * @param consentMap a Map that contains the following key-value pairs : typeIdentifier:String, status:String (must
-     *                   be one of GRANTED, DENIED or REVOKED), statusDate:String (ISO8601 date format !), revokeDate:String (ISO8601 date format !)
-     * @param dateFormat a DateFormat instance to convert the date string to date objects
-     * @throws ParseException in case one of the dates failed to parse properly
+     * Creates a consent from a deserialized property map.
+     *
+     * @param consentMap map with keys {@code typeIdentifier}, {@code status} (GRANTED, DENIED, or REVOKED),
+     *                   {@code statusDate}, and {@code revokeDate} as ISO-8601 strings
+     * @param dateFormat date format used to parse date strings
+     * @throws ParseException if a date string cannot be parsed
      */
     public Consent(Map<String,Object> consentMap, DateFormat dateFormat) throws ParseException {
         if (consentMap.containsKey("scope")) {
@@ -93,58 +94,63 @@ public class Consent implements Serializable {
     }
 
     /**
-     * Retrieve the scope for this consent
-     * @return a scope identifier
+     * Scope this consent applies to.
+     *
+     * @return the scope identifier
      */
     public String getScope() {
         return scope;
     }
 
     /**
-     * Set the scope for this consent
-     * @param scope a scope identifier
+     * Sets the scope for this consent.
+     *
+     * @param scope the scope identifier
      */
     public void setScope(String scope) {
         this.scope = scope;
     }
 
     /**
-     * Set the type identifier. This must be (no validation is done) a unique identifier for the consent type. These
-     * are usually externally defined, Apache Unomi has no knowledge of them except for this type identifier.
-     * @param typeIdentifier a unique String to identify the consent type
+     * Sets the consent type identifier (externally defined, not validated by Unomi).
+     *
+     * @param typeIdentifier the consent type identifier
      */
     public void setTypeIdentifier(String typeIdentifier) {
         this.typeIdentifier = typeIdentifier;
     }
 
     /**
-     * Retrieve the consent type identifier for this consent.
-     * @return a String containing the type identifier
+     * Consent type identifier.
+     *
+     * @return the type identifier
      */
     public String getTypeIdentifier() {
         return typeIdentifier;
     }
 
     /**
-     * Retrieves the status for this consent. This is of type @ConsentStatus
-     * @return the current value for the status.
+     * Current consent status.
+     *
+     * @return the consent status
      */
     public ConsentStatus getStatus() {
         return status;
     }
 
     /**
-     * Sets the status for this consent. A Consent status of type REVOKED means that this consent is meant to be destroyed.
-     * @param status the status to set on this consent
+     * Sets the consent status. A status of {@link ConsentStatus#REVOKED} means the consent should be removed.
+     *
+     * @param status the consent status to set
      */
     public void setStatus(ConsentStatus status) {
         this.status = status;
     }
 
     /**
-     * Retrieve the date at which this consent was given. If this date is in the future the consent should not be
-     * considered valid yet.
-     * @return a valid date or null if this date was not set.
+     * Date when this consent was given. Future dates mean the consent is not yet valid.
+     *
+     * @return the status date, or {@code null} if unset
      */
     public Date getStatusDate() {
         return statusDate;
@@ -152,34 +158,35 @@ public class Consent implements Serializable {
 
     /**
      * Sets the date from which this consent applies.
-     * @param statusDate a valid Date or null if we set not starting date (immediately valid)
+     *
+     * @param statusDate the effective date, or {@code null} for immediate validity
      */
     public void setStatusDate(Date statusDate) {
         this.statusDate = statusDate;
     }
 
     /**
-     * Retrieves the end date for this consent. After this date the consent is no longer valid and should be disposed of.
-     * If this date is not set it means the consent will never expire
-     * @return a valid Date or null to indicate an unlimited consent
+     * Expiration date after which this consent is no longer valid. {@code null} means no expiry.
+     *
+     * @return the revoke date, or {@code null} if unlimited
      */
     public Date getRevokeDate() {
         return revokeDate;
     }
 
     /**
-     * Sets the end date for this consent. After this date the consent is no longer valid and should be disposed of.
-     * If this date is not set it means the consent will never expire
-     * @param revokeDate a valid Date or null to indicate an unlimited consent
+     * Sets the expiration date for this consent. {@code null} means the consent never expires.
+     *
+     * @param revokeDate the revoke date, or {@code null} for unlimited validity
      */
     public void setRevokeDate(Date revokeDate) {
         this.revokeDate = revokeDate;
     }
 
     /**
-     * Test if the consent is GRANTED right now.
-     * @return true if the consent is granted using the current date (internally a new Date() is created and the
-     * {@link Consent#isConsentGrantedAtDate} is called.
+     * Whether this consent is granted at the current time.
+     *
+     * @return {@code true} if the consent is granted now
      */
     @XmlTransient
     public boolean isConsentGrantedNow() {
@@ -187,9 +194,10 @@ public class Consent implements Serializable {
     }
 
     /**
-     * Tests if the consent is GRANTED at the specified date
-     * @param testDate the date against which to test the consent to be granted.
-     * @return true if the consent is granted at the specified date, false otherwise.
+     * Whether this consent is granted at the given date.
+     *
+     * @param testDate the date to test against
+     * @return {@code true} if the consent is granted at the specified date
      */
     @XmlTransient
     public boolean isConsentGrantedAtDate(Date testDate) {
@@ -202,14 +210,10 @@ public class Consent implements Serializable {
     }
 
     /**
-     * This is a utility method to generate a Map based on the contents of the consents. The format of the map is the
-     * same as the one used in the Map Consent constructor. For dates you must specify a dateFormat that will be used
-     * to format the dates. This dateFormat should usually support ISO8601 to make integrate with Javascript clients
-     * easy to integrate.
-     * @param dateFormat a dateFormat instance such as ISO8601DateFormat to generate the String formats for the statusDate
-     *                   and revokeDate map entries.
-     * @return a Map that contains the following key-value pairs : typeIdentifier:String, status:String (must
-     *                   be one of GRANTED, DENIED or REVOKED), statusDate:String (generated by the dateFormat), revokeDate:String (generated by the dateFormat)
+     * Serializes this consent to a map using the same format as the map constructor.
+     *
+     * @param dateFormat date format for {@code statusDate} and {@code revokeDate} entries (ISO-8601 recommended)
+     * @return map with keys {@code scope}, {@code typeIdentifier}, {@code status}, {@code statusDate}, and {@code revokeDate}
      */
     @XmlTransient
     public Map<String,Object> toMap(DateFormat dateFormat) {

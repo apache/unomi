@@ -29,6 +29,7 @@ public interface ValueTypeValidator {
 
     /**
      * Validates if a value matches the expected type
+     *
      * @param value The value to validate
      * @return true if the value is valid for this type, false otherwise
      */

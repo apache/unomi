@@ -18,9 +18,9 @@
 package org.apache.unomi.api;
 
 /**
- * Summary of one event type known to the server.
- * Pairs an event type name with an occurrence count, for example when
- * {@link ServerInfo} lists which events the running instance supports.
+ * One event type entry in {@link ServerInfo#getEventTypes()}.
+ * Pairs the event type name with how many matching events exist on the server,
+ * giving operators and clients a quick view of which event types are active.
  */
 public class EventInfo {
 
@@ -28,38 +28,42 @@ public class EventInfo {
     private Long occurences;
 
     /**
-     * Constructs a new {@code EventInfo} object.
+     * Creates an empty event info record.
      */
     public EventInfo() {
     }
 
     /**
-     * Returns the name of the event.
-     * @return The event name as a {@link String}.
+     * Event type name.
+     *
+     * @return event type name
      */
     public String getName() {
         return name;
     }
 
     /**
-     * Sets the name of the event.
-     * @param name The name to set for the event.
+     * Sets the event type name.
+     *
+     * @param name event type name
      */
     public void setName(String name) {
         this.name = name;
     }
 
     /**
-     * Gets the number of occurrences for this event type.
-     * @return The count of occurrences as a {@link Long}.
+     * Number of occurrences for this event type.
+     *
+     * @return occurrence count
      */
     public Long getOccurences() {
         return occurences;
     }
 
     /**
-     * Sets the number of occurrences for this event type.
-     * @param occurences The count of occurrences to set.
+     * Sets the occurrence count for this event type.
+     *
+     * @param occurences occurrence count
      */
     public void setOccurences(Long occurences) {
         this.occurences = occurences;

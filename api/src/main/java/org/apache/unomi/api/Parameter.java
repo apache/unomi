@@ -28,8 +28,11 @@ import java.util.Set;
 import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
 
 /**
- * A representation of a condition parameter, to be used in the segment building UI to either select parameters from a
- * choicelist or to enter a specific value.
+ * Parameter definition for a {@link org.apache.unomi.api.conditions.ConditionType}.
+ * Describes how the segment builder UI should collect a value: free text, choice
+ * list, or nested structure. Saved on condition types and validated by
+ * {@link org.apache.unomi.api.services.ConditionValidationService} when rules
+ * or segments are stored.
  */
 public class Parameter implements Serializable, YamlConvertible {
 
@@ -45,17 +48,17 @@ public class Parameter implements Serializable, YamlConvertible {
     private ConditionValidation validation;
 
     /**
-     * Constructs a default {@link Parameter} instance.
+     * Default constructor.
      */
     public Parameter() {
     }
 
     /**
-     * Constructs a {@link Parameter} with specified
-     * identification and type details.
-     * @param id The unique identifier for this parameter.
-     * @param type The data type of the parameter (e.g., "string", "integer").
-     * @param multivalued Indicates if the parameter can hold multiple values.
+     * Creates a parameter with id, type, and multivalued flag.
+     *
+     * @param id          the parameter identifier
+     * @param type        the parameter data type (for example {@code string} or {@code integer})
+     * @param multivalued whether multiple values are allowed
      */
     public Parameter(String id, String type, boolean multivalued) {
         this.id = id;
@@ -64,50 +67,54 @@ public class Parameter implements Serializable, YamlConvertible {
     }
 
     /**
-     * Returns the unique identifier assigned to this parameter.
-     * @return The ID string of the parameter.
+     * Parameter identifier.
+     *
+     * @return the parameter id
      */
     public String getId() {
         return id;
     }
 
     /**
-     * Sets the unique identifier for this parameter.
-     * @param id The new ID to assign to the parameter.
+     * Sets the parameter identifier.
+     *
+     * @param id the parameter id
      */
     public void setId(String id) {
         this.id = id;
     }
 
     /**
-     * Retrieves the data type associated with this parameter.
-     * @return The string representation of the parameter's type.
+     * Parameter data type (for example {@code string}, {@code integer}, or {@code boolean}).
+     *
+     * @return the type id
      */
     public String getType() {
         return type;
     }
 
     /**
-     * Sets the data type for this parameter.
-     * @param type The new data type string (e.g., "array", "boolean").
+     * Sets the parameter data type.
+     *
+     * @param type the type id
      */
     public void setType(String type) {
         this.type = type;
     }
 
     /**
-     * Checks if this parameter is configured to handle multiple values.
-     * @return {@code true} if the parameter is multivalued,
-     * {@code false} otherwise.
+     * Whether this parameter accepts multiple values.
+     *
+     * @return {@code true} if multivalued, {@code false} otherwise
      */
     public boolean isMultivalued() {
         return multivalued;
     }
 
     /**
-     * Sets whether this parameter can hold multiple values.
-     * @param multivalued If {@code true}, the parameter accepts multiple
-     * values; otherwise, it accepts only one.
+     * Sets whether this parameter accepts multiple values.
+     *
+     * @param multivalued {@code true} to allow multiple values
      */
     public void setMultivalued(boolean multivalued) {
         this.multivalued = multivalued;
@@ -123,35 +130,36 @@ public class Parameter implements Serializable, YamlConvertible {
     }
 
     /**
-     * Retrieves the default value configured for this parameter.
-     * @return The stored default value, which may be null if none is set.
+     * Default value used when a condition does not supply this parameter.
+     *
+     * @return the default value, or {@code null} if none is configured
      */
     public Object getDefaultValue() {
         return defaultValue;
     }
 
     /**
-     * Sets the default value that should be used when evaluating conditions
-     * involving this parameter. This value can be of any type.
-     * @param defaultValue the object to be set as the default value
+     * Sets the default value for this parameter.
+     *
+     * @param defaultValue the default value
      */
     public void setDefaultValue(Object defaultValue) {
         this.defaultValue = defaultValue;
     }
 
     /**
-     * Gets the condition validation rules associated with this parameter.
-     * @return The {@link ConditionValidation} object defining constraints, or
-     * null if none is configured.
+     * Validation rules applied when this parameter is used in a condition.
+     *
+     * @return the validation rules, or {@code null} if none are configured
      */
     public ConditionValidation getValidation() {
         return validation;
     }
 
     /**
-     * Sets the specific condition validation rules for this parameter. This
-     * allows controlling how the parameter behaves within a condition context.
-     * @param validation the new {@link ConditionValidation} object to apply
+     * Sets validation rules for this parameter.
+     *
+     * @param validation the validation rules
      */
     public void setValidation(ConditionValidation validation) {
         this.validation = validation;
@@ -160,6 +168,7 @@ public class Parameter implements Serializable, YamlConvertible {
     /**
      * Converts this parameter to a Map structure for YAML output.
      * Implements YamlConvertible interface.
+     *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
      * @return a Map representation of this parameter
      */

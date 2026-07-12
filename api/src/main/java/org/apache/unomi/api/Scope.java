@@ -32,7 +32,7 @@ public class Scope extends MetadataItem {
     public static final String ITEM_TYPE = "scope";
 
     /**
-     * Instantiates a new Scope.
+     * Default constructor.
      */
     public Scope() {
     }

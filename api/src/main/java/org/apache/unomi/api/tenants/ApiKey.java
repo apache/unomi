@@ -22,9 +22,9 @@ import java.security.SecureRandom;
 import java.util.Date;
 
 /**
- * Represents an API key for tenant authentication and authorization.
- * This class extends the base Item class and provides functionality for managing
- * API keys including their lifecycle (creation, expiration, revocation) and metadata.
+ * Persisted credential used to authenticate REST calls for a {@link Tenant}.
+ * Stores hashed key material, scope, expiration, and revocation state. Plaintext
+ * keys are only returned once at creation time via {@link ApiKeyCreationResult}.
  */
 public class ApiKey extends Item {
     /**
@@ -142,6 +142,7 @@ public class ApiKey extends Item {
 
     /**
      * Gets the SHA-256 digest of the API key.
+     *
      * @return the key hash as lowercase hex
      */
     public String getKeyHash() {
@@ -150,6 +151,7 @@ public class ApiKey extends Item {
 
     /**
      * Sets the SHA-256 digest of the API key.
+     *
      * @param keyHash the key hash to set
      */
     public void setKeyHash(String keyHash) {
@@ -158,6 +160,7 @@ public class ApiKey extends Item {
 
     /**
      * Gets the display-safe masked representation of the key.
+     *
      * @return the masked key (e.g. "unomi_v1_****ab12")
      */
     public String getMaskedKey() {
@@ -166,6 +169,7 @@ public class ApiKey extends Item {
 
     /**
      * Sets the display-safe masked representation of the key.
+     *
      * @param maskedKey the masked key to set
      */
     public void setMaskedKey(String maskedKey) {
@@ -174,6 +178,7 @@ public class ApiKey extends Item {
 
     /**
      * Gets the name or identifier of the API key.
+     *
      * @return the API key name
      */
     public String getName() {
@@ -182,6 +187,7 @@ public class ApiKey extends Item {
 
     /**
      * Sets the name or identifier of the API key.
+     *
      * @param name the API key name to set
      */
     public void setName(String name) {
@@ -190,6 +196,7 @@ public class ApiKey extends Item {
 
     /**
      * Gets the description of the API key's purpose or usage.
+     *
      * @return the API key description
      */
     public String getDescription() {
@@ -198,6 +205,7 @@ public class ApiKey extends Item {
 
     /**
      * Sets the description of the API key's purpose or usage.
+     *
      * @param description the API key description to set
      */
     public void setDescription(String description) {
@@ -206,6 +214,7 @@ public class ApiKey extends Item {
 
     /**
      * Gets the creation date of the API key.
+     *
      * @return the creation date
      */
     @Override
@@ -215,6 +224,7 @@ public class ApiKey extends Item {
 
     /**
      * Sets the creation date of the API key.
+     *
      * @param creationDate the creation date to set
      */
     public void setCreationDate(Date creationDate) {
@@ -223,6 +233,7 @@ public class ApiKey extends Item {
 
     /**
      * Gets the expiration date of the API key.
+     *
      * @return the expiration date
      */
     public Date getExpirationDate() {
@@ -231,6 +242,7 @@ public class ApiKey extends Item {
 
     /**
      * Sets the expiration date of the API key.
+     *
      * @param expirationDate the expiration date to set
      */
     public void setExpirationDate(Date expirationDate) {
@@ -239,6 +251,7 @@ public class ApiKey extends Item {
 
     /**
      * Checks if the API key has been revoked.
+     *
      * @return true if the API key is revoked, false otherwise
      */
     public boolean isRevoked() {
@@ -247,6 +260,7 @@ public class ApiKey extends Item {
 
     /**
      * Sets the revocation status of the API key.
+     *
      * @param revoked true to revoke the API key, false to reinstate
      */
     public void setRevoked(boolean revoked) {
@@ -255,6 +269,7 @@ public class ApiKey extends Item {
 
     /**
      * Gets the type of the API key.
+     *
      * @return the API key type
      */
     public ApiKeyType getKeyType() {
@@ -263,6 +278,7 @@ public class ApiKey extends Item {
 
     /**
      * Sets the type of the API key.
+     *
      * @param keyType the API key type to set
      */
     public void setKeyType(ApiKeyType keyType) {

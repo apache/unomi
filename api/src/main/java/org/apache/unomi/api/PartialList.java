@@ -23,9 +23,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * A list of elements representing a limited view of a larger list, starting from a given element (offset from the first) and showing only a given number of elements, instead of
- * showing all of them. This is useful to retrieve "pages" of large element collections.
- * @param <T> the generic type of contained elements
+ * Window into a larger result set for paginated queries.
+ * Carries the current page, offset, total hit count, and optional scroll
+ * continuation tokens for deep result sets.
+ *
+ * @param <T> the element type
  */
 public class PartialList<T> implements Serializable {
 
@@ -51,7 +53,7 @@ public class PartialList<T> implements Serializable {
     }
 
     /**
-     * Instantiates a new PartialList.
+     * Default constructor with an empty list and zero counts.
      */
     public PartialList() {
         list = new ArrayList<>();
@@ -62,12 +64,13 @@ public class PartialList<T> implements Serializable {
     }
 
     /**
-     * Instantiates a new PartialList.
-     * @param list      the limited view into the bigger List this PartialList is representing
-     * @param offset    the offset of the first element in the view
-     * @param pageSize  the number of elements this PartialList contains
-     * @param totalSize the total size of elements in the original List
-     * @param totalSizeRelation the relation to the total size (equals or greater than)
+     * Creates a partial list view over a full result set.
+     *
+     * @param list              the page of elements
+     * @param offset            index of the first element in the full set
+     * @param pageSize          number of elements in this page
+     * @param totalSize         total elements in the full set
+     * @param totalSizeRelation whether {@code totalSize} is exact or a lower bound
      */
     public PartialList(List<T> list, long offset, long pageSize, long totalSize, Relation totalSizeRelation) {
         this.list = list;
@@ -78,74 +81,81 @@ public class PartialList<T> implements Serializable {
     }
 
     /**
-     * Retrieves the limited list view.
-     * @return a List of the {@code size} elements starting from the {@code offset}-th one from the original, larger list
+     * Elements in the current page.
+     *
+     * @return the page contents
      */
     public List<T> getList() {
         return list;
     }
 
     /**
-     * Sets the view list.
-     * @param list the view list into the bigger List this PartialList is representing
+     * Sets the page contents.
+     *
+     * @param list the elements for this page
      */
     public void setList(List<T> list) {
         this.list = list;
     }
 
     /**
-     * Retrieves the offset of the first element of the view.
-     * @return the offset of the first element of the view
+     * Index of the first element in the full result set.
+     *
+     * @return the offset
      */
     public long getOffset() {
         return offset;
     }
 
     /**
-     * Sets the offset of the first element in this partial list view.
-     * @param offset the starting index (offset) for the elements in the view.
+     * Sets the offset of the first element in the full result set.
+     *
+     * @param offset the starting index
      */
     public void setOffset(long offset) {
         this.offset = offset;
     }
 
     /**
-     * Retrieves the number of elements this PartialList contains.
-     * @return the number of elements this PartialList contains
+     * Maximum number of elements requested for this page.
+     *
+     * @return the page size
      */
     public long getPageSize() {
         return pageSize;
     }
 
     /**
-     * Sets the maximum number of elements to be returned in
-     * this partial list view.
-     * @param pageSize the size limit for the page view.
+     * Sets the page size.
+     *
+     * @param pageSize the maximum number of elements per page
      */
     public void setPageSize(long pageSize) {
         this.pageSize = pageSize;
     }
 
     /**
-     * Retrieves the total size of elements in the original List.
-     * @return the total size of elements in the original List
+     * Total number of matching elements in the full result set.
+     *
+     * @return the total size
      */
     public long getTotalSize() {
         return totalSize;
     }
 
     /**
-     * Sets the total count of elements available in the original, full list.
-     * @param totalSize the overall size of the collection represented
-     * by this PartialList.
+     * Sets the total number of matching elements.
+     *
+     * @param totalSize the total size
      */
     public void setTotalSize(long totalSize) {
         this.totalSize = totalSize;
     }
 
     /**
-     * Retrieves the size of this PartialList. Should equal {@link #getPageSize()}.
-     * @return the size of this PartialList
+     * Number of elements in the current page (should match {@link #getPageSize()}).
+     *
+     * @return the number of elements in {@link #getList()}
      */
     @XmlTransient
     public int size() {
@@ -153,9 +163,10 @@ public class PartialList<T> implements Serializable {
     }
 
     /**
-     * Retrieves the element at the specified index
-     * @param index the index of the element to retrieve
-     * @return the element at the specified index
+     * Element at the given index within the current page.
+     *
+     * @param index the zero-based index in the page list
+     * @return the element at that index
      */
     @XmlTransient
     public T get(int index) {
@@ -163,52 +174,54 @@ public class PartialList<T> implements Serializable {
     }
 
     /**
-     * Retrieve the scroll identifier to make it possible to continue a scrolling list query
-     * @return a string containing the scroll identifier, to be sent back in an subsequent request
+     * Scroll token returned by the search backend for the next page of a scroll query.
+     *
+     * @return the scroll identifier, or {@code null} if scrolling is not in use
      */
     public String getScrollIdentifier() {
         return scrollIdentifier;
     }
 
     /**
-     * Sets the scroll identifier used to continue a scrolling list query.
-     * @param scrollIdentifier a string containing the unique identifier needed
-     * for subsequent requests in a scroll operation.
+     * Sets the scroll token for continuing a scroll query.
+     *
+     * @param scrollIdentifier the scroll identifier
      */
     public void setScrollIdentifier(String scrollIdentifier) {
         this.scrollIdentifier = scrollIdentifier;
     }
 
     /**
-     * Retrieve the value of the scroll time validity to make it possible to continue a scrolling list query
-     * @return a string containing a time value for the scroll validity, to be sent back in a subsequent request
+     * How long the scroll context remains valid (for example {@code 10m}).
+     *
+     * @return the scroll time validity, or {@code null} if not set
      */
     public String getScrollTimeValidity() {
         return scrollTimeValidity;
     }
 
     /**
-     * Sets the time validity period for the scroll query.
-     * @param scrollTimeValidity a string representing how long the scroll
-     * context remains valid (e.g., "10m").
+     * Sets how long the scroll context remains valid.
+     *
+     * @param scrollTimeValidity the validity period (for example {@code 10m})
      */
     public void setScrollTimeValidity(String scrollTimeValidity) {
         this.scrollTimeValidity = scrollTimeValidity;
     }
 
     /**
-     * Retrieve the relation to the total site, wether it is equal to or greater than the value stored in the
-     * totalSize property.
-     * @return a Relation enum value that describes the type of total size we have in this object.
+     * Whether {@link #getTotalSize()} is exact or only a lower bound.
+     *
+     * @return the total-size relation
      */
     public Relation getTotalSizeRelation() {
         return totalSizeRelation;
     }
 
     /**
-     * Sets the relation describing the total size count.
-     * @param totalSizeRelation the relationship type between the total size and
-     * the actual data set.
+     * Sets whether the reported total size is exact or a lower bound.
+     *
+     * @param totalSizeRelation the total-size relation
      */
     public void setTotalSizeRelation(Relation totalSizeRelation) {
         this.totalSizeRelation = totalSizeRelation;

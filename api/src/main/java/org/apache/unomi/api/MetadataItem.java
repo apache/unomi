@@ -38,16 +38,15 @@ public abstract class MetadataItem extends Item {
     protected Metadata metadata;
 
     /**
-     * Constructs a default {@code MetadataItem}.
+     * Default constructor.
      */
     public MetadataItem() {
     }
 
     /**
-     * Constructs a {@code MetadataItem} initialized with the given metadata.
-     * The parent class ID is set using the ID from the provided metadata, and
-     * the internal metadata field is populated.
-     * @param metadata the initial metadata for this item
+     * Creates an item with the given metadata and sets the item id from it.
+     *
+     * @param metadata the item metadata
      */
     public MetadataItem(Metadata metadata) {
         super(metadata != null ? metadata.getId() : null);
@@ -55,8 +54,9 @@ public abstract class MetadataItem extends Item {
     }
 
     /**
-     * Retrieves the associated Metadata.
-     * @return the associated Metadata
+     * Descriptive metadata for this item.
+     *
+     * @return the metadata
      */
     @XmlElement(name = "metadata")
     public Metadata getMetadata() {
@@ -64,10 +64,9 @@ public abstract class MetadataItem extends Item {
     }
 
     /**
-     * Sets the associated {@link Metadata}.
-     * If the provided metadata is not null, the parent class's ID will be
-     * updated to match the ID of the new metadata object.
-     * @param metadata the metadata to set
+     * Sets the metadata and updates the item id when metadata is non-null.
+     *
+     * @param metadata the metadata to assign
      */
     public void setMetadata(Metadata metadata) {
         if (metadata != null) {
@@ -94,6 +93,7 @@ public abstract class MetadataItem extends Item {
      * Converts this metadata item to a Map structure for YAML output.
      * Merges fields from Item parent class and adds metadata field.
      * Subclasses should override this method, call super.toYaml(visited), and add their specific fields.
+     *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
      * @return a Map representation of this metadata item
      */

@@ -52,77 +52,70 @@ public class Goal extends MetadataItem implements YamlConvertible {
     private String campaignId;
 
     /**
-     * Constructs an empty {@link Goal} instance.
-     * This constructor is typically used when initializing a goal object
-     * programmatically before setting its specific metadata and events.
+     * Default constructor.
      */
     public Goal() {
     }
 
     /**
-     * Constructs a {@link Goal} instance initialized with
-     * the provided metadata.
-     * to be identified or configured within a system context.
-     * @param metadata The metadata to associate with this goal, allowing it
+     * Creates a goal with the given metadata.
+     *
+     * @param metadata the goal metadata
      */
     public Goal(Metadata metadata) {
         super(metadata);
     }
 
     /**
-     * Retrieves the {@link Condition} determining the goal's start event if any, used for more complex goals where an action has to be accomplished first before evaluating the
-     * success of the final goal (funnel goal for example).
-     * @return the condition associated with the start event for this goal or {@code null} if no such event exists
+     * Optional start condition for funnel-style goals.
+     * When set, goal tracking begins only after this condition is met.
+     *
+     * @return the start condition, or {@code null} if none is configured
      */
     public Condition getStartEvent() {
         return startEvent;
     }
 
     /**
-     * Sets the condition that must occur for the goal to begin tracking.
-     * This is used when the goal's success depends on an initial event
-     * occurring, such as in a funnel scenario.
-     * @param startEvent The {@link Condition} defining the starting event, or
-     * null if no specific start event is required.
+     * Sets the optional start condition for funnel-style goals.
+     *
+     * @param startEvent the start condition, or {@code null} to clear it
      */
     public void setStartEvent(Condition startEvent) {
         this.startEvent = startEvent;
     }
 
     /**
-     * Retrieves the {@link Condition} determining the target event which needs to occur to consider the goal accomplished.
-     * @return the condition associated with the event determining if the goal is reached or not
+     * Condition that marks the goal as accomplished when it matches.
+     *
+     * @return the target condition
      */
     public Condition getTargetEvent() {
         return targetEvent;
     }
 
     /**
-     * Sets the condition that must occur for the goal to be
-     * considered accomplished.
-     * This defines the target event that determines whether the
-     * goal has been reached.
-     * @param targetEvent The {@link Condition} defining the target event, or
-     * null if no specific target event is required.
+     * Sets the condition that marks the goal as accomplished.
+     *
+     * @param targetEvent the target condition, or {@code null} to clear it
      */
     public void setTargetEvent(Condition targetEvent) {
         this.targetEvent = targetEvent;
     }
 
     /**
-     * Retrieves the identifier of the campaign this goal is part of, if any.
-     * @return the identifier of the campaign this goal is part of, or {@code null} if this goal is not part of any campaign
+     * Campaign id when this goal is scoped to a campaign.
+     *
+     * @return the campaign id, or {@code null} for scope-level goals
      */
     public String getCampaignId() {
         return campaignId;
     }
 
     /**
-     * Sets the identifier of the campaign to which this goal belongs.
-     * This allows goals to be scoped and managed within a specific
-     * marketing campaign context.
-     * @param campaignId The unique ID of the associated campaign, or
-     * {@code null} if the goal is not tied to a campaign.
+     * Sets the campaign id for campaign-scoped goals.
+     *
+     * @param campaignId the campaign id, or {@code null} for scope-level goals
      */
     public void setCampaignId(String campaignId) {
         this.campaignId = campaignId;
@@ -131,6 +124,7 @@ public class Goal extends MetadataItem implements YamlConvertible {
     /**
      * Converts this goal to a Map structure for YAML output.
      * Implements YamlConvertible interface with circular reference detection.
+     *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
      * @return a Map representation of this goal
      */

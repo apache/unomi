@@ -22,9 +22,10 @@ import org.apache.unomi.api.conditions.Condition;
 import java.io.Serializable;
 
 /**
- * Full specification for a context server search or aggregation.
- * Combines a {@link Condition}, paging (offset/limit), sort order, and
- * optional aggregate definitions in one request object.
+ * Search and paging request sent to {@link org.apache.unomi.api.services.QueryService}
+ * and profile/segment REST endpoints.
+ * Combines an optional full-text filter, a {@link Condition}, sort field, offset/limit,
+ * and a {@code forceRefresh} flag that controls whether indexes are refreshed first.
  */
 public class Query implements Serializable {
     private String text;
@@ -37,153 +38,152 @@ public class Query implements Serializable {
     private String scrollIdentifier;
 
     /**
-     * Instantiates a new Query.
+     * Default constructor.
      */
     public Query() {
     }
 
     /**
-     * Retrieves the text to be used in full-text searches, if any.
-     * @return the text to be used in full-text searches or {@code null} if no full-text search is needed for this Query
+     * Optional full-text filter applied to the search.
+     *
+     * @return the search text, or {@code null} if none is set
      */
     public String getText() {
         return text;
     }
 
     /**
-     * Sets to be used in full-text searches
-     * @param text the text to be used in full-text searches or {@code null} if no full-text search is needed for this Query
+     * Sets the full-text filter.
+     *
+     * @param text the search text, or {@code null} to disable full-text search
      */
     public void setText(String text) {
         this.text = text;
     }
 
-
     /**
-     * Retrieves the offset of the first element to be retrieved
-     * @return zero or a positive integer specifying the position of the first item to be retrieved in the total ordered collection of matching items
+     * Zero-based index of the first result to return.
+     *
+     * @return the result offset
      */
     public int getOffset() {
         return offset;
     }
 
     /**
-     * Sets the offset of the first element to be retrieved
-     * @param offset zero or a positive integer specifying the position of the first item to be retrieved in the total ordered collection of matching items
+     * Sets the zero-based result offset.
+     *
+     * @param offset the first result index
      */
     public void setOffset(int offset) {
         this.offset = offset;
     }
 
     /**
-     * Retrieves the number of elements to retrieve.
-     * @return a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
+     * Maximum number of results to return, or {@code -1} for all matches.
+     *
+     * @return the result limit
      */
     public int getLimit() {
         return limit;
     }
 
     /**
-     * Sets the number of elements to retrieve.
-     * @param limit a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
+     * Sets the maximum number of results to return.
+     *
+     * @param limit the result limit, or {@code -1} for all matches
      */
     public void setLimit(int limit) {
         this.limit = limit;
     }
 
     /**
-     * Retrieves the sorting specifications for this Query in String format, if any.
-     * @return an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements
-     * according to the property order in the String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is
-     * optionally followed by a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * Sort specification as a comma-separated property list.
+     * Each property may be followed by {@code :asc} or {@code :desc}.
+     *
+     * @return the sort specification, or {@code null} if unsorted
      */
     public String getSortby() {
         return sortby;
     }
 
     /**
-     * Sets the String representation of the sorting specifications for this Query if any. See {@link #getSortby()} method documentation for format.
-     * @param sortby the String representation of the sorting specifications for this Query or {@code null} if no sorting is required
+     * Sets the sort specification.
+     * See {@link #getSortby()} for the expected format.
+     *
+     * @param sortby the sort specification, or {@code null} for no sorting
      */
     public void setSortby(String sortby) {
         this.sortby = sortby;
     }
 
     /**
-     * Retrieves the {@link Condition} associated with this Query.
-     * @return the {@link Condition} associated with this Query
+     * Structured filter condition for the query.
+     *
+     * @return the condition, or {@code null} if none is set
      */
     public Condition getCondition() {
         return condition;
     }
 
     /**
-     * Sets the {@link Condition} associated with this Query.
-     * @param condition the {@link Condition} associated with this Query
+     * Sets the structured filter condition.
+     *
+     * @param condition the condition
      */
     public void setCondition(Condition condition) {
         this.condition = condition;
     }
 
     /**
-     * Determines whether or not an index refresh is needed before performing this Query
-     * @return {@code true} if an index refresh is needed before performing this Query, {@code false} otherwise
+     * Whether the search index should be refreshed before executing the query.
+     *
+     * @return {@code true} to force a refresh, {@code false} otherwise
      */
     public boolean isForceRefresh() {
         return forceRefresh;
     }
 
     /**
-     * Specifies whether or not an index refresh is needed before performing this Query.
-     * @param forceRefresh {@code true} if an index refresh is needed before performing this Query, {@code false} otherwise
+     * Sets whether to refresh the index before executing the query.
+     *
+     * @param forceRefresh {@code true} to force a refresh
      */
     public void setForceRefresh(boolean forceRefresh) {
         this.forceRefresh = forceRefresh;
     }
 
     /**
-     * Retrieves the unique identifier used to continue a
-     * scrolling search session.
-     * This identifier must be provided when performing subsequent searches
-     * that rely on the results of a previous query.
-     * @return the scroll identifier, or {@code null} if no
-     * scroll session is active.
+     * Scroll token for continuing a deep result set query.
+     *
+     * @return the scroll identifier, or {@code null} if scrolling is not active
      */
     public String getScrollIdentifier() {
         return scrollIdentifier;
     }
 
     /**
-     * Sets the unique identifier required to continue a
-     * scrolling search session.
-     * This value should be obtained from the results of a previous query when
-     * performing subsequent searches that rely on the continuity of results.
-     * @param scrollIdentifier the scroll identifier used for continuation, or
-     * {@code null} if no scroll is needed.
+     * Sets the scroll token for continuing a scroll query.
+     *
+     * @param scrollIdentifier the scroll identifier, or {@code null} to clear it
      */
     public void setScrollIdentifier(String scrollIdentifier) {
         this.scrollIdentifier = scrollIdentifier;
     }
 
     /**
-     * Retrieves the configured time validity period for the
-     * current scroll session.
-     * This value determines how long the search results remain valid for
-     * continuation queries.
-     * @return the string representation of the time validity (e.g., "10m"), or
-     * {@code null} if no specific validity is set.
+     * How long the scroll context remains valid (for example {@code 10m}).
+     *
+     * @return the scroll validity period, or {@code null} if not set
      */
     public String getScrollTimeValidity() {
         return scrollTimeValidity;
     }
 
     /**
-     * Sets the time validity period for the current scroll session.
-     * This value specifies how long the search results remain available for
-     * continuation queries.
-     * @param scrollTimeValidity the string representation of the time validity
-     * (e.g., "10m"), or {@code null} if no specific
-     * validity is required.
+     * Sets how long the scroll context remains valid.
+     *
+     * @param scrollTimeValidity the validity period (for example {@code 10m})
      */
     public void setScrollTimeValidity(String scrollTimeValidity) {
         this.scrollTimeValidity = scrollTimeValidity;

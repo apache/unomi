@@ -56,6 +56,7 @@ public class PersonalizationResult implements Serializable  {
     /**
      * Constructs a PersonalizationResult initialized with a
      * list of content IDs.
+     *
      * @param contentIds the list of matching ids for current personalization
      */
     public PersonalizationResult(List<String> contentIds) {
@@ -64,6 +65,7 @@ public class PersonalizationResult implements Serializable  {
 
     /**
      * List of matching ids for current personalization
+     *
      * @return the list of matching ids
      */
     public List<String> getContentIds() {
@@ -73,6 +75,7 @@ public class PersonalizationResult implements Serializable  {
     /**
      * Sets the list of content IDs associated with this result.
      * This overwrites any previously set content IDs.
+     *
      * @param contentIds the new list of content IDs
      */
     public void setContentIds(List<String> contentIds) {
@@ -81,6 +84,7 @@ public class PersonalizationResult implements Serializable  {
 
     /**
      * Useful open map to return additional result information to the client
+     *
      * @return map of key/value pair for additional information, like: inControlGroup
      */
     public Map<String, Object> getAdditionalResultInfos() {
@@ -90,6 +94,7 @@ public class PersonalizationResult implements Serializable  {
     /**
      * Sets the map containing additional result information. This map is useful
      * for returning extra data to the client.
+     *
      * @param additionalResultInfos a map of key/value pair for additional
      * information, like: inControlGroup
      */
@@ -102,6 +107,7 @@ public class PersonalizationResult implements Serializable  {
      * Control group are used to identify a profile or a session that should not get personalized results,
      * instead the current profile/session should get a specific result (usually the same for all peoples falling in control group)
      * Note: it's for now the responsibility of the client to decide what to do when the current personalization is under control group.
+     *
      * @return true in case current profile or session is in control group for the personalization.
      */
     @XmlTransient
@@ -113,6 +119,7 @@ public class PersonalizationResult implements Serializable  {
     /**
      * Sets whether this personalization result belongs to a control group by
      * storing the boolean value in the internal additional result info map.
+     *
      * @param inControlGroup true if the current profile or session is in
      * control group for the
      * personalization, false otherwise
@@ -124,6 +131,7 @@ public class PersonalizationResult implements Serializable  {
     /**
      * Change code in case the personalization resolution modified the profile or the session
      * Only used internally, and will not be serialized either for storage or response payload.
+     *
      * @return change code
      */
     @XmlTransient
@@ -135,6 +143,7 @@ public class PersonalizationResult implements Serializable  {
      * Adds specified change flags to the current accumulated change type.
      * This method uses bitwise OR operation to ensure that multiple changes
      * are recorded without overwriting previous ones.
+     *
      * @param changes The change code or flag(s) to add to the
      * result's change type.
      */

@@ -32,16 +32,16 @@ public class PersonaWithSessions implements Serializable {
     private List<PersonaSession> sessions;
 
     /**
-     * Constructs a new, empty {@link PersonaWithSessions} instance.
+     * Default constructor.
      */
     public PersonaWithSessions() {
     }
 
     /**
-     * Constructs a {@link PersonaWithSessions} object with the specified
-     * persona and list of sessions.
-     * @param persona the associated {@link Persona}
-     * @param sessions the list of associated {@link PersonaSession}s
+     * Creates a persona bundled with its sessions.
+     *
+     * @param persona  the persona
+     * @param sessions related persona sessions
      */
     public PersonaWithSessions(Persona persona, List<PersonaSession> sessions) {
         this.persona = persona;
@@ -49,42 +49,45 @@ public class PersonaWithSessions implements Serializable {
     }
 
     /**
-     * Returns the {@link Persona} associated with this object.
-     * @return the contained {@link Persona}
+     * The persona being simulated or inspected.
+     *
+     * @return the persona
      */
     public Persona getPersona() {
         return persona;
     }
 
     /**
-     * Sets the {@link Persona} associated with this object.
-     * @param persona the new {@link Persona}
+     * Sets the persona.
+     *
+     * @param persona the persona
      */
     public void setPersona(Persona persona) {
         this.persona = persona;
     }
 
     /**
-     * Returns all {@link PersonaSession}s associated with this object.
-     * @return a list of {@link PersonaSession}s
+     * Sessions linked to the persona.
+     *
+     * @return the persona sessions
      */
     public List<PersonaSession> getSessions() {
         return sessions;
     }
 
     /**
-     * Sets the list of {@link PersonaSession}s associated with this object.
-     * @param sessions the new list of {@link PersonaSession}s
+     * Sets the persona sessions.
+     *
+     * @param sessions the session list
      */
     public void setSessions(List<PersonaSession> sessions) {
         this.sessions = sessions;
     }
 
     /**
-     * Retrieves the last session from the stored list. This is assumed to be
-     * the first element (index 0).
-     * If no sessions are present, returns null.
-     * @return the most recent {@link PersonaSession}, or null if none exist
+     * Most recent session, taken as the first element of {@link #getSessions()}.
+     *
+     * @return the latest session, or {@code null} if none exist
      */
     @XmlTransient
     public PersonaSession getLastSession() {

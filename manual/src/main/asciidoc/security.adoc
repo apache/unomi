@@ -79,4 +79,6 @@ end note
 @enduml
 ----
 
+For tenant API keys, roles (`ROLE_UNOMI_TENANT_USER`, `ROLE_UNOMI_TENANT_ADMIN`, system administrator), and operation permissions, see <<_multitenancy,Multi-tenancy>>.
+
 ===== Overview 

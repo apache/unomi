@@ -24,8 +24,9 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 /**
- * Manages task state transitions and validation.
- * This class centralizes all state-related logic for scheduled tasks.
+ * Enforces allowed {@link org.apache.unomi.api.tasks.ScheduledTask.TaskStatus} transitions.
+ * The scheduler calls this helper before running, completing, or recovering tasks so
+ * invalid state changes are rejected and logged consistently across nodes.
  */
 public class TaskStateManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskStateManager.class);
@@ -95,7 +96,11 @@ public class TaskStateManager {
     }
 
     /**
-     * Validates a state transition
+     * Validates that the requested status change is allowed.
+     *
+     * @param currentStatus the current task status
+     * @param newStatus the requested status
+     * @throws IllegalStateException when the transition is not allowed
      */
     private void validateStateTransition(TaskStatus currentStatus, TaskStatus newStatus) {
         if (currentStatus == TaskStatus.CANCELLED && newStatus == TaskStatus.CRASHED) {
@@ -103,7 +108,7 @@ public class TaskStateManager {
                 String.format("Cannot recover a cancelled task: Invalid state transition from %s to %s",
                     currentStatus, newStatus));
         }
-        
+
         if (!TaskTransition.isValidTransition(currentStatus, newStatus)) {
             throw new IllegalStateException(
                 String.format("Invalid state transition from %s to %s",
@@ -112,7 +117,11 @@ public class TaskStateManager {
     }
 
     /**
-     * Updates state-specific fields based on the new status
+     * Updates fields that depend on the new task status.
+     *
+     * @param task the task being updated
+     * @param newStatus the new status
+     * @param nodeId the node performing the update
      */
     private void updateStateSpecificFields(ScheduledTask task, TaskStatus newStatus, String nodeId) {
         switch (newStatus) {
@@ -250,9 +259,10 @@ public class TaskStateManager {
     }
 
     /**
-     * Calculates the next execution time for a task
-     * @param task The task to calculate next execution for
-     * @param isRetry Whether this calculation is for a retry attempt
+     * Calculates and stores the next execution time for a task.
+     *
+     * @param task the task to schedule
+     * @param isRetry {@code true} when computing a retry delay
      */
     public void calculateNextExecutionTime(ScheduledTask task, boolean isRetry) {
         long now = System.currentTimeMillis();
@@ -327,8 +337,9 @@ public class TaskStateManager {
     }
 
     /**
-     * Calculates the next execution time for a task (non-retry case)
-     * @param task The task to calculate next execution for
+     * Calculates and stores the next execution time for a normal (non-retry) run.
+     *
+     * @param task the task to schedule
      */
     public void calculateNextExecutionTime(ScheduledTask task) {
         calculateNextExecutionTime(task, false);

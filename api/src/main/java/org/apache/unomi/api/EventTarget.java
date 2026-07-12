@@ -21,11 +21,10 @@ import java.io.Serializable;
 import java.util.Map;
 
 /**
- * TODO: REMOVE
- * Describes what an event acted upon.
- * Holds the target item id and type plus optional properties, for example
- * the product or content element a user clicked. Used together with
- * {@link Event} to give rules and analytics full context.
+ * Subject of an {@link Event} — what the visitor interacted with.
+ * Stores the target item id and type plus optional properties (for example the
+ * product or content element clicked). Together with {@link EventSource} it
+ * gives rules enough context to personalize, segment, and report on behavior.
  */
 public class EventTarget implements Serializable {
     private static final long serialVersionUID = 6370790894348364803L;
@@ -34,15 +33,16 @@ public class EventTarget implements Serializable {
     private Map<String, Object> properties;
 
     /**
-     * Constructs a default {@code EventTarget}.
+     * Default constructor.
      */
     public EventTarget() {
     }
 
     /**
-     * Constructs an {@code EventTarget} with the specified identifier and type.
-     * @param id The unique identifier of the event target.
-     * @param type The type associated with this event target.
+     * Creates an event target with the given identifier and type.
+     *
+     * @param id the unique identifier of the event target
+     * @param type the type associated with this event target
      */
     public EventTarget(String id, String type) {
         this.id = id;
@@ -50,8 +50,9 @@ public class EventTarget implements Serializable {
     }
 
     /**
-     * Returns the unique identifier of this event target.
-     * @return The {@code String} ID.
+     * Unique identifier of this event target.
+     *
+     * @return the event target id
      */
     public String getId() {
         return id;
@@ -59,40 +60,44 @@ public class EventTarget implements Serializable {
 
     /**
      * Sets the unique identifier of this event target.
-     * @param id The new {@code String} ID.
+     *
+     * @param id the event target id
      */
     public void setId(String id) {
         this.id = id;
     }
 
     /**
-     * Returns the type associated with this event target.
-     * @return The {@code String} type.
+     * Type label for this event target.
+     *
+     * @return the event target type
      */
     public String getType() {
         return type;
     }
 
     /**
-     * Sets the type associated with this event target.
-     * @param type The new {@code String} type.
+     * Sets the type label for this event target.
+     *
+     * @param type the event target type
      */
     public void setType(String type) {
         this.type = type;
     }
 
     /**
-     * Returns a map containing arbitrary properties associated
-     * with this event target.
-     * @return The {@link java.util.Map} of properties.
+     * Arbitrary properties associated with this event target.
+     *
+     * @return the property map
      */
     public Map<String, Object> getProperties() {
         return properties;
     }
 
     /**
-     * Sets the arbitrary properties associated with this event target.
-     * @param properties The {@link java.util.Map} of properties to set.
+     * Sets the arbitrary properties for this event target.
+     *
+     * @param properties the property map
      */
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;

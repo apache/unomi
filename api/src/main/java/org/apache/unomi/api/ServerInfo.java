@@ -23,9 +23,10 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * High-level description of a running Unomi instance.
- * Exposes version, build, SCM branch, timestamp, and the list of event types
- * the server can handle. Clients call this to discover server capabilities.
+ * Capability and build information exposed by a running Unomi node.
+ * Populated at startup and returned by health and cluster APIs so clients,
+ * operators, and other nodes can read version, build metadata, supported
+ * {@link EventInfo} types, optional capability flags, and banner logo lines.
  */
 public class ServerInfo {
 
@@ -42,156 +43,168 @@ public class ServerInfo {
     private List<String> logoLines = new ArrayList<>();
 
     /**
-     * Constructs a new ServerInfo instance.
+     * Creates an empty server info record.
      */
     public ServerInfo() {
     }
 
     /**
-     * Returns the unique identifier of the server.
-     * @return The server's identifier string.
+     * Unique identifier for this server instance.
+     *
+     * @return server identifier
      */
     public String getServerIdentifier() {
         return serverIdentifier;
     }
 
     /**
-     * Sets the unique identifier for this server information.
-     * @param serverIdentifier The unique identifier to set.
+     * Sets the server identifier.
+     *
+     * @param serverIdentifier server identifier
      */
     public void setServerIdentifier(String serverIdentifier) {
         this.serverIdentifier = serverIdentifier;
     }
 
     /**
-     * Returns the version string of the server.
-     * @return The server's version number.
+     * Running Unomi version string.
+     *
+     * @return server version
      */
     public String getServerVersion() {
         return serverVersion;
     }
 
     /**
-     * Sets the version string for this server information.
-     * @param serverVersion The version string to set.
+     * Sets the server version.
+     *
+     * @param serverVersion server version
      */
     public void setServerVersion(String serverVersion) {
         this.serverVersion = serverVersion;
     }
 
     /**
-     * Returns the build number of the server.
-     * @return The server's build number as a string.
+     * Build number of this server distribution.
+     *
+     * @return build number
      */
     public String getServerBuildNumber() {
         return serverBuildNumber;
     }
 
     /**
-     * Sets the build number for this server information.
-     * @param serverBuildNumber The build number to set.
+     * Sets the build number.
+     *
+     * @param serverBuildNumber build number
      */
     public void setServerBuildNumber(String serverBuildNumber) {
         this.serverBuildNumber = serverBuildNumber;
     }
 
     /**
-     * Returns the date associated with the server's build.
-     * @return The {@link java.util.Date} representing the build date.
+     * When this server build was produced.
+     *
+     * @return build date
      */
     public Date getServerBuildDate() {
         return serverBuildDate;
     }
 
     /**
-     * Sets the build date of the server.
-     * @param serverBuildDate the build date of the server
+     * Sets the build date.
+     *
+     * @param serverBuildDate build date
      */
     public void setServerBuildDate(Date serverBuildDate) {
         this.serverBuildDate = serverBuildDate;
     }
 
     /**
-     * Retrieves the timestamp associated with the server information.
-     * @return the server's timestamp string
+     * Server timestamp string (for example {@code YYYYMMDDHHmmss}).
+     *
+     * @return server timestamp
      */
     public String getServerTimestamp() {
         return serverTimestamp;
     }
 
     /**
-     * Sets the timestamp for the server information.
-     * @param serverTimestamp the server's timestamp (e.g., YYYYMMDDHHmmss)
+     * Sets the server timestamp.
+     *
+     * @param serverTimestamp server timestamp
      */
     public void setServerTimestamp(String serverTimestamp) {
         this.serverTimestamp = serverTimestamp;
     }
 
     /**
-     * Retrieves the source control management branch name of the server.
-     * @return the SCM branch name
+     * Source control branch this build came from.
+     *
+     * @return SCM branch name
      */
     public String getServerScmBranch() {
         return serverScmBranch;
     }
 
     /**
-     * Sets the source control management branch name for
-     * the server information.
-     * @param serverScmBranch the SCM branch name
+     * Sets the SCM branch name.
+     *
+     * @param serverScmBranch SCM branch name
      */
     public void setServerScmBranch(String serverScmBranch) {
         this.serverScmBranch = serverScmBranch;
     }
 
     /**
-     * Retrieves the list of event types supported by this server instance.
-     * @return a list of {@link EventInfo} objects representing
-     * available event types
+     * Event types this server instance supports, with occurrence counts.
+     *
+     * @return supported event types
      */
     public List<EventInfo> getEventTypes() {
         return eventTypes;
     }
 
     /**
-     * Sets the collection of event types associated with
-     * the server information.
-     * @param eventTypes the list of event types to set
+     * Sets the supported event types.
+     *
+     * @param eventTypes event types
      */
     public void setEventTypes(List<EventInfo> eventTypes) {
         this.eventTypes = eventTypes;
     }
 
     /**
-     * Retrieves a map containing various capabilities reported by the server.
-     * @return a map where keys are capability names and values are descriptions
+     * Optional capability flags reported by the server.
+     *
+     * @return map of capability name to description
      */
     public Map<String, String> getCapabilities() {
         return capabilities;
     }
 
     /**
-     * Sets the map containing various capabilities reported
-     * by the Unomi server.
-     * @param capabilities The map of capability names and descriptions.
+     * Sets the capability map.
+     *
+     * @param capabilities capability name to description
      */
     public void setCapabilities(Map<String, String> capabilities) {
         this.capabilities = capabilities;
     }
 
     /**
-     * Retrieves the list of strings used to display the server's logo lines.
-     * @return The {@link java.util.List<java.lang.String>}
-     * containing the logo lines.
+     * ASCII art lines shown in the server logo banner.
+     *
+     * @return logo lines
      */
     public List<String> getLogoLines() {
         return logoLines;
     }
 
     /**
-     * Sets the list of strings that represent the server's logo lines
-     * for display purposes.
-     * @param logoLines The list of strings defining the logo lines.
+     * Sets the logo banner lines.
+     *
+     * @param logoLines logo lines
      */
     public void setLogoLines(List<String> logoLines) {
         this.logoLines = logoLines;

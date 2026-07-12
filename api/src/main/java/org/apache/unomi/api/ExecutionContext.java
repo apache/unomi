@@ -27,23 +27,21 @@ import java.util.Stack;
  * enforce multi-tenant isolation and authorization.
  */
 public class ExecutionContext {
-    /** The constant string used to identify the system tenant. */
+    /** Identifier of the system tenant, used for cross-tenant administration. */
     public static final String SYSTEM_TENANT = "system";
-    
+
     private String tenantId;
     private Set<String> roles = new HashSet<>();
     private Set<String> permissions = new HashSet<>();
     private Stack<String> tenantStack = new Stack<>();
     private boolean isSystem = false;
-    
+
     /**
-     * Constructs a new execution context with specified
-     * security and tenant details.
-     * @param tenantId The unique identifier of the tenant for this context.
-     * @param roles A set of roles assigned to the user in this
-     * context. Can be null.
-     * @param permissions A set of explicit permissions granted to the user in
-     * this context. Can be null.
+     * Creates a context for the given tenant, roles, and permissions.
+     *
+     * @param tenantId tenant id
+     * @param roles roles assigned in this context, or {@code null}
+     * @param permissions explicit permissions granted in this context, or {@code null}
      */
     public ExecutionContext(String tenantId, Set<String> roles, Set<String> permissions) {
         this.tenantId = tenantId;
@@ -57,59 +55,58 @@ public class ExecutionContext {
             this.permissions.addAll(permissions);
         }
     }
-    
+
     /**
-     * Creates and returns a dedicated execution context
-     * representing the system tenant.
-     * @return An {@link ExecutionContext} instance configured
-     * for the system tenant.
+     * Returns a context for the system tenant.
+     *
+     * @return system execution context
      */
     public static ExecutionContext systemContext() {
         ExecutionContext context = new ExecutionContext(SYSTEM_TENANT, null, null);
         context.isSystem = true;
         return context;
     }
-    
+
     /**
-     * Retrieves the unique identifier of the current tenant
-     * associated with this context.
-     * @return The tenant ID string.
+     * Active tenant id.
+     *
+     * @return tenant id
      */
     public String getTenantId() {
         return tenantId;
     }
-    
+
     /**
-     * Returns a copy of the set of roles assigned to this execution context.
-     * @return A new {@link Set} containing a copy of all assigned roles.
+     * Roles assigned to this context.
+     *
+     * @return copy of the role set
      */
     public Set<String> getRoles() {
         return new HashSet<>(roles);
     }
-    
+
     /**
-     * Returns a copy of the set of permissions granted to
-     * this execution context.
-     * @return A new {@link Set} containing a copy of all explicit permissions.
+     * Permissions granted to this context.
+     *
+     * @return copy of the permission set
      */
     public Set<String> getPermissions() {
         return new HashSet<>(permissions);
     }
-    
+
     /**
-     * Checks if this execution context is designated as the system context.
-     * @return true if the context represents the system
-     * tenant, false otherwise.
+     * Whether this context represents the system tenant.
+     *
+     * @return {@code true} for the system tenant
      */
     public boolean isSystem() {
         return isSystem;
     }
-    
+
     /**
-     * Sets a new tenant ID for the current execution context. This operation
-     * saves the previous tenant ID onto an internal stack and updates the
-     * system status accordingly.
-     * @param tenantId The new tenant identifier to set.
+     * Switches to a new tenant, saving the previous tenant on an internal stack.
+     *
+     * @param tenantId new tenant id
      */
     public void setTenant(String tenantId) {
         tenantStack.push(this.tenantId);
@@ -118,9 +115,7 @@ public class ExecutionContext {
     }
 
     /**
-     * Restores the execution context to the previously active tenant.
-     * If a previous tenant was set, this method pops that tenant ID from the
-     * internal stack and updates the current context state accordingly.
+     * Restores the tenant saved by the most recent {@link #setTenant(String)} call.
      */
     public void restorePreviousTenant() {
         if (!tenantStack.isEmpty()) {
@@ -128,50 +123,44 @@ public class ExecutionContext {
             this.isSystem = SYSTEM_TENANT.equals(this.tenantId);
         }
     }
-    
+
     /**
-     * Validates whether the current execution context has sufficient
-     * permissions to perform a given operation.
-     * If the context is system-level, validation passes immediately. Otherwise,
-     * it checks if the required permission exists in the context's
-     * granted permissions.
-     * @param operation The specific operation name required
-     * for access validation.
-     * @throws SecurityException if the current context lacks the necessary
-     * permission for the given operation.
+     * Checks that this context may perform the given operation.
+     * System contexts always pass. Otherwise the operation name must be present
+     * in the granted permissions.
+     *
+     * @param operation operation name to validate
+     * @throws SecurityException if the permission is missing
      */
     public void validateAccess(String operation) {
         if (isSystem) {
             return;
         }
-        
+
         if (!hasPermission(operation)) {
             throw new SecurityException("Access denied: Missing permission for operation " + operation + " for tenant " + tenantId + " and roles " + roles);
         }
     }
-    
+
     /**
-     * Checks if the current execution context possesses a specific permission.
-     * The context is considered to have the permission if it is system-level or
-     * if the permission name is explicitly listed in the context's
-     * granted permissions.
-     * @param permission The name of the permission to check for.
-     * @return true if the context is system-level or has been granted the
-     * permission, false otherwise.
+     * Whether this context has the given permission.
+     * System contexts always return {@code true}.
+     *
+     * @param permission permission name
+     * @return {@code true} if the permission is granted
      */
     public boolean hasPermission(String permission) {
         return isSystem || permissions.contains(permission);
     }
-    
+
     /**
-     * Checks if the current execution context possesses a specific role.
-     * The context is considered to have the role if it is system-level or if
-     * the role name is explicitly listed in the context's granted roles.
-     * @param role The name of the role to check for.
-     * @return true if the context is system-level or has been granted the
-     * role, false otherwise.
+     * Whether this context has the given role.
+     * System contexts always return {@code true}.
+     *
+     * @param role role name
+     * @return {@code true} if the role is granted
      */
     public boolean hasRole(String role) {
         return isSystem || roles.contains(role);
     }
-} 
+}

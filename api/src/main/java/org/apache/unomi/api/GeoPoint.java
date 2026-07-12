@@ -37,7 +37,7 @@ public class GeoPoint {
     private Double lon;
 
     /**
-     * Instantiates a new GeoPoint
+     * Creates a geo point at the given coordinates.
      *
      * @param lat latitude of the geo point
      * @param lon longitude of the geo point
@@ -48,7 +48,7 @@ public class GeoPoint {
     }
 
     /**
-     * Retrieves latitude of the geo point
+     * Latitude of this geo point.
      *
      * @return geo point latitude
      */
@@ -57,7 +57,7 @@ public class GeoPoint {
     }
 
     /**
-     * Retrieves longitude of the geo point
+     * Longitude of this geo point.
      *
      * @return geo point longitude
      */
@@ -100,11 +100,11 @@ public class GeoPoint {
     }
 
     /**
-     * Instantiates geo point from map of coordinates
+     * Parses a geo point from a coordinate map with {@code lat} and {@code lon} keys.
      *
-     * @param map Map containing coordinates with keys "lat" and "lon"
-     * @return New geo point or null if map is not a valid geo point
-     * @throws IllegalArgumentException Thrown if the input is not valid
+     * @param map map containing coordinates with keys {@code lat} and {@code lon}
+     * @return a new geo point
+     * @throws IllegalArgumentException if the map is null, empty, or missing required keys
      */
     public static GeoPoint fromMap(Map<String, Double> map) {
         if (map == null || map.isEmpty() || !map.containsKey("lat") || !map.containsKey("lon")) {
@@ -114,11 +114,11 @@ public class GeoPoint {
     }
 
     /**
-     * Instantiates geo point from string representation
+     * Parses a geo point from a {@code "lat, lon"} string.
      *
-     * @param input String geo point representation in the following format: "lat, lon"
-     * @return New geo point or null if string is not a valid geo point
-     * @throws IllegalArgumentException Thrown if the input is not valid
+     * @param input string geo point representation in the format {@code "lat, lon"}
+     * @return a new geo point, or {@code null} if the input is blank
+     * @throws IllegalArgumentException if the input cannot be parsed
      */
     public static GeoPoint fromString(final String input) {
         if (input == null || input.trim().length() == 0) {

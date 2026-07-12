@@ -51,20 +51,20 @@ public interface AuditService extends ItemAuditService, TenantAuditService {
     void auditDelete(Item item, String userId);
 
     /**
-     * Retrieves items modified since a specific date.
+     * Returns configuration items modified after the given date.
      *
-     * @param tenantId the tenant ID to filter by
-     * @param since the date to check modifications from
-     * @return a list of modified items
+     * @param tenantId tenant identifier
+     * @param since earliest modification timestamp (exclusive)
+     * @return modified items
      */
     List<Item> getModifiedItems(String tenantId, Date since);
 
     /**
-     * Retrieves items modified since the last synchronization.
+     * Returns items modified since the last sync with a source instance.
      *
-     * @param tenantId the tenant ID to filter by
-     * @param sourceInstanceId the source instance ID
-     * @return a list of modified items
+     * @param tenantId tenant identifier
+     * @param sourceInstanceId source cluster node identifier
+     * @return modified items since last sync
      */
     List<Item> getModifiedItemsSinceLastSync(String tenantId, String sourceInstanceId);
 
@@ -78,11 +78,11 @@ public interface AuditService extends ItemAuditService, TenantAuditService {
     void updateLastSyncDate(String tenantId, String sourceInstanceId, Date syncDate);
 
     /**
-     * Retrieves the last synchronization date.
+     * Returns the last sync timestamp for a tenant and source instance pair.
      *
-     * @param tenantId the tenant ID
-     * @param sourceInstanceId the source instance ID
-     * @return the last synchronization date
+     * @param tenantId tenant identifier
+     * @param sourceInstanceId source cluster node identifier
+     * @return last synchronization date
      */
     Date getLastSyncDate(String tenantId, String sourceInstanceId);
 

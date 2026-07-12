@@ -52,41 +52,42 @@ public class PropertyType extends MetadataItem {
     private Set<PropertyType> childPropertyTypes = new LinkedHashSet<>();
 
     /**
-     * Instantiates a new Property type.
+     * Default constructor.
      */
     public PropertyType() {
     }
 
     /**
-     * Instantiates a new Property type with the specified Metadata.
-     * @param metadata the metadata associated with the specified metadata
+     * Creates a property type with the given metadata.
+     *
+     * @param metadata the property type metadata
      */
     public PropertyType(Metadata metadata) {
         super(metadata);
     }
 
     /**
-     * Retrieves the target for this property type, indicating the type of elements this property type is defined for. For example, for property types attached to profiles, {@code
-     * target} would be {@code "profiles"}.
-     * TODO: deprecated?
-     * @return the target for this property type
+     * Item type this property applies to (for example {@code profiles}).
+     *
+     * @return the target item type
      */
     public String getTarget() {
         return target;
     }
 
     /**
-     * Sets the target for this property type.
-     * TODO: deprecated?
-     * @param target the target for this property type, indicating the type of elements this property type is defined for
+     * Sets the item type this property applies to.
+     *
+     * @param target the target item type
      */
     public void setTarget(String target) {
         this.target = target;
     }
 
     /**
-     * Retrieves the identifier of the value type constraining values for properties using this PropertyType.
-     * @return the value type identifier associated with values defined by this PropertyType
+     * Identifier of the {@link ValueType} that constrains property values.
+     *
+     * @return the value type id
      * @see ValueType
      */
     @XmlElement(name = "type")
@@ -96,15 +97,17 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Sets the value type identifier.
-     * @param valueTypeId the value type identifier
+     *
+     * @param valueTypeId the value type id
      */
     public void setValueTypeId(String valueTypeId) {
         this.valueTypeId = valueTypeId;
     }
 
     /**
-     * Retrieves the value type associated with values defined for properties using this PropertyType.
-     * @return the value type associated with values defined for properties using this PropertyType
+     * Resolved value type definition for properties using this schema.
+     *
+     * @return the value type
      */
     @XmlTransient
     public ValueType getValueType() {
@@ -112,81 +115,89 @@ public class PropertyType extends MetadataItem {
     }
 
     /**
-     * Sets the value type.
-     * @param valueType the value type associated with values defined for properties using this PropertyType
+     * Sets the resolved value type definition.
+     *
+     * @param valueType the value type
      */
     public void setValueType(ValueType valueType) {
         this.valueType = valueType;
     }
 
     /**
-     * Retrieves the default value defined for property using this PropertyType.
-     * @return the default value defined for property using this PropertyType
+     * Default value applied when a property is created without an explicit value.
+     *
+     * @return the default value
      */
     public String getDefaultValue() {
         return defaultValue;
     }
 
     /**
-     * Sets the default value that properties using this PropertyType will use if no value is specified explicitly.
-     * @param defaultValue the default value that properties using this PropertyType will use if no value is specified explicitly
+     * Sets the default value for properties of this type.
+     *
+     * @param defaultValue the default value
      */
     public void setDefaultValue(String defaultValue) {
         this.defaultValue = defaultValue;
     }
 
     /**
-     * Retrieves the set of JCR properties from which properties of this type would be automatically initialized from.
-     * TODO: remove from API?
-     * @return the name of JCR properties properties of this type would be automatically initialized from
+     * External property names used to auto-populate values for this type.
+     *
+     * @return the automatic mapping source names
      */
     public Set<String> getAutomaticMappingsFrom() {
         return automaticMappingsFrom;
     }
 
     /**
-     * Specifies the set of JCR properties from which properties of this type would be automatically initialized from.
-     * TODO: remove from API?
-     * @param automaticMappingsFrom the set of JCR properties from which properties of this type would be automatically initialized from
+     * Sets the external property names used for automatic mapping.
+     *
+     * @param automaticMappingsFrom the source property names
      */
     public void setAutomaticMappingsFrom(Set<String> automaticMappingsFrom) {
         this.automaticMappingsFrom = automaticMappingsFrom;
     }
 
     /**
-     * Retrieves the rank of this PropertyType for ordering purpose.
-     * @return the rank of this PropertyType for ordering purpose
+     * Relative ordering weight when multiple property types are shown together.
+     *
+     * @return the rank
      */
     public Double getRank() {
         return rank;
     }
 
     /**
-     * Specifies the rank of this PropertyType for ordering purpose.
-     * @param rank the rank of this PropertyType for ordering purpose
+     * Sets the display ordering rank.
+     *
+     * @param rank the rank
      */
     public void setRank(Double rank) {
         this.rank = rank;
     }
 
     /**
-     * Retrieves the identifier of the {@link PropertyMergeStrategyType} to be used in case profiles with properties using this PropertyType are being merged.
-     * @return the identifier of the {@link PropertyMergeStrategyType} to be used in case profiles with properties using this PropertyType are being merged
+     * Merge strategy id used when profiles with this property are merged.
+     *
+     * @return the merge strategy id
      */
     public String getMergeStrategy() {
         return mergeStrategy;
     }
 
     /**
-     * Sets the identifier of the {@link PropertyMergeStrategyType} to be used in case profiles with properties using this PropertyType are being merged
-     * @param mergeStrategy the identifier of the {@link PropertyMergeStrategyType} to be used in case profiles with properties using this PropertyType are being merged
+     * Sets the merge strategy id for profile merges.
+     *
+     * @param mergeStrategy the merge strategy id
      */
     public void setMergeStrategy(String mergeStrategy) {
         this.mergeStrategy = mergeStrategy;
     }
 
     /**
-     * Retrieves the date ranges.
+     * Allowed date ranges for values of this type.
+     *
      * @return the date ranges
      */
     public List<DateRange> getDateRanges() {
@@ -194,7 +205,8 @@ public class PropertyType extends MetadataItem {
     }
 
     /**
-     * Sets the date ranges.
+     * Sets the allowed date ranges.
+     *
      * @param dateRanges the date ranges
      */
     public void setDateRanges(List<DateRange> dateRanges) {
@@ -202,7 +214,8 @@ public class PropertyType extends MetadataItem {
     }
 
     /**
-     * Retrieves the numeric ranges.
+     * Allowed numeric ranges for values of this type.
+     *
      * @return the numeric ranges
      */
     public List<NumericRange> getNumericRanges() {
@@ -210,7 +223,8 @@ public class PropertyType extends MetadataItem {
     }
 
     /**
-     * Sets the numeric ranges.
+     * Sets the allowed numeric ranges.
+     *
      * @param numericRanges the numeric ranges
      */
     public void setNumericRanges(List<NumericRange> numericRanges) {
@@ -218,16 +232,18 @@ public class PropertyType extends MetadataItem {
     }
 
     /**
-     * Retrieves the ip ranges.
-     * @return the ip ranges
+     * Allowed IP ranges for values of this type.
+     *
+     * @return the IP ranges
      */
     public List<IpRange> getIpRanges() {
         return ipRanges;
     }
 
     /**
-     * Sets the ip ranges.
-     * @param ipRanges the ip ranges
+     * Sets the allowed IP ranges.
+     *
+     * @param ipRanges the IP ranges
      */
     public void setIpRanges(List<IpRange> ipRanges) {
         this.ipRanges = ipRanges;
@@ -235,6 +251,7 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Whether properties using this property type are multi-valued.
+     *
      * @return {@code true} if properties of this type should be multi-valued, {@code false} otherwise
      */
     public Boolean isMultivalued() {
@@ -243,6 +260,7 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Specifies whether properties using this property type are multi-valued.
+     *
      * @param multivalued {@code true} if properties of this type should be multi-valued, {@code false} otherwise
      */
     public void setMultivalued(Boolean multivalued) {
@@ -251,7 +269,7 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Whether properties with this type are marked as protected. Protected properties can be displayed but their value cannot be changed.
-     * TODO: rename to readOnly?
+     * The { protected} flag name may change to { readOnly} in a future release.     *
      * @return {@code true} if properties of this type are protected, {@code false} otherwise
      */
     public Boolean isProtected() {
@@ -260,6 +278,7 @@ public class PropertyType extends MetadataItem {
 
     /**
      * Specifies whether properties with this type are marked as protected.
+     *
      * @param protekted {@code true} if properties of this type are protected, {@code false} otherwise
      */
     public void setProtected(boolean protekted) {
@@ -267,18 +286,18 @@ public class PropertyType extends MetadataItem {
     }
 
     /**
-     * Retrieves the set of {@link PropertyType} objects that are considered
-     * children or subtypes of this property type.
-     * @return a set of child property types associated with this instance
+     * Nested property types that extend this schema.
+     *
+     * @return the child property types
      */
     public Set<PropertyType> getChildPropertyTypes() {
         return childPropertyTypes;
     }
 
     /**
-     * Sets the collection of child property types for this property type.
-     * @param childPropertyTypes the set of {@link PropertyType} objects that
-     * are children or subtypes
+     * Sets the nested child property types.
+     *
+     * @param childPropertyTypes the child property types
      */
     public void setChildPropertyTypes(Set<PropertyType> childPropertyTypes) {
         this.childPropertyTypes = childPropertyTypes;

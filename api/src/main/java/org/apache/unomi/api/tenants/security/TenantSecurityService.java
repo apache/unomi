@@ -19,9 +19,10 @@ package org.apache.unomi.api.tenants.security;
 import javax.servlet.http.HttpServletRequest;
 
 /**
- * Service interface for managing tenants-level security operations and validations.
- * This service provides comprehensive security features including authentication,
- * authorization, rate limiting, and security auditing for tenants-specific operations.
+ * Entry point for tenant-scoped REST security checks.
+ * Validates incoming HTTP requests against {@link SecuritySettings}, enforces
+ * rate limits, applies authorization rules, and can produce
+ * {@link SecurityAuditReport} data for operator review.
  */
 public interface TenantSecurityService {
 

@@ -31,32 +31,36 @@ public class Topic extends Item {
     private String name;
 
     /**
-     * Retrieves the unique identifier of this topic.
-     * @return The {@link String} ID of the topic.
+     * Topic identifier.
+     *
+     * @return the topic id
      */
     public String getTopicId() {
         return topicId;
     }
 
     /**
-     * Sets the unique identifier for this topic.
-     * @param topicId the unique ID to set.
+     * Sets the topic identifier.
+     *
+     * @param topicId the topic id
      */
     public void setTopicId(String topicId) {
         this.topicId = topicId;
     }
 
     /**
-     * Retrieves the name of the topic.
-     * @return The {@link String} name of the topic.
+     * Display name of the topic.
+     *
+     * @return the topic name
      */
     public String getName() {
         return name;
     }
 
     /**
-     * Sets the display name for this topic.
-     * @param name the new name to set.
+     * Sets the display name.
+     *
+     * @param name the topic name
      */
     public void setName(String name) {
         this.name = name;

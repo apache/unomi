@@ -139,6 +139,7 @@ public class ConditionContextHelper {
      * @param scriptExecutor executor for script expressions
      * @param validateParameterTypes when {@code true}, warn on resolved values that do not match the
      *                               condition type parameter definitions
+     *
      * @return resolved condition with all parameter references resolved
      */
     public static Condition getContextualCondition(
@@ -180,6 +181,7 @@ public class ConditionContextHelper {
      * @param tracerService optional tracer service for validation warnings
      * @param valueTypeValidators optional validators keyed by {@link ValueTypeValidator#getValueTypeId()} (lowercase);
      *                            when {@code null}, uses {@link ValueTypeValidatorRegistry#getValidators()}
+     *
      * @return resolved condition with all parameter references resolved
      */
     public static Condition getContextualCondition(

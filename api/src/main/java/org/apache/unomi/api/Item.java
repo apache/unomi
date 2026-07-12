@@ -51,13 +51,11 @@ public abstract class Item implements Serializable, YamlConvertible {
     private static final Map<Class,String> itemTypeCache = new ConcurrentHashMap<>();
 
     /**
-     * Retrieves the type string for a given class by attempting to read a
-     * public static String constant named {@code ITEM_TYPE} from that class.
-     * This method caches the result based on the provided class to improve
-     * performance during repeated calls.
-     * @param clazz The Class object whose item type is required.
-     * @return A string representation of the Item's type, or null if the
-     * {@code ITEM_TYPE} field cannot be found or accessed.
+     * Resolves the item type string from a class's {@code ITEM_TYPE} constant.
+     * Results are cached per class.
+     *
+     * @param clazz item class
+     * @return item type, or {@code null} if {@code ITEM_TYPE} is missing or inaccessible
      */
     public static String getItemType(Class clazz) {
         String itemType = itemTypeCache.get(clazz);
@@ -77,28 +75,27 @@ public abstract class Item implements Serializable, YamlConvertible {
     }
 
     /**
-     * Protected field representing the unique identifier used to identify this
-     * Item when persisted or referenced.
+     * Unique id used when this item is persisted or referenced.
+     * Must be unique among items of the same {@link #itemType}.
      */
     protected String itemId;
     /**
-     * Protected field storing the type of this Item. This value is typically
-     * derived from a constant defined within the implementing class.
+     * Persistence type string for this item.
+     * Subclasses must define a public {@code ITEM_TYPE} constant with this value.
      */
     protected String itemType;
     /**
-     * Protected field defining the scope of this Item, allowing related items
-     * to be grouped together during processing or retrieval.
+     * Scope that groups related items (often one analyzed site).
+     * Used by clients to filter data returned from the context server.
      */
     protected String scope;
     /**
-     * Protected field storing the current version number of this Item. This is
-     * used for tracking changes over time.
+     * Optimistic-locking version, incremented when the item is updated.
      */
     protected Long version;
     /**
-     * A protected map used to store additional, non-core metadata about this
-     * Item using string keys and arbitrary object values.
+     * Server-managed metadata keyed by string.
+     * Stores values that are not part of the item's core properties.
      */
     protected Map<String, Object> systemMetadata = new HashMap<>();
     private String tenantId;
@@ -112,10 +109,9 @@ public abstract class Item implements Serializable, YamlConvertible {
     private Date lastSyncDate;
 
     /**
-     * Default constructor that initializes the Item's type by calling
-     * {@link #getItemType(Class)} and sets up initial audit metadata fields.
-     * If the implementing class does not provide a public static String
-     * constant named {@code ITEM_TYPE}, an error is logged.
+     * Initializes {@link #itemType} from the subclass {@code ITEM_TYPE} constant
+     * and sets default audit metadata ({@link #creationDate}, {@link #version}).
+     * Logs an error when {@code ITEM_TYPE} is missing on the concrete class.
      */
     public Item() {
         this.itemType = getItemType(this.getClass());
@@ -126,9 +122,9 @@ public abstract class Item implements Serializable, YamlConvertible {
     }
 
     /**
-     * Constructor that initializes the Item using the default mechanism and
-     * explicitly sets the item's unique identifier.
-     * @param itemId The unique ID to assign to this Item upon creation.
+     * Creates an item with the given id.
+     *
+     * @param itemId item id
      */
     public Item(String itemId) {
         this();
@@ -142,50 +138,56 @@ public abstract class Item implements Serializable, YamlConvertible {
     }
 
     /**
-     * Retrieves the Item's identifier used to uniquely identify this Item when persisted or when referred to. An Item's identifier must be unique among Items with the same type.
-     * @return a String representation of the identifier, no particular format is prescribed as long as it is guaranteed unique for this particular Item.
+     * Unique id among items of the same type.
+     * No particular format is required as long as the id is unique for this item type.
+     *
+     * @return item id
      */
     public String getItemId() {
         return itemId;
     }
 
     /**
-     * Sets the unique identifier for this Item. This ID is used when persisting
-     * or referencing the item in various contexts (e.g., profiles, sessions).
-     * @param itemId the unique identifier for the Item
+     * Sets the item id.
+     *
+     * @param itemId item id
      */
     public void setItemId(String itemId) {
         this.itemId = itemId;
     }
 
     /**
-     * Retrieves the Item's type used to assert metadata and structure common to Items of this type, notably for persistence purposes. The Item's type <strong>must</strong>
-     * match the value defined by the implementation's {@code ITEM_TYPE} public constant.
-     * @return a String representation of this Item's type, must equal the {@code ITEM_TYPE} value
+     * Item type used for persistence and metadata.
+     * Must match the implementing class {@code ITEM_TYPE} constant.
+     *
+     * @return item type
      */
     public String getItemType() {
         return itemType;
     }
 
     /**
-     * Sets the Item's type.
-     * @param itemType the Item's type
+     * Sets the item type.
+     *
+     * @param itemType item type
      */
     public void setItemType(String itemType) {
         this.itemType = itemType;
     }
 
     /**
-     * Retrieves the Item's scope.
-     * @return the Item's scope name
+     * Scope that groups related items.
+     *
+     * @return scope name
      */
     public String getScope() {
         return scope;
     }
 
     /**
-     * Sets the Item's scope.
-     * @param scope the Item's scope
+     * Sets the scope.
+     *
+     * @param scope scope name
      */
     public void setScope(String scope) {
         this.scope = scope;
@@ -207,160 +209,175 @@ public abstract class Item implements Serializable, YamlConvertible {
     }
 
     /**
-     * Retrieves the current version number of the Item.
-     * @return a {@link Long} representing the version of this Item.
+     * Optimistic-locking version.
+     *
+     * @return item version
      */
     public Long getVersion() {
         return version;
     }
 
     /**
-     * Sets the version number of the Item. This is typically used when updating
-     * an existing item's state.
-     * @param version the new version to set
+     * Sets the item version.
+     *
+     * @param version item version
      */
     public void setVersion(Long version) {
         this.version = version;
     }
 
     /**
-     * Returns the system metadata for the given key.
-     * @param key the key
-     * @return the system metadata for the given key
+     * Returns system metadata for the given key.
+     *
+     * @param key metadata key
+     * @return metadata value
      */
     public Object getSystemMetadata(String key) {
         return systemMetadata.get(key);
     }
 
     /**
-     * Sets the system metadata for the given key.
-     * @param key the key
-     * @param value the value
+     * Sets system metadata for the given key.
+     *
+     * @param key metadata key
+     * @param value metadata value
      */
     public void setSystemMetadata(String key, Object value) {
         systemMetadata.put(key, value);
     }
 
     /**
-     * Retrieves the unique identifier of the tenant associated with this Item,
-     * useful for context management and logging.
-     * @return the tenant ID as a {@link String}.
+     * Tenant that owns this item.
+     *
+     * @return tenant id
      */
     public String getTenantId() {
         return tenantId;
     }
 
     /**
-     * Sets the tenant ID.
-     * @param tenantId the tenant ID
+     * Sets the tenant id.
+     *
+     * @param tenantId tenant id
      */
     public void setTenantId(String tenantId) {
         this.tenantId = tenantId;
     }
 
     /**
-     * Retrieves the identifier of the user or system that originally created
-     * this Item. This is part of the item's audit metadata.
-     * @return the creator's ID as a {@link String}.
+     * User or system that created this item.
+     *
+     * @return creator id
      */
     public String getCreatedBy() {
         return createdBy;
     }
 
     /**
-     * Sets the created by.
-     * @param createdBy the created by
+     * Sets the creator id.
+     *
+     * @param createdBy creator id
      */
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
     }
 
     /**
-     * Retrieves the identifier of the user or system that last modified this
-     * Item. This is part of the item's audit metadata.
-     * @return the last modifier's ID as a {@link String}.
+     * User or system that last modified this item.
+     *
+     * @return last modifier id
      */
     public String getLastModifiedBy() {
         return lastModifiedBy;
     }
 
     /**
-     * Sets the last modified by.
-     * @param lastModifiedBy the last modified by
+     * Sets the last modifier id.
+     *
+     * @param lastModifiedBy last modifier id
      */
     public void setLastModifiedBy(String lastModifiedBy) {
         this.lastModifiedBy = lastModifiedBy;
     }
 
     /**
-     * Returns the date when this item was created.
-     * @return the date when this item was created
+     * When this item was created.
+     *
+     * @return creation date
      */
     public Date getCreationDate() {
         return creationDate;
     }
 
     /**
-     * Sets the date when this item was created.
-     * @param creationDate the creation date
+     * Sets the creation date.
+     *
+     * @param creationDate creation date
      */
     public void setCreationDate(Date creationDate) {
         this.creationDate = creationDate;
     }
 
     /**
-     * Returns the date when this item was last modified.
-     * @return the date when this item was last modified
+     * When this item was last modified.
+     *
+     * @return last modification date
      */
     public Date getLastModificationDate() {
         return lastModificationDate;
     }
 
     /**
-     * Sets the date when this item was last modified.
-     * @param lastModificationDate the last modification date
+     * Sets the last modification date.
+     *
+     * @param lastModificationDate last modification date
      */
     public void setLastModificationDate(Date lastModificationDate) {
         this.lastModificationDate = lastModificationDate;
     }
 
     /**
-     * Returns the source instance ID.
-     * @return the source instance ID
+     * Cluster node that originated this item.
+     *
+     * @return source instance id
      */
     public String getSourceInstanceId() {
         return sourceInstanceId;
     }
 
     /**
-     * Sets the source instance ID.
-     * @param sourceInstanceId the source instance ID
+     * Sets the source instance id.
+     *
+     * @param sourceInstanceId source instance id
      */
     public void setSourceInstanceId(String sourceInstanceId) {
         this.sourceInstanceId = sourceInstanceId;
     }
 
     /**
-     * Returns the last synchronization date.
-     * @return the last synchronization date
+     * When this item was last synchronized from another node.
+     *
+     * @return last sync date
      */
     public Date getLastSyncDate() {
         return lastSyncDate;
     }
 
     /**
-     * Sets the last synchronization date.
-     * @param lastSyncDate the last synchronization date
+     * Sets the last sync date.
+     *
+     * @param lastSyncDate last sync date
      */
     public void setLastSyncDate(Date lastSyncDate) {
         this.lastSyncDate = lastSyncDate;
     }
 
     /**
-     * Converts this item to a Map structure for YAML output.
-     * Implements YamlConvertible interface with circular reference detection.
-     * @param visited set of already visited objects to prevent infinite recursion (may be null)
-     * @return a Map representation of this item
+     * Converts this item to a map for YAML output.
+     *
+     * @param visited objects already visited while converting (may be {@code null})
+     * @param maxDepth remaining recursion depth
+     * @return map representation of this item
      */
     @Override
     public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {

@@ -43,6 +43,7 @@ public interface RuleListenerService {
      * Called before a rule's conditions are evaluated. Be careful when implemented this listener because rule's condition
      * are called in very high frequencies and the performance of this listener might have a huge impact on rule's
      * performance
+     *
      * @param rule the rule that is being evaluated
      * @param event the event we are processing and evaluating against the rule
      */
@@ -50,6 +51,7 @@ public interface RuleListenerService {
 
     /**
      * Called when a rule has already been raised either for a session or a profile.
+     *
      * @param alreadyRaisedFor an enum that indicates if the rule was already raised once for the session or for the
      *                         profile
      * @param rule the rule that has already been raised
@@ -59,6 +61,7 @@ public interface RuleListenerService {
 
     /**
      * Called just before a matching rule's actions are about to be executed.
+     *
      * @param rule the matching rule for the current event
      * @param event the event we are processing that matched the current rule.
      */

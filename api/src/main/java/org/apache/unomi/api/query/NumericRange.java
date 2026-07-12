@@ -20,9 +20,9 @@ package org.apache.unomi.api.query;
 import java.io.Serializable;
 
 /**
- * Named inclusive numeric interval for query filters.
- * Stores a label plus lower and upper bounds so conditions can match
- * numeric profile or event properties in a range.
+ * Named inclusive numeric bucket for query filters and aggregations.
+ * Stores a {@code key} plus {@code from}/{@code to} bounds so conditions can
+ * test profile or event properties against numeric intervals.
  */
 public class NumericRange implements Serializable {
     private String key;
@@ -30,55 +30,60 @@ public class NumericRange implements Serializable {
     private Double to;
 
     /**
-     * Constructs a new NumericRange object.
+     * Creates an empty numeric range.
      */
     public NumericRange() {
     }
 
     /**
-     * Retrieves the unique key associated with this numeric range.
-     * @return The string key identifying the range.
+     * Label for this range in query results.
+     *
+     * @return range key
      */
     public String getKey() {
         return key;
     }
 
     /**
-     * Sets the unique identifier (key) for this numeric range.
-     * @param key the key to set
+     * Sets the range label.
+     *
+     * @param key range key
      */
     public void setKey(String key) {
         this.key = key;
     }
 
     /**
-     * Retrieves the starting value of the numeric range.
-     * @return The lower bound (inclusive start) of the
-     * range, or null if not set.
+     * Inclusive lower bound.
+     *
+     * @return lower bound, or {@code null} if unset
      */
     public Double getFrom() {
         return from;
     }
 
     /**
-     * Sets the starting value for this numeric range.
-     * @param from the inclusive starting value of the range
+     * Sets the inclusive lower bound.
+     *
+     * @param from lower bound
      */
     public void setFrom(Double from) {
         this.from = from;
     }
 
     /**
-     * Retrieves the ending value of the numeric range.
-     * @return The upper bound (inclusive end) of the range, or null if not set.
+     * Inclusive upper bound.
+     *
+     * @return upper bound, or {@code null} if unset
      */
     public Double getTo() {
         return to;
     }
 
     /**
-     * Sets the ending value for this numeric range.
-     * @param to the inclusive ending value of the range
+     * Sets the inclusive upper bound.
+     *
+     * @param to upper bound
      */
     public void setTo(Double to) {
         this.to = to;

@@ -67,6 +67,7 @@ public class ParserHelper {
         /**
          * Visits a given {@link Condition} object, executing necessary logic
          * for that specific condition during traversal.
+         *
          * @param condition The condition being visited.
          */
         void visit(Condition condition);
@@ -74,6 +75,7 @@ public class ParserHelper {
          * Executes post-visit logic for the specified {@link Condition} object.
          * This method is called after all descendants of the given condition
          * have been processed.
+         *
          * @param condition The condition whose children have
          * finished processing.
          */
@@ -94,10 +96,13 @@ public class ParserHelper {
          * provided event context.
          * This method is abstract and must be implemented by
          * concrete subclasses.
+         *
          * @param valueAsString The string value that needs to be
          * extracted or parsed.
+         *
          * @param event The {@link Event} providing context for
          * the extraction process.
+         *
          * @return An object representing the extracted value.
          * @throws IllegalAccessException if access to a required member fails.
          * @throws NoSuchMethodException if a necessary method cannot be found.
@@ -128,13 +133,14 @@ public class ParserHelper {
      * {@code rootCondition} to ensure all nested conditions have their types
      * resolved against the provided definitions service. It updates the
      * condition type on the condition object if successful.
-     * {@code false} otherwise.
+     *
      * @param definitionsService service used to resolve condition types.
      * @param rootCondition the starting condition for resolution.
      * @param contextObjectName name of the object providing context
      * (for error messages).
-     * @return {@code true} if all reachable conditions were
-     * successfully resolved,
+     *
+     * @return {@code true} if all reachable conditions were successfully resolved,
+     *         {@code false} otherwise
      */
     public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition, String contextObjectName) {
         return resolveConditionType(definitionsService, rootCondition, contextObjectName,
@@ -227,6 +233,7 @@ public class ParserHelper {
      * This method traverses the entire structure of the condition, including
      * nested parameters and collections, and gathers all associated
      * condition type ids.
+     *
      * @param rootCondition the condition whose types are to be collected.
      * @return a list of unique strings representing the condition type IDs
      * found in the condition tree.
@@ -257,6 +264,7 @@ public class ParserHelper {
      * the provided visitor for each one. This method handles recursive
      * traversal through parameters and collections that may
      * contain nested conditions.
+     *
      * @param rootCondition the starting condition to visit.
      * @param visitor the {@link ConditionVisitor} implementation to execute on
      * every visited condition.
@@ -289,10 +297,12 @@ public class ParserHelper {
      * {@link DefinitionsService}. It logs warnings if resolution fails and
      * returns {@code false} if any structural error (null/empty actions) or
      * resolution failure occurs.
+     *
      * @param definitionsService service used to resolve action types.
      * @param rule the rule containing actions whose types need resolving.
      * @param ignoreErrors if {@code true}, warnings about missing or empty
      * actions are suppressed.
+     *
      * @return {@code true} if all actions were successfully resolved,
      * {@code false} otherwise.
      */
@@ -334,11 +344,11 @@ public class ParserHelper {
      * If the action's type is not already set, this method queries the
      * definitions service to find and set the correct {@link ActionType}. It
      * tracks unresolved types internally, logging warnings if resolution fails.
-     * {@code false} otherwise.
+     *
      * @param definitionsService service used to resolve action types.
      * @param action the action whose type needs resolving.
-     * @return {@code true} if the action's type was successfully
-     * resolved or already set,
+     * @return {@code true} if the action's type was successfully resolved or already set,
+     *         {@code false} otherwise
      */
     public static boolean resolveActionType(DefinitionsService definitionsService, Action action) {
         if (definitionsService == null) {
@@ -367,6 +377,7 @@ public class ParserHelper {
      * it falls back to resolving the value type directly using the definitions
      * service's lookup mechanism.
      * The provided {@code PropertyType} object will be modified if successful.
+     *
      * @param definitionsService service used to resolve property types.
      * @param propertyType the property type whose value needs resolution.
      */
@@ -388,9 +399,9 @@ public class ParserHelper {
         }
     }
 
-
     /**
      * @deprecated Use {@link #resolveConditionEventTypes(Condition, DefinitionsService)} instead.
+     *
      * @param rootCondition the condition whose event types are to be resolved
      * @return a set of unique event type identifiers
      */
@@ -404,6 +415,7 @@ public class ParserHelper {
      * This method traverses the entire condition tree starting from
      * {@code rootCondition} and collects every distinct event type ID found in
      * any nested condition or parameter.
+     *
      * @param rootCondition the condition whose event types are to be resolved.
      * @param definitionsService service used for resolving event types.
      * @return a set of unique strings representing all event types
@@ -435,6 +447,7 @@ public class ParserHelper {
         /**
          * Constructs an {@code EventTypeConditionVisitor} and initializes it
          * with a service used to resolve condition types.
+         *
          * @param definitionsService The service providing definitions necessary
          * for resolving type information.
          */
@@ -506,9 +519,9 @@ public class ParserHelper {
         }
 
         /**
-         * Retrieves the set of event type IDs that have been collected by
-         * this visitor instance.
-         * @return A {@link Set} containing all resolved event type identifiers.
+         * Event type ids collected during condition-tree traversal.
+         *
+         * @return collected event type ids
          */
         public Set<String> getEventTypeIds() {
             return eventTypeIds;
@@ -523,12 +536,16 @@ public class ParserHelper {
      * these placeholders by calling {@link #extractValue(String, Event, Map)}.
      * The resulting map contains the processed values with resolved objects
      * instead of placeholder strings.
+     *
      * @param event The current event used for value
      * extraction during resolution.
+     *
      * @param map The input map containing potentially
      * placeholder-filled values.
+     *
      * @param valueExtractors A map linking value type names to their
      * respective extractors.
+     *
      * @return A new {@link Map<String, Object>} with the string placeholders
      * resolved into actual object values.
      */
@@ -577,17 +594,23 @@ public class ParserHelper {
      * value type from the raw value content. It then uses the provided
      * {@link ValueExtractor} to perform the actual extraction based
      * on the event context.
+     *
      * @param s The input string containing the type and
      * value separated by "::".
+     *
      * @param event The current event used during value extraction.
      * @param valueExtractors A map of available extractors
      * keyed by value type name.
+     *
      * @return The extracted object value, or null if no extractor is found
      * or extraction fails.
+     *
      * @throws IllegalAccessException If the underlying extractor
      * throws this exception.
+     *
      * @throws NoSuchMethodException If the underlying extractor
      * throws this exception.
+     *
      * @throws InvocationTargetException If the underlying extractor
      * throws this exception.
      */
@@ -616,9 +639,11 @@ public class ParserHelper {
      * This method recursively checks all values. For strings, it attempts to
      * extract content from placeholders and validates if the resulting type
      * name matches an available extractor.
+     *
      * @param values The map of parameters to check for contextual parameters.
      * @param valueExtractors A map containing all available value extractors,
      * used to validate parameter types.
+     *
      * @return True if at least one string value represents a contextual
      * parameter; otherwise, false.
      */
@@ -649,6 +674,7 @@ public class ParserHelper {
      * Gets the full parent chain for a condition type.
      * This method iteratively collects all parent conditions, detecting
      * circular references.
+     *
      * @param conditionType the condition type
      * @param definitionsService service to resolve types
      * @param contextName name for error messages
@@ -721,6 +747,7 @@ public class ParserHelper {
     /**
      * Deep copies a parameter value, handling Condition objects and collections containing Conditions.
      * This is a helper method to avoid code duplication when merging parameters.
+     *
      * @param value the parameter value to deep copy
      * @return a deep copy of the value, or the original value if it's not a Condition or collection
      */
@@ -748,6 +775,7 @@ public class ParserHelper {
      * This method traverses the parent condition chain and returns the condition
      * at the end of the chain (the root parent). It merges parameters from all
      * levels in the chain into the context and the effective condition.
+     *
      * @param condition the condition to resolve
      * @param definitionsService service to resolve condition types
      * @param context context map for parameter merging (will be modified)
@@ -765,6 +793,7 @@ public class ParserHelper {
 
     /**
      * Resolves the effective condition to use, following the parent chain.
+     *
      * @param condition the condition to resolve
      * @param definitionsService service to resolve condition types
      * @param context context map for parameter merging (will be modified)

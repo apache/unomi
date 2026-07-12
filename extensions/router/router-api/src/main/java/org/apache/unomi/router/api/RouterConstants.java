@@ -17,7 +17,9 @@
 package org.apache.unomi.router.api;
 
 /**
- * Constants used by the Unomi router import/export integration.
+ * Shared constant names for the Unomi router import/export Camel integration.
+ * Defines configuration types, route identifiers, and event names used when
+ * import or export jobs are registered, refreshed, or torn down.
  */
 public interface RouterConstants {
     /**

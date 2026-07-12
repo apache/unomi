@@ -41,6 +41,7 @@ public class Persona extends Profile {
     /**
      * Constructs a new {@link Persona} instance with the
      * specified unique identifier.
+     *
      * @param personaId The unique ID to assign to this persona.
      */
     public Persona(String personaId) {

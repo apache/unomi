@@ -58,16 +58,15 @@ public class GoalsServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of Metadata associated with existing goals.
+     * Returns metadata for all goals.
      *
-     * @return the set of Metadata associated with existing goals
+     * @return goal metadata for every stored goal
      */
     @GET
     @Path("/")
     public Set<Metadata> getGoalMetadatas() {
         return goalsService.getGoalMetadatas();
     }
-
 
     /**
      * Saves the specified goal in the context server and creates associated {@link Rule}s if the goal is enabled.
@@ -81,10 +80,10 @@ public class GoalsServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of Metadata associated with existing goals matching the specified {@link Query}
+     * Returns goal metadata matching the given query.
      *
-     * @param query the Query used to filter the Goals which metadata we want to retrieve
-     * @return the set of Metadata associated with existing goals matching the specified {@link Query}
+     * @param query the query used to filter goals
+     * @return metadata for goals that match the query
      */
     @POST
     @Path("/query")
@@ -93,10 +92,10 @@ public class GoalsServiceEndPoint {
     }
 
     /**
-     * Retrieves the goal associated with the specified identifier.
+     * Returns the goal with the given ID.
      *
-     * @param goalId the identifier of the goal to retrieve
-     * @return the goal associated with the specified identifier or {@code null} if no such goal exists
+     * @param goalId the goal identifier
+     * @return the goal, or {@code null} when it does not exist
      */
     @GET
     @Path("/{goalId}")
@@ -116,10 +115,10 @@ public class GoalsServiceEndPoint {
     }
 
     /**
-     * Retrieves the report for the goal identified with the specified identifier.
+     * Returns the performance report for the goal with the given ID.
      *
-     * @param goalId the identifier of the goal which report we want to retrieve
-     * @return the report for the specified goal
+     * @param goalId the goal identifier
+     * @return the goal report
      */
     @GET
     @Path("/{goalID}/report")
@@ -128,11 +127,11 @@ public class GoalsServiceEndPoint {
     }
 
     /**
-     * Retrieves the report for the goal identified with the specified identifier, considering only elements determined by the specified {@link AggregateQuery}.
+     * Returns a filtered goal report for the given goal and aggregate query.
      *
-     * @param goalId the identifier of the goal which report we want to retrieve
-     * @param query  an {@link AggregateQuery} to further specify which elements of the report we want
-     * @return the report for the specified goal and query
+     * @param goalId the goal identifier
+     * @param query the aggregate query that limits report elements
+     * @return the filtered goal report
      */
     @POST
     @Path("/{goalID}/report")

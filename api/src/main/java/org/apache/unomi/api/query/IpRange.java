@@ -20,9 +20,9 @@ package org.apache.unomi.api.query;
 import java.io.Serializable;
 
 /**
- * Named inclusive IP address interval for geo or network filtering.
- * Used in segment conditions to match visitors whose IP falls between
- * the configured lower and upper bounds.
+ * Named inclusive IP range used in geo or network segment conditions.
+ * The {@code from} and {@code to} strings define lower and upper bounds checked
+ * when evaluating whether a visitor's IP address belongs to the range.
  */
 public class IpRange implements Serializable {
     private String key;
@@ -30,54 +30,60 @@ public class IpRange implements Serializable {
     private String to;
 
     /**
-     * Constructs an empty {@link IpRange} instance.
+     * Creates an empty IP range.
      */
     public IpRange() {
     }
 
     /**
-     * Retrieves the unique key associated with this IP range.
-     * @return The string key identifying the range.
+     * Label for this range in query results.
+     *
+     * @return range key
      */
     public String getKey() {
         return key;
     }
 
     /**
-     * Sets the unique identifier (key) for this IP range.
-     * @param key The key to assign to the range.
+     * Sets the range label.
+     *
+     * @param key range key
      */
     public void setKey(String key) {
         this.key = key;
     }
 
     /**
-     * Retrieves the starting IP address string of the range.
-     * @return The 'from' boundary of the IP range.
+     * Inclusive lower IP bound.
+     *
+     * @return start IP address
      */
     public String getFrom() {
         return from;
     }
 
     /**
-     * Sets the starting IP address string for this range.
-     * @param from The start boundary of the IP range.
+     * Sets the inclusive lower IP bound.
+     *
+     * @param from start IP address
      */
     public void setFrom(String from) {
         this.from = from;
     }
 
     /**
-     * Retrieves the ending IP address string of the range.
-     * @return The 'to' boundary of the IP range.
+     * Inclusive upper IP bound.
+     *
+     * @return end IP address
      */
     public String getTo() {
         return to;
     }
 
     /**
-     * Sets the ending IP address string for this range.
-     * @param to The end boundary of the IP range.
+     * Sets the inclusive upper IP bound.
+     *
+     * @param to end IP address
      */
     public void setTo(String to) {
         this.to = to;

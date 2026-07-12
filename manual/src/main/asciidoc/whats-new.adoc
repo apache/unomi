@@ -11,6 +11,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_whats_new_3_1]]
+=== What's new in Apache Unomi 3.1
+
+Apache Unomi 3.1 builds on the 3.0 platform (Elasticsearch 9 client, Karaf 4.4, Java 17) with operator-focused features for multi-tenant production deployments.
+
+==== Multi-tenancy and API keys
+
+Complete tenant isolation for profiles, events, segments, rules, and schemas. Public endpoints (for example `/cxs/context.json`) require a tenant public API key; administrative work uses tenant private keys or system administrator credentials.
+
+* Operator guide: <<_multitenancy,Multi-tenancy>>
+* Migration: <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>>
+* Optional 3.0 compatibility mode: <<_v2_compatibility_mode,V2/V3 compatibility mode>> (property `unomi.v3_0.compatibility.mode`)
+
+==== Cluster-aware task scheduler
+
+Built-in background job scheduler with persistence, cluster locks, recovery, REST API (`/cxs/tasks`), and Karaf shell commands.
+
+* <<_scheduler,Task scheduler>>
+
+==== OpenSearch 3 support
+
+Official alternative to Elasticsearch, including secured Docker deployments. See <<_configuration,Configuration>> and <<_opensearch_support,OpenSearch support>> (3.0 section below).
+
+==== Persistence-based clustering
+
+Cluster node registry and heartbeats through Elasticsearch or OpenSearch (no Karaf Cellar). See <<_clustering,Cluster setup>>.
+
+==== Tenant usage and retention
+
+Read-only per-tenant usage metrics and an event retention purge API for upstream control planes.
+
+* REST: `/cxs/tenants/{tenantId}/usage` and `/cxs/tenants/{tenantId}/purge/events` (see <<_useful_apache_unomi_urls,Useful URLs>>)
+
 === What's new in Apache Unomi 3.0
 
 Apache Unomi 3 is a new release focused on integrations of the client to support elasticsearch version 9.
@@ -29,9 +62,10 @@ A procedure to migrate your data from Elasticsearch 7 to Elasticsearch 9 can be 
 
 === Karaf upgrade
 
-The Karaf version has been upgraded from 4.2.15 to 4.4.8 in order to support the latest versions of the dependencies.
+The Karaf version has been upgraded from 4.2.15 to 4.4.11 in order to support the latest versions of the dependencies.
 This upgrade also brings support for Java 17.
 
+[[_opensearch_support]]
 ==== OpenSearch Support
 
 Starting with version 3.1.0, Apache Unomi now officially supports OpenSearch 3 as an alternative to Elasticsearch. This addition gives users more flexibility in choosing their search engine backend. Key features include:

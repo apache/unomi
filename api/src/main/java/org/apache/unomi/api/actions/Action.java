@@ -42,13 +42,13 @@ public class Action implements Serializable, YamlConvertible {
     private Map<String, Object> parameterValues = new HashMap<>();
 
     /**
-     * Instantiates a new Action.
+     * Default constructor.
      */
     public Action() {
     }
 
     /**
-     * Instantiates a new Action with the specified {@link ActionType}
+     * Creates an action with the given action type
      *
      * @param actionType the action's type
      */
@@ -57,7 +57,7 @@ public class Action implements Serializable, YamlConvertible {
     }
 
     /**
-     * Retrieves the action's type.
+     * Action type for this action.
      *
      * @return the action's type
      */
@@ -77,7 +77,7 @@ public class Action implements Serializable, YamlConvertible {
     }
 
     /**
-     * Retrieves the identifier of the associated action type.
+     * Identifier of the associated action type.
      *
      * @return the identifier of the associated action type
      */
@@ -96,7 +96,7 @@ public class Action implements Serializable, YamlConvertible {
     }
 
     /**
-     * Retrieves the parameter values as a Map of parameter name - associated value pairs.
+     * Parameter values keyed by parameter name.
      *
      * @return a Map of parameter name - associated value pairs
      */
@@ -105,7 +105,7 @@ public class Action implements Serializable, YamlConvertible {
     }
 
     /**
-     * Sets the parameter values as a Map of parameter name - associated value pairs.
+     * Sets parameter values keyed by parameter name.
      *
      * @param parameterValues the parameter values as a Map of parameter name - associated value pairs
      */
@@ -129,6 +129,7 @@ public class Action implements Serializable, YamlConvertible {
      * Implements YamlConvertible interface with circular reference detection.
      *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @param maxDepth maximum recursion depth to prevent stack overflow
      * @return a Map representation of this action
      */
     @Override

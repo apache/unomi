@@ -11,19 +11,84 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[[_clustering]]
 === Cluster setup
 
-Apache Karaf relies on Persistence to register nodes and manage cluster.
+Apache Unomi runs as one or more Karaf nodes that share the same Elasticsearch or OpenSearch backend.
+Since Unomi 3.0, cluster coordination uses the **persistence layer** (UNOMI-877): each node registers a
+`ClusterNode` record, publishes periodic heartbeats, and reads peer state from the search index.
+Karaf Cellar / Hazelcast are no longer required.
 
-You can control most of the important clustering settings through the centralized configuration file at
+This design also supports the <<_scheduler,task scheduler>> (cluster-wide locks, executor nodes) and the
+health-check **cluster** provider.
 
-    etc/unomi.custom.system.properties
+==== Required settings
 
-And notably using the following properties:
+Configure each node in `etc/unomi.custom.system.properties` (or via environment variables):
 
-    org.apache.unomi.cluster.public.address=${env:UNOMI_CLUSTER_PUBLIC_ADDRESS:-http://localhost:8181}
-    org.apache.unomi.cluster.internal.address=${env:UNOMI_CLUSTER_INTERNAL_ADDRESS:-https://localhost:9443}
-    org.apache.unomi.cluster.nodeId=${env:UNOMI_CLUSTER_NODEID:-unomi-node-1}
-    org.apache.unomi.cluster.nodeStatisticsUpdateFrequency=${env:UNOMI_CLUSTER_NODESTATISTICS_UPDATEFREQUENCY:-10000}
+[source,properties]
+----
+org.apache.unomi.cluster.public.address=${env:UNOMI_CLUSTER_PUBLIC_ADDRESS:-http://localhost:8181}
+org.apache.unomi.cluster.internal.address=${env:UNOMI_CLUSTER_INTERNAL_ADDRESS:-https://localhost:9443}
+org.apache.unomi.cluster.nodeId=${env:UNOMI_CLUSTER_NODEID:-unomi-node-1}
+org.apache.unomi.cluster.nodeStatisticsUpdateFrequency=${env:UNOMI_CLUSTER_NODESTATISTICS_UPDATEFREQUENCY:-10000}
+----
 
-Note that it is mandatory to set a different `org.apache.unomi.cluster.nodeId` for each node in the cluster.
+* **public.address** — URL other nodes and operators use to reach this node (HTTP, port 8181 by default).
+* **internal.address** — HTTPS URL for the private REST API (port 9443 by default).
+* **nodeId** — **Must be unique** on every node in the cluster (for example `unomi-node-1`, `unomi-node-2`).
+* **nodeStatisticsUpdateFrequency** — Interval in milliseconds between heartbeat / statistics updates (default 10 seconds).
+
+If `nodeId` is missing or duplicate, cluster registration fails at startup.
+
+==== How it works
+
+On startup the cluster service:
+
+1. Registers this node in persistence (`ClusterNode` item).
+2. Schedules a recurring task to update CPU, load, and uptime statistics.
+3. Schedules stale-node cleanup (nodes with no heartbeat for roughly three times the update interval are removed).
+
+Other nodes see the same registry through the shared search backend. The health-check extension reports
+cluster size and per-node status when you call `/health/check` (see <<_health_check,Health Check extension>>).
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle rectangle
+
+database "Elasticsearch / OpenSearch" as IDX
+node "Unomi node A\n(nodeId=node-1)" as A
+node "Unomi node B\n(nodeId=node-2)" as B
+
+A --> IDX : register ClusterNode,\nheartbeat stats
+B --> IDX : register ClusterNode,\nheartbeat stats
+A ..> B : optional HTTP\n(public address)
+@enduml
+----
+
+==== Scheduler and executor nodes
+
+Background tasks can be marked **persistent** (stored in the index, visible on all nodes) or **local**
+(single node only). Only nodes that run the task executor process scheduled work.
+
+* Use the Karaf command `unomi:task-executor` to see or toggle executor mode on a node.
+* See <<_scheduler,Task scheduler>> for REST and shell operations on tasks.
+
+In a typical cluster you run multiple Unomi nodes with **distinct `nodeId` values**, all pointing at the
+same search backend, and enable the executor on every node that should run background jobs (or on a subset
+for dedicated worker nodes).
+
+==== Operations
+
+* **Inspect nodes** — `GET /cxs/cluster` (private API, system administrator credentials). Listed in
+  <<_useful_apache_unomi_urls,Useful Apache Unomi URLs>>.
+* **Health** — `GET /health/check` includes a `cluster` provider when the health-check feature is installed.
+* **Stale nodes** — Removed automatically when heartbeats stop; adjust `nodeStatisticsUpdateFrequency` if
+  your network is slow or nodes are under heavy load.
+
+==== Migration from Unomi 2.x / Cellar
+
+If you previously used Karaf Cellar for clustering, plan a full migration to persistence-based clustering
+as part of your Unomi 3 upgrade. See <<_upgrade_jira_reference,JIRA reference>> (UNOMI-877) and
+<<_upgrade_karaf,Karaf upgrade>> for platform constraints.

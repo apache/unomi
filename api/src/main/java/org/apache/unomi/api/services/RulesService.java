@@ -38,95 +38,98 @@ import java.util.Set;
 public interface RulesService {
 
     /**
-     * Retrieves the metadata for all known rules.
-     * Note that it only includes the rules in memory, not those persisted in storage.
-     * @return the Set of known metadata
+     * Returns metadata for all in-memory rules.
+     * Does not query persistence directly.
+     *
+     * @return rule metadata from the in-memory cache
      */
     Set<Metadata> getRuleMetadatas();
 
     /**
-     * Retrieves rule metadatas for rules matching the specified {@link Query}.
+     * Returns metadata for rules matching the given query.
      *
-     * @param query the query the rules which metadata we want to retrieve must match
-     * @return a {@link PartialList} of rules metadata for the rules matching the specified query
+     * @param query filter for rules whose metadata should be returned
+     * @return matching rule metadata
      */
     PartialList<Metadata> getRuleMetadatas(Query query);
 
     /**
-     * Retrieves rule details for rules matching the specified query.
+     * Returns full rule definitions matching the given query.
      *
-     * @param query the query specifying which rules to retrieve
-     * @return a {@link PartialList} of rule details for the rules matching the specified query
+     * @param query filter for rules to return
+     * @return matching rules
      */
     PartialList<Rule> getRuleDetails(Query query);
 
     /**
-     * Get all rules available in the system.
-     * (This is not doing a persistence query to retrieve the rules, it's using the internal in memory cache
-     * that is refreshed every second by default but can vary depending on your own configuration)
+     * Returns all rules from the in-memory cache.
+     * The cache refreshes on a configurable interval (default one second).
      *
-     * @return all rules available.
+     * @return all cached rules
      */
     List<Rule> getAllRules();
 
     /**
-     * Retrieves the rule identified by the specified identifier.
+     * Loads a rule by id.
      *
-     * @param ruleId the identifier of the rule we want to retrieve
-     * @return the rule identified by the specified identifier or {@code null} if no such rule exists.
+     * @param ruleId rule identifier
+     * @return matching rule, or {@code null} if none exists
      */
     Rule getRule(String ruleId);
 
     /**
-     * Retrieves the statistics for a rule
-     * @param ruleId the identifier of the rule
-     * @return a long representing the number of times the rule was matched and executed.
+     * Returns execution statistics for a rule.
+     *
+     * @param ruleId rule identifier
+     * @return rule match and execution counts
      */
     RuleStatistics getRuleStatistics(String ruleId);
 
     /**
-     * Retrieves the statistics for all the rules
-     * @return a map containing rule IDs as key, and the RuleStatistics object as a value
+     * Returns execution statistics for all rules.
+     *
+     * @return map of rule id to statistics
      */
     Map<String,RuleStatistics> getAllRuleStatistics();
 
     /**
-     * Resets all the rule statistics to zero, useful when testing or if you want to set a point in time.
+     * Resets match and execution counters for every rule.
      */
     void resetAllRuleStatistics();
 
     /**
-     * Persists the specified rule to the context server.
+     * Persists a rule definition.
      *
-     * @param rule the rule to be persisted
+     * @param rule rule to save
      */
     void setRule(Rule rule);
 
     /**
-     * Deletes the rule identified by the specified identifier.
+     * Deletes a rule by id.
      *
-     * @param ruleId the identifier of the rule we want to delete
+     * @param ruleId rule identifier
      */
     void removeRule(String ruleId);
 
     /**
-     * Retrieves tracked conditions (rules with a condition marked with the {@code trackedCondition} tag and which {@code sourceEventCondition} matches the specified item) for the
-     * specified item.
+     * Returns tracked conditions whose source-event condition matches the given item.
+     * Tracked conditions are rules tagged with {@code trackedCondition}.
      *
-     * @param item the item which tracked conditions we want to retrieve
-     * @return the Set of tracked conditions for the specified item
+     * @param item item to match against source-event conditions
+     * @return matching tracked conditions
      */
     Set<Condition> getTrackedConditions(Item item);
 
     /**
-     * Retrieves all the matching rules for a specific event
-     * @param event the event we want to retrieve all the matching rules for
-     * @return a set of rules that match the event passed in the parameters
+     * Returns rules whose conditions match the given event.
+     *
+     * @param event event to evaluate
+     * @return matching rules
      */
     public Set<Rule> getMatchingRules(Event event);
 
     /**
-     * Refresh the rules for this instance by reloading them from the persistence backend
+     * Reloads rules from persistence into the in-memory cache.
      */
     public void refreshRules();
 

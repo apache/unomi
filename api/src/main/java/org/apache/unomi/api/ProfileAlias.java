@@ -20,14 +20,15 @@ package org.apache.unomi.api;
 import java.util.Date;
 
 /**
- * Maps a client-specific profile identifier to a canonical Unomi profile.
- * Lets multiple applications reference the same visitor under different ids
- * while sharing one merged profile record.
+ * Cross-application link between a client profile id and a canonical {@link Profile}.
+ * When the same visitor is known under different ids in separate scopes or apps,
+ * aliases let {@link org.apache.unomi.api.services.ProfileService} merge activity
+ * onto one persisted profile record.
  */
 public class ProfileAlias extends Item {
 
     /**
-     * The constant string used to identify this item type as a profile alias.
+     * Item type identifier for profile aliases.
      */
     public static final String ITEM_TYPE = "profileAlias";
 
@@ -40,71 +41,78 @@ public class ProfileAlias extends Item {
     private Date modifiedTime;
 
     /**
-     * Constructs an empty ProfileAlias object.
+     * Creates an empty profile alias.
      */
     public ProfileAlias() {
     }
 
     /**
-     * Retrieves the unique identifier of the associated profile.
-     * @return The profile ID as a {@link String}.
+     * Canonical profile id linked by this alias.
+     *
+     * @return profile id
      */
     public String getProfileID() {
         return profileID;
     }
 
     /**
-     * Sets the unique identifier of the associated profile.
-     * @param profileID The profile ID to set.
+     * Sets the canonical profile id.
+     *
+     * @param profileID profile id
      */
     public void setProfileID(String profileID) {
         this.profileID = profileID;
     }
 
     /**
-     * Retrieves the client identifier associated with this alias.
-     * @return The client ID as a {@link String}, or null if not set.
+     * Client-specific profile identifier.
+     *
+     * @return client id, or {@code null} if unset
      */
     public String getClientID() {
         return clientID;
     }
 
     /**
-     * Sets the client identifier associated with this alias.
-     * @param clientID The client ID to set.
+     * Sets the client-specific profile identifier.
+     *
+     * @param clientID client id
      */
     public void setClientID(String clientID) {
         this.clientID = clientID;
     }
 
     /**
-     * Retrieves the date and time when this profile alias was created.
-     * @return The creation timestamp as a {@link java.util.Date}.
+     * When this alias was created.
+     *
+     * @return creation time
      */
     public Date getCreationTime() {
         return creationTime;
     }
 
     /**
-     * Sets the date and time of creation for this profile alias.
-     * @param creationTime The creation timestamp to set.
+     * Sets the creation time.
+     *
+     * @param creationTime creation time
      */
     public void setCreationTime(Date creationTime) {
         this.creationTime = creationTime;
     }
 
     /**
-     * Retrieves the date and time when this profile alias was last modified.
-     * or null if no modification time has been recorded.
-     * @return The {@link java.util.Date} representing the modification time,
+     * When this alias was last modified.
+     *
+     * @return last modification time, or {@code null} if unset
      */
     public Date getModifiedTime() {
         return modifiedTime;
     }
 
     /**
-     * Sets the date and time when this profile alias was last modified.
-     * @param modifiedTime The new timestamp indicating the modification time.
+     * Sets the last modification time.
+     *
+     * @param modifiedTime last modification time
      */
     public void setModifiedTime(Date modifiedTime) {
         this.modifiedTime = modifiedTime;

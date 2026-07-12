@@ -25,14 +25,14 @@ package org.apache.unomi.api.exceptions;
 public class BadSegmentConditionException extends RuntimeException {
 
     /**
-     * Instantiates a new BadSegmentConditionException.
+     * Default constructor.
      */
     public BadSegmentConditionException() {
         super();
     }
 
     /**
-     * Constructs with a message.
+     * Creates an exception with the given message.
      *
      * @param message the error message
      */
@@ -41,7 +41,7 @@ public class BadSegmentConditionException extends RuntimeException {
     }
 
     /**
-     * Constructs with a message and cause.
+     * Creates an exception with the given message and cause.
      *
      * @param message the error message
      * @param cause the root cause

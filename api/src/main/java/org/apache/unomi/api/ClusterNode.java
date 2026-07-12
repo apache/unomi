@@ -45,7 +45,7 @@ public class ClusterNode extends Item {
     private ServerInfo serverInfo;
 
     /**
-     * Instantiates a new Cluster node.
+     * Creates an empty cluster node with item type {@link #ITEM_TYPE}.
      */
     public ClusterNode() {
         super();
@@ -53,24 +53,27 @@ public class ClusterNode extends Item {
     }
 
     /**
-     * Retrieves the cpu load.
-     * @return the cpu load
+     * Current CPU load on this node.
+     *
+     * @return CPU load
      */
     public double getCpuLoad() {
         return cpuLoad;
     }
 
     /**
-     * Sets the cpu load.
-     * @param cpuLoad the cpu load
+     * Sets the CPU load.
+     *
+     * @param cpuLoad CPU load
      */
     public void setCpuLoad(double cpuLoad) {
         this.cpuLoad = cpuLoad;
     }
 
     /**
-     * Retrieves the public host address.
-     * @return the public host address
+     * Public host address clients use to reach this node.
+     *
+     * @return public host address
      */
     public String getPublicHostAddress() {
         return publicHostAddress;
@@ -78,135 +81,152 @@ public class ClusterNode extends Item {
 
     /**
      * Sets the public host address.
-     * @param publicHostAddress the public host address
+     *
+     * @param publicHostAddress public host address
      */
     public void setPublicHostAddress(String publicHostAddress) {
         this.publicHostAddress = publicHostAddress;
     }
 
     /**
-     * Retrieves the internal host address which uses the HTTP/HTTPS protocol for communications between clients and the context server.
-     * @return the internal host address
+     * Internal HTTP/HTTPS address used for client-to-server communication.
+     *
+     * @return internal host address
      */
     public String getInternalHostAddress() {
         return internalHostAddress;
     }
 
     /**
-     * Sets the internal host address which uses the HTTP/HTTPS protocol for communications between clients and the context server.
-     * @param internalHostAddress the internal host address
+     * Sets the internal HTTP/HTTPS host address.
+     *
+     * @param internalHostAddress internal host address
      */
     public void setInternalHostAddress(String internalHostAddress) {
         this.internalHostAddress = internalHostAddress;
     }
 
     /**
-     * Retrieves the load average for the last minute, five minutes and fifteen minutes.
-     * @return an array of {@code double} containing, in order and starting from index {@code 0}, the load average for the last minute, last five minutes and last fifteen minutes
+     * Load averages for the last 1, 5, and 15 minutes.
+     *
+     * @return three-element array: index 0 = 1 min, 1 = 5 min, 2 = 15 min
      */
     public double[] getLoadAverage() {
         return loadAverage;
     }
 
     /**
-     * Sets the load average for the last minute, five minutes and fifteen minutes.
-     * @param loadAverage an array of {@code double} containing, in order and starting from index {@code 0}, the load average for the last minute, last five minutes and last fifteen minutes
+     * Sets load averages for the last 1, 5, and 15 minutes.
+     *
+     * @param loadAverage three-element array: index 0 = 1 min, 1 = 5 min, 2 = 15 min
      */
     public void setLoadAverage(double[] loadAverage) {
         this.loadAverage = loadAverage;
     }
 
     /**
-     * Retrieves the uptime.
-     * @return the uptime
+     * Node uptime in milliseconds.
+     *
+     * @return uptime
      */
     public long getUptime() {
         return uptime;
     }
 
     /**
-     * Sets the uptime.
-     * @param uptime the uptime
+     * Sets the node uptime.
+     *
+     * @param uptime uptime in milliseconds
      */
     public void setUptime(long uptime) {
         this.uptime = uptime;
     }
 
     /**
-     * Determines whether this ClusterNode is a master node, i.e. this node doesn't store any data but is only focused on cluster management operations.
-     * @return {@code true} if this node is a master node, {@code false} otherwise
+     * Whether this node is a master (coordination only, no local context data).
+     *
+     * @return {@code true} if this is a master node
      */
     public boolean isMaster() {
         return master;
     }
 
     /**
-     * Specifies whether this ClusterNode is a master node, i.e. this node doesn't store any data but is only focused on cluster management operations.
-     * @param master {@code true} if this node is a master node, {@code false} otherwise
+     * Sets whether this node is a master (coordination only, no local context data).
+     *
+     * @param master {@code true} for a master node
      */
     public void setMaster(boolean master) {
         this.master = master;
     }
 
     /**
-     * Determines whether this ClusterNode locally stores data.
-     * @return {@code true} if this node locally stores data, {@code false} otherwise
+     * Whether this node stores context data locally.
+     *
+     * @return {@code true} if this is a data node
      */
     public boolean isData() {
         return data;
     }
 
     /**
-     * Specifies whether this ClusterNode locally stores data.
-     * @param data {@code true} if this node locally stores data, {@code false} otherwise
+     * Sets whether this node stores context data locally.
+     *
+     * @param data {@code true} for a data node
      */
     public void setData(boolean data) {
         this.data = data;
     }
 
     /**
-     * Retrieves the node start time in milliseconds.
-     * @return the start time
+     * When this node started (milliseconds since epoch).
+     *
+     * @return start time
      */
     public long getStartTime() {
         return startTime;
     }
 
     /**
-     * Sets the node start time in milliseconds.
-     * @param startTime the start time
+     * Sets the node start time.
+     *
+     * @param startTime start time in milliseconds
      */
     public void setStartTime(long startTime) {
         this.startTime = startTime;
     }
 
     /**
-     * Retrieves the last heartbeat time in milliseconds.
-     * @return the last heartbeat time
+     * When this node last sent a heartbeat (milliseconds since epoch).
+     *
+     * @return last heartbeat time
      */
     public long getLastHeartbeat() {
         return lastHeartbeat;
     }
 
     /**
-     * Sets the last heartbeat time in milliseconds.
-     * @param lastHeartbeat the last heartbeat time
+     * Sets the last heartbeat time.
+     *
+     * @param lastHeartbeat last heartbeat time in milliseconds
      */
     public void setLastHeartbeat(long lastHeartbeat) {
         this.lastHeartbeat = lastHeartbeat;
     }
 
     /**
-     * Gets the server information.
-     * @return the server information
+     * Build and capability details for this node.
+     *
+     * @return server information
      */
     public ServerInfo getServerInfo() {
         return serverInfo;
     }
 
     /**
-     * Sets the server information.
-     * @param serverInfo the server information
+     * Sets the server information for this node.
+     *
+     * @param serverInfo server information
      */
     public void setServerInfo(ServerInfo serverInfo) {
         this.serverInfo = serverInfo;

@@ -37,137 +37,134 @@ import java.util.Set;
  */
 public interface GoalsService {
     /**
-     * Retrieves the set of Metadata associated with existing goals.
+     * Returns metadata for all goals.
      *
-     * @return the set of Metadata associated with existing goals
+     * @return goal metadata entries
      */
     Set<Metadata> getGoalMetadatas();
 
     /**
-     * Retrieves the set of Metadata associated with existing goals matching the specified {@link Query}
+     * Returns metadata for goals matching the given query.
      *
-     * @param query the Query used to filter the Goals which metadata we want to retrieve
-     * @return the set of Metadata associated with existing goals matching the specified {@link Query}
+     * @param query filter for goals whose metadata should be returned
+     * @return matching goal metadata entries
      */
     Set<Metadata> getGoalMetadatas(Query query);
 
     /**
-     * Retrieves the goal associated with the specified identifier.
+     * Loads a goal by id.
      *
-     * @param goalId the identifier of the goal to retrieve
-     * @return the goal associated with the specified identifier or {@code null} if no such goal exists
+     * @param goalId goal identifier
+     * @return matching goal, or {@code null} if none exists
      */
     Goal getGoal(String goalId);
 
     /**
-     * Saves the specified goal in the context server and creates associated {@link Rule}s if the goal is enabled.
+     * Saves a goal and creates associated rules when the goal is enabled.
      *
-     * TODO: rename to saveGoal
-     *
-     * @param goal the Goal to be saved
+     * The { setGoal} name is historical; a { saveGoal} alias may be added later.     *
+     * @param goal goal to save
      */
     void setGoal(Goal goal);
 
     /**
-     * Removes the goal associated with the specified identifier, also removing associated rules if needed.
+     * Deletes a goal and its associated rules when present.
      *
-     * @param goalId the identifier of the goal to be removed
+     * @param goalId goal identifier
      */
     void removeGoal(String goalId);
 
     /**
-     * Retrieves the report for the goal identified with the specified identifier.
+     * Builds a performance report for the given goal.
      *
-     * @param goalId the identifier of the goal which report we want to retrieve
-     * @return the report for the specified goal
+     * @param goalId goal identifier
+     * @return goal report
      */
     GoalReport getGoalReport(String goalId);
 
     /**
-     * Retrieves the report for the goal identified with the specified identifier, considering only elements determined by the specified {@link AggregateQuery}.
+     * Builds a performance report for the given goal, filtered by an aggregate query.
      *
-     * @param goalId the identifier of the goal which report we want to retrieve
-     * @param query  an AggregateQuery to further specify which elements of the report we want
-     * @return the report for the specified goal and query
+     * @param goalId goal identifier
+     * @param query aggregate query limiting report elements
+     * @return goal report for the query scope
      */
     GoalReport getGoalReport(String goalId, AggregateQuery query);
 
     /**
-     * Retrieves the set of Metadata associated with existing campaigns.
+     * Returns metadata for all campaigns.
      *
-     * @return the set of Metadata associated with existing campaigns
+     * @return campaign metadata entries
      */
     Set<Metadata> getCampaignMetadatas();
 
     /**
-     * Retrieves the set of Metadata associated with existing campaign matching the specified {@link Query}
+     * Returns metadata for campaigns matching the given query.
      *
-     * @param query the Query used to filter the campagins which metadata we want to retrieve
-     * @return the set of Metadata associated with existing campaigns matching the specified {@link Query}
+     * @param query filter for campaigns whose metadata should be returned
+     * @return matching campaign metadata entries
      */
     Set<Metadata> getCampaignMetadatas(Query query);
 
     /**
-     * Retrieves campaign details for campaigns matching the specified query.
+     * Returns detailed campaign records matching the given query.
      *
-     * @param query the query specifying which campaigns to retrieve
-     * @return a {@link PartialList} of campaign details for the campaigns matching the specified query
+     * @param query filter for campaigns to return
+     * @return matching campaign details
      */
     PartialList<CampaignDetail> getCampaignDetails(Query query);
 
     /**
-     * Retrieves the {@link CampaignDetail} associated with the campaign identified with the specified identifier
+     * Loads detailed campaign information by id.
      *
-     * @param id the identifier of the campaign for which we want to retrieve the details
-     * @return the CampaignDetail for the campaign identified by the specified identifier or {@code null} if no such campaign exists
+     * @param id campaign identifier
+     * @return campaign details, or {@code null} if none exists
      */
     CampaignDetail getCampaignDetail(String id);
 
     /**
-     * Retrieves the campaign identified by the specified identifier
+     * Loads a campaign by id.
      *
-     * @param campaignId the identifier of the campaign we want to retrieve
-     * @return the campaign associated with the specified identifier or {@code null} if no such campaign exists
+     * @param campaignId campaign identifier
+     * @return matching campaign, or {@code null} if none exists
      */
     Campaign getCampaign(String campaignId);
 
     /**
-     * Saves the specified campaign in the context server and creates associated {@link Rule}s if the campaign is enabled.
+     * Saves a campaign and creates associated rules when the campaign is enabled.
      *
-     * TODO: rename to saveCampaign
-     *
-     * @param campaign the Campaign to be saved
+     * The { setCampaign} name is historical; a { saveCampaign} alias may be added later.     *
+     * @param campaign campaign to save
      */
     void setCampaign(Campaign campaign);
 
     /**
-     * Removes the campaign associated with the specified identifier, also removing associated rules if needed.
+     * Deletes a campaign and its associated rules when present.
      *
-     * @param campaignId the identifier of the campaign to be removed
+     * @param campaignId campaign identifier
      */
     void removeCampaign(String campaignId);
 
     /**
-     * Retrieves {@link CampaignEvent}s matching the specified query.
+     * Searches campaign events matching the given query.
      *
-     * @param query the Query specifying which CampaignEvents to retrieve
-     * @return a {@link PartialList} of campaign events matching the specified query
+     * @param query filter for campaign events to return
+     * @return matching campaign events
      */
     PartialList<CampaignEvent> getEvents(Query query);
 
     /**
-     * Saves the specified campaign event in the context server.
+     * Saves a campaign event.
      *
-     * TODO: rename to saveCampaignEvent
-     *
-     * @param event the CampaignEvent to be saved
+     * The { setEvent} name is historical; a { saveCampaignEvent} alias may be added later.     *
+     * @param event campaign event to save
      */
     void setCampaignEvent(CampaignEvent event);
 
     /**
-     * Removes the campaign event associated with the specified identifier.
+     * Deletes a campaign event by id.
      *
-     * @param campaignEventId the identifier of the campaign event to be removed
+     * @param campaignEventId campaign event identifier
      */
     void removeCampaignEvent(String campaignEventId);
 }

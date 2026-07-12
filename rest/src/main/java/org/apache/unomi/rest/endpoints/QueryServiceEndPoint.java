@@ -36,7 +36,7 @@ import javax.ws.rs.core.Response;
 import java.util.Map;
 
 /**
- * A JAX-RS endpoint to perform queries against context-server data.
+ * JAX-RS endpoint for aggregate counts, metrics, and conditional item counts.
  */
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -74,12 +74,11 @@ public class QueryServiceEndPoint {
     }
 
     /**
-     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and aggregated by possible values of the specified
-     * property.
+     * Returns item counts grouped by distinct values of the given property.
      *
-     * @param type     the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
-     * @param property the property we're aggregating on, i.e. for each possible value of this property, we are counting how many items of the specified type have that value
-     * @return a Map associating a specific value of the property to the cardinality of items with that value
+     * @param type the item type name from the class {@code ITEM_TYPE} field
+     * @param property the property whose distinct values form aggregation buckets
+     * @return property value to item count mappings
      * @see Item Item for a discussion of {@code ITEM_TYPE}
      */
     @GET
@@ -89,18 +88,15 @@ public class QueryServiceEndPoint {
     }
 
     /**
-     * TODO: rework, this method is confusing since it either behaves like {@link #getAggregate(String, String)} if query is null but completely differently if it isn't
+     * Returns property-value counts for an item type, optionally using an aggregate query.
+     * <p>
+     * When {@code optimizedQuery} is {@code true}, the global document count is omitted for faster execution.
      *
-     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and aggregated by possible values of the specified
-     * property or, if the specified query is not {@code null}, perform that aggregate query.
-     * Also return the global count of document matching the {@code ITEM_TYPE} if you don't use {@code optimizedQuery} or set it to false,
-     * otherwise if {@code optimizedQuery} is set to true then it won't return the global count but the query will be executed much faster.
-     *
-     * @param type           the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
-     * @param property       the property we're aggregating on, i.e. for each possible value of this property, we are counting how many items of the specified type have that value
-     * @param aggregateQuery the {@link AggregateQuery} specifying the aggregation that should be performed
-     * @param optimizedQuery the {@code optimizedQuery} specifying if we should optimized the aggregate query or not
-     * @return a Map associating a specific value of the property to the cardinality of items with that value
+     * @param type the item type name from the class {@code ITEM_TYPE} field
+     * @param property the property whose distinct values form aggregation buckets
+     * @param optimizedQuery whether to use the optimized aggregate path
+     * @param aggregateQuery optional aggregate query constraints
+     * @return property value to item count mappings
      * @see Item Item for a discussion of {@code ITEM_TYPE}
      */
     @POST
@@ -115,15 +111,13 @@ public class QueryServiceEndPoint {
     }
 
     /**
-     * Retrieves the specified metrics for the specified field of items of the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and matching the
-     * specified {@link Condition}.
+     * Returns numeric metrics for a field on items that match the given condition.
      *
-     * @param condition   the condition the items must satisfy
-     * @param metricsType a String specifying which metrics should be computed, separated by a slash ({@code /}) (possible values: {@code sum} for the sum of the
-     *                    values, {@code avg} for the average of the values, {@code min} for the minimum value and {@code max} for the maximum value)
-     * @param property    the name of the field for which the metrics should be computed
-     * @param type        the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
-     * @return a Map associating computed metric name as key to its associated value
+     * @param condition the condition matching items must satisfy
+     * @param metricsType slash-separated metric names ({@code sum}, {@code avg}, {@code min}, {@code max})
+     * @param property the numeric field to aggregate
+     * @param type the item type name from the class {@code ITEM_TYPE} field
+     * @return metric name to computed value mappings
      * @see Item Item for a discussion of {@code ITEM_TYPE}
      */
     @POST
@@ -133,16 +127,13 @@ public class QueryServiceEndPoint {
     }
 
     /**
-     * Retrieves the number of items of the specified type as defined by the Item subclass public field {@code ITEM_TYPE} and matching the specified {@link Condition}.
+     * Returns how many items of the given type match the condition.
      *
-     * @param condition the condition the items must satisfy
-     * @param validate optional parameter, in case of draft condition that have missing required parameters an IllegalArgumentException is throw
-     *                 and this end point will return status code 400, to avoid that you can set validate to false.
-     * @param type      the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
-     * @param response  the httpServletResponse
-     * @return the number of items of the specified type.
-     *         0 and status code 400 in case of IllegalArgumentException (bad condition) and validate null or true
-     *         0 and status code 200 in case of IllegalArgumentException (bad condition) and validate false
+     * @param condition the condition matching items must satisfy
+     * @param validate when {@code true} or omitted, invalid draft conditions return HTTP 400; when {@code false}, returns 0 with HTTP 200
+     * @param type the item type name from the class {@code ITEM_TYPE} field
+     * @param response the HTTP response used to set status on validation failure
+     * @return the matching item count, or {@code 0} when validation fails
      * @see Item Item for a discussion of {@code ITEM_TYPE}
      */
     @POST

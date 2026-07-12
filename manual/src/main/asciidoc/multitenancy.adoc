@@ -12,12 +12,10 @@
 // limitations under the License.
 //
 
-= Apache Unomi Multi-tenancy
-:toc: macro
-:toclevels: 4
-:toc-title: Table of contents
+=== Multi-tenancy guide
 
-toc::[]
+Apache Unomi 3.1+ isolates profiles, events, segments, rules, and schemas per tenant.
+Each tenant has public and private API keys. See also <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> for authentication changes.
 
 == Overview
 
@@ -30,7 +28,7 @@ Apache Unomi provides robust multi-tenancy support, allowing multiple organizati
 * Tenant-specific configuration
 * Per-tenant usage metrics (quotas enforced upstream)
 * Migration tools for existing data
-* Support for both REST and GraphQL APIs
+* Support for REST APIs (and GraphQL when enabled)
 
 == Authentication Methods
 

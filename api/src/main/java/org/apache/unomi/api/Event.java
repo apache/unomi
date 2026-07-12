@@ -72,13 +72,13 @@ public class Event extends Item implements TimestampedItem {
     private transient Map<String, Object> attributes;
 
     /**
-     * Instantiates a new Event.
+     * Default constructor.
      */
     public Event() {
     }
 
     /**
-     * Instantiates a new Event.
+     * Creates an event with the given identifier and context fields.
      *
      * @param itemId    the event item id identifier
      * @param eventType the event type identifier
@@ -95,7 +95,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Instantiates a new Event.
+     * Creates an event with a generated identifier and the given context fields.
      *
      * @param eventType the event type identifier
      * @param session   the session associated with the event
@@ -110,7 +110,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Instantiates a new Event.
+     * Creates an event with a generated identifier, optional properties, and persistence flag.
      *
      * @param eventType the event type identifier
      * @param session   the session associated with the event
@@ -127,7 +127,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Instantiates a new Event.
+     * Creates an event with the given identifier, properties, and persistence flag.
      *
      * @param itemId     the event item id identifier
      * @param eventType  the event type identifier
@@ -172,7 +172,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the session identifier if available.
+     * Session identifier linked to this event, if known.
      *
      * @return the session identifier or {@code null} if unavailable
      */
@@ -181,7 +181,8 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Set the session id
+     * Sets the session identifier.
+     *
      * @param sessionId the session id
      */
     public void setSessionId(String sessionId) {
@@ -189,7 +190,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the profile identifier of the Profile associated with this event
+     * Profile identifier associated with this event.
      *
      * @return the profile id
      */
@@ -207,7 +208,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the event type.
+     * Event type identifier (verb of the event sentence).
      *
      * @return the event type
      */
@@ -216,7 +217,8 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Sets the event type
+     * Sets the event type.
+     *
      * @param eventType the event type
      */
     public void setEventType(String eventType) {
@@ -224,7 +226,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the event time stamp
+     * Timestamp when this event occurred.
      *
      * @return the event time stamp
      */
@@ -233,14 +235,16 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * @param timeStamp set the time stamp
+     * Sets the event timestamp.
+     *
+     * @param timeStamp the event timestamp
      */
     public void setTimeStamp(Date timeStamp) {
         this.timeStamp = timeStamp;
     }
 
     /**
-     * Retrieves the profile.
+     * Profile associated with this event (transient, not serialized).
      *
      * @return the profile
      */
@@ -259,7 +263,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the session.
+     * Session associated with this event (transient, not serialized).
      *
      * @return the session
      */
@@ -297,7 +301,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the attributes. Attributes are not serializable, and can be used to provide additional contextual objects such as HTTP request or response objects, etc...
+     * Non-serializable contextual attributes (for example HTTP request or response objects).
      *
      * @return the attributes
      */
@@ -307,7 +311,8 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Sets the map of attribues
+     * Sets the non-serializable attribute map.
+     *
      * @param attributes the attributes map
      */
     public void setAttributes(Map<String, Object> attributes) {
@@ -328,7 +333,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the value of the property identified by the specified name.
+     * Value of the named event property.
      *
      * @param name the name of the property to be retrieved
      * @return the value of the property identified by the specified name
@@ -338,10 +343,10 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the value of the nested property identified by the specified name.
+     * Value of a nested property, using dot-separated path segments.
      *
-     * @param name the name of the property to be retrieved, splited in the nested properties with "."
-     * @return the value of the property identified by the specified name
+     * @param name the property path, split on {@code "."} for nested access
+     * @return the nested value, or {@code null} if any segment is missing
      */
     public Object getNestedProperty(String name) {
         if (!name.contains(".")) {
@@ -362,7 +367,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the properties.
+     * All event properties.
      *
      * @return the properties
      */
@@ -380,23 +385,25 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the flattened properties
-     * @return the flattened properties.
+     * Flattened property map used for indexing and search.
+     *
+     * @return the flattened properties
      */
     public Map<String, Object> getFlattenedProperties() {
         return flattenedProperties;
     }
 
     /**
-     * Set the flattened properties for current event
-     * @param flattenedProperties the properties
+     * Sets the flattened properties map used for indexing and search.
+     *
+     * @param flattenedProperties the flattened properties
      */
     public void setFlattenedProperties(Map<String, Object> flattenedProperties) {
         this.flattenedProperties = flattenedProperties;
     }
 
     /**
-     * Retrieves the source.
+     * Source item of this event (subject of the event sentence).
      *
      * @return the source
      */
@@ -414,7 +421,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the target.
+     * Target item of this event (object of the event sentence), if any.
      *
      * @return the target
      */
@@ -432,7 +439,7 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * Retrieves the action post executors for this event, if extra actions need to be executed after all Rule-triggered actions have been processed
+     * Post-executors to run after all rule-triggered actions complete.
      *
      * @return the action post executors
      */

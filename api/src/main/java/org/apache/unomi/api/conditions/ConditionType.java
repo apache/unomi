@@ -49,13 +49,14 @@ public class ConditionType extends MetadataItem implements PluginType, YamlConve
     private long pluginId;
 
     /**
-     * Instantiates a new Condition type.
+     * Default constructor.
      */
     public ConditionType() {
     }
 
     /**
-     * Instantiates a new Condition type with the specified metadata
+     * Creates a condition type with the given metadata
+     *
      * @param metadata the metadata
      */
     public ConditionType(Metadata metadata) {
@@ -63,7 +64,7 @@ public class ConditionType extends MetadataItem implements PluginType, YamlConve
     }
 
     /**
-     * Retrieves the condition evaluator.
+     * Condition evaluator implementation identifier.
      *
      * @return the condition evaluator
      */
@@ -81,7 +82,7 @@ public class ConditionType extends MetadataItem implements PluginType, YamlConve
     }
 
     /**
-     * Retrieves the query builder.
+     * Query builder implementation identifier.
      *
      * @return the query builder
      */
@@ -99,7 +100,7 @@ public class ConditionType extends MetadataItem implements PluginType, YamlConve
     }
 
     /**
-     * Retrieves the parent condition.
+     * Parent condition for composite condition types.
      *
      * @return the parent condition
      */
@@ -117,7 +118,7 @@ public class ConditionType extends MetadataItem implements PluginType, YamlConve
     }
 
     /**
-     * Retrieves the defined {@link Parameter}s for this ConditionType.
+     * Parameters defined for this condition type.
      *
      * @return a List of the defined {@link Parameter}s for this ConditionType
      */
@@ -166,6 +167,7 @@ public class ConditionType extends MetadataItem implements PluginType, YamlConve
      * Implements YamlConvertible interface with circular reference detection.
      *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @param maxDepth maximum recursion depth to prevent stack overflow
      * @return a Map representation of this condition type
      */
     @Override

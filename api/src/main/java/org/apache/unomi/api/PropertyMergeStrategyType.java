@@ -33,35 +33,38 @@ public class PropertyMergeStrategyType implements PluginType, Serializable {
     private long pluginId;
 
     /**
-     * Retrieves the identifier for this PropertyMergeStrategyType.
-     * @return the identifier for this PropertyMergeStrategyType
+     * Merge strategy identifier.
+     *
+     * @return the strategy id
      */
     public String getId() {
         return id;
     }
 
     /**
-     * Sets the identifier for this PropertyMergeStrategyType.
-     * @param id the unique identifier to be set.
+     * Sets the merge strategy identifier.
+     *
+     * @param id the strategy id
      */
     public void setId(String id) {
         this.id = id;
     }
 
     /**
-     * Retrieves the OSGi filter used to identify the implementation associated with this PropertyMergeStrategyType. Filters take the following form:
-     * {@code (propertyMergeStrategyExecutorId=&lt;id&gt;)} where {@code id} corresponds to the value of the {@code propertyMergeStrategyExecutorId} service property in the
-     * Blueprint service definition for this PropertyMergeStrategyType.
-     * @return the filter string used to identify the implementation associated with this PropertyMergeStrategyType
+     * OSGi LDAP filter that locates the executor for this strategy.
+     * Format: {@code (propertyMergeStrategyExecutorId=<id>)} where {@code id} matches the
+     * {@code propertyMergeStrategyExecutorId} service property in the Blueprint definition.
+     *
+     * @return the OSGi filter string
      */
     public String getFilter() {
         return filter;
     }
 
     /**
-     * Sets the OSGi filter used to identify the implementation associated with
-     * this PropertyMergeStrategyType.
-     * @param filter the filter string value.
+     * Sets the OSGi filter for locating the strategy executor.
+     *
+     * @param filter the OSGi filter string
      */
     public void setFilter(String filter) {
         this.filter = filter;

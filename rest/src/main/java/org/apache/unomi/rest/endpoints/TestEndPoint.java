@@ -27,7 +27,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
 /**
- * @author Jerome Blanchard
+ * Simple health-style JAX-RS endpoint for manual connectivity checks.
+ * Returns plain text so load balancers or operators can verify the REST
+ * layer is reachable without exercising business services.
  */
 @Produces(MediaType.TEXT_PLAIN + ";charset=UTF-8")
 @Path("/test")

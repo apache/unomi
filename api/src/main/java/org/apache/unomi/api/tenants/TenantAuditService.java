@@ -28,4 +28,4 @@ public interface TenantAuditService {
      * @param operation the operation being performed
      */
     void logTenantOperation(String tenantId, String operation);
-} 
+}

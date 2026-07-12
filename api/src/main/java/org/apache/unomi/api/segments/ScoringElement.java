@@ -39,13 +39,13 @@ public class ScoringElement implements Serializable, YamlConvertible {
     private int value;
 
     /**
-     * Instantiates a new Scoring element.
+     * Default constructor.
      */
     public ScoringElement() {
     }
 
     /**
-     * Retrieves the condition.
+     * Condition evaluated to decide whether this scoring element applies.
      *
      * @return the condition
      */
@@ -54,7 +54,7 @@ public class ScoringElement implements Serializable, YamlConvertible {
     }
 
     /**
-     * Sets the condition.
+     * Sets the matching condition.
      *
      * @param condition the condition
      */
@@ -63,18 +63,18 @@ public class ScoringElement implements Serializable, YamlConvertible {
     }
 
     /**
-     * Retrieves the value.
+     * Score contributed when the condition matches.
      *
-     * @return the value
+     * @return the score value
      */
     public int getValue() {
         return value;
     }
 
     /**
-     * Sets the value.
+     * Sets the score value contributed when the condition matches.
      *
-     * @param value the value
+     * @param value the score value
      */
     public void setValue(int value) {
         this.value = value;

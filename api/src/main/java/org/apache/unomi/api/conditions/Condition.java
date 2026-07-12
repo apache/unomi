@@ -50,24 +50,24 @@ public class Condition implements Serializable, YamlConvertible {
     Map<String, Object> parameterValues = new HashMap<>();
 
     /**
-     * Instantiates a new Condition.
+     * Default constructor.
      */
     public Condition() {
     }
 
     /**
-     * Instantiates a new Condition with the specified {@link ConditionType}.
+     * Creates a condition with the given condition type.
      *
-     * @param conditionType the condition type
+     * @param conditionType the condition type definition
      */
     public Condition(ConditionType conditionType) {
         setConditionType(conditionType);
     }
 
     /**
-     * Retrieves the associated condition type.
+     * Resolved condition type definition.
      *
-     * @return the condition type
+     * @return the condition type, or {@code null} if only the id is set
      */
     @XmlTransient
     public ConditionType getConditionType() {
@@ -87,9 +87,9 @@ public class Condition implements Serializable, YamlConvertible {
     }
 
     /**
-     * Retrieves the identifier of the associated condition type.
+     * Identifier of the condition type backing this expression.
      *
-     * @return the identifier of the associated condition type
+     * @return the condition type id
      */
     @XmlElement(name="type")
     public String getConditionTypeId() {
@@ -106,19 +106,18 @@ public class Condition implements Serializable, YamlConvertible {
     }
 
     /**
-     * Retrieves a Map of all parameter name - value pairs for this condition.
+     * Parameter values supplied for this condition instance.
      *
-     * @return a Map of all parameter name - value pairs for this condition. These depend on the condition type being used in the condition.
-     *
+     * @return the parameter map; contents depend on the condition type
      */
     public Map<String, Object> getParameterValues() {
         return parameterValues;
     }
 
     /**
-     * Sets the parameter name - value pairs for this profile.
+     * Sets all parameter values for this condition.
      *
-     * @param parameterValues a Map containing the parameter name - value pairs for this profile
+     * @param parameterValues the parameter map
      */
     public void setParameterValues(Map<String, Object> parameterValues) {
         this.parameterValues = parameterValues != null ? parameterValues : new HashMap<>();
@@ -135,10 +134,10 @@ public class Condition implements Serializable, YamlConvertible {
     }
 
     /**
-     * Retrieves the parameter identified by the specified name.
+     * Value of the named condition parameter.
      *
-     * @param name the name of the parameter to retrieve
-     * @return the value of the specified parameter or {@code null} if no such parameter exists
+     * @param name the parameter name
+     * @return the parameter value, or {@code null} if unset
      */
     public Object getParameter(String name) {
         return parameterValues != null ? parameterValues.get(name) : null;

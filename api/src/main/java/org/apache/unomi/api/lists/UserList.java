@@ -38,12 +38,12 @@ public class UserList extends MetadataItem{
     private static final long serialVersionUID = -1384533444875433496L;
 
     /**
-     * Instantiates a new UserList.
+     * Default constructor.
      */
     public UserList() {}
 
     /**
-     * Instantiates a new UserList with the specified metadata.
+     * Creates a user list with the given metadata.
      *
      * @param metadata the metadata
      */

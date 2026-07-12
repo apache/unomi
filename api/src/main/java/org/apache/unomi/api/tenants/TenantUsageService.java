@@ -43,6 +43,7 @@ public interface TenantUsageService {
 
     /**
      * Records one authenticated REST request for the tenant (in-memory counter).
+     *
      * @param tenantId tenant identifier
      */
     void recordRestRequest(String tenantId);

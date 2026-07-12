@@ -23,9 +23,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Diagnostic record for a configuration item that failed validation.
- * Lists missing condition or action types and the contexts where the
- * invalid object was seen so operators can fix definitions.
+ * Accumulated record for a definition that references missing condition or action types.
+ * {@link org.apache.unomi.api.services.TypeResolutionService} creates and updates
+ * these entries when JSON rules, segments, or other items fail type resolution.
+ * Operators use the missing-type lists and encounter counts to fix broken imports.
  */
 public class InvalidObjectInfo {
     private final String objectType;
@@ -39,36 +40,28 @@ public class InvalidObjectInfo {
     private final Set<String> contextNames;
 
     /**
-     * Constructs an {@code InvalidObjectInfo} object using only the basic
-     * identifying information.
-     * This constructor delegates to the full constructor, initializing missing
-     * lists and context names as null or empty.
-     * @param objectType The type name of the invalid object. Must not be null.
-     * @param objectId The unique ID of the invalid object. Must not be null.
-     * @param reason A detailed explanation for why the object
-     * is considered invalid.
+     * Creates a record with type, id, and reason only.
+     *
+     * @param objectType invalid object type
+     * @param objectId invalid object id
+     * @param reason why the object is invalid
      */
     public InvalidObjectInfo(String objectType, String objectId, String reason) {
         this(objectType, objectId, reason, null, null, null);
     }
 
     /**
-     * Constructs an {@code InvalidObjectInfo} object with full details,
-     * including initial tracking information.
-     * This initializes timestamps and encounter counts upon creation.
-     * @param objectType The type name of the invalid object. Must not be null.
-     * @param objectId The unique ID of the invalid object. Must not be null.
-     * @param reason A detailed explanation for why the object
-     * is considered invalid.
-     * @param missingConditionTypeIds Initial list of condition types that were
-     * missing during validation.
-     * @param missingActionTypeIds Initial list of action types that were
-     * missing during validation.
-     * @param contextName The specific context where this initial encounter
-     * occurred. Can be null.
+     * Creates a record with initial missing-type and context details.
+     *
+     * @param objectType invalid object type
+     * @param objectId invalid object id
+     * @param reason why the object is invalid
+     * @param missingConditionTypeIds missing condition types from the first encounter, or {@code null}
+     * @param missingActionTypeIds missing action types from the first encounter, or {@code null}
+     * @param contextName context where the object was first seen, or {@code null}
      */
-    public InvalidObjectInfo(String objectType, String objectId, String reason, 
-                             List<String> missingConditionTypeIds, 
+    public InvalidObjectInfo(String objectType, String objectId, String reason,
+                             List<String> missingConditionTypeIds,
                              List<String> missingActionTypeIds,
                              String contextName) {
         this.objectType = objectType;
@@ -88,80 +81,81 @@ public class InvalidObjectInfo {
     }
 
     /**
-     * Retrieves the type name associated with this invalid object record.
-     * @return The {@code String} representing the object's type name.
+     * Invalid object type.
+     *
+     * @return object type
      */
     public String getObjectType() {
         return objectType;
     }
 
     /**
-     * Retrieves the unique ID of the invalid object record.
-     * @return The {@code String} representing the object's ID.
+     * Invalid object id.
+     *
+     * @return object id
      */
     public String getObjectId() {
         return objectId;
     }
 
     /**
-     * Retrieves the reason why this object was flagged as invalid.
-     * @return The detailed explanation for the invalidation, or {@code null}
-     * if none is provided.
+     * Why the object failed validation.
+     *
+     * @return reason, or {@code null} if unset
      */
     public String getReason() {
         return reason;
     }
 
     /**
-     * Gets the timestamp when this object record was first observed as invalid.
-     * @return The initial {@code long} timestamp (milliseconds since epoch).
+     * When this record was first created (milliseconds since epoch).
+     *
+     * @return first-seen timestamp
      */
     public long getFirstSeenTimestamp() {
         return firstSeenTimestamp;
     }
 
     /**
-     * Gets the most recent timestamp when this object record was
-     * observed as invalid.
-     * This value is updated whenever an encounter occurs.
-     * @return The latest {@code long} timestamp (milliseconds since epoch).
+     * When this object was last seen as invalid (milliseconds since epoch).
+     *
+     * @return last-seen timestamp
      */
     public long getLastSeenTimestamp() {
         return lastSeenTimestamp.get();
     }
 
     /**
-     * Returns the total number of times this object has been
-     * encountered as invalid.
-     * @return An integer count representing the cumulative encounters.
+     * How many times this invalid object has been encountered.
+     *
+     * @return encounter count
      */
     public int getEncounterCount() {
         return encounterCount.get();
     }
 
     /**
-     * Retrieves an unmodifiable list of condition type IDs that were found to
-     * be missing or unresolved for this object instance.
-     * @return A {@link java.util.List} containing the
-     * missing condition type IDs.
+     * Condition types that could not be resolved for this object.
+     *
+     * @return unmodifiable list of missing condition type ids
      */
     public List<String> getMissingConditionTypeIds() {
         return Collections.unmodifiableList(new ArrayList<>(missingConditionTypeIds));
     }
 
     /**
-     * Retrieves an unmodifiable list of action type IDs that were found to be
-     * missing or unresolved for this object instance.
-     * @return A {@link java.util.List} containing the missing action type IDs.
+     * Action types that could not be resolved for this object.
+     *
+     * @return unmodifiable list of missing action type ids
      */
     public List<String> getMissingActionTypeIds() {
         return Collections.unmodifiableList(new ArrayList<>(missingActionTypeIds));
     }
 
     /**
-     * Returns an unmodifiable set of context names in which this invalid
-     * object was encountered.
-     * @return A {@link java.util.Set} containing all recorded context names.
+     * Contexts where this invalid object was seen.
+     *
+     * @return unmodifiable set of context names
      */
     public Set<String> getContextNames() {
         return Collections.unmodifiableSet(contextNames);
@@ -172,9 +166,10 @@ public class InvalidObjectInfo {
      * Thread-safe: backed by CopyOnWriteArrayList/CopyOnWriteArraySet, so reads via
      * {@code getMissingConditionTypeIds()}, {@code getMissingActionTypeIds()}, and
      * {@code getContextNames()} are safe during concurrent writes.
-     * @param missingConditionTypeIds additional missing condition type IDs found in this encounter
-     * @param missingActionTypeIds    additional missing action type IDs found in this encounter
-     * @param contextName             context where this encounter occurred
+     *
+     * @param missingConditionTypeIds additional missing condition type ids from this encounter
+     * @param missingActionTypeIds additional missing action type ids from this encounter
+     * @param contextName context where this encounter occurred
      */
     public void updateEncounter(List<String> missingConditionTypeIds,
                                 List<String> missingActionTypeIds,
@@ -230,4 +225,3 @@ public class InvalidObjectInfo {
         return sb.toString();
     }
 }
-

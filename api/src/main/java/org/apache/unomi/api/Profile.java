@@ -64,13 +64,13 @@ public class Profile extends Item implements SystemPropertiesItem {
     private Map<String, Consent> consents = new LinkedHashMap<>();
 
     /**
-     * Instantiates a new Profile.
+     * Default constructor.
      */
     public Profile() {
     }
 
     /**
-     * Instantiates a new Profile with the specified identifier.
+     * Creates a profile with the given identifier.
      *
      * @param profileId the profile identifier
      */
@@ -90,20 +90,20 @@ public class Profile extends Item implements SystemPropertiesItem {
     }
 
     /**
-     * Retrieves the property identified by the specified name.
+     * Value of the named profile property.
      *
-     * @param name the name of the property to retrieve
-     * @return the value of the specified property or {@code null} if no such property exists
+     * @param name the property name
+     * @return the property value, or {@code null} if unset
      */
     public Object getProperty(String name) {
         return properties.get(name);
     }
 
     /**
-     * Retrieves the value of the nested property identified by the specified name.
+     * Value of a nested property, using dot-separated path segments.
      *
-     * @param name the name of the property to be retrieved, splited in the nested properties with "."
-     * @return the value of the property identified by the specified name
+     * @param name the property path (for example {@code address.city})
+     * @return the nested value, or {@code null} if any segment is missing
      */
     public Object getNestedProperty(String name) {
         if (!name.contains(".")) {
@@ -124,9 +124,9 @@ public class Profile extends Item implements SystemPropertiesItem {
     }
 
     /**
-     * Retrieves a Map of all property name - value pairs for this profile.
+     * All user-visible profile properties.
      *
-     * @return a Map of all property name - value pairs for this profile
+     * @return the property map
      */
     public Map<String, Object> getProperties() {
         return properties;
@@ -142,10 +142,9 @@ public class Profile extends Item implements SystemPropertiesItem {
     }
 
     /**
-     * Retrieves a Map of system property name - value pairs for this profile. System properties can be used by implementations to store non-user visible properties needed for
-     * internal purposes.
+     * Internal properties used by implementations and not shown in UIs.
      *
-     * @return a Map of system property name - value pairs for this profile
+     * @return the system property map
      */
     public Map<String, Object> getSystemProperties() {
         return systemProperties;
@@ -161,11 +160,11 @@ public class Profile extends Item implements SystemPropertiesItem {
     }
 
     /**
-     * Sets a system property, overwriting an existing one if it existed. This call will also created the system
-     * properties hash map if it didn't exist.
-     * @param key the key for the system property hash map
-     * @param value the value for the system property hash map
-     * @return the previous value object if it existing.
+     * Sets or replaces a system property, creating the map if needed.
+     *
+     * @param key   the system property name
+     * @param value the system property value
+     * @return the previous value, or {@code null} if the key was not set
      */
     public Object setSystemProperty(String key, Object value) {
         if (this.systemProperties == null) {
@@ -185,9 +184,9 @@ public class Profile extends Item implements SystemPropertiesItem {
     }
 
     /**
-     * Retrieves the identifiers of the segments this profile is a member of.
+     * Segment ids this profile currently belongs to.
      *
-     * @return the identifiers of the segments this profile is a member of
+     * @return the segment ids
      */
     public Set<String> getSegments() {
         return segments;
@@ -195,8 +194,6 @@ public class Profile extends Item implements SystemPropertiesItem {
 
     /**
      * Sets the identifiers of the segments this profile is a member of.
-     *
-     * TODO: should be removed from the API
      *
      * @param segments the segments
      */
@@ -223,16 +220,17 @@ public class Profile extends Item implements SystemPropertiesItem {
     }
 
     /**
-     * Retrieves the scores associated to this profile.
+     * Scoring model values keyed by scoring id.
      *
-     * @return the scores associated to this profile as a Map of {@link Scoring} identifier - score pairs
+     * @return the score map
      */
     public Map<String, Integer> getScores() {
         return scores;
     }
 
     /**
-     * TODO: should be removed from the API
+     * Sets scoring model values keyed by scoring id.
+     *
      * @param scores new value for scores
      */
     public void setScores(Map<String, Integer> scores) {
@@ -240,16 +238,18 @@ public class Profile extends Item implements SystemPropertiesItem {
     }
 
     /**
-     * Returns all the consents, including the revokes ones.
-     * @return a map that contains as a key the scope + "/" + consent type ID (or just the consent type ID if no scope was set on the consent), and the consent itself as a value
+     * All consents on this profile, including revoked entries.
+     *
+     * @return consent map keyed by scope/type path
      */
     public Map<String, Consent> getConsents() {
         return consents;
     }
 
     /**
-     * Returns true if this profile is an anonymous profile.
-     * @return true of the profile has been marked as an anonymous profile, false otherwise.
+     * Whether this profile is marked anonymous via the system property {@code isAnonymousProfile}.
+     *
+     * @return {@code true} if anonymous, {@code false} otherwise
      */
     @XmlTransient
     public boolean isAnonymousProfile() {
@@ -258,11 +258,11 @@ public class Profile extends Item implements SystemPropertiesItem {
     }
 
     /**
-     * Set a consent into the profile.
-     * @param consent if the consent is REVOKED, it will try to remove a consent with the same type id if it
-     *                exists for the profile.
-     * @return true if the operation was successful (inserted exception in the case of a revoked consent, in which case
-     * it is successful if there was a consent to revoke).
+     * Adds or removes a consent on this profile.
+     * Revoked consents remove the matching entry when present.
+     *
+     * @param consent the consent to store or revoke
+     * @return {@code true} if the operation changed stored consents
      */
     @XmlTransient
     public boolean setConsent(Consent consent) {

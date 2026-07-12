@@ -24,8 +24,10 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Represents a node in the request tracing tree structure.
- * Each node contains information about an operation, its timing, and any child operations.
+ * One node in the hierarchical request trace returned to operators.
+ * Each node records an operation name, timing, optional context/result strings,
+ * log lines, and nested child nodes. The tracing service assembles these into
+ * a tree attached to context and event processing responses.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TraceNode implements Serializable {

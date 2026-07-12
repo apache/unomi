@@ -50,6 +50,11 @@ include::request-examples.adoc[]
 
 include::configuration.adoc[]
 
+[[_multitenancy]]
+== Multi-tenancy
+
+include::multitenancy.adoc[]
+
 [[_json_schemas]]
 == JSON schemas
 

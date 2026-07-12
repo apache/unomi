@@ -32,7 +32,8 @@ import java.util.*;
 import java.util.regex.Pattern;
 
 /**
- * Default implementation for the unomi authentication on Rest endpoints
+ * Default OSGi-backed implementation of {@link RestAuthenticationConfig} for REST endpoint
+ * authentication, role mappings, and V2 compatibility mode settings.
  */
 @Component(service = { RestAuthenticationConfig.class}, configurationPid = "org.apache.unomi.rest.authentication", immediate = true)
 @Designate(ocd = DefaultRestAuthenticationConfig.Config.class)
@@ -77,7 +78,6 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
 
     private volatile boolean v2CompatibilityModeEnabled = false;
     private volatile String v2CompatibilityDefaultTenantId = "default";
-
 
     /**
      * Updates authentication settings from OSGi configuration.

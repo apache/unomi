@@ -45,13 +45,13 @@ public class Scoring extends MetadataItem implements YamlConvertible {
     private List<ScoringElement> elements;
 
     /**
-     * Instantiates a new Scoring.
+     * Default constructor.
      */
     public Scoring() {
     }
 
     /**
-     * Instantiates a new Scoring with the specified metadata.
+     * Creates a scoring definition with the given metadata.
      *
      * @param metadata the metadata
      */
@@ -60,9 +60,9 @@ public class Scoring extends MetadataItem implements YamlConvertible {
     }
 
     /**
-     * Retrieves the details of this Scoring.
+     * Scoring elements that define conditions and point values.
      *
-     * @return the elements
+     * @return the scoring elements
      */
     public List<ScoringElement> getElements() {
         return elements;
@@ -82,6 +82,7 @@ public class Scoring extends MetadataItem implements YamlConvertible {
      * Implements YamlConvertible interface with circular reference detection.
      *
      * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @param maxDepth maximum recursion depth to prevent stack overflow
      * @return a Map representation of this scoring
      */
     @Override

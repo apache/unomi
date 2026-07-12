@@ -23,7 +23,9 @@ import java.util.Collection;
 import java.util.Map;
 
 /**
- * Utility methods for router import/export configuration handling.
+ * Helper routines for building router import/export column mappings.
+ * Converts Unomi {@link PropertyType} metadata into header lists and default
+ * values used when CSV or similar files are parsed by router Camel processors.
  */
 public class RouterUtils {
 

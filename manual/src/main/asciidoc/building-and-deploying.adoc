@@ -367,7 +367,7 @@ This is only needed if you didn't use the generated package. Also, this is the p
 environment if you intend to re-deploy the context server KAR iteratively.
 
 Additional requirements:
-* Apache Karaf 4.2.x, http://karaf.apache.org[http://karaf.apache.org]
+* Apache Karaf 4.4.x (Unomi 3.1 ships with 4.4.11), Java 17+ — http://karaf.apache.org[http://karaf.apache.org]
 
 Before deploying, make sure that you have Apache Karaf properly installed. Depending of your usage, you may also have to increase the
  memory size by adjusting the following environment values in the bin/setenv(.bat)
@@ -384,7 +384,7 @@ Install the WAR support and CXF into Karaf by doing the following in the Karaf c
 
 [source]
 ----
-   feature:repo-add cxf-jaxrs 3.3.4
+   feature:repo-add cxf-jaxrs 3.6.x (match the CXF version pinned in the Unomi Karaf features)
    feature:repo-add mvn:org.apache.unomi/unomi-kar/VERSION/xml/features
    feature:install unomi-kar
 ----

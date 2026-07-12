@@ -20,9 +20,10 @@ package org.apache.unomi.api.query;
 import java.io.Serializable;
 
 /**
- * Named inclusive date interval used in queries and aggregations.
- * Pairs a label ({@code key}) with {@code from} and {@code to} bounds so
- * conditions can match events or profiles inside a calendar window.
+ * Named inclusive date bucket for queries and aggregations.
+ * Combines a display {@code key} with {@code from} and {@code to} bounds so
+ * segment conditions and aggregate queries can group events or profiles inside
+ * a calendar window.
  */
 public class DateRange implements Serializable {
     private String key;
@@ -30,54 +31,60 @@ public class DateRange implements Serializable {
     private Object to;
 
     /**
-     * Constructs a new {@link DateRange} instance.
+     * Creates an empty date range.
      */
     public DateRange() {
     }
 
     /**
-     * Retrieves the unique key associated with this date range.
-     * @return The string key of the range.
+     * Label for this range in query results.
+     *
+     * @return range key
      */
     public String getKey() {
         return key;
     }
 
     /**
-     * Sets the unique identifier (key) for this date range.
-     * @param key the key to set
+     * Sets the range label.
+     *
+     * @param key range key
      */
     public void setKey(String key) {
         this.key = key;
     }
 
     /**
-     * Retrieves the starting value (from) of the date range.
-     * @return The object representing the start time or value.
+     * Inclusive lower bound of the interval.
+     *
+     * @return start date or value
      */
     public Object getFrom() {
         return from;
     }
 
     /**
-     * Sets the starting value (from) for this date range.
-     * @param from the starting value to set
+     * Sets the inclusive lower bound.
+     *
+     * @param from start date or value
      */
     public void setFrom(Object from) {
         this.from = from;
     }
 
     /**
-     * Retrieves the ending value (to) of the date range.
-     * @return The object representing the end time or value.
+     * Inclusive upper bound of the interval.
+     *
+     * @return end date or value
      */
     public Object getTo() {
         return to;
     }
 
     /**
-     * Sets the ending value (to) for this date range.
-     * @param to the ending value to set
+     * Sets the inclusive upper bound.
+     *
+     * @param to end date or value
      */
     public void setTo(Object to) {
         this.to = to;

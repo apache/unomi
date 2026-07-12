@@ -30,24 +30,24 @@ import java.util.List;
 public interface ClusterService {
 
     /**
-     * Retrieves the list of available nodes for this context server instance.
+     * Returns cluster nodes known to this instance.
      *
-     * @return a list of {@link ClusterNode}
+     * @return cluster nodes in the current topology
      */
     List<ClusterNode> getClusterNodes();
 
     /**
-     * Removes all data before the specified date from the context server.
+     * Deletes all persisted data older than the given cutoff date.
      *
-     * @param date the Date before which all data needs to be removed
+     * @param date cutoff; data before this date is removed
      */
     @Deprecated
     void purge(final Date date);
 
     /**
-     * Removes all data associated with the provided scope.
+     * Deletes all persisted data belonging to the given scope.
      *
-     * @param scope the scope for which we want to remove data
+     * @param scope scope whose data should be removed
      */
     void purge(final String scope);
 

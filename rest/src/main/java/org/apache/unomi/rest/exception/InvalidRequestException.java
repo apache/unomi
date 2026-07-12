@@ -28,6 +28,7 @@ public class InvalidRequestException extends RuntimeException {
 
     /**
      * Build an invalid request
+     *
      * @param message message in the logs. It contains detailed information
      * @param responseMessage message in the response, sent to the browser, must be vague as possible.
      */

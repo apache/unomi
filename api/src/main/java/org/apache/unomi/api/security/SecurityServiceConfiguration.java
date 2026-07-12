@@ -109,9 +109,7 @@ public class SecurityServiceConfiguration {
     private boolean enableEncryption = false;
 
     /**
-     * Constructs a default security service configuration, initializing system
-     * roles and mapping permissions for standard operations like query, save,
-     * update, etc., with default roles.
+     * Initializes default system roles and permission-to-role mappings.
      */
     public SecurityServiceConfiguration() {
         // Initialize default system roles
@@ -137,106 +135,100 @@ public class SecurityServiceConfiguration {
     }
 
     /**
-     * Retrieves the map containing defined permission keys and the array of
-     * roles authorized to use them.
-     * The returned map is a direct reference to the internal configuration.
-     * @return A {@link Map} where keys are permission strings and values are
-     * arrays of required role names.
+     * Permission keys mapped to the roles allowed to perform them.
+     *
+     * @return the permission-to-roles map
      */
     public Map<String, String[]> getPermissionRoles() {
         return permissionRoles;
     }
 
     /**
-     * Sets the complete mapping of permissions to roles for the security
-     * service. This allows external configuration of which roles can perform
-     * specific operations.
-     * @param permissionRoles The map containing all permission keys and their
-     * associated authorized roles.
+     * Replaces the full permission-to-role mapping.
+     *
+     * @param permissionRoles the permission-to-roles map
      */
     public void setPermissionRoles(Map<String, String[]> permissionRoles) {
         this.permissionRoles = permissionRoles;
     }
 
     /**
-     * Retrieves the default role assigned to users or
-     * entities within the system.
-     * @return The configured default role string.
+     * Role assigned when no explicit mapping exists.
+     *
+     * @return the default role name
      */
     public String getDefaultRole() {
         return defaultRole;
     }
 
     /**
-     * Sets the default role that should be applied when a user
-     * or entity is created.
-     * @param defaultRole the role to set as the default for new entities.
+     * Sets the default role name.
+     *
+     * @param defaultRole the default role
      */
     public void setDefaultRole(String defaultRole) {
         this.defaultRole = defaultRole;
     }
 
     /**
-     * Get required roles for an permission
-     * @param permission the permission to check
-     * @return array of required roles, or array containing default role if permission not mapped
+     * Roles required for the given permission.
+     *
+     * @param permission the permission key
+     * @return the required roles, or an array containing the default role if unmapped
      */
     public String[] getRequiredRolesForPermission(String permission) {
         return permissionRoles.getOrDefault(permission, new String[]{defaultRole});
     }
 
     /**
-     * Gets the immutable set of system roles recognized by the security
-     * service, such as administrative or core platform roles.
-     * @return A {@link Set} of strings representing the defined system roles.
+     * Platform roles recognized by the security service.
+     *
+     * @return the system role names
      */
     public Set<String> getSystemRoles() {
         return systemRoles;
     }
 
     /**
-     * Sets all system roles that the security service should
-     * recognize and manage.
-     * @param systemRoles a set containing all system role names.
+     * Replaces the set of recognized system roles.
+     *
+     * @param systemRoles the system role names
      */
     public void setSystemRoles(Set<String> systemRoles) {
         this.systemRoles = systemRoles;
     }
 
     /**
-     * Adds a single specified role name to the collection of
-     * recognized system roles.
-     * This allows dynamic configuration of core platform roles.
-     * @param role the role string to add to the system roles list.
+     * Adds a system role name.
+     *
+     * @param role the role to add
      */
     public void addSystemRole(String role) {
         systemRoles.add(role);
     }
 
     /**
-     * Removes a specified role name from the set of recognized system roles.
-     * This should be used when a system role is deprecated or removed.
-     * @param role the role string to remove from the system roles list.
+     * Removes a system role name.
+     *
+     * @param role the role to remove
      */
     public void removeSystemRole(String role) {
         systemRoles.remove(role);
     }
 
     /**
-     * Checks if profile data encryption has been enabled for
-     * the security service.
-     * @return {@code true} if encryption is active, {@code false} otherwise.
+     * Whether profile data encryption is enabled.
+     *
+     * @return {@code true} if encryption is enabled
      */
     public boolean isEnableEncryption() {
         return enableEncryption;
     }
 
     /**
-     * Sets whether sensitive profile data should be encrypted when stored and
-     * retrieved by the security service. This controls the use of
-     * encryption mechanisms.
-     * @param enableEncryption {@code true} to enable encryption,
-     * {@code false} otherwise.
+     * Enables or disables profile data encryption.
+     *
+     * @param enableEncryption {@code true} to enable encryption
      */
     public void setEnableEncryption(boolean enableEncryption) {
         this.enableEncryption = enableEncryption;

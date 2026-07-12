@@ -25,12 +25,8 @@ import java.util.stream.Stream;
 import javax.xml.bind.annotation.XmlTransient;
 
 /**
- * Represents a tenant in the system.
- * A tenant is an isolated entity within the system with its own users, data, and configuration.
- * Each tenant has its own set of API keys (public and private) for authentication and authorization,
- * and event permissions to control access to specific event types.
- * This class extends the base Item class and provides functionality for managing tenant
- * settings and lifecycle.
+ * A tenant isolates data, API keys, and event permissions within a single Unomi deployment.
+ * Each tenant has its own users, configuration, and lifecycle settings.
  */
 public class Tenant extends Item {
     /**
@@ -101,6 +97,7 @@ public class Tenant extends Item {
 
     /**
      * Gets the tenant's display name.
+     *
      * @return the tenant name
      */
     public String getName() {
@@ -109,6 +106,7 @@ public class Tenant extends Item {
 
     /**
      * Sets the tenant's display name.
+     *
      * @param name the tenant name to set
      */
     public void setName(String name) {
@@ -117,6 +115,7 @@ public class Tenant extends Item {
 
     /**
      * Gets the tenant's description.
+     *
      * @return the tenant description
      */
     public String getDescription() {
@@ -125,6 +124,7 @@ public class Tenant extends Item {
 
     /**
      * Sets the tenant's description.
+     *
      * @param description the tenant description to set
      */
     public void setDescription(String description) {
@@ -133,6 +133,7 @@ public class Tenant extends Item {
 
     /**
      * Gets the tenant's current status.
+     *
      * @return the tenant status
      */
     public TenantStatus getStatus() {
@@ -141,6 +142,7 @@ public class Tenant extends Item {
 
     /**
      * Sets the tenant's status.
+     *
      * @param status the tenant status to set
      */
     public void setStatus(TenantStatus status) {
@@ -149,6 +151,7 @@ public class Tenant extends Item {
 
     /**
      * Gets the tenant's creation date.
+     *
      * @return the creation date
      */
     @Override
@@ -158,6 +161,7 @@ public class Tenant extends Item {
 
     /**
      * Sets the tenant's creation date.
+     *
      * @param creationDate the creation date to set
      */
     public void setCreationDate(Date creationDate) {
@@ -166,6 +170,7 @@ public class Tenant extends Item {
 
     /**
      * Gets the tenant's last modification date.
+     *
      * @return the last modification date
      */
     @Override
@@ -175,6 +180,7 @@ public class Tenant extends Item {
 
     /**
      * Sets the tenant's last modification date.
+     *
      * @param lastModificationDate the last modification date to set
      */
     public void setLastModificationDate(Date lastModificationDate) {
@@ -184,6 +190,7 @@ public class Tenant extends Item {
     /**
      * Gets the list of all API keys associated with the tenant.
      * This includes both active and historical keys for auditing purposes.
+     *
      * @return the list of API keys
      */
     public List<ApiKey> getApiKeys() {
@@ -192,6 +199,7 @@ public class Tenant extends Item {
 
     /**
      * Sets the list of API keys associated with the tenant.
+     *
      * @param apiKeys the list of API keys to set
      */
     public void setApiKeys(List<ApiKey> apiKeys) {
@@ -200,6 +208,7 @@ public class Tenant extends Item {
 
     /**
      * Gets additional tenant properties as key-value pairs.
+     *
      * @return map of additional properties
      */
     public Map<String, Object> getProperties() {
@@ -208,6 +217,7 @@ public class Tenant extends Item {
 
     /**
      * Sets additional tenant properties as key-value pairs.
+     *
      * @param properties map of additional properties to set
      */
     public void setProperties(Map<String, Object> properties) {
@@ -217,6 +227,7 @@ public class Tenant extends Item {
     /**
      * Gets the set of event types that are restricted for this tenant.
      * Events of these types will require IP validation before being processed.
+     *
      * @return the set of restricted event types
      */
     public Set<String> getRestrictedEventTypes() {
@@ -226,6 +237,7 @@ public class Tenant extends Item {
     /**
      * Sets the event types that are restricted for this tenant.
      * Events of these types will require IP validation before being processed.
+     *
      * @param restrictedEventTypes the set of restricted event types to set
      */
     public void setRestrictedEventTypes(Set<String> restrictedEventTypes) {
@@ -234,6 +246,7 @@ public class Tenant extends Item {
 
     /**
      * Gets the set of authorized IP addresses or CIDR ranges for this tenant.
+     *
      * @return the set of authorized IP addresses/ranges
      */
     public Set<String> getAuthorizedIPs() {
@@ -242,6 +255,7 @@ public class Tenant extends Item {
 
     /**
      * Sets the authorized IP addresses or CIDR ranges for this tenant.
+     *
      * @param authorizedIPs the set of authorized IP addresses/ranges to set
      */
     public void setAuthorizedIPs(Set<String> authorizedIPs) {
@@ -254,6 +268,7 @@ public class Tenant extends Item {
      * non-revoked, non-expired private key, but since the plaintext key is never persisted (see
      * UNOMI-938), this cannot be used to authenticate as the tenant; the real plaintext key is
      * only available once, at creation time, via {@link ApiKeyCreationResult}.
+     *
      * @return the masked private API key, or null if no valid private key exists
      */
     @XmlTransient
@@ -267,6 +282,7 @@ public class Tenant extends Item {
      * non-revoked, non-expired public key, but since the plaintext key is never persisted (see
      * UNOMI-938), this cannot be used in client-side applications; the real plaintext key is
      * only available once, at creation time, via {@link ApiKeyCreationResult}.
+     *
      * @return the masked public API key, or null if no valid public key exists
      */
     @XmlTransient
@@ -277,6 +293,7 @@ public class Tenant extends Item {
     /**
      * Gets all active private API keys for the tenant.
      * This method returns all non-revoked, non-expired private keys.
+     *
      * @return list of active private API keys, or empty list if none exist
      */
     @XmlTransient
@@ -287,6 +304,7 @@ public class Tenant extends Item {
     /**
      * Gets all active public API keys for the tenant.
      * This method returns all non-revoked, non-expired public keys.
+     *
      * @return list of active public API keys, or empty list if none exist
      */
     @XmlTransient
@@ -297,6 +315,7 @@ public class Tenant extends Item {
     /**
      * Gets all active API keys for the tenant.
      * This method returns all non-revoked, non-expired keys regardless of type.
+     *
      * @return list of all active API keys, or empty list if none exist
      */
     @XmlTransient

@@ -20,9 +20,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Represents security settings for a tenant.
- * This class contains configuration for various security aspects including
- * authentication, authorization, and API access.
+ * Tenant-level security policy loaded and enforced by {@link TenantSecurityService}.
+ * Groups authentication rules (token/session settings), authorization mappings,
+ * rate limits, and API access constraints that apply to REST calls for one tenant.
  */
 public class SecuritySettings {
     private boolean enabled;
@@ -31,64 +31,72 @@ public class SecuritySettings {
     private Map<String, Object> additionalSettings;
 
     /**
-     * Gets whether security is enabled for the tenant.
-     * @return true if security is enabled, false otherwise
+     * Whether tenant security enforcement is enabled.
+     *
+     * @return {@code true} when security is enabled
      */
     public boolean isEnabled() {
         return enabled;
     }
 
     /**
-     * Sets whether security is enabled for the tenant.
-     * @param enabled true to enable security, false to disable
+     * Enables or disables tenant security enforcement.
+     *
+     * @param enabled {@code true} to enable security
      */
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
 
     /**
-     * Gets the authentication configuration.
-     * @return the authentication configuration
+     * Authentication policy for this tenant.
+     *
+     * @return authentication configuration
      */
     public AuthenticationConfig getAuthentication() {
         return authentication;
     }
 
     /**
-     * Sets the authentication configuration.
-     * @param authentication the authentication configuration to set
+     * Sets the authentication policy for this tenant.
+     *
+     * @param authentication authentication configuration
      */
     public void setAuthentication(AuthenticationConfig authentication) {
         this.authentication = authentication;
     }
 
     /**
-     * Gets the authorization configuration.
-     * @return the authorization configuration
+     * Authorization policy for this tenant.
+     *
+     * @return authorization configuration
      */
     public AuthorizationConfig getAuthorization() {
         return authorization;
     }
 
     /**
-     * Sets the authorization configuration.
-     * @param authorization the authorization configuration to set
+     * Sets the authorization policy for this tenant.
+     *
+     * @param authorization authorization configuration
      */
     public void setAuthorization(AuthorizationConfig authorization) {
         this.authorization = authorization;
     }
 
     /**
-     * Gets additional security settings as key-value pairs.
-     * @return map of additional settings
+     * Extra security settings not covered by authentication or authorization.
+     *
+     * @return additional settings map
      */
     public Map<String, Object> getAdditionalSettings() {
         return additionalSettings;
     }
 
     /**
-     * Sets additional security settings as key-value pairs.
-     * @param additionalSettings map of additional settings to set
+     * Sets extra security settings not covered by authentication or authorization.
+     *
+     * @param additionalSettings additional settings map
      */
     public void setAdditionalSettings(Map<String, Object> additionalSettings) {
         this.additionalSettings = additionalSettings;
@@ -121,9 +129,9 @@ public class SecuritySettings {
         }
 
         /**
-         * Retrieves the maximum number of login attempts
-         * permitted before lockout.
-         * @return The maximum number of login attempts.
+         * Maximum failed login attempts before account lockout.
+         *
+         * @return max login attempts
          */
         public int getMaxLoginAttempts() {
             return maxLoginAttempts;
@@ -183,9 +191,9 @@ public class SecuritySettings {
         private Map<String, List<String>> rolePermissions;
 
         /**
-         * Retrieves the list of roles configured for this tenant.
-         * @return A {@link java.util.List} of strings
-         * representing the assigned roles.
+         * Roles defined for this tenant.
+         *
+         * @return role names
          */
         public List<String> getRoles() {
             return roles;
@@ -200,9 +208,9 @@ public class SecuritySettings {
         }
 
         /**
-         * Retrieves the list of permissions configured for this tenant.
-         * @return A {@link java.util.List} of strings representing the
-         * assigned permissions.
+         * Permissions defined for this tenant.
+         *
+         * @return permission names
          */
         public List<String> getPermissions() {
             return permissions;
@@ -217,9 +225,9 @@ public class SecuritySettings {
         }
 
         /**
-         * Retrieves the mapping of roles to their associated permissions.
-         * @return A {@link java.util.Map} where keys are role names and values
-         * are lists of permissions.
+         * Maps each role to the permissions it grants.
+         *
+         * @return role-to-permissions map
          */
         public Map<String, List<String>> getRolePermissions() {
             return rolePermissions;
@@ -234,4 +242,4 @@ public class SecuritySettings {
             this.rolePermissions = rolePermissions;
         }
     }
-} 
+}

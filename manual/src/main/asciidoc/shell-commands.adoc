@@ -205,6 +205,56 @@ command: `undeploy-definition BUNDLE_ID * *` when `BUNDLE_ID` is the identifier 
 
 |===
 
+
+==== Tenant commands
+
+Multi-tenant shell operations (Unomi 3.1+). See <<_multitenancy,Multi-tenancy>> for REST equivalents.
+
+.Table Tenant commands
+|===
+|Command|Arguments|Description
+
+|tenant-get
+|n/a
+|Print the tenant ID stored for this Karaf session.
+
+|tenant-set
+|tenant-id
+|Set the current tenant for this shell session (`system` is allowed). Other CRUD commands use this context.
+
+|crud list tenant
+|[--csv]
+|List tenants (excludes the built-in `system` tenant from normal listings).
+
+|crud read tenant
+|-i tenant-id
+|Show one tenant as JSON.
+
+|crud create tenant
+|-d JSON or --file path
+|Create a tenant. Use `help` on the command for required properties.
+
+|crud update tenant
+|-i tenant-id -d JSON or --file path
+|Update tenant metadata.
+
+|crud delete tenant
+|-i tenant-id
+|Delete a tenant.
+
+|crud list apikey
+|[--csv]
+|List API keys across all tenants (keys are masked in the table).
+
+|crud create apikey
+|-d JSON
+|Create an API key for a tenant (`tenantId`, `keyType`, optional `validityPeriod`).
+
+|cache
+|--tenant ID [--clear]
+|Inspect or clear per-tenant caches (segments, rules, and related types).
+|===
+
 ==== Scheduler commands
 
 These commands manage background tasks created by the cluster-aware scheduler (see <<_scheduler,Task scheduler>>).

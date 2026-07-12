@@ -18,23 +18,24 @@
 package org.apache.unomi.api;
 
 /**
- * Marker interface for Unomi plugin definition types.
- * Implementations such as {@link PropertyMergeStrategyType} expose an id
- * and OSGi filter so the runtime can locate the plugin implementation.
+ * Common contract for pluggable Unomi definition types loaded from OSGi.
+ * Implementations expose a stable id and an OSGi target filter so the runtime
+ * can locate executors and validators (for example {@link PropertyMergeStrategyType}
+ * and {@link ValueType}).
  */
 public interface PluginType {
 
     /**
-     * Retrieves the plugin identifier, corresponding to the identifier of the OSGi bundle implementing the plugin.
+     * OSGi bundle id of the plugin that registered this type.
      *
-     * @return the plugin identifier, corresponding to the identifier of the OSGi bundle implementing the plugin
+     * @return the plugin bundle id
      */
     long getPluginId();
 
     /**
-     * Associates this plugin with its associated OSGi bundle identifier.
+     * Associates this plugin type with its OSGi bundle.
      *
-     * @param pluginId the OSGi bundle identifier associated with this plugin
+     * @param pluginId the plugin bundle id
      */
     void setPluginId(long pluginId);
 

@@ -44,9 +44,11 @@ public class PersonaSession extends Session {
      * Constructs a {@link PersonaSession} associated with a given profile,
      * item ID, and timestamp.
      * The resulting session is initialized with a system scope metadata.
+     *
      * @param itemId the unique identifier for the persona session item.
      * @param profile the {@link Profile} object representing the
      * context of the session.
+     *
      * @param timeStamp the date and time when this session was
      * created or recorded.
      */

@@ -18,11 +18,10 @@
 package org.apache.unomi.api;
 
 /**
- * TODO: REMOVE
- * Describes where an event originated in the digital experience.
- * Identifies the scope, item id, path, and type of the source page or item
- * that triggered the event. Clients attach this information when they send
- * events to Unomi.
+ * Origin of an {@link Event} in the visitor journey.
+ * Captures scope, item id, path, and type for the page or asset that produced
+ * the event. Client trackers populate this object when posting to the events
+ * collector so rules and analytics can attribute actions to a source context.
  */
 public class EventSource {
     private String scope;
@@ -31,72 +30,78 @@ public class EventSource {
     private String type;
 
     /**
-     * Constructs a new EventSource instance.
+     * Creates an empty event source.
      */
     public EventSource() {
     }
 
     /**
-     * Returns the scope associated with this event source.
-     * @return The scope string.
+     * Scope of the page or asset that originated the event.
+     *
+     * @return scope name
      */
     public String getScope() {
         return scope;
     }
 
     /**
-     * Sets the scope for this event source.
-     * @param scope the new scope to set.
+     * Sets the source scope.
+     *
+     * @param scope scope name
      */
     public void setScope(String scope) {
         this.scope = scope;
     }
 
     /**
-     * Returns the unique identifier of this event source.
-     * @return The ID string.
+     * Identifier of the originating page or asset within the scope.
+     *
+     * @return source item id
      */
     public String getId() {
         return id;
     }
 
     /**
-     * Sets the unique identifier for this event source.
-     * @param id the new ID to set.
+     * Sets the source item id.
+     *
+     * @param id source item id
      */
     public void setId(String id) {
         this.id = id;
     }
 
     /**
-     * Returns the path associated with this event source.
-     * @return The path string.
+     * URL or logical path of the page where the event was triggered.
+     *
+     * @return source path
      */
     public String getPath() {
         return path;
     }
 
     /**
-     * Sets the path for this event source.
-     * @param path the new path to set.
+     * Sets the source path.
+     *
+     * @param path source path
      */
     public void setPath(String path) {
         this.path = path;
     }
 
     /**
-     * Returns the type identifier of this event source.
-     * @return The type string.
+     * Type label for the source object (for example page, form, or product).
+     *
+     * @return source type
      */
     public String getType() {
         return type;
     }
 
     /**
-     * Sets the type of this event source.
-     * This value can be used to classify the data structure or content
-     * represented by the event source, such as "string", "array", or "boolean".
-     * @param type The string representation of the desired type.
+     * Sets the source type label.
+     *
+     * @param type source type
      */
     public void setType(String type) {
         this.type = type;

@@ -19,7 +19,9 @@ package org.apache.unomi.rest.tenants;
 import java.util.Map;
 
 /**
- * Request body for tenant create and update operations.
+ * REST request payload for creating or updating a {@link org.apache.unomi.api.tenants.Tenant}.
+ * Carries the desired tenant id and an open properties map that maps to
+ * tenant configuration fields accepted by {@link org.apache.unomi.api.tenants.TenantService}.
  */
 public class TenantRequest {
     private String requestedId;
@@ -60,4 +62,4 @@ public class TenantRequest {
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
     }
-} 
+}

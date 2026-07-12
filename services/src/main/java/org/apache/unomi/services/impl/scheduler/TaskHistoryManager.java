@@ -70,7 +70,7 @@ public class TaskHistoryManager {
         entry.put("status", "SUCCESS");
         entry.put("nodeId", nodeId);
         entry.put("executionTime", executionTime);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_COMPLETED);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_EXECUTION_TIME, executionTime);
@@ -88,7 +88,7 @@ public class TaskHistoryManager {
         entry.put("status", "FAILED");
         entry.put("nodeId", nodeId);
         entry.put("error", error);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_FAILED);
     }
@@ -103,7 +103,7 @@ public class TaskHistoryManager {
         entry.put("timestamp", new Date());
         entry.put("status", "CRASHED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_CRASHED);
     }
@@ -118,7 +118,7 @@ public class TaskHistoryManager {
         entry.put("timestamp", new Date());
         entry.put("status", "CANCELLED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_CANCELLED);
     }
@@ -133,7 +133,7 @@ public class TaskHistoryManager {
         entry.put("timestamp", new Date());
         entry.put("status", "RESUMED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_RESUMED);
     }
@@ -148,7 +148,7 @@ public class TaskHistoryManager {
         entry.put("timestamp", new Date());
         entry.put("status", "RETRIED");
         entry.put("nodeId", nodeId);
-        
+
         addToHistory(task, entry);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_RETRIED);
     }
@@ -184,10 +184,10 @@ public class TaskHistoryManager {
     }
 
     /**
-     * Gets execution history for a task.
+     * Returns execution history entries stored on the task.
      *
      * @param task the task
-     * @return execution history entries, or an empty list
+     * @return execution history entries, or an empty list when none exist
      */
     public List<Map<String, Object>> getExecutionHistory(ScheduledTask task) {
         Map<String, Object> details = task.getStatusDetails();
@@ -199,4 +199,4 @@ public class TaskHistoryManager {
         List<Map<String, Object>> history = (List<Map<String, Object>>) details.get("executionHistory");
         return history != null ? history : Collections.emptyList();
     }
-} 
+}

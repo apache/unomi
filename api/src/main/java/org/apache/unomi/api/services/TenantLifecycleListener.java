@@ -23,7 +23,8 @@ package org.apache.unomi.api.services;
 public interface TenantLifecycleListener {
     /**
      * Called when a tenant is removed from the system.
+     *
      * @param tenantId the ID of the tenant that was removed
      */
     void onTenantRemoved(String tenantId);
-} 
+}

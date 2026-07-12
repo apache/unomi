@@ -17,48 +17,50 @@
 package org.apache.unomi.api.tenants;
 
 /**
- * Represents metadata used to track the state or existence of a backup
- * for a specific tenant.
- * This class encapsulates essential information linking a backup record
- * to its owner and time.
- * The {@link TenantBackupMetadata} holds two primary pieces of data: the unique
- * identifier of the tenant, stored in {@code tenantId}, and a timestamp
- * indicating when this metadata was generated or pertains to, stored
- * in {@code timestamp}.
+ * Bookmark for a tenant backup operation.
+ * Associates a {@code tenantId} with the {@code timestamp} when backup metadata
+ * was recorded so restore and housekeeping jobs can tell which backup generation
+ * applies to which tenant.
  */
 public class TenantBackupMetadata {
+    /** Tenant that owns this backup record. */
     private String tenantId;
+    /** When this backup metadata was recorded (milliseconds since epoch). */
     private long timestamp;
 
     /**
-     * Retrieves the tenant ID associated with this metadata object.
-     * @return The stored {@link String} tenant ID.
+     * Tenant that owns this backup.
+     *
+     * @return tenant id
      */
     public String getTenantId() {
         return tenantId;
     }
 
     /**
-     * Sets the tenant ID for this metadata object.
-     * @param tenantId The new {@link String} tenant ID to set.
+     * Sets the tenant id.
+     *
+     * @param tenantId tenant id
      */
     public void setTenantId(String tenantId) {
         this.tenantId = tenantId;
     }
 
     /**
-     * Retrieves the timestamp associated with this metadata object.
-     * @return The stored {@link Long} timestamp.
+     * When this backup metadata was recorded.
+     *
+     * @return timestamp in milliseconds since epoch
      */
     public long getTimestamp() {
         return timestamp;
     }
 
     /**
-     * Sets the timestamp for this metadata object.
-     * @param timestamp The new {@link Long} timestamp to set.
+     * Sets the backup metadata timestamp.
+     *
+     * @param timestamp timestamp in milliseconds since epoch
      */
     public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
-} 
+}

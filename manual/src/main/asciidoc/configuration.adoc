@@ -733,7 +733,7 @@ org.apache.unomi.security.personalization.sanitizeConditions=${env:UNOMI_SECURIT
 
 Groovy actions offer the ability to define a set of actions and action types (aka action descriptors) purely from Groovy scripts defined at runtime.
 
-Initially submitted to Unomi through a purpose-built REST API endpoint, Groovy actions are then stored in Elasticsearch. When an event matches a rule configured to execute an action, the corresponding action is fetched from Elasticsearch and executed.
+Initially submitted to Unomi through a purpose-built REST API endpoint, Groovy actions are then stored in the persistence layer (Elasticsearch or OpenSearch). When an event matches a rule configured to execute an action, the corresponding action is fetched from persistence and executed.
 
 ===== Anatomy of a Groovy Action
 
@@ -1743,6 +1743,7 @@ cd apache-unomi-custom-*
 unomi:start elasticsearch-prod
 ----
 
+[[_health_check]]
 === Health Check Extension
 
 The Health Check extension provides a way to check is required Unomi components are 'live'.

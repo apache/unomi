@@ -36,13 +36,13 @@ public class CustomItem extends Item {
     private Map<String,Object> properties = new HashMap<String,Object>();
 
     /**
-     * Instantiates a new Custom item.
+     * Default constructor.
      */
     public CustomItem() {
     }
 
     /**
-     * Instantiates a new Custom item.
+     * Creates a custom item with the given identifier and item type.
      *
      * @param itemId   the item id
      * @param itemType the item type
@@ -53,9 +53,9 @@ public class CustomItem extends Item {
     }
 
     /**
-     * Retrieves this CustomItem's properties.
+     * Property map for this custom item.
      *
-     * @return a Map of the item's properties associating the property name as key to its value.
+     * @return a map of property names to values
      */
     public Map<String, Object> getProperties() {
         return properties;

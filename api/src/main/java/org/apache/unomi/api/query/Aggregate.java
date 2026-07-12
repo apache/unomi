@@ -42,13 +42,13 @@ public class Aggregate implements Serializable {
 
 
     /**
-     * Instantiates a new Aggregate.
+     * Default constructor.
      */
     public Aggregate() {
     }
 
     /**
-     * Retrieves the aggregation type.
+     * Aggregation type.
      * <p>
      * Supported values are {@code date}, {@code dateRange}, {@code numericRange}, and {@code ipRange}.
      * When {@code null}, a terms aggregation is used on distinct property values.
@@ -72,7 +72,7 @@ public class Aggregate implements Serializable {
     }
 
     /**
-     * Retrieves the aggregation parameters.
+     * Aggregation parameters.
      * <p>
      * For {@code date} aggregations, expected keys are {@code interval} and {@code format}.
      * For {@code dateRange} aggregations, the {@code format} key defines the date format.
@@ -96,7 +96,7 @@ public class Aggregate implements Serializable {
     }
 
     /**
-     * Retrieves the property to aggregate on.
+     * Property to aggregate on.
      *
      * @return the property to aggregate on
      */
@@ -114,7 +114,7 @@ public class Aggregate implements Serializable {
     }
 
     /**
-     * Retrieves the numeric ranges used by {@code numericRange} aggregations.
+     * Numeric ranges for {@code numericRange} aggregations.
      *
      * @return the numeric ranges
      */
@@ -123,7 +123,7 @@ public class Aggregate implements Serializable {
     }
 
     /**
-     * Retrieves the date ranges used by {@code dateRange} aggregations.
+     * Date ranges for {@code dateRange} aggregations.
      *
      * @return the date ranges
      */
@@ -141,7 +141,7 @@ public class Aggregate implements Serializable {
     }
 
     /**
-     * Retrieves the IP ranges used by {@code ipRange} aggregations.
+     * IP ranges for {@code ipRange} aggregations.
      *
      * @return the IP ranges
      */

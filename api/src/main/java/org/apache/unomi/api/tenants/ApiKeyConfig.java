@@ -20,9 +20,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Configuration settings for API keys.
- * This class defines the configuration parameters for API key management,
- * including validation rules and usage limits.
+ * Policy constraints applied when creating or validating {@link ApiKey} instances.
+ * Defines length and pattern rules, expiration defaults, allowed scopes, active-key
+ * limits, and optional per-scope rate limits consumed by tenant security services.
  */
 public class ApiKeyConfig {
     private int minLength;
@@ -36,6 +36,7 @@ public class ApiKeyConfig {
 
     /**
      * Gets the minimum length required for API keys.
+     *
      * @return the minimum length
      */
     public int getMinLength() {
@@ -44,6 +45,7 @@ public class ApiKeyConfig {
 
     /**
      * Sets the minimum length required for API keys.
+     *
      * @param minLength the minimum length to set
      */
     public void setMinLength(int minLength) {
@@ -52,6 +54,7 @@ public class ApiKeyConfig {
 
     /**
      * Gets the maximum length allowed for API keys.
+     *
      * @return the maximum length
      */
     public int getMaxLength() {
@@ -60,6 +63,7 @@ public class ApiKeyConfig {
 
     /**
      * Sets the maximum length allowed for API keys.
+     *
      * @param maxLength the maximum length to set
      */
     public void setMaxLength(int maxLength) {
@@ -68,6 +72,7 @@ public class ApiKeyConfig {
 
     /**
      * Gets the regex pattern for API key validation.
+     *
      * @return the validation pattern
      */
     public String getPattern() {
@@ -76,6 +81,7 @@ public class ApiKeyConfig {
 
     /**
      * Sets the regex pattern for API key validation.
+     *
      * @param pattern the validation pattern to set
      */
     public void setPattern(String pattern) {
@@ -84,6 +90,7 @@ public class ApiKeyConfig {
 
     /**
      * Gets the maximum number of active API keys allowed.
+     *
      * @return the maximum number of active keys
      */
     public int getMaxActiveKeys() {
@@ -92,6 +99,7 @@ public class ApiKeyConfig {
 
     /**
      * Sets the maximum number of active API keys allowed.
+     *
      * @param maxActiveKeys the maximum number to set
      */
     public void setMaxActiveKeys(int maxActiveKeys) {
@@ -100,6 +108,7 @@ public class ApiKeyConfig {
 
     /**
      * Gets the default expiration period in days for new API keys.
+     *
      * @return the default expiration period in days
      */
     public int getDefaultExpirationDays() {
@@ -108,6 +117,7 @@ public class ApiKeyConfig {
 
     /**
      * Sets the default expiration period in days for new API keys.
+     *
      * @param defaultExpirationDays the default expiration period to set
      */
     public void setDefaultExpirationDays(int defaultExpirationDays) {
@@ -116,6 +126,7 @@ public class ApiKeyConfig {
 
     /**
      * Gets the list of allowed scopes for API keys.
+     *
      * @return list of allowed scopes
      */
     public List<String> getAllowedScopes() {
@@ -124,6 +135,7 @@ public class ApiKeyConfig {
 
     /**
      * Sets the list of allowed scopes for API keys.
+     *
      * @param allowedScopes list of allowed scopes to set
      */
     public void setAllowedScopes(List<String> allowedScopes) {
@@ -132,6 +144,7 @@ public class ApiKeyConfig {
 
     /**
      * Gets the rate limits for different operations.
+     *
      * @return map of operation names to their rate limits
      */
     public Map<String, Integer> getRateLimits() {
@@ -140,6 +153,7 @@ public class ApiKeyConfig {
 
     /**
      * Sets the rate limits for different operations.
+     *
      * @param rateLimits map of operation names to their rate limits
      */
     public void setRateLimits(Map<String, Integer> rateLimits) {
@@ -148,6 +162,7 @@ public class ApiKeyConfig {
 
     /**
      * Gets additional configuration settings.
+     *
      * @return map of additional settings
      */
     public Map<String, Object> getAdditionalSettings() {
@@ -156,6 +171,7 @@ public class ApiKeyConfig {
 
     /**
      * Sets additional configuration settings.
+     *
      * @param additionalSettings map of additional settings to set
      */
     public void setAdditionalSettings(Map<String, Object> additionalSettings) {

@@ -232,6 +232,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
         /**
          * Checks if a state transition is valid
+         *
          * @param from Current task state
          * @param to Target task state
          * @return true if transition is valid
@@ -245,6 +246,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Checks if all required services are initialized and available
+     *
      * @return true if services are ready, false otherwise
      */
     private boolean areServicesReady() {
@@ -255,6 +257,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Checks if all required services are initialized and available, including persistence provider if required
+     *
      * @param requirePersistenceProvider Whether the operation requires persistence provider to be available
      * @return true if services are ready, false otherwise
      */
@@ -273,6 +276,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Queues an operation to be executed once services are available
+     *
      * @param type The type of operation
      * @param description Human-readable description of the operation
      * @param parameters The parameters for the operation
@@ -283,6 +287,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Queues an operation to be executed once services are available
+     *
      * @param type The type of operation
      * @param description Human-readable description of the operation
      * @param requirePersistenceProvider Whether the operation requires persistence provider to be available
@@ -385,6 +390,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Determines if an operation type requires the persistence provider to be available
+     *
      * @param operation The pending operation
      * @return true if the operation requires persistence provider, false otherwise
      */
@@ -411,6 +417,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Executes a specific pending operation
+     *
      * @param operation The operation to execute
      */
     private void executePendingOperation(PendingOperation operation) {
@@ -461,6 +468,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Updates task state with validation and persistence
+     *
      * @param task The task to update
      * @param newStatus The new status to set
      * @param error Optional error message for failed states
@@ -662,6 +670,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Checks if all remaining operations in the queue require the persistence provider
+     *
      * @return true if all remaining operations require persistence, false otherwise
      */
     private boolean checkIfAllRemainingOperationsRequirePersistence() {
@@ -917,6 +926,7 @@ public class SchedulerServiceImpl implements SchedulerService {
     /**
      * Checks if the scheduler is shutting down.
      * This method is used by TaskExecutionManager to skip task execution during shutdown.
+     *
      * @return true if the scheduler is shutting down, false otherwise
      */
     public boolean isShutdownNow() {
@@ -1170,6 +1180,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Internal method to schedule a task - called when services are ready
+     *
      * @param task The task to schedule
      */
     private void scheduleTaskInternal(ScheduledTask task) {
@@ -1229,6 +1240,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Internal method to cancel a task - called when services are ready
+     *
      * @param taskId The task ID to cancel
      */
     private void cancelTaskInternal(String taskId) {
@@ -1552,6 +1564,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Internal method to retry a task - called when services are ready
+     *
      * @param taskId The task ID to retry
      * @param resetFailureCount Whether to reset the failure count
      */
@@ -1580,6 +1593,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Internal method to resume a task - called when services are ready
+     *
      * @param taskId The task ID to resume
      */
     private void resumeTaskInternal(String taskId) {
@@ -1689,6 +1703,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Saves a task to the persistence service if it's persistent.
+     *
      * @param task The task to save
      * @return true if the task was successfully saved, false otherwise
      */
@@ -1869,6 +1884,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Gets the number of pending operations waiting to be processed
+     *
      * @return The number of pending operations
      */
     public int getPendingOperationsCount() {
@@ -1877,6 +1893,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Gets a list of pending operations for debugging purposes
+     *
      * @return List of pending operation descriptions
      */
     public List<String> getPendingOperationsList() {

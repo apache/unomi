@@ -23,12 +23,15 @@ import javax.lang.model.type.MirroredTypeException;
 import java.util.*;
 
 /**
- * Created by amidani on 28/04/2017.
+ * Router-side import job definition for bulk loading Unomi items.
+ * Extends {@link ImportExportConfiguration} with import-specific column mappings,
+ * type mappings, and merge behavior. Camel routes in the router extension read
+ * this configuration to stream external files into the persistence layer.
  */
 public class ImportConfiguration extends ImportExportConfiguration {
 
     /**
-     * The ImportConfiguration ITEM_TYPE
+     * Persistence item type for router import configurations.
      *
      * @see Item for a discussion of ITEM_TYPE
      */
@@ -38,7 +41,6 @@ public class ImportConfiguration extends ImportExportConfiguration {
     private List<String> propertiesToOverwrite;
     private boolean hasHeader = false;
     private boolean hasDeleteColumn = false;
-
 
     /**
      * Returns the property used to match existing profiles during import.
@@ -50,35 +52,36 @@ public class ImportConfiguration extends ImportExportConfiguration {
     }
 
     /**
-     * Sets the merging property.
-     * @param mergingProperty property used to check if the profile exist when merging
+     * Sets the property used to match existing profiles during import.
+     *
+     * @param mergingProperty property used to check whether the profile exists when merging
      */
     public void setMergingProperty(String mergingProperty) {
         this.mergingProperty = mergingProperty;
     }
 
     /**
-     * Retrieves the import configuration overwriteExistingProfiles flag.
+     * Returns whether existing profiles are overwritten during import.
      *
-     * @return true if during the import existing profiles must be overwritten
+     * @return {@code true} when existing profiles must be overwritten
      */
     public boolean isOverwriteExistingProfiles() {
         return this.overwriteExistingProfiles;
     }
 
     /**
-     * Sets the overwriteExistingProfiles flag true/false.
+     * Sets whether existing profiles are overwritten during import.
      *
-     * @param overwriteExistingProfiles a boolean to set overwriteExistingProfiles in the import configuration
+     * @param overwriteExistingProfiles {@code true} to overwrite existing profiles
      */
     public void setOverwriteExistingProfiles(boolean overwriteExistingProfiles) {
         this.overwriteExistingProfiles = overwriteExistingProfiles;
     }
 
     /**
-     * Retrieves the import configuration propertiesToOverwrite field.
+     * Returns profile property names that may be overwritten during import.
      *
-     * @return propertiesToOverwrite list.
+     * @return the property names to overwrite, or {@code null} when not restricted
      */
     public List<String> getPropertiesToOverwrite() {
         return propertiesToOverwrite;
@@ -94,36 +97,36 @@ public class ImportConfiguration extends ImportExportConfiguration {
     }
 
     /**
-     * Retrieves the hasHeader flag.
+     * Returns whether the import file includes a header row.
      *
-     * @return true if the file imported by the current config has a header line.
+     * @return {@code true} when the first row is a header
      */
     public boolean isHasHeader() {
         return this.hasHeader;
     }
 
     /**
-     * Sets the hasHeader flag.
+     * Sets whether the import file includes a header row.
      *
-     * @param hasHeader new value for hasHeader
+     * @param hasHeader {@code true} when the first row is a header
      */
     public void setHasHeader(boolean hasHeader) {
         this.hasHeader = hasHeader;
     }
 
     /**
-     * Retrieves the hasDeleteColumn flag.
+     * Returns whether the import file includes a delete column.
      *
-     * @return true if the file imported by the current config has a delete column.
+     * @return {@code true} when a delete column is present
      */
     public boolean isHasDeleteColumn() {
         return this.hasDeleteColumn;
     }
 
     /**
-     * Sets the hasDeleteColumn flag.
+     * Sets whether the import file includes a delete column.
      *
-     * @param hasDeleteColumn new value for hasDeleteColumn
+     * @param hasDeleteColumn {@code true} when a delete column is present
      */
     public void setHasDeleteColumn(boolean hasDeleteColumn) {
         this.hasDeleteColumn = hasDeleteColumn;

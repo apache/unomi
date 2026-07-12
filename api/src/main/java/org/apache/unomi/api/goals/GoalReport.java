@@ -21,9 +21,10 @@ import java.io.Serializable;
 import java.util.List;
 
 /**
- * Performance statistics for a {@link org.apache.unomi.api.goals.Goal}.
- * Contains counts and rates (starts, conversions, etc.) used to measure
- * whether visitors complete the tracked goal.
+ * Goal conversion report returned by {@link org.apache.unomi.api.services.GoalsService}.
+ * {@link #globalStats} aggregates all traffic; {@link #split} breaks the same
+ * metrics down per experiment or variant key so marketers can compare branches
+ * of a goal or campaign.
  */
 public class GoalReport implements Serializable {
     private static final long serialVersionUID = -9150361970326342064L;
@@ -31,47 +32,49 @@ public class GoalReport implements Serializable {
     private List<Stat> split;
 
     /**
-     * Constructs a new GoalReport instance.
+     * Creates an empty goal report.
      */
     public GoalReport() {
     }
 
     /**
-     * Retrieves the global statistics associated with this report.
-     * @return The {@link Stat} containing global statistics.
+     * Aggregated statistics across all traffic.
+     *
+     * @return global statistics
      */
     public Stat getGlobalStats() {
         return globalStats;
     }
 
     /**
-     * Sets the global statistics for this report.
-     * @param globalStats The {@link Stat} object representing
-     * the global statistics.
+     * Sets the global statistics.
+     *
+     * @param globalStats global statistics
      */
     public void setGlobalStats(Stat globalStats) {
         this.globalStats = globalStats;
     }
 
     /**
-     * Retrieves the list of split statistics associated with this report.
-     * @return A {@link List} of {@link Stat} objects representing the splits.
+     * Per-split statistics (for example A/B variants).
+     *
+     * @return split statistics
      */
     public List<Stat> getSplit() {
         return split;
     }
 
     /**
-     * Sets the list of split statistics for this report.
-     * @param split The {@link List} of {@link Stat} objects
-     * defining the splits.
+     * Sets the per-split statistics.
+     *
+     * @param split split statistics
      */
     public void setSplit(List<Stat> split) {
         this.split = split;
     }
 
     /**
-     * Statistics
+     * Counts and rates for one goal report bucket.
      */
     public static class Stat implements Serializable {
         private static final long serialVersionUID = 4306277648074263098L;
@@ -82,93 +85,96 @@ public class GoalReport implements Serializable {
         private double percentage;
 
         /**
-         * Constructs a new {@code Stat} instance.
+         * Creates an empty stat bucket.
          */
         public Stat() {
         }
 
         /**
-         * Retrieves the key associated with this statistic.
-         * @return The unique identifier (key) for the stat.
+         * Bucket key (for example a split name).
+         *
+         * @return stat key
          */
         public String getKey() {
             return key;
         }
 
         /**
-         * Sets the key used to identify this statistic.
-         * @param key The unique string key.
+         * Sets the bucket key.
+         *
+         * @param key stat key
          */
         public void setKey(String key) {
             this.key = key;
         }
 
         /**
-         * Retrieves the starting count of records analyzed.
-         * @return The total number of records at the start count.
+         * Number of goal starts.
+         *
+         * @return start count
          */
         public long getStartCount() {
             return startCount;
         }
 
         /**
-         * Sets the initial count for this statistic.
-         * @param startCount The total number of records.
+         * Sets the start count.
+         *
+         * @param startCount start count
          */
         public void setStartCount(long startCount) {
             this.startCount = startCount;
         }
 
         /**
-         * Retrieves the target count of successful records.
-         * @return The number of records that met the target criteria.
+         * Number of goal completions.
+         *
+         * @return target count
          */
         public long getTargetCount() {
             return targetCount;
         }
 
         /**
-         * Sets the target count for this statistic.
-         * @param targetCount The desired or measured target count.
+         * Sets the target count.
+         *
+         * @param targetCount target count
          */
         public void setTargetCount(long targetCount) {
             this.targetCount = targetCount;
         }
 
         /**
-         * Retrieves the calculated conversion rate (Target
-         * Count / Start Count).
-         * @return The conversion rate as a double value.
+         * Conversion rate ({@code targetCount / startCount}).
+         *
+         * @return conversion rate
          */
         public double getConversionRate() {
             return conversionRate;
         }
 
         /**
-         * Sets the conversion rate statistic.
-         * This value is typically calculated as a ratio of successful
-         * targets to starting counts.
-         * @param conversionRate the calculated conversion rate (target
-         * count / start count).
+         * Sets the conversion rate.
+         *
+         * @param conversionRate conversion rate
          */
         public void setConversionRate(double conversionRate) {
             this.conversionRate = conversionRate;
         }
 
         /**
-         * Retrieves the percentage value stored in this statistic.
-         * This value represents a proportion, often relative to another total.
-         * @return the percentage value.
+         * Share of the total as a percentage.
+         *
+         * @return percentage value
          */
         public double getPercentage() {
             return percentage;
         }
 
         /**
-         * Sets the calculated percentage for this goal report statistic.
-         * This value is typically derived by dividing target counts by
-         * a larger total count.
-         * @param percentage the calculated percentage value.
+         * Sets the percentage value.
+         *
+         * @param percentage percentage value
          */
         public void setPercentage(double percentage) {
             this.percentage = percentage;

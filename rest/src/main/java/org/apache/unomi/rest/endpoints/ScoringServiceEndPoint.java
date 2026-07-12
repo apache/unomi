@@ -35,7 +35,7 @@ import javax.ws.rs.core.MediaType;
 import java.util.List;
 
 /**
- * A JAX-RS endpoint to manage {@link Scoring}s
+ * JAX-RS endpoint for managing {@link Scoring} definitions and their dependents.
  */
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
@@ -69,15 +69,12 @@ public class ScoringServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of all scoring metadata.
-     * @param offset zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
-     * @param size   a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *               elements according to the property order in the
-     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * Returns scoring metadata with paging and optional sorting.
      *
-     * @return the set of all scoring metadata
+     * @param offset zero-based index of the first result
+     * @param size maximum number of results to return, or {@code -1} for all matches
+     * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
+     * @return matching scoring metadata
      */
     @GET
     @Path("/")
@@ -86,10 +83,10 @@ public class ScoringServiceEndPoint {
     }
 
     /**
-     * Retrieves the set of scoring metadata for scorings matching the specified query.
+     * Returns scoring metadata matching the given query.
      *
-     * @param query the query the scorings must match for their metadata to be retrieved
-     * @return the set of scoring metadata for scorings matching the specified query
+     * @param query the query scorings must match
+     * @return a paged list of matching scoring metadata
      */
     @POST
     @Path("/query")
@@ -98,10 +95,10 @@ public class ScoringServiceEndPoint {
     }
 
     /**
-     * Retrieves the scoring identified by the specified identifier.
+     * Returns the scoring definition with the given ID.
      *
-     * @param scoringId the identifier of the scoring to be retrieved
-     * @return the scoring identified by the specified identifier or {@code null} if no such scoring exists
+     * @param scoringId the scoring identifier
+     * @return the scoring, or {@code null} when it does not exist
      */
     @GET
     @Path("/{scoringID}")
@@ -153,11 +150,12 @@ public class ScoringServiceEndPoint {
     }
 
     /**
-     * Retrieves the list of Segment and Scoring metadata depending on the specified scoring.
-     * A segment or scoring is depending on a segment if it includes a scoringCondition with a test on this scoring.
+     * Returns segment and scoring metadata that depend on the given scoring.
+     * <p>
+     * A dependent definition includes a scoring condition that references this scoring.
      *
-     * @param scoringId the segment identifier
-     * @return a list of Segment/Scoring Metadata depending on the specified scoring
+     * @param scoringId the scoring identifier
+     * @return metadata for dependent segments and scorings
      */
     @GET
     @Path("/{scoringID}/impacted")
@@ -166,8 +164,7 @@ public class ScoringServiceEndPoint {
     }
 
     /**
-     * TODO: remove
-     *
+     * Deprecated maintenance endpoint kept for backward compatibility.     *
      * @deprecated As of version 1.1.0-incubating, not needed anymore
      */
     @Deprecated

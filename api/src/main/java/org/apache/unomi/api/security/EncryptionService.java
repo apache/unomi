@@ -22,18 +22,18 @@ package org.apache.unomi.api.security;
  */
 public interface EncryptionService {
     /**
-     * Get the encryption key for a specific tenant.
+     * Encryption key for the specified tenant.
      *
      * @param tenantId the tenant ID
-     * @return the encryption key as a byte array
+     * @return the encryption key bytes
      */
     byte[] getTenantEncryptionKey(String tenantId);
 
     /**
-     * Generate a new encryption key for a tenant.
+     * Generates a new encryption key for the specified tenant.
      *
      * @param tenantId the tenant ID
-     * @return the newly generated encryption key
+     * @return the newly generated encryption key bytes
      */
     byte[] generateTenantEncryptionKey(String tenantId);
-} 
+}

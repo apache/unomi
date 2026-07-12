@@ -21,9 +21,13 @@ import org.apache.unomi.api.Item;
 import java.util.Date;
 
 /**
- * A separate item to track rule statistics, because we will manage the persistence and updating of
- * these seperately from the rules themselves. This object contains all the relevant statistics
- * concerning the execution of a rule, including accumulated execution times.
+ * Persisted statistics for a {@link org.apache.unomi.api.rules.Rule}, stored separately from the rule
+ * definition so counters can be updated without rewriting the rule itself.
+ * <p>
+ * Cluster-wide fields ({@link #executionCount}, {@link #conditionsTime}, {@link #actionsTime}) hold
+ * aggregated totals synchronized across nodes. Matching {@code local*} fields track counts and
+ * timings on the current node since {@link #lastSyncDate}; they are merged into the cluster totals
+ * during synchronization.
  */
 public class RuleStatistics extends Item {
 
@@ -43,135 +47,141 @@ public class RuleStatistics extends Item {
     private Date lastSyncDate;
 
     /**
-     * Constructs a new RuleStatistics instance with default values.
-     * This constructor is used when initializing statistics objects without
-     * an associated item ID.
+     * Default constructor.
      */
     public RuleStatistics() {
     }
 
     /**
-     * Constructs a new RuleStatistics instance, associating it with
-     * the given rule item ID.
-     * @param itemId The unique identifier of the rule item to which
-     * these statistics belong.
+     * Creates statistics for the rule with the given identifier.
+     *
+     * @param itemId the rule item identifier these statistics belong to
      */
     public RuleStatistics(String itemId) {
         super(itemId);
     }
 
     /**
-     * Retrieve the execution count of the rule in the cluster
-     * @return a long that is the total number of executions of the rule without the local node execution
-     * count
+     * Cluster-wide execution count (excluding the current node's unsynchronized local count).
+     *
+     * @return the cluster execution count
      */
     public long getExecutionCount() {
         return executionCount;
     }
 
     /**
-     * Set the execution count of the rule in the cluster
-     * @param executionCount a long that represents the number of execution of the rule in the cluster
+     * Sets the cluster-wide execution count.
+     *
+     * @param executionCount the cluster execution count
      */
     public void setExecutionCount(long executionCount) {
         this.executionCount = executionCount;
     }
 
     /**
-     * Retrieve the execution count of the rule on this single node since the last sync with the cluster
-     * @return a long that is the total number of executions on this node since the last sync with the
-     * cluster
+     * Execution count on this node since the last cluster synchronization.
+     *
+     * @return the local execution count
      */
     public long getLocalExecutionCount() {
         return localExecutionCount;
     }
 
     /**
-     * Sets the number of local execution counts for this node since the last sync with the cluster
-     * @param localExecutionCount a long that represents the number of execution of the rule since the
-     *                            last sync with the cluster
+     * Sets the local execution count since the last cluster synchronization.
+     *
+     * @param localExecutionCount the local execution count
      */
     public void setLocalExecutionCount(long localExecutionCount) {
         this.localExecutionCount = localExecutionCount;
     }
 
     /**
-     * Retrieve the accumulated time evaluating the conditions of the rule in the cluster
-     * @return a long representing the accumulated time in milliseconds that represents the time spent
-     * evaluating the conditions of the rule for the whole cluster
+     * Cluster-wide accumulated time spent evaluating rule conditions, in milliseconds.
+     *
+     * @return the cluster conditions time in milliseconds
      */
     public long getConditionsTime() {
         return conditionsTime;
     }
 
     /**
-     * Sets the execution time of the condition of the rule for the whole cluster
-     * @param conditionsTime a long representing a time in milliseconds
+     * Sets the cluster-wide accumulated conditions evaluation time.
+     *
+     * @param conditionsTime the cluster conditions time in milliseconds
      */
     public void setConditionsTime(long conditionsTime) {
         this.conditionsTime = conditionsTime;
     }
 
     /**
-     * Retrieve the accumulated execution time of the rule's condition since the last sync with the cluster
-     * @return a long that represents the accumulated time in milliseconds
+     * Local accumulated time spent evaluating rule conditions since the last cluster sync, in milliseconds.
+     *
+     * @return the local conditions time in milliseconds
      */
     public long getLocalConditionsTime() {
         return localConditionsTime;
     }
 
     /**
-     * Sets the accumulated execution time of the rule's condition since the last sync with the cluster
-     * @param localConditionsTime a long that represents the accumulated time in milliseconds
+     * Sets the local accumulated conditions evaluation time since the last cluster sync.
+     *
+     * @param localConditionsTime the local conditions time in milliseconds
      */
     public void setLocalConditionsTime(long localConditionsTime) {
         this.localConditionsTime = localConditionsTime;
     }
 
     /**
-     * Retrieve the accumulated time of the rule's actions
-     * @return a long representing the accumulated time in milliseconds
+     * Cluster-wide accumulated time spent executing rule actions, in milliseconds.
+     *
+     * @return the cluster actions time in milliseconds
      */
     public long getActionsTime() {
         return actionsTime;
     }
 
     /**
-     * Sets the accumulated time for the rule's actions
-     * @param actionsTime a long representing the accumulated time in milliseconds
+     * Sets the cluster-wide accumulated actions execution time.
+     *
+     * @param actionsTime the cluster actions time in milliseconds
      */
     public void setActionsTime(long actionsTime) {
         this.actionsTime = actionsTime;
     }
 
     /**
-     * Retrieve the accumulated time spent executing the rule's actions since the last sync with the cluster
-     * @return a long representing the accumulated time in milliseconds
+     * Local accumulated time spent executing rule actions since the last cluster sync, in milliseconds.
+     *
+     * @return the local actions time in milliseconds
      */
     public long getLocalActionsTime() {
         return localActionsTime;
     }
 
     /**
-     * Sets the accumulated time spend executing the rule's actions since the last sync with the cluster
-     * @param localActionsTime a long representing the accumulated time in milliseconds
+     * Sets the local accumulated actions execution time since the last cluster sync.
+     *
+     * @param localActionsTime the local actions time in milliseconds
      */
     public void setLocalActionsTime(long localActionsTime) {
         this.localActionsTime = localActionsTime;
     }
 
     /**
-     * Retrieve the last sync date
-     * @return a date that was set the last time the statistics were synchronized with the cluster
+     * Date when local counters were last merged into the cluster totals.
+     *
+     * @return the last synchronization date
      */
     public Date getLastSyncDate() {
         return lastSyncDate;
     }
 
     /**
-     * Sets the last sync date
-     * @param lastSyncDate a date that represents the last time the statistics were synchronized
-     *                     with the cluster
+     * Sets the last cluster synchronization date.
+     *
+     * @param lastSyncDate the last synchronization date
      */
     public void setLastSyncDate(Date lastSyncDate) {
         this.lastSyncDate = lastSyncDate;

@@ -17,9 +17,10 @@
 package org.apache.unomi.api.tenants;
 
 /**
- * Usage counters for a single scope inside a tenant usage snapshot.
- * Tracks how many segments and rules exist in that scope when
- * {@link TenantUsageService} collects statistics.
+ * Per-scope slice of a {@link TenantUsage} snapshot.
+ * When usage collection runs, each scope contributes segment and rule counts so
+ * operators can see which sites or applications consume the most configuration
+ * inside a tenant.
  */
 public class TenantScopeUsage {
 
@@ -28,48 +29,54 @@ public class TenantScopeUsage {
     private long ruleCount;
 
     /**
-     * Retrieves the unique identifier of the scope.
-     * @return The scope ID as a {@link String}.
+     * Scope identifier.
+     *
+     * @return scope id
      */
     public String getScopeId() {
         return scopeId;
     }
 
     /**
-     * Sets the unique identifier of the scope.
-     * @param scopeId The new scope ID to set.
+     * Sets the scope identifier.
+     *
+     * @param scopeId scope id
      */
     public void setScopeId(String scopeId) {
         this.scopeId = scopeId;
     }
 
     /**
-     * Retrieves the count of segments associated with this scope usage.
-     * @return The segment count as a {@link Long}.
+     * Number of segments in this scope.
+     *
+     * @return segment count
      */
     public long getSegmentCount() {
         return segmentCount;
     }
 
     /**
-     * Sets the count of segments associated with this scope usage.
-     * @param segmentCount The new segment count to set.
+     * Sets the segment count.
+     *
+     * @param segmentCount segment count
      */
     public void setSegmentCount(long segmentCount) {
         this.segmentCount = segmentCount;
     }
 
     /**
-     * Retrieves the count of rules associated with this scope usage.
-     * @return The rule count as a {@link Long}.
+     * Number of rules in this scope.
+     *
+     * @return rule count
      */
     public long getRuleCount() {
         return ruleCount;
     }
 
     /**
-     * Sets the count of rules associated with this scope usage.
-     * @param ruleCount The new rule count to set.
+     * Sets the rule count.
+     *
+     * @param ruleCount rule count
      */
     public void setRuleCount(long ruleCount) {
         this.ruleCount = ruleCount;

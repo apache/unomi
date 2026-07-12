@@ -37,9 +37,9 @@ public class TenantEventPurgeResult {
     private long requestedAt;
 
     /**
-     * Retrieves the unique identifier of the tenant
-     * associated with this result.
-     * @return The tenant ID string.
+     * Tenant this purge result applies to.
+     *
+     * @return tenant id
      */
     public String getTenantId() {
         return tenantId;
@@ -47,6 +47,7 @@ public class TenantEventPurgeResult {
 
     /**
      * Sets the unique identifier of the tenant associated with this result.
+     *
      * @param tenantId The tenant ID to set.
      */
     public void setTenantId(String tenantId) {
@@ -54,9 +55,9 @@ public class TenantEventPurgeResult {
     }
 
     /**
-     * Retrieves the number of days events must be retained before
-     * purge consideration.
-     * @return The retention period in days.
+     * Retention window in days before events become eligible for purge.
+     *
+     * @return retention period in days
      */
     public int getRetentionDays() {
         return retentionDays;
@@ -65,6 +66,7 @@ public class TenantEventPurgeResult {
     /**
      * Sets the number of days events must be retained before
      * purge consideration.
+     *
      * @param retentionDays The retention period in days.
      */
     public void setRetentionDays(int retentionDays) {
@@ -72,9 +74,10 @@ public class TenantEventPurgeResult {
     }
 
     /**
-     * Retrieves the estimated number of events that matched the retention
-     * cutoff before the delete-by-query was submitted; not a post-delete count.
-     * @return The count of matching events.
+     * Estimated event count matching the retention cutoff before delete-by-query ran.
+     * This is a pre-delete estimate, not a post-delete count.
+     *
+     * @return estimated matching event count
      */
     public long getEventsMatched() {
         return eventsMatched;
@@ -83,6 +86,7 @@ public class TenantEventPurgeResult {
     /**
      * Sets the estimated number of events that matched the retention cutoff
      * before the delete-by-query was submitted; not a post-delete count.
+     *
      * @param eventsMatched The estimated count of matching events.
      */
     public void setEventsMatched(long eventsMatched) {
@@ -114,6 +118,7 @@ public class TenantEventPurgeResult {
     /**
      * Gets the timestamp (in milliseconds) when this event retention purge
      * request was initiated.
+     *
      * @return The requested time in milliseconds since the epoch.
      */
     public long getRequestedAt() {
@@ -122,6 +127,7 @@ public class TenantEventPurgeResult {
 
     /**
      * Sets the timestamp when the event retention purge request was initiated.
+     *
      * @param requestedAt the time in milliseconds since the epoch
      */
     public void setRequestedAt(long requestedAt) {

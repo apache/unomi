@@ -34,7 +34,7 @@ import java.text.SimpleDateFormat;
 import java.util.List;
 
 /**
- * A JAX-RS endpoint to access information about the context server's cluster.
+ * JAX-RS endpoint for cluster node visibility and data purge operations.
  */
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -78,9 +78,9 @@ public class ClusterServiceEndPoint {
     }
 
     /**
-     * Retrieves the list of available nodes for this context server instance.
+     * Returns cluster nodes known to this server instance.
      *
-     * @return a list of {@link ClusterNode}
+     * @return the available cluster nodes
      */
     @GET
     @Path("/")

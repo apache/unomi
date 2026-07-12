@@ -26,9 +26,9 @@ import java.util.Date;
  */
 public interface TimestampedItem {
     /**
-     * Retrieves the associated timestamp.
+     * Creation or last-modification timestamp for timestamped items.
      *
-     * @return the associated timestamp
+     * @return the timestamp
      */
     Date getTimeStamp();
 }

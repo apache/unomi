@@ -25,7 +25,7 @@ import java.util.*;
 
 /**
  * Manages task locks to coordinate execution in a cluster environment.
- * This class ensures that tasks which don't allow parallel execution
+ * Ensures that tasks which do not allow parallel execution
  * only run on a single node at a time.
  *
  * <p>Distributed Locking Strategy:</p>
