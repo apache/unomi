@@ -31,11 +31,22 @@ public class TermsAggregate extends BaseAggregate{
      */
     private int numPartitions = -1;
 
-
+    /**
+     * Creates a terms aggregation on the given field.
+     *
+     * @param field the field to aggregate on
+     */
     public TermsAggregate(String field) {
         super(field);
     }
 
+    /**
+     * Creates a partitioned terms aggregation.
+     *
+     * @param field the field to aggregate on
+     * @param partition the zero-based partition index
+     * @param numPartitions the total number of partitions
+     */
     public TermsAggregate(String field, int partition, int numPartitions) {
         super(field);
         this.partition = partition;
@@ -44,6 +55,8 @@ public class TermsAggregate extends BaseAggregate{
 
     /**
      * Returns the zero-based partition index, or {@code -1} if partitioning is disabled.
+     *
+     * @return the partition index
      */
     public int getPartition() {
         return partition;
@@ -51,6 +64,8 @@ public class TermsAggregate extends BaseAggregate{
 
     /**
      * Returns the total number of partitions, or {@code -1} if partitioning is disabled.
+     *
+     * @return the number of partitions
      */
     public int getNumPartitions() {
         return numPartitions;

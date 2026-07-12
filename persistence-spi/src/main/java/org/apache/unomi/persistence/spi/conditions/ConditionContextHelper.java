@@ -40,6 +40,9 @@ import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Resolves parameter references and script expressions in condition parameter values.
+ */
 public class ConditionContextHelper {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConditionContextHelper.class);
 
@@ -115,6 +118,14 @@ public class ConditionContextHelper {
         }
     }
 
+    /**
+     * Resolves parameter references and script expressions without type validation.
+     *
+     * @param condition the condition to resolve
+     * @param context context map for parameter resolution
+     * @param scriptExecutor executor for script expressions
+     * @return the resolved condition, or {@code null} on failure
+     */
     public static Condition getContextualCondition(Condition condition, Map<String, Object> context, ScriptExecutor scriptExecutor) {
         return getContextualCondition(condition, context, scriptExecutor, false, null, null);
     }
@@ -670,6 +681,12 @@ public class ConditionContextHelper {
         return false;
     }
 
+    /**
+     * Folds an object's string representation to ASCII.
+     *
+     * @param object the object to fold
+     * @return the folded string, or {@code null}
+     */
     public static String forceFoldToASCII(Object object) {
         if (object != null) {
             return foldToASCII(object.toString());
@@ -677,6 +694,12 @@ public class ConditionContextHelper {
         return null;
     }
 
+    /**
+     * Folds each element of a collection to ASCII strings.
+     *
+     * @param collection the collection to fold
+     * @return a new collection of folded strings, or {@code null}
+     */
     public static Collection<String> forceFoldToASCII(Collection<?> collection) {
         if (collection != null) {
             return collection.stream().map(ConditionContextHelper::forceFoldToASCII).collect(Collectors.toList());
@@ -684,6 +707,12 @@ public class ConditionContextHelper {
         return null;
     }
 
+    /**
+     * Folds each string in an array to ASCII in place.
+     *
+     * @param s the string array to fold
+     * @return the same array with folded elements
+     */
     public static String[] foldToASCII(String[] s) {
         if (s != null) {
             for (int i = 0; i < s.length; i++) {
@@ -693,6 +722,12 @@ public class ConditionContextHelper {
         return s;
     }
 
+    /**
+     * Folds a string to ASCII using the built-in character mapping.
+     *
+     * @param s the string to fold
+     * @return the folded string, or {@code null}
+     */
     public static String foldToASCII(String s) {
         if (s == null) {
             return null;
@@ -715,6 +750,13 @@ public class ConditionContextHelper {
         return result.toString();
     }
 
+    /**
+     * Folds string elements in a collection to ASCII.
+     *
+     * @param <T> the collection element type
+     * @param s the collection to fold
+     * @return a new collection with folded strings, or {@code null}
+     */
     public static <T> Collection<T> foldToASCII(Collection<T> s) {
         if (s != null) {
             return s.stream().map(o -> {

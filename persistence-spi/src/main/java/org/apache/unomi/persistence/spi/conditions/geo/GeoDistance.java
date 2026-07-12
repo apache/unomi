@@ -76,6 +76,12 @@ public enum GeoDistance {
     public static final double TO_RADIANS = Math.PI / 180D;
     public static final double TO_DEGREES = 180D / Math.PI;
 
+    /**
+     * Converts degrees to radians.
+     *
+     * @param degrees the angle in degrees
+     * @return the angle in radians
+     */
     public static double toRadians(double degrees) {
         return degrees * TO_RADIANS;
     }

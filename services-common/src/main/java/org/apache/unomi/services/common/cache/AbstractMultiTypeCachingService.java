@@ -109,6 +109,11 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     protected final Map<String, ScheduledTask> scheduledRefreshTasks = new ConcurrentHashMap<>();
 
     // Each service defines its supported types
+    /**
+     * Returns the cache type configurations supported by this service.
+     *
+     * @return supported cacheable type configurations
+     */
     protected abstract Set<CacheableTypeConfig<?>> getTypeConfigs();
 
     /**
@@ -216,12 +221,18 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         logger.debug("{} service shutdown.", getClass().getSimpleName());
     }
 
+    /**
+     * Registers cache types defined by {@link #getTypeConfigs()}.
+     */
     protected void initializeCaches() {
         for (CacheableTypeConfig<?> config : getTypeConfigs()) {
             cacheService.registerType(config);
         }
     }
 
+    /**
+     * Schedules periodic refresh tasks for cache types that require them.
+     */
     protected void initializeTimers() {
         // Initialize refresh timers for types that need it
         for (CacheableTypeConfig<?> config : getTypeConfigs()) {
@@ -231,6 +242,11 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         }
     }
 
+    /**
+     * Schedules a periodic refresh task for the given cache type.
+     *
+     * @param config the cache type configuration
+     */
     protected void scheduleTypeRefresh(CacheableTypeConfig<?> config) {
         String taskName = "cache-refresh-" + config.getType().getSimpleName();
         // Avoid rescheduling if a task with the same name already exists
@@ -266,6 +282,9 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         logger.debug("Scheduled cache refresh for type: {}", config.getType().getSimpleName());
     }
 
+    /**
+     * Cancels all scheduled cache refresh tasks.
+     */
     protected void shutdownTimers() {
         logger.info("Shutting down cache refresh timers...");
         for (Map.Entry<String, ScheduledTask> entry : scheduledRefreshTasks.entrySet()) {
@@ -283,6 +302,12 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         scheduledRefreshTasks.clear();
     }
 
+    /**
+     * Reloads cached items for a type from persistence.
+     *
+     * @param <T> the cached item type
+     * @param config the cache type configuration
+     */
     protected <T extends Serializable> void refreshTypeCache(CacheableTypeConfig<T> config) {
         if (!config.isRequiresRefresh()) {
             return;
@@ -409,6 +434,14 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         }
     }
 
+    /**
+     * Loads items for a tenant from persistence, including inherited system-tenant items when configured.
+     *
+     * @param <T> the cached item type
+     * @param tenantId the tenant identifier
+     * @param config the cache type configuration
+     * @return items loaded for the tenant
+     */
     @SuppressWarnings("unchecked")
     protected <T extends Serializable> List<T> loadItemsForTenant(String tenantId, CacheableTypeConfig<T> config) {
         List<T> items = new ArrayList<>();
@@ -484,6 +517,14 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         return items;
     }
 
+    /**
+     * Applies optional post-processing and stores items in the tenant cache.
+     *
+     * @param <T> the cached item type
+     * @param tenantId the tenant identifier
+     * @param items the items to cache
+     * @param config the cache type configuration
+     */
     protected <T extends Serializable> void processAndCacheItems(String tenantId, List<T> items, CacheableTypeConfig<T> config) {
         for (T item : items) {
             // Apply post-processor if defined
@@ -496,6 +537,11 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         }
     }
 
+    /**
+     * Returns all tenant identifiers, including the system tenant.
+     *
+     * @return tenant identifiers known to the service
+     */
     protected Set<String> getTenants() {
         Set<String> tenants = new HashSet<>();
         for (Tenant tenant : tenantService.getAllTenants()) {
@@ -505,6 +551,11 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         return tenants;
     }
 
+    /**
+     * Loads predefined JSON items from bundle resources for all configured types.
+     *
+     * @param bundleContext the bundle context used to discover predefined resources
+     */
     protected void loadPredefinedItems(BundleContext bundleContext) {
         if (bundleContext == null) return;
 
@@ -535,6 +586,13 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         pluginContributions.computeIfAbsent(bundleId, k -> new CopyOnWriteArrayList<>()).add(item);
     }
 
+    /**
+     * Loads predefined JSON items for one cache type from bundle resources.
+     *
+     * @param <T> the cached item type
+     * @param bundleContext the bundle context used to discover predefined resources
+     * @param config the cache type configuration
+     */
     @SuppressWarnings("unchecked")
     protected <T extends Serializable> void loadPredefinedItemsForType(BundleContext bundleContext, CacheableTypeConfig<T> config) {
         // Skip if this type doesn't have predefined items
@@ -765,6 +823,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
      *
      * @param <T> the type of items to retrieve
      * @param itemClass the class of the items to retrieve
+     * @param withInherited {@code true} to include inherited system-tenant items
      * @return a collection of all items of the specified type
      */
     protected <T extends Serializable> Collection<T> getAllItems(Class<T> itemClass, boolean withInherited) {
@@ -932,6 +991,10 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
      * The read lock is exclusive with refreshTypeCache()'s write lock, which prevents a
      * concurrent cache refresh from re-populating subclass state after removal.
      * Default implementation is a no-op.
+     *
+     * @param id the removed item identifier
+     * @param itemType the removed item type
+     * @param tenantId the tenant that owned the removed item
      */
     protected void onItemRemoved(String id, String itemType, String tenantId) {
     }

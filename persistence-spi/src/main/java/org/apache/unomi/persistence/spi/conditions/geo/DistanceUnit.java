@@ -62,34 +62,82 @@ public enum DistanceUnit {
         this.aliases = aliases;
     }
 
+    /**
+     * Returns the Earth's circumference in this unit.
+     *
+     * @return the circumference
+     */
     public double getEarthCircumference() {
         return EARTH_EQUATOR / metersPerUnit;
     }
 
+    /**
+     * Returns the Earth's radius in this unit.
+     *
+     * @return the radius
+     */
     public double getEarthRadius() {
         return EARTH_SEMI_MAJOR_AXIS / metersPerUnit;
     }
 
+    /**
+     * Returns the distance per degree of latitude in this unit.
+     *
+     * @return the distance per degree
+     */
     public double getDistancePerDegree() {
         return EARTH_EQUATOR / (360.0 * metersPerUnit);
     }
 
+    /**
+     * Converts a value in this unit to meters.
+     *
+     * @param value the value in this unit
+     * @return the value in meters
+     */
     public double toMeters(double value) {
         return value * metersPerUnit;
     }
 
+    /**
+     * Converts a value from meters to this unit.
+     *
+     * @param value the value in meters
+     * @return the value in this unit
+     */
     public double fromMeters(double value) {
         return value / metersPerUnit;
     }
 
+    /**
+     * Converts a value from this unit to another unit.
+     *
+     * @param value the value in this unit
+     * @param toUnit the target unit
+     * @return the converted value
+     */
     public double convert(double value, DistanceUnit toUnit) {
         return (value * metersPerUnit) / toUnit.metersPerUnit;
     }
 
+    /**
+     * Converts a value between two distance units.
+     *
+     * @param value the value to convert
+     * @param from the source unit
+     * @param to the target unit
+     * @return the converted value
+     */
     public static double convert(double value, DistanceUnit from, DistanceUnit to) {
         return (value * from.metersPerUnit) / to.metersPerUnit;
     }
 
+    /**
+     * Parses a distance unit from its string representation.
+     *
+     * @param unit the unit name or alias
+     * @return the matching distance unit
+     */
     public static DistanceUnit fromString(String unit) {
         if (unit == null || unit.isEmpty()) {
             throw new IllegalArgumentException("Unit string must not be null or empty");
@@ -101,6 +149,13 @@ public enum DistanceUnit {
         return distanceUnit;
     }
 
+    /**
+     * Parses the unit suffix from a distance string.
+     *
+     * @param distance the distance string (e.g. {@code 10km})
+     * @param defaultUnit the unit to use when no suffix is found
+     * @return the parsed distance unit
+     */
     public static DistanceUnit parseUnit(String distance, DistanceUnit defaultUnit) {
         for (DistanceUnit unit : values()) {
             for (String alias : unit.aliases) {
@@ -112,6 +167,13 @@ public enum DistanceUnit {
         return defaultUnit;
     }
 
+    /**
+     * Parses a distance string and returns the value in this unit.
+     *
+     * @param distance the distance string (e.g. {@code 10km})
+     * @param defaultUnit the unit to use when no suffix is found
+     * @return the distance in this unit
+     */
     public double parse(String distance, DistanceUnit defaultUnit) {
         Distance parsed = Distance.parseDistance(distance, defaultUnit);
         return convert(parsed.value, parsed.unit, this);
@@ -122,15 +184,30 @@ public enum DistanceUnit {
         return aliases[0];
     }
 
+    /**
+     * A distance value paired with its unit.
+     */
     public static class Distance {
         public final double value;
         public final DistanceUnit unit;
 
+        /**
+         * Creates a distance value.
+         *
+         * @param value the numeric distance
+         * @param unit the distance unit
+         */
         public Distance(double value, DistanceUnit unit) {
             this.value = value;
             this.unit = unit;
         }
 
+        /**
+         * Converts this distance to another unit.
+         *
+         * @param toUnit the target unit
+         * @return a new distance in the target unit
+         */
         public Distance convert(DistanceUnit toUnit) {
             double convertedValue = DistanceUnit.convert(value, unit, toUnit);
             return new Distance(convertedValue, toUnit);
@@ -154,10 +231,23 @@ public enum DistanceUnit {
             return value + " " + unit.toString();
         }
 
+        /**
+         * Parses a distance string using meters as the default unit.
+         *
+         * @param distance the distance string
+         * @return the parsed distance
+         */
         public static Distance parseDistance(String distance) {
             return parseDistance(distance, DistanceUnit.METERS);
         }
 
+        /**
+         * Parses a distance string with a default unit.
+         *
+         * @param distance the distance string
+         * @param defaultUnit the unit when no suffix is found
+         * @return the parsed distance
+         */
         public static Distance parseDistance(String distance, DistanceUnit defaultUnit) {
             for (DistanceUnit unit : values()) {
                 for (String alias : unit.aliases) {

@@ -37,11 +37,26 @@ import java.util.function.LongSupplier;
  */
 public class DateMathParser {
 
+    /**
+     * Returns {@code true} if the sequence is null or empty.
+     *
+     * @param cs the character sequence
+     * @return {@code true} when null or empty
+     */
     public static boolean isNullOrEmpty(CharSequence cs) {
         return cs == null || cs.length() == 0;
     }
 
+    /**
+     * Helpers for converting parsed temporal accessors to zoned date-times.
+     */
     public static class DateFormatters {
+        /**
+         * Converts a temporal accessor to a {@link ZonedDateTime} in UTC when no zone is present.
+         *
+         * @param accessor the parsed temporal accessor
+         * @return the zoned date-time
+         */
         public static ZonedDateTime from(TemporalAccessor accessor) {
             // Default to UTC if no zone or offset is present
             ZoneId zone = accessor.query(TemporalQueries.zone());
@@ -80,6 +95,12 @@ public class DateMathParser {
     private final JavaDateFormatter formatter;
     private final DateTimeFormatter roundUpFormatter;
 
+    /**
+     * Creates a parser with the given formatters.
+     *
+     * @param formatter the primary date formatter
+     * @param roundUpFormatter formatter used when rounding up date-only values
+     */
     public DateMathParser(JavaDateFormatter formatter, DateTimeFormatter roundUpFormatter) {
         this.formatter = formatter;
         this.roundUpFormatter = roundUpFormatter;
@@ -94,6 +115,15 @@ public class DateMathParser {
         return input;
     }
 
+    /**
+     * Parses a date math expression into an instant.
+     *
+     * @param text the date math expression
+     * @param now supplier for the current epoch millis (used for {@code now})
+     * @param roundUpProperty whether to round up when rounding
+     * @param timeZone the time zone for parsing
+     * @return the parsed instant
+     */
     public Instant parse(String text, LongSupplier now, boolean roundUpProperty, ZoneId timeZone) {
         text = text.trim();
 

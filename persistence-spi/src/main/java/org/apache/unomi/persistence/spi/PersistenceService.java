@@ -698,6 +698,7 @@ public interface PersistenceService {
      * Purges time based data in the context server up to the specified days number of existence.
      * (This only works for time based data stored in rolling over indices, it have no effect on other types)
      *
+     * @param <T> the item type
      * @param existsNumberOfDays the number of days
      * @param clazz the item type to be purged
      */

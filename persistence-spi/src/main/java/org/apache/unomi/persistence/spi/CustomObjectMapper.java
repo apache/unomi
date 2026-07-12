@@ -62,10 +62,18 @@ public class CustomObjectMapper extends ObjectMapper {
     private PropertyTypedObjectDeserializer propertyTypedObjectDeserializer;
     private ItemDeserializer itemDeserializer;
 
+    /**
+     * Creates a mapper with default deserializers.
+     */
     public CustomObjectMapper() {
         this(null);
     }
 
+    /**
+     * Creates a mapper with optional extra deserializers.
+     *
+     * @param deserializers additional deserializers to register
+     */
     public CustomObjectMapper(Map<Class, StdDeserializer<?>> deserializers) {
         super();
         super.registerModule(new JaxbAnnotationModule());
@@ -124,22 +132,49 @@ public class CustomObjectMapper extends ObjectMapper {
         super.registerModule(deserializerModule);
     }
 
+    /**
+     * Registers a built-in item type for deserialization.
+     *
+     * @param itemType the item type identifier
+     * @param clazz the item class
+     */
     public void registerBuiltInItemTypeClass(String itemType, Class clazz) {
         propertyTypedObjectDeserializer.registerMapping("itemType=" + itemType, clazz);
         itemDeserializer.registerMapping(itemType, clazz);
     }
 
+    /**
+     * Unregisters a built-in item type.
+     *
+     * @param itemType the item type identifier
+     */
     public void unregisterBuiltInItemTypeClass(String itemType) {
         propertyTypedObjectDeserializer.unregisterMapping("itemType=" + itemType);
         itemDeserializer.unregisterMapping(itemType);
     }
 
+    /**
+     * Returns the shared {@link ObjectMapper} instance.
+     *
+     * @return the singleton mapper
+     */
     public static ObjectMapper getObjectMapper() {
         return Holder.INSTANCE;
     }
 
+    /**
+     * Returns the shared {@link CustomObjectMapper} instance.
+     *
+     * @return the singleton custom mapper
+     */
     public static CustomObjectMapper getCustomInstance() { return Holder.INSTANCE; }
 
+    /**
+     * Returns the class registered for a built-in item type.
+     *
+     * @param itemType the item type identifier
+     * @return the item class, or {@code null}
+     */
     public Class<? extends Item> getBuiltinItemTypeClass(String itemType) {
         return builtinItemTypeClasses.get(itemType);
     }

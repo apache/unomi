@@ -27,6 +27,15 @@ import java.util.Map;
  */
 public interface ConditionEvaluator {
 
+    /**
+     * Evaluates a condition against an item.
+     *
+     * @param condition the condition to evaluate
+     * @param item the item to test
+     * @param context evaluation context
+     * @param dispatcher dispatcher for nested condition evaluation
+     * @return {@code true} if the condition matches
+     */
     boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher);
 
 }

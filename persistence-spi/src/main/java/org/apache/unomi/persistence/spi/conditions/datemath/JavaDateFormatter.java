@@ -40,6 +40,11 @@ public class JavaDateFormatter {
     private final boolean allowEpochMillis;
     private final boolean allowEpochSecond;
 
+    /**
+     * Creates a formatter supporting one or more pipe-separated patterns.
+     *
+     * @param formatString the format string (e.g. {@code strict_date_optional_time||epoch_millis})
+     */
     public JavaDateFormatter(String formatString) {
         this.formats = new ArrayList<>();
         boolean epochMillis = false;
@@ -72,6 +77,12 @@ public class JavaDateFormatter {
         return input;
     }
 
+    /**
+     * Parses an input string using the configured formats.
+     *
+     * @param input the date/time string
+     * @return the parsed temporal accessor
+     */
     public TemporalAccessor parse(String input) {
         // Numeric check
         if (isNumeric(input)) {
@@ -331,11 +342,21 @@ public class JavaDateFormatter {
         return new FormatDefinition(name, pattern, dtf);
     }
 
+    /**
+     * A named date format pattern with its compiled formatter.
+     */
     public static class FormatDefinition {
         final String name;
         final String pattern;
         final DateTimeFormatter formatter;
 
+        /**
+         * Creates a format definition.
+         *
+         * @param name the format name
+         * @param pattern the pattern string
+         * @param formatter the compiled formatter
+         */
         public FormatDefinition(String name, String pattern, DateTimeFormatter formatter) {
             this.name = name;
             this.pattern = pattern;

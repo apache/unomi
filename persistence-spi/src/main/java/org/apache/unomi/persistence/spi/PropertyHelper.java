@@ -29,13 +29,22 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Helper method for properties
+ * Utility methods for reading and writing nested item properties.
  */
 public class PropertyHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PropertyHelper.class.getName());
     private static DefaultResolver resolver = new DefaultResolver();
 
+    /**
+     * Sets a nested property on the target using the given strategy.
+     *
+     * @param target the object to update
+     * @param propertyName the property path (dot-separated for nesting)
+     * @param propertyValue the value to set
+     * @param setPropertyStrategy the merge strategy ({@code alwaysSet}, {@code setIfMissing}, etc.)
+     * @return {@code true} if the target was modified
+     */
     public static boolean setProperty(Object target, String propertyName, Object propertyValue, String setPropertyStrategy) {
         try {
             // Handle remove
@@ -113,6 +122,12 @@ public class PropertyHelper {
         return false;
     }
 
+    /**
+     * Converts a value to a list (wraps non-list values).
+     *
+     * @param value the value to convert
+     * @return a list containing the value(s)
+     */
     public static List<Object> convertToList(Object value) {
         List<Object> convertedList = new ArrayList<>();
         if (value != null && value instanceof List) {
@@ -123,6 +138,12 @@ public class PropertyHelper {
         return convertedList;
     }
 
+    /**
+     * Coerces a value to an {@link Integer}, or returns {@code null}.
+     *
+     * @param value the value to coerce
+     * @return the integer value, or {@code null}
+     */
     public static Integer getInteger(Object value) {
         if (value == null) {
             return null;
@@ -138,6 +159,12 @@ public class PropertyHelper {
         return null;
     }
 
+    /**
+     * Coerces a value to a {@link Long}, or returns {@code null}.
+     *
+     * @param value the value to coerce
+     * @return the long value, or {@code null}
+     */
     public static Long getLong(Object value) {
         if (value instanceof Number) {
             return ((Number) value).longValue();
@@ -151,6 +178,12 @@ public class PropertyHelper {
         return null;
     }
 
+    /**
+     * Coerces a value to a {@link Double}, or returns {@code null}.
+     *
+     * @param value the value to coerce
+     * @return the double value, or {@code null}
+     */
     public static Double getDouble(Object value) {
         if (value instanceof Number) {
             return ((Number) value).doubleValue();
@@ -164,6 +197,12 @@ public class PropertyHelper {
         return null;
     }
 
+    /**
+     * Coerces a value to a {@link Boolean}.
+     *
+     * @param setPropertyValueBoolean the value to coerce
+     * @return the boolean value
+     */
     public static Boolean getBooleanValue(Object setPropertyValueBoolean) {
 
         if (setPropertyValueBoolean instanceof Boolean) {
@@ -185,6 +224,13 @@ public class PropertyHelper {
 
     }
 
+    /**
+     * Coerces a property value according to a value type id.
+     *
+     * @param propertyValue the raw value
+     * @param valueTypeId the target type id ({@code boolean}, {@code integer}, etc.)
+     * @return the coerced value
+     */
     public static Object getValueByTypeId(Object propertyValue, String valueTypeId) {
         if (("boolean".equals(valueTypeId))) {
             return getBooleanValue(propertyValue);
@@ -195,6 +241,13 @@ public class PropertyHelper {
         }
     }
 
+    /**
+     * Compares two property values with type-aware coercion.
+     *
+     * @param propertyValue the expected value
+     * @param beanPropertyValue the actual value on the bean
+     * @return {@code true} if the values are equal
+     */
     public static boolean compareValues(Object propertyValue, Object beanPropertyValue) {
         if (propertyValue == null) {
             return true;
@@ -212,6 +265,12 @@ public class PropertyHelper {
         }
     }
 
+    /**
+     * Flattens a nested map into dot-separated keys.
+     *
+     * @param in the map to flatten
+     * @return the flattened map
+     */
     public static Map<String, Object> flatten(Map<String, Object> in) {
         return in.entrySet().stream()
                 .filter(entry -> entry.getValue() != null)

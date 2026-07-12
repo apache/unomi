@@ -45,6 +45,8 @@ public class DateRangeAggregate extends BaseAggregate{
 
     /**
      * Returns the configured date ranges.
+     *
+     * @return the date ranges
      */
     public List<DateRange> getDateRanges() {
         return dateRanges;
@@ -52,6 +54,8 @@ public class DateRangeAggregate extends BaseAggregate{
 
     /**
      * Sets the date ranges to use for bucketing.
+     *
+     * @param dateRanges the date ranges
      */
     public void setDateRanges(List<DateRange> dateRanges) {
         this.dateRanges = dateRanges;
@@ -59,6 +63,8 @@ public class DateRangeAggregate extends BaseAggregate{
 
     /**
      * Returns the date format, if any.
+     *
+     * @return the date format, or {@code null}
      */
     public String getFormat() {
         return format;
@@ -66,6 +72,8 @@ public class DateRangeAggregate extends BaseAggregate{
 
     /**
      * Sets the date format.
+     *
+     * @param format the date format
      */
     public void setFormat(String format) {
         this.format = format;
