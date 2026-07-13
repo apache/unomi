@@ -47,7 +47,9 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A filter that combines JAAS authentication with tenant API key authentication:
@@ -316,8 +318,13 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 Subject mergedSubject = new Subject();
                 mergedSubject.getPrincipals().addAll(jaasSubject.getPrincipals());
                 if (StringUtils.isNotBlank(defaultTenantId)) {
-                    mergedSubject.getPrincipals().add(new TenantPrincipal(defaultTenantId));
-                    executionContextManager.setCurrentContext(executionContextManager.createContext(defaultTenantId));
+                    mergedSubject.getPrincipals().addAll(securityService.createSubject(defaultTenantId, true).getPrincipals());
+                    Set<String> roles = securityService.extractRolesFromSubject(mergedSubject);
+                    Set<String> permissions = new HashSet<>();
+                    for (String role : roles) {
+                        permissions.addAll(securityService.getPermissionsForRole(role));
+                    }
+                    executionContextManager.setCurrentContext(new ExecutionContext(defaultTenantId, roles, permissions));
                 } else {
                     executionContextManager.setCurrentContext(ExecutionContext.systemContext());
                 }
