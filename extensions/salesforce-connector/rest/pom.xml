@@ -112,7 +112,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>buildnumber-maven-plugin</artifactId>
-                <version>1.4</version>
+                <version>3.3.0</version>
                 <configuration>
                     <format>{0}-{1,date,short}-{1,time,short}</format>
                     <items>
