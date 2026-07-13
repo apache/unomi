@@ -17,6 +17,9 @@
 package org.apache.unomi.services.impl.profiles;
 
 import org.apache.unomi.api.*;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
@@ -61,6 +64,7 @@ public class ProfileServiceImplTest {
     private KarafSecurityService securityService;
     private AuditServiceImpl auditService;
     private SchedulerService schedulerService;
+    private SegmentService segmentService;
 
     private static final String TENANT_1 = "tenant1";
     private static final String SYSTEM_TENANT = "system";
@@ -117,6 +121,7 @@ public class ProfileServiceImplTest {
                 .thenReturn(Collections.enumeration(Arrays.asList(personasUrl)));
 
         // Set up profile service
+        segmentService = mock(SegmentService.class);
         profileService = new ProfileServiceImpl();
         profileService.setBundleContext(bundleContext);
         profileService.setPersistenceService(persistenceService);
@@ -126,7 +131,7 @@ public class ProfileServiceImplTest {
         profileService.setCacheService(multiTypeCacheService);
         // Ensure tenantService is available for initial data loading
         profileService.setTenantService(tenantService);
-
+        profileService.setSegmentService(segmentService);
 
         profileService.postConstruct();
 
@@ -669,6 +674,28 @@ public class ProfileServiceImplTest {
         } catch (MalformedURLException e) {
             fail("Failed to create test URL: " + e.getMessage());
         }
+    }
+
+    @Test
+    public void testExportProfilesPropertiesToCsv_missingSegmentDefinition_usesSegmentId() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Profile profile = new Profile("profile-export-missing-segment");
+            profile.setProperty("firstName", "Jane");
+            profile.getSegments().add("missing-segment-id");
+            profileService.setForceRefreshOnSave(true);
+            profileService.save(profile);
+
+            when(segmentService.getSegmentDefinition("missing-segment-id")).thenReturn(null);
+
+            Query query = new Query();
+
+            String csv = profileService.exportProfilesPropertiesToCsv(query);
+
+            assertNotNull(csv, "CSV export should succeed when segment definition is missing");
+            assertTrue(csv.contains("missing-segment-id"),
+                "CSV should contain the raw segment id when segment metadata is unavailable");
+            return null;
+        });
     }
 
 }

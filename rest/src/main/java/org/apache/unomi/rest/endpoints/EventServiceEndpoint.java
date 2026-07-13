@@ -26,6 +26,7 @@ import org.osgi.service.component.annotations.Reference;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.Set;
 
 /**
@@ -72,8 +73,12 @@ public class EventServiceEndpoint {
      */
     @GET
     @Path("/{id}")
-    public Event getEvents(@PathParam("id") final String id) {
-        return eventService.getEvent(id);
+    public Response getEvents(@PathParam("id") final String id) {
+        Event event = eventService.getEvent(id);
+        if (event == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        return Response.ok(event).build();
     }
 
     /**

@@ -378,6 +378,7 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="contextManager" ref="executionContextManager"/>
     </bean>
 
     <bean id="profileServiceImpl" class="org.apache.unomi.services.impl.profiles.ProfileServiceImpl"

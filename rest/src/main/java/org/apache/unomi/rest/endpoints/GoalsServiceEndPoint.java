@@ -123,6 +123,9 @@ public class GoalsServiceEndPoint {
     @GET
     @Path("/{goalID}/report")
     public GoalReport getGoalReport(@PathParam("goalID") String goalId) {
+        if (goalsService.getGoal(goalId) == null) {
+            throw new NotFoundException("Goal not found: " + goalId);
+        }
         return goalsService.getGoalReport(goalId);
     }
 
@@ -136,6 +139,9 @@ public class GoalsServiceEndPoint {
     @POST
     @Path("/{goalID}/report")
     public GoalReport getGoalReport(@PathParam("goalID") String goalId, AggregateQuery query) {
+        if (goalsService.getGoal(goalId) == null) {
+            throw new NotFoundException("Goal not found: " + goalId);
+        }
         return goalsService.getGoalReport(goalId, query);
     }
 }

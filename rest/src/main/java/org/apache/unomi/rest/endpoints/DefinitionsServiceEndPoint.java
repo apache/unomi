@@ -281,6 +281,9 @@ public class DefinitionsServiceEndPoint {
     @Path("/values/{valueTypeId}")
     public RESTValueType getValueType(@PathParam("valueTypeId") String id, @HeaderParam("Accept-Language") String language) {
         ValueType valueType = definitionsService.getValueType(id);
+        if (valueType == null) {
+            throw new NotFoundException("Value type not found: " + id);
+        }
         return localizationHelper.generateValueType(valueType, language);
     }
 

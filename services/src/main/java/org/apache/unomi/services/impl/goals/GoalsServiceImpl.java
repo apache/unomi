@@ -518,6 +518,9 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
         condition.setParameter("subConditions", list);
 
         Goal g = getGoal(goalId);
+        if (g == null) {
+            return null;
+        }
 
         Condition goalTargetCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
         goalTargetCondition.setParameter("propertyName",  "systemProperties.goals." + goalId+ "TargetReached");

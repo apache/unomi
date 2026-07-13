@@ -541,7 +541,11 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
             List<String> segmentNames = new ArrayList<String>();
             for (String segment : profile.getSegments()) {
                 Segment s = segmentService.getSegmentDefinition(segment);
-                segmentNames.add(csvEncode(s.getMetadata().getName()));
+                if (s == null || s.getMetadata() == null) {
+                    segmentNames.add(csvEncode(segment));
+                } else {
+                    segmentNames.add(csvEncode(s.getMetadata().getName()));
+                }
             }
             sb.append(csvEncode(StringUtils.join(segmentNames, ",")));
             sb.append('\n');

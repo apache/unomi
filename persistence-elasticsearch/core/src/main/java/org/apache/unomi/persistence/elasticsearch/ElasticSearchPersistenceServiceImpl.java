@@ -1754,7 +1754,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             Map<String, Object> subSubMappings = (Map<String, Object>) subMappings.computeIfAbsent("properties", k -> new HashMap<>());
 
             if (subSubMappings.containsKey(property.getItemId())) {
-                LOGGER.warn("Mapping already exists for type {} and property {}", itemType, property.getItemId());
+                LOGGER.debug("Mapping already exists for type {} and property {}", itemType, property.getItemId());
                 return;
             }
 
