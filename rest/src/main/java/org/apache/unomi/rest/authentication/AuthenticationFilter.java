@@ -25,7 +25,6 @@ import org.apache.karaf.jaas.boot.principal.RolePrincipal;
 import org.apache.karaf.jaas.boot.principal.UserPrincipal;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
-import org.apache.unomi.api.security.TenantPrincipal;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.ApiKey;
@@ -312,8 +311,17 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 }
                 Subject jaasSubject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
 
-                // Build a merged subject that combines the JAAS principals with a TenantPrincipal
-                // for the default tenant, so that resolveTenantId() can find it downstream.
+                // Private endpoints in V2 compatibility mode require system administrator
+                // authentication (like V2) — a JAAS login alone isn't enough, since any Karaf
+                // user (not just admins) can authenticate against the realm.
+                if (!securityService.extractRolesFromSubject(jaasSubject).contains(UnomiRoles.ADMINISTRATOR)) {
+                    logger.debug("V2 compatibility mode: authenticated user lacks administrator role, denying access to private endpoint");
+                    unauthorized(requestContext);
+                    return;
+                }
+
+                // Build a merged subject that combines the JAAS principals with tenant admin
+                // principals for the default tenant, so that resolveTenantId() can find it downstream.
                 String defaultTenantId = restAuthenticationConfig.getV2CompatibilityDefaultTenantId();
                 Subject mergedSubject = new Subject();
                 mergedSubject.getPrincipals().addAll(jaasSubject.getPrincipals());
