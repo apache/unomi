@@ -55,9 +55,13 @@ public class EventServiceEndpoint {
 
     /**
      * Searches events using the given query.
+     * The query may include a condition tree ({@code type} + {@code parameterValues}), offset, and limit.
      *
      * @param query the search query, including optional condition tree, offset, and limit
      * @return a paged list of matching events
+     * @api.status 200 org.apache.unomi.api.PartialList Events page (list items are Event).
+     * @api.status 400 empty Invalid or unreadable query body.
+     * @api.example {"list":[{"itemId":"evt-1","itemType":"event","eventType":"view","sessionId":"session-1","profileId":"profile-1","scope":"mysite","timeStamp":"2024-06-15T10:30:00.000Z","properties":{"pageUrl":"https://example.com/"},"persistent":true}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @POST
     @Path("/search")
@@ -69,7 +73,10 @@ public class EventServiceEndpoint {
      * Returns the event with the given ID.
      *
      * @param id the event identifier
-     * @return the event, or {@code null} when it does not exist
+     * @return the event, or HTTP 404 when it does not exist
+     * @api.status 200 org.apache.unomi.api.Event Event found.
+     * @api.status 404 empty Event not found.
+     * @api.example {"itemId":"evt-1","itemType":"event","eventType":"view","sessionId":"session-1","profileId":"profile-1","scope":"mysite","timeStamp":"2024-06-15T10:30:00.000Z","properties":{"pageUrl":"https://example.com/"},"persistent":true}
      */
     @GET
     @Path("/{id}")
@@ -85,6 +92,8 @@ public class EventServiceEndpoint {
      * Deletes an event by id.
      *
      * @param id the identifier for the event to delete
+     * @api.status 204 empty Event deleted.
+     * @api.example {"itemId":"evt-1","itemType":"event","eventType":"view","sessionId":"session-1","profileId":"profile-42","scope":"mysite","timeStamp":"2024-06-15T10:30:00.000Z","properties":{"pageUrl":"https://example.com/"},"persistent":true}
      */
     @DELETE
     @Path("/{id}")
@@ -96,6 +105,8 @@ public class EventServiceEndpoint {
      * Returns event type identifiers known to the server.
      *
      * @return the processed event type identifiers
+     * @api.status 200 array empty Event type ids known to the server (may be empty).
+     * @api.example ["view","login","purchase"]
      */
     @GET
     @Path("types")

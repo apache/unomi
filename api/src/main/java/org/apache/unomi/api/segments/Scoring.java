@@ -42,6 +42,10 @@ public class Scoring extends MetadataItem implements YamlConvertible {
      */
     public static final String ITEM_TYPE = "scoring";
     private static final long serialVersionUID = 6351058906259967559L;
+    /**
+     * Scoring elements that define conditions and point values.
+     * @api.example [{"condition":{"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}},"value":10}]
+     */
     private List<ScoringElement> elements;
 
     /**
@@ -61,8 +65,10 @@ public class Scoring extends MetadataItem implements YamlConvertible {
 
     /**
      * Scoring elements that define conditions and point values.
+     * Each element pairs a {@code condition} ({@code type} + {@code parameterValues}) with a point {@code value}.
      *
      * @return the scoring elements
+     * @api.example [{"condition":{"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}},"value":10}]
      */
     public List<ScoringElement> getElements() {
         return elements;

@@ -44,59 +44,57 @@ public class ApiKey extends Item {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
-     * Enum defining the types of API keys.
+     * Scope of an API key. Serialized as {@code PUBLIC} or {@code PRIVATE}.
      */
     public enum ApiKeyType {
-        /**
-         * Public API key for context.json, event collector and other public-facing endpoints
-         */
+        /** Public key for context.json, event collector, and other public-facing endpoints. */
         PUBLIC,
-        
-        /**
-         * Private API key for protected endpoints including login and updateProperties
-         */
+
+        /** Private key for protected endpoints (login, updateProperties, admin-style operations). */
         PRIVATE
     }
 
     /**
      * SHA-256 hex digest of the API key ({@link org.apache.unomi.api.security.SecretHashService#hash(String)}).
-     * The plaintext key is never persisted; it is only returned once at creation time.
+     * The plaintext key is never persisted; it is only returned once at creation time via {@link ApiKeyCreationResult}.
      */
     private String keyHash;
 
     /**
-     * A display-safe, masked representation of the key (e.g. "unomi_v1_****ab12"),
-     * suitable for showing in UIs and logs without exposing the secret.
+     * Display-safe masked key (for example {@code unomi_v1_****ab12}) for UIs and logs.
+     * @api.example unomi_v1_****ab12
      */
     private String maskedKey;
 
     /**
-     * The type of API key (public or private).
+     * Key scope: {@code PUBLIC} or {@code PRIVATE}.
+     * @api.example PUBLIC
      */
     private ApiKeyType keyType;
 
     /**
-     * The name or identifier of the API key.
+     * Optional operator label for the key.
      */
     private String name;
 
     /**
-     * A description of the API key's purpose or usage.
+     * Optional description of the key's purpose.
      */
     private String description;
 
     /**
-     * The date when the API key was created.
+     * When the key was created (ISO-8601 date-time in JSON).
      */
     private Date creationDate;
 
     /**
-     * The date when the API key expires.
+     * Expiration instant, or omitted/null when the key does not expire.
      */
     private Date expirationDate;
 
     /**
-     * Whether the API key has been revoked.
+     * {@code true} if the key has been revoked and must not authenticate.
+     * @api.example false
      */
     private boolean revoked;
 

@@ -73,6 +73,8 @@ public class ClientEndpoint {
      * Handles CORS preflight for the client endpoint.
      *
      * @return an empty CORS preflight response
+     * @api.status 204 empty CORS preflight accepted.
+     * @api.example {}
      */
     @OPTIONS
     @Path("/client/{operation}/{param}")
@@ -82,11 +84,18 @@ public class ClientEndpoint {
 
     /**
      * Exports profile data for the requested client operation.
+     * <p>
+     * Currently supports {@code myprofile} with a download format in {@code param}
+     * (must appear in the {@code allowedProfileDownloadFormats} configuration).
+     * Requires a profile id cookie; CSV layout can be vertical via the {@code vertical} query parameter.
      *
-     * @param operation the export operation
-     * @param param the operation parameter
-     * @return the export response
-     * @throws JsonProcessingException if response serialization fails
+     * @param operation the export operation (currently {@code myprofile})
+     * @param param the download format ({@code json}, {@code yaml}, {@code csv}, or {@code text})
+     * @return the export response with attachment headers
+     * @api.status 200 empty Profile export payload (JSON, YAML, CSV, or plain text depending on {@code param}).
+     * @api.status 404 empty Unknown operation, format, or missing profile cookie/profile.
+     * @api.status 500 empty {@code param} is not in {@code allowedProfileDownloadFormats}.
+     * @api.example {"itemId":"profile-42","itemType":"profile","properties":{"firstName":"Ada","email":"ada@example.com"},"segments":["vip"]}
      */
     @GET
     @Path("/client/{operation}/{param}")

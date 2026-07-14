@@ -46,6 +46,9 @@ public class ConditionType extends MetadataItem implements PluginType, YamlConve
     private String queryBuilder;
     private Condition parentCondition;
     private List<Parameter> parameters = new ArrayList<Parameter>();
+    /**
+     * Bundle/plugin id that contributed this condition type definition.
+     */
     private long pluginId;
 
     /**

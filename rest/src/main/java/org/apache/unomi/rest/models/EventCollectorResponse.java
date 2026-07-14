@@ -27,24 +27,15 @@ import java.io.Serializable;
  */
 public class EventCollectorResponse implements Serializable {
     /**
-     * A bitwise combination of EventService flags indicating what was updated during event processing.
-     * The value is composed of the following flags:
-     * <ul>
-     *   <li>0 = NO_CHANGE - No changes occurred</li>
-     *   <li>1 = ERROR - An error occurred during processing</li>
-     *   <li>2 = SESSION_UPDATED - The associated session was updated</li>
-     *   <li>4 = PROFILE_UPDATED - The associated profile was updated</li>
-     * </ul>
-     * Multiple flags can be combined, for example:
-     * <ul>
-     *   <li>6 = SESSION_UPDATED (2) + PROFILE_UPDATED (4) - Both session and profile were updated</li>
-     * </ul>
+     * Bitwise change flags from event processing:
+     * {@code 0}=NO_CHANGE, {@code 1}=ERROR, {@code 2}=SESSION_UPDATED, {@code 4}=PROFILE_UPDATED
+     * (combine with OR, e.g. {@code 6}=session+profile updated).
+     * @api.example 6
      */
     private int updated;
 
     /**
-     * Contains tracing information about the request processing.
-     * This can be used for debugging and monitoring purposes.
+     * Present only when {@code explain=true} and the caller is an administrator / tenant administrator.
      */
     private TraceNode requestTracing;
 

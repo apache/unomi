@@ -34,32 +34,87 @@ public class ContextResponse implements Serializable {
 
     private static final long serialVersionUID = -5638595408986826332L;
 
+    /**
+     * Resolved profile id for this evaluation.
+     * @api.example profile-1
+     */
     private String profileId;
 
+    /**
+     * Resolved session id for this evaluation (may be omitted when no session exists).
+     * @api.example session-1
+     */
     private String sessionId;
 
+    /**
+     * Profile properties subset requested via {@link ContextRequest#getRequiredProfileProperties()}.
+     * @api.example {"firstName":"Ada"}
+     */
     private Map<String, Object> profileProperties;
 
+    /**
+     * Session properties subset requested via {@link ContextRequest#getRequiredSessionProperties()}.
+     * @api.example {"utm_source":"newsletter"}
+     */
     private Map<String, Object> sessionProperties;
 
+    /**
+     * Segment ids for the profile when {@link ContextRequest#isRequireSegments()} was true.
+     * @api.example ["vip","returning"]
+     */
     private Set<String> profileSegments;
 
+    /**
+     * Scoring plan id → score when {@link ContextRequest#isRequireScores()} was true.
+     * @api.example {"engagement":12}
+     */
     private Map<String,Integer> profileScores;
 
+    /**
+     * Filter id → whether the profile matched that content filter.
+     * @api.example {"hero-banner":true}
+     */
     private Map<String, Boolean> filteringResults;
 
+    /**
+     * Number of events from the request that were processed.
+     * @api.example 1
+     */
     private int processedEvents;
 
+    /**
+     * Legacy personalization id → selected content ids.
+     * Prefer {@link #personalizationResults} since 2.1.0.
+     * @api.example {"hero":["variant-a"]}
+     */
     private Map<String, List<String>> personalizations;
 
+    /**
+     * Personalization id → resolution result (content ids, scores, filters).
+     * Prefer this over the legacy {@link #personalizations} map.
+     */
     private Map<String, PersonalizationResult> personalizationResults;
 
+    /**
+     * Tracked conditions clients should watch for (for example form field mapping rules).
+     */
     private Set<Condition> trackedConditions;
 
+    /**
+     * {@code true} when privacy requires anonymous browsing for this profile.
+     * @api.example false
+     */
     private boolean anonymousBrowsing;
 
+    /**
+     * Consent map for the profile, keyed by consent identifier.
+     * @api.example {"newsletter":{"scope":"mysite","typeIdentifier":"newsletter","status":"GRANTED"}}
+     */
     private Map<String, Consent> consents = new LinkedHashMap<>();
 
+    /**
+     * Present only when {@code explain=true} and the caller is an administrator / tenant administrator.
+     */
     private TraceNode requestTracing;
 
     /**

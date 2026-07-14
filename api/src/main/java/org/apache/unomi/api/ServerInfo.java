@@ -30,8 +30,11 @@ import java.util.Map;
  */
 public class ServerInfo {
 
+    /** @api.example unomi */
     private String serverIdentifier;
+    /** @api.example 3.1.0-SNAPSHOT */
     private String serverVersion;
+    /** @api.example 1 */
     private String serverBuildNumber;
     private Date serverBuildDate;
     private String serverTimestamp;
@@ -52,6 +55,7 @@ public class ServerInfo {
      * Unique identifier for this server instance.
      *
      * @return server identifier
+     * @api.example unomi
      */
     public String getServerIdentifier() {
         return serverIdentifier;
@@ -70,6 +74,7 @@ public class ServerInfo {
      * Running Unomi version string.
      *
      * @return server version
+     * @api.example 3.1.0-SNAPSHOT
      */
     public String getServerVersion() {
         return serverVersion;

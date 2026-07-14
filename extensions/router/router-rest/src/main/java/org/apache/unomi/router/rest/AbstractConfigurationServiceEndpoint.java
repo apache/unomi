@@ -23,16 +23,19 @@ import javax.ws.rs.core.MediaType;
 import java.util.List;
 
 /**
- * Created by amidani on 26/06/2017.
+ * Abstract JAX-RS base for router import/export configuration CRUD.
+ *
+ * @param <T> configuration item type
  */
 public abstract class AbstractConfigurationServiceEndpoint<T> {
 
     protected ImportExportConfigurationService<T> configurationService;
 
     /**
-     * Retrieves all the configurations.
+     * Returns all router configurations of this type.
      *
-     * @return all the configurations.
+     * @return all configurations (may be empty)
+     * @api.status 200 array empty Configuration list (may be empty).
      */
     @GET
     @Path("/")
@@ -42,6 +45,13 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
         return this.configurationService.getAll();
     }
 
+    /**
+     * Creates or updates a router configuration.
+     *
+     * @param configuration the configuration to save
+     * @return the persisted configuration
+     * @api.status 200 empty Configuration saved.
+     */
     @POST
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
@@ -49,10 +59,12 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
     public abstract T saveConfiguration(T configuration);
 
     /**
-     * Retrieves a configuration by id.
+     * Returns the configuration with the given id.
+     * When it does not exist the endpoint returns {@code null} (HTTP 200 with empty body).
      *
-     * @param configId config id
-     * @return the configuration that matches the given id.
+     * @param configId the configuration identifier
+     * @return the configuration, or {@code null} when missing
+     * @api.status 200 empty Configuration found, or empty body when missing.
      */
     @GET
     @Path("/{configId}")
@@ -63,9 +75,10 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
     }
 
     /**
-     * Delete a configuration by id.
+     * Deletes the configuration with the given id.
      *
-     * @param configId config id
+     * @param configId the configuration identifier
+     * @api.status 204 empty Configuration deleted.
      */
     @DELETE
     @Path("/{configId}")

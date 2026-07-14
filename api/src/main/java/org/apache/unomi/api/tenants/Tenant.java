@@ -35,54 +35,59 @@ public class Tenant extends Item {
     public static final String ITEM_TYPE = "tenant";
 
     /**
-     * The display name of the tenant.
+     * Display name of the tenant (human-readable label).
+     * @api.example Acme Corp
      */
     private String name;
 
     /**
-     * A description of the tenant's purpose or usage.
+     * Free-text description of the tenant's purpose or usage.
+     * @api.example Production tenant for Acme
      */
     private String description;
 
     /**
-     * The current operational status of the tenant.
+     * Lifecycle status. One of {@link TenantStatus}: {@code ACTIVE}, {@code DISABLED},
+     * {@code SUSPENDED}, {@code PENDING_ACTIVATION}, {@code MAINTENANCE}. New tenants are created as {@code ACTIVE}.
+     * @api.example ACTIVE
      */
     private TenantStatus status;
 
     /**
-     * The date when the tenant was created.
+     * When the tenant was created (ISO-8601 date-time in JSON).
      */
     private Date creationDate;
 
     /**
-     * The date when the tenant was last modified.
+     * When the tenant was last modified (ISO-8601 date-time in JSON).
      */
     private Date lastModificationDate;
 
 
     /**
-     * The list of all API keys (both active and historical) associated with the tenant.
-     * This list maintains a history of all API keys that have been generated for the tenant,
-     * including both public and private keys, for auditing purposes.
+     * API keys associated with the tenant (active and historical). Each entry is an {@link ApiKey}
+     * with hashed material ({@code keyHash}), display {@code maskedKey}, {@code keyType}
+     * ({@code PUBLIC} or {@code PRIVATE}), dates, and {@code revoked}. The plaintext secret is never stored here.
      */
     private List<ApiKey> apiKeys;
 
     /**
-     * Additional custom properties for the tenant.
+     * Open map of custom tenant properties. Free-form keys/values; often used for operator metadata
+     * (for example display {@code name}/{@code description} at create time via {@code TenantRequest}).
+     * @api.example {"region":"eu-west","tier":"premium"}
      */
     private Map<String, Object> properties;
 
     /**
-     * The set of event types that are restricted for this tenant.
-     * Events of these types will require IP validation before being processed.
-     * This is used to control which event types require additional validation
-     * at the tenant level.
+     * Event type names that require IP validation before processing for this tenant
+     * (for example {@code login} or custom event type identifiers). Empty means no extra restriction.
+     * @api.example ["login","updateProperties"]
      */
     private Set<String> restrictedEventTypes = new HashSet<>();
 
     /**
-     * The set of IP addresses or CIDR ranges that are authorized to make requests
-     * for this tenant. Requests from IP addresses not in this set will be rejected.
+     * Authorized client IP addresses or CIDR ranges. When non-empty, requests from other addresses are rejected.
+     * @api.example ["10.0.0.0/8","192.168.1.10"]
      */
     private Set<String> authorizedIPs = new HashSet<>();
 

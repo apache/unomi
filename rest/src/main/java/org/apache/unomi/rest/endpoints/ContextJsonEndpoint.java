@@ -53,6 +53,8 @@ import java.util.stream.Collectors;
 
 /**
  * REST endpoint for context.js and context.json requests.
+ * Public CDP entry points used by client SDKs to resolve profile/session context, ingest
+ * events, evaluate personalization filters, and return consented profile data.
  */
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
@@ -90,6 +92,8 @@ public class ContextJsonEndpoint {
      * Handles CORS preflight for context.js.
      *
      * @return an empty CORS preflight response
+     * @api.status 204 empty CORS preflight (no body).
+     * @api.example {}
      */
     @OPTIONS
     @Path("/context.js")
@@ -101,6 +105,8 @@ public class ContextJsonEndpoint {
      * Handles CORS preflight for context.json.
      *
      * @return an empty CORS preflight response
+     * @api.status 204 empty CORS preflight (no body).
+     * @api.example {}
      */
     @OPTIONS
     @Path("/context.json")
@@ -110,17 +116,23 @@ public class ContextJsonEndpoint {
 
     /**
      * Processes a context.js POST request.
+     * Same evaluation as {@code /context.json}, but returns {@code text/plain} JavaScript that
+     * assigns the {@link ContextResponse} JSON to {@code window.digitalData} / {@code cxs}.
      *
      * @param contextRequest the context request payload
-     * @param personaId optional persona identifier
-     * @param sessionId optional session identifier
-     * @param timestampAsLong optional request timestamp
-     * @param invalidateProfile whether to invalidate the profile
-     * @param invalidateSession whether to invalidate the session
-     * @param explain whether to include tracing details
+     * @param personaId optional persona identifier used to load a persona instead of a live profile
+     * @param sessionId optional session identifier (prefer body {@code sessionId} over the query string)
+     * @param timestampAsLong optional request time as epoch millis; defaults to server now
+     * @param invalidateProfile whether to drop and recreate the profile cookie/state
+     * @param invalidateSession whether to drop and recreate the session
+     * @param explain when {@code true}, include request tracing (requires administrator or tenant administrator)
      * @param securityContext the security context
-     * @return the context response wrapped as JavaScript
+     * @return JavaScript text wrapping a {@link ContextResponse}
      * @throws JsonProcessingException if response serialization fails
+     * @api.status 200 empty JavaScript that sets {@code cxs} from a ContextResponse JSON object.
+     * @api.status 400 empty Invalid personaId/sessionId schema or invalid request payload.
+     * @api.status 403 empty {@code explain=true} without administrator / tenant administrator role.
+     * @api.example window.digitalData=window.digitalData||{};var cxs={"profileId":"profile-42","sessionId":"session-1","profileProperties":{"firstName":"Ada"},"processedEvents":0,"anonymousBrowsing":false,"consents":{}};
      */
     @POST
     @Produces(MediaType.TEXT_PLAIN)
@@ -138,17 +150,23 @@ public class ContextJsonEndpoint {
 
     /**
      * Processes a context.js GET request.
+     * The {@link ContextRequest} is supplied as the {@code payload} query parameter (JSON).
+     * Prefer POST for production traffic; GET exists for legacy script tags.
      *
-     * @param contextRequest the context request payload
-     * @param personaId optional persona identifier
-     * @param sessionId optional session identifier
-     * @param timestampAsLong optional request timestamp
-     * @param invalidateProfile whether to invalidate the profile
-     * @param invalidateSession whether to invalidate the session
-     * @param explain whether to include tracing details
+     * @param contextRequest context request decoded from the {@code payload} query parameter
+     * @param personaId optional persona identifier used to load a persona instead of a live profile
+     * @param sessionId optional session identifier (prefer payload {@code sessionId} over the query string)
+     * @param timestampAsLong optional request time as epoch millis; defaults to server now
+     * @param invalidateProfile whether to drop and recreate the profile cookie/state
+     * @param invalidateSession whether to drop and recreate the session
+     * @param explain when {@code true}, include request tracing (requires administrator or tenant administrator)
      * @param securityContext the security context
-     * @return the context response wrapped as JavaScript
+     * @return JavaScript text wrapping a {@link ContextResponse}
      * @throws JsonProcessingException if response serialization fails
+     * @api.status 200 empty JavaScript that sets {@code cxs} from a ContextResponse JSON object.
+     * @api.status 400 empty Invalid personaId/sessionId schema or invalid payload.
+     * @api.status 403 empty {@code explain=true} without administrator / tenant administrator role.
+     * @api.example window.digitalData=window.digitalData||{};var cxs={"profileId":"profile-42","sessionId":"session-1","profileProperties":{"firstName":"Ada"},"processedEvents":0,"anonymousBrowsing":false,"consents":{}};
      */
     @GET
     @Produces(MediaType.TEXT_PLAIN)
@@ -172,16 +190,22 @@ public class ContextJsonEndpoint {
 
     /**
      * Processes a context.json GET request.
+     * The {@link ContextRequest} is supplied as the {@code payload} query parameter (JSON).
+     * Prefer POST for production traffic.
      *
-     * @param contextRequest the context request payload
-     * @param personaId optional persona identifier
-     * @param sessionId optional session identifier
-     * @param timestampAsLong optional request timestamp
-     * @param invalidateProfile whether to invalidate the profile
-     * @param invalidateSession whether to invalidate the session
-     * @param explain whether to include tracing details
+     * @param contextRequest context request decoded from the {@code payload} query parameter
+     * @param personaId optional persona identifier used to load a persona instead of a live profile
+     * @param sessionId optional session identifier (prefer payload {@code sessionId} over the query string)
+     * @param timestampAsLong optional request time as epoch millis; defaults to server now
+     * @param invalidateProfile whether to drop and recreate the profile cookie/state
+     * @param invalidateSession whether to drop and recreate the session
+     * @param explain when {@code true}, include {@code requestTracing} (requires administrator or tenant administrator)
      * @param securityContext the security context
      * @return the context response
+     * @api.status 200 org.apache.unomi.api.ContextResponse Context evaluation succeeded.
+     * @api.status 400 empty Invalid personaId/sessionId schema or invalid payload.
+     * @api.status 403 empty {@code explain=true} without administrator / tenant administrator role.
+     * @api.example {"profileId":"profile-1","sessionId":"session-1","profileProperties":{"firstName":"Ada"},"processedEvents":0,"anonymousBrowsing":false,"consents":{}}
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
@@ -198,17 +222,23 @@ public class ContextJsonEndpoint {
     }
 
     /**
-     * Processes a context.json POST request.
+     * Processes a context.json POST request (preferred public CDP entry point).
+     * Evaluates optional events, content filters, and personalizations; returns profile/session
+     * ids plus any requested properties, segments, scores, consents, and tracked conditions.
      *
-     * @param contextRequest the context request payload
-     * @param personaId optional persona identifier
-     * @param sessionId optional session identifier
-     * @param timestampAsLong optional request timestamp
-     * @param invalidateProfile whether to invalidate the profile
-     * @param invalidateSession whether to invalidate the session
-     * @param explain whether to include tracing details
+     * @param contextRequest the JSON context request body
+     * @param personaId optional persona identifier used to load a persona instead of a live profile
+     * @param sessionId optional session identifier (prefer body {@code sessionId} over the query string)
+     * @param timestampAsLong optional request time as epoch millis; defaults to server now
+     * @param invalidateProfile whether to drop and recreate the profile cookie/state
+     * @param invalidateSession whether to drop and recreate the session
+     * @param explain when {@code true}, include {@code requestTracing} (requires administrator or tenant administrator)
      * @param securityContext the security context
      * @return the context response
+     * @api.status 200 org.apache.unomi.api.ContextResponse Context evaluation succeeded.
+     * @api.status 400 empty Invalid personaId/sessionId schema or invalid request body.
+     * @api.status 403 empty {@code explain=true} without administrator / tenant administrator role.
+     * @api.example {"profileId":"profile-1","sessionId":"session-1","profileProperties":{"firstName":"Ada"},"profileSegments":["vip"],"processedEvents":1,"anonymousBrowsing":false,"consents":{}}
      */
     @POST
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")

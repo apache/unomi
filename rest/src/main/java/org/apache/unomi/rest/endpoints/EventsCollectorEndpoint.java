@@ -43,7 +43,9 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * REST endpoint for collecting client events.
+ * REST endpoint for collecting client events ({@code /eventcollector}).
+ * Accepts a batch of {@link org.apache.unomi.api.Event} objects, attaches them to a profile/session,
+ * runs rules, and returns a bitwise {@code updated} change mask.
  */
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @Consumes(MediaType.APPLICATION_JSON)
@@ -70,6 +72,8 @@ public class EventsCollectorEndpoint {
      * Handles CORS preflight for the event collector endpoint.
      *
      * @return an empty CORS preflight response
+     * @api.status 204 empty CORS preflight (no body).
+     * @api.example {}
      */
     @OPTIONS
     @Path("/eventcollector")
@@ -79,12 +83,18 @@ public class EventsCollectorEndpoint {
 
     /**
      * Collects events from a GET request.
+     * The {@link EventsCollectorRequest} is supplied as the {@code payload} query parameter (JSON).
+     * Prefer POST for production traffic.
      *
-     * @param eventsCollectorRequest the events collector request
-     * @param timestampAsString optional request timestamp
-     * @param explain whether to include tracing details
+     * @param eventsCollectorRequest collector request decoded from the {@code payload} query parameter
+     * @param timestampAsString optional request time as epoch millis; defaults to server now
+     * @param explain when {@code true}, include {@code requestTracing} (requires administrator or tenant administrator)
      * @param securityContext the security context
      * @return the event collector response
+     * @api.status 200 org.apache.unomi.rest.models.EventCollectorResponse Events processed; see {@code updated} bitwise flags.
+     * @api.status 400 empty Missing/empty collector payload or invalid event data.
+     * @api.status 403 empty {@code explain=true} without administrator / tenant administrator role.
+     * @api.example {"updated":6}
      */
     @GET
     @Path("/eventcollector")
@@ -96,13 +106,18 @@ public class EventsCollectorEndpoint {
     }
 
     /**
-     * Collects events from a POST request.
+     * Collects events from a POST request (preferred).
+     * Submits an {@link org.apache.unomi.api.EventsCollectorRequest} body so Unomi can attach events to a session/profile, run rules, and return bitwise update flags.
      *
-     * @param eventsCollectorRequest the events collector request
-     * @param timestampAsLong optional request timestamp
-     * @param explain whether to include tracing details
+     * @param eventsCollectorRequest JSON body with {@code events} plus optional {@code sessionId}/{@code profileId}/{@code publicApiKey}
+     * @param timestampAsLong optional request time as epoch millis; defaults to server now
+     * @param explain when {@code true}, include {@code requestTracing} (requires administrator or tenant administrator)
      * @param securityContext the security context
      * @return the event collector response
+     * @api.status 200 org.apache.unomi.rest.models.EventCollectorResponse Events processed; see {@code updated} bitwise flags.
+     * @api.status 400 empty Missing/empty collector body or invalid event data.
+     * @api.status 403 empty {@code explain=true} without administrator / tenant administrator role.
+     * @api.example {"updated":6}
      */
     @POST
     @Path("/eventcollector")

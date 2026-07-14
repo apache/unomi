@@ -99,6 +99,7 @@
         <jakarta-json-api.version>2.1.2</jakarta-json-api.version>
         <swagger-ui.version>5.27.1</swagger-ui.version>
         <cxf.version>3.6.8</cxf.version>
+        <openapi.enrich.version>0.1.0-SNAPSHOT</openapi.enrich.version>
         <rs-api.version>2.1</rs-api.version>
         <groovy.version>4.0.28</groovy.version>
         <httpclient-osgi.version>4.5.14</httpclient-osgi.version>
@@ -921,6 +922,19 @@
                         <!-- Broken {@link}/HTML/syntax fail the build; missing @param/@return do not (use -Pjavadoc-tags-warn) -->
                         <failOnError>true</failOnError>
                         <failOnWarnings>false</failOnWarnings>
+                        <!-- UNOMI-963: OpenAPI enrichment packs read @api.status / @api.example from source -->
+                        <tags>
+                            <tag>
+                                <name>api.status</name>
+                                <placement>a</placement>
+                                <head>API Status:</head>
+                            </tag>
+                            <tag>
+                                <name>api.example</name>
+                                <placement>a</placement>
+                                <head>API Example:</head>
+                            </tag>
+                        </tags>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -1026,6 +1040,19 @@
                     <groupId>com.mycila</groupId>
                     <artifactId>license-maven-plugin</artifactId>
                     <version>${license-maven-plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>dev.inoyu.openapi</groupId>
+                    <artifactId>openapi-enrich-maven-plugin</artifactId>
+                    <version>${openapi.enrich.version}</version>
+                    <executions>
+                        <execution>
+                            <id>generate-openapi-doc</id>
+                            <goals>
+                                <goal>generate</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
                 <plugin>
                     <groupId>org.jasig.maven</groupId>

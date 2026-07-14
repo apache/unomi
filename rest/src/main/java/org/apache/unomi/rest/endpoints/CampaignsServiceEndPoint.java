@@ -73,6 +73,8 @@ public class CampaignsServiceEndPoint {
      * Returns metadata for all campaigns.
      *
      * @return campaign metadata for every stored campaign
+     * @api.status 200 array org.apache.unomi.api.Metadata Campaign metadata for all stored campaigns (may be empty).
+     * @api.example [{"id":"summer-sale","name":"Summer Sale","scope":"mysite","enabled":true}]
      */
     @GET
     @Path("/")
@@ -82,8 +84,13 @@ public class CampaignsServiceEndPoint {
 
     /**
      * Saves the specified campaign in the context server and creates associated {@link Rule}s if the campaign is enabled.
+     * Body is a full {@link Campaign}: {@code metadata}, {@code entryCondition} (JSON field {@code type} + {@code parameterValues}),
+     * date range, cost, and optional {@code primaryGoal}.
      *
      * @param campaign the Campaign to be saved
+     * @api.status 204 empty Campaign created or updated.
+     * @api.status 400 empty Invalid or unreadable campaign body.
+     * @api.example {"itemId":"summer-sale","itemType":"campaign","metadata":{"id":"summer-sale","name":"Summer Sale","scope":"mysite","enabled":true},"startDate":"2024-06-01T00:00:00.000Z","endDate":"2024-08-31T23:59:59.000Z","entryCondition":{"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}},"cost":5000.0,"currency":"USD","primaryGoal":"checkout-goal","timezone":"UTC"}
      */
     @POST
     @Path("/")
@@ -96,6 +103,9 @@ public class CampaignsServiceEndPoint {
      *
      * @param query the query used to filter campaigns
      * @return metadata for campaigns that match the query
+     * @api.status 200 array org.apache.unomi.api.Metadata Matching campaign metadata (may be empty).
+     * @api.status 400 empty Invalid or unreadable query body.
+     * @api.example [{"id":"summer-sale","name":"Summer Sale","scope":"mysite","enabled":true}]
      */
     @POST
     @Path("/query")
@@ -105,9 +115,13 @@ public class CampaignsServiceEndPoint {
 
     /**
      * Returns detailed campaign data matching the given query.
+     * Each list element includes engagement metrics and the embedded {@link Campaign}.
      *
      * @param query the query specifying which campaigns to include
      * @return a paged list of campaign details
+     * @api.status 200 org.apache.unomi.api.PartialList Campaign details page (list items are CampaignDetail).
+     * @api.status 400 empty Invalid or unreadable query body.
+     * @api.example {"list":[{"engagedProfiles":120,"campaignSessionViews":450,"campaignSessionSuccess":38,"numberOfGoals":2,"conversionRate":0.084,"campaign":{"itemId":"summer-sale","itemType":"campaign","metadata":{"id":"summer-sale","name":"Summer Sale","scope":"mysite","enabled":true}}}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @POST
     @Path("/query/detailed")
@@ -117,9 +131,12 @@ public class CampaignsServiceEndPoint {
 
     /**
      * Returns detailed data for the campaign with the given ID.
+     * When the campaign does not exist the endpoint returns {@code null} (HTTP 200 with empty body).
      *
      * @param campaignID the campaign identifier
      * @return the campaign detail, or {@code null} when no such campaign exists
+     * @api.status 200 org.apache.unomi.api.campaigns.CampaignDetail Campaign detail found, or empty body when missing.
+     * @api.example {"engagedProfiles":120,"campaignSessionViews":450,"campaignSessionSuccess":38,"numberOfGoals":2,"conversionRate":0.084,"campaign":{"itemId":"summer-sale","itemType":"campaign","metadata":{"id":"summer-sale","name":"Summer Sale","scope":"mysite","enabled":true}}}
      */
     @GET
     @Path("/{campaignID}/detailed")
@@ -129,9 +146,12 @@ public class CampaignsServiceEndPoint {
 
     /**
      * Returns the campaign definition for the given ID.
+     * When the campaign does not exist the endpoint returns {@code null} (HTTP 200 with empty body).
      *
      * @param campaignID the campaign identifier
      * @return the campaign, or {@code null} when no such campaign exists
+     * @api.status 200 org.apache.unomi.api.campaigns.Campaign Campaign found, or empty body when missing.
+     * @api.example {"itemId":"summer-sale","itemType":"campaign","metadata":{"id":"summer-sale","name":"Summer Sale","scope":"mysite","enabled":true},"startDate":"2024-06-01T00:00:00.000Z","endDate":"2024-08-31T23:59:59.000Z","entryCondition":{"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}},"cost":5000.0,"currency":"USD","primaryGoal":"checkout-goal","timezone":"UTC"}
      */
     @GET
     @Path("/{campaignID}")
@@ -143,6 +163,8 @@ public class CampaignsServiceEndPoint {
      * Removes the campaign associated with the specified identifier, also removing associated rules if needed.
      *
      * @param campaignID the identifier of the campaign to be removed
+     * @api.status 204 empty Campaign deleted.
+     * @api.example {"itemId":"summer-sale","itemType":"campaign","metadata":{"id":"summer-sale","name":"Summer Sale","scope":"mysite","enabled":true},"startDate":"2024-06-01T00:00:00.000Z","endDate":"2024-08-31T23:59:59.000Z","entryCondition":{"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}},"cost":5000.0,"currency":"USD","primaryGoal":"checkout-goal","timezone":"UTC"}
      */
     @DELETE
     @Path("/{campaignID}")
@@ -152,8 +174,12 @@ public class CampaignsServiceEndPoint {
 
     /**
      * Saves the specified campaign event in the context server.
+     * Body is a full {@link CampaignEvent}: {@code metadata}, {@code eventDate}, {@code campaignId}, and optional cost fields.
      *
      * @param campaignEvent the CampaignEvent to be saved
+     * @api.status 204 empty Campaign event created or updated.
+     * @api.status 400 empty Invalid or unreadable campaign event body.
+     * @api.example {"itemId":"summer-launch","itemType":"campaignevent","metadata":{"id":"summer-launch","name":"Campaign launch","scope":"mysite","enabled":true},"eventDate":"2024-06-01T09:00:00.000Z","campaignId":"summer-sale","cost":1000.0,"currency":"USD","timezone":"UTC"}
      */
     @POST
     @Path("/event")
@@ -165,6 +191,8 @@ public class CampaignsServiceEndPoint {
      * Removes the campaign event associated with the specified identifier.
      *
      * @param campaignEventID the identifier of the campaign event to be removed
+     * @api.status 204 empty Campaign event deleted.
+     * @api.example {"itemId":"summer-launch","itemType":"campaignevent","metadata":{"id":"summer-launch","name":"Campaign launch","scope":"mysite","enabled":true},"eventDate":"2024-06-01T09:00:00.000Z","campaignId":"summer-sale","cost":1000.0,"currency":"USD","timezone":"UTC"}
      */
     @DELETE
     @Path("/event/{eventId}")
@@ -177,6 +205,9 @@ public class CampaignsServiceEndPoint {
      *
      * @param query the query specifying which campaign events to include
      * @return a paged list of matching campaign events
+     * @api.status 200 org.apache.unomi.api.PartialList Campaign events page (list items are CampaignEvent).
+     * @api.status 400 empty Invalid or unreadable query body.
+     * @api.example {"list":[{"itemId":"summer-launch","itemType":"campaignevent","metadata":{"id":"summer-launch","name":"Campaign launch","scope":"mysite","enabled":true},"eventDate":"2024-06-01T09:00:00.000Z","campaignId":"summer-sale","cost":1000.0,"currency":"USD","timezone":"UTC"}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @POST
     @Path("/events/query")

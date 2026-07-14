@@ -42,6 +42,9 @@ public class ActionType extends MetadataItem implements PluginType, YamlConverti
     private static final long serialVersionUID = -3522958600710010935L;
     private String actionExecutor;
     private List<Parameter> parameters = new ArrayList<Parameter>();
+    /**
+     * Bundle/plugin id that contributed this action type definition.
+     */
     private long pluginId;
 
     /**

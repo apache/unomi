@@ -73,6 +73,8 @@ public class UserListServiceEndPoint {
      * @param size maximum number of results to return, or {@code -1} for all matches
      * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
      * @return matching user list metadata
+     * @api.status 200 array org.apache.unomi.api.Metadata User list metadata for the requested page (may be empty).
+     * @api.example [{"id":"newsletter-subscribers","name":"Newsletter subscribers","scope":"mysite","enabled":true}]
      */
     @GET
     @Path("/")

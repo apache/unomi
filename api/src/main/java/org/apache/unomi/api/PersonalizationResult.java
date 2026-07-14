@@ -38,13 +38,22 @@ public class PersonalizationResult implements Serializable  {
      */
     public final static String ADDITIONAL_RESULT_INFO_IN_CONTROL_GROUP = "inControlGroup";
 
-    /** Matching content identifiers for the resolved personalization. */
+    /**
+     * Matching content identifiers for the resolved personalization (ordered by strategy).
+     * @api.example ["hero-a","hero-b"]
+     */
     List<String> contentIds;
 
-    /** Extra key/value metadata returned to the client (for example control group flags). */
+    /**
+     * Extra key/value metadata returned to the client. Well-known key:
+     * {@link #ADDITIONAL_RESULT_INFO_IN_CONTROL_GROUP} ({@code inControlGroup}) → boolean.
+     * @api.example {"inControlGroup":false}
+     */
     Map<String, Object> additionalResultInfos = new HashMap<>();
 
-    /** Internal change flags when resolution updated the profile or session. */
+    /**
+     * Internal change flags when resolution updated the profile or session (not serialized on the wire).
+     */
     int changeType = EventService.NO_CHANGE;
 
     /**

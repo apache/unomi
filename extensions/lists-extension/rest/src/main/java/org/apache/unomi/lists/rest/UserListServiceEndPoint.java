@@ -33,7 +33,7 @@ import javax.ws.rs.core.MediaType;
 
 
 /**
- * @author Christophe Laprun
+ * JAX-RS endpoint for static {@link UserList} CRUD and metadata queries.
  */
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -57,30 +57,69 @@ public class UserListServiceEndPoint {
         this.userListService = userListService;
     }
 
+    /**
+     * Returns the first page of user list metadata (offset 0, size 50).
+     *
+     * @return user list metadata page
+     * @api.status 200 org.apache.unomi.api.PartialList Metadata page (list items are Metadata; may be empty).
+     * @api.example {"list":[{"id":"newsletter-subscribers","name":"Newsletter subscribers","scope":"mysite","enabled":true}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
+     */
     @GET
     @Path("/")
     public PartialList<Metadata> getListMetadatas() {
         return userListService.getListMetadatas(0, 50, null);
     }
 
+    /**
+     * Returns user list metadata matching the given query.
+     *
+     * @param query the query lists must match
+     * @return a paged list of matching metadata
+     * @api.status 200 org.apache.unomi.api.PartialList Metadata page (list items are Metadata).
+     * @api.status 400 empty Invalid or unreadable query body.
+     * @api.example {"list":[{"id":"newsletter-subscribers","name":"Newsletter subscribers","scope":"mysite","enabled":true}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
+     */
     @POST
     @Path("/query")
     public PartialList<Metadata> getListMetadatas(Query query) {
         return userListService.getListMetadatas(query);
     }
 
+    /**
+     * Returns the user list with the given ID.
+     * When the list does not exist the endpoint returns {@code null} (HTTP 200 with empty body).
+     *
+     * @param listId the list identifier
+     * @return the user list, or {@code null} when missing
+     * @api.status 200 org.apache.unomi.lists.UserList List found, or empty body when missing.
+     * @api.example {"itemId":"newsletter-subscribers","itemType":"userList","metadata":{"id":"newsletter-subscribers","name":"Newsletter subscribers","scope":"mysite","enabled":true}}
+     */
     @GET
     @Path("/{listId}")
     public UserList load(@PathParam("listId") String listId) {
         return userListService.load(listId);
     }
 
+    /**
+     * Persists the specified user list.
+     *
+     * @param list the list to save
+     * @api.status 204 empty List created or updated.
+     * @api.example {"itemId":"newsletter-subscribers","itemType":"userList","metadata":{"id":"newsletter-subscribers","name":"Newsletter subscribers","scope":"mysite","enabled":true}}
+     */
     @POST
     @Path("/")
     public void save(UserList list) {
         userListService.save(list);
     }
 
+    /**
+     * Deletes the user list with the given ID.
+     *
+     * @param listId the list identifier
+     * @api.status 204 empty List deleted.
+     * @api.example {"itemId":"newsletter-subscribers","itemType":"userList","metadata":{"id":"newsletter-subscribers","name":"Newsletter subscribers","scope":"mysite","enabled":true}}
+     */
     @DELETE
     @Path("/{listId}")
     public void delete(@PathParam("listId") String listId) {

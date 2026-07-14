@@ -38,7 +38,8 @@ import java.util.List;
 /**
  * REST endpoint for managing tenants in the Apache Unomi system.
  * Provides operations for creating, updating, deleting, and retrieving tenants,
- * as well as managing their API keys and configurations.
+ * as well as managing their API keys, usage, and event retention.
+ * Class-level access requires the administrator role; usage and purge also accept tenant administrators.
  */
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -59,7 +60,9 @@ public class TenantEndpoint {
     /**
      * Retrieves all tenants in the system.
      *
-     * @return a list of all tenants
+     * @return a JSON array of all tenants
+     * @api.status 200 array org.apache.unomi.api.tenants.Tenant List of tenants (may be empty).
+     * @api.example [{"itemId":"acme","itemType":"tenant","name":"Acme Corp","status":"ACTIVE","creationDate":"2026-01-15T10:00:00.000Z","apiKeys":[],"properties":{},"restrictedEventTypes":[],"authorizedIPs":[]}]
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -72,6 +75,9 @@ public class TenantEndpoint {
      *
      * @param tenantId the ID of the tenant to retrieve
      * @return the requested tenant with 200 status, or 404 if tenant is not found
+     * @api.status 200 org.apache.unomi.api.tenants.Tenant Tenant found.
+     * @api.status 404 empty Tenant not found.
+     * @api.example {"itemId":"acme","itemType":"tenant","name":"Acme Corp","status":"ACTIVE","creationDate":"2026-01-15T10:00:00.000Z","lastModificationDate":"2026-01-15T10:00:00.000Z","apiKeys":[{"itemId":"key-1","itemType":"apiKey","maskedKey":"unomi_v1_****ab12","keyType":"PUBLIC","creationDate":"2026-01-15T10:00:00.000Z","revoked":false}],"properties":{},"restrictedEventTypes":[],"authorizedIPs":["10.0.0.0/8"]}
      */
     @GET
     @Path("/{tenantId}")
@@ -87,10 +93,17 @@ public class TenantEndpoint {
 
     /**
      * Creates a new tenant.
+     * On success, Unomi generates both a PUBLIC and a PRIVATE API key for the tenant.
+     * Plaintext keys are only returned in responses that explicitly expose
+     * {@link ApiKeyCreationResult} (not on this create response — the returned
+     * {@link Tenant} includes hashed/masked key metadata only).
      *
      * @param request the tenant creation request containing tenant details
-     * @return the created tenant with generated API keys
+     * @return the created tenant with generated API key metadata
      * @throws WebApplicationException with 400 status if request is invalid
+     * @api.status 200 org.apache.unomi.api.tenants.Tenant Tenant created (status ACTIVE, public and private keys generated).
+     * @api.status 400 empty Missing or blank requestedId.
+     * @api.example {"itemId":"acme","itemType":"tenant","status":"ACTIVE","creationDate":"2026-01-15T10:00:00.000Z","apiKeys":[{"maskedKey":"unomi_v1_****ab12","keyType":"PUBLIC","revoked":false},{"maskedKey":"unomi_v1_****cd34","keyType":"PRIVATE","revoked":false}],"properties":{"name":"Acme"},"restrictedEventTypes":[],"authorizedIPs":[]}
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
@@ -107,11 +120,16 @@ public class TenantEndpoint {
 
     /**
      * Updates an existing tenant.
+     * The path {@code tenantId} must equal {@code tenant.itemId}.
      *
      * @param tenantId the ID of the tenant to update
      * @param tenant the updated tenant information
      * @return the updated tenant
-     * @throws WebApplicationException with 404 status if tenant is not found
+     * @throws WebApplicationException with 400 if IDs mismatch, 404 if tenant is not found
+     * @api.status 200 org.apache.unomi.api.tenants.Tenant Tenant updated.
+     * @api.status 400 empty Path tenantId does not match body itemId.
+     * @api.status 404 empty Tenant not found.
+     * @api.example {"itemId":"acme","itemType":"tenant","name":"Acme Corp","status":"ACTIVE","creationDate":"2026-01-15T10:00:00.000Z","lastModificationDate":"2026-01-15T10:00:00.000Z","apiKeys":[{"itemId":"key-1","itemType":"apiKey","maskedKey":"unomi_v1_****ab12","keyType":"PUBLIC","creationDate":"2026-01-15T10:00:00.000Z","revoked":false}],"properties":{},"restrictedEventTypes":[],"authorizedIPs":["10.0.0.0/8"]}
      */
     @PUT
     @Path("/{tenantId}")
@@ -137,6 +155,9 @@ public class TenantEndpoint {
      * @param tenantId the ID of the tenant to delete
      * @return 204 No Content on success
      * @throws WebApplicationException with 404 status if tenant is not found
+     * @api.status 204 empty Tenant deleted.
+     * @api.status 404 empty Tenant not found.
+     * @api.example {}
      */
     @DELETE
     @Path("/{tenantId}")
@@ -152,12 +173,17 @@ public class TenantEndpoint {
 
     /**
      * Generates a new API key for a tenant.
+     * Replaces any existing key of the same {@code type}. The plaintext key is returned
+     * only in this response ({@link ApiKeyCreationResult#getPlainTextKey()}).
      *
      * @param tenantId the ID of the tenant
-     * @param type the type of API key to generate (PUBLIC or PRIVATE)
-     * @param validityDays the validity period in days (0 or null for no expiration)
+     * @param type the type of API key to generate ({@code PUBLIC} or {@code PRIVATE})
+     * @param validityDays the validity period in days ({@code 0} or omitted for no expiration)
      * @return the generated key metadata together with its one-time plaintext value
      * @throws WebApplicationException with 404 status if tenant is not found
+     * @api.status 200 org.apache.unomi.api.tenants.ApiKeyCreationResult Key created; store plainTextKey immediately.
+     * @api.status 404 empty Tenant not found.
+     * @api.example {"apiKey":{"itemId":"key-1","itemType":"apiKey","maskedKey":"unomi_v1_****ab12","keyType":"PUBLIC","creationDate":"2026-01-15T10:00:00.000Z","revoked":false},"plainTextKey":"unomi_v1_0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"}
      */
     @POST
     @Path("/{tenantId}/apikeys")
@@ -185,9 +211,12 @@ public class TenantEndpoint {
      * Validates an API key for a tenant.
      *
      * @param tenantId the ID of the tenant
-     * @param apiKey the API key to validate
-     * @param type the type of API key (PUBLIC or PRIVATE)
+     * @param apiKey the plaintext API key to validate
+     * @param type the type of API key ({@code PUBLIC} or {@code PRIVATE})
      * @return 200 OK if valid, 401 Unauthorized if invalid
+     * @api.status 200 empty API key is valid for the tenant and type.
+     * @api.status 401 empty API key is missing, wrong type, revoked, expired, or unknown.
+     * @api.example {}
      */
     @GET
     @Path("/{tenantId}/apikeys/validate")
@@ -208,8 +237,12 @@ public class TenantEndpoint {
      * this endpoint exposes measured usage for operators and control planes.
      *
      * @param tenantId tenant identifier
-     * @param period reporting window: {@code current-month}, {@code YYYY-MM}, or legacy {@code 24h}
+     * @param period reporting window: {@code current-month} (default), {@code YYYY-MM}, or legacy {@code 24h}
      * @return usage snapshot, 404 if tenant is missing, 400 for unsupported period
+     * @api.status 200 org.apache.unomi.api.tenants.TenantUsage Usage snapshot (may be slightly stale until the next collection cycle).
+     * @api.status 400 empty Unsupported period value.
+     * @api.status 404 empty Tenant not found.
+     * @api.example {"tenantId":"acme","period":"2026-07","periodStart":1751328000000,"periodEnd":1754006400000,"profileCount":1200,"eventCount":45000,"scopeCount":3,"segmentCount":12,"ruleCount":8,"storageDocumentCount":52000,"activeApiKeyCount":2,"restRequestCount":180,"scopeUsages":[{"scopeId":"site","segmentCount":4,"ruleCount":3}],"collectedAt":1754000000000}
      */
     @GET
     @Path("/{tenantId}/usage")
@@ -232,11 +265,17 @@ public class TenantEndpoint {
     /**
      * Deletes events for the tenant at least {@code retentionDays} days old.
      * Destructive operation; intended for upstream retention jobs.
+     * Minimum retention is {@link TenantUsageService#MIN_EVENT_RETENTION_DAYS} days.
      *
      * @param tenantId tenant identifier
      * @param retentionDays age cutoff in whole days (minimum {@link TenantUsageService#MIN_EVENT_RETENTION_DAYS})
      * @return purge summary, 404 if tenant is missing, 400 for invalid retention, 500 if the
      *         persistence layer failed to complete the deletion (see {@code purgeRequested})
+     * @api.status 200 org.apache.unomi.api.tenants.TenantEventPurgeResult Delete-by-query completed ({@code purgeRequested}=true).
+     * @api.status 400 empty retentionDays missing, not positive, or below the configured minimum.
+     * @api.status 404 empty Tenant not found.
+     * @api.status 500 org.apache.unomi.api.tenants.TenantEventPurgeResult Persistence accepted the request but deletion failed ({@code purgeRequested}=false).
+     * @api.example {"tenantId":"acme","retentionDays":30,"eventsMatched":1200,"purgeRequested":true,"requestedAt":1754000000000}
      */
     @POST
     @Path("/{tenantId}/purge/events")

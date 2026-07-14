@@ -50,29 +50,78 @@ import java.util.Map;
 
 public class ContextRequest {
 
+    /**
+     * Request source item (typically a page/site {@code Item} with {@code scope}). Used to resolve tracked conditions.
+     */
     private Item source;
+    /**
+     * When {@code true}, response includes {@code profileSegments}.
+     * @api.example true
+     */
     private boolean requireSegments;
+    /**
+     * Profile property names to return, or {@code ["*"]} for public (non-concealed) properties.
+     * @api.example ["firstName","email"]
+     */
     private List<String> requiredProfileProperties;
+    /**
+     * Session property names to return, or {@code ["*"]} for all session properties.
+     * @api.example ["*"]
+     */
     private List<String> requiredSessionProperties;
+    /**
+     * When {@code true}, response includes {@code profileScores}.
+     * @api.example false
+     */
     private boolean requireScores;
+    /**
+     * Client-generated events to process before building the response (view, click, login, …).
+     */
     private List<Event> events;
+    /**
+     * Content personalization filters to evaluate against the (possibly overridden) profile/session.
+     */
     private List<PersonalizationService.PersonalizedContent> filters;
+    /**
+     * Personalization requests (ordered content lists) to resolve for this profile/session.
+     */
     private List<PersonalizationService.PersonalizationRequest> personalizations;
 
     // the following overrides make it possible to override temporarily the current profile segments, properties or
     // even session properties. This is useful for building UIs to temporarily override one of these parameters to
     // test different filter results.
+    /**
+     * Temporary profile overrides for persona/preview UIs (segments, scores, properties). Applied only when the
+     * active profile is a {@link Persona}.
+     */
     private Profile profileOverrides;
+    /**
+     * Temporary session property overrides for persona/preview UIs.
+     * @api.example {"utm_source":"newsletter"}
+     */
     private Map<String, Object> sessionPropertiesOverrides;
 
+    /**
+     * Session identifier for this request (preferred over {@code sessionId} query param).
+     * @api.example session-1
+     */
     private String sessionId;
 
+    /**
+     * Profile identifier hint for this request.
+     * @api.example profile-1
+     */
     private String profileId;
 
+    /**
+     * Optional client / channel identifier.
+     * @api.example web-tracker
+     */
     private String clientId;
 
     /**
-     * The public API key for tenant authentication.
+     * Public API key for tenant authentication (multi-tenant deployments).
+     * @api.example pk_live_example
      */
     private String publicApiKey;
 

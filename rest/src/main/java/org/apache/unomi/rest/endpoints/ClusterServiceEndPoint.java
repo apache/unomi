@@ -81,6 +81,8 @@ public class ClusterServiceEndPoint {
      * Returns cluster nodes known to this server instance.
      *
      * @return the available cluster nodes
+     * @api.status 200 array org.apache.unomi.api.ClusterNode Cluster nodes (may be empty).
+     * @api.example [{"itemId":"node-1","itemType":"clusterNode","publicHostAddress":"10.0.0.1","master":true,"data":true}]
      */
     @GET
     @Path("/")
@@ -90,8 +92,13 @@ public class ClusterServiceEndPoint {
 
     /**
      * Removes all data before the specified date from the context server.
+     * <p>
+     * The date must use {@code yyyy-MM-dd} format; unparseable values are logged and no purge is performed.
      *
-     * @param date the Date before which all data needs to be removed
+     * @param date the date before which all data is removed ({@code yyyy-MM-dd})
+     * @deprecated As of version 1.1.0-incubating, use scope-scoped purge instead
+     * @api.status 204 empty Purge requested when the date parsed successfully.
+     * @api.example {}
      */
     @GET
     @Path("/purge/{date}")
@@ -108,7 +115,9 @@ public class ClusterServiceEndPoint {
     /**
      * Removes all data associated with the provided scope.
      *
-     * @param scope the scope for which we want to remove data
+     * @param scope the scope for which data is removed
+     * @api.status 204 empty Scope data purge requested.
+     * @api.example {}
      */
     @DELETE
     @Path("{scope}")

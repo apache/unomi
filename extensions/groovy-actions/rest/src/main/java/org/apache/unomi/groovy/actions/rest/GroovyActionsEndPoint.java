@@ -52,10 +52,15 @@ public class GroovyActionsEndPoint {
     }
 
     /**
-     * Save a groovy action file and create an actionType entry to allow to call this action
+     * Uploads a Groovy action script and registers a matching action type.
+     * <p>
+     * The multipart field {@code file} must be a {@code .groovy} file; the action id is derived from the filename.
      *
-     * @param file the file to save
-     * @return Response of the API call
+     * @param file the Groovy script upload
+     * @return an empty success response
+     * @api.status 200 empty Action saved and action type registered.
+     * @api.status 500 empty Error reading or processing the uploaded file.
+     * @api.example {}
      */
     @POST
     @Path("/")
@@ -73,9 +78,11 @@ public class GroovyActionsEndPoint {
     }
 
     /**
-     * Deletes the rule identified by the specified identifier.
+     * Deletes the Groovy action and its action type entry.
      *
-     * @param actionId the identifier of the groovy action that we want to delete
+     * @param actionId the action identifier
+     * @api.status 204 empty Action deleted.
+     * @api.example {}
      */
     @DELETE
     @Path("/{actionId}")

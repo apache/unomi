@@ -42,6 +42,10 @@ public class Campaign extends MetadataItem {
 
     private Date endDate;
 
+    /**
+     * Condition a profile must satisfy to enter the campaign (JSON wire field {@code type} + {@code parameterValues}).
+     * @api.example {"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}}
+     */
     private Condition entryCondition;
 
     private Double cost;
@@ -105,8 +109,10 @@ public class Campaign extends MetadataItem {
 
     /**
      * Condition a profile must satisfy to enter the campaign.
+     * In JSON the condition type id is usually the field {@code type} (not {@code conditionTypeId}).
      *
      * @return the entry condition
+     * @api.example {"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}}
      */
     public Condition getEntryCondition() {
         return entryCondition;

@@ -29,8 +29,16 @@ import java.util.List;
  */
 public class DependentMetadata implements Serializable {
 
+    /**
+     * Segments that reference the given segment (for example via profileSegmentCondition).
+     * @api.example [{"id":"premium-buyers","name":"Premium buyers","scope":"mysite","enabled":true}]
+     */
     private List<Metadata> segments;
 
+    /**
+     * Scorings that reference the given segment.
+     * @api.example [{"id":"premium-score","name":"Premium score","scope":"mysite","enabled":true}]
+     */
     private List<Metadata> scorings;
 
     /**
@@ -48,6 +56,7 @@ public class DependentMetadata implements Serializable {
      * Metadata for segments that depend on the edited item.
      *
      * @return the dependent segment metadata
+     * @api.example [{"id":"premium-buyers","name":"Premium buyers","scope":"mysite","enabled":true}]
      */
     public List<Metadata> getSegments() {
         return segments;
@@ -66,6 +75,7 @@ public class DependentMetadata implements Serializable {
      * Metadata for scorings that depend on the edited item.
      *
      * @return the dependent scoring metadata
+     * @api.example [{"id":"premium-score","name":"Premium score","scope":"mysite","enabled":true}]
      */
     public List<Metadata> getScorings() {
         return scorings;

@@ -23,9 +23,21 @@ package org.apache.unomi.api.tenants;
  */
 public class TenantEventPurgeResult {
 
+    /**
+     * Tenant this purge applies to.
+     * @api.example acme
+     */
     private String tenantId;
+    /**
+     * Retention cutoff in whole days (query {@code retentionDays}; minimum
+     * {@link TenantUsageService#MIN_EVENT_RETENTION_DAYS}).
+     * @api.example 30
+     */
     private int retentionDays;
-    /** Events matching the retention cutoff before delete-by-query was submitted; not a post-delete count. */
+    /**
+     * Events matching the retention cutoff before delete-by-query was submitted; not a post-delete count.
+     * @api.example 1200
+     */
     private long eventsMatched;
     /**
      * {@code true} if the delete-by-query completed successfully; {@code false} if the
@@ -33,7 +45,12 @@ public class TenantEventPurgeResult {
      * partial-success indicator: {@link #eventsMatched} is a pre-delete estimate only, so a
      * {@code true} result does not by itself confirm how many events were actually removed.
      */
+    /**
+     * {@code true} if delete-by-query completed successfully; {@code false} maps to HTTP 500 on the REST endpoint.
+     * @api.example true
+     */
     private boolean purgeRequested;
+    /** When the purge was requested (epoch millis, UTC). */
     private long requestedAt;
 
     /**

@@ -49,18 +49,46 @@ public class Rule extends MetadataItem implements YamlConvertible {
      */
     public static final String ITEM_TYPE = "rule";
     private static final long serialVersionUID = 3058739939263056507L;
+    /**
+     * Condition that must match before this rule's actions run.
+     * Typical trigger: {@code eventTypeCondition} with {@code eventTypeId}.
+     */
     private Condition condition;
 
+    /**
+     * Actions performed when the condition matches (ordered).
+     * @api.example [{"type":"setPropertyAction","parameterValues":{"setPropertyName":"properties.isPremium","setPropertyValueBoolean":true,"storeInSession":false}}]
+     */
     private List<Action> actions;
 
+    /**
+     * Identifiers of items linked to this rule (for example segments or goals that own it).
+     * @api.example ["goal-welcome"]
+     */
     private List<String> linkedItems;
 
+    /**
+     * When {@code true}, raise the rule-triggered event at most once per profile.
+     * @api.example false
+     */
     private boolean raiseEventOnlyOnceForProfile = false;
 
+    /**
+     * When {@code true}, raise the rule-triggered event at most once per session.
+     * @api.example false
+     */
     private boolean raiseEventOnlyOnceForSession = false;
 
+    /**
+     * When {@code true}, raise the rule-triggered event at most once overall.
+     * @api.example false
+     */
     private boolean raiseEventOnlyOnce = false;
 
+    /**
+     * Execution priority among matching rules (higher runs first when comparable).
+     * @api.example 0
+     */
     private int priority;
 
     /**

@@ -27,14 +27,27 @@ import java.util.List;
  */
 public class EventsCollectorRequest {
 
+    /**
+     * Events to collect and evaluate. At least one event is expected for a useful call.
+     * @api.example [{"eventType":"view","scope":"mysite","source":{"itemType":"page","scope":"mysite","itemId":"/home"}}]
+     */
     private List<Event> events;
 
+    /**
+     * Default session id when individual events do not specify one (prefer body over query string).
+     * @api.example session-1
+     */
     private String sessionId;
 
+    /**
+     * Default profile id when individual events do not specify one.
+     * @api.example profile-1
+     */
     private String profileId;
 
     /**
-     * The public API key for tenant authentication.
+     * Public API key for tenant authentication (multi-tenant deployments).
+     * @api.example pk_live_example
      */
     private String publicApiKey;
 

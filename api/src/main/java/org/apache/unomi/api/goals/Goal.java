@@ -45,8 +45,16 @@ public class Goal extends MetadataItem implements YamlConvertible {
     /** The constant string used to identify this object as a goal item type. */
     public static final String ITEM_TYPE = "goal";
     private static final long serialVersionUID = 6131648013470949983L;
+    /**
+     * Optional start condition for funnel-style goals (JSON wire field {@code type} + {@code parameterValues}).
+     * @api.example {"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}}
+     */
     private Condition startEvent;
 
+    /**
+     * Condition that marks the goal as accomplished (JSON wire field {@code type} + {@code parameterValues}).
+     * @api.example {"type":"eventTypeCondition","parameterValues":{"eventTypeId":"purchase"}}
+     */
     private Condition targetEvent;
 
     private String campaignId;
@@ -69,8 +77,10 @@ public class Goal extends MetadataItem implements YamlConvertible {
     /**
      * Optional start condition for funnel-style goals.
      * When set, goal tracking begins only after this condition is met.
+     * In JSON the condition type id is usually the field {@code type} (not {@code conditionTypeId}).
      *
      * @return the start condition, or {@code null} if none is configured
+     * @api.example {"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}}
      */
     public Condition getStartEvent() {
         return startEvent;
@@ -87,8 +97,10 @@ public class Goal extends MetadataItem implements YamlConvertible {
 
     /**
      * Condition that marks the goal as accomplished when it matches.
+     * In JSON the condition type id is usually the field {@code type} (not {@code conditionTypeId}).
      *
      * @return the target condition
+     * @api.example {"type":"eventTypeCondition","parameterValues":{"eventTypeId":"purchase"}}
      */
     public Condition getTargetEvent() {
         return targetEvent;

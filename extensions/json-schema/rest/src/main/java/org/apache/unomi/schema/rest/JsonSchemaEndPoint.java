@@ -54,9 +54,11 @@ public class JsonSchemaEndPoint {
     }
 
     /**
-     * Get the list of installed Json Schema Ids
+     * Returns identifiers of all installed JSON schemas.
      *
-     * @return A Set of JSON schema ids
+     * @return installed JSON schema ids
+     * @api.status 200 array empty Schema id set (may be empty).
+     * @api.example ["profile","event"]
      */
     @GET
     @Path("/")
@@ -65,10 +67,14 @@ public class JsonSchemaEndPoint {
     }
 
     /**
-     * Get a schema by it's id
+     * Returns the JSON schema document for the given id.
+     * <p>
+     * Request body is the schema id as a plain JSON string. When no schema matches, returns {@code null} (HTTP 200 with empty body).
      *
-     * @param id of the schema
-     * @return Json schema matching the id
+     * @param id the schema identifier
+     * @return the schema JSON string, or {@code null} when missing
+     * @api.status 200 empty Schema JSON string, or empty body when missing.
+     * @api.example "{\"$schema\":\"http://json-schema.org/draft-07/schema#\",\"type\":\"object\"}"
      */
     @POST
     @Path("/query")
@@ -81,10 +87,13 @@ public class JsonSchemaEndPoint {
     }
 
     /**
-     * Save a JSON schema
+     * Saves a JSON schema document.
      *
-     * @param jsonSchema the schema as string to save
-     * @return Response of the API call
+     * @param jsonSchema the schema JSON as plain text or JSON body
+     * @return an empty success response
+     * @api.status 200 empty Schema saved.
+     * @api.status 400 empty Invalid or unreadable schema body.
+     * @api.example "{\"$schema\":\"https://json-schema.org/draft/2019-09/schema\",\"self\":{\"vendor\":\"com.example\",\"target\":\"events\",\"name\":\"customEvent\",\"format\":\"jsonschema\",\"version\":\"1-0-0\"},\"title\":\"CustomEvent\",\"type\":\"object\",\"allOf\":[{\"$ref\":\"https://unomi.apache.org/schemas/json/event/1-0-0\"}],\"properties\":{\"properties\":{\"type\":\"object\",\"properties\":{\"category\":{\"type\":\"string\"}}}},\"unevaluatedProperties\":false}"
      */
     @POST
     @Path("/")
@@ -100,9 +109,14 @@ public class JsonSchemaEndPoint {
     }
 
     /**
-     * Deletes a JSON schema by it's id.
+     * Deletes the JSON schema with the given id.
+     * <p>
+     * Request body is the schema id as a plain JSON string.
      *
-     * @param id the identifier of the JSON schema that we want to delete
+     * @param id the schema identifier
+     * @return {@code true} when the schema was deleted, {@code false} when it did not exist
+     * @api.status 200 empty Deletion result flag.
+     * @api.example true
      */
     @POST
     @Path("/delete")
@@ -111,10 +125,13 @@ public class JsonSchemaEndPoint {
     }
 
     /**
-     * Being able to validate a given event is useful when you want to develop custom events and associated schemas
+     * Validates a single event JSON document against installed schemas.
      *
-     * @param event the event to be validated
-     * @return Validation error messages if there is some
+     * @param event the event JSON to validate
+     * @return validation errors (empty collection when valid)
+     * @api.status 200 array org.apache.unomi.schema.api.ValidationError Validation errors (may be empty).
+     * @api.status 400 empty Invalid or unreadable event body.
+     * @api.example [{"error":"$.eventType: is missing but it is required"}]
      */
     @POST
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
@@ -130,10 +147,13 @@ public class JsonSchemaEndPoint {
     }
 
     /**
-     * Being able to validate a given list of event is useful when you want to develop custom events and associated schemas
+     * Validates a batch of events JSON against installed schemas.
      *
-     * @param events the events to be validated
-     * @return Validation error messages if there is some grouped per event type
+     * @param events the events JSON to validate
+     * @return validation errors grouped by event type (empty map when all valid)
+     * @api.status 200 empty Event type to validation error set map (may be empty).
+     * @api.status 400 empty Invalid or unreadable events body.
+     * @api.example {"view":{"error":"$.scope: is missing but it is required"}}
      */
     @POST
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")

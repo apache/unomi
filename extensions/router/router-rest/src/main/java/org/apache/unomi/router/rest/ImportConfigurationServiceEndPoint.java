@@ -44,6 +44,8 @@ import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 
+import java.util.List;
+
 /**
  * A JAX-RS endpoint to manage {@link ImportConfiguration}s.
  */
@@ -74,9 +76,37 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
     }
 
     /**
-     * Save the given import configuration.
+     * Returns all import configurations.
      *
-     * @return the import configuration saved.
+     * @return all import configurations (may be empty)
+     * @api.status 200 array org.apache.unomi.router.api.ImportConfiguration Import configuration list (may be empty).
+     * @api.example [{"itemId":"profile-csv-import","itemType":"importConfig","metadata":{"id":"profile-csv-import","name":"Profile CSV import","scope":"systemscope","enabled":true},"mergingProperty":"itemId"}]
+     */
+    @Override
+    public List<ImportConfiguration> getConfigurations() {
+        return super.getConfigurations();
+    }
+
+    /**
+     * Returns the import configuration with the given id.
+     *
+     * @param configId the configuration identifier
+     * @return the import configuration, or {@code null} when missing
+     * @api.status 200 org.apache.unomi.router.api.ImportConfiguration Import configuration found, or empty body when missing.
+     * @api.example {"itemId":"profile-csv-import","itemType":"importConfig","metadata":{"id":"profile-csv-import","name":"Profile CSV import","scope":"systemscope","enabled":true},"mergingProperty":"itemId"}
+     */
+    @Override
+    public ImportConfiguration getConfiguration(String configId) {
+        return super.getConfiguration(configId);
+    }
+
+    /**
+     * Creates or updates an import configuration and persists it for Camel routes.
+     *
+     * @param importConfiguration the import configuration to save
+     * @return the persisted import configuration
+     * @api.status 200 org.apache.unomi.router.api.ImportConfiguration Import configuration saved.
+     * @api.example {"itemId":"profile-csv-import","itemType":"importConfig","metadata":{"id":"profile-csv-import","name":"Profile CSV import","scope":"systemscope","enabled":true},"mergingProperty":"itemId"}
      */
     @Override
     public ImportConfiguration saveConfiguration(ImportConfiguration importConfiguration) {
@@ -86,18 +116,30 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
         return importConfigSaved;
     }
 
+    /**
+     * Deletes the import configuration with the given id.
+     *
+     * @param configId the configuration identifier
+     * @api.status 204 empty Import configuration deleted.
+     * @api.example {"itemId":"profile-csv-import","itemType":"importConfig","metadata":{"id":"profile-csv-import","name":"Profile CSV import","scope":"systemscope","enabled":true},"mergingProperty":"itemId"}
+     */
     @Override
     public void deleteConfiguration(String configId) {
         this.configurationService.delete(configId);
     }
 
     /**
-     * Save/Update the given import configuration.
-     * Prepare the file to be processed with Camel routes
+     * Uploads a one-shot CSV file for an existing import configuration.
+     * <p>
+     * The file is stored under the configured one-shot upload directory as {@code {importConfigId}.csv}
+     * for subsequent Camel processing.
      *
-     * @param file           file
-     * @param importConfigId config
-     * @return OK / NOK Http Code.
+     * @param importConfigId the import configuration id (multipart field)
+     * @param file the CSV file upload (multipart field)
+     * @return an empty success response
+     * @api.status 200 empty CSV uploaded and ready for processing.
+     * @api.status 500 empty Error writing the uploaded file.
+     * @api.example {}
      */
     @POST
     @Path("/oneshot")
