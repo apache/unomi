@@ -1711,7 +1711,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             Map<String, Object> subSubMappings = (Map<String, Object>) subMappings.computeIfAbsent("properties", k -> new HashMap<>());
 
             if (subSubMappings.containsKey(property.getItemId())) {
-                LOGGER.warn("Mapping already exists for type " + itemType + " and property " + property.getItemId());
+                LOGGER.debug("Mapping already exists for type " + itemType + " and property " + property.getItemId());
                 return;
             }
 

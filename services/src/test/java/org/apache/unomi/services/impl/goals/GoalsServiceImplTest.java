@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -293,4 +294,10 @@ public class GoalsServiceImplTest {
             return null;
         });
     }
+    @Test
+    public void testGetGoalReportMissingGoalReturnsNull() {
+        assertNull(goalsService.getGoalReport("missing-goal-id"));
+        assertNull(goalsService.getGoalReport("missing-goal-id", null));
+    }
+
 }

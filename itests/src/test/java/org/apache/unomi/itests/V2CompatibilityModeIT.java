@@ -293,9 +293,13 @@ public class V2CompatibilityModeIT extends BaseIT {
         try (CloseableHttpClient adminClient = HttpClients.custom()
                 .setDefaultCredentialsProvider(credsProvider)
                 .setDefaultRequestConfig(requestConfig)
-                .build();
-             CloseableHttpResponse jaasResponse = adminClient.execute(getRequest)) {
-            assertEquals("Private endpoint with JAAS auth should work in V2 compatibility mode", 200, jaasResponse.getStatusLine().getStatusCode());
+                .build()) {
+            try (CloseableHttpResponse jaasResponse = adminClient.execute(getRequest)) {
+                assertEquals("Private endpoint with JAAS auth should work in V2 compatibility mode", 200, jaasResponse.getStatusLine().getStatusCode());
+            }
+            try (CloseableHttpResponse privacyResponse = adminClient.execute(new HttpGet(getFullUrl("/cxs/privacy/info")))) {
+                assertEquals("GET /cxs/privacy/info with Karaf auth should work in V2 compatibility mode", 200, privacyResponse.getStatusLine().getStatusCode());
+            }
         }
     }
 

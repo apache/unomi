@@ -25,7 +25,6 @@ import org.apache.karaf.jaas.boot.principal.RolePrincipal;
 import org.apache.karaf.jaas.boot.principal.UserPrincipal;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
-import org.apache.unomi.api.security.TenantPrincipal;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.ApiKey;
@@ -47,7 +46,9 @@ import org.apache.commons.lang3.StringUtils;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * A filter that combines JAAS authentication with tenant API key authentication:
@@ -310,14 +311,28 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 }
                 Subject jaasSubject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
 
-                // Build a merged subject that combines the JAAS principals with a TenantPrincipal
-                // for the default tenant, so that resolveTenantId() can find it downstream.
+                // Private endpoints in V2 compatibility mode require system administrator
+                // authentication (like V2) — a JAAS login alone isn't enough, since any Karaf
+                // user (not just admins) can authenticate against the realm.
+                if (!securityService.extractRolesFromSubject(jaasSubject).contains(UnomiRoles.ADMINISTRATOR)) {
+                    logger.debug("V2 compatibility mode: authenticated user lacks administrator role, denying access to private endpoint");
+                    unauthorized(requestContext);
+                    return;
+                }
+
+                // Build a merged subject that combines the JAAS principals with tenant admin
+                // principals for the default tenant, so that resolveTenantId() can find it downstream.
                 String defaultTenantId = restAuthenticationConfig.getV2CompatibilityDefaultTenantId();
                 Subject mergedSubject = new Subject();
                 mergedSubject.getPrincipals().addAll(jaasSubject.getPrincipals());
                 if (StringUtils.isNotBlank(defaultTenantId)) {
-                    mergedSubject.getPrincipals().add(new TenantPrincipal(defaultTenantId));
-                    executionContextManager.setCurrentContext(executionContextManager.createContext(defaultTenantId));
+                    mergedSubject.getPrincipals().addAll(securityService.createSubject(defaultTenantId, true).getPrincipals());
+                    Set<String> roles = securityService.extractRolesFromSubject(mergedSubject);
+                    Set<String> permissions = new HashSet<>();
+                    for (String role : roles) {
+                        permissions.addAll(securityService.getPermissionsForRole(role));
+                    }
+                    executionContextManager.setCurrentContext(new ExecutionContext(defaultTenantId, roles, permissions));
                 } else {
                     executionContextManager.setCurrentContext(ExecutionContext.systemContext());
                 }

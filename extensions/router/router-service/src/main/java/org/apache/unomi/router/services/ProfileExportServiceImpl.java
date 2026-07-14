@@ -59,6 +59,15 @@ public class ProfileExportServiceImpl implements ProfileExportService {
     }
 
     public String extractProfilesBySegment(ExportConfiguration exportConfiguration) {
+        Object segmentProperty = exportConfiguration.getProperty("segment");
+        if (segmentProperty == null || StringUtils.isBlank(segmentProperty.toString())) {
+            throw new IllegalArgumentException("Export segment is required");
+        }
+        Map<String, String> mapping = (Map<String, String>) exportConfiguration.getProperty("mapping");
+        if (mapping == null || mapping.isEmpty()) {
+            throw new IllegalArgumentException("Export mapping is required");
+        }
+
         Collection<PropertyType> propertiesDef = persistenceService.query("target", "profiles", null, PropertyType.class);
 
         Condition segmentCondition = new Condition();
@@ -97,6 +106,9 @@ public class ProfileExportServiceImpl implements ProfileExportService {
 
     public String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration, Collection<PropertyType> propertiesDef) {
         Map<String, String> mapping = (Map<String, String>) exportConfiguration.getProperty("mapping");
+        if (mapping == null || mapping.isEmpty()) {
+            throw new IllegalArgumentException("Export mapping is required");
+        }
         String lineToWrite = "";
         for (int i = 0; i < mapping.size(); i++) {
             String propertyName = mapping.get(String.valueOf(i));
