@@ -43,15 +43,55 @@ public class Metadata implements Comparable<Metadata>, Serializable, YamlConvert
      * Default scope, gathers default entities and can also be used to share entities across scopes.
      */
     public static final String SYSTEM_SCOPE = "systemscope";
+    /**
+     * Stable identifier of this metadata item (often equals itemId of the owning entity).
+     * @api.example vip
+     */
     private String id;
+    /**
+     * Display name.
+     * @api.example VIP customers
+     */
     private String name;
+    /**
+     * Human-readable description.
+     * @api.example Customers with high engagement score
+     */
     private String description;
+    /**
+     * Scope that owns this metadata.
+     * @api.example mysite
+     */
     private String scope;
+    /**
+     * User-visible tags.
+     * @api.example ["marketing"]
+     */
     private Set<String> tags = new LinkedHashSet<>();
+    /**
+     * System tags used by Unomi internals and plugins.
+     * @api.example ["profileProperties"]
+     */
     private Set<String> systemTags = new LinkedHashSet<>();
+    /**
+     * Whether this item is enabled.
+     * @api.example true
+     */
     private boolean enabled = true;
+    /**
+     * {@code true} when required plugins are not installed.
+     * @api.example false
+     */
     private boolean missingPlugins = false;
+    /**
+     * Whether this item is hidden from default UIs.
+     * @api.example false
+     */
     private boolean hidden = false;
+    /**
+     * Whether this item is read-only.
+     * @api.example false
+     */
     private boolean readOnly = false;
 
     /**

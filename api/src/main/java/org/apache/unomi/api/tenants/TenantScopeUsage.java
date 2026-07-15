@@ -24,8 +24,14 @@ package org.apache.unomi.api.tenants;
  */
 public class TenantScopeUsage {
 
+    /**
+     * Scope identifier (site/application id), excluding {@code systemscope} at the aggregate level.
+     * @api.example mysite
+     */
     private String scopeId;
+    /** Number of segments in this scope at collection time. */
     private long segmentCount;
+    /** Number of rules in this scope at collection time. */
     private long ruleCount;
 
     /**

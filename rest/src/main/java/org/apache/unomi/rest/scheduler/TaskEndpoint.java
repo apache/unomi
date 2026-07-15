@@ -48,14 +48,19 @@ public class TaskEndpoint {
     private SchedulerService schedulerService;
 
     /**
-     * Retrieves all tasks in the system.
+     * Returns scheduled tasks with optional status or type filtering and paging.
+     * <p>
+     * When neither {@code status} nor {@code type} is set, all tasks are loaded and sliced in memory.
      *
-     * @param status optional status filter
-     * @param type optional type filter
-     * @param offset pagination offset
-     * @param limit pagination limit
-     * @param sortBy sort field
-     * @return a partial list of tasks matching the criteria
+     * @param status optional {@link ScheduledTask.TaskStatus} name (case-insensitive)
+     * @param type optional task type filter
+     * @param offset zero-based index of the first result
+     * @param limit maximum number of results to return
+     * @param sortBy optional sort field
+     * @return a paged list of matching tasks
+     * @api.status 200 org.apache.unomi.api.PartialList ScheduledTask page (list items are ScheduledTask; may be empty).
+     * @api.status 400 empty Invalid {@code status} value.
+     * @api.example {"list":[{"itemId":"task-1","itemType":"scheduledTask","taskType":"segmentRefresh","status":"SCHEDULED"}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @GET
     @Produces(MediaType.APPLICATION_JSON)
@@ -87,11 +92,13 @@ public class TaskEndpoint {
     }
 
     /**
-     * Retrieves a specific task by ID.
+     * Returns the scheduled task with the given ID.
      *
-     * @param taskId the ID of the task to retrieve
+     * @param taskId the task identifier
      * @return the requested task
-     * @throws WebApplicationException with 404 status if task is not found
+     * @api.status 200 org.apache.unomi.api.tasks.ScheduledTask Task found.
+     * @api.status 404 empty Task not found.
+     * @api.example {"itemId":"task-1","itemType":"scheduledTask","taskType":"segmentRefresh","status":"SCHEDULED"}
      */
     @GET
     @Path("/{taskId}")
@@ -105,11 +112,13 @@ public class TaskEndpoint {
     }
 
     /**
-     * Cancels a scheduled task.
+     * Cancels the scheduled task with the given ID.
      *
-     * @param taskId the ID of the task to cancel
-     * @return 204 No Content on success
-     * @throws WebApplicationException with 404 status if task is not found
+     * @param taskId the task identifier
+     * @return an empty response on success
+     * @api.status 204 empty Task cancelled.
+     * @api.status 404 empty Task not found.
+     * @api.example {}
      */
     @DELETE
     @Path("/{taskId}")
@@ -123,12 +132,14 @@ public class TaskEndpoint {
     }
 
     /**
-     * Retries a failed task.
+     * Retries a failed scheduled task and returns its updated state.
      *
-     * @param taskId the ID of the task to retry
-     * @param resetFailureCount whether to reset the failure count
+     * @param taskId the task identifier
+     * @param resetFailureCount when {@code true}, resets the failure counter before retry
      * @return the retried task
-     * @throws WebApplicationException with 404 status if task is not found
+     * @api.status 200 org.apache.unomi.api.tasks.ScheduledTask Task retried.
+     * @api.status 404 empty Task not found.
+     * @api.example {"itemId":"task-1","itemType":"scheduledTask","taskType":"segmentRefresh","status":"SCHEDULED"}
      */
     @POST
     @Path("/{taskId}/retry")
@@ -145,11 +156,13 @@ public class TaskEndpoint {
     }
 
     /**
-     * Resumes a crashed task.
+     * Resumes a crashed scheduled task and returns its updated state.
      *
-     * @param taskId the ID of the task to resume
+     * @param taskId the task identifier
      * @return the resumed task
-     * @throws WebApplicationException with 404 status if task is not found
+     * @api.status 200 org.apache.unomi.api.tasks.ScheduledTask Task resumed.
+     * @api.status 404 empty Task not found.
+     * @api.example {"itemId":"task-1","itemType":"scheduledTask","taskType":"segmentRefresh","status":"RUNNING"}
      */
     @POST
     @Path("/{taskId}/resume")

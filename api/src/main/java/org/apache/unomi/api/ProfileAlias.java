@@ -32,12 +32,28 @@ public class ProfileAlias extends Item {
      */
     public static final String ITEM_TYPE = "profileAlias";
 
+    /**
+     * Canonical profile id linked by this alias.
+     * @api.example profile-1
+     */
     private String profileID;
 
+    /**
+     * Client that owns / created this alias link.
+     * @api.example web-tracker
+     */
     private String clientID;
 
+    /**
+     * When this alias was created (ISO-8601 in JSON).
+     * @api.example 2024-06-15T10:00:00.000Z
+     */
     private Date creationTime;
 
+    /**
+     * When this alias was last modified (ISO-8601 in JSON).
+     * @api.example 2024-06-15T11:00:00.000Z
+     */
     private Date modifiedTime;
 
     /**

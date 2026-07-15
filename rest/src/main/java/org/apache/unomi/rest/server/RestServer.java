@@ -23,12 +23,14 @@ import org.apache.cxf.Bus;
 import org.apache.cxf.endpoint.Server;
 import org.apache.cxf.interceptor.Interceptor;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
-import org.apache.cxf.jaxrs.openapi.OpenApiCustomizer;
 import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
 import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
 import org.apache.cxf.jaxrs.swagger.ui.SwaggerUiConfig;
 import org.apache.cxf.message.Message;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter;
+import dev.inoyu.openapi.enrich.cxf.BundleContextDocPackLoader;
+import dev.inoyu.openapi.enrich.cxf.EnrichingOpenApiCustomizer;
+import dev.inoyu.openapi.enrich.model.DocPack;
 import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.security.SecurityService;
@@ -430,7 +432,16 @@ public class RestServer {
         openApiFeature.setUseContextBasedConfig(true);
         SwaggerUiConfig swaggerUiConfig = new SwaggerUiConfig().url("openapi.json").deepLinking(true).queryConfigEnabled(false);
         openApiFeature.setSwaggerUiConfig(swaggerUiConfig);
-        OpenApiCustomizer customizer = new OpenApiCustomizer();
+        DocPack openApiDocPack;
+        try {
+            openApiDocPack = new BundleContextDocPackLoader().loadMerged(bundleContext);
+        } catch (Exception e) {
+            // Defense in depth: a documentation-only enrichment pack must never prevent the
+            // JAX-RS server (all REST endpoints, not just OpenAPI/Swagger) from starting.
+            LOGGER.error("Failed to load OpenAPI enrichment doc pack; continuing without Javadoc-based OpenAPI enrichment", e);
+            openApiDocPack = new DocPack();
+        }
+        EnrichingOpenApiCustomizer customizer = new EnrichingOpenApiCustomizer(openApiDocPack);
         customizer.setDynamicBasePath(true);
         openApiFeature.setCustomizer(customizer);
         jaxrsServerFactoryBean.getFeatures().add(openApiFeature);

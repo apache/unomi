@@ -37,6 +37,7 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 /**
  * A JAX-RS endpoint to manage {@link ExportConfiguration}s.
@@ -75,9 +76,37 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
     }
 
     /**
-     * Save the given export configuration.
+     * Returns all export configurations.
      *
-     * @return the export configuration saved.
+     * @return all export configurations (may be empty)
+     * @api.status 200 array org.apache.unomi.router.api.ExportConfiguration Export configuration list (may be empty).
+     * @api.example [{"itemId":"segment-export","itemType":"exportConfig","metadata":{"id":"segment-export","name":"Segment export","scope":"systemscope","enabled":true}}]
+     */
+    @Override
+    public List<ExportConfiguration> getConfigurations() {
+        return super.getConfigurations();
+    }
+
+    /**
+     * Returns the export configuration with the given id.
+     *
+     * @param configId the configuration identifier
+     * @return the export configuration, or {@code null} when missing
+     * @api.status 200 org.apache.unomi.router.api.ExportConfiguration Export configuration found, or empty body when missing.
+     * @api.example {"itemId":"segment-export","itemType":"exportConfig","metadata":{"id":"segment-export","name":"Segment export","scope":"systemscope","enabled":true}}
+     */
+    @Override
+    public ExportConfiguration getConfiguration(String configId) {
+        return super.getConfiguration(configId);
+    }
+
+    /**
+     * Creates or updates an export configuration and persists it for Camel routes.
+     *
+     * @param exportConfiguration the export configuration to save
+     * @return the persisted export configuration
+     * @api.status 200 org.apache.unomi.router.api.ExportConfiguration Export configuration saved.
+     * @api.example {"itemId":"segment-export","itemType":"exportConfig","metadata":{"id":"segment-export","name":"Segment export","scope":"systemscope","enabled":true}}
      */
     @Override
     public ExportConfiguration saveConfiguration(ExportConfiguration exportConfiguration) {
@@ -86,17 +115,25 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
         return exportConfigSaved;
     }
 
+    /**
+     * Deletes the export configuration with the given id.
+     *
+     * @param configId the configuration identifier
+     * @api.status 204 empty Export configuration deleted.
+     * @api.example {"itemId":"segment-export","itemType":"exportConfig","metadata":{"id":"segment-export","name":"Segment export","scope":"systemscope","enabled":true}}
+     */
     @Override
     public void deleteConfiguration(String configId) {
         this.configurationService.delete(configId);
     }
 
     /**
-     * Save/Update the given import configuration.
-     * Prepare the file to be processed with Camel routes
+     * Runs a one-shot profile export for the given export configuration and returns CSV.
      *
-     * @param exportConfiguration configuration
-     * @return OK / NOK Http Code.
+     * @param exportConfiguration the export configuration describing the segment and columns
+     * @return CSV attachment with exported profiles
+     * @api.status 200 empty CSV export payload ({@code text/csv} with Content-Disposition attachment).
+     * @api.example itemId,properties.email\nprofile-1,user@example.com
      */
     @POST
     @Path("/oneshot")

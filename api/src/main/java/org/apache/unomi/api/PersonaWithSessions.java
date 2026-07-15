@@ -27,8 +27,14 @@ import java.util.List;
  * the sessions needed to simulate or inspect that persona.
  */
 public class PersonaWithSessions implements Serializable {
+    /**
+     * The persona being simulated or inspected.
+     */
     private Persona persona;
 
+    /**
+     * Sessions associated with the persona.
+     */
     private List<PersonaSession> sessions;
 
     /**

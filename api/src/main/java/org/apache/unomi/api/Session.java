@@ -36,25 +36,67 @@ public class Session extends Item implements TimestampedItem, SystemPropertiesIt
      */
     public static final String ITEM_TYPE = "session";
     private static final long serialVersionUID = 4628640198281687336L;
+    /**
+     * Identifier of the profile linked to this session.
+     * @api.example profile-1
+     */
     private String profileId;
 
+    /**
+     * Profile associated with this session.
+     */
     private Profile profile;
 
+    /**
+     * All user-visible session properties.
+     * @api.example {"utm_source":"newsletter"}
+     */
     private Map<String, Object> properties = new HashMap<>();
 
+    /**
+     * Internal properties used by implementations and not usually returned to clients.
+     */
     private Map<String, Object> systemProperties = new HashMap<>();
 
+    /**
+     * When this session was created (ISO-8601 in JSON).
+     * @api.example 2024-06-15T10:00:00.000Z
+     */
     private Date timeStamp;
 
+    /**
+     * Scope this session belongs to.
+     * @api.example mysite
+     */
     private String scope;
 
+    /**
+     * Timestamp of the most recent event in this session (ISO-8601 in JSON).
+     * @api.example 2024-06-15T10:30:00.000Z
+     */
     private Date lastEventDate;
 
+    /**
+     * Number of events recorded in this session.
+     * @api.example 4
+     */
     private int size = 0;
 
+    /**
+     * Elapsed time between session start and last event, in milliseconds.
+     * @api.example 1800000
+     */
     private int duration = 0;
 
+    /**
+     * Event types that triggered session creation.
+     * @api.example ["view"]
+     */
     private List<String> originEventTypes = new ArrayList<>();
+    /**
+     * Event ids that triggered session creation.
+     * @api.example ["evt-1"]
+     */
     private List<String> originEventIds = new ArrayList<>();
 
     /**

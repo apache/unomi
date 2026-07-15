@@ -75,6 +75,8 @@ public class ScoringServiceEndPoint {
      * @param size maximum number of results to return, or {@code -1} for all matches
      * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
      * @return matching scoring metadata
+     * @api.status 200 array org.apache.unomi.api.Metadata Scoring metadata for the requested page (may be empty).
+     * @api.example [{"id":"engagement-score","name":"Engagement score","scope":"mysite","enabled":true}]
      */
     @GET
     @Path("/")
@@ -87,6 +89,9 @@ public class ScoringServiceEndPoint {
      *
      * @param query the query scorings must match
      * @return a paged list of matching scoring metadata
+     * @api.status 200 org.apache.unomi.api.PartialList Metadata page (list items are Metadata).
+     * @api.status 400 empty Invalid or unreadable query body.
+     * @api.example {"list":[{"id":"engagement-score","name":"Engagement score","scope":"mysite","enabled":true}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @POST
     @Path("/query")
@@ -96,9 +101,12 @@ public class ScoringServiceEndPoint {
 
     /**
      * Returns the scoring definition with the given ID.
+     * When the scoring does not exist the endpoint returns {@code null} (HTTP 200 with empty body).
      *
      * @param scoringId the scoring identifier
      * @return the scoring, or {@code null} when it does not exist
+     * @api.status 200 org.apache.unomi.api.segments.Scoring Scoring found, or empty body when missing.
+     * @api.example {"itemId":"engagement-score","itemType":"scoring","metadata":{"id":"engagement-score","name":"Engagement score","scope":"mysite","enabled":true},"elements":[{"condition":{"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}},"value":10}]}
      */
     @GET
     @Path("/{scoringID}")
@@ -108,8 +116,13 @@ public class ScoringServiceEndPoint {
 
     /**
      * Persists the specified scoring in the context server.
+     * Body is a full {@link Scoring}: {@code metadata} plus {@code elements}, each with a
+     * {@code condition} (JSON field {@code type} + {@code parameterValues}) and a point {@code value}.
      *
      * @param scoring the scoring to be persisted
+     * @api.status 204 empty Scoring created or updated.
+     * @api.status 400 empty Invalid or unreadable scoring body (condition schema / validation).
+     * @api.example {"itemId":"engagement-score","itemType":"scoring","metadata":{"id":"engagement-score","name":"Engagement score","scope":"mysite","enabled":true},"elements":[{"condition":{"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}},"value":10}]}
      */
     @POST
     @Path("/")
@@ -125,6 +138,8 @@ public class ScoringServiceEndPoint {
      * @param scoringName        the name of the new scoring
      * @param scoringDescription the description of the new scoring
      * @see Item Item's description for a discussion of scope
+     * @api.status 204 empty Scoring created.
+     * @api.example {"itemId":"engagement-score","itemType":"scoring","metadata":{"id":"engagement-score","name":"Engagement score","scope":"mysite","enabled":true},"elements":[{"condition":{"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}},"value":10}]}
      */
     @PUT
     @Path("/{scope}/{scoringID}")
@@ -134,14 +149,17 @@ public class ScoringServiceEndPoint {
     }
 
     /**
-     * Removes the scoring definition identified by the specified identifier. We can specify that we want the operation to be validated beforehand so that we can
-     * know if any other segment that might use the segment we're trying to delete as a condition might be impacted. If {@code validate} is set to {@code false}, no
-     * validation is performed. If set to {@code true}, we will first check if any segment or scoring depends on the scoring we're trying to delete and if so we will not delete the
-     * scoring but rather return the list of the metadata of the impacted items. If no dependents are found, then we properly delete the scoring.
+     * Removes the scoring definition identified by the specified identifier.
+     * <p>
+     * When {@code validate} is {@code true}, dependents are checked first: if any segment or scoring
+     * references this scoring, it is <strong>not</strong> deleted and the impacted metadata is returned.
+     * When {@code validate} is {@code false}, the scoring is deleted without that check.
      *
      * @param scoringId the identifier of the scoring we want to delete
-     * @param validate  whether or not to perform validation
-     * @return a list of impacted items metadata if any or an empty list if none were found or validation was skipped
+     * @param validate  whether or not to perform dependency validation before delete
+     * @return dependent metadata when delete was blocked; empty lists when deleted or nothing depended on it
+     * @api.status 200 org.apache.unomi.api.segments.DependentMetadata Empty lists when deleted; otherwise dependents that blocked delete.
+     * @api.example {"segments":[],"scorings":[{"id":"loyalty-score","name":"Loyalty score","scope":"mysite","enabled":true}]}
      */
     @DELETE
     @Path("/{scoringID}")
@@ -152,10 +170,13 @@ public class ScoringServiceEndPoint {
     /**
      * Returns segment and scoring metadata that depend on the given scoring.
      * <p>
-     * A dependent definition includes a scoring condition that references this scoring.
+     * A dependent definition includes a scoring condition that references this scoring
+     * (useful before delete or when editing related definitions).
      *
      * @param scoringId the scoring identifier
      * @return metadata for dependent segments and scorings
+     * @api.status 200 org.apache.unomi.api.segments.DependentMetadata Dependent segments/scorings (lists may be empty).
+     * @api.example {"segments":[],"scorings":[]}
      */
     @GET
     @Path("/{scoringID}/impacted")
@@ -165,8 +186,11 @@ public class ScoringServiceEndPoint {
 
     /**
      * Deprecated maintenance endpoint kept for backward compatibility.
+     * Reloads in-memory scorings from storage by re-saving each definition.
      *
      * @deprecated As of version 1.1.0-incubating, not needed anymore
+     * @api.status 204 empty In-memory scorings re-persisted.
+     * @api.example {}
      */
     @Deprecated
     @GET

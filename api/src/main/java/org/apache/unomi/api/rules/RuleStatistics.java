@@ -38,12 +38,40 @@ public class RuleStatistics extends Item {
     public static final String ITEM_TYPE = "rulestats";
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Cluster-wide execution count (excluding unsynchronized local count).
+     * @api.example 42
+     */
     private long executionCount = 0;
+    /**
+     * Executions on this node since {@link #lastSyncDate}.
+     * @api.example 3
+     */
     private long localExecutionCount = 0;
+    /**
+     * Cluster-wide time spent evaluating conditions, in milliseconds.
+     * @api.example 120
+     */
     private long conditionsTime = 0;
+    /**
+     * Condition evaluation time on this node since last sync, in milliseconds.
+     * @api.example 8
+     */
     private long localConditionsTime = 0;
+    /**
+     * Cluster-wide time spent running actions, in milliseconds.
+     * @api.example 95
+     */
     private long actionsTime = 0;
+    /**
+     * Action execution time on this node since last sync, in milliseconds.
+     * @api.example 5
+     */
     private long localActionsTime = 0;
+    /**
+     * When local counters were last merged into cluster totals (ISO-8601 in JSON).
+     * @api.example 2024-06-15T11:00:00.000Z
+     */
     private Date lastSyncDate;
 
     /**

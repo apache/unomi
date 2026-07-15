@@ -34,6 +34,9 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * JAX-RS endpoint exposing Salesforce connector bundle metadata and API limits.
+ */
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
@@ -64,6 +67,13 @@ public class SFDCEndPoint {
         this.bundleContext = bundleContext;
     }
 
+    /**
+     * Returns OSGi bundle headers for the Salesforce connector extension.
+     *
+     * @return bundle header name to value map
+     * @api.status 200 empty Bundle header map.
+     * @api.example {"Bundle-Name":"Apache Unomi :: Extensions :: Salesforce Connector","Bundle-Version":"3.0.0"}
+     */
     @GET
     @Path("/version")
     public Map<String,String> getVersion() {
@@ -77,6 +87,13 @@ public class SFDCEndPoint {
         return versionInfo;
     }
 
+    /**
+     * Returns current Salesforce API limits from the connected org.
+     *
+     * @return limit name to usage snapshot map
+     * @api.status 200 empty Salesforce limits map (shape depends on the connected org).
+     * @api.example {"DailyApiRequests":{"Max":15000,"Remaining":14200}}
+     */
     @GET
     @Path("/limits")
     public Map<String,Object> getLimits() {

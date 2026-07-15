@@ -23,13 +23,45 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * A Health Check response.
+ * One liveliness check result returned by GET /health/check.
  */
 public class HealthCheckResponse {
 
+    /**
+     * Name of the check. Built-ins include {@code karaf} (always present) plus
+     * enabled providers such as {@code elasticsearch}, {@code opensearch},
+     * {@code cluster}, {@code persistence}, and {@code unomi} (bundle state).
+     * @api.example elasticsearch
+     */
     private final String name;
+    /**
+     * Check outcome. One of: {@code LIVE} (ready to serve traffic),
+     * {@code UP} (running or still starting), {@code DOWN} (unavailable),
+     * {@code ERROR} (the check itself failed). The HTTP endpoint returns 200
+     * only when every item is {@code LIVE}; otherwise 206.
+     * @api.example LIVE
+     */
     private final Status status;
+    /**
+     * Time spent collecting this check, in milliseconds.
+     * @api.example 42
+     */
     private final long collectingTime;
+    /**
+     * Optional provider-specific details; omitted from JSON when empty.
+     * Values are strings, numbers, or booleans. Common keys:
+     * {@code error} / {@code error.cause} on failure or timeout;
+     * elasticsearch/opensearch: {@code cluster_name}, {@code status}
+     * (green/yellow/red), {@code timed_out}, {@code number_of_nodes},
+     * {@code number_of_data_nodes}, {@code active_primary_shards},
+     * {@code active_shards}, {@code relocating_shards},
+     * {@code initializing_shards}, {@code unassigned_shards};
+     * cluster: {@code cluster.size}, {@code cluster.node.<i>.uptime},
+     * {@code cluster.node.<i>.cpuload}, {@code cluster.node.<i>.loadAverage},
+     * {@code cluster.node.<i>.public}, {@code cluster.node.<i>.internal},
+     * {@code cluster.node.<i>.role}.
+     * @api.example {"cluster_name":"elasticsearch","status":"green","number_of_nodes":1}
+     */
     private final Map<String, Object> data;
 
     protected HealthCheckResponse(String name, Status status, long collectingTime, Map<String, Object> data) {
@@ -156,11 +188,18 @@ public class HealthCheckResponse {
         }
     }
 
+    /**
+     * Outcome of a single health check.
+     */
     public enum Status {
-        DOWN,     //Not available
-        UP,       //Running or starting
-        LIVE,     //Ready to serve requests
-        ERROR     //Errors during check
+        /** Not available / not ready. */
+        DOWN,
+        /** Running or still starting (not yet ready to serve traffic). */
+        UP,
+        /** Ready to serve requests; required on every check for HTTP 200. */
+        LIVE,
+        /** The check itself failed (see {@code data.error} / {@code data.error.cause}). */
+        ERROR
     }
 
 }

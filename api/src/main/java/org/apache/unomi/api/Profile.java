@@ -47,20 +47,42 @@ public class Profile extends Item implements SystemPropertiesItem {
      */
     public static final String ITEM_TYPE = "profile";
     private static final long serialVersionUID = -7409439322939712238L;
+    /**
+     * All user-visible profile properties.
+     * @api.example {"firstName":"Ada","email":"ada@example.com"}
+     */
     private Map<String, Object> properties = new HashMap<>();
 
+    /**
+     * Internal properties used by implementations and not usually returned to clients.
+     */
     private Map<String, Object> systemProperties = new HashMap<>();
 
+    /**
+     * Segment identifiers matched by this profile.
+     * @api.example ["vip","returning"]
+     */
     private Set<String> segments = new HashSet<>();
 
+    /**
+     * Scoring plan id → numeric score for this profile.
+     * @api.example {"engagement":12}
+     */
     private Map<String, Integer> scores;
 
     /**
+     * Legacy merge target profile id; unused since 2.0.0 (profile aliases replaced merges).
+     *
      * @deprecated since 2.0.0 merge mechanism is now based on profile aliases, and this property is not used anymore
+     * @api.example profile-merged-target
      */
     @Deprecated
     private String mergedWith;
 
+    /**
+     * Consent map for this profile, keyed by consent identifier.
+     * @api.example {"newsletter":{"scope":"mysite","typeIdentifier":"newsletter","status":"GRANTED"}}
+     */
     private Map<String, Consent> consents = new LinkedHashMap<>();
 
     /**

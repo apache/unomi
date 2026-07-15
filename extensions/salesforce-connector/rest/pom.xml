@@ -110,6 +110,15 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>dev.inoyu.openapi</groupId>
+                <artifactId>openapi-enrich-maven-plugin</artifactId>
+                <configuration>
+                    <extraSourceRoots>
+                        <extraSourceRoot>${project.basedir}/../../../api/src/main/java</extraSourceRoot>
+                    </extraSourceRoots>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>buildnumber-maven-plugin</artifactId>
                 <version>1.4</version>

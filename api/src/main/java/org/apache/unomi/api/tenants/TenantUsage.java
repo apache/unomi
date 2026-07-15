@@ -29,27 +29,40 @@ import java.util.List;
  */
 public class TenantUsage {
 
+    /**
+     * Tenant this snapshot describes.
+     * @api.example acme
+     */
     private String tenantId;
-    /** Normalized period label, e.g. {@code 2026-07} for a calendar month. */
+    /**
+     * Normalized period label. For month windows typically {@code YYYY-MM} (for example {@code 2026-07}).
+     * Request {@code period} query accepts {@code current-month}, {@code YYYY-MM}, or legacy {@code 24h}.
+     * @api.example 2026-07
+     */
     private String period;
     /** Inclusive start of the reporting period (epoch millis, UTC). */
     private long periodStart;
     /** Exclusive end of the reporting period (epoch millis, UTC). */
     private long periodEnd;
+    /** Point-in-time profile count at collection. */
     private long profileCount;
-    /** Events in the calendar month identified by {@link #period}. */
+    /** Events whose {@code timeStamp} falls in [{@link #periodStart}, {@link #periodEnd}). */
     private long eventCount;
     /** Tenant scopes excluding {@code systemscope}. */
     private long scopeCount;
+    /** Point-in-time segment count. */
     private long segmentCount;
+    /** Point-in-time rule count. */
     private long ruleCount;
     /** Document count across tenant indices (not byte size). */
     private long storageDocumentCount;
-    /** Active API keys on the tenant record. */
+    /** Active (non-revoked, non-expired) API keys on the tenant record. */
     private long activeApiKeyCount;
-    /** In-memory REST request counter for this tenant since the Unomi process started. */
+    /** In-memory REST request counter for this tenant since the Unomi process started (resets on restart). */
     private long restRequestCount;
+    /** Per-scope segment/rule breakdown; empty when no scoped usage was collected. */
     private List<TenantScopeUsage> scopeUsages = new ArrayList<>();
+    /** When this snapshot was collected (epoch millis, UTC). */
     private long collectedAt;
 
     /**

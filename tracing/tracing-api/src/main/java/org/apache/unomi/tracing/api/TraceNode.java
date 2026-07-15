@@ -31,13 +31,44 @@ import java.util.List;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TraceNode implements Serializable {
+    /**
+     * Type of operation represented by this node.
+     * @api.example event-collection
+     */
     private String operationType;
+    /**
+     * Human-readable description of this operation.
+     * @api.example Processing event collection request
+     */
     private String description;
+    /**
+     * Additional context information for this operation.
+     * @api.example scope=mysite
+     */
     private String context;
+    /**
+     * Result summary for this operation.
+     * @api.example updated=6
+     */
     private String result;
+    /**
+     * Start time of this operation in milliseconds since epoch.
+     * @api.example 1718448600000
+     */
     private long startTime;
+    /**
+     * End time of this operation in milliseconds since epoch.
+     * @api.example 1718448600125
+     */
     private long endTime;
+    /**
+     * Trace messages recorded for this node.
+     * @api.example ["started","rules-evaluated"]
+     */
     private List<String> traces;
+    /**
+     * Nested child trace nodes.
+     */
     private List<TraceNode> children;
 
     /**
@@ -160,6 +191,7 @@ public class TraceNode implements Serializable {
      * Returns the operation duration in milliseconds.
      *
      * @return duration as {@code endTime - startTime}, or zero if end time precedes start time
+     * @api.example 125
      */
     public long getDuration() {
         return Math.max(0, endTime - startTime);

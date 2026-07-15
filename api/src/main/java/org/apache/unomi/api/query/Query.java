@@ -28,13 +28,44 @@ import java.io.Serializable;
  * and a {@code forceRefresh} flag that controls whether indexes are refreshed first.
  */
 public class Query implements Serializable {
+    /**
+     * Optional full-text filter applied to the search.
+     * @api.example Ada
+     */
     private String text;
+    /**
+     * Zero-based index of the first result to return.
+     * @api.example 0
+     */
     private int offset;
+    /**
+     * Maximum number of results to return, or {@code -1} for all matches.
+     * @api.example 20
+     */
     private int limit = Integer.MIN_VALUE;
+    /**
+     * Comma-separated sort fields with optional {@code :asc} or {@code :desc} (for example {@code properties.firstName:asc}).
+     * @api.example properties.firstName:asc
+     */
     private String sortby;
+    /**
+     * Condition that returned items must satisfy.
+     */
     private Condition condition;
+    /**
+     * When {@code true}, refresh indexes before running the query (slower, more consistent).
+     * @api.example false
+     */
     private boolean forceRefresh;
+    /**
+     * Scroll keep-alive window (for example {@code 10m}) when using scroll search.
+     * @api.example 10m
+     */
     private String scrollTimeValidity;
+    /**
+     * Scroll identifier returned by a previous scroll page when continuing deep pagination.
+     * @api.example DXF1ZXJ5QW5kRmV0Y2gBAAAAAAAAAD4WYmRUMAkwZGY=
+     */
     private String scrollIdentifier;
 
     /**

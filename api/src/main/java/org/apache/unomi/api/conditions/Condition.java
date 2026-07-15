@@ -46,7 +46,20 @@ public class Condition implements Serializable, YamlConvertible {
     private static final long serialVersionUID = 7584522402785053206L;
 
     ConditionType conditionType;
+    /**
+     * Identifier of the condition type backing this expression.
+     * In JSON request/response bodies this id is usually serialized as {@code type}
+     * (for example {@code eventTypeCondition}, {@code profilePropertyCondition}, {@code booleanCondition}).
+     * @api.example eventTypeCondition
+     */
     String conditionTypeId;
+    /**
+     * Parameter values supplied for this condition instance (names depend on the condition type).
+     * Examples: {@code eventTypeCondition} uses {@code eventTypeId};
+     * {@code profilePropertyCondition} uses {@code propertyName}/{@code comparisonOperator}/{@code propertyValue*};
+     * {@code booleanCondition} uses {@code operator} plus nested {@code subConditions}.
+     * @api.example {"eventTypeId":"view"}
+     */
     Map<String, Object> parameterValues = new HashMap<>();
 
     /**

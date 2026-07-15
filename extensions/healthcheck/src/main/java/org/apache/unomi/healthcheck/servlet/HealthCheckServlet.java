@@ -35,7 +35,17 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * A simple servlet that provides a health check endpoint.
+ * Liveliness checks for Unomi, registered at /health/check via the OSGi HttpService.
+ * Callers must have the OSGi role "health"; otherwise the servlet returns HTTP 403.
+ * On success the body is a JSON array of health check results.
+ *
+ * <p>HTTP 200 is returned when every check reports LIVE. HTTP 206 Partial Content is
+ * returned when at least one check is not LIVE (still starting, down, or in error).
+ *
+ * @api.status 200 array org.apache.unomi.healthcheck.HealthCheckResponse All checks report LIVE.
+ * @api.status 206 array org.apache.unomi.healthcheck.HealthCheckResponse At least one check is not LIVE (HTTP 206 Partial Content).
+ * @api.status 403 empty Missing the OSGi health role.
+ * @api.example [{"name":"karaf","status":"LIVE","collectingTime":1},{"name":"elasticsearch","status":"LIVE","collectingTime":42,"data":{"cluster_name":"elasticsearch","status":"green","number_of_nodes":1}}]
  */
 public class HealthCheckServlet extends HttpServlet {
 

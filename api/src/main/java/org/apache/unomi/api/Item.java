@@ -77,35 +77,68 @@ public abstract class Item implements Serializable, YamlConvertible {
     /**
      * Unique id used when this item is persisted or referenced.
      * Must be unique among items of the same {@link #itemType}.
+     * @api.example profile-1
      */
     protected String itemId;
     /**
      * Persistence type string for this item.
      * Subclasses must define a public {@code ITEM_TYPE} constant with this value.
+     * @api.example profile
      */
     protected String itemType;
     /**
      * Scope that groups related items (often one analyzed site).
      * Used by clients to filter data returned from the context server.
+     * @api.example mysite
      */
     protected String scope;
     /**
      * Optimistic-locking version, incremented when the item is updated.
+     * @api.example 3
      */
     protected Long version;
     /**
      * Server-managed metadata keyed by string.
      * Stores values that are not part of the item's core properties.
+     * @api.example {"origin":"import"}
      */
     protected Map<String, Object> systemMetadata = new HashMap<>();
+    /**
+     * Tenant that owns this item.
+     * @api.example acme
+     */
     private String tenantId;
 
     // Audit metadata fields
+    /**
+     * User or system that created this item.
+     * @api.example karaf
+     */
     private String createdBy;
+    /**
+     * User or system that last modified this item.
+     * @api.example karaf
+     */
     private String lastModifiedBy;
+    /**
+     * When this item was created (ISO-8601 in JSON).
+     * @api.example 2024-06-15T10:30:00.000Z
+     */
     private Date creationDate;
+    /**
+     * When this item was last modified (ISO-8601 in JSON).
+     * @api.example 2024-06-15T11:00:00.000Z
+     */
     private Date lastModificationDate;
+    /**
+     * Cluster node that originated this item.
+     * @api.example node-1
+     */
     private String sourceInstanceId;
+    /**
+     * When this item was last synchronized from another node (ISO-8601 in JSON).
+     * @api.example 2024-06-15T11:05:00.000Z
+     */
     private Date lastSyncDate;
 
     /**

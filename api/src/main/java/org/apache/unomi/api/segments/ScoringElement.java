@@ -35,6 +35,10 @@ import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
  * profile matches the element's condition.
  */
 public class ScoringElement implements Serializable, YamlConvertible {
+    /**
+     * Condition evaluated to decide whether this scoring element applies (JSON wire field {@code type} + {@code parameterValues}).
+     * @api.example {"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}}
+     */
     private Condition condition;
     private int value;
 
@@ -46,8 +50,10 @@ public class ScoringElement implements Serializable, YamlConvertible {
 
     /**
      * Condition evaluated to decide whether this scoring element applies.
+     * In JSON the condition type id is usually the field {@code type} (not {@code conditionTypeId}).
      *
      * @return the condition
+     * @api.example {"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}}
      */
     public Condition getCondition() {
         return condition;

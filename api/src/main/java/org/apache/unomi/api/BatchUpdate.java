@@ -26,11 +26,34 @@ import org.apache.unomi.api.conditions.Condition;
  * applies a {@link PropertyMergeStrategyType} when merging complex fields.
  */
 public class BatchUpdate {
+    /**
+     * Property to update, as an Apache Commons BeanUtils expression (for example {@code properties.email}).
+     * @api.example properties.email
+     */
     private String propertyName;
+    /**
+     * New value to assign to the property.
+     * @api.example updated@example.com
+     */
     private Object propertyValue;
+    /**
+     * Condition that items must match to be updated.
+     */
     private Condition condition;
+    /**
+     * Optional property merge strategy name when updating complex fields.
+     * @api.example defaultPropertyMergeStrategy
+     */
     private String strategy;
+    /**
+     * Scroll keep-alive window while iterating matches.
+     * @api.example 10m
+     */
     private String scrollTimeValidity = "10m";
+    /**
+     * Number of matching items to process per scroll batch.
+     * @api.example 1000
+     */
     private int scrollBatchSize = 1000;
 
     /**

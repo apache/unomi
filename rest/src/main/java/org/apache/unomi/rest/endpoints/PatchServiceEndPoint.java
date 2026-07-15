@@ -52,10 +52,14 @@ public class PatchServiceEndPoint {
     }
 
     /**
-     * Apply a patch on an item
+     * Applies a patch to an item.
+     * <p>
+     * When {@code force} is {@code false} or omitted and the patch was already applied, the call is a no-op.
      *
      * @param patch the patch to apply
-     * @param force a boolean to force (or not) the application of the patch even if it was previously applied.
+     * @param force when {@code true}, re-applies even if previously applied
+     * @api.status 204 empty Patch applied or skipped because it was already applied.
+     * @api.example {"itemId":"profile-1","itemType":"patch","patches":[{"operation":"set","path":"properties.firstName","value":"Ada"}]}
      */
     @POST
     @Path("/apply")

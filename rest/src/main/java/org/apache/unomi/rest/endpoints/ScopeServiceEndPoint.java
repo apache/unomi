@@ -65,6 +65,8 @@ public class ScopeServiceEndPoint {
      * Returns all configured scopes.
      *
      * @return all known scopes
+     * @api.status 200 array org.apache.unomi.api.Scope All scopes (may be empty).
+     * @api.example [{"itemId":"systemscope","itemType":"scope","metadata":{"id":"systemscope","name":"System scope","scope":"systemscope","enabled":true}}]
      */
     @GET
     @Path("/")
@@ -76,6 +78,8 @@ public class ScopeServiceEndPoint {
      *
      * @param scope the scope to be persisted
      * @return an empty success response
+     * @api.status 200 empty Scope created or updated.
+     * @api.example {"itemId":"mysite","itemType":"scope","metadata":{"id":"mysite","name":"My site","scope":"mysite","enabled":true}}
      */
     @POST
     @Path("/")
@@ -86,9 +90,12 @@ public class ScopeServiceEndPoint {
 
     /**
      * Returns the scope with the given ID.
+     * When the scope does not exist the endpoint returns {@code null} (HTTP 200 with empty body).
      *
      * @param scopeId the scope identifier
      * @return the scope, or {@code null} when it does not exist
+     * @api.status 200 org.apache.unomi.api.Scope Scope found, or empty body when missing.
+     * @api.example {"itemId":"mysite","itemType":"scope","metadata":{"id":"mysite","name":"My site","scope":"mysite","enabled":true}}
      */
     @GET
     @Path("/{scopeId}")
@@ -97,9 +104,11 @@ public class ScopeServiceEndPoint {
     }
 
     /**
-     * Deletes a scope.
+     * Deletes the scope with the given ID.
      *
      * @param scopeId the identifier of the scope
+     * @api.status 204 empty Scope deleted.
+     * @api.example {"itemId":"mysite","itemType":"scope","metadata":{"id":"mysite","name":"My site","scope":"mysite","enabled":true}}
      */
     @DELETE
     @Path("/{scopeId}")

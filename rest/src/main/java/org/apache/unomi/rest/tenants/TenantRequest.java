@@ -19,12 +19,20 @@ package org.apache.unomi.rest.tenants;
 import java.util.Map;
 
 /**
- * REST request payload for creating or updating a {@link org.apache.unomi.api.tenants.Tenant}.
- * Carries the desired tenant id and an open properties map that maps to
- * tenant configuration fields accepted by {@link org.apache.unomi.api.tenants.TenantService}.
+ * REST request body for creating a {@link org.apache.unomi.api.tenants.Tenant}.
+ * Carries the desired tenant id and an open properties map stored on the tenant.
  */
 public class TenantRequest {
+    /**
+     * Desired tenant identifier ({@link org.apache.unomi.api.Item#itemId}). Required; blank values yield HTTP 400.
+     * @api.example acme
+     */
     private String requestedId;
+    /**
+     * Optional open map of custom tenant properties persisted as {@code Tenant.properties}.
+     * Free-form keys; common ones include display hints such as {@code name} or {@code description}.
+     * @api.example {"name":"Acme Corp","description":"Production tenant"}
+     */
     private Map<String, Object> properties;
 
     /**

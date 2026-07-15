@@ -69,13 +69,15 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * Returns profiles that match the segment with the given ID.
+     * Returns profiles that currently match the segment with the given ID.
      *
      * @param segmentId the segment identifier
      * @param offset zero-based index of the first result
      * @param size maximum number of results to return, or {@code -1} for all matches
      * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
      * @return a paged list of matching profiles
+     * @api.status 200 org.apache.unomi.api.PartialList Profiles page (list items are Profile).
+     * @api.example {"list":[{"itemId":"profile-1","itemType":"profile","properties":{"isPremium":true}}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @GET
     @Path("/{segmentID}/match")
@@ -84,10 +86,12 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * Returns how many profiles match the segment with the given ID.
+     * Returns how many profiles currently match the segment with the given ID.
      *
      * @param segmentId the segment identifier
      * @return the number of matching profiles
+     * @api.status 200 empty Match count as a JSON number.
+     * @api.example 42
      */
     @GET
     @Path("/{segmentID}/count")
@@ -96,11 +100,15 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * Determines whether the specified profile is part of the segment identified by the specified identifier.
+     * Determines whether the specified profile is a member of the given segment.
+     * <p>
+     * The {@code profile} path variable is the profile identifier (the JAX-RS type is {@link Profile} for binding).
      *
-     * @param profile   the profile we want to check
+     * @param profile   the profile to check (bound from the profile id path segment)
      * @param segmentId the identifier of the segment against which we want to check the profile
      * @return {@code true} if the specified profile is in the specified segment, {@code false} otherwise
+     * @api.status 200 empty Membership flag.
+     * @api.example true
      */
     @GET
     @Path("/{segmentID}/match/{profile}")
@@ -115,6 +123,8 @@ public class SegmentServiceEndPoint {
      * @param size maximum number of results to return, or {@code -1} for all matches
      * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
      * @return matching segment metadata
+     * @api.status 200 array org.apache.unomi.api.Metadata Segment metadata for the requested page (may be empty).
+     * @api.example [{"id":"premium-profiles","name":"Premium profiles","scope":"mysite","enabled":true}]
      */
     @GET
     @Path("/")
@@ -125,10 +135,13 @@ public class SegmentServiceEndPoint {
     /**
      * Returns segment and scoring metadata that depend on the given segment.
      * <p>
-     * A dependent definition includes a profile-segment condition that references this segment.
+     * A dependent definition includes a profile-segment condition that references this segment
+     * (useful before delete or when editing related definitions).
      *
      * @param segmentId the segment identifier
      * @return metadata for dependent segments and scorings
+     * @api.status 200 org.apache.unomi.api.segments.DependentMetadata Dependent segments/scorings (lists may be empty).
+     * @api.example {"segments":[],"scorings":[]}
      */
     @GET
     @Path("/{segmentID}/impacted")
@@ -138,8 +151,13 @@ public class SegmentServiceEndPoint {
 
     /**
      * Persists the specified segment in the context server.
+     * Body is a full {@link Segment}: {@code metadata} plus a membership {@code condition}
+     * (JSON field {@code type} + {@code parameterValues}).
      *
      * @param segment the segment to be persisted
+     * @api.status 204 empty Segment created or updated.
+     * @api.status 400 empty Invalid or unreadable segment body (condition schema / validation).
+     * @api.example {"itemId":"premium-profiles","itemType":"segment","metadata":{"id":"premium-profiles","name":"Premium profiles","scope":"mysite","enabled":true,"description":"Profiles marked as premium"},"condition":{"type":"profilePropertyCondition","parameterValues":{"propertyName":"properties.isPremium","comparisonOperator":"equals","propertyValue":"true"}}}
      */
     @POST
     @Path("/")
@@ -152,6 +170,9 @@ public class SegmentServiceEndPoint {
      *
      * @param query the query segments must match
      * @return a paged list of matching segment metadata
+     * @api.status 200 org.apache.unomi.api.PartialList Metadata page (list items are Metadata).
+     * @api.status 400 empty Invalid or unreadable query body.
+     * @api.example {"list":[{"id":"premium-profiles","name":"Premium profiles","scope":"mysite","enabled":true}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @POST
     @Path("/query")
@@ -161,9 +182,12 @@ public class SegmentServiceEndPoint {
 
     /**
      * Returns the segment definition with the given ID.
+     * When the segment does not exist the endpoint returns {@code null} (HTTP 200 with empty body).
      *
      * @param segmentId the segment identifier
      * @return the segment, or {@code null} when it does not exist
+     * @api.status 200 org.apache.unomi.api.segments.Segment Segment found, or empty body when missing.
+     * @api.example {"itemId":"premium-profiles","itemType":"segment","metadata":{"id":"premium-profiles","name":"Premium profiles","scope":"mysite","enabled":true,"description":"Profiles marked as premium"},"condition":{"type":"profilePropertyCondition","parameterValues":{"propertyName":"properties.isPremium","comparisonOperator":"equals","propertyValue":"true"}}}
      */
     @GET
     @Path("/{segmentID}")
@@ -172,14 +196,17 @@ public class SegmentServiceEndPoint {
     }
 
     /**
-     * Removes the segment definition identified by the specified identifier. We can specify that we want the operation to be validated beforehand so that we can
-     * know if any other segment that might use the segment we're trying to delete as a condition might be impacted. If {@code validate} is set to {@code false}, no
-     * validation is performed. If set to {@code true}, we will first check if any segment or scoring depends on the segment we're trying to delete and if so we will not delete the
-     * segment but rather return the list of the metadata of the impacted items. If no dependents are found, then we properly delete the segment.
+     * Removes the segment definition identified by the specified identifier.
+     * <p>
+     * When {@code validate} is {@code true}, dependents are checked first: if any segment or scoring
+     * references this segment, it is <strong>not</strong> deleted and the impacted metadata is returned.
+     * When {@code validate} is {@code false}, the segment is deleted without that check.
      *
      * @param segmentId the identifier of the segment we want to delete
-     * @param validate  whether or not to perform validation
-     * @return a list of impacted segment metadata if any or an empty list if none were found or validation was skipped
+     * @param validate  whether or not to perform dependency validation before delete
+     * @return dependent metadata when delete was blocked; empty lists when deleted or nothing depended on it
+     * @api.status 200 org.apache.unomi.api.segments.DependentMetadata Empty lists when deleted; otherwise dependents that blocked delete.
+     * @api.example {"segments":[{"id":"premium-buyers","name":"Premium buyers","scope":"mysite","enabled":true}],"scorings":[]}
      */
     @DELETE
     @Path("/{segmentID}")
@@ -189,8 +216,11 @@ public class SegmentServiceEndPoint {
 
     /**
      * Deprecated maintenance endpoint kept for backward compatibility.
+     * Reloads in-memory segments from storage by re-saving each definition.
      *
      * @deprecated As of version 1.1.0-incubating, not needed anymore
+     * @api.status 204 empty In-memory segments re-persisted.
+     * @api.example {}
      */
     @Deprecated
     @GET

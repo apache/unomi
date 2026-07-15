@@ -38,7 +38,18 @@ import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
  */
 public class Action implements Serializable, YamlConvertible {
     private ActionType actionType;
+    /**
+     * Identifier of the action type to execute.
+     * In JSON bodies this id is usually serialized as {@code type}
+     * (for example {@code setPropertyAction}, {@code allEventToProfilePropertiesAction}).
+     * @api.example setPropertyAction
+     */
     private String actionTypeId;
+    /**
+     * Parameter values for the action (names depend on the action type).
+     * For {@code setPropertyAction}: {@code setPropertyName}, then one value param ({@code setPropertyValue} string, {@code setPropertyValueBoolean}, {@code setPropertyValueInteger}, or a helper such as {@code setPropertyValueCurrentDate}), optional {@code storeInSession}.
+     * @api.example {"setPropertyName":"properties.isPremium","setPropertyValueBoolean":true,"storeInSession":false}
+     */
     private Map<String, Object> parameterValues = new HashMap<>();
 
     /**
@@ -80,6 +91,7 @@ public class Action implements Serializable, YamlConvertible {
      * Identifier of the associated action type.
      *
      * @return the identifier of the associated action type
+     * @api.example setPropertyAction
      */
     @XmlElement(name = "type")
     public String getActionTypeId() {
@@ -99,6 +111,7 @@ public class Action implements Serializable, YamlConvertible {
      * Parameter values keyed by parameter name.
      *
      * @return a Map of parameter name - associated value pairs
+     * @api.example {"setPropertyName":"properties.isPremium","setPropertyValueBoolean":true,"storeInSession":false}
      */
     public Map<String, Object> getParameterValues() {
         return parameterValues;

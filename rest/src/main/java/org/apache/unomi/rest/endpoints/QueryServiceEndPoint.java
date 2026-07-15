@@ -80,6 +80,8 @@ public class QueryServiceEndPoint {
      * @param property the property whose distinct values form aggregation buckets
      * @return property value to item count mappings
      * @see Item Item for a discussion of {@code ITEM_TYPE}
+     * @api.status 200 empty Property value to item count map (may be empty).
+     * @api.example {"vip":42,"standard":128}
      */
     @GET
     @Path("/{type}/{property}")
@@ -98,6 +100,8 @@ public class QueryServiceEndPoint {
      * @param aggregateQuery optional aggregate query constraints
      * @return property value to item count mappings
      * @see Item Item for a discussion of {@code ITEM_TYPE}
+     * @api.status 200 empty Property value to item count map (may be empty).
+     * @api.example {"FR":1200,"DE":980}
      */
     @POST
     @Path("/{type}/{property}")
@@ -112,13 +116,18 @@ public class QueryServiceEndPoint {
 
     /**
      * Returns numeric metrics for a field on items that match the given condition.
+     * <p>
+     * Example path: {@code POST /cxs/query/profile/properties.nbOfVisits/sum/avg} with a condition body
+     * returns visit-count metrics across matching profiles.
      *
      * @param condition the condition matching items must satisfy
      * @param metricsType slash-separated metric names ({@code sum}, {@code avg}, {@code min}, {@code max})
-     * @param property the numeric field to aggregate
-     * @param type the item type name from the class {@code ITEM_TYPE} field
+     * @param property the numeric field to aggregate (e.g. {@code properties.nbOfVisits})
+     * @param type the item type name from the class {@code ITEM_TYPE} field (e.g. {@code profile})
      * @return metric name to computed value mappings
      * @see Item Item for a discussion of {@code ITEM_TYPE}
+     * @api.status 200 empty Metric name to computed value map (keys are the requested metric names).
+     * @api.example {"sum":12500.0,"avg":250.0,"min":1.0,"max":900.0}
      */
     @POST
     @Path("/{type}/{property}/{metricTypes:((sum|avg|min|max)/?)*}")
@@ -135,6 +144,9 @@ public class QueryServiceEndPoint {
      * @param response the HTTP response used to set status on validation failure
      * @return the matching item count, or {@code 0} when validation fails
      * @see Item Item for a discussion of {@code ITEM_TYPE}
+     * @api.status 200 empty Match count as a JSON number.
+     * @api.status 400 empty Invalid or unreadable condition when {@code validate} is {@code true} or omitted.
+     * @api.example 42
      */
     @POST
     @Path("/{type}/count")

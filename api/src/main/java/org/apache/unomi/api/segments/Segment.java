@@ -46,6 +46,10 @@ public class Segment extends MetadataItem implements YamlConvertible {
      */
     public static final String ITEM_TYPE = "segment";
     private static final long serialVersionUID = -1384533444860961296L;
+    /**
+     * Membership condition evaluated against profiles (JSON wire field {@code type} + {@code parameterValues}).
+     * @api.example {"type":"profilePropertyCondition","parameterValues":{"propertyName":"properties.isPremium","comparisonOperator":"equals","propertyValue":"true"}}
+     */
     private Condition condition;
 
     /**
@@ -65,8 +69,10 @@ public class Segment extends MetadataItem implements YamlConvertible {
 
     /**
      * Condition that profiles must satisfy to belong to this segment.
+     * In JSON the condition type id is usually the field {@code type} (not {@code conditionTypeId}).
      *
      * @return the membership condition
+     * @api.example {"type":"profilePropertyCondition","parameterValues":{"propertyName":"properties.isPremium","comparisonOperator":"equals","propertyValue":"true"}}
      */
     public Condition getCondition() {
         return condition;

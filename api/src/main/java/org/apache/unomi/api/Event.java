@@ -53,20 +53,54 @@ public class Event extends Item implements TimestampedItem {
     public static final String CLIENT_ID_ATTRIBUTE = "client_id";
 
     private static final long serialVersionUID = -1096874942838593575L;
+    /**
+     * Event verb / type id (for example {@code view}, {@code login}, {@code modifyProperties}).
+     * @api.example view
+     */
     private String eventType;
+    /**
+     * Session this event belongs to (optional if the collector request sets a default).
+     * @api.example session-1
+     */
     private String sessionId = null;
+    /**
+     * Profile this event belongs to (optional if the collector/context request sets a default).
+     * @api.example profile-1
+     */
     private String profileId = null;
+    /**
+     * Event time; defaults to receive time when omitted (ISO-8601 in JSON).
+     * @api.example 2024-06-15T10:30:00.000Z
+     */
     private Date timeStamp;
+    /**
+     * Event-specific properties (URL, product id, form fields, …). Free-form map.
+     * @api.example {"pageUrl":"https://example.com/"}
+     */
     private Map<String, Object> properties;
+    /**
+     * Flattened copy of nested properties used by some query paths.
+     * @api.example {"pageUrl":"https://example.com/"}
+     */
     private Map<String, Object> flattenedProperties;
 
     private transient Profile profile;
     private transient Session session;
     private transient List<ActionPostExecutor> actionPostExecutors;
 
+    /**
+     * Event source (subject), often a page {@link Item} with {@code scope} and {@code itemId}.
+     */
     private Item source;
+    /**
+     * Event target (object), when applicable.
+     */
     private Item target;
 
+    /**
+     * When {@code false}, the event is evaluated by rules but not persisted.
+     * @api.example true
+     */
     private boolean persistent = true;
 
     private transient Map<String, Object> attributes;

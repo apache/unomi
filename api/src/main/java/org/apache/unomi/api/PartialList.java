@@ -32,12 +32,39 @@ import java.util.List;
 public class PartialList<T> implements Serializable {
 
     private static final long serialVersionUID = 2661946814840468260L;
+    /**
+     * Elements in the current page.
+     */
     private List<T> list;
+    /**
+     * Zero-based index of the first element of this page in the full result set.
+     * @api.example 0
+     */
     private long offset;
+    /**
+     * Number of elements in this page.
+     * @api.example 20
+     */
     private long pageSize;
+    /**
+     * Total number of matching elements (exact or lower bound; see {@link #totalSizeRelation}).
+     * @api.example 120
+     */
     private long totalSize;
+    /**
+     * Whether {@link #totalSize} is exact ({@code EQUAL}) or a lower bound ({@code GREATER_THAN_OR_EQUAL_TO}).
+     * @api.example EQUAL
+     */
     private Relation totalSizeRelation;
+    /**
+     * Scroll identifier for continuing a deep scroll query, when applicable.
+     * @api.example DXF1ZXJ5QW5kRmV0Y2gBAAAAAAAAAD4WYmRUMAkwZGY=
+     */
     private String scrollIdentifier = null;
+    /**
+     * Scroll keep-alive window associated with {@link #scrollIdentifier}.
+     * @api.example 10m
+     */
     private String scrollTimeValidity = null;
 
     /**

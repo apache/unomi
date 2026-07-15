@@ -25,7 +25,15 @@ package org.apache.unomi.api.tenants;
  */
 public class ApiKeyCreationResult {
 
+    /**
+     * Persisted API key metadata (hash, maskedKey, type, dates). Does not contain the secret.
+     */
     private ApiKey apiKey;
+    /**
+     * One-time plaintext key value, only available at creation. Prefixed with {@code unomi_v1_}.
+     * Store immediately; it cannot be recovered later.
+     * @api.example unomi_v1_0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF
+     */
     private String plainTextKey;
 
     /**

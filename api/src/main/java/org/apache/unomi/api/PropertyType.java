@@ -37,18 +37,65 @@ public class PropertyType extends MetadataItem {
      */
     public static final String ITEM_TYPE = "propertyType";
 
+    /**
+     * Item type this property applies to (for example {@code profiles}).
+     * @api.example profiles
+     */
     private String target;
+    /**
+     * Value type identifier (for example {@code string}, {@code email}, {@code integer}).
+     * @api.example email
+     */
     private String valueTypeId;
+    /**
+     * Resolved value type definition (optional; usually derived from {@link #valueTypeId}).
+     */
     private ValueType valueType;
+    /**
+     * Optional default value for new items.
+     * @api.example unknown@example.com
+     */
     private String defaultValue;
+    /**
+     * Optional allowed date ranges for date-typed properties.
+     */
     private List<DateRange> dateRanges = new ArrayList<>();
+    /**
+     * Optional allowed numeric ranges for numeric properties.
+     */
     private List<NumericRange> numericRanges = new ArrayList<>();
+    /**
+     * Optional allowed IP ranges for IP-typed properties.
+     */
     private List<IpRange> ipRanges = new ArrayList<>();
+    /**
+     * External property names automatically mapped onto this property type.
+     * @api.example ["mail","e-mail"]
+     */
     private Set<String> automaticMappingsFrom = new HashSet<>();
+    /**
+     * Display/order rank among sibling property types.
+     * @api.example 10.0
+     */
     private Double rank;
+    /**
+     * Strategy used when merging this property across profiles.
+     * @api.example defaultPropertyMergeStrategy
+     */
     private String mergeStrategy;
+    /**
+     * Whether the property accepts multiple values.
+     * @api.example false
+     */
     private Boolean multivalued;
+    /**
+     * When {@code true}, the property is protected / concealed from public APIs.
+     * @api.example false
+     */
     private Boolean protekted;
+    /**
+     * Nested child property types for structured properties.
+     */
     private Set<PropertyType> childPropertyTypes = new LinkedHashSet<>();
 
     /**

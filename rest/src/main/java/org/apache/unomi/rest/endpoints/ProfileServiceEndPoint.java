@@ -116,6 +116,8 @@ public class ProfileServiceEndPoint {
      * Returns the total number of unique profiles.
      *
      * @return the profile count
+     * @api.status 200 empty Total number of unique profiles.
+     * @api.example 1200
      */
     @GET
     @Path("/count")
@@ -125,9 +127,13 @@ public class ProfileServiceEndPoint {
 
     /**
      * Returns profiles matching the given query.
+     * Prefer a {@link org.apache.unomi.api.conditions.Condition} in the body for precise filters; optional full-text {@code text} and paging fields are also supported.
      *
      * @param query the search query
      * @return a paged list of matching profiles
+     * @api.status 200 org.apache.unomi.api.PartialList Profiles page (list items are Profile).
+     * @api.status 400 empty Invalid or unreadable query body.
+     * @api.example {"list":[{"itemId":"profile-1","itemType":"profile","properties":{"firstName":"Ada","email":"ada@example.com"},"segments":["vip"]}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @POST
     @Path("/search")
@@ -137,9 +143,14 @@ public class ProfileServiceEndPoint {
 
     /**
      * Exports matching profiles as a downloadable CSV file.
+     * The {@code query} parameter must be a JSON-encoded {@link org.apache.unomi.api.query.Query}.
      *
      * @param query JSON query string describing which profiles to export
      * @return a CSV download response
+     * @api.status 200 empty CSV attachment with matching profile properties.
+     * @api.status 400 empty {@code query} JSON is missing or not a valid Query.
+     * @api.status 500 empty Export failed while parsing the query or generating CSV.
+     * @api.example itemId,properties.email,properties.firstName\nprofile-42,ada@example.com,Ada
      */
     @GET
     @Path("/export")
@@ -158,6 +169,9 @@ public class ProfileServiceEndPoint {
      *
      * @param query a form-encoded representation of the query the profiles to export should match
      * @return a Response object configured to allow caller to download the CSV export file
+     * @api.status 200 empty CSV attachment with matching profile properties.
+     * @api.status 400 empty Form {@code query} is missing or not a valid Query JSON.
+     * @api.status 500 empty Export failed while parsing the query or generating CSV.
      */
     @GET
     @Path("/export")
@@ -177,6 +191,9 @@ public class ProfileServiceEndPoint {
      *
      * @param query the query describing which profiles to export
      * @return a CSV download response
+     * @api.status 200 empty CSV attachment with matching profile properties.
+     * @api.status 400 empty Invalid or unreadable query body.
+     * @api.example itemId,properties.email,properties.firstName\nprofile-42,ada@example.com,Ada
      */
     @POST
     @Path("/export")
@@ -191,8 +208,12 @@ public class ProfileServiceEndPoint {
 
     /**
      * Applies a batch update to all matching profiles.
+     * Selects matching profiles with {@link org.apache.unomi.api.BatchUpdate#getCondition()} and sets {@code propertyName} to {@code propertyValue}.
      *
      * @param update the batch update specification
+     * @api.status 204 empty Batch update accepted and processed.
+     * @api.status 400 empty Invalid batch update body (missing propertyName/condition).
+     * @api.example {"propertyName":"properties.email","propertyValue":"updated@example.com","condition":{"type":"profilePropertyCondition","parameterValues":{"propertyName":"properties.email","comparisonOperator":"exists","propertyValue":""}},"strategy":"defaultPropertyMergeStrategy","scrollTimeValidity":"10m","scrollBatchSize":1000}
      */
     @POST
     @Path("/batchProfilesUpdate")
@@ -202,9 +223,12 @@ public class ProfileServiceEndPoint {
 
     /**
      * Returns the profile with the given ID.
+     * When the profile does not exist the endpoint returns {@code null} (HTTP 200 with empty body), not 404.
      *
      * @param profileId the profile identifier
      * @return the profile, or {@code null} when it does not exist
+     * @api.status 200 org.apache.unomi.api.Profile Profile found, or empty body when missing.
+     * @api.example {"itemId":"profile-1","itemType":"profile","properties":{"firstName":"Ada","email":"ada@example.com"},"segments":["vip"],"scores":{"engagement":12},"consents":{}}
      */
     @GET
     @Path("/{profileId}")
@@ -214,9 +238,13 @@ public class ProfileServiceEndPoint {
 
     /**
      * Saves the specified profile in the context server, sending a {@code profileUpdated} event.
+     * Creates a new profile or merges into an existing one when applicable, then fires a non-persistent {@code profileUpdated} event.
      *
      * @param profile the profile to be saved
      * @return the newly saved profile
+     * @api.status 200 org.apache.unomi.api.Profile Profile saved (or merged).
+     * @api.status 400 empty Invalid or unreadable profile body.
+     * @api.example {"itemId":"profile-1","itemType":"profile","properties":{"firstName":"Ada","email":"ada@example.com"},"segments":["vip"]}
      */
     @POST
     @Path("/")
@@ -238,6 +266,8 @@ public class ProfileServiceEndPoint {
      *
      * @param profileId the identifier of the profile or persona to delete
      * @param persona   {@code true} if the specified identifier is supposed to refer to a persona, {@code false} if it is supposed to refer to a profile
+     * @api.status 204 empty Profile or persona deleted.
+     * @api.example {"itemId":"profile-42","itemType":"profile","properties":{"firstName":"Ada","email":"ada@example.com"}}
      */
     @DELETE
     @Path("/{profileId}")
@@ -256,6 +286,8 @@ public class ProfileServiceEndPoint {
      * @param size maximum number of results to return, or {@code -1} for all matches
      * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
      * @return a paged list of matching sessions
+     * @api.status 200 org.apache.unomi.api.PartialList Sessions page (list items are Session).
+     * @api.example {"list":[{"itemId":"session-1","itemType":"session","profileId":"profile-1","scope":"mysite","size":4}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @GET
     @Path("/{profileId}/sessions")
@@ -272,6 +304,8 @@ public class ProfileServiceEndPoint {
      *
      * @param profileId the profile identifier
      * @return segment metadata for memberships of this profile
+     * @api.status 200 array org.apache.unomi.api.Metadata Segment memberships for the profile (may be empty).
+     * @api.example [{"id":"vip","name":"VIP customers","scope":"mysite","enabled":true}]
      */
     @GET
     @Path("/{profileId}/segments")
@@ -285,6 +319,8 @@ public class ProfileServiceEndPoint {
      *
      * @param fromPropertyTypeId the source property type identifier
      * @return the mapped target property type identifier
+     * @api.status 200 empty Mapped target property type id (may be empty/null when unmapped).
+     * @api.example email
      */
     @GET
     @Path("/properties/mappings/{fromPropertyTypeId}")
@@ -297,6 +333,9 @@ public class ProfileServiceEndPoint {
      *
      * @param query the search query
      * @return a paged list of matching personas
+     * @api.status 200 org.apache.unomi.api.PartialList Personas page (list items are Persona).
+     * @api.status 400 empty Invalid or unreadable query body.
+     * @api.example {"list":[{"itemId":"persona-vip","itemType":"persona","properties":{"firstName":"VIP"}}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @POST
     @Path("/personas/search")
@@ -306,9 +345,12 @@ public class ProfileServiceEndPoint {
 
     /**
      * Returns the persona with the given ID.
+     * When the persona does not exist the endpoint returns {@code null} (HTTP 200 with empty body).
      *
      * @param personaId the persona identifier
      * @return the persona, or {@code null} when it does not exist
+     * @api.status 200 org.apache.unomi.api.Persona Persona found, or empty body when missing.
+     * @api.example {"itemId":"persona-vip","itemType":"persona","properties":{"firstName":"VIP"},"segments":["vip"]}
      */
     @GET
     @Path("/personas/{personaId}")
@@ -321,6 +363,8 @@ public class ProfileServiceEndPoint {
      *
      * @param personaId the persona identifier
      * @return the persona and its sessions
+     * @api.status 200 org.apache.unomi.api.PersonaWithSessions Persona bundled with its sessions.
+     * @api.example {"persona":{"itemId":"persona-vip","itemType":"persona","properties":{"firstName":"VIP"}},"sessions":[{"itemId":"ps-1","profileId":"persona-vip","scope":"mysite"}]}
      */
     @GET
     @Path("/personasWithSessions/{personaId}")
@@ -333,6 +377,9 @@ public class ProfileServiceEndPoint {
      *
      * @param personaWithSessions the persona and sessions to persist
      * @return the saved persona and sessions
+     * @api.status 200 org.apache.unomi.api.PersonaWithSessions Persona and sessions saved.
+     * @api.status 400 empty Invalid or unreadable body.
+     * @api.example {"persona":{"itemId":"persona-vip","itemType":"persona","properties":{"firstName":"VIP"}},"sessions":[{"itemId":"ps-1","profileId":"persona-vip","scope":"mysite"}]}
      */
     @POST
     @Path("/personasWithSessions")
@@ -345,6 +392,9 @@ public class ProfileServiceEndPoint {
      *
      * @param persona the persona to persist
      * @return the newly persisted persona
+     * @api.status 200 org.apache.unomi.api.Persona Persona saved.
+     * @api.status 400 empty Invalid or unreadable persona body.
+     * @api.example {"itemId":"persona-vip","itemType":"persona","properties":{"firstName":"VIP"},"segments":["vip"]}
      */
     @POST
     @Path("/personas")
@@ -357,6 +407,8 @@ public class ProfileServiceEndPoint {
      *
      * @param personaId the identifier of the persona to delete
      * @param persona   {@code true} if the specified identifier is supposed to refer to a persona, {@code false} if it is supposed to refer to a profile
+     * @api.status 204 empty Persona deleted.
+     * @api.example {"itemId":"persona-vip","itemType":"persona","properties":{"firstName":"VIP"}}
      */
     @DELETE
     @Path("/personas/{personaId}")
@@ -369,6 +421,8 @@ public class ProfileServiceEndPoint {
      *
      * @param personaId the identifier to use for the new persona
      * @return the newly created persona
+     * @api.status 200 org.apache.unomi.api.Persona Persona created with an initial session.
+     * @api.example {"itemId":"persona-vip","itemType":"persona"}
      */
     @PUT
     @Path("/personas/{personaId}")
@@ -385,6 +439,8 @@ public class ProfileServiceEndPoint {
      * @param size maximum number of results to return, or {@code -1} for all matches
      * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
      * @return a paged list of persona sessions
+     * @api.status 200 org.apache.unomi.api.PartialList Persona sessions page (list items are PersonaSession).
+     * @api.example {"list":[{"itemId":"ps-1","profileId":"persona-vip","scope":"mysite"}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @GET
     @Path("/personas/{personaId}/sessions")
@@ -397,10 +453,13 @@ public class ProfileServiceEndPoint {
 
     /**
      * Returns the session with the given ID.
+     * When the session does not exist the endpoint may return {@code null} (HTTP 200 with empty body).
      *
      * @param sessionId the session identifier
      * @return the session
      * @throws ParseException if a stored date hint cannot be parsed
+     * @api.status 200 org.apache.unomi.api.Session Session found, or empty body when missing.
+     * @api.example {"itemId":"session-1","itemType":"session","profileId":"profile-1","scope":"mysite","size":4,"duration":1800000}
      */
     @GET
     @Path("/sessions/{sessionId}")
@@ -413,6 +472,9 @@ public class ProfileServiceEndPoint {
      *
      * @param session the session to be saved
      * @return the newly saved session
+     * @api.status 200 org.apache.unomi.api.Session Session saved.
+     * @api.status 400 empty Invalid or unreadable session body.
+     * @api.example {"itemId":"session-1","itemType":"session","profileId":"profile-1","scope":"mysite"}
      */
     @POST
     @Path("/sessions/{sessionId}")
@@ -424,6 +486,8 @@ public class ProfileServiceEndPoint {
      * Deletes the session with the given ID.
      *
      * @param sessionId the session identifier
+     * @api.status 204 empty Session deleted.
+     * @api.example {"itemId":"session-1","itemType":"session","profileId":"profile-42","scope":"mysite"}
      */
     @DELETE
     @Path("/sessions/{sessionId}")
@@ -443,6 +507,8 @@ public class ProfileServiceEndPoint {
      * @param size maximum number of results to return, or {@code -1} for all matches
      * @param sortBy optional comma-separated sort fields with optional {@code :asc} or {@code :desc}
      * @return a paged list of matching events
+     * @api.status 200 org.apache.unomi.api.PartialList Events page (list items are Event).
+     * @api.example {"list":[{"itemId":"evt-1","itemType":"event","eventType":"view","sessionId":"session-1","profileId":"profile-1","scope":"mysite"}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @GET
     @Path("/sessions/{sessionId}/events")
@@ -489,6 +555,9 @@ public class ProfileServiceEndPoint {
      * @param response the HTTP response used to signal missing query parameters
      * @return matching property types, or {@code null} when required parameters are missing
      * @throws IOException if sending the error response fails
+     * @api.status 200 array org.apache.unomi.api.PropertyType Property types already used for the item type/tag.
+     * @api.status 400 empty Missing mandatory {@code tag} or {@code itemType} query parameter.
+     * @api.example [{"itemId":"email","itemType":"propertyType","metadata":{"id":"email","name":"Email","scope":"systemscope"},"target":"profiles","valueTypeId":"email"}]
      */
     @GET
     @Path("/existingProperties")
@@ -513,6 +582,8 @@ public class ProfileServiceEndPoint {
      *
      * @param language the requested locale for property descriptions (currently unused)
      * @return target name to property type mappings
+     * @api.status 200 empty Map of target name to property type collections.
+     * @api.example {"profiles":[{"itemId":"email","itemType":"propertyType","metadata":{"id":"email","name":"Email","scope":"systemscope"},"target":"profiles","valueTypeId":"email"}]}
      */
     @GET
     @Path("/properties")
@@ -528,6 +599,8 @@ public class ProfileServiceEndPoint {
      * @param propertyId the property identifier
      * @param language the requested locale for property descriptions (currently unused)
      * @return the property type
+     * @api.status 200 org.apache.unomi.api.PropertyType Property type found, or empty body when missing.
+     * @api.example {"itemId":"email","itemType":"propertyType","metadata":{"id":"email","name":"Email","scope":"systemscope"},"target":"profiles","valueTypeId":"email"}
      */
     @GET
     @Path("/properties/{propertyId}")
@@ -543,6 +616,8 @@ public class ProfileServiceEndPoint {
      * @param target the property target name
      * @param language the requested locale for property descriptions (currently unused)
      * @return property types for the target
+     * @api.status 200 array org.apache.unomi.api.PropertyType Property types for the target.
+     * @api.example [{"itemId":"email","itemType":"propertyType","metadata":{"id":"email","name":"Email","scope":"systemscope"},"target":"profiles","valueTypeId":"email"},{"itemId":"firstName","itemType":"propertyType","metadata":{"id":"firstName","name":"First Name","scope":"systemscope"},"target":"profiles","valueTypeId":"text"}]
      */
     @GET
     @Path("/properties/targets/{target}")
@@ -559,6 +634,8 @@ public class ProfileServiceEndPoint {
      * @param tags comma-separated tag identifiers
      * @param language the requested locale for property descriptions (currently unused)
      * @return matching property types
+     * @api.status 200 array org.apache.unomi.api.PropertyType Property types matching any of the tags.
+     * @api.example [{"itemId":"email","itemType":"propertyType","metadata":{"id":"email","name":"Email","scope":"systemscope","tags":["contact"]},"target":"profiles","valueTypeId":"email"}]
      */
     @GET
     @Path("/properties/tags/{tags}")
@@ -580,6 +657,8 @@ public class ProfileServiceEndPoint {
      * @param tags comma-separated system tag identifiers
      * @param language the requested locale for property descriptions (currently unused)
      * @return matching property types
+     * @api.status 200 array org.apache.unomi.api.PropertyType Property types matching any of the system tags.
+     * @api.example [{"itemId":"email","itemType":"propertyType","metadata":{"id":"email","name":"Email","scope":"systemscope","systemTags":["contactInfo"]},"target":"profiles","valueTypeId":"email"}]
      */
     @GET
     @Path("/properties/systemTags/{tags}")
@@ -598,7 +677,10 @@ public class ProfileServiceEndPoint {
      * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
      *
      * @param property the property type to persist
-     * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
+     * @return {@code true} if the property type was properly created, {@code false} otherwise (for example if it already existed)
+     * @api.status 200 empty {@code true} when created/updated, {@code false} when not persisted.
+     * @api.status 400 empty Invalid or unreadable property type body.
+     * @api.example true
      */
     @POST
     @Path("/properties")
@@ -612,7 +694,10 @@ public class ProfileServiceEndPoint {
      * Property-type lookup helpers that may move to a dedicated endpoint in a future release.
      *
      * @param properties the properties type to persist
-     * @return {@code true} if the property type was properly created, {@code false} otherwise (for example, if the property type already existed
+     * @return {@code true} if at least one property type was persisted, {@code false} otherwise
+     * @api.status 200 empty {@code true} when at least one property type was saved.
+     * @api.status 400 empty Invalid or unreadable property type list body.
+     * @api.example true
      */
     @POST
     @Path("/properties/bulk")
@@ -631,6 +716,8 @@ public class ProfileServiceEndPoint {
      *
      * @param propertyId the identifier of the property type to delete
      * @return {@code true} if the property type was properly deleted, {@code false} otherwise
+     * @api.status 200 empty {@code true} when deleted, {@code false} when not found / not deleted.
+     * @api.example true
      */
     @DELETE
     @Path("/properties/{propertyId}")
@@ -643,6 +730,9 @@ public class ProfileServiceEndPoint {
      *
      * @param query the search query
      * @return a paged list of matching sessions
+     * @api.status 200 org.apache.unomi.api.PartialList Sessions page (list items are Session).
+     * @api.status 400 empty Invalid or unreadable query body.
+     * @api.example {"list":[{"itemId":"session-1","itemType":"session","profileId":"profile-1","scope":"mysite"}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @POST
     @Path("/search/sessions")
@@ -652,10 +742,13 @@ public class ProfileServiceEndPoint {
 
     /**
      * Adds an alias to a profile.
+     * Links a client-specific alias id to the canonical {@code profileId}. When {@code X-Unomi-ClientId} is omitted, {@code defaultClientId} is used.
      *
      * @param profileId the profile identifier
      * @param aliasId the alias identifier
      * @param headerClientID optional client identifier from the request header
+     * @api.status 204 empty Alias linked to the profile.
+     * @api.example {"itemId":"alias-crm-9","itemType":"profileAlias","profileID":"profile-42","clientID":"web-tracker"}
      */
     @POST
     @Path("/{profileId}/aliases/{aliasId}")
@@ -672,6 +765,8 @@ public class ProfileServiceEndPoint {
      * @param profileId the profile identifier
      * @param aliasId the alias identifier
      * @param headerClientID optional client identifier from the request header
+     * @api.status 204 empty Alias removed from the profile.
+     * @api.example {"itemId":"alias-crm-9","itemType":"profileAlias","profileID":"profile-42","clientID":"web-tracker"}
      */
     @DELETE
     @Path("/{profileId}/aliases/{aliasId}")
@@ -690,6 +785,8 @@ public class ProfileServiceEndPoint {
      * @param size page size
      * @param sortBy optional sort field
      * @return the matching profile aliases
+     * @api.status 200 org.apache.unomi.api.PartialList Aliases page (list items are ProfileAlias).
+     * @api.example {"list":[{"itemId":"alias-crm-9","itemType":"profileAlias","profileID":"profile-1","clientID":"web-tracker"}],"offset":0,"pageSize":1,"totalSize":1,"totalSizeRelation":"EQUAL"}
      */
     @GET
     @Path("/{profileId}/aliases")

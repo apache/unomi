@@ -17,32 +17,22 @@
 package org.apache.unomi.api.tenants;
 
 /**
- * Lifecycle state of a tenant (for example active, suspended, or pending).
- * Administrators filter and manage tenants based on these enum values.
+ * Lifecycle state of a tenant. Serialized as the enum name string in JSON
+ * ({@code ACTIVE}, {@code DISABLED}, {@code SUSPENDED}, {@code PENDING_ACTIVATION}, {@code MAINTENANCE}).
  */
 public enum TenantStatus {
-    /**
-     * Tenant is active and fully operational
-     */
+    /** Fully operational; default for newly created tenants. */
     ACTIVE,
 
-    /**
-     * Tenant is disabled and cannot perform any operations
-     */
+    /** Disabled; cannot perform tenant operations. */
     DISABLED,
 
-    /**
-     * Tenant is temporarily suspended, typically due to policy violations or maintenance
-     */
+    /** Temporarily suspended (policy, billing, or maintenance). */
     SUSPENDED,
 
-    /**
-     * Tenant is created but waiting for activation process to complete
-     */
+    /** Created but waiting for activation to complete. */
     PENDING_ACTIVATION,
 
-    /**
-     * Tenant is undergoing scheduled maintenance
-     */
+    /** Undergoing scheduled maintenance. */
     MAINTENANCE
 }

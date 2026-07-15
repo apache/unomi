@@ -166,6 +166,18 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>dev.inoyu.openapi</groupId>
+                <artifactId>openapi-enrich-maven-plugin</artifactId>
+                <configuration>
+                    <servletPaths>
+                        <servletPath>
+                            <className>org.apache.unomi.healthcheck.servlet.HealthCheckServlet</className>
+                            <path>/health/check</path>
+                        </servletPath>
+                    </servletPaths>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>

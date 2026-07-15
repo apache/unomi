@@ -47,9 +47,11 @@ public class TestEndPoint {
     }
 
     /**
-     * Returns a simple health-check response.
+     * Returns a simple health-check response for connectivity probes.
      *
-     * @return the ping response
+     * @return the ping response body ({@code pong})
+     * @api.status 200 empty Plain-text {@code pong} when the REST layer is reachable.
+     * @api.example pong
      */
     @GET
     @Path("/ping")

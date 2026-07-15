@@ -31,10 +31,30 @@ import java.util.Map;
  */
 public class Consent implements Serializable {
 
+    /**
+     * Scope this consent applies to (often a site id).
+     * @api.example mysite
+     */
     private String scope;
+    /**
+     * Consent type id defined outside Unomi (newsletter, tracking, ...).
+     * @api.example newsletter
+     */
     private String typeIdentifier; // type identifiers are defined and managed externally of Apache Unomi
+    /**
+     * Consent status: {@code GRANTED}, {@code DENIED}, or {@code REVOKED}.
+     * @api.example GRANTED
+     */
     private ConsentStatus status;
+    /**
+     * When this status was recorded (ISO-8601 in JSON).
+     * @api.example 2024-01-15T09:00:00.000Z
+     */
     private Date statusDate;
+    /**
+     * Optional automatic revoke date; omitted when the consent does not expire.
+     * @api.example 2025-01-15T09:00:00.000Z
+     */
     private Date revokeDate;
 
     /**
@@ -124,6 +144,7 @@ public class Consent implements Serializable {
      * Consent type identifier.
      *
      * @return the type identifier
+     * @api.example newsletter
      */
     public String getTypeIdentifier() {
         return typeIdentifier;

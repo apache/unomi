@@ -63,12 +63,28 @@ public interface PersonalizationService {
     PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationRequest personalizationRequest);
 
     /**
-     * Personalization request
+     * Request to resolve an ordered set of content variants for a profile/session
+     * (sent in {@code ContextRequest.personalizations}).
      */
     class PersonalizationRequest {
+        /**
+         * Client-defined personalization id; echoed as the key in {@code ContextResponse.personalizationResults}.
+         * @api.example homepage-hero
+         */
         private String id;
+        /**
+         * Strategy plugin name (for example {@code matching-content}, {@code score-sort}, {@code random}).
+         * @api.example matching-content
+         */
         private String strategy;
+        /**
+         * Strategy-specific options (control groups, fallbacks, size limits, …). Free-form map.
+         * @api.example {"fallback":"default","size":1}
+         */
         private Map<String, Object> strategyOptions;
+        /**
+         * Candidate content variants evaluated by the strategy.
+         */
         private List<PersonalizedContent> contents;
 
         /**
@@ -145,11 +161,22 @@ public interface PersonalizationService {
     }
 
     /**
-     * A personalizated content definition.
+     * One content variant (also used as entries in {@code ContextRequest.filters}).
      */
     class PersonalizedContent {
+        /**
+         * Variant / filter id returned to the client when selected or when evaluating filters.
+         * @api.example hero-a
+         */
         private String id;
+        /**
+         * Optional filters; all applicable conditions must match for the variant to be eligible.
+         */
         private List<Filter> filters;
+        /**
+         * Optional free-form metadata for the client (CMS labels, positions, …).
+         * @api.example {"position":"top"}
+         */
         private Map<String,Object> properties;
 
         /**
@@ -218,11 +245,21 @@ public interface PersonalizationService {
     }
 
     /**
-     * A filter definition for content filtering
+     * Filter applied to a content variant: condition plus optional target hints.
      */
     class Filter {
+        /**
+         * Optional targets describing which profile/session dimensions the filter concerns.
+         */
         private List<Target> appliesOn;
+        /**
+         * Unomi condition that must match the profile/session for this filter to pass.
+         */
         private Condition condition;
+        /**
+         * Optional free-form filter metadata.
+         * @api.example {"priority":1}
+         */
         private Map<String,Object> properties;
 
         /**
@@ -281,10 +318,18 @@ public interface PersonalizationService {
     }
 
     /**
-     * A target for content filtering.
+     * Named dimension and allowed values used as filter metadata (client/CMS hinting).
      */
     class Target {
+        /**
+         * Dimension name (for example a property key or {@code segments}).
+         * @api.example interests
+         */
         private String target;
+        /**
+         * Allowed values for that dimension.
+         * @api.example ["sports","news"]
+         */
         private List<String> values;
 
         /**
