@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-extensions</artifactId>
-        <version>3.0.1</version>
+        <version>3.0.2-SNAPSHOT</version>
     </parent>
     <artifactId>log4j-extension</artifactId>
     <name>Apache Unomi :: Extensions :: Log4j Extension</name>
