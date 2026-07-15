@@ -20,6 +20,7 @@ package org.apache.unomi.persistence.opensearch;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.TypeResolutionService;
+import org.apache.unomi.api.utils.DiagnosticLog;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.dispatcher.ConditionQueryBuilderDispatcher;
@@ -103,6 +104,27 @@ public class ConditionOSQueryBuilderDispatcher extends ConditionQueryBuilderDisp
         return buildFilter(condition, new HashMap<>());
     }
 
+    /**
+     * Emits a generic diagnostic when a condition collapses into a match-none query, which silently makes a
+     * search return nothing. Captures how many condition types the DefinitionsService can currently see so we
+     * can distinguish "this specific type is unresolved" from "the definitions cache/context sees nothing".
+     */
+    private void logMatchNoneDiagnostics(String stage, String conditionTypeId) {
+        int visibleConditionTypes = -1;
+        try {
+            if (definitionsService != null) {
+                visibleConditionTypes = definitionsService.getAllConditionTypes().size();
+            }
+        } catch (Exception e) {
+            DiagnosticLog.warn(LOGGER, "os-match-none-error", "stage", stage, "error", e.getMessage());
+        }
+        DiagnosticLog.warn(LOGGER, "os-match-none",
+                "stage", stage,
+                "conditionTypeId", conditionTypeId,
+                "definitionsServiceAvailable", definitionsService != null,
+                "visibleConditionTypes", visibleConditionTypes);
+    }
+
     public Query buildFilter(Condition condition, Map<String, Object> context) {
         if (condition == null) {
             throw new IllegalArgumentException("Condition is null, impossible to build filter");
@@ -121,6 +143,7 @@ public class ConditionOSQueryBuilderDispatcher extends ConditionQueryBuilderDisp
             // If still null after attempting resolution (or definitionsService was null), return match-none
             if (condition.getConditionType() == null) {
                 LOGGER.warn("Condition type is null for condition typeID={}, returning match-none query", condition.getConditionTypeId());
+                logMatchNoneDiagnostics("build-filter", condition.getConditionTypeId());
                 return Query.of(q -> q.matchNone(t -> t));
             }
         }
