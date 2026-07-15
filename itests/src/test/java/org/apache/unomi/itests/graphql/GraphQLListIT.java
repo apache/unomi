@@ -75,18 +75,15 @@ public class GraphQLListIT extends BaseGraphQLIT {
                 Assert.assertEquals("testListId", context.getValue("data.cdp.addProfileToList.id"));
             }
 
-            refreshPersistence(UserList.class);
+            refreshPersistence(UserList.class, Profile.class);
 
-            // Profile.class refresh is deferred into the retry loop: addProfileToList processes
-            // list membership via an async rule-engine event, so the profile write may not be
-            // visible yet when we first reach this point.
+            // The list membership is written to the profile synchronously by addProfileToList,
+            // then made searchable via the index refresh above; keepTrying only absorbs normal
+            // Elasticsearch refresh latency.
             final ResponseContext findListsContext = keepTrying("Failed waiting for profile in list query",
                     () -> {
-                        try {
-                            refreshPersistence(Profile.class);
-                            try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
-                                return ResponseContext.parse(response.getEntity());
-                            }
+                        try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
+                            return ResponseContext.parse(response.getEntity());
                         } catch (Exception e) {
                             return null;
                         }
@@ -102,8 +99,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
                         Object profileId = context.getValue("data.cdp.findLists.edges[0].node.active.edges[0].node.cdp_profileIDs[0].id");
                         return profile.getItemId().equals(profileId);
                     },
-                    // async rule-engine processing needs more retries on loaded CI
-                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES * 3);
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
             Assert.assertEquals("testListId", findListsContext.getValue("data.cdp.findLists.edges[0].node.id"));
 

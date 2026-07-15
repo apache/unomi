@@ -26,14 +26,8 @@ import java.util.Map;
 
 public class TopicConditionFactory extends ConditionFactory {
 
-    private static TopicConditionFactory instance;
-
-    public static synchronized TopicConditionFactory get(final DataFetchingEnvironment environment) {
-        if (instance == null) {
-            instance = new TopicConditionFactory(environment);
-        }
-
-        return instance;
+    public static TopicConditionFactory get(final DataFetchingEnvironment environment) {
+        return new TopicConditionFactory(environment);
     }
 
     private TopicConditionFactory(final DataFetchingEnvironment environment) {

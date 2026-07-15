@@ -46,17 +46,12 @@ public class ConditionFactory {
 
     protected String conditionTypeId;
 
-    private Map<String, ConditionType> conditionTypesMap;
-
     public ConditionFactory(final String conditionTypeId, final DataFetchingEnvironment environment) {
         this.environment = environment;
         this.conditionTypeId = conditionTypeId;
 
         final ServiceManager context = environment.getContext();
         this.definitionsService = context.getService(DefinitionsService.class);
-
-        this.conditionTypesMap = definitionsService.getAllConditionTypes().stream()
-                .collect(Collectors.toMap(ConditionType::getItemId, Function.identity()));
     }
 
     public Condition matchAllCondition() {
@@ -127,7 +122,7 @@ public class ConditionFactory {
     }
 
     public ConditionType getConditionType(final String typeId) {
-        return this.conditionTypesMap.get(typeId);
+        return definitionsService.getConditionType(typeId);
     }
 
     public <INPUT> Condition filtersToCondition(

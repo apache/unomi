@@ -66,7 +66,7 @@ public class AddProfileToListCommand extends BaseCommand<CDPList> {
                 .setPersistent(true)
                 .build();
 
-        if (serviceManager.getService(EventService.class).send(event) == EventService.PROFILE_UPDATED) {
+        if ((serviceManager.getService(EventService.class).send(event) & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(event.getProfile());
         }
 
