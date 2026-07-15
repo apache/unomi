@@ -432,7 +432,15 @@ public class RestServer {
         openApiFeature.setUseContextBasedConfig(true);
         SwaggerUiConfig swaggerUiConfig = new SwaggerUiConfig().url("openapi.json").deepLinking(true).queryConfigEnabled(false);
         openApiFeature.setSwaggerUiConfig(swaggerUiConfig);
-        DocPack openApiDocPack = new BundleContextDocPackLoader().loadMerged(bundleContext);
+        DocPack openApiDocPack;
+        try {
+            openApiDocPack = new BundleContextDocPackLoader().loadMerged(bundleContext);
+        } catch (Exception e) {
+            // Defense in depth: a documentation-only enrichment pack must never prevent the
+            // JAX-RS server (all REST endpoints, not just OpenAPI/Swagger) from starting.
+            LOGGER.error("Failed to load OpenAPI enrichment doc pack; continuing without Javadoc-based OpenAPI enrichment", e);
+            openApiDocPack = new DocPack();
+        }
         EnrichingOpenApiCustomizer customizer = new EnrichingOpenApiCustomizer(openApiDocPack);
         customizer.setDynamicBasePath(true);
         openApiFeature.setCustomizer(customizer);
