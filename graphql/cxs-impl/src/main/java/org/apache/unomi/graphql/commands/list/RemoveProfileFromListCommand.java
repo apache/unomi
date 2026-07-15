@@ -26,11 +26,15 @@ import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.utils.EventBuilder;
 import org.apache.unomi.lists.UserList;
 import org.apache.unomi.services.UserListService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Objects;
 
 public class RemoveProfileFromListCommand extends BaseCommand<Boolean> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RemoveProfileFromListCommand.class.getName());
 
     private final String listId;
     private final CDPProfileIDInput profileIDInput;
@@ -62,9 +66,13 @@ public class RemoveProfileFromListCommand extends BaseCommand<Boolean> {
                 .setPersistent(true)
                 .build();
 
-        int eventCode = serviceManager.getService(EventService.class).send(event);
+        final int changes = serviceManager.getService(EventService.class).send(event);
 
-        if (eventCode == EventService.PROFILE_UPDATED) {
+        if ((changes & EventService.ERROR) == EventService.ERROR) {
+            LOGGER.warn("Error processing removeProfileFromList event for profile {} and list {}", profileIDInput.getId(), listId);
+        }
+
+        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(event.getProfile());
 
             return true;

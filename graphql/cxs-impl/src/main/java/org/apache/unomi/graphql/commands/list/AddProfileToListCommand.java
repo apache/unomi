@@ -28,11 +28,15 @@ import org.apache.unomi.graphql.types.output.CDPList;
 import org.apache.unomi.graphql.utils.EventBuilder;
 import org.apache.unomi.lists.UserList;
 import org.apache.unomi.services.UserListService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Objects;
 
 public class AddProfileToListCommand extends BaseCommand<CDPList> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AddProfileToListCommand.class.getName());
 
     private final String listId;
     private final CDPProfileIDInput profileIDInput;
@@ -66,7 +70,13 @@ public class AddProfileToListCommand extends BaseCommand<CDPList> {
                 .setPersistent(true)
                 .build();
 
-        if ((serviceManager.getService(EventService.class).send(event) & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+        final int changes = serviceManager.getService(EventService.class).send(event);
+
+        if ((changes & EventService.ERROR) == EventService.ERROR) {
+            LOGGER.warn("Error processing addProfileToList event for profile {} and list {}", profileIDInput.getId(), listId);
+        }
+
+        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(event.getProfile());
         }
 

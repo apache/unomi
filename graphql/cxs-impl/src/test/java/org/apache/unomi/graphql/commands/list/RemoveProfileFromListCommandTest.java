@@ -32,6 +32,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
@@ -39,13 +41,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Guards the UNOMI-964 bitmask fix in {@link AddProfileToListCommand}. {@link EventService#send}
- * returns a bitmask; the profile must be persisted whenever the PROFILE_UPDATED bit is set,
- * even when it is OR-ed with other change flags. The previous {@code == PROFILE_UPDATED} check
- * silently dropped the save whenever another flag was also set.
+ * Guards the same {@link EventService#send} bitmask handling in {@link RemoveProfileFromListCommand}
+ * as {@link AddProfileToListCommandTest} does for {@link AddProfileToListCommand}: the profile must
+ * be persisted whenever the PROFILE_UPDATED bit is set, even when OR-ed with other change flags. The
+ * previous {@code == PROFILE_UPDATED} check silently dropped the save whenever another flag was also set.
  */
 @ExtendWith(MockitoExtension.class)
-class AddProfileToListCommandTest {
+class RemoveProfileFromListCommandTest {
 
     private static final String LIST_ID = "testListId";
     private static final String PROFILE_ID = "test_profile_id";
@@ -78,8 +80,8 @@ class AddProfileToListCommandTest {
         when(profileService.load(PROFILE_ID)).thenReturn(profile);
     }
 
-    private AddProfileToListCommand command() {
-        return AddProfileToListCommand.create()
+    private RemoveProfileFromListCommand command() {
+        return RemoveProfileFromListCommand.create()
                 .listId(LIST_ID)
                 .profileIDInput(new CDPProfileIDInput(PROFILE_ID, null))
                 .setEnvironment(environment)
@@ -87,48 +89,48 @@ class AddProfileToListCommandTest {
     }
 
     @Test
-    void savesProfile_whenEventReturnsProfileUpdatedExactly() {
+    void savesProfileAndReturnsTrue_whenEventReturnsProfileUpdatedExactly() {
         when(eventService.send(any(Event.class))).thenReturn(EventService.PROFILE_UPDATED);
 
-        command().execute();
+        assertTrue(command().execute());
 
         verify(profileService).save(profile);
     }
 
     @Test
-    void savesProfile_whenProfileUpdatedBitIsCombinedWithOtherFlags() {
+    void savesProfileAndReturnsTrue_whenProfileUpdatedBitIsCombinedWithOtherFlags() {
         when(eventService.send(any(Event.class)))
                 .thenReturn(EventService.PROFILE_UPDATED | EventService.SESSION_UPDATED);
 
-        command().execute();
+        assertTrue(command().execute());
 
         verify(profileService).save(profile);
     }
 
     @Test
-    void savesProfile_whenProfileUpdatedBitIsCombinedWithErrorFlag() {
+    void savesProfileAndReturnsTrue_whenProfileUpdatedBitIsCombinedWithErrorFlag() {
         when(eventService.send(any(Event.class)))
                 .thenReturn(EventService.PROFILE_UPDATED | EventService.ERROR);
 
-        command().execute();
+        assertTrue(command().execute());
 
         verify(profileService).save(profile);
     }
 
     @Test
-    void doesNotSaveProfile_whenEventReportsNoChange() {
+    void doesNotSaveProfileAndReturnsFalse_whenEventReportsNoChange() {
         when(eventService.send(any(Event.class))).thenReturn(EventService.NO_CHANGE);
 
-        command().execute();
+        assertFalse(command().execute());
 
         verify(profileService, never()).save(any(Profile.class));
     }
 
     @Test
-    void doesNotSaveProfile_whenProfileUpdatedBitIsNotSet() {
+    void doesNotSaveProfileAndReturnsFalse_whenProfileUpdatedBitIsNotSet() {
         when(eventService.send(any(Event.class))).thenReturn(EventService.SESSION_UPDATED);
 
-        command().execute();
+        assertFalse(command().execute());
 
         verify(profileService, never()).save(any(Profile.class));
     }
