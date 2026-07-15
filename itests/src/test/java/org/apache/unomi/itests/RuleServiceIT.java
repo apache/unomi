@@ -220,55 +220,6 @@ public class RuleServiceIT extends BaseIT {
         rulesService.refreshRules();
     }
 
-    @Test
-    public void testRuleOptimizationPerf() throws NoSuchFieldException, IllegalAccessException, IOException, InterruptedException {
-        Profile profile = new Profile(UUID.randomUUID().toString());
-        Session session = new Session(UUID.randomUUID().toString(), profile, new Date(), TEST_SCOPE);
-
-        updateConfiguration(null, "org.apache.unomi.services", "rules.optimizationActivated", "false");
-        rulesService = getService(RulesService.class);
-        eventService = getService(EventService.class);
-
-        LOGGER.info("Running unoptimized rules performance test...");
-        long unoptimizedRunTime = runEventTest(profile, session);
-
-        updateConfiguration(null, "org.apache.unomi.services", "rules.optimizationActivated", "true");
-        rulesService = getService(RulesService.class);
-        eventService = getService(EventService.class);
-
-        LOGGER.info("Running optimized rules performance test...");
-        long optimizedRunTime = runEventTest(profile, session);
-
-        double improvementRatio = ((double) unoptimizedRunTime) / ((double) optimizedRunTime);
-        LOGGER.info("Unoptimized run time = {}ms, optimized run time = {}ms. Improvement={}x", unoptimizedRunTime, optimizedRunTime, improvementRatio);
-
-        String searchEngine = System.getProperty("org.apache.unomi.itests.searchEngine", "elasticsearch");
-        // we check with a ratio of 0.7 because the test can sometimes fail due to the fact that the sample size is small and can be affected by
-        // environmental issues such as CPU or I/O load, JVM warmup, garbage collection, etc.
-        // The optimization may not always show improvement in a single test run, but should not be significantly worse
-        if ("opensearch".equals(searchEngine)) {
-            // OpenSearch may have different performance characteristics
-            assertTrue("Optimized run time should not be significantly worse (ratio: " + improvementRatio + ")",
-            improvementRatio > 0.7);
-        } else {
-            assertTrue("Optimized run time should not be significantly worse (ratio: " + improvementRatio + ")",
-            improvementRatio > 0.7);
-        }
-    }
-
-    private long runEventTest(Profile profile, Session session) {
-        LOGGER.info("eventService={}", eventService);
-        Event viewEvent = generateViewEvent(session, profile);
-        int loopCount = 0;
-        long startTime = System.currentTimeMillis();
-        while (loopCount < 500) {
-            eventService.send(viewEvent);
-            viewEvent = generateViewEvent(session, profile);
-            loopCount++;
-        }
-        return System.currentTimeMillis() - startTime;
-    }
-
     private Event generateViewEvent(Session session, Profile profile) {
         CustomItem sourceItem = new CustomItem();
         sourceItem.setScope(TEST_SCOPE);

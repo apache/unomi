@@ -317,6 +317,96 @@ public class RulesServiceImplTest {
         });
     }
 
+    /**
+     * Replaces the flaky RuleServiceIT.testRuleOptimizationPerf IT. That test timed full
+     * {@code eventService.send} loops in a PaxExam suite with a tiny rule set, so the signal was
+     * dominated by persistence / GC / CPU noise and the assert had to be diluted to "not ~30% worse".
+     * <p>
+     * Here we isolate {@link RulesServiceImpl#getMatchingRules(Event)} with a large synthetic index
+     * (many rules for unrelated event types, one for the target type). The optimized path should only
+     * evaluate the target-type bucket; the unoptimized path scans every rule. That yields a large,
+     * stable speedup independent of Elasticsearch / OSGi lifecycle.
+     */
+    @Test
+    public void testEventTypeOptimizationOutperformsScanningAllRules() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            final String targetEventType = "perf-target-view";
+            final int noiseRuleCount = 400;
+            final int warmUpIterations = 50;
+            final int timedIterations = 200;
+            // With ~400:1 evaluation count, a modest floor stays well clear of timer noise.
+            final double minImprovementRatio = 5.0;
+
+            for (int i = 0; i < noiseRuleCount; i++) {
+                Rule noise = createEventTypeRule("noise-rule-" + i, "noise-type-" + i, TENANT_1);
+                rulesService.setRule(noise);
+            }
+            Rule targetRule = createEventTypeRule("target-rule", targetEventType, TENANT_1);
+            rulesService.setRule(targetRule);
+            // Do NOT call refreshRules(): it rebuilds the event-type index from persistence, and the
+            // in-memory persistence's simulated ES refresh delay would temporarily hide just-saved
+            // rules and wipe the index setRule already populated. setRule indexes each rule itself.
+
+            Event event = createTestEvent();
+            event.setEventType(targetEventType);
+            event.setItemId("perf-target-event");
+            event.setScope(Metadata.SYSTEM_SCOPE);
+
+            // Correctness first: optimized matching must still find the target rule.
+            rulesService.setOptimizedRulesActivated(true);
+            Set<Rule> optimizedMatches = waitForMatchingRules(event, 1);
+            assertTrue(optimizedMatches.stream().anyMatch(r -> "target-rule".equals(r.getItemId())),
+                    "Optimized matching should still find the target event-type rule");
+
+            // Warm both code paths so timed runs are not dominated by first-call class loading.
+            for (int i = 0; i < warmUpIterations; i++) {
+                rulesService.setOptimizedRulesActivated(false);
+                rulesService.getMatchingRules(event);
+                rulesService.setOptimizedRulesActivated(true);
+                rulesService.getMatchingRules(event);
+            }
+
+            long unoptimizedNanos = timeMatchingRules(event, false, timedIterations);
+            long optimizedNanos = timeMatchingRules(event, true, timedIterations);
+
+            double improvementRatio = (double) unoptimizedNanos / (double) optimizedNanos;
+            assertTrue(unoptimizedNanos > 1_000_000L,
+                    "Unoptimized run should take a measurable time (got " + unoptimizedNanos + " ns)");
+            assertTrue(improvementRatio >= minImprovementRatio,
+                    String.format(Locale.ROOT,
+                            "Event-type indexing should be at least %.1fx faster than scanning all rules "
+                                    + "(unoptimized=%dns, optimized=%dns, ratio=%.2f)",
+                            minImprovementRatio, unoptimizedNanos, optimizedNanos, improvementRatio));
+
+            return null;
+        });
+    }
+
+    private long timeMatchingRules(Event event, boolean optimized, int iterations) {
+        rulesService.setOptimizedRulesActivated(optimized);
+        long start = System.nanoTime();
+        for (int i = 0; i < iterations; i++) {
+            rulesService.getMatchingRules(event);
+        }
+        return System.nanoTime() - start;
+    }
+
+    private Rule createEventTypeRule(String ruleId, String eventType, String tenantId) {
+        Rule rule = new Rule();
+        rule.setItemId(ruleId);
+        rule.setTenantId(tenantId);
+
+        Metadata metadata = new Metadata();
+        metadata.setId(ruleId);
+        metadata.setScope(Metadata.SYSTEM_SCOPE);
+        metadata.setEnabled(true);
+        rule.setMetadata(metadata);
+
+        rule.setCondition(createEventTypeCondition(eventType));
+        rule.setActions(Collections.singletonList(createTestAction()));
+        return rule;
+    }
+
     @Test
     public void testGetMatchingRules_WithMatchingRule() {
         // Setup test data
