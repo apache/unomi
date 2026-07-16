@@ -264,6 +264,7 @@ SEARCH_HEAP=""
 KARAF_HEAP=""
 MAVEN_QUIET=false
 NO_KARAF=false
+SKIP_CLEAN=false
 AUTO_START=""
 # Only initialize UNOMI_DISTRIBUTION if not already set (e.g., by setup-opensearch.sh or setup-elasticsearch.sh)
 if [ -z "${UNOMI_DISTRIBUTION+x}" ]; then
@@ -315,6 +316,7 @@ EOF
         echo -e "  ${CYAN}--use-opensearch${NC}           Use OpenSearch instead of ElasticSearch"
         echo -e "  ${CYAN}--distribution DIST${NC}        Set Unomi distribution (e.g., unomi-distribution-opensearch)"
         echo -e "  ${CYAN}--no-karaf${NC}                 Build without starting Karaf"
+        echo -e "  ${CYAN}--no-clean${NC}                 Skip 'mvn clean' (reuse previous build; faster re-runs)"
         echo -e "  ${CYAN}--auto-start ENGINE${NC}        Auto-start with specified engine"
         echo -e "  ${CYAN}--single-test TEST${NC}         Run a single integration test"
         echo -e "  ${CYAN}--it-debug${NC}                 Enable integration test debug mode"
@@ -358,6 +360,7 @@ EOF
         echo "  --use-opensearch          Use OpenSearch instead of ElasticSearch"
         echo "  --distribution DIST       Set Unomi distribution (e.g., unomi-distribution-opensearch)"
         echo "  --no-karaf               Build without starting Karaf"
+        echo "  --no-clean               Skip 'mvn clean' (reuse previous build; faster re-runs)"
         echo "  --auto-start ENGINE      Auto-start with specified engine"
         echo "  --single-test TEST         Run a single integration test"
         echo "  --it-debug                Enable integration test debug mode"
@@ -498,6 +501,9 @@ while [ "$1" != "" ]; do
             ;;
         --no-karaf)
             NO_KARAF=true
+            ;;
+        --no-clean)
+            SKIP_CLEAN=true
             ;;
         --auto-start)
             shift
@@ -1238,16 +1244,20 @@ finalize_it_run_trace() {
     } >> "$trace_file"
 }
 
-print_progress $((++current_step)) $total_steps "Cleaning previous build..."
-if [ "$HAS_COLORS" -eq 1 ]; then
-    echo -e "${GRAY}Running: $MVN_CMD clean $MVN_OPTS${NC}"
+if [ "$SKIP_CLEAN" = true ]; then
+    print_status "info" "Skipping 'mvn clean' (--no-clean): reusing previous build output"
 else
-    echo "Running: $MVN_CMD clean $MVN_OPTS"
+    print_progress $((++current_step)) $total_steps "Cleaning previous build..."
+    if [ "$HAS_COLORS" -eq 1 ]; then
+        echo -e "${GRAY}Running: $MVN_CMD clean $MVN_OPTS${NC}"
+    else
+        echo "Running: $MVN_CMD clean $MVN_OPTS"
+    fi
+    $MVN_CMD clean $MVN_OPTS || {
+        print_status "error" "Maven clean failed"
+        exit 1
+    }
 fi
-$MVN_CMD clean $MVN_OPTS || {
-    print_status "error" "Maven clean failed"
-    exit 1
-}
 
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
     write_it_run_trace_start

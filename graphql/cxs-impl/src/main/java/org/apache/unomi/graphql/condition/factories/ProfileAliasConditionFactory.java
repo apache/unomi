@@ -26,14 +26,8 @@ import java.util.Map;
 
 public class ProfileAliasConditionFactory extends ConditionFactory {
 
-    private static ProfileAliasConditionFactory instance;
-
-    public static synchronized ProfileAliasConditionFactory get(final DataFetchingEnvironment environment) {
-        if (instance == null) {
-            instance = new ProfileAliasConditionFactory(environment);
-        }
-
-        return instance;
+    public static ProfileAliasConditionFactory get(final DataFetchingEnvironment environment) {
+        return new ProfileAliasConditionFactory(environment);
     }
 
     private ProfileAliasConditionFactory(final DataFetchingEnvironment environment) {

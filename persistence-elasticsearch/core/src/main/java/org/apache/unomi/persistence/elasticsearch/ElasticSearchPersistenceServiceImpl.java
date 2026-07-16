@@ -69,6 +69,7 @@ import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.api.security.SecurityServiceConfiguration;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantTransformationListener;
+import org.apache.unomi.api.utils.DiagnosticLog;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -1483,9 +1484,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 Phase hotPhase = new Phase.Builder().actions(new Actions.Builder().rollover(rolloverAction).build())
                         .minAge(new Time.Builder().time("0ms").build()).build();
                 IlmPolicy ilmPolicy = new IlmPolicy.Builder().phases(new Phases.Builder().hot(hotPhase).build()).build();
+                String policyName = indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME;
                 PutLifecycleRequest request = new PutLifecycleRequest.Builder().policy(ilmPolicy)
-                        .name(indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME).build();
+                        .name(policyName).build();
                 PutLifecycleResponse response = esClient.ilm().putLifecycle(request);
+                // RolloverIT asserts the event index references this policy; if the policy itself was never
+                // acknowledged, every later "attach policy to index" step is doomed, so record it explicitly.
+                DiagnosticLog.info(LOGGER, "rollover-policy-register",
+                        "policyName", policyName,
+                        "acknowledged", response.acknowledged(),
+                        "maxAge", rolloverMaxAge,
+                        "maxSize", rolloverMaxSize,
+                        "maxDocs", rolloverMaxDocs);
                 return response.acknowledged();
             }
         }.catchingExecuteInClassLoader(true);
@@ -1697,6 +1707,28 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             if (dynamicTemplates != null && !dynamicTemplates.isEmpty()) {
                 hasDynamicTemplates = true;
             }
+
+            // RolloverIT asserts the created event index carries index.lifecycle.name; the checks above only
+            // verify folding + dynamic templates, so capture the lifecycle attachment explicitly to reveal
+            // whether it is missing at creation time (the exact null RolloverIT reports).
+            String lifecycleName = null;
+            String lifecycleRolloverAlias = null;
+            try {
+                var lifecycle = indexSettings.settings().index().lifecycle();
+                if (lifecycle != null) {
+                    lifecycleName = lifecycle.name();
+                    lifecycleRolloverAlias = lifecycle.rolloverAlias();
+                }
+            } catch (Exception e) {
+                DiagnosticLog.warn(LOGGER, "rollover-index-lifecycle-error", "index", fullIndexName, "error", e.getMessage());
+            }
+            DiagnosticLog.info(LOGGER, "rollover-index-created",
+                    "index", fullIndexName,
+                    "attempt", retryCount + 1,
+                    "hasFoldingAnalyzer", hasFoldingAnalyzer,
+                    "hasDynamicTemplates", hasDynamicTemplates,
+                    "lifecycleName", lifecycleName,
+                    "lifecycleRolloverAlias", lifecycleRolloverAlias);
 
             if (hasFoldingAnalyzer && hasDynamicTemplates) {
                 // Template was applied successfully

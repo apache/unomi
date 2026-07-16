@@ -18,9 +18,12 @@
 package org.apache.unomi.graphql.condition.factories;
 
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.api.utils.DiagnosticLog;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.utils.ConditionBuilder;
 import org.apache.unomi.graphql.utils.DateUtils;
@@ -46,17 +49,12 @@ public class ConditionFactory {
 
     protected String conditionTypeId;
 
-    private Map<String, ConditionType> conditionTypesMap;
-
     public ConditionFactory(final String conditionTypeId, final DataFetchingEnvironment environment) {
         this.environment = environment;
         this.conditionTypeId = conditionTypeId;
 
         final ServiceManager context = environment.getContext();
         this.definitionsService = context.getService(DefinitionsService.class);
-
-        this.conditionTypesMap = definitionsService.getAllConditionTypes().stream()
-                .collect(Collectors.toMap(ConditionType::getItemId, Function.identity()));
     }
 
     public Condition matchAllCondition() {
@@ -127,7 +125,44 @@ public class ConditionFactory {
     }
 
     public ConditionType getConditionType(final String typeId) {
-        return this.conditionTypesMap.get(typeId);
+        final ConditionType conditionType = definitionsService.getConditionType(typeId);
+        if (conditionType == null) {
+            logNullConditionTypeDiagnostics(typeId);
+        }
+        return conditionType;
+    }
+
+    /**
+     * A null condition type here becomes a match-none query downstream (see TypeResolutionServiceImpl
+     * "Condition has no type ID" + query-builder "returning match-none"). Capture the current execution
+     * context so we can tell whether the null is caused by a missing/blank tenant on the request thread,
+     * an empty definitions cache, or a genuinely absent type in the system tenant. Only runs on the (rare)
+     * null path, so it adds no cost to the happy path.
+     */
+    private void logNullConditionTypeDiagnostics(final String typeId) {
+        String currentTenant = "<unavailable>";
+        int visibleConditionTypes = -1;
+        Boolean resolvableUnderSystemTenant = null;
+        try {
+            final ServiceManager serviceManager = environment.getContext();
+            visibleConditionTypes = definitionsService.getAllConditionTypes().size();
+
+            final ExecutionContextManager contextManager = serviceManager.getService(ExecutionContextManager.class);
+            if (contextManager != null) {
+                final ExecutionContext context = contextManager.getCurrentContext();
+                currentTenant = context == null ? "<null-context>" : String.valueOf(context.getTenantId());
+                resolvableUnderSystemTenant =
+                        contextManager.executeAsSystem(() -> definitionsService.getConditionType(typeId)) != null;
+            }
+        } catch (Exception e) {
+            DiagnosticLog.warn(LOGGER, "graphql-condition-type-null-error", "typeId", typeId, "error", e.getMessage());
+        }
+        DiagnosticLog.warn(LOGGER, "graphql-condition-type-null",
+                "typeId", typeId,
+                "effect", "match-none",
+                "currentTenant", currentTenant,
+                "visibleConditionTypesInContext", visibleConditionTypes,
+                "resolvableUnderSystemTenant", resolvableUnderSystemTenant);
     }
 
     public <INPUT> Condition filtersToCondition(

@@ -39,13 +39,8 @@ import java.util.stream.Collectors;
 
 public class ProfileConditionFactory extends ConditionFactory {
 
-    private static ProfileConditionFactory instance;
-
-    public static synchronized ProfileConditionFactory get(final DataFetchingEnvironment environment) {
-        if (instance == null) {
-            instance = new ProfileConditionFactory(environment);
-        }
-        return instance;
+    public static ProfileConditionFactory get(final DataFetchingEnvironment environment) {
+        return new ProfileConditionFactory(environment);
     }
 
     private ProfileConditionFactory(final DataFetchingEnvironment environment) {

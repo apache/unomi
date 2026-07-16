@@ -38,13 +38,8 @@ import java.util.stream.Collectors;
 
 public class EventConditionFactory extends ConditionFactory {
 
-    private static EventConditionFactory instance;
-
-    public static synchronized EventConditionFactory get(final DataFetchingEnvironment environment) {
-        if (instance == null) {
-            instance = new EventConditionFactory(environment);
-        }
-        return instance;
+    public static EventConditionFactory get(final DataFetchingEnvironment environment) {
+        return new EventConditionFactory(environment);
     }
 
     private EventConditionFactory(final DataFetchingEnvironment environment) {

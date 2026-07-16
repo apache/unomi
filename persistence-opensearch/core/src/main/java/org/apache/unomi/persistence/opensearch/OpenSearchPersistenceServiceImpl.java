@@ -45,6 +45,7 @@ import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.api.security.SecurityServiceConfiguration;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantTransformationListener;
+import org.apache.unomi.api.utils.DiagnosticLog;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -1445,8 +1446,17 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                                     .build()
                     );
 
+                    // RolloverIT asserts the event index references this ISM policy; if the policy PUT itself
+                    // failed, every later "attach policy to index" step is doomed, so record it explicitly.
+                    DiagnosticLog.info(LOGGER, "rollover-policy-register",
+                            "policyName", policyName,
+                            "httpStatus", response.getStatus(),
+                            "maxAge", rolloverMaxAge,
+                            "maxSize", rolloverMaxSize,
+                            "maxDocs", rolloverMaxDocs);
                     return response.getStatus() == 200;
                 } catch (Exception e) {
+                    DiagnosticLog.warn(LOGGER, "rollover-policy-register-error", "error", e.getMessage());
                     LOGGER.error("Error registering rollover lifecycle policy", e);
                     return false;
                 }
@@ -1657,6 +1667,14 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             failures = Boolean.TRUE.equals(parsed.get("failures"))
                     || Integer.valueOf(0).equals(parsed.get("updated_indices"));
         }
+        // RolloverIT asserts the event index is actually ISM-managed (policy_id set + managed). This explicit
+        // attach is where that happens, so record the outcome to distinguish "policy never attached" from
+        // "attached but index/query flaked later".
+        DiagnosticLog.info(LOGGER, "rollover-index-attach-policy",
+                "index", fullIndexName,
+                "policyName", policyName,
+                "httpStatus", response.getStatus(),
+                "attachFailed", failures);
         if (failures) {
             throw new IOException("Failed to attach ISM policy " + policyName + " to index " + fullIndexName +
                     " - status: " + response.getStatus() + ", body: " + responseBody);
