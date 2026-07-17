@@ -10,6 +10,11 @@ on:
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
 
+# Serialize deploys from consecutive master pushes; never cancel a publish mid-run
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
 jobs:
   publish-docs-and-snapshots:
     name: Publish Javadoc and snapshots
@@ -19,8 +24,9 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
-          distribution: temurin
-          java-version: 17
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
           server-id: apache.snapshots.https
           server-username: NEXUS_USER
           server-password: NEXUS_PW
@@ -36,6 +42,11 @@ jobs:
         env:
           NEXUS_USER: ${{ secrets.NEXUS_USER }}
           NEXUS_PW: ${{ secrets.NEXUS_PW }}
+      # Keep only third-party dependencies in the post-job Maven cache: Unomi's own
+      # snapshots are rebuilt every run and would only bloat the cache / risk staleness
+      - name: Clean Unomi artifacts from Maven cache
+        if: always()
+        run: rm -rf ~/.m2/repository/org/apache/unomi
 
   publish-docker-image:
     name: Push Docker image snapshot
@@ -45,10 +56,13 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
-          distribution: temurin
-          java-version: 17
-          server-id: apache.snapshots.https
-          server-username: NEXUS_USER
-          server-password: NEXUS_PW
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
       - name: Building & pushing Docker snapshot image
         run: mvn -ntp clean install -P docker; pushd docker; mvn -Ddocker.username=${{ secrets.DOCKERHUB_USER }} -Ddocker.password=${{ secrets.DOCKERHUB_TOKEN }} docker:push; popd
+      # Keep only third-party dependencies in the post-job Maven cache: Unomi's own
+      # snapshots are rebuilt every run and would only bloat the cache / risk staleness
+      - name: Clean Unomi artifacts from Maven cache
+        if: always()
+        run: rm -rf ~/.m2/repository/org/apache/unomi

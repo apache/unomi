@@ -12,6 +12,11 @@ on:
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
 
+# Cancel superseded runs on the same PR, but never cancel master runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   unit-tests:
     name: Execute unit tests
@@ -32,6 +37,11 @@ jobs:
         dot -V
     - name: Build and Unit tests
       run: ./build.sh --ci
+    # Keep only third-party dependencies in the post-job Maven cache: Unomi's own
+    # snapshots are rebuilt every run and would only bloat the cache / risk staleness
+    - name: Clean Unomi artifacts from Maven cache
+      if: always()
+      run: rm -rf ~/.m2/repository/org/apache/unomi
 
   integration-tests:
     name: Execute integration tests
@@ -70,6 +80,11 @@ jobs:
           else
             ./build.sh --ci --integration-tests
           fi
+      # Keep only third-party dependencies in the post-job Maven cache: Unomi's own
+      # snapshots are rebuilt every run and would only bloat the cache / risk staleness
+      - name: Clean Unomi artifacts from Maven cache
+        if: always()
+        run: rm -rf ~/.m2/repository/org/apache/unomi
       - name: Archive IT memory metrics
         uses: actions/upload-artifact@v6
         if: always()
