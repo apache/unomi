@@ -101,6 +101,6 @@ public class UserAgent {
         sb.append("device.category: " + this.getDeviceCategory() + " \n}");
         sb.append("device.brand: " + this.getDeviceBrand() + " \n}");
         sb.append("device.name: " + this.getDeviceName() + " \n}");
-        return super.toString();
+        return sb.toString();
     }
 }
