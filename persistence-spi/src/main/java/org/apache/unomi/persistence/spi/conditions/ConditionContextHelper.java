@@ -70,6 +70,18 @@ public class ConditionContextHelper {
      */
     private static final Object RESOLUTION_ERROR = new Object();
 
+    /**
+     * Expected-type names that {@link #isTypeCompatible(String, String)} can actually reason
+     * about. A mismatch against one of these is a genuine, actionable signal. Anything else is
+     * a custom/registry-only type (e.g. "comparisonOperator") whose real check lives in a
+     * {@link org.apache.unomi.api.services.ValueTypeValidator} that may simply not be
+     * registered in this context (plain unit tests with no OSGi container) — in that case we
+     * have no basis to call it a mismatch, so it must not be logged at the same severity as a
+     * confirmed one.
+     */
+    private static final Set<String> KNOWN_PRIMITIVE_TYPES = new HashSet<>(Arrays.asList(
+        "string", "integer", "long", "float", "double", "boolean", "date"));
+
     private static final Map<Character, String> FOLD_MAPPING = new HashMap<>();
 
     static {
@@ -511,7 +523,16 @@ public class ConditionContextHelper {
                 "Parameter '%s' in condition type '%s' resolved to type '%s' but expected '%s'",
                 paramName, conditionTypeId, actualType, expectedType);
 
-            LOGGER.warn(message + " (value: {})", resolvedValue);
+            // Only a mismatch against a type isTypeCompatible() truly understands is a
+            // confirmed problem worth a WARN. expectedType naming a custom/registry-only type
+            // (e.g. "comparisonoperator") with no registered validator is inconclusive, not
+            // confirmed — see KNOWN_PRIMITIVE_TYPES javadoc.
+            if (KNOWN_PRIMITIVE_TYPES.contains(expectedType)) {
+                LOGGER.warn(message + " (value: {})", resolvedValue);
+            } else {
+                LOGGER.debug(message + " (value: {}); no ValueTypeValidator registered for '{}' "
+                        + "to confirm this is a real mismatch", resolvedValue, expectedType);
+            }
 
             traceParameterTypeMismatch(tracerService, paramName, expectedType, actualType, resolvedValue, conditionTypeId);
         }
