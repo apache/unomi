@@ -24,6 +24,11 @@ on:
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
 
+# Cancel superseded runs on the same PR, but never cancel master/scheduled runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   analyze:
     name: Analyze
@@ -44,10 +49,18 @@ jobs:
         # queries: ./path/to/local/query, your-org/your-repo/queries@main
 
     - name: Set up JDK 17
-      uses: actions/setup-java@v1
+      uses: actions/setup-java@v5
       with:
-        java-version: 17
+        distribution: 'temurin'
+        java-version: '17'
+        cache: 'maven'
     - run: mvn -U -ntp -e clean install -DskipTests
+
+    # Keep only third-party dependencies in the post-job Maven cache: Unomi's own
+    # snapshots are rebuilt every run and would only bloat the cache / risk staleness
+    - name: Clean Unomi artifacts from Maven cache
+      if: always()
+      run: rm -rf ~/.m2/repository/org/apache/unomi
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
