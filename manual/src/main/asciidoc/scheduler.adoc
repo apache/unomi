@@ -295,6 +295,116 @@ Key properties:
 * **Affinity windows** — reduce contention: the hashed primary node gets ~3s exclusivity, then staggered 500ms backup windows, then an *open field* so a dead primary that remains in `getActiveNodes()` cannot strand the task forever.
 * **CRASHED bypasses affinity** — recovery must be able to resume immediately on a survivor.
 
+===== Lock lease renewal (heartbeating)
+
+A fixed lock timeout alone cannot distinguish *"the owner died"* from *"the execution is simply taking
+longer than `scheduler.lockTimeout`"*. Without renewal, a long-running execution eventually looks expired
+to its peers, and crash recovery can then steal the lock — through a perfectly valid compare-and-set —
+from a node that is still working, producing a double execution. Guarding on `executingNodeId` instead
+would create the opposite failure: only the owner ever clears that field, so a task whose owner really is
+dead would be declined by every node forever.
+
+[plantuml]
+----
+@startuml
+participant "Node A\n(executing, alive)" as A
+participant "Node B\n(recovery)" as B
+database "ES / OS\n(scheduledTask doc)" as ES
+
+A -> ES : acquire lock,\nlockDate = T0
+A -> A : execute() keeps running\npast lockTimeout
+B -> ES : GET task
+B -> B : lockDate older than\nlockTimeout → "expired"
+B -> ES : steal lock (valid CAS)
+B -> B : execute() starts
+note over A, B #FFDDDD
+  Without renewal both nodes
+  now run the task:
+  double execution
+end note
+@enduml
+----
+
+While a node executes a persistent exclusive task it therefore **renews its lease**: a periodic heartbeat
+(every `max(100 ms, lockTimeout / 3)`) reloads the document with a realtime GET, verifies it still owns
+`lockOwner`, and refreshes `lockDate` with a compare-and-set write. Lock expiry then only ever means the
+owner **stopped renewing** — crashed, shut down, or unreachable — never merely "ran long".
+
+[plantuml]
+----
+@startuml
+participant "Node A\n(executing)" as A
+participant "Node B\n(recovery)" as B
+database "ES / OS\n(scheduledTask doc)" as ES
+
+loop every max(100 ms, lockTimeout / 3)
+  A -> ES : GET task (realtime)
+  A -> A : still lockOwner = A ?
+  A -> ES : CAS: lockDate = now
+end
+B -> ES : GET task
+B -> B : lockDate fresh →\nnot expired → back off
+== Node A crashes — heartbeat stops ==
+B -> ES : GET task (after lockTimeout)
+B -> B : lockDate stale → recover\n(CAS acquire, resume/restart)
+@enduml
+----
+
+The heartbeat fails closed on any conflict: if a peer legitimately took over (or the document changed
+between the GET and the write), the CAS is rejected and the heartbeat backs off — it never resurrects a
+lost lock. Renewal deliberately uses the shutdown-sensitive load/save paths, so heartbeats go inert the
+moment shutdown begins and held locks age out normally for peers to recover. And just before a terminal
+`COMPLETED` / `FAILED` write, the heartbeat is stopped (waiting out any in-flight tick) so a late renewal
+cannot invalidate the terminal compare-and-set.
+
+===== Renewal timing limits with the default 1 s refresh interval
+
+Renewal is safe with the ES/OS default index refresh batching (`refresh_interval` = 1 s) because none of
+its building blocks depend on search visibility: compare-and-set is enforced at write time on the primary
+shard, and ownership checks use realtime GETs that read through the translog. Two operational bounds do
+follow from that batching, though:
+
+* `scheduledTask` writes use the `wait_for` refresh policy, so **each heartbeat write may block up to
+  ~1 s** waiting for the next refresh cycle. The safety margin is roughly
+  `lockTimeout − (lockTimeout / 3 + 1 s + scheduling jitter)`: comfortable at the default
+  `scheduler.lockTimeout=10000`, but do **not** tune `scheduler.lockTimeout` below ~5 s in production or
+  the refresh wait consumes the whole margin.
+* Heartbeats run on the **same scheduler thread pool** (`scheduler.thread.poolSize`) as task executions
+  and the task checker. If every pool thread is occupied by long-running blocking executors, heartbeats —
+  like the checker — can starve, the lock expires under a live owner, and the pre-renewal steal scenario
+  returns.
+
+[plantuml]
+----
+@startuml
+concise "Pool threads" as POOL
+concise "Heartbeat" as HB
+concise "Lock (as seen by peers)" as LOCK
+
+@0
+POOL is "long executors occupy every thread"
+HB is running
+LOCK is fresh
+
+@3
+HB is starved #FFDDDD
+
+@10
+LOCK is expired #FFDDDD
+
+@13
+POOL is "still busy"
+LOCK is "stolen by peer → double execution"
+@enduml
+----
+
+To stay clear of both bounds:
+
+* **Size `scheduler.thread.poolSize` above the number of concurrently executing long-running exclusive
+  tasks**, so a thread is always free for heartbeats and the checker.
+* Or break long work into checkpointed steps with a `resume()`-capable executor, so no single execution
+  blocks a pool thread for long stretches.
+
 ===== Release protocol (safe unlock)
 
 Unlocking reloads the store document and **re-validates** before clearing `lockOwner`:
@@ -403,7 +513,8 @@ Every checker tick (~1s) on a node runs recovery:
 * Set a **stable unique** `scheduler.nodeId` per JVM.
 * Put at least one `scheduler.executorNode=true` in the cluster for persistent work.
 * Use `disallowParallelExecution()` for singleton side-effecting jobs.
-* Size `scheduler.lockTimeout` above the longest expected quiet period inside an executor (or checkpoint frequently and support `resume`).
+* Keep `scheduler.lockTimeout` at ~5s or above (default 10s): lease renewal keeps long executions safe automatically, but the heartbeat needs headroom over the `wait_for` refresh cycle (see <<_renewal_timing_limits_with_the_default_1_s_refresh_interval,Renewal timing limits>>).
+* Size `scheduler.thread.poolSize` above the number of concurrently executing long-running exclusive tasks, so lock heartbeats and the task checker never starve.
 * Remember ES/OS visibility: Unomi uses wait-for refresh + OCC + fencing; do not assume search-after-index without those safeguards.
 * On cancel: expect `CANCELLED` to win over a late `complete()` from an in-flight thread.
 
@@ -952,7 +1063,7 @@ long failures = schedulerService.getMetric("tasks.failed");
 |Duplicate cache refresh tasks |Use `disallowParallelExecution()` and stable task names (see `AbstractMultiTypeCachingService`)
 |Same persistent task runs on two nodes |Was `allowParallelExecution()` called explicitly (default is `false`/exclusive)? Use `disallowParallelExecution()`. Check `tasks.lock.conflicts` metrics.
 |Task `CRASHED` then stuck |Is an executor registered? Is retry budget exhausted (`failureCount` vs `maxRetries`)? Does the executor implement `canResume`/`resume` when checkpoints exist?
-|Lock timeout storms / false CRASHED |Increase `scheduler.lockTimeout`, or checkpoint + resume for long work. Verify clocks are roughly NTP-aligned across nodes.
+|Lock timeout storms / false CRASHED |Usually a starved heartbeat: check that `scheduler.thread.poolSize` exceeds the number of concurrent long-running tasks. Otherwise increase `scheduler.lockTimeout` (keep ≥ ~5s), or checkpoint + resume for long work. Verify clocks are roughly NTP-aligned across nodes.
 |Cancelled task becomes COMPLETED |Should not happen after Unomi 3.1 terminal CAS guards; if seen, capture `seq_no` history and node logs around `Skipping terminal transition`.
 |Tenant data wrong in background job |Missing `executeAsTenant` / security subject setup in executor
 |===
