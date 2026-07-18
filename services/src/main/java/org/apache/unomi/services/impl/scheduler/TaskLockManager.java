@@ -421,18 +421,51 @@ public class TaskLockManager {
             task.setLockOwner(null);
             task.setLockDate(null);
 
-            // Allow persist during shutdown: preDestroy/simulateCrash set shutdownNow before
-            // releasing locks; a no-op save would leave a stale lock in deep-copy stores.
-            if (!schedulerService.saveTask(toSave, true)) {
-                LOGGER.error("Failed to release lock for task {}", task.getItemId());
+            // Compare-and-set on the freshly loaded seq_no/primary_term, not a blind overwrite:
+            // a peer may win a legitimate CAS-based lock acquisition in the window between our
+            // read above and this write. A blind overwrite would silently clobber that peer's
+            // new lock; CAS instead fails closed and we report a lost race below. Allow persist
+            // during shutdown: preDestroy/simulateCrash set shutdownNow before releasing locks,
+            // and a no-op save would leave a stale lock in deep-copy stores.
+            if (!schedulerService.saveTaskWithRefresh(toSave, true)) {
+                LOGGER.warn("Failed to release lock for task {}: lost compare-and-set race, "
+                        + "a peer likely re-acquired the lock", task.getItemId());
                 return false;
             }
 
             metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_LOCK_RELEASED);
             return true;
         } catch (Exception e) {
-            LOGGER.error("Error releasing lock for task {}: {}", task.getItemId(), e.getMessage());
+            LOGGER.error("Error releasing lock for task {}", task.getItemId(), e);
             return false;
+        }
+    }
+
+    /**
+     * Copies OCC (seq_no/primary_term) fencing metadata from a freshly loaded task onto the
+     * task about to be persisted, so a subsequent compare-and-set save is checked against the
+     * store's current version rather than a stale in-memory one. {@code from} and {@code to}
+     * may be the same instance (normalizes both ES/OS key variants onto it).
+     *
+     * @param from the task holding the current OCC metadata (typically a fresh store read)
+     * @param to the task that will be persisted next
+     */
+    public static void copyOccMetadata(ScheduledTask from, ScheduledTask to) {
+        Object seq = from.getSystemMetadata(SEQ_NO);
+        if (seq == null) {
+            seq = from.getSystemMetadata("_seq_no");
+        }
+        Object term = from.getSystemMetadata(PRIMARY_TERM);
+        if (term == null) {
+            term = from.getSystemMetadata("_primary_term");
+        }
+        if (seq != null) {
+            to.setSystemMetadata(SEQ_NO, seq);
+            to.setSystemMetadata("_seq_no", seq);
+        }
+        if (term != null) {
+            to.setSystemMetadata(PRIMARY_TERM, term);
+            to.setSystemMetadata("_primary_term", term);
         }
     }
 

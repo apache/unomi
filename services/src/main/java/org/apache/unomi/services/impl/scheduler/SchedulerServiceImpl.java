@@ -898,7 +898,11 @@ public class SchedulerServiceImpl implements SchedulerService {
                             task.setLockOwner(null);
                             task.setLockDate(null);
                             if (task.isPersistent() && persistenceProvider != null) {
-                                persistenceProvider.saveTask(task);
+                                if (!persistenceProvider.saveTask(task)) {
+                                    LOGGER.warn("Failed to persist CRASHED state for task {} during shutdown; "
+                                            + "store may still show it RUNNING with a dead lock owner until lockTimeout",
+                                            task.getItemId());
+                                }
                             }
                         } catch (Exception e) {
                             LOGGER.warn("Error marking task {} as crashed during shutdown: {}", task.getItemId(), e.getMessage());
@@ -906,7 +910,7 @@ public class SchedulerServiceImpl implements SchedulerService {
                     }
                 }
             } catch (Exception e) {
-                LOGGER.debug("Error marking running tasks as crashed during shutdown: {}", e.getMessage());
+                LOGGER.warn("Error marking running tasks as crashed during shutdown", e);
             }
         }
 
@@ -2006,7 +2010,21 @@ public class SchedulerServiceImpl implements SchedulerService {
      * @return true if the operation was successful
      */
     public boolean saveTaskWithRefresh(ScheduledTask task) {
-        if (task == null || shutdownNow) {
+        return saveTaskWithRefresh(task, false);
+    }
+
+    /**
+     * Saves a task with immediate refresh, optionally allowing persistence while
+     * {@code shutdownNow} is set. Lock release during {@link #preDestroy()} /
+     * {@link #simulateCrash()} must still go through compare-and-set — a blind overwrite
+     * could clobber a lock a peer legitimately acquired between our read and this write.
+     *
+     * @param task the task to save
+     * @param allowDuringShutdown when true, persist even if the scheduler is shutting down
+     * @return true if the operation was successful
+     */
+    public boolean saveTaskWithRefresh(ScheduledTask task, boolean allowDuringShutdown) {
+        if (task == null || (!allowDuringShutdown && shutdownNow)) {
             return false;
         }
 
@@ -2026,7 +2044,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             }
         } else {
             // For non-persistent tasks, just save normally
-            return saveTask(task);
+            return saveTask(task, allowDuringShutdown);
         }
     }
 

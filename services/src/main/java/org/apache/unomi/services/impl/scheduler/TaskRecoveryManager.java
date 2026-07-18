@@ -213,22 +213,7 @@ public class TaskRecoveryManager {
         }
 
         // Carry OCC tokens from the fresh load when present
-        Object seq = latest.getSystemMetadata("seq_no");
-        if (seq == null) {
-            seq = latest.getSystemMetadata("_seq_no");
-        }
-        Object term = latest.getSystemMetadata("primary_term");
-        if (term == null) {
-            term = latest.getSystemMetadata("_primary_term");
-        }
-        if (seq != null) {
-            latest.setSystemMetadata("seq_no", seq);
-            latest.setSystemMetadata("_seq_no", seq);
-        }
-        if (term != null) {
-            latest.setSystemMetadata("primary_term", term);
-            latest.setSystemMetadata("_primary_term", term);
-        }
+        TaskLockManager.copyOccMetadata(latest, latest);
 
         // Mark as crashed, then drop the dead owner's lock. prepareForExecution() /
         // acquireLock() takes a fresh lock on resume/restart. Leaving an expired lock
@@ -327,7 +312,11 @@ public class TaskRecoveryManager {
         // Keep CRASHED so the execution wrapper calls executor.resume(). Persist so the
         // checker can retry if executeTask is a no-op (e.g. previous dispatch claim held).
         // Do not pre-acquire the lock here — prepareForExecution owns locking.
-        schedulerService.saveTask(task);
+        if (!schedulerService.saveTask(task)) {
+            LOGGER.warn("Node {} failed to persist CRASHED state before resuming task {} : {} — "
+                    + "checker safety-net retry may not trigger if the resume dispatch is a no-op",
+                nodeId, task.getTaskType(), task.getItemId());
+        }
         executionManager.executeTask(task, executor);
     }
 
@@ -353,7 +342,11 @@ public class TaskRecoveryManager {
         task.setNextScheduledExecution(new Date());
         // Persist SCHEDULED before best-effort dispatch so the checker is a safety net when
         // executeTask no-ops (dispatch claim still held by a dying node's stalled wrapper).
-        schedulerService.saveTask(task);
+        if (!schedulerService.saveTask(task)) {
+            LOGGER.warn("Node {} failed to persist SCHEDULED state before restarting task {} : {} — "
+                    + "checker safety-net retry may not trigger if the restart dispatch is a no-op",
+                nodeId, task.getTaskType(), task.getItemId());
+        }
         executionManager.executeTask(task, executor);
     }
 

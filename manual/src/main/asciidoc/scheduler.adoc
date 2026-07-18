@@ -950,7 +950,7 @@ long failures = schedulerService.getMetric("tasks.failed");
 |Task `FAILED` after retries |Read `lastError` via `task-show` or REST; fix root cause; call retry
 |Task `CRASHED` |Node failure during run; use resume if checkpoints exist
 |Duplicate cache refresh tasks |Use `disallowParallelExecution()` and stable task names (see `AbstractMultiTypeCachingService`)
-|Same persistent task runs on two nodes |Was `allowParallelExecution` left at default `true`? Use `disallowParallelExecution()`. Check `tasks.lock.conflicts` metrics.
+|Same persistent task runs on two nodes |Was `allowParallelExecution()` called explicitly (default is `false`/exclusive)? Use `disallowParallelExecution()`. Check `tasks.lock.conflicts` metrics.
 |Task `CRASHED` then stuck |Is an executor registered? Is retry budget exhausted (`failureCount` vs `maxRetries`)? Does the executor implement `canResume`/`resume` when checkpoints exist?
 |Lock timeout storms / false CRASHED |Increase `scheduler.lockTimeout`, or checkpoint + resume for long work. Verify clocks are roughly NTP-aligned across nodes.
 |Cancelled task becomes COMPLETED |Should not happen after Unomi 3.1 terminal CAS guards; if seen, capture `seq_no` history and node logs around `Skipping terminal transition`.

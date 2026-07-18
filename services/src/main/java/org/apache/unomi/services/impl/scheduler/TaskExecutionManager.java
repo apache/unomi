@@ -449,19 +449,6 @@ public class TaskExecutionManager {
     }
 
     /**
-     * Reclaims a task that crash recovery prematurely marked as CRASHED while it was in fact
-     * still executing on this node (e.g. the executing thread stalled long enough for the
-     * task lock to expire). The executor invoking its status callback proves the execution is
-     * alive, so the CRASHED marker is wrong: without reclaiming, the callback would be
-     * silently ignored and a one-shot task would be stranded in CRASHED state forever
-     * (recovery refuses to restart one-shot tasks that already executed, and the task checker
-     * only selects SCHEDULED/WAITING tasks).
-     *
-     * The executingNodeId guard ensures we only reclaim executions this node actually owns:
-     * it is set by the task wrapper right after successful preparation and cleared when the
-     * wrapper finishes, and recovery preserves it when marking a task CRASHED.
-     */
-    /**
      * Rolls back a task that was prepared (RUNNING + lock) but must not execute because
      * the scheduler is shutting down. Marks CRASHED and clears the lock so recovery on
      * the next instance is immediate.
@@ -480,6 +467,19 @@ public class TaskExecutionManager {
         }
     }
 
+    /**
+     * Reclaims a task that crash recovery prematurely marked as CRASHED while it was in fact
+     * still executing on this node (e.g. the executing thread stalled long enough for the
+     * task lock to expire). The executor invoking its status callback proves the execution is
+     * alive, so the CRASHED marker is wrong: without reclaiming, the callback would be
+     * silently ignored and a one-shot task would be stranded in CRASHED state forever
+     * (recovery refuses to restart one-shot tasks that already executed, and the task checker
+     * only selects SCHEDULED/WAITING tasks).
+     *
+     * The executingNodeId guard ensures we only reclaim executions this node actually owns:
+     * it is set by the task wrapper right after successful preparation and cleared when the
+     * wrapper finishes, and recovery preserves it when marking a task CRASHED.
+     */
     private void reclaimIfPrematurelyCrashed(ScheduledTask task) {
         if (task.getStatus() == ScheduledTask.TaskStatus.CRASHED
                 && nodeId != null && nodeId.equals(task.getExecutingNodeId())) {
@@ -547,27 +547,8 @@ public class TaskExecutionManager {
         }
 
         // Carry OCC tokens from the fresh load so persistTerminalState can CAS.
-        copyOccMetadata(latest, task);
+        TaskLockManager.copyOccMetadata(latest, task);
         return true;
-    }
-
-    private static void copyOccMetadata(ScheduledTask from, ScheduledTask to) {
-        Object seq = from.getSystemMetadata("seq_no");
-        if (seq == null) {
-            seq = from.getSystemMetadata("_seq_no");
-        }
-        Object term = from.getSystemMetadata("primary_term");
-        if (term == null) {
-            term = from.getSystemMetadata("_primary_term");
-        }
-        if (seq != null) {
-            to.setSystemMetadata("seq_no", seq);
-            to.setSystemMetadata("_seq_no", seq);
-        }
-        if (term != null) {
-            to.setSystemMetadata("primary_term", term);
-            to.setSystemMetadata("_primary_term", term);
-        }
     }
 
     /**
@@ -579,7 +560,12 @@ public class TaskExecutionManager {
         task.setLockOwner(null);
         task.setLockDate(null);
         if (!task.isPersistent()) {
-            return schedulerService.saveTask(task);
+            boolean saved = schedulerService.saveTask(task);
+            if (!saved) {
+                LOGGER.warn("Failed to persist terminal state for non-persistent task {} (status={})",
+                    task.getItemId(), task.getStatus());
+            }
+            return saved;
         }
         boolean saved = schedulerService.saveTaskWithRefresh(task);
         if (!saved) {

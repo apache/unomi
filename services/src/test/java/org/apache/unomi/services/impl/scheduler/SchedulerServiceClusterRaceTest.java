@@ -1080,4 +1080,97 @@ public class SchedulerServiceClusterRaceTest {
         assertEquals(1, identityHashes.size(), "Winning execution uses one in-process instance");
         assertDistinctTaskViews(node1, node2, task.getItemId());
     }
+
+    @Test
+    public void testConcurrentShutdownRacingPeerRecoveryDoesNotDoubleDispatch() throws Exception {
+        // Gap flagged in the UNOMI-967 PR review: existing crash-recovery tests trigger
+        // recovery *after* a crash has already happened (simulateCrash() then recover()).
+        // This drives victim.preDestroy() (which marks RUNNING work CRASHED and clears its
+        // own lock) concurrently with peer.recoverCrashedTasks() racing for the same
+        // still-locked document, exercising the shutdown-vs-recovery interleaving directly.
+        long lockTimeout = SHORT_LOCK_TIMEOUT_MS;
+        SchedulerServiceImpl victim = createNode("shutdown-race-victim", true, lockTimeout);
+        SchedulerServiceImpl peer = createNode("shutdown-race-peer", true, lockTimeout);
+        seedActiveNodes("shutdown-race-victim", "shutdown-race-peer");
+
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicInteger executeCount = new AtomicInteger();
+        AtomicInteger resumeCount = new AtomicInteger();
+
+        TaskExecutor executor = new TaskExecutor() {
+            @Override public String getTaskType() { return "shutdown-race"; }
+            @Override public void execute(ScheduledTask task, TaskStatusCallback callback) throws Exception {
+                executeCount.incrementAndGet();
+                callback.checkpoint(Collections.singletonMap("step", 1));
+                started.countDown();
+                release.await(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                callback.complete();
+            }
+            @Override public boolean canResume(ScheduledTask task) {
+                return task.getCheckpointData() != null;
+            }
+            @Override public void resume(ScheduledTask task, TaskStatusCallback callback) {
+                resumeCount.incrementAndGet();
+                callback.complete();
+            }
+        };
+        registerOnAll(executor, victim, peer);
+
+        ScheduledTask task = victim.newTask("shutdown-race")
+            .disallowParallelExecution()
+            .asOneShot()
+            .schedule();
+
+        assertTrue(started.await(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+        // Age the lock past lockTimeout so peer's recovery pass considers it eligible,
+        // at the same moment we drive the victim's own shutdown-triggered crash-mark.
+        expireLockInStore(task.getItemId());
+
+        AtomicReference<Throwable> victimError = new AtomicReference<>();
+        AtomicReference<Throwable> peerError = new AtomicReference<>();
+        CountDownLatch go = new CountDownLatch(1);
+        CountDownLatch done = new CountDownLatch(2);
+        Thread shutdownThread = new Thread(() -> {
+            try {
+                go.await(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                victim.preDestroy();
+            } catch (Throwable t) {
+                victimError.set(t);
+            } finally {
+                done.countDown();
+            }
+        }, "shutdown-race-victim-thread");
+        Thread recoveryThread = new Thread(() -> {
+            try {
+                go.await(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+                peer.recoverCrashedTasks();
+            } catch (Throwable t) {
+                peerError.set(t);
+            } finally {
+                done.countDown();
+            }
+        }, "shutdown-race-peer-thread");
+        shutdownThread.start();
+        recoveryThread.start();
+        go.countDown();
+        assertTrue(done.await(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+        release.countDown();
+
+        assertNull(victimError.get(), "victim.preDestroy() must not throw when racing peer recovery");
+        assertNull(peerError.get(), "peer.recoverCrashedTasks() must not throw when racing victim shutdown");
+
+        // Drive a few more recover passes in case the first concurrent pass lost the OCC race
+        // (victim's own shutdown save and peer's recovery save both target the same document).
+        long deadline = System.currentTimeMillis() + TEST_TIMEOUT_MS;
+        while (resumeCount.get() == 0 && System.currentTimeMillis() < deadline) {
+            peer.recoverCrashedTasks();
+            Thread.sleep(100);
+        }
+
+        assertEquals(1, executeCount.get(),
+            "Concurrent shutdown + peer recovery must not cause a second independent execute()");
+        assertTrue(resumeCount.get() <= 1,
+            "Concurrent shutdown + peer recovery must not double-resume the same crashed work");
+    }
 }

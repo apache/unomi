@@ -67,6 +67,7 @@ public class TaskLockManagerTest {
         when(schedulerService.saveTask(any(ScheduledTask.class))).thenReturn(true);
         when(schedulerService.saveTask(any(ScheduledTask.class), anyBoolean())).thenReturn(true);
         when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenReturn(true);
+        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class), anyBoolean())).thenReturn(true);
     }
 
     @Test
@@ -222,7 +223,7 @@ public class TaskLockManagerTest {
         assertTrue(lockManager.releaseLock(caller));
         assertNull(stored.getLockOwner());
         assertEquals(ScheduledTask.TaskStatus.RUNNING, stored.getStatus());
-        verify(schedulerService).saveTask(stored, true);
+        verify(schedulerService).saveTaskWithRefresh(stored, true);
         assertEquals(1, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_LOCK_RELEASED));
     }
 
@@ -372,14 +373,14 @@ public class TaskLockManagerTest {
         t.interrupt();
         t.join(2000);
         assertFalse(acquired.get());
-        verify(schedulerService, atLeastOnce()).saveTask(any(ScheduledTask.class), eq(true));
+        verify(schedulerService, atLeastOnce()).saveTaskWithRefresh(any(ScheduledTask.class), eq(true));
     }
 
     @Test
     public void testReleaseLockReturnsFalseWhenPersistFails() {
         ScheduledTask task = TaskTestFixtures.runningTask("rel", NODE);
         when(schedulerService.getTask(eq(task.getItemId()), eq(true))).thenReturn(task);
-        when(schedulerService.saveTask(any(ScheduledTask.class), eq(true))).thenReturn(false);
+        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class), eq(true))).thenReturn(false);
 
         assertFalse(lockManager.releaseLock(task));
         assertEquals(0, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_LOCK_RELEASED));
@@ -401,7 +402,7 @@ public class TaskLockManagerTest {
 
         assertFalse(lockManager.releaseLock(caller));
         assertEquals("peer-node", peerHeld.getLockOwner());
-        verify(schedulerService, never()).saveTask(any(ScheduledTask.class), eq(true));
+        verify(schedulerService, never()).saveTaskWithRefresh(any(ScheduledTask.class), eq(true));
         assertEquals(0, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_LOCK_RELEASED));
     }
 
@@ -428,7 +429,7 @@ public class TaskLockManagerTest {
         });
 
         assertFalse(lockManager.acquireLock(task));
-        verify(schedulerService, atLeastOnce()).saveTask(any(ScheduledTask.class), eq(true));
+        verify(schedulerService, atLeastOnce()).saveTaskWithRefresh(any(ScheduledTask.class), eq(true));
         assertEquals(1, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_LOCK_CONFLICTS));
     }
 
@@ -505,6 +506,80 @@ public class TaskLockManagerTest {
         assertTrue(done.await(5, TimeUnit.SECONDS));
         assertEquals(1, wins.get(), "Only one in-memory exclusive acquire should win across node ids");
         assertNotNull(shared.getLockOwner());
+    }
+
+    @Test
+    public void testPeerStealDuringVerificationWindowIsNotClobberedByLoser() throws Exception {
+        // Simulates a peer legitimately stealing the lock (via its own CAS, after our lock
+        // aged past a short lockTimeout) while we are inside acquireDistributedLock's
+        // VERIFICATION_DELAY_MS post-CAS sleep — the exact narrow window the CAS+verify
+        // protocol exists to protect. Unlike the canned-sequential-stub tests above, the
+        // steal here is driven by a real background thread racing real wall-clock time
+        // against our verification sleep, not pre-scripted return values.
+        String taskId = "verify-window";
+        java.util.concurrent.atomic.AtomicLong seqNo = new java.util.concurrent.atomic.AtomicLong(1L);
+        java.util.concurrent.atomic.AtomicReference<String> owner = new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicLong lockVersion = new java.util.concurrent.atomic.AtomicLong(0L);
+        CountDownLatch nodeACasDone = new CountDownLatch(1);
+        CountDownLatch peerStealDone = new CountDownLatch(1);
+
+        when(schedulerService.getTask(eq(taskId))).thenAnswer(inv -> {
+            ScheduledTask snapshot = TaskTestFixtures.baseTask("verify-window");
+            snapshot.setItemId(taskId);
+            snapshot.setSystemMetadata("seq_no", seqNo.get());
+            snapshot.setSystemMetadata("primary_term", 1L);
+            String currentOwner = owner.get();
+            if (currentOwner != null) {
+                snapshot.setLockOwner(currentOwner);
+                snapshot.setLockDate(new Date());
+                snapshot.setSystemMetadata("lockVersion", lockVersion.get());
+            }
+            return snapshot;
+        });
+        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenAnswer(inv -> {
+            ScheduledTask t = inv.getArgument(0);
+            Object givenSeq = t.getSystemMetadata("seq_no");
+            if (!Long.valueOf(seqNo.get()).equals(givenSeq)) {
+                return false;
+            }
+            owner.set(t.getLockOwner());
+            Object ver = t.getSystemMetadata("lockVersion");
+            lockVersion.set(ver instanceof Number ? ((Number) ver).longValue() : 0L);
+            seqNo.incrementAndGet();
+            nodeACasDone.countDown();
+            return true;
+        });
+
+        // Peer steal thread: waits for our CAS to land, then performs its own legitimate
+        // CAS using the now-current seq_no — exactly what a real peer's acquireDistributedLock
+        // would do once it observes our lock as expired (short lockTimeout below). Runs during
+        // our real Thread.sleep(VERIFICATION_DELAY_MS) inside acquireDistributedLock.
+        Thread stealer = new Thread(() -> {
+            try {
+                assertTrue(nodeACasDone.await(2, TimeUnit.SECONDS));
+                long stolenSeq = seqNo.get();
+                owner.set("peer-node");
+                lockVersion.set(999L);
+                seqNo.set(stolenSeq + 1);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                peerStealDone.countDown();
+            }
+        }, "peer-steal-thread");
+        stealer.start();
+
+        ScheduledTask task = TaskTestFixtures.baseTask("verify-window");
+        task.setItemId(taskId);
+
+        assertFalse(lockManager.acquireLock(task),
+            "Verification must fail once a peer has legitimately stolen the lock mid-window");
+        assertTrue(peerStealDone.await(2, TimeUnit.SECONDS));
+        assertEquals(1, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_LOCK_CONFLICTS));
+
+        // The loser must not have clobbered the peer's win on its way out.
+        assertEquals("peer-node", owner.get(), "Losing node must not clear the peer's legitimate lock");
+        assertEquals(999L, lockVersion.get());
     }
 
     private void stubSuccessfulDistributedAcquire(ScheduledTask task) {
