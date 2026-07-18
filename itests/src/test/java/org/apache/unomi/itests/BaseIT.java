@@ -669,6 +669,13 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.rollover.maxDocs", "300"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.migration.tenant.id", TEST_TENANT_ID),
+                // Default scheduler.thread.poolSize (5) is sized for the near-instant in-memory unit-test
+                // double, not a real ES/OS backend. Under real refresh/write latency, the checker, task
+                // executions, and lease-renewal heartbeats (see scheduler.adoc) compete for the same small
+                // pool; when it saturates, heartbeats starve, locks age out from under live executions, and
+                // crash recovery repeatedly (mis)reclaims them, logging "Lock verification failed... after
+                // CAS" every checker tick. Widen it for ITs so heartbeats/checker never starve.
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.scheduler.thread.poolSize", "10"),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
