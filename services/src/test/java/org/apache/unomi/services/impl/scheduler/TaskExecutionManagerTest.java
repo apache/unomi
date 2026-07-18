@@ -533,7 +533,10 @@ public class TaskExecutionManagerTest {
         assertTrue(done.await(5, TimeUnit.SECONDS));
         Thread.sleep(100);
         assertEquals(ScheduledTask.TaskStatus.CANCELLED, task.getStatus());
-        verify(schedulerService, never()).saveTaskWithRefresh(any());
+        // persistTerminalState() is skipped (terminal transition correctly bailed out above), but
+        // the wrapper's cleanup still CAS-clears executingNodeId once; that write is expected to
+        // fail harmlessly against a real store since the document moved on to CANCELLED.
+        verify(schedulerService, times(1)).saveTaskWithRefresh(any());
         assertEquals(0, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_COMPLETED));
     }
 
@@ -557,7 +560,10 @@ public class TaskExecutionManagerTest {
         assertTrue(done.await(5, TimeUnit.SECONDS));
         Thread.sleep(100);
         assertEquals(ScheduledTask.TaskStatus.RUNNING, task.getStatus());
-        verify(schedulerService, never()).saveTaskWithRefresh(any());
+        // persistTerminalState() is skipped (peer holds the lock), but the wrapper's cleanup still
+        // CAS-clears executingNodeId once; that write is expected to fail harmlessly against a real
+        // store since the peer is the authoritative owner.
+        verify(schedulerService, times(1)).saveTaskWithRefresh(any());
     }
 
     @Test

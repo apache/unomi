@@ -427,9 +427,19 @@ public class TaskExecutionManager {
             } finally {
                 // Only clear/save executingNodeId if we actually set it above; otherwise we never
                 // touched the task and a redundant save here could race a concurrent legitimate holder.
+                // Use CAS, not a blind overwrite: when our own terminal transition above was skipped
+                // because a peer already reclaimed/restarted this task (canCommitTerminalTransition
+                // returned false), task still holds our stale local view (status RUNNING). A blind
+                // save here would clobber the peer's newer state and revive an already-resolved race,
+                // letting the peer's restart re-dispatch and double-execute. CAS fails harmlessly
+                // instead, since the peer is now the authoritative owner.
                 if (executingNodeIdSet) {
                     task.setExecutingNodeId(null);
-                    schedulerService.saveTask(task);
+                    if (!schedulerService.saveTaskWithRefresh(task)) {
+                        LOGGER.debug("Node {} : Could not clear executingNodeId for task {} — "
+                                + "a peer likely reclaimed it first, which is expected",
+                            nodeId, taskId);
+                    }
                 }
 
                 // Always release the dispatch claim taken by executeTask(), regardless of which path
