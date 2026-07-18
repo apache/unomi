@@ -611,6 +611,9 @@ public class SchedulerServiceImpl implements SchedulerService {
      */
     public void setRecoveryManager(TaskRecoveryManager recoveryManager) {
         this.recoveryManager = recoveryManager;
+        if (recoveryManager != null) {
+            recoveryManager.setExecutorNode(this.executorNode);
+        }
     }
 
     /**
@@ -782,10 +785,12 @@ public class SchedulerServiceImpl implements SchedulerService {
         executionManager.setSchedulerService(this);
         recoveryManager.setSchedulerService(this);
 
+        // Start the task checker on every node. Non-executor nodes only dispatch tasks with
+        // runOnAllNodes=true (filtered in shouldExecuteTask); without a checker those nodes
+        // would never re-poll recurring runOnAllNodes work after the initial schedule.
+        running.set(true);
+        executionManager.startTaskChecker(this::checkTasks);
         if (executorNode) {
-            running.set(true);
-            // Start task checking thread using the execution manager
-            executionManager.startTaskChecker(this::checkTasks);
             // Queue task purge initialization instead of calling directly
             queuePendingOperation(OperationType.INITIALIZE_TASK_PURGE, "Initialize task purge");
         }
@@ -888,6 +893,10 @@ public class SchedulerServiceImpl implements SchedulerService {
                         try {
                             stateManager.updateTaskState(task, ScheduledTask.TaskStatus.CRASHED,
                                     "Interrupted by scheduler shutdown", nodeId);
+                            // Clear lock in the same write so peers do not wait for lockTimeout
+                            // and PersistenceSchedulerProvider.preDestroy need not unlock RUNNING.
+                            task.setLockOwner(null);
+                            task.setLockDate(null);
                             if (task.isPersistent() && persistenceProvider != null) {
                                 persistenceProvider.saveTask(task);
                             }
@@ -934,7 +943,7 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     void checkTasks() {
-        if (shutdownNow || !running.get() || checkTasksRunning.get() || !executorNode) {
+        if (shutdownNow || !running.get() || checkTasksRunning.get()) {
             return;
         }
 
@@ -969,7 +978,8 @@ public class SchedulerServiceImpl implements SchedulerService {
             List<ScheduledTask> inMemoryTasks = nonPersistentTasks.values().stream()
                 .filter(task -> task.isEnabled() &&
                     (task.getStatus() == ScheduledTask.TaskStatus.SCHEDULED ||
-                     task.getStatus() == ScheduledTask.TaskStatus.WAITING))
+                     task.getStatus() == ScheduledTask.TaskStatus.WAITING ||
+                     task.getStatus() == ScheduledTask.TaskStatus.CRASHED))
                 .collect(Collectors.toList());
 
             // Add in-memory tasks to the list of tasks to check
@@ -1036,16 +1046,23 @@ public class SchedulerServiceImpl implements SchedulerService {
             return;
         }
 
-        // Check if any task of this type is running with a valid lock
-        boolean hasRunningTask = hasRunningTaskOfType(taskType);
-        if (!hasRunningTask) {
-            // Get the first task that should execute
-            for (ScheduledTask task : tasks) {
-                if (shouldExecuteTask(task)) {
-                    // All tasks here are persistent since they come from persistence service query
-                    executionManager.executeTask(task, executor);
-                    break;
-                }
+        for (ScheduledTask task : tasks) {
+            if (shutdownNow) {
+                return;
+            }
+            if (!shouldExecuteTask(task)) {
+                continue;
+            }
+            // Type-level mutex is best-effort across nodes (TOCTOU vs peer checkers).
+            // Re-query immediately before dispatch to shrink the race; the hard guarantee
+            // for a single task instance remains the per-task OCC lock.
+            if (!task.isAllowParallelExecution() && hasRunningTaskOfType(taskType)) {
+                continue;
+            }
+            executionManager.executeTask(task, executor);
+            if (!task.isAllowParallelExecution()) {
+                // One exclusive task of this type at a time on this node
+                break;
             }
         }
     }
@@ -1133,8 +1150,14 @@ public class SchedulerServiceImpl implements SchedulerService {
             }
         }
 
-        // For waiting tasks, they are already ordered by creation date
+        // WAITING tasks run once their dependencies are satisfied (checked above).
+        // They are ordered by creation date in sortTasksByPriority.
         if (task.getStatus() == ScheduledTask.TaskStatus.WAITING) {
+            return true;
+        }
+
+        // CRASHED tasks are due for recovery/resume immediately
+        if (task.getStatus() == ScheduledTask.TaskStatus.CRASHED) {
             return true;
         }
 
@@ -1158,14 +1181,19 @@ public class SchedulerServiceImpl implements SchedulerService {
             return true; // Execute immediately if no initial delay
         }
 
-        // For periodic tasks, check next scheduled execution
-        if (!task.isOneShot() && task.getPeriod() > 0) {
-            Date nextExecution = task.getNextScheduledExecution();
-            return nextExecution != null &&
-                   System.currentTimeMillis() >= nextExecution.getTime();
-        }
-
-        return false;
+        // Already executed at least once: the task is due again when a next execution is
+        // scheduled and its time has been reached. This covers periodic tasks (next period)
+        // as well as pending retries of one-shot tasks (handleTaskError() moves the failed
+        // task back to SCHEDULED with nextScheduledExecution = failure time + retry delay).
+        // Including one-shot retries here makes the periodic task checker a safety net when
+        // the in-process retry dispatch is lost, e.g. because it fired while the previous
+        // execution was still releasing its dispatch claim, or because the node that
+        // scheduled the retry died. Completed one-shot tasks are never re-dispatched:
+        // completion clears nextScheduledExecution and disables the task, and tasks whose
+        // retries are exhausted stay in FAILED state which the checker does not select.
+        Date nextExecution = task.getNextScheduledExecution();
+        return nextExecution != null &&
+               System.currentTimeMillis() >= nextExecution.getTime();
     }
 
     @Override
@@ -1189,6 +1217,8 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
 
         Map<String, ScheduledTask> existingTasks = new HashMap<>();
+        // Include the task itself so cycle detection can walk its dependsOn graph
+        existingTasks.put(task.getItemId(), task);
         if (task.getDependsOn() != null) {
             for (String dependencyId : task.getDependsOn()) {
                 ScheduledTask dependency = getTask(dependencyId);
@@ -1199,6 +1229,21 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
 
         validationManager.validateTask(task, existingTasks);
+
+        // Enforce dependencies: enter WAITING until all dependsOn tasks have COMPLETED
+        if (task.getDependsOn() != null && !task.getDependsOn().isEmpty()) {
+            task.setWaitingOnTasks(new HashSet<>(task.getDependsOn()));
+            if (!stateManager.canRescheduleTask(task, existingTasks)) {
+                stateManager.updateTaskState(task, TaskStatus.WAITING, null, nodeId);
+                if (!saveTask(task)) {
+                    LOGGER.error("Failed to save waiting task: {}", task.getItemId());
+                }
+                LOGGER.debug("Task {} waiting on dependencies {}", task.getItemId(), task.getDependsOn());
+                return;
+            }
+            // Dependencies already satisfied — clear waiting set and proceed to schedule
+            task.setWaitingOnTasks(null);
+        }
 
         // Store task
         if (!saveTask(task)) {
@@ -1310,7 +1355,20 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     @Override
     public ScheduledTask getTask(String taskId) {
-        if (shutdownNow) {
+        return getTask(taskId, false);
+    }
+
+    /**
+     * Loads a task by id.
+     *
+     * @param taskId the task id
+     * @param allowDuringShutdown when true, load even if {@code shutdownNow} is set
+     *        (needed so lock release can re-read store state without picking up a
+     *        caller-mutated SCHEDULED/FAILED retry view)
+     * @return the task, or null if not found
+     */
+    public ScheduledTask getTask(String taskId, boolean allowDuringShutdown) {
+        if (!allowDuringShutdown && shutdownNow) {
             return null;
         }
 
@@ -1497,6 +1555,9 @@ public class SchedulerServiceImpl implements SchedulerService {
      */
     public void setExecutorNode(boolean executorNode) {
         this.executorNode = executorNode;
+        if (recoveryManager != null) {
+            recoveryManager.setExecutorNode(executorNode);
+        }
     }
 
     /**
@@ -1506,6 +1567,9 @@ public class SchedulerServiceImpl implements SchedulerService {
      */
     public void setLockTimeout(long lockTimeout) {
         this.lockTimeout = lockTimeout;
+        if (lockManager != null) {
+            lockManager.setLockTimeout(lockTimeout);
+        }
     }
 
     /**
@@ -1544,9 +1608,9 @@ public class SchedulerServiceImpl implements SchedulerService {
     @Override
     public void recoverCrashedTasks() {
         if (areServicesReady()) {
-            if (executorNode) {
-                recoveryManager.recoverCrashedTasks();
-            }
+            // Recovery may mark CRASHED / clear locks on any node; dispatch is gated inside
+            // TaskRecoveryManager by executorNode || runOnAllNodes.
+            recoveryManager.recoverCrashedTasks();
         } else {
             queuePendingOperation(OperationType.RECOVER_CRASHED_TASKS, "Recover crashed tasks");
         }
@@ -1601,9 +1665,11 @@ public class SchedulerServiceImpl implements SchedulerService {
         if (task != null && task.getStatus() == ScheduledTask.TaskStatus.CRASHED) {
             TaskExecutor executor = executorRegistry.getExecutor(task.getTaskType());
             if (executor != null && executor.canResume(task)) {
-                stateManager.updateTaskState(task, ScheduledTask.TaskStatus.SCHEDULED, null, nodeId);
+                // Keep CRASHED so the execution wrapper invokes executor.resume()
                 metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_RESUMED);
-                scheduleTaskInternal(task);
+                if (lockManager.acquireLock(task)) {
+                    executionManager.executeTask(task, executor);
+                }
             }
         }
     }
@@ -1709,7 +1775,21 @@ public class SchedulerServiceImpl implements SchedulerService {
      */
     @Override
     public boolean saveTask(ScheduledTask task) {
-        if (task == null || shutdownNow) {
+        return saveTask(task, false);
+    }
+
+    /**
+     * Saves a task, optionally allowing persistence while {@code shutdownNow} is set.
+     * Lock release during {@link #preDestroy()} / {@link #simulateCrash()} must still
+     * reach the store — otherwise deep-copy persistence leaves a stale lock that blocks
+     * the next scheduler instance until lock timeout.
+     *
+     * @param task the task to save
+     * @param allowDuringShutdown when true, persist even if the scheduler is shutting down
+     * @return true if saved successfully
+     */
+    public boolean saveTask(ScheduledTask task, boolean allowDuringShutdown) {
+        if (task == null || (!allowDuringShutdown && shutdownNow)) {
             return false;
         }
 
@@ -1720,9 +1800,11 @@ public class SchedulerServiceImpl implements SchedulerService {
             }
 
             try {
-                persistenceProvider.saveTask(task);
-                LOGGER.debug("Saved task {} to persistence", task.getItemId());
-                return true;
+                boolean saved = persistenceProvider.saveTask(task);
+                if (saved) {
+                    LOGGER.debug("Saved task {} to persistence", task.getItemId());
+                }
+                return saved;
             } catch (Exception e) {
                 LOGGER.error("Error saving task {} to persistence", task.getItemId(), e);
                 return false;
@@ -1736,12 +1818,14 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     @Override
     public ScheduledTask createRecurringTask(String taskType, long period, TimeUnit timeUnit, Runnable runnable, boolean persistent) {
-        return newTask(taskType)
+        TaskBuilder builder = newTask(taskType)
             .withPeriod(period, timeUnit)
             .withFixedRate()
-            .withSimpleExecutor(runnable)
-            .nonPersistent()
-            .schedule();
+            .withSimpleExecutor(runnable);
+        if (!persistent) {
+            builder.nonPersistent();
+        }
+        return builder.schedule();
     }
 
     @Override
@@ -1933,9 +2017,9 @@ public class SchedulerServiceImpl implements SchedulerService {
             }
 
             try {
-                // Save with optimistic concurrency control
-                // Refresh is now handled automatically by the refresh policy
-                return persistenceProvider.saveTask(task);
+                // Compare-and-set on seq_no/primary_term so distributed lock acquisition
+                // fails closed when two nodes race. Refresh is handled by refresh policy.
+                return persistenceProvider.saveTaskCompareAndSet(task);
             } catch (Exception e) {
                 LOGGER.error("Error saving task {}", task.getItemId(), e);
                 return false;
@@ -2031,7 +2115,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         private TimeUnit timeUnit = TimeUnit.MILLISECONDS;
         private boolean fixedRate = true;
         private boolean oneShot = false;
-        private boolean allowParallelExecution = true;
+        private boolean allowParallelExecution = false;
         private TaskExecutor executor;
         private boolean persistent = true;
         private boolean runOnAllNodes = false;
@@ -2090,6 +2174,12 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
 
         @Override
+        public TaskBuilder allowParallelExecution() {
+            this.allowParallelExecution = true;
+            return this;
+        }
+
+        @Override
         public TaskBuilder withExecutor(TaskExecutor executor) {
             this.executor = executor;
             return this;
@@ -2125,6 +2215,8 @@ public class SchedulerServiceImpl implements SchedulerService {
         @Override
         public TaskBuilder runOnAllNodes() {
             this.runOnAllNodes = true;
+            // Validation requires allowParallelExecution when runOnAllNodes is set.
+            this.allowParallelExecution = true;
             return this;
         }
 
@@ -2172,6 +2264,13 @@ public class SchedulerServiceImpl implements SchedulerService {
         public ScheduledTask schedule() {
             if (executor != null) {
                 schedulerService.registerTaskExecutor(executor);
+            }
+
+            // period=0 means one-shot; TaskBuilder defaults oneShot=false, and createTask
+            // calls setOneShot after setPeriod which would otherwise clear the auto-flag
+            // set by ScheduledTask.setPeriod(0).
+            if (period == 0) {
+                oneShot = true;
             }
 
             // Check for existing system tasks of the same type if this is a system task

@@ -92,6 +92,8 @@ public class TaskValidationManager {
     private void validateDependencyCycles(ScheduledTask task, Map<String, ScheduledTask> existingTasks) {
         Set<String> visited = new HashSet<>();
         Set<String> recursionStack = new HashSet<>();
+        // Ensure the task under validation is present with its current dependsOn edge set
+        existingTasks.put(task.getItemId(), task);
         detectCycle(task.getItemId(), existingTasks, visited, recursionStack);
     }
 
@@ -186,9 +188,10 @@ public class TaskValidationManager {
      */
     public void validateExecutionPrerequisites(ScheduledTask task, String nodeId) {
         if (task.getStatus() != ScheduledTask.TaskStatus.SCHEDULED &&
-            task.getStatus() != ScheduledTask.TaskStatus.CRASHED) {
+            task.getStatus() != ScheduledTask.TaskStatus.CRASHED &&
+            task.getStatus() != ScheduledTask.TaskStatus.WAITING) {
             throw new IllegalStateException(
-                "Task must be in SCHEDULED or CRASHED state to execute, current state: " +
+                "Task must be in SCHEDULED, CRASHED, or WAITING state to execute, current state: " +
                 task.getStatus());
         }
 

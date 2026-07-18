@@ -322,6 +322,7 @@ public class TestHelper {
         taskRecoveryManager.setMetricsManager(taskMetricsManager);
         taskRecoveryManager.setExecutionManager(taskExecutionManager);
         taskRecoveryManager.setExecutorRegistry(taskExecutorRegistry);
+        taskRecoveryManager.setExecutorNode(executorNode);
 
         // Task Validation Manager
         TaskValidationManager taskValidationManager = new TaskValidationManager();
@@ -447,6 +448,7 @@ public class TestHelper {
         taskRecoveryManager.setMetricsManager(taskMetricsManager);
         taskRecoveryManager.setExecutionManager(taskExecutionManager);
         taskRecoveryManager.setExecutorRegistry(taskExecutorRegistry);
+        taskRecoveryManager.setExecutorNode(executorNode);
 
         // Create scheduler service
         SchedulerServiceImpl schedulerService = new SchedulerServiceImpl();

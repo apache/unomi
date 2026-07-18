@@ -17,12 +17,16 @@
 
 package org.apache.unomi.api;
 
+import java.io.Serializable;
+
 /**
  * One event type entry in {@link ServerInfo#getEventTypes()}.
  * Pairs the event type name with how many matching events exist on the server,
  * giving operators and clients a quick view of which event types are active.
  */
-public class EventInfo {
+public class EventInfo implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     private String name;
     private Long occurences;

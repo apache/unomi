@@ -42,6 +42,7 @@ public class TaskRecoveryManager {
     private TaskExecutorRegistry executorRegistry;
     private SchedulerServiceImpl schedulerService;
     private volatile boolean shutdownNow = false;
+    private boolean executorNode = true;
 
     /**
      * Creates the manager for Blueprint dependency injection.
@@ -114,6 +115,17 @@ public class TaskRecoveryManager {
     }
 
     /**
+     * Sets whether this node is an executor node. Non-executors may still mark
+     * crashed tasks and clear dead locks, but must not dispatch resume/restart
+     * unless the task is {@code runOnAllNodes}.
+     *
+     * @param executorNode true when this node runs cluster tasks
+     */
+    public void setExecutorNode(boolean executorNode) {
+        this.executorNode = executorNode;
+    }
+
+    /**
      * Marks the manager as shutting down so recovery work is skipped.
      */
     public void prepareForShutdown() {
@@ -180,28 +192,84 @@ public class TaskRecoveryManager {
             return;
         }
 
-        // First mark as crashed and release lock
-        String previousOwner = task.getLockOwner();
-        if (task.getStatus() != ScheduledTask.TaskStatus.CRASHED) {
-            stateManager.updateTaskState(task, ScheduledTask.TaskStatus.CRASHED,
-                "Node failure detected: " + previousOwner, nodeId);
+        // Reload + CAS so two survivors do not both alwaysOverwrite CRASHED/history.
+        ScheduledTask latest = schedulerService.getTask(task.getItemId(), true);
+        if (latest == null) {
+            latest = task;
+        }
+        if (latest.getStatus() == ScheduledTask.TaskStatus.CANCELLED) {
+            return;
+        }
+        if (latest.getStatus() != ScheduledTask.TaskStatus.CRASHED
+                && latest.getStatus() != ScheduledTask.TaskStatus.RUNNING) {
+            LOGGER.debug("Node {} Skipping recovery of task {} : {} — store status is {}",
+                nodeId, latest.getTaskType(), latest.getItemId(), latest.getStatus());
+            return;
+        }
+        if (latest.getStatus() == ScheduledTask.TaskStatus.RUNNING && !lockManager.isLockExpired(latest)) {
+            LOGGER.debug("Node {} Skipping recovery of task {} : {} — lock no longer expired",
+                nodeId, latest.getTaskType(), latest.getItemId());
+            return;
         }
 
+        // Carry OCC tokens from the fresh load when present
+        Object seq = latest.getSystemMetadata("seq_no");
+        if (seq == null) {
+            seq = latest.getSystemMetadata("_seq_no");
+        }
+        Object term = latest.getSystemMetadata("primary_term");
+        if (term == null) {
+            term = latest.getSystemMetadata("_primary_term");
+        }
+        if (seq != null) {
+            latest.setSystemMetadata("seq_no", seq);
+            latest.setSystemMetadata("_seq_no", seq);
+        }
+        if (term != null) {
+            latest.setSystemMetadata("primary_term", term);
+            latest.setSystemMetadata("_primary_term", term);
+        }
+
+        // Mark as crashed, then drop the dead owner's lock. prepareForExecution() /
+        // acquireLock() takes a fresh lock on resume/restart. Leaving an expired lock
+        // in place races recoverLockedTasks() in the same pass: it can overwrite the
+        // newly acquired lock (alwaysOverwrite save) and the resume dispatch fails
+        // verification with "Lost lock ownership".
+        String previousOwner = latest.getLockOwner();
+        if (latest.getStatus() != ScheduledTask.TaskStatus.CRASHED) {
+            stateManager.updateTaskState(latest, ScheduledTask.TaskStatus.CRASHED,
+                "Node failure detected: " + previousOwner, nodeId);
+        }
+        latest.setLockOwner(null);
+        latest.setLockDate(null);
+
         // Record the crash in execution history
-        recordCrash(task, previousOwner);
+        recordCrash(latest, previousOwner);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_CRASHED);
 
-        if (schedulerService.saveTask(task)) {
-            // If task has checkpoint data and can be resumed, try to resume it
-            TaskExecutor executor = executorRegistry.getExecutor(task.getTaskType());
-            if (executor != null && executor.canResume(task)) {
-                attemptTaskResumption(task, executor);
-            } else {
-                // If task can't be resumed, try to restart it
-                if (shouldRestartTask(task)) {
-                    attemptTaskRestart(task, executor);
-                }
-            }
+        boolean saved = latest.isPersistent()
+            ? schedulerService.saveTaskWithRefresh(latest)
+            : schedulerService.saveTask(latest);
+        if (!saved) {
+            LOGGER.debug("Node {} lost CRASH CAS race for task {} : {}",
+                nodeId, latest.getTaskType(), latest.getItemId());
+            return;
+        }
+
+        // Keep caller-visible fields in sync for tests that hold the original reference
+        task.setStatus(latest.getStatus());
+        task.setLockOwner(null);
+        task.setLockDate(null);
+        task.setStatusDetails(latest.getStatusDetails());
+        task.setCurrentStep(latest.getCurrentStep());
+        task.setLastError(latest.getLastError());
+        task.setCheckpointData(latest.getCheckpointData());
+
+        TaskExecutor executor = executorRegistry.getExecutor(latest.getTaskType());
+        if (executor != null && executor.canResume(latest)) {
+            attemptTaskResumption(latest, executor);
+        } else if (shouldRestartTask(latest)) {
+            attemptTaskRestart(latest, executor);
         }
     }
 
@@ -244,12 +312,23 @@ public class TaskRecoveryManager {
      * @param executor the executor for the task type
      */
     private void attemptTaskResumption(ScheduledTask task, TaskExecutor executor) {
+        if (executor == null) {
+            LOGGER.warn("Node {} cannot resume task {} : {} — no executor registered",
+                nodeId, task.getTaskType(), task.getItemId());
+            return;
+        }
+        if (!mayDispatchRecovery(task)) {
+            LOGGER.debug("Node {} marked task {} : {} CRASHED but not dispatching resume (non-executor)",
+                nodeId, task.getTaskType(), task.getItemId());
+            return;
+        }
         LOGGER.info("Node {} resuming crashed task {} : {}", nodeId, task.getTaskType(), task.getItemId());
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_RESUMED);
-        stateManager.resetTaskToScheduled(task);
-        if (lockManager.acquireLock(task)) {
-            executionManager.executeTask(task, executor);
-        }
+        // Keep CRASHED so the execution wrapper calls executor.resume(). Persist so the
+        // checker can retry if executeTask is a no-op (e.g. previous dispatch claim held).
+        // Do not pre-acquire the lock here — prepareForExecution owns locking.
+        schedulerService.saveTask(task);
+        executionManager.executeTask(task, executor);
     }
 
     /**
@@ -259,11 +338,23 @@ public class TaskRecoveryManager {
      * @param executor the executor for the task type
      */
     private void attemptTaskRestart(ScheduledTask task, TaskExecutor executor) {
+        if (executor == null) {
+            LOGGER.warn("Node {} cannot restart task {} : {} — no executor registered",
+                nodeId, task.getTaskType(), task.getItemId());
+            return;
+        }
+        if (!mayDispatchRecovery(task)) {
+            LOGGER.debug("Node {} marked task {} : {} CRASHED but not dispatching restart (non-executor)",
+                nodeId, task.getTaskType(), task.getItemId());
+            return;
+        }
         LOGGER.info("Node {} restarting crashed task: {}", nodeId, task.getItemId());
         stateManager.resetTaskToScheduled(task);
-        if (lockManager.acquireLock(task)) {
-            executionManager.executeTask(task, executor);
-        }
+        task.setNextScheduledExecution(new Date());
+        // Persist SCHEDULED before best-effort dispatch so the checker is a safety net when
+        // executeTask no-ops (dispatch claim still held by a dying node's stalled wrapper).
+        schedulerService.saveTask(task);
+        executionManager.executeTask(task, executor);
     }
 
     /**
@@ -273,6 +364,12 @@ public class TaskRecoveryManager {
         List<ScheduledTask> lockedTasks = schedulerService.findLockedTasks();
 
         for (ScheduledTask task : lockedTasks) {
+            // RUNNING / CRASHED are owned by recoverRunningTasks (resume/restart).
+            // Releasing their locks here races the async dispatch that just acquired a new lock.
+            if (task.getStatus() == ScheduledTask.TaskStatus.RUNNING
+                || task.getStatus() == ScheduledTask.TaskStatus.CRASHED) {
+                continue;
+            }
             if (lockManager.isLockExpired(task)) {
                 LOGGER.info("Node {} releasing expired lock for task: {}", nodeId, task.getItemId());
                 recoverLockedTask(task);
@@ -295,8 +392,8 @@ public class TaskRecoveryManager {
         }
 
         if (schedulerService.saveTask(task)) {
-            // If task is now scheduled, try to execute it
-            if (task.getStatus() == ScheduledTask.TaskStatus.SCHEDULED) {
+            // If task is now scheduled, try to execute it (executor nodes / runOnAllNodes only)
+            if (task.getStatus() == ScheduledTask.TaskStatus.SCHEDULED && mayDispatchRecovery(task)) {
                 TaskExecutor executor = executorRegistry.getExecutor(task.getTaskType());
                 if (executor != null) {
                     executionManager.executeTask(task, executor);
@@ -306,23 +403,32 @@ public class TaskRecoveryManager {
     }
 
     /**
+     * Whether this node may dispatch resume/restart after marking a task crashed.
+     * Non-executors may still persist CRASHED / clear locks, but only executors
+     * (or runOnAllNodes tasks) should run the work.
+     */
+    private boolean mayDispatchRecovery(ScheduledTask task) {
+        return executorNode || task.isRunOnAllNodes();
+    }
+
+    /**
      * Returns whether a crashed task should be restarted instead of abandoned.
      *
      * @param task the crashed task
      * @return {@code true} when the task should be restarted
      */
     private boolean shouldRestartTask(ScheduledTask task) {
-        // Don't restart one-shot tasks that have already started
-        if (task.isOneShot() && task.getLastExecutionDate() != null) {
+        if (!task.isEnabled()) {
             return false;
         }
 
-        // Check retry configuration
-        if (task.getMaxRetries() > 0 && task.getFailureCount() >= task.getMaxRetries()) {
-            return false;
-        }
-
-        return task.isEnabled();
+        // Align with handleTaskError(): after a failure, failureCount is incremented and a
+        // retry is scheduled while failureCount <= maxRetries. A crash mid-attempt has not
+        // yet incremented failureCount for that attempt, so restart while still within budget.
+        // Importantly, do NOT abandon one-shots merely because lastExecutionDate is set —
+        // that field is written on every failure, and abandoning them stranded one-shots that
+        // crashed mid-retry with budget remaining.
+        return task.getFailureCount() <= task.getMaxRetries();
     }
 
     /**

@@ -141,6 +141,13 @@ public class PersistenceSchedulerProvider implements SchedulerProvider {
             List<ScheduledTask> tasks = findTasksByLockOwner(nodeId);
             for (ScheduledTask task : tasks) {
                 try {
+                    // Do not unlock RUNNING/CRASHED here — that races SchedulerServiceImpl.preDestroy
+                    // which marks this node's RUNNING work CRASHED. Unlocking first would let a peer
+                    // steal still-live JVM work. Service preDestroy clears locks after the CRASH mark.
+                    if (task.getStatus() == ScheduledTask.TaskStatus.RUNNING
+                            || task.getStatus() == ScheduledTask.TaskStatus.CRASHED) {
+                        continue;
+                    }
                     if (lockManager != null) {
                         lockManager.releaseLock(task);
                     }
@@ -148,7 +155,7 @@ public class PersistenceSchedulerProvider implements SchedulerProvider {
                     LOGGER.debug("Error releasing lock for task {} during shutdown: {}", task.getItemId(), e.getMessage());
                 }
             }
-            LOGGER.debug("Task locks released");
+            LOGGER.debug("Non-running task locks released");
         } catch (Exception e) {
             // During shutdown, services may be unavailable - this is expected
             LOGGER.debug("Error finding locked tasks during shutdown (this is expected if services are shutting down): {}", e.getMessage());
@@ -188,7 +195,11 @@ public class PersistenceSchedulerProvider implements SchedulerProvider {
             statusCondition.setParameter("comparisonOperator", "in");
             statusCondition.setParameter("propertyValues", Arrays.asList(
                     ScheduledTask.TaskStatus.SCHEDULED,
-                    ScheduledTask.TaskStatus.WAITING
+                    ScheduledTask.TaskStatus.WAITING,
+                    // CRASHED must stay visible: recovery may fail to dispatch immediately
+                    // (e.g. previous node's dispatch claim still held), and without this the
+                    // task would remain stranded forever.
+                    ScheduledTask.TaskStatus.CRASHED
             ));
 
             Condition andCondition = new Condition(SchedulerProvider.BOOLEAN_CONDITION_TYPE);
@@ -328,15 +339,41 @@ public class PersistenceSchedulerProvider implements SchedulerProvider {
 
         if (task.isPersistent()) {
             try {
-                persistenceService.save(task);
-                LOGGER.debug("Saved task {} to persistence", task.getItemId());
-                return true;
+                boolean saved = persistenceService.save(task);
+                if (saved) {
+                    LOGGER.debug("Saved task {} to persistence", task.getItemId());
+                } else {
+                    LOGGER.debug("Persistence rejected save for task {} (likely OCC conflict)", task.getItemId());
+                }
+                return saved;
             } catch (Exception e) {
                 LOGGER.error("Error saving task {} to persistence", task.getItemId(), e);
                 return false;
             }
         } else {
             LOGGER.error("Can't handle in-memory task saving !");
+            return false;
+        }
+    }
+
+    @Override
+    public boolean saveTaskCompareAndSet(ScheduledTask task) {
+        if (task == null) {
+            return false;
+        }
+        if (!task.isPersistent()) {
+            LOGGER.error("Can't handle in-memory task compare-and-set !");
+            return false;
+        }
+        try {
+            // alwaysOverwrite=false enables seq_no / primary_term conflict detection
+            boolean saved = persistenceService.save(task, false, false);
+            if (!saved) {
+                LOGGER.debug("Compare-and-set rejected for task {}", task.getItemId());
+            }
+            return saved;
+        } catch (Exception e) {
+            LOGGER.error("Error compare-and-set saving task {} to persistence", task.getItemId(), e);
             return false;
         }
     }
