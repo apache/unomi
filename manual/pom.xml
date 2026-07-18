@@ -72,9 +72,6 @@
                             <requires>
                                 <require>asciidoctor-diagram</require>
                             </requires>
-                            <attributes>
-                                <graphvizdot>${graphviz.dot.path}</graphvizdot>
-                            </attributes>
                             <sourceDocumentName>index.adoc</sourceDocumentName>
                             <sourceDirectory>${doc.source}</sourceDirectory>
                             <outputDirectory>${doc.output.html}</outputDirectory>
@@ -89,6 +86,8 @@
                                 <source-highlighter>highlightjs</source-highlighter>
                                 <revnumber>${project.version}</revnumber>
                                 <project-version>${project.version}</project-version>
+                                <graphvizdot>${graphviz.dot.path}</graphvizdot>
+                                <plantuml-config>${project.basedir}/src/main/asciidoc/plantuml/unomi-theme.puml</plantuml-config>
                             </attributes>
                         </configuration>
                     </execution>
@@ -122,6 +121,8 @@
                                 <idprefix />
                                 <idseparator>_</idseparator>
                                 <sectnums>true</sectnums>
+                                <graphvizdot>${graphviz.dot.path}</graphvizdot>
+                                <plantuml-config>${project.basedir}/src/main/asciidoc/plantuml/unomi-theme.puml</plantuml-config>
                             </attributes>
                         </configuration>
                     </execution>

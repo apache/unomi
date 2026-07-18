@@ -23,9 +23,6 @@ All major entities in Apache Unomi inherit from two base classes that provide es
 @startuml
 skinparam componentStyle uml2
 skinparam class {
-    BackgroundColor White
-    BorderColor DarkGray
-    ArrowColor DarkGray
     FontSize 14
 }
 
@@ -78,9 +75,6 @@ This diagram shows the key data structures in Apache Unomi and their relationshi
 @startuml
 skinparam componentStyle uml2
 skinparam class {
-    BackgroundColor White
-    BorderColor DarkGray
-    ArrowColor DarkGray
     FontSize 14
 }
 
@@ -267,10 +261,6 @@ Conditions are the fundamental building blocks used across many Unomi components
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor LightBlue
-  BorderColor DarkBlue
-}
 
 class Condition {
   + type: String
@@ -319,10 +309,6 @@ Segments group profiles based on conditions. They are dynamic - profiles can ent
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor LightGreen
-  BorderColor DarkGreen
-}
 
 class Segment {
   + itemId: String
@@ -365,10 +351,6 @@ Rules define automated actions triggered by conditions.
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor LightYellow
-  BorderColor DarkGoldenRod
-}
 
 class Rule {
   + itemId: String
@@ -411,10 +393,6 @@ Goals track visitor progress toward specific objectives.
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor LightPink
-  BorderColor DarkRed
-}
 
 class Goal {
   + itemId: String
@@ -460,10 +438,6 @@ Campaigns organize marketing activities with goals, timeframes and costs.
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor LightSalmon
-  BorderColor DarkRed
-}
 
 class Campaign {
   + itemId: String
@@ -507,10 +481,6 @@ This diagram shows how these components work together in practice.
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor White
-  BorderColor Black
-}
 
 actor Visitor
 participant "Event Collector" as EC
@@ -556,9 +526,6 @@ The following diagram illustrates how conditions can be nested and composed to c
 @startuml
 skinparam componentStyle uml2
 skinparam class {
-    BackgroundColor White
-    BorderColor DarkGray
-    ArrowColor DarkGray
     FontSize 14
 }
 
@@ -635,11 +602,6 @@ Here are some examples of how conditions can be composed:
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam object {
-    BackgroundColor White
-    BorderColor DarkGray
-    ArrowColor DarkGray
-}
 
 object "BooleanCondition (AND)" as root {
     type = "booleanCondition"
@@ -706,11 +668,6 @@ Past event conditions have a special structure that allows for complex temporal 
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam object {
-    BackgroundColor White
-    BorderColor DarkGray
-    ArrowColor DarkGray
-}
 
 object "PastEventCondition" as past {
     type = "pastEventCondition"

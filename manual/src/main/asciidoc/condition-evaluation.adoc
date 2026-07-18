@@ -26,11 +26,6 @@ The condition evaluation system in Apache Unomi provides flexible and efficient 
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<evaluation>> LightBlue
-  BackgroundColor<<query>> LightGreen
-  BackgroundColor<<persistence>> LightYellow
-}
 
 package "Condition Evaluation" {
   [ConditionDispatcher] <<evaluation>>

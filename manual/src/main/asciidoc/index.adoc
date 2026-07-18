@@ -23,6 +23,7 @@ Apache Software Foundation
 :homepage: https://unomi.apache.org
 :docinfo: shared-head,shared-footer
 :source-highlighter: highlightjs
+:plantuml-config: {docdir}/plantuml/unomi-theme.puml
 
 ifndef::backend-pdf[]
 [%passthrough,subs=attributes]

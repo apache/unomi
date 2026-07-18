@@ -20,13 +20,11 @@ Platform upgrades are validated by *Pax Exam* integration tests plus *Docker-bac
 See also: `itests/README.md` and <<_using_the_build_script,build.sh>>.
 
 
-
 ===== Validation pipeline after a platform bump
 
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor #F8F8F8
 
 |Maintainer|
 start

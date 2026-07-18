@@ -18,10 +18,6 @@
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<security>> LightYellow
-  BackgroundColor<<api>> LightBlue
-}
 
 package "Security Layer" {
   [Security Service] <<security>>

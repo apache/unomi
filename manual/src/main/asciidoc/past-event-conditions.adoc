@@ -31,9 +31,6 @@ Past event conditions are a powerful feature in Apache Unomi that allows both se
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor LightBlue
-skinparam activityBorderColor DarkBlue
-skinparam arrowColor DarkBlue
 
 |Visitor|
 start
@@ -127,9 +124,6 @@ Common website scenarios include:
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor LightGreen
-skinparam activityBorderColor DarkGreen
-skinparam arrowColor DarkGreen
 
 |User|
 start
@@ -207,11 +201,6 @@ Common mobile scenarios include:
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<source>> LightYellow
-  BackgroundColor<<processing>> LightBlue
-  BackgroundColor<<action>> LightGreen
-}
 
 package "Data Sources" {
   [Website Events] as web <<source>>
@@ -310,9 +299,6 @@ Common CDP scenarios include:
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor LightPurple
-skinparam activityBorderColor DarkPurple
-skinparam arrowColor DarkPurple
 
 |Account|
 start
@@ -398,10 +384,6 @@ Common B2B scenarios include:
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<cached>> LightGreen
-  BackgroundColor<<uncached>> LightYellow
-}
 
 package "Past Event System" {
   [SetEventOccurenceCountAction] as action
@@ -491,9 +473,6 @@ stop
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor LightBlue
-skinparam activityBorderColor DarkBlue
-skinparam arrowColor DarkBlue
 
 start
 :Event Received;
@@ -526,10 +505,6 @@ stop
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<efficient>> LightGreen
-  BackgroundColor<<inefficient>> LightPink
-}
 
 package "Segment Approach" <<efficient>> {
   [Past Event Condition] as segmentCondition

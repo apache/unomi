@@ -124,7 +124,6 @@ IMPORTANT: https://issues.apache.org/jira/browse/UNOMI-884[UNOMI-884] covers *in
 ===== Historical blockers (Karaf)
 
 
-
 ===== Karaf upgrade prerequisites (timeline)
 
 Historical JIRA blockers explain why Karaf 4.3+ waited until Unomi 3 clustering changed:
@@ -132,7 +131,6 @@ Historical JIRA blockers explain why Karaf 4.3+ waited until Unomi 3 clustering 
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor #F8F8F8
 
 title Karaf upgrade path (JIRA milestones)
 

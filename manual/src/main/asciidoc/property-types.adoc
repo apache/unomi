@@ -861,10 +861,6 @@ Property types and JSON schemas serve different purposes for different objects:
 [plantuml]
 ----
 @startuml
-skinparam rectangle {
-    BackgroundColor #E8F4F8
-    BorderColor #4A90A4
-}
 
 rectangle "Profiles/Sessions Workflow" {
     rectangle "Property Type\n(UI hints)" as PT
@@ -1098,10 +1094,6 @@ Property types and JSON schemas complement each other:
 [plantuml]
 ----
 @startuml
-skinparam rectangle {
-    BackgroundColor #E8F4F8
-    BorderColor #4A90A4
-}
 
 rectangle "Property Types" as PT
 note right of PT
