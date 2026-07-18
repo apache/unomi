@@ -104,6 +104,15 @@ public class TaskLockManager {
     }
 
     /**
+     * Returns the lock expiry timeout in milliseconds.
+     *
+     * @return the lock timeout
+     */
+    public long getLockTimeout() {
+        return lockTimeout;
+    }
+
+    /**
      * Sets the task metrics manager.
      *
      * @param metricsManager the metrics manager
@@ -437,6 +446,61 @@ public class TaskLockManager {
             return true;
         } catch (Exception e) {
             LOGGER.error("Error releasing lock for task {}", task.getItemId(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Renews (heartbeats) a held distributed lock by refreshing its {@code lockDate}, so that
+     * expiry only ever means "the owner stopped renewing" (crashed or unreachable), never
+     * merely "the execution outlived the timeout". A live owner that keeps renewing never
+     * looks expired to peers, which closes the window where crash recovery could steal the
+     * lock from a node that is still genuinely executing and double-run the task.
+     *
+     * Only persistent exclusive tasks need renewal: parallel-execution and non-persistent
+     * tasks return true without touching the store. Renewal deliberately uses the
+     * shutdown-sensitive load/save paths — once shutdown begins the lock must be allowed to
+     * age out so peers can recover the work.
+     *
+     * @param task the executing task whose lock should be renewed (caller must own the lock)
+     * @return true if the lock was renewed (or renewal is not applicable), false if ownership
+     *         was lost or the compare-and-set write failed (benign: a peer took over)
+     */
+    public boolean renewLock(ScheduledTask task) {
+        if (task == null) {
+            return false;
+        }
+        if (!task.isPersistent() || task.isAllowParallelExecution()) {
+            return true;
+        }
+        if (!nodeId.equals(task.getLockOwner())) {
+            return false;
+        }
+        try {
+            ScheduledTask latest = schedulerService.getTask(task.getItemId());
+            if (latest == null || !nodeId.equals(latest.getLockOwner())) {
+                LOGGER.debug("Not renewing lock for task {}: store owner is {}",
+                    task.getItemId(), latest != null ? latest.getLockOwner() : null);
+                return false;
+            }
+
+            latest.setLockDate(new Date());
+
+            // Compare-and-set on the fresh store view: if a peer stole the lock between the
+            // read above and this write, renewal fails closed instead of resurrecting our lock.
+            if (!schedulerService.saveTaskWithRefresh(latest)) {
+                LOGGER.debug("Lock renewal for task {} lost a compare-and-set race", task.getItemId());
+                return false;
+            }
+
+            // Sync the renewed date and post-save OCC tokens back onto the caller's task so
+            // the executing thread's later compare-and-set writes are checked against the
+            // store's current version, not the pre-renewal one.
+            task.setLockDate(latest.getLockDate());
+            copyOccMetadata(latest, task);
+            return true;
+        } catch (Exception e) {
+            LOGGER.warn("Error renewing lock for task {}", task.getItemId(), e);
             return false;
         }
     }

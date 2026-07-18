@@ -21,6 +21,7 @@ import org.apache.unomi.api.tasks.TaskExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
 import java.util.Set;
@@ -34,6 +35,7 @@ public class TaskExecutionManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskExecutionManager.class);
     private static final int MIN_THREAD_POOL_SIZE = 4;
     private static final long TASK_CHECK_INTERVAL = 1000; // 1 second
+    private static final long MIN_LOCK_RENEWAL_INTERVAL_MS = 100;
 
     private String nodeId;
     private ScheduledExecutorService scheduler;
@@ -43,6 +45,7 @@ public class TaskExecutionManager {
     private TaskMetricsManager metricsManager;
     private TaskHistoryManager historyManager;
     private final Map<String, Set<String>> executingTasksByType;
+    private final Map<String, LockRenewalHandle> activeLockRenewals = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
     private ScheduledFuture<?> taskCheckerFuture;
     private SchedulerServiceImpl schedulerService;
@@ -406,6 +409,10 @@ public class TaskExecutionManager {
                 executingNodeIdSet = true;
                 schedulerService.saveTask(task);
 
+                // Heartbeat the lock while we execute so peers only see it expire if this
+                // node actually dies (stops renewing), not just because execution ran long.
+                startLockRenewal(task);
+
                 long startTime = System.currentTimeMillis();
                 try {
                     if (shouldResume) {
@@ -425,6 +432,10 @@ public class TaskExecutionManager {
                     statusCallback.fail("Unexpected error: " + e.getMessage());
                 }
             } finally {
+                // Catch-all renewal stop for paths where no terminal callback ran (executor
+                // returned without complete()/fail()); terminal handlers already stopped it.
+                stopLockRenewal(taskId);
+
                 // Only clear/save executingNodeId if we actually set it above; otherwise we never
                 // touched the task and a redundant save here could race a concurrent legitimate holder.
                 // Use CAS, not a blind overwrite: when our own terminal transition above was skipped
@@ -474,6 +485,73 @@ public class TaskExecutionManager {
         } catch (Exception e) {
             LOGGER.warn("Failed to abort prepared task {} during shutdown: {}",
                 task.getItemId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Handle for the periodic lock-renewal (heartbeat) scheduled while a task executes.
+     * The mutex serializes renewal ticks against {@link #stopLockRenewal(String)} so a
+     * terminal transition can guarantee no renewal write lands after its fresh OCC read.
+     */
+    private static final class LockRenewalHandle {
+        private final Object mutex = new Object();
+        private volatile boolean cancelled;
+        private volatile ScheduledFuture<?> future;
+    }
+
+    /**
+     * Starts periodic lock renewal (heartbeating) for a persistent exclusive task while it
+     * executes on this node, so its lock only expires when the owner actually stops renewing
+     * (crash, shutdown) rather than merely because the execution outlived the lock timeout.
+     * Without renewal, crash recovery on a peer can legitimately steal the lock from a node
+     * that is still executing and double-run the task.
+     */
+    private void startLockRenewal(ScheduledTask task) {
+        if (!task.isPersistent() || task.isAllowParallelExecution()) {
+            return;
+        }
+        long interval = Math.max(MIN_LOCK_RENEWAL_INTERVAL_MS, lockManager.getLockTimeout() / 3);
+        LockRenewalHandle handle = new LockRenewalHandle();
+        activeLockRenewals.put(task.getItemId(), handle);
+        try {
+            handle.future = scheduler.scheduleAtFixedRate(() -> {
+                synchronized (handle.mutex) {
+                    if (handle.cancelled) {
+                        return;
+                    }
+                    try {
+                        lockManager.renewLock(task);
+                    } catch (Exception e) {
+                        LOGGER.debug("Lock renewal failed for task {}: {}", task.getItemId(), e.getMessage());
+                    }
+                }
+            }, interval, interval, TimeUnit.MILLISECONDS);
+        } catch (RejectedExecutionException e) {
+            // Scheduler is shutting down; without renewal the lock simply ages out, which is
+            // exactly what peers need in order to recover the work.
+            activeLockRenewals.remove(task.getItemId(), handle);
+        }
+    }
+
+    /**
+     * Stops lock renewal for a task, waiting out any in-flight renewal tick. Must be called
+     * before a terminal transition's fresh OCC read: a renewal write landing after that read
+     * would advance the store version and make the terminal compare-and-set fail, stranding
+     * a finished task as RUNNING in the store.
+     */
+    private void stopLockRenewal(String taskId) {
+        if (taskId == null) {
+            return;
+        }
+        LockRenewalHandle handle = activeLockRenewals.remove(taskId);
+        if (handle == null) {
+            return;
+        }
+        synchronized (handle.mutex) {
+            handle.cancelled = true;
+        }
+        if (handle.future != null) {
+            handle.future.cancel(false);
         }
     }
 
@@ -591,6 +669,10 @@ public class TaskExecutionManager {
     private void handleTaskCompletion(ScheduledTask task, long startTime) {
         long executionTime = System.currentTimeMillis() - startTime;
 
+        // Stop heartbeating before the terminal fresh read below — a renewal landing after
+        // that read would advance the store version and fail the terminal compare-and-set.
+        stopLockRenewal(task.getItemId());
+
         if (!canCommitTerminalTransition(task)) {
             return;
         }
@@ -636,6 +718,10 @@ public class TaskExecutionManager {
      */
     private void handleTaskError(ScheduledTask task, String error, long startTime) {
         long executionTime = System.currentTimeMillis() - startTime;
+
+        // Stop heartbeating before the terminal fresh read below — a renewal landing after
+        // that read would advance the store version and fail the terminal compare-and-set.
+        stopLockRenewal(task.getItemId());
 
         if (!canCommitTerminalTransition(task)) {
             return;
@@ -727,6 +813,8 @@ public class TaskExecutionManager {
      * @param taskId the task ID to cancel
      */
     public void cancelTask(String taskId) {
+        stopLockRenewal(taskId);
+
         ScheduledFuture<?> future = scheduledTasks.remove(taskId);
         if (future != null) {
             future.cancel(true);
@@ -743,6 +831,11 @@ public class TaskExecutionManager {
      */
     public void shutdown() {
         stopTaskChecker();
+
+        // Stop all lock heartbeats so held locks age out and peers can recover the work
+        for (String taskId : new ArrayList<>(activeLockRenewals.keySet())) {
+            stopLockRenewal(taskId);
+        }
 
         // Cancel all scheduled and running tasks
         for (ScheduledFuture<?> future : scheduledTasks.values()) {

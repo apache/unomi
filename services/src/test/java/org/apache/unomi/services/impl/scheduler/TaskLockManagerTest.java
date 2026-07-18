@@ -582,6 +582,93 @@ public class TaskLockManagerTest {
         assertEquals(999L, lockVersion.get());
     }
 
+    @Test
+    public void testRenewLockSkipsNonExclusiveAndNonPersistentTasks() {
+        ScheduledTask parallel = TaskTestFixtures.baseTask("renew-parallel");
+        parallel.setAllowParallelExecution(true);
+        assertTrue(lockManager.renewLock(parallel));
+
+        ScheduledTask inMemory = TaskTestFixtures.baseTask("renew-mem");
+        inMemory.setPersistent(false);
+        assertTrue(lockManager.renewLock(inMemory));
+
+        verify(schedulerService, never()).getTask(anyString());
+        verify(schedulerService, never()).saveTaskWithRefresh(any(ScheduledTask.class));
+    }
+
+    @Test
+    public void testRenewLockRefusesWhenNotLocalOwner() {
+        ScheduledTask task = TaskTestFixtures.baseTask("renew-foreign");
+        task.setLockOwner("other-node");
+        task.setLockDate(new Date());
+
+        assertFalse(lockManager.renewLock(task));
+        verify(schedulerService, never()).saveTaskWithRefresh(any(ScheduledTask.class));
+    }
+
+    @Test
+    public void testRenewLockRefusesWhenStoreOwnerChanged() {
+        ScheduledTask task = TaskTestFixtures.baseTask("renew-stolen");
+        task.setLockOwner(NODE);
+        task.setLockDate(new Date());
+        ScheduledTask storeView = TaskTestFixtures.baseTask("renew-stolen");
+        storeView.setItemId(task.getItemId());
+        storeView.setLockOwner("peer-node");
+        storeView.setLockDate(new Date());
+        when(schedulerService.getTask(task.getItemId())).thenReturn(storeView);
+
+        assertFalse(lockManager.renewLock(task));
+        verify(schedulerService, never()).saveTaskWithRefresh(any(ScheduledTask.class));
+    }
+
+    @Test
+    public void testRenewLockRefreshesLockDateAndSyncsOccMetadata() {
+        Date staleDate = new Date(System.currentTimeMillis() - 60_000);
+        ScheduledTask task = TaskTestFixtures.baseTask("renew-ok");
+        task.setLockOwner(NODE);
+        task.setLockDate(staleDate);
+        task.setSystemMetadata("seq_no", 3L);
+        task.setSystemMetadata("primary_term", 1L);
+
+        ScheduledTask storeView = TaskTestFixtures.baseTask("renew-ok");
+        storeView.setItemId(task.getItemId());
+        storeView.setLockOwner(NODE);
+        storeView.setLockDate(staleDate);
+        storeView.setSystemMetadata("seq_no", 7L);
+        storeView.setSystemMetadata("primary_term", 2L);
+        when(schedulerService.getTask(task.getItemId())).thenReturn(storeView);
+        when(schedulerService.saveTaskWithRefresh(storeView)).thenAnswer(inv -> {
+            // Simulate the store handing back post-save OCC tokens on the saved instance
+            storeView.setSystemMetadata("seq_no", 8L);
+            return true;
+        });
+
+        assertTrue(lockManager.renewLock(task));
+        assertTrue(task.getLockDate().after(staleDate),
+            "Renewal must refresh the caller's lockDate");
+        assertEquals(8L, ((Number) task.getSystemMetadata("seq_no")).longValue(),
+            "Renewal must sync post-save seq_no back so later CAS writes succeed");
+        assertEquals(2L, ((Number) task.getSystemMetadata("primary_term")).longValue());
+    }
+
+    @Test
+    public void testRenewLockFailsClosedWhenCasLost() {
+        Date originalDate = new Date(System.currentTimeMillis() - 500);
+        ScheduledTask task = TaskTestFixtures.baseTask("renew-cas");
+        task.setLockOwner(NODE);
+        task.setLockDate(originalDate);
+        ScheduledTask storeView = TaskTestFixtures.baseTask("renew-cas");
+        storeView.setItemId(task.getItemId());
+        storeView.setLockOwner(NODE);
+        storeView.setLockDate(originalDate);
+        when(schedulerService.getTask(task.getItemId())).thenReturn(storeView);
+        when(schedulerService.saveTaskWithRefresh(storeView)).thenReturn(false);
+
+        assertFalse(lockManager.renewLock(task));
+        assertEquals(originalDate, task.getLockDate(),
+            "A lost renewal CAS must not touch the caller's lock state");
+    }
+
     private void stubSuccessfulDistributedAcquire(ScheduledTask task) {
         ScheduledTask latest = TaskTestFixtures.baseTask(task.getTaskType());
         latest.setItemId(task.getItemId());
