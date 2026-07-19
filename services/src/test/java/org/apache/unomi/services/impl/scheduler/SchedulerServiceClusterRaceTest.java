@@ -953,6 +953,16 @@ public class SchedulerServiceClusterRaceTest {
             "Each node execution must use a distinct deep-copied task instance, got "
                 + identityHashes.size());
 
+        // Parallel-execution tasks give each node an independent, uncoordinated status write
+        // (prepareForExecution()'s RUNNING transition is a blind, non-CAS save for parallel
+        // tasks by design). With a 200ms period, reading status right after the latch fires can
+        // race an in-flight node's RUNNING->SCHEDULED transition. Cancel on every node first -
+        // idempotent and terminal - so all nodes converge on the same shared-store status before
+        // the isolation assertions below, which only care about per-node deep-copy isolation.
+        node1.cancelTask(task.getItemId());
+        node2.cancelTask(task.getItemId());
+        node3.cancelTask(task.getItemId());
+
         assertDistinctTaskViews(node1, node2, task.getItemId());
         assertDistinctTaskViews(node2, node3, task.getItemId());
     }
