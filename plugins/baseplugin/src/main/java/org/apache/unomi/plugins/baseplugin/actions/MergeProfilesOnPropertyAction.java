@@ -280,7 +280,12 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         // Register the executor
         schedulerService.registerTaskExecutor(mergeProfilesReassignDataExecutor);
 
-        // Create a one-shot task for async data reassignment
+        // Create a one-shot task for async data reassignment. Runs allowParallelExecution():
+        // the underlying operation (bulk update-by-query-and-script / anonymizeBrowsingData) is
+        // idempotent, and as a one-shot task it gets no natural retry if a single exclusive-lock
+        // acquisition attempt is lost to a transient race - unlike a periodic task, which simply
+        // tries again next period. Exclusivity buys nothing here but adds a real risk of the
+        // rewrite silently never running.
         schedulerService.newTask(taskType)
             .withParameters(Map.of(
                 "anonymousBrowsing", anonymousBrowsing,
@@ -290,6 +295,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             ))
             .withInitialDelay(1000, TimeUnit.MILLISECONDS)
             .asOneShot()
+            .allowParallelExecution()
             .schedule();
     }
 
