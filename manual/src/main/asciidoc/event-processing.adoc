@@ -17,11 +17,6 @@
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<event>> LightBlue
-  BackgroundColor<<rule>> LightGreen
-  BackgroundColor<<action>> LightYellow
-}
 
 package "Event Processing" {
   [Event Service] <<event>>

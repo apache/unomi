@@ -37,8 +37,8 @@ them at your own risks.
 
 Apache Unomi supports two search engine backends:
 
-* *ElasticSearch*: Version **9.x** (for example 9.4.3) is required for Unomi 3.0 and later. Version 7.17.5 applies only to Unomi 2.x.
-* *OpenSearch*: Version 3.x is supported starting with Unomi 3.1
+* *Elasticsearch*: Version **9.x** (for example 9.4.3) is required for Unomi 3.0 and later. Version 7.17.5 applies only to Unomi 2.x.
+* *OpenSearch*: Version **3.7.0** (matching `opensearch.version` in the Unomi root POM) is supported starting with Unomi 3.1
 
 It is highly recommended to use the versions specified in the documentation. When in doubt, consult the Apache Unomi community
 for the latest compatibility information.
@@ -85,7 +85,15 @@ curl -X POST http://localhost:8181/cxs/tenants \
   }'
 ----
 
-Save the API keys from the response - you'll need them for all subsequent API calls. See <<_multitenancy,Multi-tenancy>> for authentication details.
+The tenant create response includes **masked** API key metadata only. Regenerate keys to obtain one-time `plainTextKey` values:
+
+[source,bash]
+----
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PUBLIC" --user karaf:karaf
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PRIVATE" --user karaf:karaf
+----
+
+Store `plainTextKey` immediately — you'll need the public key for subsequent API calls. See <<_multitenancy,Multi-tenancy>> for authentication details.
 
 Now you can:
 

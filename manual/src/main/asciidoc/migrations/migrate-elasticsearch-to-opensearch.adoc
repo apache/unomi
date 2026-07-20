@@ -14,200 +14,121 @@
 
 [#_migrate_from_elasticsearch_to_opensearch]
 ==== Migrating from Elasticsearch to OpenSearch
-:toc: macro
-:toclevels: 4
-:toc-title: Table of contents
-:numbered:
 
-toc::[]
+Apache Unomi 3.1+ can use OpenSearch instead of Elasticsearch as its search/persistence backend.
+Moving existing data is a **search-engine cutover**: copy Unomi indices from Elasticsearch to OpenSearch, then point Unomi at the OpenSearch distribution.
+It is **not** performed by `unomi:migrate` (that command upgrades Unomi data shape between Unomi versions).
 
-===== Overview
-
-This guide describes how to migrate your Apache Unomi data from Elasticsearch to OpenSearch. The migration process involves using the OpenSearch Replication Tool, which is designed to handle large-scale migrations efficiently while maintaining data consistency.
+This page only covers Unomi-specific index naming and cutover steps.
+Use the official OpenSearch documentation for how to copy cluster data; tooling and supported version matrices change over time.
 
 ===== Prerequisites
 
-Before starting the migration, ensure you have:
+* Apache Unomi already running against Elasticsearch (typically Elasticsearch 9.x for Unomi 3.x)
+* A target OpenSearch cluster at the version Unomi expects (see `opensearch.version` in the Unomi root POM; currently **3.7.0**)
+* Network path between the clusters (or shared snapshot storage, depending on the method you choose)
+* Backup of the Elasticsearch indices, and a staging rehearsal before production
+* Plan a write freeze (stop or quiesce Unomi) for the final cutover so source and target do not diverge
 
-* Running Elasticsearch cluster with your Unomi data
-* Target OpenSearch cluster set up and running
-* Sufficient disk space on the target cluster
-* Java 17 or later installed
-* Network connectivity between source and target clusters
+===== Unomi index naming
 
-===== Migration Options
+By default Unomi stores data under the index prefix `context`
+(`org.apache.unomi.elasticsearch.index.prefix` / `org.apache.unomi.opensearch.index.prefix`).
 
-====== Option 1: OpenSearch Replication Tool (Recommended)
+Examples:
 
-The OpenSearch Replication Tool is the recommended approach for production environments, especially for large datasets.
+* `context-profile`, `context-segment`, `context-rule`, …
+* Rollover types: `context-event-*`, `context-session-*`, …
 
-====== Installation
-
-[source,bash]
-----
-git clone https://github.com/opensearch-project/opensearch-migrations.git
-cd opensearch-migrations/replication-tool
-./gradlew build
-----
-
-====== Configuration
-
-Create a configuration file `config.yml`:
-
-[source,yaml]
-----
-source:
-  hosts: ["source-elasticsearch-host:9200"]
-  user: "elastic_user"     # if authentication is enabled
-  password: "elastic_pass" # if authentication is enabled
-
-destination:
-  hosts: ["target-opensearch-host:9200"]
-  user: "opensearch_user"     # if authentication is enabled
-  password: "opensearch_pass" # if authentication is enabled
-
-indices:
-  - name: "context-*"         # Unomi context indices
-  - name: "segment-*"         # Unomi segment indices
-  - name: "profile-*"         # Unomi profile indices
-  - name: "session-*"         # Unomi session indices
-----
-
-====== Running the Migration
+List what you must copy:
 
 [source,bash]
 ----
-./bin/replication-tool --config config.yml
+curl -s "http://SOURCE:9200/_cat/indices/context-*?v"
 ----
 
-The tool provides progress updates and ensures data consistency during the migration.
+If you customized the prefix, replace `context` with your value everywhere below, and keep the **same** prefix on the OpenSearch side after cutover.
 
-====== Option 2: Logstash Pipeline
+Also migrate **aliases** and any ILM/ISM (or equivalent) policies that Unomi relies on for rollover indices. Official migration tooling does not always move policies automatically; check the tool’s component support list.
 
-For smaller deployments or when more control over the migration process is needed, you can use Logstash.
+===== Choose a data-copy method (external docs)
 
-====== Logstash Configuration
+Pick a method that matches your Elasticsearch/OpenSearch versions, downtime budget, and ops stack.
+Always confirm the current **supported source → target matrix** before you start.
 
-Create a file named `logstash-migration.conf`:
+[cols="1,2",options="header"]
+|===
+| Approach | Where to start
 
-[source,ruby]
-----
-input {
-  elasticsearch {
-    hosts => ["source-elasticsearch-host:9200"]
-    index => "context-*"  # Repeat for other indices
-    size => 5000
-    scroll => "5m"
-    docinfo => true
-    user => "elastic_user"     # if authentication is enabled
-    password => "elastic_pass" # if authentication is enabled
-  }
-}
+| Migration Assistant (metadata, snapshot backfill / Reindex-from-Snapshot, optional live Capture and Replay)
+| https://docs.opensearch.org/latest/migration-assistant/[Migration Assistant for OpenSearch] ·
+https://docs.opensearch.org/latest/migration-assistant/is-migration-assistant-right-for-you/[Is it right for you? (version matrix)] ·
+https://github.com/opensearch-project/opensearch-migrations[opensearch-migrations on GitHub]
 
-output {
-  opensearch {
-    hosts => ["target-opensearch-host:9200"]
-    index => "%{[@metadata][_index]}"
-    document_id => "%{[@metadata][_id]}"
-    user => "opensearch_user"     # if authentication is enabled
-    password => "opensearch_pass" # if authentication is enabled
-  }
-}
-----
+| Remote reindex into OpenSearch (copy documents from a remote Elasticsearch cluster)
+| https://docs.opensearch.org/latest/im-plugin/reindex-data/[Reindex data] ·
+https://docs.opensearch.org/latest/api-reference/document-apis/reindex/[Reindex API] +
+(create destination indices with mappings/settings first; remote host must be allowlisted)
 
-====== Running Logstash Migration
+| Logstash (scroll from Elasticsearch, ship to OpenSearch)
+| https://docs.opensearch.org/latest/tools/logstash/[Logstash and OpenSearch] ·
+https://docs.opensearch.org/latest/tools/logstash/ship-to-opensearch/[Ship events to OpenSearch]
+(`logstash-output-opensearch` plugin)
+|===
+
+TIP: For a self-managed Unomi deployment with planned downtime, **remote reindex** is often the simplest path once destination mappings exist.
+For large or near-zero-downtime migrations, evaluate **Migration Assistant** against the published matrix for your Elasticsearch major version (Unomi 3.x commonly uses Elasticsearch **9.x**; confirm support in the upstream docs).
+
+===== Verify the copy
+
+Before switching Unomi:
+
+* Compare `_cat/indices` document counts for every Unomi index (and rollover generations)
+* Confirm aliases used by rollover types still resolve
+* Spot-check a few documents by id
 
 [source,bash]
 ----
-logstash -f logstash-migration.conf
+curl -s "http://SOURCE:9200/_cat/indices/context-*?v&h=index,docs.count"
+curl -s "https://TARGET:9200/_cat/indices/context-*?v&h=index,docs.count"
 ----
 
-===== Post-Migration Steps
+(Adjust scheme, auth, and TLS as required by each cluster.)
 
-1. Verify Data Integrity
+===== Point Unomi at OpenSearch
+
+1. Stop Apache Unomi (or otherwise freeze writes).
+2. Switch the runtime distribution to OpenSearch:
 +
 [source,bash]
 ----
-# Check document counts
-curl -X GET "source-elasticsearch-host:9200/_cat/indices/context-*?v"
-curl -X GET "target-opensearch-host:9200/_cat/indices/context-*?v"
-----
+# Docker / environment
+UNOMI_DISTRIBUTION=unomi-distribution-opensearch
 
-2. Update Unomi Configuration
-+
-Edit `etc/custom.system.properties`:
+# Or from the Karaf shell before starting Unomi features
+unomi:setup -d=unomi-distribution-opensearch -f=true
+----
+3. Point Unomi at the target cluster in `etc/custom.system.properties` (or `unomi.custom.system.properties` / env vars). Example:
 +
 [source,properties]
 ----
-# Comment out or remove Elasticsearch properties
-#org.apache.unomi.elasticsearch.addresses=localhost:9200
-#org.apache.unomi.elasticsearch.cluster.name=contextElasticSearch
+# org.apache.unomi.elasticsearch.*  (disable / stop using)
 
-# Add OpenSearch properties
 org.apache.unomi.opensearch.addresses=localhost:9200
-org.apache.unomi.opensearch.cluster.name=contextOpenSearch
-org.apache.unomi.opensearch.sslEnable=false
+org.apache.unomi.opensearch.cluster.name=opensearch-cluster
+org.apache.unomi.opensearch.index.prefix=context
 org.apache.unomi.opensearch.username=admin
-org.apache.unomi.opensearch.password=admin
+org.apache.unomi.opensearch.password=${env:OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
+org.apache.unomi.opensearch.sslEnable=true
+org.apache.unomi.opensearch.sslTrustAllCertificates=true
 ----
-
-3. Restart Apache Unomi
 +
-[source,bash]
-----
-./bin/stop
-./bin/start
-----
+Align `sslEnable` / trust settings with your OpenSearch security setup. See <<_configuration,Configuration>>.
+4. Start Unomi and verify health, tenant/API access, and a representative profile/event flow.
 
-===== Troubleshooting
+Keep the Elasticsearch cluster until you are satisfied the OpenSearch deployment is correct, then decommission it.
 
-====== Common Issues
+===== Further help
 
-1. Connection Timeouts
-* Increase the timeout settings in your configuration
-* Check network connectivity between clusters
-
-2. Memory Issues
-* Adjust JVM heap size for the migration tool
-* Consider reducing batch sizes
-
-3. Missing Indices
-* Verify index patterns in configuration
-* Check source cluster health
-
-====== Monitoring Progress
-
-The OpenSearch Replication Tool provides progress information during migration:
-
-* Documents copied
-* Time elapsed
-* Current transfer rate
-* Estimated completion time
-
-===== Best Practices
-
-1. *Testing*
-* Always test the migration process in a non-production environment first
-* Verify all Unomi features work with migrated data
-
-2. *Performance*
-* Run migration during off-peak hours
-* Monitor system resources during migration
-* Use appropriate batch sizes based on document size
-
-3. *Backup*
-* Create backups of your Elasticsearch indices before migration
-* Keep source cluster running until verification is complete
-
-4. *Validation*
-* Compare document counts between source and target
-* Verify index mappings and settings
-* Test Unomi functionality with migrated data
-
-===== Support
-
-For additional support:
-
-* OpenSearch Replication Tool: https://github.com/opensearch-project/opensearch-migrations
-* Apache Unomi Community: https://unomi.apache.org/community.html
-* OpenSearch Forum: https://forum.opensearch.org/ 
+* Apache Unomi community: https://unomi.apache.org/community.html
+* OpenSearch forum: https://forum.opensearch.org/

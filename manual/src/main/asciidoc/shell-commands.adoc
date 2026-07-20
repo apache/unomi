@@ -42,7 +42,7 @@ karaf@root()> help unomi:migrate
 DESCRIPTION
         unomi:migrate
 
-    This will Migrate your date in ES to be compliant with current version.
+    This will migrate your data in Elasticsearch or OpenSearch to be compliant with the current version.
     It's possible to configure the migration using OSGI configuration file: org.apache.unomi.migration.cfg,
     if no configuration is provided then questions will be prompted during the migration process.
 

@@ -30,7 +30,6 @@ A JDK upgrade is almost always bundled with a *major* Karaf migration. Unomi 3.x
 Also update CI workflows, `build.sh` preflight checks, and contributor docs when raising the minimum JDK.
 
 
-
 ===== JDK upgrade coupled to Karaf (diagram)
 
 Java version changes are not done in isolation on Unomi 3.x — they ride the major Karaf migration path (UNOMI-876).
@@ -38,7 +37,6 @@ Java version changes are not done in isolation on Unomi 3.x — they ride the ma
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor #F8F8F8
 
 start
 :Read Karaf release notes

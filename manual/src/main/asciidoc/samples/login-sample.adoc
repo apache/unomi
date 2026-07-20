@@ -14,7 +14,7 @@
 [#_login_sample]
 === Login sample
 
-This samples is an example of what is involved in integrated a login with Apache Unomi.
+This sample is an example of what is involved in integrating a login with Apache Unomi.
 
 ==== Warning !
 

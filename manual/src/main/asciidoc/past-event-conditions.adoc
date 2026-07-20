@@ -31,9 +31,6 @@ Past event conditions are a powerful feature in Apache Unomi that allows both se
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor LightBlue
-skinparam activityBorderColor DarkBlue
-skinparam arrowColor DarkBlue
 
 |Visitor|
 start
@@ -122,14 +119,11 @@ Common website scenarios include:
 }
 ----
 
-=== Mobile Application Engagement
+==== Mobile Application Engagement
 
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor LightGreen
-skinparam activityBorderColor DarkGreen
-skinparam arrowColor DarkGreen
 
 |User|
 start
@@ -201,17 +195,12 @@ Common mobile scenarios include:
 }
 ----
 
-=== Customer Data Platform (CDP) Integration
+==== Customer Data Platform (CDP) Integration
 
 [plantuml]
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<source>> LightYellow
-  BackgroundColor<<processing>> LightBlue
-  BackgroundColor<<action>> LightGreen
-}
 
 package "Data Sources" {
   [Website Events] as web <<source>>
@@ -305,14 +294,11 @@ Common CDP scenarios include:
 }
 ----
 
-=== B2B Use Cases
+==== B2B Use Cases
 
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor LightPurple
-skinparam activityBorderColor DarkPurple
-skinparam arrowColor DarkPurple
 
 |Account|
 start
@@ -392,16 +378,12 @@ Common B2B scenarios include:
 }
 ----
 
-== Architecture Overview
+==== Architecture Overview
 
 [plantuml]
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<cached>> LightGreen
-  BackgroundColor<<uncached>> LightYellow
-}
 
 package "Past Event System" {
   [SetEventOccurenceCountAction] as action
@@ -444,7 +426,7 @@ end note
 @enduml
 ----
 
-=== Query Strategy Selection
+===== Query Strategy Selection
 
 [plantuml]
 ----
@@ -472,7 +454,7 @@ stop
 @enduml
 ----
 
-==== Performance Implications
+====== Performance Implications
 
 1. *Property-Based Evaluation*
 - Uses cached counts from profile properties
@@ -486,14 +468,11 @@ stop
 - No caching mechanism
 - Use with caution in rules
 
-== Event Processing Flow
+==== Event Processing Flow
 
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor LightBlue
-skinparam activityBorderColor DarkBlue
-skinparam arrowColor DarkBlue
 
 start
 :Event Received;
@@ -520,16 +499,12 @@ stop
 @enduml
 ----
 
-== Segment vs Direct Rule Comparison
+==== Segment vs Direct Rule Comparison
 
 [plantuml]
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<efficient>> LightGreen
-  BackgroundColor<<inefficient>> LightPink
-}
 
 package "Segment Approach" <<efficient>> {
   [Past Event Condition] as segmentCondition
@@ -570,7 +545,7 @@ end note
 @enduml
 ----
 
-== Cache Update Process
+==== Cache Update Process
 
 [plantuml]
 ----
@@ -601,7 +576,7 @@ deactivate action
 @enduml
 ----
 
-== Query Strategy Selection
+==== Query Strategy Selection
 
 [plantuml]
 ----
@@ -629,9 +604,9 @@ stop
 @enduml
 ----
 
-== Usage Patterns
+==== Usage Patterns
 
-=== In Segments
+===== In Segments
 
 When used in segments, past event conditions automatically generate optimization rules that maintain cached event counts on profiles. This is the recommended approach for optimal performance.
 
@@ -661,7 +636,7 @@ When this segment is created:
 3. Initial profile counts are calculated and stored
 4. Subsequent events update the cached counts in real-time
 
-=== In Rules
+===== In Rules
 
 Past event conditions can also be used directly in rules, but with important performance considerations:
 
@@ -699,7 +674,7 @@ Past event conditions can also be used directly in rules, but with important per
 4. Higher latency and resource usage
 5. Not recommended for high-frequency conditions
 
-== Auto-Generated Rules
+==== Auto-Generated Rules
 
 The system automatically generates rules for past event conditions through `SegmentServiceImpl`:
 
@@ -744,7 +719,7 @@ The system automatically generates rules for past event conditions through `Segm
 }
 ----
 
-== Core Components
+==== Core Components
 
 The past event condition system consists of four main components:
 
@@ -753,7 +728,7 @@ The past event condition system consists of four main components:
 3. `pastEventConditionQueryBuilder` - Constructs optimized search index queries
 4. `SegmentServiceImpl` - Manages segments and auto-generated rules
 
-== Condition Parameters
+==== Condition Parameters
 
 Past event conditions support the following parameters as defined in `pastEventCondition.json`:
 
@@ -827,9 +802,9 @@ If you need to combine multiple event conditions, you have two options:
 This pattern works because the condition type system is hierarchical - a condition type can define a `parentCondition` that will be evaluated as part of the condition evaluation. The restriction on using `booleanCondition` applies only to direct usage in the `eventCondition` parameter, not to the internal structure of properly tagged condition types.
 ====
 
-== Event Processing System
+==== Event Processing System
 
-=== Real-Time Event Processing
+===== Real-Time Event Processing
 
 When an event occurs in Unomi, the `SetEventOccurenceCountAction` processes it in real-time through the following steps:
 
@@ -856,7 +831,7 @@ The action is defined in `setEventOccurenceCountAction.json` with the following 
 }
 ----
 
-=== Time Window Processing
+===== Time Window Processing
 
 The `SetEventOccurenceCountAction` implements time window processing using the following logic:
 
@@ -887,7 +862,7 @@ private boolean inTimeRange(LocalDateTime eventTime, Integer numberOfDays,
 }
 ----
 
-=== Profile Storage Format
+===== Profile Storage Format
 
 Past event counts are stored efficiently in the profile's system properties under a `pastEvents` list. Each entry contains:
 
@@ -925,7 +900,7 @@ private boolean updatePastEvents(Event event, String generatedPropertyKey, long 
 }
 ----
 
-=== Evaluation Process
+===== Evaluation Process
 
 The evaluation process involves multiple components working together to efficiently evaluate past event conditions:
 
@@ -1009,9 +984,9 @@ public boolean eval(Condition condition, Item item, Map<String, Object> context,
 }
 ----
 
-== Rule Generation
+==== Rule Generation
 
-=== Auto-Generated Rules
+===== Auto-Generated Rules
 
 The system automatically generates rules for past event conditions through `SegmentServiceImpl`:
 
@@ -1041,7 +1016,7 @@ The system automatically generates rules for past event conditions through `Segm
 }
 ----
 
-=== Performance Configuration
+===== Performance Configuration
 
 Key configuration parameters from `SegmentServiceImpl`:
 
@@ -1069,9 +1044,9 @@ secondsDelayForRetryUpdateProfileSegment = 1
 sendProfileUpdateEventForSegmentUpdate = true
 ----
 
-== Best Practices
+==== Best Practices
 
-=== Implementation Guidelines
+===== Implementation Guidelines
 
 1. *Time Window Selection*
    * Use `numberOfDays` for rolling windows
@@ -1091,7 +1066,7 @@ sendProfileUpdateEventForSegmentUpdate = true
    * Implement proper logging
    * Plan for recovery scenarios
 
-=== Example Configurations
+===== Example Configurations
 
 1. *Rolling Window*
 [source,json]
@@ -1128,9 +1103,9 @@ sendProfileUpdateEventForSegmentUpdate = true
 }
 ----
 
-== Common Use Cases and Examples
+==== Common Use Cases and Examples
 
-=== Basic Past Event Condition
+===== Basic Past Event Condition
 
 .Example: Count page views in the last 7 days
 [source,json]
@@ -1146,7 +1121,7 @@ sendProfileUpdateEventForSegmentUpdate = true
 }
 ----
 
-=== Time-Based Conditions
+===== Time-Based Conditions
 
 .Example: Count purchases between specific dates
 [source,json]
@@ -1162,7 +1137,7 @@ sendProfileUpdateEventForSegmentUpdate = true
 }
 ----
 
-=== Complex Event Conditions
+===== Complex Event Conditions
 
 .Example: Count specific product category views with property constraints
 [source,json]
@@ -1201,7 +1176,7 @@ sendProfileUpdateEventForSegmentUpdate = true
 }
 ----
 
-=== Segment Definition
+===== Segment Definition
 
 .Example: Segment for active users based on past events
 [source,json]
@@ -1239,7 +1214,7 @@ sendProfileUpdateEventForSegmentUpdate = true
 }
 ----
 
-=== Auto-Generated Rule
+===== Auto-Generated Rule
 
 .Example: Auto-generated rule for past event counting
 [source,json]
@@ -1270,7 +1245,7 @@ sendProfileUpdateEventForSegmentUpdate = true
 }
 ----
 
-=== Property Storage Format
+===== Property Storage Format
 
 .Example: Profile property storage format for past event counts
 [source,json]
@@ -1291,9 +1266,9 @@ sendProfileUpdateEventForSegmentUpdate = true
 }
 ----
 
-=== Integration Examples
+===== Integration Examples
 
-==== REST API Usage
+====== REST API Usage
 
 .Example: Query past event counts via REST API
 [source,bash]
@@ -1312,7 +1287,7 @@ curl -X POST http://localhost:8181/cxs/profiles/query \
   }'
 ----
 
-==== Batch Update Configuration
+====== Batch Update Configuration
 
 .Example: Configure batch updates for past event counts
 [source,properties]
@@ -1327,22 +1302,22 @@ segment.pastEventCondition.monitoringEnabled=true
 segment.pastEventCondition.alertThreshold=100000
 ----
 
-== Troubleshooting
+==== Troubleshooting
 
-=== Common Issues
+===== Common Issues
 
 1. *Performance Problems*
    * Partition Size Issues
      ** Symptom: Slow query performance or high memory usage
      ** Check `aggregateQueryBucketSize` configuration (default: 5000)
-     ** Monitor Elasticsearch heap usage during queries
+     ** Monitor search engine (Elasticsearch or OpenSearch) heap usage during queries
      ** Consider enabling partitioned processing for large datasets
    
    * Query Optimization
      ** Verify proper index settings for event timestamps
      ** Check if property-based queries are being used when possible
      ** Monitor query execution times through metrics
-     ** Analyze Elasticsearch query patterns
+     ** Analyze search engine query patterns
 
 2. *Incorrect Counts*
    * Time Window Configuration
@@ -1362,11 +1337,11 @@ segment.pastEventCondition.alertThreshold=100000
      ** Monitor profile update events
      ** Validate segment evaluation timing
 
-=== Debugging Tips
+===== Debugging Tips
 
 1. *Query Verification*
-   * Elasticsearch Query Analysis
-     ** Use Elasticsearch _explain API to analyze queries
+   * Search engine query analysis
+     ** Use the Elasticsearch or OpenSearch `_explain` API to analyze queries
      ** Monitor query performance through metrics
      ** Check query routing and shard distribution
      ** Verify index mappings for event fields
@@ -1384,9 +1359,9 @@ segment.pastEventCondition.alertThreshold=100000
      ** Verify rule execution flow
      ** Validate condition evaluation results
 
-== Integration Points
+==== Integration Points
 
-=== Event Flow
+===== Event Flow
 
 The complete event processing flow for past event conditions:
 
@@ -1414,7 +1389,7 @@ The complete event processing flow for past event conditions:
    * Profile is updated with new segments
    * Related rules are triggered
 
-=== Segment Evaluation Flow
+===== Segment Evaluation Flow
 
 The detailed segment evaluation process:
 
@@ -1442,9 +1417,9 @@ The detailed segment evaluation process:
    * Update events are triggered
    * Changes are persisted to storage
 
-== Security Considerations
+==== Security Considerations
 
-=== Data Access Controls
+===== Data Access Controls
 
 1. *Profile Data Protection*
    * Event data access is controlled through permissions
@@ -1453,12 +1428,12 @@ The detailed segment evaluation process:
    * Access to past event counts follows profile permissions
 
 2. *Query Security*
-   * Elasticsearch queries are sanitized
+   * Search engine queries are sanitized
    * Input parameters are validated
    * Time ranges are bounded
    * Resource limits are enforced
 
-=== Resource Protection
+===== Resource Protection
 
 1. *Query Limits*
    * Maximum time window restrictions
@@ -1472,7 +1447,7 @@ The detailed segment evaluation process:
    * Segment evaluation throttling
    * Cache invalidation controls
 
-=== Data Integrity
+===== Data Integrity
 
 1. *Event Data*
    * Event timestamps are validated
@@ -1486,7 +1461,7 @@ The detailed segment evaluation process:
    * Update validation
    * Rollback procedures
 
-=== Audit Trail
+===== Audit Trail
 
 1. *Event Processing*
    * Event processing logs
@@ -1500,9 +1475,9 @@ The detailed segment evaluation process:
    * Resource limit violations
    * Data integrity issues
 
-== Configuration Parameters
+==== Configuration Parameters
 
-=== Core Settings
+===== Core Settings
 
 [source,properties]
 ----
@@ -1521,7 +1496,7 @@ query.pastEvent.enablePartitioning=true
 query.pastEvent.partitionSize=10000
 ----
 
-=== Performance Tuning
+===== Performance Tuning
 
 [source,properties]
 ----
@@ -1539,7 +1514,7 @@ batch.pastEventUpdate.threadPoolSize=4
 batch.pastEventUpdate.queueSize=1000
 ----
 
-=== Monitoring Configuration
+===== Monitoring Configuration
 
 [source,properties]
 ----
@@ -1556,9 +1531,9 @@ alerts.pastEventCondition.slowQueryThreshold=5000
 alerts.pastEventCondition.errorThreshold=100
 ----
 
-== Best Practices
+==== Best Practices
 
-=== Performance Optimization
+===== Performance Optimization
 
 1. *Query Optimization*
    * Use property-based evaluation when possible
@@ -1572,7 +1547,7 @@ alerts.pastEventCondition.errorThreshold=100
    * Monitor memory usage
    * Use partitioned processing
 
-=== Maintenance
+===== Maintenance
 
 1. *Regular Tasks*
    * Monitor cache hit rates
@@ -1586,7 +1561,7 @@ alerts.pastEventCondition.errorThreshold=100
    * Review audit trails
    * Check resource usage
 
-=== Scaling Considerations
+===== Scaling Considerations
 
 1. *Horizontal Scaling*
    * Configure cluster settings
@@ -1600,11 +1575,11 @@ alerts.pastEventCondition.errorThreshold=100
    * Optimize thread pools
    * Monitor CPU usage
 
-== Evaluation Strategies
+==== Evaluation Strategies
 
 The system uses different evaluation strategies depending on how the past event condition is used:
 
-=== Property-Based Evaluation
+===== Property-Based Evaluation
 
 Used when a past event condition is part of a segment:
 
@@ -1633,12 +1608,12 @@ if (parameters.containsKey("generatedPropertyKey")) {
 }
 ----
 
-=== Direct Event Query Evaluation
+===== Direct Event Query Evaluation
 
 Used when a past event condition is used directly in a rule:
 
 1. *Evaluation Process*
-   * Constructs Elasticsearch query for matching events
+   * Constructs a search engine query for matching events
    * Queries event store directly
    * Aggregates results
    * No caching occurs
@@ -1655,9 +1630,9 @@ count = persistenceService.queryCount(
 );
 ----
 
-== Performance Considerations
+==== Performance Considerations
 
-=== Segment vs Direct Rule Usage
+===== Segment vs Direct Rule Usage
 
 1. *Segment Usage (Recommended)*
    * Cached event counts in profile properties
@@ -1673,7 +1648,7 @@ count = persistenceService.queryCount(
    * Can impact system performance
    * Suitable only for low-frequency rules
 
-=== Query Optimization
+===== Query Optimization
 
 1. *Property-Based Queries*
    * Used when `generatedPropertyKey` is available
@@ -1710,7 +1685,7 @@ Set<String> ids = getProfileIdsMatchingEventCount(
 );
 ----
 
-=== Resource Usage
+===== Resource Usage
 
 1. *Memory Impact*
    * Segment usage: Minimal (only stores count in profile)
@@ -1724,7 +1699,7 @@ Set<String> ids = getProfileIdsMatchingEventCount(
    * Segment usage: Small profile property overhead
    * Direct rule usage: No additional storage
 
-=== Best Practices for Performance
+===== Best Practices for Performance
 
 1. *Use Segments When Possible*
    * Prefer segments over direct rule usage
@@ -1746,7 +1721,7 @@ Set<String> ids = getProfileIdsMatchingEventCount(
    * Configure appropriate cache sizes
    * Regular cache maintenance
 
-=== Resolution Steps
+===== Resolution Steps
 
 1. *Initial Analysis*
    * Verify configuration
@@ -1772,9 +1747,9 @@ Set<String> ids = getProfileIdsMatchingEventCount(
    * Check error rates
    * Document changes
 
-== Maintenance and Monitoring
+==== Maintenance and Monitoring
 
-=== Regular Maintenance Tasks
+===== Regular Maintenance Tasks
 
 1. *Event Count Recalculation*
    * Periodic recalculation of past event counts
@@ -1796,7 +1771,7 @@ segmentService.recalculatePastEventConditions();
    * Monitor resource usage
    * Identify bottlenecks
 
-=== Monitoring Metrics
+===== Monitoring Metrics
 
 1. *Query Performance*
    * Average query execution time
@@ -1808,7 +1783,7 @@ segmentService.recalculatePastEventConditions();
    * CPU utilization
    * Storage growth
 
-=== Troubleshooting
+===== Troubleshooting
 
 1. *Common Issues*
    * Slow query performance
@@ -1817,7 +1792,7 @@ segmentService.recalculatePastEventConditions();
    * Cache inconsistencies
 
 2. *Diagnostic Tools*
-   * Elasticsearch query analysis
+   * Search engine query analysis
    * Performance metrics
    * Log analysis
    * Cache statistics

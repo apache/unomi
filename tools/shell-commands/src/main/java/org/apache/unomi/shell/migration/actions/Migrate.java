@@ -24,7 +24,7 @@ import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.MigrationService;
 
-@Command(scope = "unomi", name = "migrate", description = "This will Migrate your data in ES to be compliant with current version. " +
+@Command(scope = "unomi", name = "migrate", description = "This will migrate your data in Elasticsearch or OpenSearch to be compliant with the current version. " +
         "It's possible to configure the migration using OSGI configuration file: org.apache.unomi.migration.cfg, " +
         "if no configuration is provided then questions will be prompted during the migration process.")
 @Service

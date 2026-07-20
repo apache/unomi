@@ -18,7 +18,7 @@
 This section is for **contributors** who add or change Groovy migration scripts shipped in the `shell-commands` module.
 Operators upgrading a cluster should follow the version-specific guides in this chapter instead.
 
-Migration scripts run with **Apache Unomi stopped**, via `unomi:migrate` (see <<SSH Shell Commands>>).
+Migration scripts run with **Apache Unomi stopped**, via `unomi:migrate` (see <<_shell_commands,Shell commands>>).
 They talk directly to Elasticsearch or OpenSearch over HTTP and transform persisted data in place.
 
 ==== Script location and naming

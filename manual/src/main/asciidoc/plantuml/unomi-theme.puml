@@ -1,0 +1,259 @@
+'
+' Licensed under the Apache License, Version 2.0 (the "License");
+' you may not use this file except in compliance with the License.
+' You may obtain a copy of the License at
+'
+'      http://www.apache.org/licenses/LICENSE-2.0
+'
+' Unless required by applicable law or agreed to in writing, software
+' distributed under the License is distributed on an "AS IS" BASIS,
+' WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+' See the License for the specific language governing permissions and
+' limitations under the License.
+'
+
+' Apache Unomi PlantUML theme — aligned with unomi-site / unomi-manual.css tokens
+' Brand: --unomi-primary #6d5ce7, semantic accents from the Unomi design system
+'
+' Applied globally via AsciiDoctor attribute plantuml-config (see manual/pom.xml).
+' Prefer stereotypes below for role colors; avoid per-diagram LightBlue/LightGreen overrides.
+
+' ---- Brand & semantic palette (match unomi.css :root) ----
+' primary #6d5ce7 | primary-dark #5a48c9 | primary-light #ede9fe | primary-subtle #f5f3ff
+' text #1e293b | muted #64748b | border #e2e8f0 | bg-soft #f8fafc
+' success #059669 / #ecfdf5 | info #2563eb / #dbeafe | amber #d97706 / #fef3c7
+' rose #db2777 / #fce7f3 | accent #00cec9 | hero-accent #a78bfa
+
+' ---- C4-PlantUML defaults (set before C4 include via ?= in C4) ----
+!$ELEMENT_FONT_COLOR = "#1e293b"
+!$ARROW_COLOR = "#6d5ce7"
+!$ARROW_FONT_COLOR = "#64748b"
+!$BOUNDARY_COLOR = "#5a48c9"
+!$BOUNDARY_BG_COLOR = "#f5f3ff"
+!$PERSON_BG_COLOR = "#ede9fe"
+!$PERSON_BORDER_COLOR = "#6d5ce7"
+!$PERSON_FONT_COLOR = "#1e293b"
+!$SYSTEM_BG_COLOR = "#ede9fe"
+!$SYSTEM_BORDER_COLOR = "#6d5ce7"
+!$SYSTEM_FONT_COLOR = "#1e293b"
+!$CONTAINER_BG_COLOR = "#f5f3ff"
+!$CONTAINER_BORDER_COLOR = "#6d5ce7"
+!$CONTAINER_FONT_COLOR = "#1e293b"
+!$COMPONENT_BG_COLOR = "#ede9fe"
+!$COMPONENT_BORDER_COLOR = "#6d5ce7"
+!$COMPONENT_FONT_COLOR = "#1e293b"
+!$EXTERNAL_COMPONENT_BG_COLOR = "#f1f5f9"
+!$EXTERNAL_COMPONENT_BORDER_COLOR = "#94a3b8"
+!$EXTERNAL_COMPONENT_FONT_COLOR = "#1e293b"
+!$DATABASE_BG_COLOR = "#ecfdf5"
+!$DATABASE_BORDER_COLOR = "#059669"
+!$DATABASE_FONT_COLOR = "#1e293b"
+
+skinparam {
+  shadowing false
+  defaultFontSize 13
+  defaultFontColor #1e293b
+  BackgroundColor #ffffff
+  ArrowColor #6d5ce7
+  ArrowFontColor #64748b
+  BorderColor #6d5ce7
+  RoundCorner 8
+  Padding 6
+  NoteBackgroundColor #f5f3ff
+  NoteBorderColor #a78bfa
+  NoteFontColor #1e293b
+  PackageBackgroundColor #f8fafc
+  PackageBorderColor #e2e8f0
+  PackageTitleFontColor #5a48c9
+  StereotypeFontColor #64748b
+  LegendBackgroundColor #f8fafc
+  LegendBorderColor #e2e8f0
+}
+
+skinparam componentStyle uml2
+
+skinparam activity {
+  BackgroundColor #ede9fe
+  BorderColor #6d5ce7
+  FontColor #1e293b
+  DiamondBackgroundColor #f5f3ff
+  DiamondBorderColor #5a48c9
+  StartColor #6d5ce7
+  EndColor #5a48c9
+  BarColor #a78bfa
+}
+
+skinparam component {
+  BackgroundColor #ede9fe
+  BorderColor #6d5ce7
+  FontColor #1e293b
+  ArrowColor #6d5ce7
+}
+
+skinparam class {
+  BackgroundColor #ffffff
+  BorderColor #6d5ce7
+  FontColor #1e293b
+  AttributeFontColor #475569
+  HeaderBackgroundColor #f5f3ff
+}
+
+skinparam object {
+  BackgroundColor #ffffff
+  BorderColor #6d5ce7
+  FontColor #1e293b
+}
+
+skinparam rectangle {
+  BackgroundColor #ede9fe
+  BorderColor #6d5ce7
+  FontColor #1e293b
+}
+
+skinparam state {
+  BackgroundColor #ede9fe
+  BorderColor #6d5ce7
+  FontColor #1e293b
+  StartColor #6d5ce7
+  EndColor #5a48c9
+}
+
+skinparam sequence {
+  ArrowColor #6d5ce7
+  LifeLineBorderColor #a78bfa
+  LifeLineBackgroundColor #f5f3ff
+  ParticipantBackgroundColor #ede9fe
+  ParticipantBorderColor #6d5ce7
+  ParticipantFontColor #1e293b
+  ActorBackgroundColor #ede9fe
+  ActorBorderColor #6d5ce7
+  BoxBackgroundColor #f8fafc
+  BoxBorderColor #e2e8f0
+}
+
+skinparam database {
+  BackgroundColor #ecfdf5
+  BorderColor #059669
+  FontColor #1e293b
+}
+
+skinparam agent {
+  BackgroundColor #ede9fe
+  BorderColor #6d5ce7
+  FontColor #1e293b
+}
+
+skinparam node {
+  BackgroundColor #f5f3ff
+  BorderColor #6d5ce7
+  FontColor #1e293b
+}
+
+skinparam cloud {
+  BackgroundColor #e0f2fe
+  BorderColor #0369a1
+  FontColor #1e293b
+}
+
+skinparam interface {
+  BackgroundColor #f5f3ff
+  BorderColor #6d5ce7
+  FontColor #1e293b
+}
+
+' ---- Role stereotypes (shared across chapters) ----
+' primary / core path
+skinparam component<<core>> {
+  BackgroundColor #ede9fe
+  BorderColor #6d5ce7
+}
+skinparam component<<api>> {
+  BackgroundColor #ede9fe
+  BorderColor #5a48c9
+}
+skinparam component<<event>> {
+  BackgroundColor #ede9fe
+  BorderColor #6d5ce7
+}
+skinparam component<<evaluation>> {
+  BackgroundColor #dbeafe
+  BorderColor #2563eb
+}
+skinparam component<<processing>> {
+  BackgroundColor #dbeafe
+  BorderColor #2563eb
+}
+
+' persistence / query / success path
+skinparam component<<persistence>> {
+  BackgroundColor #ecfdf5
+  BorderColor #059669
+}
+skinparam component<<query>> {
+  BackgroundColor #ecfdf5
+  BorderColor #059669
+}
+skinparam component<<rule>> {
+  BackgroundColor #ecfdf5
+  BorderColor #059669
+}
+skinparam component<<action>> {
+  BackgroundColor #ecfdf5
+  BorderColor #059669
+}
+skinparam component<<cached>> {
+  BackgroundColor #ecfdf5
+  BorderColor #059669
+}
+skinparam component<<efficient>> {
+  BackgroundColor #ecfdf5
+  BorderColor #059669
+}
+skinparam component<<platform>> {
+  BackgroundColor #ecfdf5
+  BorderColor #059669
+}
+skinparam component<<karaf>> {
+  BackgroundColor #ecfdf5
+  BorderColor #059669
+}
+
+' caution / security / pin
+skinparam component<<security>> {
+  BackgroundColor #fef3c7
+  BorderColor #d97706
+}
+skinparam component<<source>> {
+  BackgroundColor #fef3c7
+  BorderColor #d97706
+}
+skinparam component<<uncached>> {
+  BackgroundColor #fef3c7
+  BorderColor #d97706
+}
+skinparam component<<pin>> {
+  BackgroundColor #fef3c7
+  BorderColor #d97706
+}
+
+' accent / embed
+skinparam component<<embed>> {
+  BackgroundColor #e0f2fe
+  BorderColor #0369a1
+}
+
+' muted / external / terminal
+skinparam component<<external>> {
+  BackgroundColor #f1f5f9
+  BorderColor #94a3b8
+}
+skinparam state<<terminal>> {
+  BackgroundColor #f1f5f9
+  BorderColor #94a3b8
+}
+
+' negative / inefficient
+skinparam component<<inefficient>> {
+  BackgroundColor #fce7f3
+  BorderColor #db2777
+}

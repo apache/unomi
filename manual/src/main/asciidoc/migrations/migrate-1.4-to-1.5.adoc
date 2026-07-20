@@ -22,7 +22,7 @@ To be able to do so, we had to rework the way the data was stored inside Elastic
 
 Previously every items was stored inside the same ElasticSearch index but this is not allowed anymore in recent ElasticSearch versions.
 
-Since Apache Unomi version 1.5.0 every type of items (see section: link:#_items[Items]) is now stored in a dedicated separated index.
+Since Apache Unomi version 1.5.0 every type of items (see section: <<_item,Item>>) is now stored in a dedicated separated index.
 
 ===== API changes
 

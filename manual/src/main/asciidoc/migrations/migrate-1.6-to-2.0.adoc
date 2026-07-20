@@ -154,7 +154,7 @@ The following environment variables are used for the migration:
 
 |===
 
-If there is a need for advanced configuratiion, the configuration file used by Apache Unomi 2.0 is located in: `etc/org.apache.unomi.migration.cfg`
+If there is a need for advanced configuration, the configuration file used by Apache Unomi 2.0 is located in: `etc/org.apache.unomi.migration.cfg`
 
 ===== Migrate manually
 

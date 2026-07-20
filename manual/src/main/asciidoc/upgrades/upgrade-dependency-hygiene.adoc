@@ -45,13 +45,11 @@ The bulk dependency pass https://issues.apache.org/jira/browse/UNOMI-829[UNOMI-8
 ===== Recommended order (platform stack)
 
 
-
 ===== Hygiene vs platform upgrade scope
 
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor #F8F8F8
 
 start
 :Library bump requested;

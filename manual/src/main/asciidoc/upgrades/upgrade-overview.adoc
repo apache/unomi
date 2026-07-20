@@ -70,8 +70,6 @@ Recommended order when bumping multiple platform components in one release cycle
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor #F8F8F8
-skinparam activityBorderColor #333333
 
 start
 :Identify bump scope
@@ -130,12 +128,6 @@ Karaf is the hub: most runtime libraries come from Karaf features, while Unomi M
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<karaf>> #E8F4E8
-  BackgroundColor<<pin>> #FFF4E6
-  BackgroundColor<<embed>> #E8EEF8
-  BackgroundColor<<external>> #F0F0F0
-}
 
 package "Apache Karaf (karaf.version)" <<karaf>> {
   [Pax Web / Jetty runtime]

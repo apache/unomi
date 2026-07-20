@@ -235,14 +235,14 @@ While the mapping system provides backward compatibility, it is recommended to u
 
 ==== Configuration Changes
 
-===== OpenSearch Security Configuration
+===== OpenSearch Security Configuration (Unomi 3.1+)
 
-When using OpenSearch 3.x with Apache Unomi 3.1, security is enabled by default and requires specific configuration:
+OpenSearch as a Unomi backend is supported starting with **Apache Unomi 3.1** (not required for a pure 2.x → 3.0 upgrade on Elasticsearch). When using OpenSearch 3.x with Unomi 3.1, security is commonly enabled and requires:
 
 [source,properties]
 ----
-# OpenSearch security settings (required by default since OpenSearch 3)
-org.apache.unomi.opensearch.ssl.enable=true
+# OpenSearch security settings (sslEnable defaults to true in package samples)
+org.apache.unomi.opensearch.sslEnable=true
 org.apache.unomi.opensearch.username=admin
 org.apache.unomi.opensearch.password=${env:OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
 org.apache.unomi.opensearch.sslTrustAllCertificates=true

@@ -175,7 +175,17 @@ To make this query work you need to supply authorization token in the `HTTP head
 }
 ----
 
-NOTE: When using curl, you can use the `--user` option instead of manually encoding credentials. For example, `--user karaf:karaf` automatically handles Base64 encoding for Basic authentication.
+NOTE: GraphQL requests need authentication. For **mutations and administrative queries**, use HTTP Basic with JAAS (`karaf:karaf`) or `tenantId:privateApiKey`. For **public read** operations on the `cdp` root field, send `X-Unomi-Api-Key` with a tenant public API key. See <<_graphql_api,GraphQL API>> authentication.
+
+When using curl, you can use the `--user` option instead of manually encoding credentials. For example, `--user karaf:karaf` or `--user TENANT_ID:PRIVATE_KEY` automatically handles Base64 encoding for Basic authentication. For public reads:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/graphql \
+  -H "Content-Type: application/json" \
+  -H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+  -d '{"query":"{ cdp { ... } }"}'
+----
 
 The result will now show the list of profiles:
 

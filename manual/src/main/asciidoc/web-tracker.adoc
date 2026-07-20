@@ -16,6 +16,17 @@
 
 In this section of the documentation, more details are provided about the web tracker provided by Unomi.
 
+==== Authentication (Unomi 3.1)
+
+Public context and event endpoints require a tenant public API key (`X-Unomi-Api-Key`) unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled.
+
+The built-in WAB tracker sample does **not** currently attach that header. For production 3.1 deployments:
+
+* Prefer the NPM package / custom integration that can set `X-Unomi-Api-Key` (see <<_javascript_tracker_guide,JavaScript tracker guide>>), or
+* Enable V2 compatibility mode only as a temporary migration aid.
+
+Create a tenant and obtain plaintext public/private keys via `POST /cxs/tenants/{id}/apikeys` before integrating a site. See <<_multitenancy,Multi-tenancy>> and the <<_unomi_web_tracking_tutorial,web tracking tutorial>>.
+
 ==== Custom events
 
 In order to be able to use your own custom events with the web tracker, you must first declare them in Unomi so that they are properly recognized and validated by the `/context.json` or `/eventcollector` endpoints.

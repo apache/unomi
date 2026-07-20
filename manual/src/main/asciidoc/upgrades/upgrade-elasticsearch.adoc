@@ -56,11 +56,6 @@ Image tag example: `docker.elastic.co/elasticsearch/elasticsearch:9.4.3`.
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<platform>> #E8F4E8
-  BackgroundColor<<embed>> #E8EEF8
-  BackgroundColor<<external>> #F0F0F0
-}
 
 package "Karaf platform" <<platform>> {
   [slf4j-api provided]

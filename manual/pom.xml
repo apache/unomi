@@ -33,8 +33,9 @@
         <doc.output.html>target/generated-docs/html/latest</doc.output.html>
         <doc.output.pdf>target/generated-docs/pdf/latest</doc.output.pdf>
         <doc.version>${project.version}</doc.version>
-        <!-- Default path to GraphViz dot executable, can be overridden via -Dgraphviz.dot.path=/path/to/dot -->
-        <graphviz.dot.path>${env.GRAPHVIZ_DOT}</graphviz.dot.path>
+        <!-- Prefer PATH (`dot`). Do not default to ${env.GRAPHVIZ_DOT}: when unset it
+             becomes "", and PlantUML treats that as the process cwd (a directory). -->
+        <graphviz.dot.path>dot</graphviz.dot.path>
     </properties>
 
     <build>
@@ -72,9 +73,6 @@
                             <requires>
                                 <require>asciidoctor-diagram</require>
                             </requires>
-                            <attributes>
-                                <graphvizdot>${graphviz.dot.path}</graphvizdot>
-                            </attributes>
                             <sourceDocumentName>index.adoc</sourceDocumentName>
                             <sourceDirectory>${doc.source}</sourceDirectory>
                             <outputDirectory>${doc.output.html}</outputDirectory>
@@ -89,6 +87,8 @@
                                 <source-highlighter>highlightjs</source-highlighter>
                                 <revnumber>${project.version}</revnumber>
                                 <project-version>${project.version}</project-version>
+                                <graphvizdot>${graphviz.dot.path}</graphvizdot>
+                                <plantuml-config>${project.basedir}/src/main/asciidoc/plantuml/unomi-theme.puml</plantuml-config>
                             </attributes>
                         </configuration>
                     </execution>
@@ -122,6 +122,8 @@
                                 <idprefix />
                                 <idseparator>_</idseparator>
                                 <sectnums>true</sectnums>
+                                <graphvizdot>${graphviz.dot.path}</graphvizdot>
+                                <plantuml-config>${project.basedir}/src/main/asciidoc/plantuml/unomi-theme.puml</plantuml-config>
                             </attributes>
                         </configuration>
                     </execution>
@@ -207,6 +209,18 @@
     </build>
 
     <profiles>
+        <!-- Honor GRAPHVIZ_DOT when set (see building-and-deploying.adoc); leave default `dot` otherwise. -->
+        <profile>
+            <id>graphviz-from-env</id>
+            <activation>
+                <property>
+                    <name>env.GRAPHVIZ_DOT</name>
+                </property>
+            </activation>
+            <properties>
+                <graphviz.dot.path>${env.GRAPHVIZ_DOT}</graphviz.dot.path>
+            </properties>
+        </profile>
         <profile>
             <id>generate-documentation-bundle</id>
             <activation>

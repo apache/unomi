@@ -14,7 +14,7 @@
 
 === Introduction
 
-Introduced with Apache Unomi 2.0, JSON-Schema are used to validate data submitted through all of the public (unprotected) API endpoints.
+Introduced with Apache Unomi 2.0, JSON Schema is used to validate data submitted through public API endpoints (for example `/cxs/context.json`). In Unomi 3.1 those endpoints require a tenant public API key (`X-Unomi-Api-Key`); they are no longer anonymous.
 
 ==== What is a JSON Schema
 
@@ -278,5 +278,25 @@ Schemas persisted in Elasticsearch do not require a restart of the platform to r
 
 Process of creation of schemas:
 
-image::process-creation-schema.png[pdfwidth=35%,align=center]
+[plantuml]
+----
+@startuml
+skinparam shadowing false
+hide footbox
+
+actor Admin
+actor "Authenticated user" as AuthUser
+participant UNOMI
+participant Elasticsearch
+
+Admin -> UNOMI : Start unomi
+UNOMI -> UNOMI : Load predefined schemas in memory
+UNOMI -> UNOMI : Start timer to load\npersisted schemas in memory
+
+AuthUser -> UNOMI : Send schema
+UNOMI -> Elasticsearch : Persist schema
+UNOMI -> UNOMI : Load schema in memory
+
+@enduml
+----
 

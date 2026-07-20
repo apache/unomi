@@ -15,4 +15,79 @@
 
 Here is an overview of how Unomi processes incoming requests to the `ContextServlet`.
 
-image::unomi-request.png[Unomi request overview]
+[plantuml]
+----
+@startuml
+skinparam shadowing false
+hide footbox
+
+participant ContextServlet
+participant ProfileService
+participant EventService
+participant RulesService
+participant PersistenceService
+
+[-> ContextServlet : Request
+
+== User identification ==
+ContextServlet -> ProfileService : Find/create user and session
+ProfileService -> PersistenceService : Find/create user and session
+PersistenceService --> ProfileService
+ProfileService --> ContextServlet
+
+== Handle events ==
+loop all events
+  ContextServlet -> EventService : Send events
+  group Event handling
+    EventService -> RulesService : Call listener
+    RulesService -> RulesService : Get matching rules
+    loop all rules
+      RulesService -> PersistenceService : Test rule against current\nevent / source / profile / session
+      PersistenceService --> RulesService
+      loop all actions
+        RulesService -> RulesService : Execute action
+      end
+      RulesService -> EventService : Send 'rule fired' Event
+      note right of EventService
+        Recurse Event Handling
+      end note
+    end
+    RulesService -> EventService : Send profile updated event
+    note right of EventService
+      Recurse Event Handling
+    end note
+  end
+end
+
+== Test condition filters ==
+loop all condition filters
+  ContextServlet -> ProfileService : Check condition against\ncurrent profile/session
+  ProfileService -> PersistenceService : Test condition against\ncurrent profile/session
+  PersistenceService --> ProfileService
+  ProfileService --> ContextServlet
+  note right of ContextServlet
+    Add filter results to answer
+  end note
+end
+
+== Tracked Conditions ==
+ContextServlet -> RulesService : Get tracked conditions
+loop all rules
+  RulesService -> PersistenceService : Test condition against\ncurrent event source
+  PersistenceService --> RulesService
+end
+RulesService --> ContextServlet
+note right of ContextServlet
+  Add tracked conditions to answer
+end note
+
+== Finalize ==
+ContextServlet -> ProfileService : Save profile and/or\nsession if needed
+ProfileService -> PersistenceService : Save profile to persistence
+PersistenceService --> ProfileService
+ProfileService --> ContextServlet
+
+ContextServlet ->] : Response
+
+@enduml
+----

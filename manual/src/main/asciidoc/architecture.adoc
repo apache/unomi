@@ -14,7 +14,7 @@
 
 === High-Level Architecture
 
-NOTE: Unomi 3.1 adds <<_multitenancy,multi-tenancy>>, <<_scheduler,task scheduling>>, and <<_clustering,persistence-based clustering>>. The diagram below focuses on core request processing.
+NOTE: Unomi 3.1 adds <<_multitenancy,multi-tenancy>> and <<_scheduler,task scheduling>> on top of the 3.0 platform (including <<_clustering,persistence-based clustering>>). The diagram below focuses on core request processing.
 
 [plantuml]
 ----
@@ -61,11 +61,6 @@ Rel(karaf, unomi, "Hosts")
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<core>> LightBlue
-  BackgroundColor<<persistence>> LightGreen
-  BackgroundColor<<security>> LightYellow
-}
 
 package "Core Services" {
   [Profile Service] <<core>>
@@ -141,11 +136,6 @@ end note
 ----
 @startuml
 skinparam componentStyle uml2
-skinparam component {
-  BackgroundColor<<evaluation>> LightBlue
-  BackgroundColor<<query>> LightGreen
-  BackgroundColor<<persistence>> LightYellow
-}
 
 package "Condition Evaluation" {
   [ConditionDispatcher] <<evaluation>>
@@ -213,9 +203,6 @@ end note
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor LightBlue
-skinparam activityBorderColor DarkBlue
-skinparam arrowColor DarkBlue
 
 |Client|
 start

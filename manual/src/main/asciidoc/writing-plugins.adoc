@@ -626,7 +626,7 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:9.4.3
   opensearch:
-    image: opensearchproject/opensearch:3.4.0
+    image: opensearchproject/opensearch:3.7.0
 ----
 
 ==== Reference implementations in the core codebase

@@ -17,11 +17,11 @@
 
 This document explains how to use the V2 compatibility mode in Apache Unomi V3, which allows V2 client applications to work with Unomi V3 without requiring API keys.
 
-== Overview
+==== Overview
 
 The V2 compatibility mode is designed to ease the migration from Unomi V2 to V3 by allowing V2 clients to continue working without immediate changes to their authentication logic. This mode provides backward compatibility while still leveraging the multi-tenant architecture of V3.
 
-=== How It Works
+===== How It Works
 
 When V2 compatibility mode is enabled:
 
@@ -33,7 +33,7 @@ When V2 compatibility mode is enabled:
 
 This allows V2 clients to work with Unomi V3 immediately after migration, giving you time to gradually update client applications to use the new V3 authentication model.
 
-== Prerequisites
+==== Prerequisites
 
 Before enabling V2 compatibility mode, ensure that:
 
@@ -41,9 +41,9 @@ Before enabling V2 compatibility mode, ensure that:
 2. **Default Tenant Exists**: A default tenant exists that will be used for all operations
 3. **V3 Installation**: Unomi V3 is properly installed and configured
 
-== Configuration
+==== Configuration
 
-=== Enable V2 Compatibility Mode
+===== Enable V2 Compatibility Mode
 
 You can also set the environment variable `UNOMI_REST_AUTHENTICATION_V2COMPATIBILITYMODEENABLED=true` (maps to `org.apache.unomi.rest.authentication.v2CompatibilityModeEnabled` in `custom.system.properties`).
 
@@ -71,25 +71,24 @@ You can also set the environment variable `UNOMI_REST_AUTHENTICATION_V2COMPATIBI
    ./bin/start
    ```
 
-=== Configuration Management
+===== Configuration Management
 
 V2 compatibility mode is managed through configuration files only. This approach is safer and prevents accidental changes to authentication settings.
 
-== Migration Workflow
+==== Migration Workflow
 
-=== Step 1: Migrate Data
+===== Step 1: Migrate Data
 
-First, migrate your V2 data to V3 using the migration scripts:
+First, migrate your data with Apache Unomi stopped using the single shell command (bundled Groovy scripts under `META-INF/cxs/migration/` run automatically for versions after the origin you pass):
 
 ```bash
-# Run the migration scripts
-unomi:migrate-3.1.0-00-tenantDocumentIds
-unomi:migrate-3.1.0-10-tenantInitialization
+# From the Karaf shell (Unomi runtime stopped). Example when upgrading from 2.x through 3.1:
+unomi:migrate 2.0.0
 ```
 
-The `migrate-3.1.0-10-tenantInitialization` script creates a default tenant that will be used for V2 compatibility mode.
+The `migrate-3.1.0-10-tenantInitialization` script (run as part of that chain when migrating through 3.1) creates a default tenant used for V2 compatibility mode. See <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> and <<_shell_commands,Shell commands>>.
 
-=== Step 2: Enable V2 Compatibility Mode
+===== Step 2: Enable V2 Compatibility Mode
 
 Enable V2 compatibility mode by updating the configuration file:
 
@@ -98,14 +97,14 @@ Enable V2 compatibility mode by updating the configuration file:
 vi etc/org.apache.unomi.rest.authentication.cfg
 
 # Set v2.compatibilitymode.enabled = true
-# Set v2CompatibilityDefaultTenantId = your-tenant-id
+# Set v2.compatibilitymode.defaultTenantId = your-tenant-id
 
 # Restart the server to apply changes
 ./bin/stop
 ./bin/start
 ```
 
-=== Step 3: Test V2 Clients
+===== Step 3: Test V2 Clients
 
 Your V2 clients should now work without any changes:
 
@@ -122,7 +121,7 @@ RestAssured.given()
     .post("/context.json");
 ```
 
-=== Step 4: Gradual Migration
+===== Step 4: Gradual Migration
 
 Over time, gradually update your clients to use V3 authentication:
 
@@ -130,9 +129,9 @@ Over time, gradually update your clients to use V3 authentication:
 2. **Test with V3 authentication** while keeping V2 compatibility mode enabled
 3. **Disable V2 compatibility mode** once all clients are updated
 
-== Client Migration Examples
+==== Client Migration Examples
 
-=== From V2 to V3 (with V2 Compatibility Mode)
+===== From V2 to V3 (with V2 Compatibility Mode)
 
 **V2 Client (continues to work)**:
 ```java
@@ -157,16 +156,16 @@ given()
     .post("/context.json");
 ```
 
-=== Gradual Migration Strategy
+===== Gradual Migration Strategy
 
 1. **Phase 1**: Enable V2 compatibility mode, V2 clients continue working
 2. **Phase 2**: Develop and test V3 clients alongside V2 clients
 3. **Phase 3**: Migrate clients one by one to V3 authentication
 4. **Phase 4**: Disable V2 compatibility mode once all clients are migrated
 
-== Security Considerations
+==== Security Considerations
 
-=== V2 Compatibility Mode Security
+===== V2 Compatibility Mode Security
 
 When V2 compatibility mode is enabled:
 
@@ -176,7 +175,7 @@ When V2 compatibility mode is enabled:
 - **All operations** use the default tenant context
 - **Non-protected events** require no authentication (same as V2)
 
-=== Protected Events in V2 Compatibility Mode
+===== Protected Events in V2 Compatibility Mode
 
 In V2 compatibility mode, protected event types are configured dynamically using the V2 third-party configuration file. By default, the following event types are protected:
 
@@ -191,7 +190,7 @@ For protected events, clients must:
 
 All other event types are considered non-protected and require no authentication.
 
-=== V2 Third-Party Configuration
+===== V2 Third-Party Configuration
 
 The protected events and third-party providers are configured in the original V2 configuration file `etc/org.apache.unomi.thirdparty.cfg`. The system dynamically detects any number of providers using the pattern `thirdparty.{providerName}.{property}`:
 
@@ -209,7 +208,7 @@ thirdparty.myapp.allowedEvents=${org.apache.unomi.thirdparty.myapp.allowedEvents
 
 This uses the exact same configuration format as V2, ensuring complete compatibility with existing V2 setups. The system automatically detects and configures any provider that has a valid key.
 
-=== Configuration Management
+===== Configuration Management
 
 The V2 third-party configuration supports dynamic updates:
 
@@ -243,21 +242,21 @@ The V2 third-party configuration supports dynamic updates:
    ./bin/start
    ```
 
-=== Recommendations
+===== Recommendations
 
 1. **Use V2 compatibility mode temporarily** during migration
 2. **Plan for gradual migration** to V3 authentication
 3. **Monitor access patterns** during the transition
 4. **Disable V2 compatibility mode** once migration is complete
 
-== Troubleshooting
+==== Troubleshooting
 
-=== Common Issues
+===== Common Issues
 
 **V2 clients still not working**:
 - Check configuration file: `etc/org.apache.unomi.rest.authentication.cfg`
 - Verify `v2.compatibilitymode.enabled = true`
-- Ensure `v2CompatibilityDefaultTenantId` matches the tenant ID used during migration
+- Ensure `v2.compatibilitymode.defaultTenantId` matches the tenant ID used during migration
 - Ensure the tenant exists and is accessible
 
 **Authentication errors**:
@@ -270,7 +269,7 @@ The V2 third-party configuration supports dynamic updates:
 - Verify tenant exists in the tenant index
 - Check tenant configuration in the migration scripts
 
-=== Debugging
+===== Debugging
 
 Enable debug logging for authentication:
 
@@ -286,7 +285,7 @@ Check authentication filter logs:
 log:display | grep AuthenticationFilter
 ```
 
-== Disabling V2 Compatibility Mode
+==== Disabling V2 Compatibility Mode
 
 Once all clients are migrated to V3 authentication:
 
@@ -305,11 +304,11 @@ Once all clients are migrated to V3 authentication:
 
 4. **Monitor for any issues** and address them before final deployment
 
-== Testing V2 Compatibility Mode
+==== Testing V2 Compatibility Mode
 
 The existing test framework supports testing V2 compatibility mode using system properties.
 
-=== Running Tests in V2 Compatibility Mode
+===== Running Tests in V2 Compatibility Mode
 
 To run tests with V2 compatibility mode enabled:
 
@@ -322,7 +321,7 @@ export UNOMI_V2_COMPATIBILITY_MODE=true
 mvn test
 ```
 
-=== Test Framework Integration
+===== Test Framework Integration
 
 The test framework automatically detects V2 compatibility mode and uses the appropriate client:
 
@@ -331,7 +330,7 @@ The test framework automatically detects V2 compatibility mode and uses the appr
 
 This allows you to test both V2 compatibility mode and normal V3 mode using the same test suite.
 
-=== Example Test Execution
+===== Example Test Execution
 
 ```bash
 # Test with V2 compatibility mode (server should be configured for V2 compatibility)
@@ -341,7 +340,7 @@ mvn test -Dunomi.v2.compatibility.mode=true -Dunomi.url=http://localhost:8181
 mvn test -Dunomi.url=http://localhost:8181
 ```
 
-== Conclusion
+==== Conclusion
 
 The V2 compatibility mode provides a smooth migration path from Unomi V2 to V3, allowing you to:
 

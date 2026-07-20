@@ -11,6 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[#_javascript_tracker_guide]
 === Implementing a JavaScript Tracker
 
 This guide explains how to implement a basic JavaScript tracker for Apache Unomi from scratch. This will help you understand the underlying concepts and API interactions, whether you're building a custom tracker or integrating Apache Unomi into an existing application.

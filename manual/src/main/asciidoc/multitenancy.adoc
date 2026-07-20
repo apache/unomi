@@ -17,11 +17,11 @@
 Apache Unomi 3.1+ isolates profiles, events, segments, rules, and schemas per tenant.
 Each tenant has public and private API keys. See also <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> for authentication changes.
 
-== Overview
+==== Overview
 
 Apache Unomi provides robust multi-tenancy support, allowing multiple organizations to use the same Unomi instance while maintaining complete data isolation. Each tenant gets their own dedicated space with separate data storage, configuration, and API keys.
 
-== Key Features
+==== Key Features
 
 * Complete data isolation between tenants
 * Dual API key system (public and private keys)
@@ -30,9 +30,9 @@ Apache Unomi provides robust multi-tenancy support, allowing multiple organizati
 * Migration tools for existing data
 * Support for REST APIs (and GraphQL when enabled)
 
-== Authentication Methods
+==== Authentication Methods
 
-=== Public API Key
+===== Public API Key
 Used for public endpoints (e.g., context requests) that are typically accessed from client-side applications.
 
 [source,http]
@@ -40,7 +40,7 @@ Used for public endpoints (e.g., context requests) that are typically accessed f
 X-Unomi-Api-Key: <PUBLIC_KEY>
 ----
 
-=== Private API Key
+===== Private API Key
 Used for administrative operations and sensitive endpoints. Requires Basic Authentication using tenant ID and private key.
 
 [source,bash]
@@ -50,9 +50,9 @@ Used for administrative operations and sensitive endpoints. Requires Basic Authe
 
 NOTE: curl automatically handles Base64 encoding when using the `--user` option, so you don't need to manually encode the credentials.
 
-== Getting Started
+==== Getting Started
 
-=== Creating Your First Tenant
+===== Creating Your First Tenant
 
 To create a new tenant, use the Tenant API endpoint:
 
@@ -70,34 +70,61 @@ curl -X POST http://localhost:8181/cxs/tenants \
   }'
 ----
 
-The response includes the tenant with automatically generated API keys:
+The create response includes the tenant with **masked** API key metadata only (plaintext secrets are not returned and cannot be recovered from storage):
 
 [source,json]
 ----
 {
   "itemId": "my-tenant",
-  "name": "My Organization",
-  "description": "My organization description",
+  "itemType": "tenant",
+  "status": "ACTIVE",
   "apiKeys": [
     {
-      "type": "PUBLIC",
-      "key": "abc123...",
-      "created": "2024-01-01T00:00:00Z"
+      "maskedKey": "unomi_v1_****ab12",
+      "keyType": "PUBLIC",
+      "revoked": false
     },
     {
-      "type": "PRIVATE",
-      "key": "xyz789...",
-      "created": "2024-01-01T00:00:00Z"
+      "maskedKey": "unomi_v1_****cd34",
+      "keyType": "PRIVATE",
+      "revoked": false
     }
-  ]
+  ],
+  "properties": {
+    "name": "My Organization",
+    "description": "My organization description"
+  }
 }
 ----
 
-NOTE: Both public and private API keys are automatically generated when creating a tenant. Extract the `key` value from the appropriate API key object in the `apiKeys` array.
+IMPORTANT: Store plaintext keys immediately after calling the key creation endpoint. Creating a tenant generates keys server-side, but only masked values appear on the tenant resource. Regenerate (replace) keys to obtain `plainTextKey`:
 
-=== Making Your First API Call
+[source,bash]
+----
+curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/apikeys?type=PUBLIC" \
+  --user karaf:karaf
 
-==== Public Endpoint Example (Context Request)
+curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/apikeys?type=PRIVATE" \
+  --user karaf:karaf
+----
+
+Example response:
+
+[source,json]
+----
+{
+  "apiKey": {
+    "maskedKey": "unomi_v1_****ab12",
+    "keyType": "PUBLIC",
+    "revoked": false
+  },
+  "plainTextKey": "unomi_v1_0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
+}
+----
+
+===== Making Your First API Call
+
+====== Public Endpoint Example (Context Request)
 
 [source,bash]
 ----
@@ -114,7 +141,7 @@ curl http://localhost:8181/cxs/context.json \
   }'
 ----
 
-==== Private Endpoint Example (Profile Management)
+====== Private Endpoint Example (Profile Management)
 
 [source,bash]
 ----
@@ -123,9 +150,9 @@ curl -X GET http://localhost:8181/cxs/profiles \
   -H "Content-Type: application/json"
 ----
 
-== Configuration
+==== Configuration
 
-=== Basic Setup
+===== Basic Setup
 
 Configure default tenant settings in `etc/org.apache.unomi.tenant.cfg`:
 
@@ -145,7 +172,7 @@ tenant.apikey.rotation.warning.days=7
 tenant.security.roles.prefix=unomi_tenant_
 ----
 
-=== Security Provider Configuration
+===== Security Provider Configuration
 
 For Elasticsearch:
 [source,properties]
@@ -159,9 +186,9 @@ For OpenSearch:
 tenant.security.provider=opensearch
 ----
 
-== Security Model
+==== Security Model
 
-=== Roles and Permissions
+===== Roles and Permissions
 
 Apache Unomi implements a hierarchical role-based access control (RBAC) system. The main roles are:
 
@@ -197,11 +224,11 @@ The configuration uses the format `operation.roles.OPERATION_NAME=ROLE1,ROLE2,..
 - Multiple roles are comma-separated
 - Changes take effect immediately without restart
 
-=== Operation Configuration
+===== Operation Configuration
 
 Operations in Unomi can be customized to require specific roles. This is configured through OSGi configuration files.
 
-==== Configuration File
+====== Configuration File
 
 Create or modify the file `etc/org.apache.unomi.security.cfg`:
 
@@ -228,7 +255,7 @@ The configuration uses the format `operation.roles.OPERATION_NAME=ROLE1,ROLE2,..
 - Multiple roles are comma-separated
 - Changes take effect immediately without restart
 
-==== Common Operations
+====== Common Operations
 
 Here are some common operations and their typical role requirements:
 
@@ -244,7 +271,7 @@ Here are some common operations and their typical role requirements:
 |RULE_UPDATE |Update business rules |ROLE_UNOMI_TENANT_ADMIN
 |===
 
-==== Custom Operations
+====== Custom Operations
 
 To define custom operations:
 
@@ -270,7 +297,7 @@ public void performCustomOperation() {
 }
 ----
 
-=== Subjects and Authentication
+===== Subjects and Authentication
 
 A Subject represents an authenticated entity in the system. There are three types of subjects:
 
@@ -298,7 +325,7 @@ tenantSubject.getPrincipals().add(new UserPrincipal("tenant-id"));
 tenantSubject.getPrincipals().add(new RolePrincipal("ROLE_UNOMI_TENANT_ADMIN"));
 ----
 
-=== Tenant-Role Relationship
+===== Tenant-Role Relationship
 
 Each tenant has associated public and private roles:
 
@@ -310,7 +337,7 @@ Each tenant has associated public and private roles:
 * Full access to tenant data
 * Can perform all tenant operations
 
-=== Operation Validation
+===== Operation Validation
 
 The security service validates operations based on:
 
@@ -331,7 +358,7 @@ securityService.executeAsSystemSubject(() -> {
 });
 ----
 
-=== Best Practices
+===== Best Practices
 
 1. Role Assignment:
 * Assign minimum required roles
@@ -353,9 +380,9 @@ securityService.executeAsSystemSubject(() -> {
 * Validate operations before execution
 * Maintain proper audit trails
 
-== Tenant Management
+==== Tenant Management
 
-=== Listing Tenants
+===== Listing Tenants
 
 [source,bash]
 ----
@@ -364,7 +391,7 @@ curl -X GET http://localhost:8181/cxs/tenants \
   -H "Content-Type: application/json"
 ----
 
-=== Updating a Tenant
+===== Updating a Tenant
 
 [source,bash]
 ----
@@ -377,22 +404,22 @@ curl -X PUT http://localhost:8181/cxs/tenants/my-tenant \
   }'
 ----
 
-=== Regenerating API Keys
+===== Regenerating API Keys
+
+Regenerating replaces any existing key of the same type. Store `plainTextKey` from the response immediately.
 
 [source,bash]
 ----
-curl -X POST http://localhost:8181/cxs/tenants/my-tenant/apikeys \
-  --user karaf:karaf \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "PUBLIC",
-    "validityDays": 30
-  }'
+curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/apikeys?type=PUBLIC&validityDays=30" \
+  --user karaf:karaf
+
+curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/apikeys?type=PRIVATE" \
+  --user karaf:karaf
 ----
 
-NOTE: You can specify `type` as `PUBLIC` or `PRIVATE`, and optionally set `validityDays` for key expiration. If omitted, both keys will be regenerated.
+NOTE: `type` must be `PUBLIC` or `PRIVATE`. Optional `validityDays` sets expiration; omit it (or use `0`) for no expiration.
 
-=== Deleting a Tenant
+===== Deleting a Tenant
 
 [source,bash]
 ----
@@ -401,7 +428,7 @@ curl -X DELETE http://localhost:8181/cxs/tenants/my-tenant \
   -H "Content-Type: application/json"
 ----
 
-== GraphQL Support
+==== GraphQL Support
 
 GraphQL endpoints support both public and private authentication methods:
 
@@ -415,7 +442,7 @@ curl -X POST http://localhost:8181/graphql \
   }'
 ----
 
-=== Tenant-Specific GraphQL Schemas
+===== Tenant-Specific GraphQL Schemas
 
 The GraphQL API provides tenant-specific schemas, meaning each tenant can have a unique GraphQL schema based on their property types and configurations. This ensures that tenants only see the data and fields relevant to their specific implementation.
 
@@ -428,9 +455,9 @@ When a tenant accesses the GraphQL API:
 
 For complete details on the GraphQL multi-tenancy implementation, refer to the <<_graphql_api,GraphQL API>> section of the documentation.
 
-== Monitoring and Management
+==== Monitoring and Management
 
-=== Monitoring API Usage
+===== Monitoring API Usage
 
 Unomi exposes read-only usage metrics per tenant. Quota enforcement belongs in your upstream gateway or control plane.
 
@@ -445,7 +472,7 @@ Supported `period` values are `current-month` (default), `YYYY-MM` (for example 
 
 The response includes profile, scope, segment, and rule totals, per-scope segment/rule breakdown (`scopeUsages`), monthly `eventCount` for the requested period (`periodStart` / `periodEnd` in epoch millis), active API key count, storage document count, in-memory REST request count since process start, and `collectedAt` (epoch millis). Values refresh on a background schedule and may be stale until the next collection cycle.
 
-=== Event retention purge
+===== Event retention purge
 
 Upstream control planes can delete old tenant events through Unomi instead of talking to the search cluster directly:
 
@@ -458,56 +485,56 @@ curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/purge/events?retention
 
 The response reports how many events matched the retention cutoff before deletion ran (`eventsMatched`) and whether the delete-by-query completed successfully (`purgeRequested`); a `purgeRequested` of `false` means the deletion failed and the request returns HTTP 500 (see server logs for the cause). The minimum accepted retention is seven days, to guard against accidentally purging recent or active event data.
 
-=== Data Migration
+===== Data Migration
 
-Migrate data between tenants:
+There is no REST endpoint to copy data between tenants. Version upgrades that introduce or adjust multi-tenancy run through the Karaf shell with Unomi stopped:
 
 [source,bash]
 ----
-curl -X POST http://localhost:8181/cxs/tenants/source-tenant/migrate/target-tenant \
-  --user karaf:karaf \
-  -H "Content-Type: application/json"
+unomi:migrate 3.0.0
 ----
 
-== Best Practices
+See <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> and <<_shell_commands,Shell commands>>.
 
-=== API Key Management
+==== Best Practices
+
+===== API Key Management
 * Rotate keys regularly using the key regeneration endpoint
 * Use public keys only for public endpoints
 * Never expose private keys in client-side code
 * Monitor API key usage and implement rate limiting
 
-=== Resource Management
+===== Resource Management
 * Set appropriate quotas for each tenant
 * Monitor resource usage through the tenant usage API (`GET /cxs/tenants/{tenantId}/usage`)
 * Configure alerts for quota limits
 * Regularly review and adjust limits based on usage patterns
 
-=== Security
+===== Security
 * Always use HTTPS in production
 * Implement proper key rotation policies
 * Conduct regular security audits
 * Monitor for suspicious activity patterns
 * Keep tenant configurations up to date
 
-== Troubleshooting
+==== Troubleshooting
 
-=== Common Issues
+===== Common Issues
 
-==== 401 Unauthorized
+====== 401 Unauthorized
 * Verify API key is correct
 * Check if using public key for private endpoint
 * Ensure tenant ID matches the API key
 
-==== 400 Bad Request
+====== 400 Bad Request
 * Check if API key header is present
 * Verify request format is correct
 
-==== 404 Not Found
+====== 404 Not Found
 * Verify tenant ID exists
 * Check if endpoint path is correct
 
-=== Logging
+===== Logging
 
 Enable debug logging for tenant-related operations:
 
@@ -516,47 +543,43 @@ Enable debug logging for tenant-related operations:
 log4j.logger.org.apache.unomi.tenant=DEBUG
 ----
 
-== Migration Guide
+==== Migration Guide
 
-=== Migrating Existing Data
+===== Migrating Existing Data
 
-To migrate existing data to use multi-tenancy:
+To attach existing 3.0 data to the multi-tenant model when upgrading to 3.1:
+
+1. Stop Apache Unomi.
+2. Run the bundled migration from the Karaf shell:
++
+[source,bash]
+----
+unomi:migrate 3.0.0
+----
++
+This runs the `migrate-3.1.0-*` Groovy scripts (tenant document IDs, system item IDs, default tenant initialization, legacy queryBuilder IDs, and related fixes). See <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>>.
+3. Start Unomi 3.1 and regenerate tenant API keys if you need the plaintext secrets (create/migrate responses only expose masked keys). See <<_multitenancy,Creating Your First Tenant>> / API key regeneration below.
+
+===== Verification
+
+After migration, verify tenant context and data access:
 
 [source,bash]
 ----
-# Step 1: Create new tenant
-curl -X POST http://localhost:8181/cxs/tenants \
+# List tenants (JAAS admin)
+curl -X GET http://localhost:8181/cxs/tenants \
   --user karaf:karaf \
-  -H "Content-Type: application/json" \
-  -d '{
-    "requestedId": "new-tenant",
-    "properties": {
-      "name": "New Tenant",
-      "description": "Migrated tenant"
-    }
-  }'
+  -H "Accept: application/json"
 
-# Step 2: Migrate data
-curl -X POST http://localhost:8181/cxs/tenants/migration/default/new-tenant \
-  --user karaf:karaf \
-  -H "Content-Type: application/json"
+# List profiles for a tenant (tenant private key auth)
+curl -X GET http://localhost:8181/cxs/profiles \
+  --user "TENANT_ID:PRIVATE_KEY" \
+  -H "Accept: application/json"
 ----
 
-=== Verification
+==== Working with Events and Rules
 
-After migration, verify data integrity:
-
-[source,bash]
-----
-# Check profile count
-curl -X GET http://localhost:8181/cxs/tenants/new-tenant/profiles/count \
-  --user karaf:karaf \
-  -H "Content-Type: application/json"
-----
-
-== Working with Events and Rules
-
-=== Creating Custom Event Types
+===== Creating Custom Event Types
 
 First, create a JSON schema for your custom event type and deploy it using the JSON schema endpoint:
 
@@ -656,7 +679,7 @@ curl -X POST http://localhost:8181/cxs/jsonSchema/validateEvent \
   }'
 ----
 
-=== Sending Custom Events
+===== Sending Custom Events
 
 Once the event type is defined, you can send events:
 
@@ -692,7 +715,7 @@ curl -X POST http://localhost:8181/cxs/context.json \
   }'
 ----
 
-=== Creating Rules for Event Processing
+===== Creating Rules for Event Processing
 
 Create a rule to update profile properties based on purchase events:
 
@@ -735,7 +758,7 @@ curl -X POST http://localhost:8181/cxs/rules \
   }'
 ----
 
-=== Testing the Event Processing
+===== Testing the Event Processing
 
 To test that everything works:
 
@@ -793,9 +816,9 @@ Expected response will show updated properties:
 }
 ----
 
-=== Advanced Rule Examples
+===== Advanced Rule Examples
 
-==== Segmenting High-Value Customers
+====== Segmenting High-Value Customers
 
 Create a segment for customers with high total revenue:
 
@@ -821,7 +844,7 @@ curl -X POST http://localhost:8181/cxs/segments \
   }'
 ----
 
-==== Tracking Purchase Frequency
+====== Tracking Purchase Frequency
 
 Create a rule to track days between purchases:
 

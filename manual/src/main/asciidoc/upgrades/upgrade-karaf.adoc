@@ -42,7 +42,6 @@ TIP: JIRA context for prerequisites (Cellar removal, CXF 3.x ceiling, UNOMI-876 
 [plantuml]
 ----
 @startuml
-skinparam activityBackgroundColor #F8F8F8
 
 start
 :New target Karaf version;

@@ -17,6 +17,8 @@
 This connectors makes it possible to push and pull data to/from the Salesforce CRM. It can copy information between
 Apache Unomi profiles and Salesforce Leads.
 
+NOTE: On Unomi **3.1**, profile and rule APIs used by the connector operate in a **tenant** context. Ensure the Unomi side uses tenant private-key or JAAS credentials with an explicit tenant (see <<_multitenancy,Multi-tenancy>>). The connector's Salesforce OAuth configuration is unchanged.
+
 ==== Getting started
 
 ===== Salesforce account setup

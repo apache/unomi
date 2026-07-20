@@ -20,7 +20,7 @@ To execute the migration, you should have one Elasticsearch 7 running (your sour
 
 This upgrade relies on a script. If you are sharing the Elasticsearch instance with other projects, it might need to be adjusted.
 
-The script migration_es7-es9.sh at the root of the project and handles:
+The script `migration_es7-es9.sh` at the root of the project handles:
 * Regular indices and rollover indices with their aliases
 * ILM policies migration
 * Data reindexing from ES7 to ES9
@@ -33,7 +33,7 @@ The script migration_es7-es9.sh at the root of the project and handles:
 * `curl` for HTTP requests
 * Access to both ES7 (source) and ES9 (destination) clusters
 * *ES9 must have `reindex.remote.whitelist` configured* (see configuration below)
-* Ensure the machine where ES9 is running have access to the ES7 environment
+* Ensure the machine where ES9 is running has access to the ES7 environment
 
 Install `jq` if not already installed:
 
@@ -73,6 +73,9 @@ export ES9_USER="elastic"
 export ES9_PASSWORD="your-es9-password"
 
 export INDEX_PREFIX="context-"
+# Script default includes a trailing hyphen and concatenates patterns (context-profile, …).
+# Unomi system property org.apache.unomi.*.index.prefix is the prefix *without* a hyphen (`context`);
+# the persistence layer adds `-` when forming index names.
 export BATCH_SIZE="1000"
 ----
 
@@ -89,7 +92,7 @@ export BATCH_SIZE="1000"
 | ES9_HOST | Elasticsearch 9 URL | http://localhost:9201
 | ES9_USER | ES9 username | elastic
 | ES9_PASSWORD | ES9 password | password
-| INDEX_PREFIX | Prefix for index names | context-
+| INDEX_PREFIX | Prefix for index names (script concatenates; include trailing `-`) | context-
 | BATCH_SIZE | Reindex batch size | 1000
 |===
 

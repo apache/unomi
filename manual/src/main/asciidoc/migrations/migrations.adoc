@@ -14,6 +14,39 @@
 
 This section contains information and steps to migrate between major Unomi versions.
 
+Use this decision guide to pick the right runbook:
+
+* **Unomi 2.x → 3.0** (platform): <<_migrate_from_2_x_to_3_0,Migrate from 2.x to 3.0>> (+ <<_migrate_from_elasticsearch_7_to_elasticsearch_9,ES7→ES9>> if needed)
+* **Unomi 3.0 → 3.1** (tenants / API keys): <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> (`unomi:migrate`); optional <<_v2_compatibility_mode,V2 compatibility mode>> for 2.x clients
+* **Elasticsearch → OpenSearch** (same Unomi version, backend swap): <<_migrate_from_elasticsearch_to_opensearch,Migrate from Elasticsearch to OpenSearch>> (not `unomi:migrate`)
+
+[plantuml]
+----
+@startuml
+skinparam shadowing false
+title Migration decision (Unomi 3.x)
+
+start
+if (Changing Unomi version?) then (yes)
+  if (From 2.x?) then (yes)
+    :2.x to 3.0 platform upgrade;
+    :ES7 to ES9 data copy if needed;
+    if (Need multi-tenancy / API keys?) then (yes)
+      :3.0 to 3.1 via unomi:migrate;
+      :Optional V2 compatibility mode;
+    endif
+  else (from 3.0)
+    :3.0 to 3.1 via unomi:migrate;
+  endif
+else (no)
+endif
+if (Switching Elasticsearch to OpenSearch?) then (yes)
+  :Backend cutover guide\n(not unomi:migrate);
+endif
+stop
+@enduml
+----
+
 include::writing-migration-scripts.adoc[]
 
 === V2/V3 API Compatibility Guide

@@ -242,7 +242,7 @@ To merge the branch into master.
 
 Apache Unomi 3.x does not embed a search engine. Install Elasticsearch 9.x or OpenSearch 3.x as a standalone service. See <<_migrate_from_2_x_to_3_0,Migrate from 2.x to 3.0>> for version requirements.
 
-===== Option 1: Using ElasticSearch
+===== Option 1: Using Elasticsearch
 
 1. Download Elasticsearch 9.4.3 from: https://www.elastic.co/downloads/past-releases/elasticsearch-9-4-3[https://www.elastic.co/downloads/past-releases/elasticsearch-9-4-3]
 
@@ -252,7 +252,7 @@ Apache Unomi 3.x does not embed a search engine. Install Elasticsearch 9.x or Op
 
 [source,yaml]
 ----
-cluster.name: contextElasticSearch
+cluster.name: contextElasticsearch
 ----
 +
 4. Launch the server using:
@@ -274,14 +274,14 @@ The recommended way to run OpenSearch is using Docker Compose:
 version: '3.8'
 services:
   opensearch-node1:
-    image: opensearchproject/opensearch:3
+    image: opensearchproject/opensearch:3.7.0
     environment:
       - cluster.name=opensearch-cluster
       - node.name=opensearch-node1
       - discovery.type=single-node
       - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-MyStrongPassw0rd!}
     ulimits:
       memlock:
         soft: -1
@@ -324,7 +324,7 @@ After your search engine is running, you can start Unomi using the appropriate c
 
 [source]
 ----
-# For ElasticSearch
+# For Elasticsearch
 unomi:start elasticsearch
 
 # For OpenSearch
@@ -470,7 +470,7 @@ which will output something like this :
 [source]
 ----
 Matching Java Virtual Machines (3):
-    11.0.5, x86_64:	"OpenJDK 11.0.5"	/Library/Java/JavaVirtualMachines/openjdk-11.jdk/Contents/Home
+    17.0.x, x86_64:	"OpenJDK 17"	/Library/Java/JavaVirtualMachines/openjdk-17.jdk/Contents/Home
     1.8.0_181, x86_64:	"Java SE 8"	/Library/Java/JavaVirtualMachines/jdk1.8.0_181.jdk/Contents/Home
     1.7.0_80, x86_64:	"Java SE 7"	/Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
 
@@ -507,7 +507,7 @@ integration tests at least once before using the server to make sure that everyt
 to use these tests is to run them from a continuous integration server such as Jenkins, Apache Gump, Atlassian Bamboo or
  others.
 
-Note : the integration tests require a JDK 11 or more recent !
+Note : the integration tests require a JDK **17** or more recent !
 
 To run the tests simply activate the following profile:
 
@@ -518,7 +518,7 @@ mvn -P integration-tests clean install
 
 ===== Selecting the Search Engine for Integration Tests
 
-By default, integration tests target ElasticSearch. To run them against OpenSearch, you can use either:
+By default, integration tests target Elasticsearch. To run them against OpenSearch, you can use either:
 
 * **Using the build script** (recommended):
 +
@@ -557,6 +557,7 @@ A default test page is provided at the following URL:
    http://localhost:8181/index.html
 ----
 
-This test page will trigger the loading of the /cxs/context.js script, which will try to retrieving the user context
-or create a new one if it doesn't exist yet. It also contains an experimental integration with Facebook Login, but it
-doesn't yet save the context back to the context server.
+This test page loads `/cxs/context.js`, which retrieves or creates a user context.
+On Unomi 3.1, public context endpoints require a tenant public API key (`X-Unomi-Api-Key`) unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled.
+Create a tenant and regenerate keys first (see <<_five_minutes_quickstart,5-minute quickstart>> or <<_multitenancy,Multi-tenancy>>).
+The page also contains an experimental Facebook Login integration that does not yet save the context back to the server.
