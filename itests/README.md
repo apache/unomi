@@ -32,7 +32,9 @@ and data migration.
   `docker-maven-plugin`).
 - **Maven Failsafe** runs a single entry point — `AllITs` — which aggregates all test
   classes. Each test class extends `BaseIT`, which handles Karaf startup, OSGi service
-  injection, and common test utilities.
+  injection, and common test utilities. Persistence is selected via
+  `unomi.persistence.provider` (Elasticsearch / OpenSearch today; see
+  [Pluggable persistence providers](#pluggable-persistence-providers)).
 
 A full IT run typically takes 20–30 minutes. The Karaf instance is created fresh for each
 run under `itests/target/exam/` with a UUID directory name.
@@ -281,6 +283,86 @@ mvn clean install -P integration-tests -Dit.test=org.apache.unomi.itests.Context
 ```
 
 See the [Maven Failsafe plugin docs](https://maven.apache.org/surefire/maven-failsafe-plugin/examples/single-test.html) for more filtering options.
+
+---
+
+## Pluggable persistence providers
+
+Unomi’s runtime persistence is an OSGi capability (`unomi.persistence;provider:=…`).
+The IT harness follows the same idea: `BaseIT` resolves a test-only
+`PersistenceITBackend` instead of hard-coding Elasticsearch / OpenSearch.
+
+### Provider selection
+
+| Property | Role |
+|----------|------|
+| `unomi.persistence.provider` | Preferred provider id (`elasticsearch`, `opensearch`, or an extension id) |
+| `unomi.search.engine` | **Deprecated alias** — used when `unomi.persistence.provider` is unset |
+| `unomi.persistence.it.backend` | Optional FQCN of a `PersistenceITBackend` implementation |
+
+Default CI cells set both `unomi.persistence.provider` and the deprecated
+`unomi.search.engine` so existing `--use-opensearch` / scripts keep working.
+
+### Built-in backends
+
+| Id | Class | Suite for CI |
+|----|-------|--------------|
+| `elasticsearch` | `ElasticsearchITBackend` | `AllITs` (default) |
+| `opensearch` | `OpenSearchITBackend` | `AllITs` with `-Duse.opensearch=true` |
+
+### Search-only vs core behavioural tests
+
+`AllITs` and `CorePersistenceITs` share the **same** test membership for maximum coverage.
+Tests that need HTTP admin / snapshot / rollover APIs stay in the suite and use
+`Assume` + `PersistenceITCapabilities` so unsupported backends **skip** (reported as
+skipped, not green false-pass):
+
+| Class | Gate |
+|-------|------|
+| `Migrate16xToCurrentVersionIT` | `snapshotRestoreMigration()` |
+| `RolloverIT` | `indexRolloverApi().isPresent()` + `httpAdminApi()`; switch on `LIFECYCLE` / `STATE_MANAGEMENT` |
+| `HealthCheckIT` | Always asserts `karaf` / `unomi` / `persistence`; optional `providerNamedHealthProbe` / `clusterHealthProbe` |
+
+`HealthCheckIT` is not search-only: it runs on every provider.
+
+Elasticsearch / OpenSearch CI continues to use `AllITs`. Portable / non-search cells
+(PostgreSQL, …) should run `CorePersistenceITs` (identical membership, clearer name).
+
+```bash
+mvn clean install -P integration-tests -Dit.test=org.apache.unomi.itests.CorePersistenceITs
+```
+
+Capability flags gate remaining special-cases
+(e.g. `snapshotRestoreMigration`, `flattenedRangeQueryResult`, `indexRolloverApi`)
+so providers skip what they cannot support instead of checking product names.
+
+### Adding a third-party backend
+
+1. Implement `org.apache.unomi.itests.persistence.PersistenceITBackend`
+   (feature options, distribution name for `unomi:setup`, ConfigAdmin PID,
+   capabilities, await-ready / HTTP helpers as needed).
+2. Put the implementation on the Failsafe test classpath.
+3. Register it either:
+   - in `META-INF/services/org.apache.unomi.itests.persistence.PersistenceITBackend`, or
+   - via `-Dunomi.persistence.it.backend=com.example.MyPersistenceITBackend`
+4. Select it with `-Dunomi.persistence.provider=<your-id>`.
+5. Run `CorePersistenceITs` (same membership as `AllITs`). Incomplete SPI
+   implementations may still fail behavioural tests — unsupported HTTP-admin
+   features are skipped via `Assume`, not removed from the suite.
+
+`unomi-itests` publishes a **test-jar** (`mvn -pl itests install`) so external modules can
+depend on `BaseIT`, `CorePersistenceITs`, and `PersistenceITBackend` without forking
+sources. Optionally implement `prepareBeforeUnomiSetup` to patch ConfigAdmin (e.g. JDBC
+DataSource) after `UnomiManagementService` is up and before `unomi:setup`.
+
+Example Failsafe exclude when running `AllITs` against a non-search provider:
+
+```xml
+<excludedGroups>org.apache.unomi.itests.persistence.SearchBackendIT</excludedGroups>
+```
+
+(Note: JUnit 4 category filtering applies to classes Failsafe launches directly;
+prefer `CorePersistenceITs` when using the suite entry point.)
 
 ---
 

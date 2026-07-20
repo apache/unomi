@@ -26,19 +26,23 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.geonames.services.GeonameEntry;
 import org.apache.unomi.itests.BaseIT;
+import org.apache.unomi.itests.persistence.SearchBackendIT;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.apache.unomi.shell.migration.utils.MigrationUtils;
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
 
+@Category(SearchBackendIT.class)
 public class Migrate16xToCurrentVersionIT extends BaseIT {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(Migrate16xToCurrentVersionIT.class);
@@ -54,7 +58,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
 
     // Elasticsearch connection constants
     private static String getEsBaseUrl() {
-        return "http://localhost:" + getSearchPort();
+        return getSearchEngineBaseUrl();
     }
     private static String getEsSnapshotRepo() {
         return getEsBaseUrl() + "/_snapshot/snapshots_repository/";
@@ -109,8 +113,9 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         // This is called from BaseIT and will run before any migration setup
         checkSearchEngine();
 
-        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-            System.out.println("Migration from 1.x to 2.x not supported for OpenSearch, skipping snapshot restore");
+        if (!persistenceCapabilities().snapshotRestoreMigration()) {
+            System.out.println("snapshotRestoreMigration not supported for provider "
+                    + getPersistenceBackend().providerId() + " — starting Unomi without legacy snapshot restore");
             super.waitForStartup();
             return;
         }
@@ -119,7 +124,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         LOGGER.info("Restoring snapshot into search engine...");
 
         // Restore snapshot from 1.6.x
-        try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(true, null)) {
+        try (CloseableHttpClient httpClient = createSearchEngineHttpClient()) {
             // Create snapshot repo
             HttpUtils.executePutRequest(httpClient, getEsSnapshotRepo(), resourceAsString(RESOURCE_CREATE_SNAPSHOTS_REPO), null);
             // Get snapshot, insure it exists
@@ -199,10 +204,10 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
      */
     @Test
     public void checkMigratedData() throws Exception {
-        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-            System.out.println("Migration from 1.x to 2.x not supported for OpenSearch, skipping checks");
-            return;
-        }
+        Assume.assumeTrue(
+                "snapshotRestoreMigration not supported for provider "
+                        + getPersistenceBackend().providerId(),
+                persistenceCapabilities().snapshotRestoreMigration());
         checkMergedProfilesAliases();
         checkProfileInterests();
         checkProfileTotalNbOfVisits();
@@ -654,10 +659,10 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
      * Test that the default tenant was created during migration (migrate-3.1.0-10-tenantInitialization)
      */
     private void checkDefaultTenantCreated() throws Exception {
-        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-            System.out.println("Migration from 1.x to 2.x not supported for OpenSearch, skipping checks");
-            return;
-        }
+        Assume.assumeTrue(
+                "snapshotRestoreMigration not supported for provider "
+                        + getPersistenceBackend().providerId(),
+                persistenceCapabilities().snapshotRestoreMigration());
 
         // Check that the default tenant index exists
         Assert.assertTrue("Default tenant index should exist", MigrationUtils.indexExists(httpClient, getEsBaseUrl(), INDEX_PREFIX_CONTEXT + "tenant"));
@@ -692,10 +697,10 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
      * have proper tenant information, audit metadata, and are accessible via definitionsService.
      */
     private void checkDefinitionsServiceObjectsAccessible() throws Exception {
-        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-            System.out.println("Migration from 1.x to 2.x not supported for OpenSearch, skipping checks");
-            return;
-        }
+        Assume.assumeTrue(
+                "snapshotRestoreMigration not supported for provider "
+                        + getPersistenceBackend().providerId(),
+                persistenceCapabilities().snapshotRestoreMigration());
 
         // Refresh the definitions service cache to ensure migrated items are loaded
         // This is necessary because items might be in persistence but not yet in cache
@@ -811,10 +816,10 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
      * all condition types that use legacy *ESQueryBuilder syntax to use the new generic QueryBuilder syntax.
      */
     private void checkLegacyQueryBuilderMigration() throws Exception {
-        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-            System.out.println("Migration from 1.x to 2.x not supported for OpenSearch, skipping checks");
-            return;
-        }
+        Assume.assumeTrue(
+                "snapshotRestoreMigration not supported for provider "
+                        + getPersistenceBackend().providerId(),
+                persistenceCapabilities().snapshotRestoreMigration());
 
         // Refresh the definitions service cache to ensure migrated items are loaded
         definitionsService.refresh();

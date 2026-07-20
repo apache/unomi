@@ -18,8 +18,12 @@ package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.unomi.itests.persistence.PersistenceITCapabilities;
+import org.apache.unomi.itests.persistence.SearchBackendIT;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
+import org.junit.Assume;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
@@ -31,6 +35,7 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /**
  * Verifies that Unomi correctly wires up the event index's rollover lifecycle on both Elasticsearch (ILM)
@@ -52,9 +57,14 @@ import static org.junit.Assert.assertTrue;
  * that happens ISM has nothing left to transition to (the rollover policy's single state has no further
  * transitions) and marks that now-rolled-over index's management as completed/disabled, which would make a
  * hardcoded context-event-000001 check fail even though the rollover machinery worked correctly.
+ * <p>
+ * Non-search providers (e.g. PostgreSQL) leave {@link PersistenceITCapabilities.IndexRolloverApi#NONE}
+ * so this test is {@link Assume Assumed} skipped (not failed). Kept in {@link CorePersistenceITs}
+ * / {@link AllITs} for maximum suite coverage across backends.
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
+@Category(SearchBackendIT.class)
 public class RolloverIT extends BaseIT {
 
     private static final String EVENT_ALIAS = "context-event";
@@ -63,16 +73,36 @@ public class RolloverIT extends BaseIT {
 
     @Test
     public void testEventIndexRolloverIsProperlyConfigured() throws Exception {
+        PersistenceITCapabilities caps = persistenceCapabilities();
+        Assume.assumeTrue(
+                "Index rollover requires an HTTP rollover API (provider="
+                        + getPersistenceBackend().providerId() + ")",
+                caps.indexRolloverApi().isPresent());
+        Assume.assumeTrue(
+                "Index rollover assertions require httpAdminApi (provider="
+                        + getPersistenceBackend().providerId() + ")",
+                caps.httpAdminApi());
+
         try (CloseableHttpClient client = createSearchEngineHttpClient()) {
             String writeIndex = resolveCurrentWriteIndex(client);
             JsonNode indexRoot = getJson(client, "/" + writeIndex + "/_settings?flat_settings=true").get(writeIndex);
             assertTrue("Expected the event write index " + writeIndex + " to already exist", indexRoot != null);
             JsonNode settings = indexRoot.get("settings");
 
-            if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-                assertOpenSearchRolloverConfigured(client, settings, writeIndex);
-            } else {
-                assertElasticsearchRolloverConfigured(client, settings, writeIndex);
+            switch (caps.indexRolloverApi()) {
+                case STATE_MANAGEMENT:
+                    assertStateManagementRolloverConfigured(client, settings, writeIndex);
+                    break;
+                case LIFECYCLE:
+                    assertLifecycleRolloverConfigured(client, settings, writeIndex);
+                    break;
+                case NONE:
+                    fail("unreachable: indexRolloverApi was assumed present");
+                    break;
+                default: {
+                    PersistenceITCapabilities.IndexRolloverApi unexpected = caps.indexRolloverApi();
+                    throw new IllegalStateException("Unhandled IndexRolloverApi: " + unexpected);
+                }
             }
         }
     }
@@ -94,7 +124,7 @@ public class RolloverIT extends BaseIT {
         throw new AssertionError("Could not find a write index for alias " + EVENT_ALIAS);
     }
 
-    private void assertOpenSearchRolloverConfigured(CloseableHttpClient client, JsonNode settings, String writeIndex) throws IOException {
+    private void assertStateManagementRolloverConfigured(CloseableHttpClient client, JsonNode settings, String writeIndex) throws IOException {
         assertEquals("event index should reference the Unomi rollover policy",
                 POLICY_ID, text(settings, "index.plugins.index_state_management.policy_id"));
         assertEquals("event index rollover_alias should be the event write alias",
@@ -116,7 +146,7 @@ public class RolloverIT extends BaseIT {
         assertEquals(EXPECTED_MAX_DOCS, rolloverAction.get("min_doc_count").asLong());
     }
 
-    private void assertElasticsearchRolloverConfigured(CloseableHttpClient client, JsonNode settings, String writeIndex) throws IOException {
+    private void assertLifecycleRolloverConfigured(CloseableHttpClient client, JsonNode settings, String writeIndex) throws IOException {
         assertEquals("event index should reference the Unomi rollover policy",
                 POLICY_ID, text(settings, "index.lifecycle.name"));
         assertEquals("event index rollover_alias should be the event write alias",

@@ -24,11 +24,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite.SuiteClasses;
 
 /**
- * Defines suite of test classes to run (Elasticsearch / OpenSearch CI default).
- * Same membership as {@link CorePersistenceITs}; use capabilities + {@code Assume} for
- * provider-specific skips rather than maintaining a smaller suite.
- *
- * @author Sergiy Shyrkov
+ * Full behavioural IT suite for any {@code PersistenceService} provider.
+ * <p>
+ * Membership matches {@link AllITs}. Tests that need HTTP admin / snapshot / rollover
+ * APIs use {@link org.junit.Assume} on {@link org.apache.unomi.itests.persistence.PersistenceITCapabilities}
+ * so unsupported backends <em>skip</em> (not fail, not false-pass). Prefer this suite for
+ * PostgreSQL, in-memory, JDBC, etc.; Elasticsearch / OpenSearch CI may keep using {@link AllITs}.
  */
 @RunWith(ProgressSuite.class)
 @SuiteClasses({
@@ -85,5 +86,5 @@ import org.junit.runners.Suite.SuiteClasses;
         RolloverIT.class,
         HealthCheckIT.class
 })
-public class AllITs {
+public class CorePersistenceITs {
 }

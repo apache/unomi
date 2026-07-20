@@ -153,7 +153,7 @@ public class ProfileServiceIT extends BaseIT {
     @Test
     public void testGetProfileWithWrongScrollerIdThrowException() throws InterruptedException, IOException {
         boolean throwExceptionCurrent = false;
-        Configuration searchEngineConfiguration = configurationAdmin.getConfiguration("org.apache.unomi.persistence." + searchEngine);
+        Configuration searchEngineConfiguration = configurationAdmin.getConfiguration(persistenceConfigPid());
         if (searchEngineConfiguration != null && searchEngineConfiguration.getProperties().get("throwExceptions") != null) {
             try {
                 if (searchEngineConfiguration.getProperties().get("throwExceptions") instanceof String) {
@@ -167,7 +167,7 @@ public class ProfileServiceIT extends BaseIT {
             }
         }
 
-        updateConfiguration(null, "org.apache.unomi.persistence." + searchEngine, "throwExceptions", true);
+        updateConfiguration(null, persistenceConfigPid(), "throwExceptions", true);
 
         Query query = new Query();
         query.setLimit(2);
@@ -180,7 +180,7 @@ public class ProfileServiceIT extends BaseIT {
         } catch (RuntimeException ex) {
             // Should get here since this scenario should throw exception
         } finally {
-            updateConfiguration(null, "org.apache.unomi.persistence." + searchEngine, "throwExceptions",
+            updateConfiguration(null, persistenceConfigPid(), "throwExceptions",
                     throwExceptionCurrent);
         }
     }

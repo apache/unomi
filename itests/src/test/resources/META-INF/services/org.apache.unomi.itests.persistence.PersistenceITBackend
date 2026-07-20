@@ -1,0 +1,2 @@
+org.apache.unomi.itests.persistence.ElasticsearchITBackend
+org.apache.unomi.itests.persistence.OpenSearchITBackend
