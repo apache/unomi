@@ -131,8 +131,8 @@ public interface PersistenceService {
      * Persists the specified Item in the context server.
      * <p>
      * When {@code alwaysOverwrite} is {@code false}, this becomes a compare-and-set (CAS) write:
-     * the backend applies it only if the item's current {@link Item#SYSTEM_METADATA_SEQ_NO}/
-     * {@link Item#SYSTEM_METADATA_PRIMARY_TERM} system metadata (typically populated by a prior
+     * the backend applies it only if the item's current {@link #SYSTEM_METADATA_SEQ_NO}/
+     * {@link #SYSTEM_METADATA_PRIMARY_TERM} system metadata (typically populated by a prior
      * {@code load()} or {@code save()} on the same item) still match the backend's current state
      * for that document. A {@code true} return is itself authoritative proof the write applied —
      * callers do not need a follow-up read to double-check, since every implementation applies
