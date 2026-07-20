@@ -22,7 +22,207 @@ user profiles into segments along user-definable dimensions or acted upon by alg
 The following data model only contains the classes and properties directly related to the most important objects of Apache Unomi.
 There are other classes that are less central to the functionality but all the major ones are represented in the diagram below:
 
-image::data-model.png[]
+[plantuml]
+----
+@startuml
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+hide circle
+hide empty methods
+
+class Item {
+  scope: String
+  itemType: String
+  version: Long
+  itemId: String
+}
+
+class Metadata {
+  id: String
+  name: String
+  description: String
+  scope: String
+  enabled: boolean
+  hidden: boolean
+  readOnly: boolean
+  missingPlugins: boolean
+  tags: Set<String>
+  systemTags: Set<String>
+}
+
+class MetadataItem {
+  metadata: Metadata
+  scope: String
+}
+
+class CustomItem {
+  customItemType: String
+  properties: Map<String, Object>
+}
+
+class TimestampedItem {
+  timeStamp: Date
+}
+
+class Profile {
+  scope: String
+  mergedWith: String
+  anonymousProfile: boolean
+  properties: Map<String, Object>
+  systemProperties: Map<String, Object>
+  scores: Map<String, Integer>
+  segments: Set<String>
+  consents: Map<String, Consent>
+}
+
+class Persona
+class Consent {
+  scope: String
+  typeIdentifier: String
+  status: ConsentStatus
+  statusDate: Date
+  revokeDate: Date
+  consentGrantedNow: boolean
+}
+
+enum ConsentStatus
+
+class Session {
+  scope: String
+  profileId: String
+  profile: Profile
+  timeStamp: Date
+  lastEventDate: Date
+  duration: int
+  size: int
+  properties: Map<String, Object>
+  systemProperties: Map<String, Object>
+  originEventIds: List<String>
+  originEventTypes: List<String>
+}
+
+class Event {
+  eventType: String
+  sessionId: String
+  profileId: String
+  session: Session
+  profile: Profile
+  source: Item
+  target: Item
+  timeStamp: Date
+  persistent: boolean
+  properties: Map<String, Object>
+  attributes: Map<String, Object>
+  flattenedProperties: Map<String, Object>
+}
+
+class ConditionType {
+  conditionEvaluator: String
+  queryBuilder: String
+  parameters: List<Parameter>
+  parentCondition: Condition
+}
+
+class Condition {
+  conditionTypeId: String
+  conditionType: ConditionType
+  parameterValues: Map<String, Object>
+}
+
+class Parameter {
+  id: String
+  type: String
+  defaultValue: String
+  multivalued: boolean
+  choiceListInitializerFilter: String
+}
+
+class ActionType {
+  actionExecutor: String
+  parameters: List<Parameter>
+}
+
+class Action {
+  actionTypeId: String
+  actionType: ActionType
+  parameterValues: Map<String, Object>
+}
+
+class Rule {
+  condition: Condition
+  actions: List<Action>
+  linkedItems: List<String>
+  priority: int
+  raiseEventOnlyOnce: boolean
+  raiseEventOnlyOnceForProfile: boolean
+  raiseEventOnlyOnceForSession: boolean
+}
+
+class Segment {
+  condition: Condition
+}
+
+class Scoring {
+  elements: List<ScoringElement>
+}
+
+class Campaign {
+  startDate: Date
+  endDate: Date
+  timezone: String
+  currency: String
+  cost: Double
+  primaryGoal: String
+  entryCondition: Condition
+}
+
+class Goal {
+  campaignId: String
+  startEvent: Condition
+  targetEvent: Condition
+}
+
+class Scope
+class UserList
+
+Item <|-- MetadataItem
+Item <|-- CustomItem
+Item <|-- Profile
+Item <|-- Session
+TimestampedItem <|-- Event
+MetadataItem <|-- ConditionType
+MetadataItem <|-- ActionType
+MetadataItem <|-- Rule
+MetadataItem <|-- Segment
+MetadataItem <|-- Scoring
+MetadataItem <|-- Campaign
+MetadataItem <|-- Goal
+MetadataItem <|-- Scope
+MetadataItem <|-- UserList
+Profile <|-- Persona
+
+MetadataItem "1" *-- "1" Metadata
+Profile "1" *-- "*" Consent
+Consent "1" --> "1" ConsentStatus
+Session "*" --> "1" Profile
+Event "*" --> "1" Session
+Event "*" --> "1" Profile
+Event --> Item : source
+Event --> Item : target
+Rule "1" *-- "1" Condition
+Rule "1" *-- "*" Action
+Condition --> ConditionType
+Action --> ActionType
+ConditionType "*" *-- "*" Parameter
+ActionType "*" *-- "*" Parameter
+Segment --> Condition
+Campaign --> Condition : entryCondition
+Goal --> Condition : startEvent
+Goal --> Condition : targetEvent
+Campaign "1" o-- "*" Goal
+
+@enduml
+----
 
 We will detail many of these classes in the document below.
 

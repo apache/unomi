@@ -80,7 +80,28 @@ With this extension the property *myNewProp* can now be added to the event.
 
 Process when adding extension:
 
-image::process-creation-extension.png[pdfwidth=35%,align=center]
+[plantuml]
+----
+@startuml
+skinparam shadowing false
+hide footbox
+
+actor User
+actor "Authenticated user" as AuthUser
+participant UNOMI
+participant Elasticsearch
+
+UNOMI -> UNOMI : Start timer to load\nextensions in memory
+
+AuthUser -> UNOMI : Send extension
+UNOMI -> Elasticsearch : Persist extension
+UNOMI -> UNOMI : Load extension in memory
+
+User -> UNOMI : Send an event
+UNOMI -> UNOMI : Get the schema with extension\nand validate the event against it
+
+@enduml
+----
 
 ==== How to add an extension through the API
 
