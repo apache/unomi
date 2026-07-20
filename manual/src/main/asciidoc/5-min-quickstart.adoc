@@ -52,7 +52,7 @@ services:
 version: '3.8'
 services:
     opensearch-node1:
-        image: opensearchproject/opensearch:3
+        image: opensearchproject/opensearch:3.7.0
         environment:
             - cluster.name=opensearch-cluster
             - node.name=opensearch-node1
@@ -80,6 +80,9 @@ services:
             - UNOMI_OPENSEARCH_ADDRESSES=opensearch-node1:9200
             - UNOMI_OPENSEARCH_USERNAME=admin
             - UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
+            # Package default sslEnable is true; trust-all matches typical local OpenSearch Docker TLS
+            - UNOMI_OPENSEARCH_SSL_ENABLE=true
+            - UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES=true
             - UNOMI_HEALTHCHECK_PROVIDERS=cluster,opensearch,unomi,persistence
         ports:
             - 8181:8181
@@ -96,7 +99,7 @@ From the same folder, start the environment using `docker-compose up` and wait f
 
 ==== After startup (ElasticSearch Docker path)
 
-Once Unomi is running, create a tenant and save the API keys from the response:
+Once Unomi is running, create a tenant, then **regenerate** API keys and save the `plainTextKey` values from those responses (tenant create only returns masked keys):
 
 [source,bash]
 ----
@@ -110,6 +113,9 @@ curl -X POST http://localhost:8181/cxs/tenants \
       "description": "Default tenant for quick start"
     }
   }'
+
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PUBLIC" --user karaf:karaf
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PRIVATE" --user karaf:karaf
 ----
 
 Use the public API key in `X-Unomi-Api-Key` for `/cxs/context.json` requests. See <<_multitenancy,Multi-tenancy>>.
@@ -137,7 +143,7 @@ cluster.name: contextElasticSearch
 
 1) Install JDK 17 as described above
 
-2) Download OpenSearch here: https://opensearch.org/downloads.html (please *make sure* you use version 3.x)
+2) Download OpenSearch here: https://opensearch.org/downloads.html (please *make sure* you use version **3.7.0**, matching `opensearch.version` in the Unomi root POM)
 
 3) Uncompress it and change the `config/opensearch.yml` to include the following config:
 
@@ -169,7 +175,7 @@ which determines which set of features and bundles are installed and started. A 
 
 9) Try accessing https://localhost:9443/cxs/cluster with username/password: `karaf/karaf` . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
 
-10) Create a tenant that will own all your data:
+10) Create a tenant that will own all your data, then regenerate keys and store `plainTextKey`:
 
 [source,bash]
 ----
@@ -183,9 +189,12 @@ curl -X POST http://localhost:8181/cxs/tenants \
       "description": "Default tenant for quick start"
     }
   }'
+
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PUBLIC" --user karaf:karaf
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PRIVATE" --user karaf:karaf
 ----
 
-Save the API keys from the response - you'll need them for API calls.
+Save the `plainTextKey` values from the key-creation responses — you'll need them for API calls.
 
 11) Request your first context:
 
@@ -216,6 +225,7 @@ Next steps:
 - Trying our integration <<_samples,samples page>>
 
 Note: When using OpenSearch, make sure to:
-- Set up proper SSL certificates or disable SSL verification for development
-- Configure the admin password via OPENSEARCH_INITIAL_ADMIN_PASSWORD
-- Enable SSL in Unomi configuration if using secure connections
+- Align SSL with the cluster (`UNOMI_OPENSEARCH_SSL_ENABLE` / `org.apache.unomi.opensearch.sslEnable`; package default is `true`)
+- For local Docker TLS, set `UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES=true` or install a proper trust store
+- Configure the admin password via `OPENSEARCH_INITIAL_ADMIN_PASSWORD`
+- Select the OpenSearch distribution (`UNOMI_DISTRIBUTION=unomi-distribution-opensearch` or `unomi:setup -d=unomi-distribution-opensearch`)

@@ -38,10 +38,6 @@ Official alternative to Elasticsearch, including secured Docker deployments.
 * Configuration: <<_configuration,Configuration>>
 * Migration from Elasticsearch: <<_migrate_from_elasticsearch_to_opensearch,Migrate from Elasticsearch to OpenSearch>>
 
-==== Persistence-based clustering
-
-Cluster node registry and heartbeats through Elasticsearch or OpenSearch (no Karaf Cellar). See <<_clustering,Cluster setup>>.
-
 ==== Tenant usage and retention
 
 Read-only per-tenant usage metrics and an event retention purge API for upstream control planes.

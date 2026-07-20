@@ -43,7 +43,7 @@ If you are using the packaged version of Unomi (as opposed to deploying it to yo
 
 [source]
 ----
-cp target/tweet-button-plugin-2.0.0-SNAPSHOT.jar ../../package/target/unomi-2.0.0-SNAPSHOT/deploy
+cp target/tweet-button-plugin-3.1.0-SNAPSHOT.jar ../../package/target/unomi-3.1.0-SNAPSHOT/deploy
 ----
 
 ===== Testing the samples
@@ -185,7 +185,7 @@ Let's look at the context request structure:
     "requiredProfileProperties": <optional array of property identifiers>,
     "requiredSessionProperties": <optional array of property identifiers>,
     filters: <optional array of filters to evaluate>,
-    "personalitations": <optional array of personalizations to evaluate>,
+    "personalizations": <optional array of personalizations to evaluate>,
     "profileOverrides": <optional profile containing segments,scores or profile properties to override>,
         - segments: <optional array of segment identifiers>,
         - profileProperties: <optional map of property name / value pairs>,

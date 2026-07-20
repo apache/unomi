@@ -14,7 +14,7 @@
 
 === Introduction
 
-Introduced with Apache Unomi 2.0, JSON-Schema are used to validate data submitted through all of the public (unprotected) API endpoints.
+Introduced with Apache Unomi 2.0, JSON Schema is used to validate data submitted through public API endpoints (for example `/cxs/context.json`). In Unomi 3.1 those endpoints require a tenant public API key (`X-Unomi-Api-Key`); they are no longer anonymous.
 
 ==== What is a JSON Schema
 

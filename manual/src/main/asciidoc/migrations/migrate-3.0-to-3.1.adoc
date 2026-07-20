@@ -229,22 +229,36 @@ Before starting the migration, please ensure that:
 
 - You do have a backup of your data
 - You did practice the migration in a staging environment, NEVER migrate a production environment without prior validation
-- You verified your applications were operational with Apache Unomi 3.1 (authentication updated, client applications updated, ...)
 - You are currently running Apache Unomi 3.0 (or a later 3.0.x version)
 - You understand the multi-tenancy impact on your data model
-- You have configured tenant-specific API keys for your applications
+- You have a plan to update client applications to tenant API keys (or temporary <<_v2_compatibility_mode,V2 compatibility mode>> only if coming from 2.x)
+- You know how to obtain plaintext API keys after upgrade (regenerate via `/cxs/tenants/{id}/apikeys`; create responses expose masked keys only)
 
 === Migration Process
 
-The migration from 3.0 to 3.1 is primarily a configuration and authentication update:
+Upgrading from 3.0 to 3.1 requires a **data migration** (bundled Groovy scripts) plus client authentication updates. Contributors maintaining those scripts should follow <<_writing_migration_scripts,Writing migration scripts>> (step tracking, idempotency, and common pitfalls).
 
-Contributors maintaining the Groovy scripts that implement this upgrade should follow <<_writing_migration_scripts,Writing migration scripts>> (step tracking, idempotency, and common pitfalls).
-
-1. **Shutdown your Apache Unomi 3.0 cluster**
-2. **Update your client applications** to use the new authentication model
-3. **Configure tenant-specific API keys** for your applications
-4. **Start your Apache Unomi 3.1 cluster**
-5. **Test your applications** with the new authentication model
+1. **Shut down your Apache Unomi 3.0 cluster** (migration runs with Unomi stopped; the search engine must remain reachable).
+2. **Install Apache Unomi 3.1** on the node(s) that will run the migration (Karaf shell available).
+3. **Run the migration** from the Karaf shell:
++
+[source,bash]
+----
+unomi:migrate 3.0.0
+----
++
+Pass your actual origin version without qualifier (for example `3.0.0`). Optional second argument skips the confirmation prompt. You can preconfigure `etc/org.apache.unomi.migration.cfg` instead of answering interactive questions; see <<_shell_commands,Shell commands>>.
++
+Scripts applied for the 3.1 line include (under `tools/shell-commands/.../META-INF/cxs/migration/`):
++
+* `migrate-3.1.0-00-fixProfileNbOfVisits`
+* `migrate-3.1.0-01-tenantDocumentIds`
+* `migrate-3.1.0-05-fixSystemItemIds`
+* `migrate-3.1.0-10-tenantInitialization` (creates the default tenant used for isolation)
+* `migrate-3.1.0-15-updateLegacyQueryBuilder`
+4. **Update client applications** to the 3.1 authentication model (public key header / tenant private key), or enable <<_v2_compatibility_mode,V2 compatibility mode>> only when migrating **from Unomi 2.x**.
+5. **Start your Apache Unomi 3.1 cluster**.
+6. **Regenerate and store tenant API keys** (plaintext is returned only from the key-creation endpoint), then **test** applications end to end.
 
 === Transitional authentication options
 

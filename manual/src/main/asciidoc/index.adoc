@@ -163,7 +163,9 @@ include::scheduler.adoc[]
 [#_health_check_chapter]
 == Health check
 
-The health check endpoint and providers are documented in the Configuration chapter: <<_health_check,Health check extension>>.
+Apache Unomi exposes an HTTP health endpoint at `/health/check` with pluggable providers (Karaf, search engine, persistence, cluster, Unomi bundles).
+
+Configuration of providers and related system properties is documented in the Configuration chapter: <<_health_check,Health check extension>>.
 
 == Reference
 

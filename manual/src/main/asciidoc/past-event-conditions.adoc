@@ -1310,14 +1310,14 @@ segment.pastEventCondition.alertThreshold=100000
    * Partition Size Issues
      ** Symptom: Slow query performance or high memory usage
      ** Check `aggregateQueryBucketSize` configuration (default: 5000)
-     ** Monitor Elasticsearch heap usage during queries
+     ** Monitor search engine (Elasticsearch or OpenSearch) heap usage during queries
      ** Consider enabling partitioned processing for large datasets
    
    * Query Optimization
      ** Verify proper index settings for event timestamps
      ** Check if property-based queries are being used when possible
      ** Monitor query execution times through metrics
-     ** Analyze Elasticsearch query patterns
+     ** Analyze search engine query patterns
 
 2. *Incorrect Counts*
    * Time Window Configuration
@@ -1340,8 +1340,8 @@ segment.pastEventCondition.alertThreshold=100000
 === Debugging Tips
 
 1. *Query Verification*
-   * Elasticsearch Query Analysis
-     ** Use Elasticsearch _explain API to analyze queries
+   * Search engine query analysis
+     ** Use the Elasticsearch or OpenSearch `_explain` API to analyze queries
      ** Monitor query performance through metrics
      ** Check query routing and shard distribution
      ** Verify index mappings for event fields
@@ -1428,7 +1428,7 @@ The detailed segment evaluation process:
    * Access to past event counts follows profile permissions
 
 2. *Query Security*
-   * Elasticsearch queries are sanitized
+   * Search engine queries are sanitized
    * Input parameters are validated
    * Time ranges are bounded
    * Resource limits are enforced
@@ -1613,7 +1613,7 @@ if (parameters.containsKey("generatedPropertyKey")) {
 Used when a past event condition is used directly in a rule:
 
 1. *Evaluation Process*
-   * Constructs Elasticsearch query for matching events
+   * Constructs a search engine query for matching events
    * Queries event store directly
    * Aggregates results
    * No caching occurs
@@ -1792,7 +1792,7 @@ segmentService.recalculatePastEventConditions();
    * Cache inconsistencies
 
 2. *Diagnostic Tools*
-   * Elasticsearch query analysis
+   * Search engine query analysis
    * Performance metrics
    * Log analysis
    * Cache statistics

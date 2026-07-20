@@ -14,7 +14,7 @@
 
 === High-Level Architecture
 
-NOTE: Unomi 3.1 adds <<_multitenancy,multi-tenancy>>, <<_scheduler,task scheduling>>, and <<_clustering,persistence-based clustering>>. The diagram below focuses on core request processing.
+NOTE: Unomi 3.1 adds <<_multitenancy,multi-tenancy>> and <<_scheduler,task scheduling>> on top of the 3.0 platform (including <<_clustering,persistence-based clustering>>). The diagram below focuses on core request processing.
 
 [plantuml]
 ----

@@ -1013,8 +1013,8 @@ You can think of a rule as a structure that looks like this:
 
 Basically when a rule is evaluated, all the conditions in the `when` part are evaluated and if the result matches (meaning it evaluates to `true`) then the actions will be executed in sequence.
 
-The real power of Apache Unomi comes from the fact that `conditions` and `actions` are fully pluggeable and that plugins may implement new conditions and/or actions to perform any task.
-You can imagine conditions checking incoming event data against third-party systems or even against authentication systesm, and actions actually pulling or pushing data to third-party systems.
+The real power of Apache Unomi comes from the fact that `conditions` and `actions` are fully pluggable and that plugins may implement new conditions and/or actions to perform any task.
+You can imagine conditions checking incoming event data against third-party systems or even against authentication systems, and actions actually pulling or pushing data to third-party systems.
 
 For example the Salesforce CRM connector is simply a set of actions that pull and push data into the CRM. It is then just a matter of setting up the proper rules with the proper conditions to determine when and how the data will be pulled or pushed into the third-party system.
 

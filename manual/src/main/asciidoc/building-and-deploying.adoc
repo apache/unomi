@@ -274,7 +274,7 @@ The recommended way to run OpenSearch is using Docker Compose:
 version: '3.8'
 services:
   opensearch-node1:
-    image: opensearchproject/opensearch:3
+    image: opensearchproject/opensearch:3.7.0
     environment:
       - cluster.name=opensearch-cluster
       - node.name=opensearch-node1

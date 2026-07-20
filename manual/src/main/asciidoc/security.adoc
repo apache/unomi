@@ -89,7 +89,7 @@ Unomi 3.1 uses a layered authentication model:
 
 Configuration keys live in `etc/org.apache.unomi.rest.authentication.cfg` and `custom.system.properties`. Tenant API key settings are in `etc/org.apache.unomi.tenant.cfg`.
 
-For endpoint lists, auth examples, and migration from 2.x/3.0, see <<_multitenancy,Multi-tenancy>>, <<_configuration,Tenant management in Configuration>>, and <<_v2_compatibility_mode,V2 compatibility mode>>.
+For endpoint lists, auth examples, and migration from 2.x/3.0, see <<_multitenancy,Multi-tenancy>>, <<_configuration,Configuration>> (tenant management), and <<_v2_compatibility_mode,V2 compatibility mode>>.
 
 ==== Request tracing
 

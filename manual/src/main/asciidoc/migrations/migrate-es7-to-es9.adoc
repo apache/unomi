@@ -20,7 +20,7 @@ To execute the migration, you should have one Elasticsearch 7 running (your sour
 
 This upgrade relies on a script. If you are sharing the Elasticsearch instance with other projects, it might need to be adjusted.
 
-The script migration_es7-es9.sh at the root of the project and handles:
+The script `migration_es7-es9.sh` at the root of the project handles:
 * Regular indices and rollover indices with their aliases
 * ILM policies migration
 * Data reindexing from ES7 to ES9
@@ -33,7 +33,7 @@ The script migration_es7-es9.sh at the root of the project and handles:
 * `curl` for HTTP requests
 * Access to both ES7 (source) and ES9 (destination) clusters
 * *ES9 must have `reindex.remote.whitelist` configured* (see configuration below)
-* Ensure the machine where ES9 is running have access to the ES7 environment
+* Ensure the machine where ES9 is running has access to the ES7 environment
 
 Install `jq` if not already installed:
 
