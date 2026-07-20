@@ -15,9 +15,9 @@
 [#_five_minutes_quickstart]
 === Quick start with Docker
 
-Begin by creating a `docker-compose.yml` file. You can choose between ElasticSearch or OpenSearch:
+Begin by creating a `docker-compose.yml` file. You can choose between Elasticsearch or OpenSearch:
 
-==== Option 1: Using ElasticSearch
+==== Option 1: Using Elasticsearch
 
 [source,yaml]
 ----
@@ -59,7 +59,7 @@ services:
             - discovery.type=single-node
             - bootstrap.memory_lock=true
             - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-            - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
+            - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-MyStrongPassw0rd!}
         ulimits:
             memlock:
                 soft: -1
@@ -79,7 +79,7 @@ services:
             - UNOMI_DISTRIBUTION=unomi-distribution-opensearch
             - UNOMI_OPENSEARCH_ADDRESSES=opensearch-node1:9200
             - UNOMI_OPENSEARCH_USERNAME=admin
-            - UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
+            - UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-MyStrongPassw0rd!}
             # Package default sslEnable is true; trust-all matches typical local OpenSearch Docker TLS
             - UNOMI_OPENSEARCH_SSL_ENABLE=true
             - UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES=true
@@ -97,7 +97,7 @@ volumes:
 
 From the same folder, start the environment using `docker-compose up` and wait for the startup to complete.
 
-==== After startup (ElasticSearch Docker path)
+==== After startup (Elasticsearch Docker path)
 
 Once Unomi is running, create a tenant, then **regenerate** API keys and save the `plainTextKey` values from those responses (tenant create only returns masked keys):
 
@@ -124,20 +124,20 @@ Try accessing https://localhost:9443/cxs/cluster with username/password: karaf/k
 
 === Quick Start manually
 
-==== Option 1: Using ElasticSearch
+==== Option 1: Using Elasticsearch
 
 1) Install JDK 17 and make sure you set the JAVA_HOME variable (see our <<_jdk_compatibility,Getting Started>> guide for more information on JDK compatibility)
 
-2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-9-4-3 (please *make sure* you use the proper version : 9.4.3)
+2) Download Elasticsearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-9-4-3 (please *make sure* you use the proper version : 9.4.3)
 
 3) Uncompress it and change the `config/elasticsearch.yml` to include the following config :
 
 [source,yaml]
 ----
-cluster.name: contextElasticSearch
+cluster.name: contextElasticsearch
 ----
 
-4) Launch ElasticSearch using : `bin/elasticsearch`
+4) Launch Elasticsearch using : `bin/elasticsearch`
 
 ==== Option 2: Using OpenSearch
 
@@ -227,5 +227,5 @@ Next steps:
 Note: When using OpenSearch, make sure to:
 - Align SSL with the cluster (`UNOMI_OPENSEARCH_SSL_ENABLE` / `org.apache.unomi.opensearch.sslEnable`; package default is `true`)
 - For local Docker TLS, set `UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES=true` or install a proper trust store
-- Configure the admin password via `OPENSEARCH_INITIAL_ADMIN_PASSWORD`
+- Configure a strong admin password via `OPENSEARCH_INITIAL_ADMIN_PASSWORD` (OpenSearch rejects weak passwords such as `admin`)
 - Select the OpenSearch distribution (`UNOMI_DISTRIBUTION=unomi-distribution-opensearch` or `unomi:setup -d=unomi-distribution-opensearch`)

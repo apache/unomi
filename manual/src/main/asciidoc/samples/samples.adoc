@@ -20,3 +20,4 @@ These are scenario walkthroughs, not maintained plugin templates — for plugin 
 
 * <<_twitter_sample,Twitter integration>>
 * <<_login_sample,Login integration>>
+* <<_weather_update_sample,Weather update extension>>

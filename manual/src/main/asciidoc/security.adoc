@@ -14,6 +14,65 @@
 
 ==== Security Architecture
 
+Unomi 3.1 authenticates every request so the server can resolve a **tenant** (or system-admin context) before profiles, events, and rules are touched.
+
+===== Authentication overview
+
+[cols="1,2,2",options="header"]
+|===
+| Path class | Credentials | Typical use
+
+| Public (`/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`, …)
+| `X-Unomi-Api-Key: <publicApiKey>`
+| Browser / mobile SDKs, trackers
+
+| Private REST
+| Basic `tenantId:privateApiKey`, or JAAS + optional `X-Unomi-Tenant-Id`
+| Server-side integrations, admin UIs
+
+| Tenant administration (`/cxs/tenants`)
+| JAAS system administrator (for example `karaf:karaf`)
+| Create tenants, rotate keys
+|===
+
+Temporary exception: <<_v2_compatibility_mode,V2 compatibility mode>> allows public endpoints without API keys while migrating 2.x clients.
+
+===== Auth resolution sequence
+
+[plantuml]
+----
+@startuml
+skinparam shadowing false
+hide footbox
+
+actor Client
+participant "AuthenticationFilter" as Auth
+participant "TenantService" as Tenant
+participant "REST endpoint" as API
+
+Client -> Auth : HTTP request
+alt /cxs/tenants*
+  Auth -> Auth : Require JAAS admin
+  Auth -> API : System subject
+else Public path + X-Unomi-Api-Key
+  Auth -> Tenant : Resolve tenant from public key
+  Auth -> API : Tenant context
+else Private path + Basic tenantId:privateKey
+  Auth -> Tenant : Validate private key
+  Auth -> API : Tenant context
+else Private path + JAAS (+ optional X-Unomi-Tenant-Id)
+  Auth -> API : Admin / tenant context
+else V2 compatibility mode
+  Auth -> Tenant : Default tenant
+  Auth -> API : Legacy 2.x-style access
+else
+  Auth --> Client : 401 Unauthorized
+end
+@enduml
+----
+
+===== Component view
+
 [plantuml]
 ----
 @startuml
@@ -23,7 +82,6 @@ package "Security Layer" {
   [Security Service] <<security>>
   [Authentication Filter] <<security>>
   [Authorization Filter] <<security>>
-  [Encryption Service] <<security>>
 }
 
 package "API Layer" {
@@ -38,7 +96,7 @@ package "Core Services" {
 }
 
 actor "Public Client" as public
-actor "Admin Client" as admin
+actor "Admin / Tenant Client" as admin
 
 database "Tenant Store" {
   [Tenant Configuration]
@@ -55,43 +113,56 @@ admin --> [Private API]
 [Authorization Filter] --> [Security Service]
 [Security Service] --> [Tenant Configuration]
 [Security Service] --> [Roles & Permissions]
-
 [Security Service] --> [Core Services]
-[Encryption Service] --> [Profile Service]
-
-note right of [Security Service]
-  - JAAS Authentication
-  - Role-based Authorization
-  - Tenant Isolation
-  - Operation Permissions
-end note
 
 note right of [Authentication Filter]
-  - Basic Auth
-  - API Key Auth
-  - Token Auth
+  - X-Unomi-Api-Key (public)
+  - Basic Auth (tenant or JAAS)
+  - X-Unomi-Tenant-Id (with JAAS)
+end note
+
+note right of [Security Service]
+  - Role-based authorization
+  - Tenant isolation
+  - Operation permissions
 end note
 
 @enduml
 ----
 
-For tenant API keys, roles (`ROLE_UNOMI_TENANT_USER`, `ROLE_UNOMI_TENANT_ADMIN`, system administrator), and operation permissions, see <<_multitenancy,Multi-tenancy>>.
-
-===== Overview
-
-==== Authentication overview
-
-Unomi 3.1 uses a layered authentication model:
-
-* *Public endpoints* (for example `/cxs/context.json`, `/cxs/eventcollector`): require a tenant **public** API key via the `X-Unomi-Api-Key` header.
-* *Private REST endpoints*: require tenant `tenantId:privateApiKey` basic authentication, or JAAS credentials with the `X-Unomi-Tenant-Id` header.
-* *System administrator*: Karaf JAAS user (for example `karaf:karaf`) for tenant management and cluster operations.
-
 Configuration keys live in `etc/org.apache.unomi.rest.authentication.cfg` and `custom.system.properties`. Tenant API key settings are in `etc/org.apache.unomi.tenant.cfg`.
 
-For endpoint lists, auth examples, and migration from 2.x/3.0, see <<_multitenancy,Multi-tenancy>>, <<_configuration,Configuration>> (tenant management), and <<_v2_compatibility_mode,V2 compatibility mode>>.
+For tenant API keys, roles (`ROLE_UNOMI_TENANT_USER`, `ROLE_UNOMI_TENANT_ADMIN`, system administrator), operation permissions, and curl examples, see <<_multitenancy,Multi-tenancy>> and <<_configuration,Configuration>> (tenant management). For migration from 2.x, see <<_v2_compatibility_mode,V2 compatibility mode>> and <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>>.
+
+===== Multi-tenancy isolation
+
+[plantuml]
+----
+@startuml
+skinparam shadowing false
+
+rectangle "Unomi instance" {
+  rectangle "Tenant A" as A {
+    card "Public key" as Ap
+    card "Private key" as Apr
+    database "Profiles / events / rules" as Ad
+  }
+  rectangle "Tenant B" as B {
+    card "Public key" as Bp
+    card "Private key" as Bpr
+    database "Profiles / events / rules" as Bd
+  }
+}
+
+Ap -[hidden]-> Apr
+Bp -[hidden]-> Bpr
+A -[hidden]-> B
+note bottom of A
+  No cross-tenant reads/writes
+end note
+@enduml
+----
 
 ==== Request tracing
 
 Administrators with the appropriate roles can enable request tracing with `explain=true` on context and event-collector requests. See <<_request_tracing_explain,Using the explain parameter for request tracing>>.
-

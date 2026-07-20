@@ -12,17 +12,17 @@
 // limitations under the License.
 //
 
-== Apache Unomi V2/V3 API Differences Guide
+=== Apache Unomi V2/V3 API Differences Guide
 
 This document explains the key differences between Apache Unomi 2.x and 3.x versions from an API perspective.
 
-== Overview
+==== Overview
 
-Apache Unomi 3.x introduces comprehensive multi-tenancy support, enabling complete data isolation between different tenants. This fundamental architectural change requires a new tenant-based authentication model while keeping all API endpoints unchanged.
+Apache Unomi **3.1** introduces comprehensive multi-tenancy support, enabling complete data isolation between different tenants. This fundamental architectural change requires a new tenant-based authentication model while keeping all API endpoints unchanged.
 
-=== Multi-Tenancy in V3
+===== Multi-Tenancy in 3.1
 
-The key innovation in V3 is the introduction of **tenant isolation** for all data:
+The key innovation in Unomi 3.1 is the introduction of **tenant isolation** for all data:
 
 - **Profiles, events, segments, rules, and schemas** are now tenant-specific
 - **Complete data separation** between tenants - no cross-tenant data access
@@ -31,13 +31,13 @@ The key innovation in V3 is the introduction of **tenant isolation** for all dat
 
 This multi-tenancy support necessitates the authentication changes described below, as the system must now identify which tenant context to operate in for every request.
 
-== Key Differences Between V2 and V3
+==== Key Differences Between V2 and V3
 
-=== Authentication Model
+===== Authentication Model
 
 [cols="1,1,1", options="header"]
 |===
-|Aspect |Unomi V2 |Unomi V3
+|Aspect |Unomi V2 |Unomi 3.1
 
 |Authentication Method
 |System Administrator Authentication (karaf/karaf)
@@ -56,14 +56,14 @@ This multi-tenancy support necessitates the authentication changes described bel
 |System Administrator Authentication (karaf/karaf)
 |===
 
-=== API Key Types (V3 Only)
+===== API Key Types (V3 Only)
 
 V3 introduces two types of API keys per tenant:
 
 - **Public Key**: Used for public endpoints (event collection via `/context.json`)
 - **Private Key**: Used with tenantId for tenant-specific administrative operations
 
-=== Authentication Requirements by Endpoint Type
+===== Authentication Requirements by Endpoint Type
 
 [cols="1,1,1", options="header"]
 |===
@@ -82,7 +82,7 @@ V3 introduces two types of API keys per tenant:
 |System Admin (karaf/karaf)
 |===
 
-== Authentication Flow (V3)
+==== Authentication Flow (V3)
 
 The AuthenticationFilter in V3 follows this resolution order:
 
@@ -92,9 +92,9 @@ The AuthenticationFilter in V3 follows this resolution order:
    - **Tenant Authentication**: Basic Auth with `tenantId:privateKey`
    - **System Administrator Authentication**: Basic Auth with `karaf:karaf` (or configured admin credentials)
 
-== Code Examples
+==== Code Examples
 
-=== V2 Authentication
+===== V2 Authentication
 
 [source,java]
 ----
@@ -110,7 +110,7 @@ RestAssured.given()
     .post("/context.json");
 ----
 
-=== V3 Authentication
+===== V3 Authentication
 
 [source,java]
 ----
@@ -143,9 +143,9 @@ given()
     .post("/cxs/tenants");
 ----
 
-== Implementation Strategy
+==== Implementation Strategy
 
-=== Client Factory Pattern
+===== Client Factory Pattern
 
 [source,java]
 ----
@@ -162,7 +162,7 @@ public class UnomiConfiguration {
 }
 ----
 
-=== Version-Specific Authentication
+===== Version-Specific Authentication
 
 [source,java]
 ----
@@ -184,9 +184,9 @@ public void updateKeys(String publicKey, String privateKey) {
 }
 ----
 
-== Migration Guidelines
+==== Migration Guidelines
 
-=== From V2 to V3
+===== From V2 to V3
 
 1. **Understand Multi-Tenancy Impact**
    - All data (profiles, events, segments, rules, schemas) becomes tenant-specific
@@ -209,7 +209,7 @@ public void updateKeys(String publicKey, String privateKey) {
    - Request/response payloads are unchanged
    - Only authentication mechanism differs
 
-=== Benefits of Multi-Tenancy in V3
+===== Benefits of Multi-Tenancy in V3
 
 - **Data Isolation**: Complete separation ensures tenant data never crosses boundaries
 - **Scalability**: Support for multiple customers/organizations in a single Unomi instance
@@ -217,7 +217,7 @@ public void updateKeys(String publicKey, String privateKey) {
 - **Compliance**: Easier to meet data privacy regulations with clear tenant boundaries
 - **Cost Efficiency**: Shared infrastructure with isolated data reduces operational costs
 
-== Conclusion
+==== Conclusion
 
 The fundamental difference between Unomi V2 and V3 is the introduction of **comprehensive multi-tenancy support**:
 

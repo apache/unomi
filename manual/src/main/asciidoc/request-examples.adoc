@@ -36,33 +36,45 @@ curl -X POST http://localhost:8181/cxs/tenants \
 }'
 ----
 
-The response will include the created tenant with automatically generated API keys:
+The response includes the created tenant with **masked** API key metadata only (plaintext secrets are not returned):
 
 [source,json]
 ----
 {
     "itemId": "mytenant",
-    "name": "My Company",
-    "description": "My tenant description",
+    "itemType": "tenant",
+    "status": "ACTIVE",
     "apiKeys": [
         {
-            "type": "PUBLIC",
-            "key": "public-key-abc123...",
-            "created": "2024-01-01T00:00:00Z"
+            "maskedKey": "unomi_v1_****ab12",
+            "keyType": "PUBLIC",
+            "revoked": false
         },
         {
-            "type": "PRIVATE",
-            "key": "private-key-xyz789...",
-            "created": "2024-01-01T00:00:00Z"
+            "maskedKey": "unomi_v1_****cd34",
+            "keyType": "PRIVATE",
+            "revoked": false
         }
-    ]
+    ],
+    "properties": {
+        "name": "My Company",
+        "description": "My tenant description"
+    }
 }
 ----
 
-After creating the tenant, you will need to use these credentials in the examples:
+Regenerate keys to obtain one-time plaintext values (store them immediately):
+
+[source,bash]
+----
+curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PUBLIC" --user karaf:karaf
+curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PRIVATE" --user karaf:karaf
+----
+
+After creating the tenant and regenerating keys, use these credentials in the examples:
 - Tenant ID: `mytenant`
-- Private API Key: Extract the `key` value from the API key with `type: "PRIVATE"` in the response
-- Public API Key: Extract the `key` value from the API key with `type: "PUBLIC"` in the response
+- Private API Key: `plainTextKey` from the PRIVATE key-creation response
+- Public API Key: `plainTextKey` from the PUBLIC key-creation response
 
 ===== 2. Create a scope
 
@@ -82,7 +94,7 @@ curl -X POST http://localhost:8181/cxs/scopes \
 }'
 ----
 
-TIP: The scope creation response will include a public API key that you should save for use with the public APIs.
+TIP: After creating the scope, continue using the tenant **public** API key (from `POST /cxs/tenants/{id}/apikeys?type=PUBLIC`) for `/cxs/context.json` and `/cxs/eventcollector`. Scope creation does not return an API key.
 
 [IMPORTANT]
 ====
@@ -101,7 +113,7 @@ NOTE: In all the examples below, replace:
 - `YOUR_TENANT_ID` with `mytenant`
 - `YOUR_PRIVATE_API_KEY` with your actual private API key
 - `example` scope with `mydigital`
-- `YOUR_PUBLIC_API_KEY` with the public key from the scope creation response
+- `YOUR_PUBLIC_API_KEY` with the tenant public API key from key regeneration
 
 ===== 3. Verify the scope
 

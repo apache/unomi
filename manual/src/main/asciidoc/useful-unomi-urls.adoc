@@ -112,7 +112,7 @@ where PROFILE_ID is a profile identifier. This will indeed retrieve all the even
 
 |/cxs/tenants
 |POST
-|Create a tenant (system administrator). Returns generated public and private API keys.
+|Create a tenant (system administrator). Returns the tenant with **masked** API key metadata; obtain plaintext via `POST /cxs/tenants/{id}/apikeys`.
 
 |/cxs/tenants/{tenantId}/apikeys
 |POST

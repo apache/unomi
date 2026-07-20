@@ -73,6 +73,9 @@ export ES9_USER="elastic"
 export ES9_PASSWORD="your-es9-password"
 
 export INDEX_PREFIX="context-"
+# Script default includes a trailing hyphen and concatenates patterns (context-profile, …).
+# Unomi system property org.apache.unomi.*.index.prefix is the prefix *without* a hyphen (`context`);
+# the persistence layer adds `-` when forming index names.
 export BATCH_SIZE="1000"
 ----
 
@@ -89,7 +92,7 @@ export BATCH_SIZE="1000"
 | ES9_HOST | Elasticsearch 9 URL | http://localhost:9201
 | ES9_USER | ES9 username | elastic
 | ES9_PASSWORD | ES9 password | password
-| INDEX_PREFIX | Prefix for index names | context-
+| INDEX_PREFIX | Prefix for index names (script concatenates; include trailing `-`) | context-
 | BATCH_SIZE | Reindex batch size | 1000
 |===
 

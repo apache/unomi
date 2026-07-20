@@ -235,9 +235,9 @@ While the mapping system provides backward compatibility, it is recommended to u
 
 ==== Configuration Changes
 
-===== OpenSearch Security Configuration
+===== OpenSearch Security Configuration (Unomi 3.1+)
 
-OpenSearch as a Unomi backend is supported starting with **Apache Unomi 3.1**. When using OpenSearch 3.x with Unomi 3.1, security is commonly enabled and requires:
+OpenSearch as a Unomi backend is supported starting with **Apache Unomi 3.1** (not required for a pure 2.x → 3.0 upgrade on Elasticsearch). When using OpenSearch 3.x with Unomi 3.1, security is commonly enabled and requires:
 
 [source,properties]
 ----

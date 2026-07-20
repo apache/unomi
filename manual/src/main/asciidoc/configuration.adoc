@@ -72,12 +72,12 @@ If you need to specify a search engine configuration that is different than the 
 it is recommended to do this BEFORE you start the server for the first time, or you will lose all the data
 you have stored previously.
 
-Apache Unomi supports both ElasticSearch and OpenSearch as search engine backends. Here are the configuration properties for each:
+Apache Unomi supports both Elasticsearch and OpenSearch as search engine backends. Here are the configuration properties for each:
 
-For ElasticSearch:
+For Elasticsearch:
 [source]
 ----
-org.apache.unomi.elasticsearch.cluster.name=contextElasticSearch
+org.apache.unomi.elasticsearch.cluster.name=contextElasticsearch
 # The elasticsearch.addresses may be a comma separated list of host names and ports such as
 # hostA:9200,hostB:9200
 # Note: the port number must be repeated for each host.
@@ -108,11 +108,11 @@ org.apache.unomi.opensearch.sslTrustAllCertificates=true
 To select which search engine to use, you can:
 1. Use the appropriate configuration properties above
 2. When building from source, use the appropriate Maven profile:
-   * For ElasticSearch (default): no special profile needed
+   * For Elasticsearch (default): no special profile needed
    * For OpenSearch: add `-Duse.opensearch=true` to your Maven command
    (this will only impact the integration tests if they are activated using the -Pintegration-tests profile)
 3. When using Docker:
-   * For ElasticSearch: use `UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch`
+   * For Elasticsearch: use `UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch`
    * For OpenSearch: use `UNOMI_DISTRIBUTION=unomi-distribution-opensearch`
    * For custom configurations: use `UNOMI_DISTRIBUTION=your-custom-distribution-name`
 
@@ -125,9 +125,9 @@ Note: When using OpenSearch 3.x:
 
 === Refresh Policy Configuration
 
-Apache Unomi provides the ability to configure refresh policies for different item types in both ElasticSearch and OpenSearch. This feature allows you to optimize when changes to documents are made visible to search.
+Apache Unomi provides the ability to configure refresh policies for different item types in both Elasticsearch and OpenSearch. This feature allows you to optimize when changes to documents are made visible to search.
 
-For ElasticSearch:
+For Elasticsearch:
 [source]
 ----
 # refresh policy per item type in Json format.
@@ -230,6 +230,7 @@ http://dev.maxmind.com/geoip/geoip2/geolite2/[http://dev.maxmind.com/geoip/geoip
 
 Simply download the GeoLite2-City.mmdb file into the "etc" directory.
 
+[#_installing_geonames_database]
 === Installing Geonames database
 
 Apache Unomi includes a geocoding service based on the geonames database ( http://www.geonames.org/[http://www.geonames.org/] ). It can be
@@ -403,37 +404,12 @@ unomi:crud create apikey -d '{"tenantId":"mytenant","keyType":"PUBLIC","validity
 
 There are three ways to authenticate with the Unomi API:
 
-1. Tenant Authentication (Recommended for most endpoints):
-[source,bash]
-----
-# List all profiles (tenant access)
-curl -X GET "http://localhost:8181/cxs/profiles" \
-  --user "TENANT_ID:PRIVATE_KEY" \
-  -H "Accept: application/json"
-
-# Response (HTTP 200 OK):
-{
-    "list": [
-        {
-            "itemId": "profile1",
-            "properties": {
-                "firstName": "John",
-                "lastName": "Doe"
-            }
-        }
-    ],
-    "offset": 0,
-    "pageSize": 50,
-    "totalSize": 1
-}
-----
-+
-2. Public API Access (Client-Side Operations):
+1. Public API access (client-side / public endpoints):
 [source,bash]
 ----
 # Get context data
 curl -X POST "http://localhost:8181/cxs/context.json" \
-  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c" \
+  -H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "source": {
@@ -443,51 +419,39 @@ curl -X POST "http://localhost:8181/cxs/context.json" \
     },
     "requiredProfileProperties": ["firstName", "lastName"]
   }'
-
-# Response (HTTP 200 OK):
-{
-    "profileId": "xyz123",
-    "sessionId": "abc456",
-    "profileProperties": {
-        "firstName": "John",
-        "lastName": "Doe"
-    }
-}
 ----
 +
-3. Private API Access (Server-Side Operations):
+2. Tenant private-key authentication (most private REST endpoints):
 [source,bash]
 ----
-# Get profiles using tenant credentials
-curl -X GET "http://localhost:8181/cxs/profiles" \
-  --user "mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6" \
-  -H "Accept: application/json"
-
-# Response (HTTP 200 OK):
-{
-    "list": [
-        {
-            "itemId": "profile1",
-            "scope": "mytenant",
-            "properties": {
-                "firstName": "John",
-                "lastName": "Doe"
-            }
-        }
-    ],
+# Search profiles (there is no GET /cxs/profiles collection endpoint)
+curl -X POST "http://localhost:8181/cxs/profiles/search" \
+  --user "TENANT_ID:PRIVATE_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json" \
+  -d '{
+    "condition": {
+      "type": "matchAllCondition"
+    },
     "offset": 0,
-    "pageSize": 50,
-    "totalSize": 1
-}
+    "limit": 50
+  }'
+----
++
+3. System administrator (JAAS) for tenant management and cluster operations:
+[source,bash]
+----
+curl -X GET "http://localhost:8181/cxs/tenants" \
+  --user "karaf:karaf" \
+  -H "Accept: application/json"
 ----
 
-Authentication Rules:
+Authentication rules (Unomi 3.1):
 
-1. If JAAS authentication is provided (username/password), it grants full access to all endpoints
-2. Public paths (like /context.json) require a valid public API key
-3. Private paths require both tenantId and private API key
-4. All other requests are denied
-
+1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled).
+2. Private paths accept `tenantId:privateApiKey` Basic auth, or JAAS admin credentials (often with `X-Unomi-Tenant-Id` when a tenant context is required).
+3. Tenant administration (`/cxs/tenants`) requires system administrator JAAS credentials.
+4. JAAS admin does **not** replace the public API key on public endpoints.
 ==== Public vs Private Endpoints
 
 Public endpoints (requiring only public API key):
@@ -1473,7 +1437,7 @@ Be aware that in distribution's feature, you should only reference other feature
     <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
     <repository>mvn:org.apache.unomi/unomi-kar/${project.version}/xml/features</repository>
 
-    <feature name="unomi-distribution-elasticsearch-dev" description="Apache Unomi :: ElasticSearch Development Distribution" version="${project.version}">
+    <feature name="unomi-distribution-elasticsearch-dev" description="Apache Unomi :: Elasticsearch Development Distribution" version="${project.version}">
         <feature dependency="true" version="${project.version}">unomi-base</feature>
         <feature dependency="true" version="${project.version}">unomi-startup</feature>
         <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
@@ -1511,7 +1475,7 @@ NOTE: For OpenSearch distributions, use `unomi-healthcheck-opensearch` instead o
     <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
     <repository>mvn:org.apache.unomi/unomi-kar/${project.version}/xml/features</repository>
 
-    <feature name="unomi-distribution-elasticsearch-staging" description="Apache Unomi :: ElasticSearch Staging Distribution" version="${project.version}">
+    <feature name="unomi-distribution-elasticsearch-staging" description="Apache Unomi :: Elasticsearch Staging Distribution" version="${project.version}">
         <feature dependency="true" version="${project.version}">unomi-base</feature>
         <feature dependency="true" version="${project.version}">unomi-startup</feature>
         <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
@@ -1547,7 +1511,7 @@ NOTE: For OpenSearch distributions, use `unomi-healthcheck-opensearch` instead o
     <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
     <repository>mvn:org.apache.unomi/unomi-kar/${project.version}/xml/features</repository>
 
-    <feature name="unomi-distribution-elasticsearch-prod" description="Apache Unomi :: ElasticSearch Production Distribution" version="${project.version}">
+    <feature name="unomi-distribution-elasticsearch-prod" description="Apache Unomi :: Elasticsearch Production Distribution" version="${project.version}">
         <feature dependency="true" version="${project.version}">unomi-base</feature>
         <feature dependency="true" version="${project.version}">unomi-startup</feature>
         <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
@@ -1772,7 +1736,7 @@ unomi:start elasticsearch-prod
 [#_health_check]
 === Health Check Extension
 
-The Health Check extension provides a way to check is required Unomi components are 'live'.
+The Health Check extension provides a way to check if required Unomi components are 'live'.
 
 It consists in a simple http endpoint that provide a JSON view of integrated health checks. It can then be used to determine if the server
 is up and running and can serve requests.
@@ -1784,12 +1748,15 @@ to access the endpoint. Users and roles can be configured in the etc/users.prope
 
 Specific configuration is located in : org.apache.unomi.healthcheck.cfg  Existing health checks are using configuration from that file, including authentication realm.
 
-Existing health checks gives information about :
-- Karaf (as soon as the karaf container is started, that check is LIVE)
-- Elasticsearch (connection to elasticsearch cluster and its health)
-- Unomi (unomi bundles status)
-- Persistence (unomi to elasticsearch binding)
-- Cluster health (unomi cluster status and nodes information)
+Existing health checks give information about:
+
+* Karaf (as soon as the karaf container is started, that check is LIVE)
+* Elasticsearch **or** OpenSearch (connection to the search cluster and its health) — provider name `elasticsearch` or `opensearch` depending on the distribution
+* Unomi (unomi bundles status)
+* Persistence (Unomi binding to the search/persistence backend)
+* Cluster health (unomi cluster status and nodes information)
+
+Set `UNOMI_HEALTHCHECK_PROVIDERS` (or `providers` in the cfg file) to the comma-separated list that matches your deployment, for example `karaf,elasticsearch,unomi,persistence,cluster` or `karaf,opensearch,unomi,persistence,cluster`.
 
 All healthcheck can have a status :
 - DOWN (service is not available)
@@ -1858,159 +1825,3 @@ By default, all healthcheck providers are included but the list of those include
 Karaf provider is the one needed by healthcheck (always LIVE), it cannot be ignored.
 
 The timeout used for each health check can be set by setting the property `timeout` to the desired value in milliseconds. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_TIMEOUT
-
-=== API Access Examples
-
-1. Basic Authentication Example:
-[source,bash]
-----
-# Get authentication token
-curl -X POST "http://localhost:8181/cxs/login" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "myuser",
-    "password": "mypassword"
-  }'
-
-# Response (HTTP 200 OK):
-{
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "totalSize": 1
-}
-----
-+
-2. Public API Access (Client-Side Operations):
-[source,bash]
-----
-# Get context data
-curl -X POST "http://localhost:8181/cxs/context.json" \
-  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "source": {
-        "itemId": "homepage",
-        "itemType": "page",
-        "scope": "example"
-    },
-    "requiredProfileProperties": ["firstName", "lastName"]
-  }'
-
-# Response (HTTP 200 OK):
-{
-    "profileId": "xyz123",
-    "sessionId": "abc456",
-    "profileProperties": {
-        "firstName": "John",
-        "lastName": "Doe"
-    }
-}
-----
-+
-3. Private API Access (Server-Side Operations):
-[source,bash]
-----
-# Get profiles using tenant credentials
-curl -X GET "http://localhost:8181/cxs/profiles" \
-  --user "mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6" \
-  -H "Accept: application/json"
-
-# Response (HTTP 200 OK):
-{
-    "list": [
-        {
-            "itemId": "profile1",
-            "scope": "mytenant",
-            "properties": {
-                "firstName": "John",
-                "lastName": "Doe"
-            }
-        }
-    ],
-    "offset": 0,
-    "pageSize": 50,
-    "totalSize": 1
-}
-----
-
-Authentication Rules:
-
-1. If JAAS authentication is provided (username/password), it grants full access to all endpoints
-2. Public paths (like /context.json) require a valid public API key
-3. Private paths require both tenantId and private API key
-4. All other requests are denied
-
-==== Public vs Private Endpoints
-
-Public endpoints (requiring only public API key):
-
-1. GET/POST /context.json
-[source,bash]
-----
-# Example request
-curl -X GET "http://localhost:8181/cxs/context.json?sessionId=abc123" \
-  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c"
-----
-+
-2. GET/POST /eventcollector
-[source,bash]
-----
-# Example request
-curl -X POST "http://localhost:8181/cxs/eventcollector" \
-  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "events": [{
-        "eventType": "view",
-        "scope": "example",
-        "source": {
-            "itemId": "page1",
-            "itemType": "page",
-            "scope": "example"
-        },
-        "target": {
-            "itemId": "product1",
-            "itemType": "product",
-            "scope": "example"
-        }
-    }]
-  }'
-----
-+
-3. GET /client/*
-[source,bash]
-----
-# Example request
-curl -X GET "http://localhost:8181/cxs/client/myapp/status" \
-  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c"
-----
-
-All other endpoints are considered private and require either:
-* JAAS authentication with admin credentials, or
-* Private API key authentication with tenant credentials
-
-Example private endpoint access:
-[source,bash]
-----
-# Get segment details
-curl -X GET "http://localhost:8181/cxs/segments/important-customers" \
-  --user "mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6" \
-  -H "Accept: application/json"
-
-# Create a new segment
-curl -X POST "http://localhost:8181/cxs/segments" \
-  --user "mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "itemId": "high-value-customers",
-    "name": "High Value Customers",
-    "description": "Customers with high purchase value",
-    "condition": {
-        "type": "profilePropertyCondition",
-        "parameterValues": {
-            "propertyName": "totalPurchases",
-            "comparisonOperator": "greaterThan",
-            "propertyValue": 1000
-        }
-    }
-  }'
-----

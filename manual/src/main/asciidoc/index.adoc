@@ -163,9 +163,25 @@ include::scheduler.adoc[]
 [#_health_check_chapter]
 == Health check
 
-Apache Unomi exposes an HTTP health endpoint at `/health/check` with pluggable providers (Karaf, search engine, persistence, cluster, Unomi bundles).
+Apache Unomi exposes an HTTP health endpoint at `/health/check` with pluggable providers.
 
-Configuration of providers and related system properties is documented in the Configuration chapter: <<_health_check,Health check extension>>.
+Typical providers:
+
+* `karaf` — always required (Karaf framework)
+* `elasticsearch` or `opensearch` — search backend (match your distribution)
+* `persistence` — persistence binding
+* `cluster` — cluster node registry
+* `unomi` — Unomi bundles / services
+
+Docker / env example (OpenSearch distribution):
+
+[source,bash]
+----
+UNOMI_HEALTHCHECK_ENABLED=true
+UNOMI_HEALTHCHECK_PROVIDERS=cluster,opensearch,unomi,persistence
+----
+
+The endpoint is protected by the `health` role (default user `health` / `health`). Full provider configuration, sample JSON, and extension points are documented in the Configuration chapter: <<_health_check,Health check extension>>.
 
 == Reference
 

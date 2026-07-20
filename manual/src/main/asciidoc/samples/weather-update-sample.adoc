@@ -11,4 +11,45 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[#_weather_update_sample]
 === Weather update sample
+
+The **weather-update** extension enriches the visitor session with weather properties based on the resolved geo-location (typically from IP lookup). It calls the OpenWeatherMap API and stores values such as temperature, “feels like”, wind speed, and wind direction on the session.
+
+Source and packaging live under `extensions/weather-update/` in the Unomi repository. See also the extension README: https://github.com/apache/unomi/blob/master/extensions/weather-update/README.md
+
+==== Prerequisites
+
+* Apache Unomi running with a tenant and API keys (see <<_multitenancy,Multi-tenancy>>)
+* An OpenWeatherMap account and API key: https://home.openweathermap.org/api_keys
+* GeoIP / location resolution configured so sessions have a usable location (see Geonames / GeoIP sections in <<_configuration,Configuration>>)
+
+==== Install the extension
+
+From the Karaf shell (adjust the version to match your Unomi build):
+
+[source,bash]
+----
+feature:repo-add mvn:org.apache.unomi/unomi-weather-update-karaf-kar/3.1.0-SNAPSHOT/xml/features
+feature:install unomi-weather-update-karaf-kar
+----
+
+==== Configure the OpenWeatherMap API key
+
+Edit `etc/org.apache.unomi.weatherUpdate.cfg`:
+
+[source,properties]
+----
+weatherUpdate.apiKey=YOUR_OPENWEATHERMAP_API_KEY
+----
+
+==== What it updates
+
+The extension registers session property types under the weather tag (for example `weatherTemp`, `weatherLike`, `weatherWindSpeed`, `weatherWindDirection`) and an action that fills them when a suitable event/rule fires.
+
+Wire a rule that runs the weather-update action on session start or first view (using the tenant private API key or JAAS), then verify session properties via `POST /cxs/profiles/search` / session APIs or a context request with `requiredSessionProperties`.
+
+==== Related
+
+* <<_twitter_sample,Twitter sample>> — another extension-driven action example
+* <<_builtin_action_types,Built-in action types>> — action plugin patterns

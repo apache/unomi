@@ -11,11 +11,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+[#_unomi_web_tracking_tutorial]
 === Unomi web tracking tutorial
 
 In this tutorial we will guide through the basic steps of getting started with a web tracking project. You will see how to integrate the built-in web tracker with an existing web site and what this enables.
 
 If you prefer to use existing HTML and Javascript rather than building your own, all the code we feature in this tutorial is extracted from our tracker sample which is available here: https://github.com/apache/unomi/blob/master/extensions/web-tracker/wab/src/main/webapp/index.html . However you will still need to use the REST API calls to create the scope and rule to make it all work.
+
+IMPORTANT: On Unomi **3.1**, `/cxs/context.json` and `/cxs/eventcollector` require a tenant **public** API key.
+The bundled `unomi-web-tracker` does not yet send `X-Unomi-Api-Key`. For this tutorial, either:
+
+* Enable <<_v2_compatibility_mode,V2 compatibility mode>> for local learning (public endpoints work without API keys), **or**
+* Use the NPM tracker / custom fetch wrappers that set `X-Unomi-Api-Key` (see <<_javascript_tracker_guide,JavaScript tracker guide>>), after creating a tenant and regenerating keys (see <<_multitenancy,Multi-tenancy>>).
+
+Create a scope and rules with tenant private-key or JAAS admin authentication as shown below.
 
 ==== Installing the web tracker in a web page
 
@@ -33,7 +42,7 @@ or you can also use the non-minified version that is available here:
     <script type="text/javascript" src="/tracker/unomi-web-tracker.js"></script>
 ----
 
-This will only load the tracker. To initialize it use a snipper like the following code:
+This will only load the tracker. To initialize it use a snippet like the following code:
 
 [source,javascript]
 ----
@@ -59,7 +68,7 @@ This will only load the tracker. To initialize it use a snipper like the followi
                     "attributes": {},
                     "consentTypes": []
                 },
-                "events:": [],
+                "events": [],
                 "wemInitConfig": {
                     "contextServerUrl": document.location.origin,
                     "timeoutInMilliseconds": "1500",
@@ -149,7 +158,7 @@ import {useTracker} from "apache-unomi-tracker";
             "attributes": {},
             "consentTypes": []
         },
-        "events:": [],
+        "events": [],
         "wemInitConfig": {
             "contextServerUrl": document.location.origin,
             "timeoutInMilliseconds": "1500",
