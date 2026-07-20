@@ -145,11 +145,16 @@ public class TaskRecoveryManager {
             return;
         }
 
+        long diagStart = System.currentTimeMillis();
+        LOGGER.debug("LOCK-DIAG node {} : recoverCrashedTasks() tick starting", nodeId);
         try {
             recoverRunningTasks();
             recoverLockedTasks();
         } catch (Exception e) {
             LOGGER.error("Node {} Error recovering crashed tasks", nodeId, e);
+        } finally {
+            LOGGER.debug("LOCK-DIAG node {} : recoverCrashedTasks() tick finished in {} ms",
+                nodeId, System.currentTimeMillis() - diagStart);
         }
     }
 
@@ -160,6 +165,8 @@ public class TaskRecoveryManager {
         if (shutdownNow) return;
 
         List<ScheduledTask> runningTasks = schedulerService.findTasksByStatus(ScheduledTask.TaskStatus.RUNNING);
+        LOGGER.debug("LOCK-DIAG node {} : recoverRunningTasks() search found {} RUNNING task(s): {}",
+            nodeId, runningTasks.size(), taskSummary(runningTasks));
 
         for (ScheduledTask task : runningTasks) {
             if (shutdownNow) return;
@@ -169,6 +176,27 @@ public class TaskRecoveryManager {
                 recoverCrashedTask(task);
             }
         }
+    }
+
+    /**
+     * Diagnostic helper: summarizes a list of tasks (id/status/lockOwner/lockDate) for a single
+     * log line, so recovery-pass discoveries can be correlated against TaskLockManager's
+     * LOCK-DIAG output by task id and timestamp.
+     */
+    private static String taskSummary(List<ScheduledTask> tasks) {
+        if (tasks == null || tasks.isEmpty()) {
+            return "[]";
+        }
+        StringBuilder sb = new StringBuilder("[");
+        for (ScheduledTask t : tasks) {
+            sb.append("{id=").append(t.getItemId())
+              .append(", status=").append(t.getStatus())
+              .append(", lockOwner=").append(t.getLockOwner())
+              .append(", lockDate=").append(t.getLockDate())
+              .append("} ");
+        }
+        sb.append("]");
+        return sb.toString();
     }
 
     /**
@@ -355,15 +383,25 @@ public class TaskRecoveryManager {
      */
     private void recoverLockedTasks() {
         List<ScheduledTask> lockedTasks = schedulerService.findLockedTasks();
+        LOGGER.debug("LOCK-DIAG node {} : recoverLockedTasks() search (findLockedTasks, propertyCondition-based, "
+                + "NOT a real-time GET) found {} locked task(s): {}",
+            nodeId, lockedTasks.size(), taskSummary(lockedTasks));
 
         for (ScheduledTask task : lockedTasks) {
             // RUNNING / CRASHED are owned by recoverRunningTasks (resume/restart).
             // Releasing their locks here races the async dispatch that just acquired a new lock.
             if (task.getStatus() == ScheduledTask.TaskStatus.RUNNING
                 || task.getStatus() == ScheduledTask.TaskStatus.CRASHED) {
+                LOGGER.debug("LOCK-DIAG [{}] node {} : recoverLockedTasks() skipping - status={} owned by "
+                        + "recoverRunningTasks",
+                    task.getItemId(), nodeId, task.getStatus());
                 continue;
             }
-            if (lockManager.isLockExpired(task)) {
+            boolean expired = lockManager.isLockExpired(task);
+            LOGGER.debug("LOCK-DIAG [{}] node {} : recoverLockedTasks() candidate - status={}, lockOwner={}, "
+                    + "lockDate={}, isLockExpired={}",
+                task.getItemId(), nodeId, task.getStatus(), task.getLockOwner(), task.getLockDate(), expired);
+            if (expired) {
                 LOGGER.info("Node {} releasing expired lock for task: {}", nodeId, task.getItemId());
                 recoverLockedTask(task);
             }
@@ -373,9 +411,20 @@ public class TaskRecoveryManager {
     /**
      * Releases an expired lock and reschedules the task when appropriate.
      *
+     * <p>NOTE: {@code task} here comes from a SEARCH query ({@link SchedulerServiceImpl#findLockedTasks()}),
+     * not a real-time GET by ID. If the search index lags a moment behind a concurrent, legitimate
+     * lock acquisition/release cycle on this same task (elsewhere in {@code acquireDistributedLock()}),
+     * this method can act on a stale view: releasing a lock a live acquisition attempt just took, and/or
+     * re-dispatching a duplicate execution attempt via {@code executionManager.executeTask()} below,
+     * which independently races whatever the normal {@code checkTasks()} -> {@code processTaskGroup()}
+     * dispatch path is doing for the same task in the same or a nearby tick.
+     *
      * @param task the locked task to recover
      */
     private void recoverLockedTask(ScheduledTask task) {
+        LOGGER.debug("LOCK-DIAG [{}] node {} : recoverLockedTask() - releasing lock owned by {} (search-view "
+                + "lockDate={}), then re-dispatching if status becomes SCHEDULED",
+            task.getItemId(), nodeId, task.getLockOwner(), task.getLockDate());
         lockManager.releaseLock(task);
 
         // Check if task can be rescheduled
@@ -389,6 +438,10 @@ public class TaskRecoveryManager {
             if (task.getStatus() == ScheduledTask.TaskStatus.SCHEDULED && mayDispatchRecovery(task)) {
                 TaskExecutor executor = executorRegistry.getExecutor(task.getTaskType());
                 if (executor != null) {
+                    LOGGER.debug("LOCK-DIAG [{}] node {} : recoverLockedTask() re-dispatching via "
+                            + "executionManager.executeTask() (recovery-path dispatch, bypasses the normal "
+                            + "checkTasks()/processTaskGroup() dispatch claim ordering)",
+                        task.getItemId(), nodeId);
                     executionManager.executeTask(task, executor);
                 }
             }

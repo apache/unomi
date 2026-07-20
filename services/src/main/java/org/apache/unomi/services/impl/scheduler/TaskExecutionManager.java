@@ -234,9 +234,15 @@ public class TaskExecutionManager {
             // so a second poll tick landing in that gap could otherwise see a stale non-RUNNING status and
             // dispatch the same task again. Set.add() is atomic, so only one caller can win this race.
             if (!executingSet.add(task.getItemId())) {
+                LOGGER.debug("LOCK-DIAG [{}] node {} : executeTask() dispatch claim REJECTED - task already "
+                        + "claimed by an in-flight dispatch (this is the duplicate-dispatch guard working)",
+                    task.getItemId(), nodeId);
                 LOGGER.debug("Node {} : Task {} is already dispatched for execution, skipping duplicate dispatch", nodeId, task.getItemId());
                 return;
             }
+            LOGGER.debug("LOCK-DIAG [{}] node {} : executeTask() dispatch claim ACQUIRED, scheduling wrapper "
+                    + "(caller thread={})",
+                task.getItemId(), nodeId, Thread.currentThread().getName());
 
             TaskExecutor.TaskStatusCallback statusCallback = createStatusCallback(task);
             Runnable taskWrapper = createTaskWrapper(task, executor, statusCallback);
@@ -264,6 +270,8 @@ public class TaskExecutionManager {
      * @return true if the task is ready to run
      */
     public boolean prepareForExecution(ScheduledTask task) {
+        LOGGER.debug("LOCK-DIAG [{}] node {} : prepareForExecution() starting on thread {}, status={}",
+            task.getItemId(), nodeId, Thread.currentThread().getName(), task.getStatus());
         if (!task.isEnabled()) {
             LOGGER.debug("Task {} is disabled", task.getItemId());
             return false;
@@ -294,7 +302,11 @@ public class TaskExecutionManager {
 
         // Acquire lock for exclusive tasks (persistent distributed or in-memory).
         // allowParallelExecution tasks get a non-exclusive lock marker inside acquireLock.
-        if (!lockManager.acquireLock(task)) {
+        long lockAttemptStart = System.currentTimeMillis();
+        boolean lockAcquired = lockManager.acquireLock(task);
+        LOGGER.debug("LOCK-DIAG [{}] node {} : prepareForExecution() acquireLock() returned {} in {} ms",
+            task.getItemId(), nodeId, lockAcquired, System.currentTimeMillis() - lockAttemptStart);
+        if (!lockAcquired) {
             LOGGER.debug("Could not acquire lock for task: {}", task.getItemId());
             return false;
         }
@@ -307,6 +319,8 @@ public class TaskExecutionManager {
 
         stateManager.updateTaskState(task, ScheduledTask.TaskStatus.RUNNING, null, nodeId);
         schedulerService.saveTask(task);
+        LOGGER.debug("LOCK-DIAG [{}] node {} : prepareForExecution() succeeded, task now RUNNING",
+            task.getItemId(), nodeId);
         return true;
     }
 

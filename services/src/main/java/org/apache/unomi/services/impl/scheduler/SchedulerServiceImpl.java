@@ -88,6 +88,8 @@ public class SchedulerServiceImpl implements SchedulerService {
     private final AtomicBoolean running = new AtomicBoolean(false);
     private final Map<String, Queue<ScheduledTask>> waitingNonPersistentTasks = new ConcurrentHashMap<>();
     private final AtomicBoolean checkTasksRunning = new AtomicBoolean(false);
+    /** Diagnostic-only monotonic tick counter to correlate LOCK-DIAG log lines across managers. */
+    private final java.util.concurrent.atomic.AtomicLong diagTickCounter = new java.util.concurrent.atomic.AtomicLong();
 
     // Manager instances - will be injected by Blueprint
     private TaskStateManager stateManager;
@@ -955,6 +957,9 @@ public class SchedulerServiceImpl implements SchedulerService {
             return;
         }
 
+        long tick = diagTickCounter.incrementAndGet();
+        long diagStart = System.currentTimeMillis();
+        LOGGER.debug("LOCK-DIAG node {} : checkTasks() tick #{} starting", nodeId, tick);
         try {
             // Skip task processing during shutdown
             if (shutdownNow) {
@@ -977,6 +982,9 @@ public class SchedulerServiceImpl implements SchedulerService {
                     tasks.addAll(persistentTasks);
                 }
             }
+            LOGGER.debug("LOCK-DIAG node {} : checkTasks() tick #{} findEnabledScheduledOrWaitingTasks() "
+                    + "(search-based) returned {} persistent task(s)",
+                nodeId, tick, tasks.size());
 
             // Also check in-memory tasks
             List<ScheduledTask> inMemoryTasks = nonPersistentTasks.values().stream()
@@ -1010,6 +1018,8 @@ public class SchedulerServiceImpl implements SchedulerService {
         } catch (Exception e) {
             LOGGER.error("Error checking tasks", e);
         } finally {
+            LOGGER.debug("LOCK-DIAG node {} : checkTasks() tick #{} finished in {} ms",
+                nodeId, tick, System.currentTimeMillis() - diagStart);
             checkTasksRunning.set(false);
         }
     }
@@ -1047,6 +1057,8 @@ public class SchedulerServiceImpl implements SchedulerService {
     private void processTaskGroup(String taskType, List<ScheduledTask> tasks) {
         TaskExecutor executor = executorRegistry.getExecutor(taskType);
         if (executor == null) {
+            LOGGER.debug("LOCK-DIAG node {} : processTaskGroup(type={}) no executor registered, skipping {} task(s)",
+                nodeId, taskType, tasks.size());
             return;
         }
 
@@ -1054,15 +1066,26 @@ public class SchedulerServiceImpl implements SchedulerService {
             if (shutdownNow) {
                 return;
             }
-            if (!shouldExecuteTask(task)) {
+            boolean due = shouldExecuteTask(task);
+            LOGGER.debug("LOCK-DIAG [{}] node {} : processTaskGroup(type={}) shouldExecuteTask={}, status={}, "
+                    + "lockOwner={}, allowParallelExecution={}",
+                task.getItemId(), nodeId, taskType, due, task.getStatus(), task.getLockOwner(),
+                task.isAllowParallelExecution());
+            if (!due) {
                 continue;
             }
             // Type-level mutex is best-effort across nodes (TOCTOU vs peer checkers).
             // Re-query immediately before dispatch to shrink the race; the hard guarantee
             // for a single task instance remains the per-task OCC lock.
             if (!task.isAllowParallelExecution() && hasRunningTaskOfType(taskType)) {
+                LOGGER.debug("LOCK-DIAG [{}] node {} : processTaskGroup(type={}) skipping - another task of "
+                        + "this type is already RUNNING on this node",
+                    task.getItemId(), nodeId, taskType);
                 continue;
             }
+            LOGGER.debug("LOCK-DIAG [{}] node {} : processTaskGroup(type={}) dispatching via "
+                    + "executionManager.executeTask()",
+                task.getItemId(), nodeId, taskType);
             executionManager.executeTask(task, executor);
             if (!task.isAllowParallelExecution()) {
                 // One exclusive task of this type at a time on this node

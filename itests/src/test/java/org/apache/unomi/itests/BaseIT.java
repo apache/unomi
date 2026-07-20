@@ -754,6 +754,15 @@ public abstract class BaseIT extends KarafTestSupport {
         karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxStore.name", "org.ops4j.store"));
         karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxStore.level", "WARN"));
 
+        // UNOMI-967 diagnostic: DEBUG-level "LOCK-DIAG"-tagged logging was added throughout the
+        // scheduler's lock acquisition/renewal/recovery paths (TaskLockManager, TaskRecoveryManager,
+        // SchedulerServiceImpl, TaskExecutionManager) to root-cause a live-IT-only bug where
+        // "Lock verification failed... after CAS" fires on every checker tick for the whole suite
+        // (a real ES backend, not the in-memory unit-test double). Bump this package to DEBUG for
+        // ITs only so that logging is actually captured. TODO: remove once root-caused and fixed.
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.schedulerDiag.name", "org.apache.unomi.services.impl.scheduler"));
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.schedulerDiag.level", "DEBUG"));
+
         // Enable debug logging for Karaf Resolver to diagnose bundle refresh issues (default: disabled)
         boolean enableResolverDebug = Boolean.parseBoolean(System.getProperty(RESOLVER_DEBUG_PROPERTY, "false"));
         if (enableResolverDebug) {
