@@ -70,6 +70,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     private final Map<String, Long> sequenceNumbersByIndex = new ConcurrentHashMap<>();
     private final Map<String, Long> primaryTermsByIndex = new ConcurrentHashMap<>();
     private final Map<String, Object> fileLocks = new ConcurrentHashMap<>();
+    /** Per-item-key mutex guarding save()'s read-check-write CAS sequence (see save()). */
+    private final Map<String, Object> saveLocks = new ConcurrentHashMap<>();
     private final ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private final ExecutionContextManager executionContextManager;
     private final CustomObjectMapper objectMapper;
@@ -617,68 +619,80 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
         String indexName = getIndexName(item);
         String key = getKey(item.getItemId(), indexName);
-        Item existingItem = itemsById.get(key);
 
-        // Optimistic concurrency control — matches ES/OpenSearch: only enforced when
-        // alwaysOverwrite is false. Accept both ES keys (seq_no / primary_term) used by
-        // TaskLockManager and legacy underscore-prefixed keys used by older unit tests.
-        // Default save(item) passes alwaysOverwrite=true and must overwrite (blind put),
-        // otherwise multi-node recovery races fail spuriously when a stale in-memory view
-        // still carries an older seq_no.
-        boolean overwrite = alwaysOverwrite == null || alwaysOverwrite;
-        if (existingItem != null && !overwrite) {
-            Object existingSeqNo = getSequenceMetadata(existingItem, true);
-            Object existingPrimaryTerm = getSequenceMetadata(existingItem, false);
+        // The read (existingItem), the CAS precondition check, and the write (itemsById.put)
+        // below must happen as a single atomic unit per key - real ES/OS enforce this via
+        // per-document write ordering at the shard level. Without this lock, two threads can
+        // both read the same pre-write state, both pass the CAS check, and both "successfully"
+        // write - a real bug this exact double once had, masked for a long time because a
+        // since-removed caller-side post-write re-verification step (in TaskLockManager)
+        // happened to catch the resulting double-acquisition after the fact. Real ES/OS never
+        // needed that re-verification because they never had this race to begin with.
+        Object lock = saveLocks.computeIfAbsent(key, k -> new Object());
+        synchronized (lock) {
+            Item existingItem = itemsById.get(key);
 
-            Object requestedSeqNo = getSequenceMetadata(item, true);
-            Object requestedPrimaryTerm = getSequenceMetadata(item, false);
+            // Optimistic concurrency control — matches ES/OpenSearch: only enforced when
+            // alwaysOverwrite is false. Accept both ES keys (seq_no / primary_term) used by
+            // TaskLockManager and legacy underscore-prefixed keys used by older unit tests.
+            // Default save(item) passes alwaysOverwrite=true and must overwrite (blind put),
+            // otherwise multi-node recovery races fail spuriously when a stale in-memory view
+            // still carries an older seq_no.
+            boolean overwrite = alwaysOverwrite == null || alwaysOverwrite;
+            if (existingItem != null && !overwrite) {
+                Object existingSeqNo = getSequenceMetadata(existingItem, true);
+                Object existingPrimaryTerm = getSequenceMetadata(existingItem, false);
 
-            if (requestedSeqNo != null && requestedPrimaryTerm != null) {
-                if (existingSeqNo != null &&
-                    ((Number) requestedSeqNo).longValue() != ((Number) existingSeqNo).longValue()) {
-                    LOGGER.warn("Sequence number conflict detected for item {}: requested={}, current={}",
-                               item.getItemId(), requestedSeqNo, existingSeqNo);
-                    return false;
-                }
+                Object requestedSeqNo = getSequenceMetadata(item, true);
+                Object requestedPrimaryTerm = getSequenceMetadata(item, false);
 
-                if (existingPrimaryTerm != null &&
-                    ((Number) requestedPrimaryTerm).longValue() != ((Number) existingPrimaryTerm).longValue()) {
-                    LOGGER.warn("Primary term conflict detected for item {}: requested={}, current={}",
-                               item.getItemId(), requestedPrimaryTerm, existingPrimaryTerm);
-                    return false;
+                if (requestedSeqNo != null && requestedPrimaryTerm != null) {
+                    if (existingSeqNo != null &&
+                        ((Number) requestedSeqNo).longValue() != ((Number) existingSeqNo).longValue()) {
+                        LOGGER.warn("Sequence number conflict detected for item {}: requested={}, current={}",
+                                   item.getItemId(), requestedSeqNo, existingSeqNo);
+                        return false;
+                    }
+
+                    if (existingPrimaryTerm != null &&
+                        ((Number) requestedPrimaryTerm).longValue() != ((Number) existingPrimaryTerm).longValue()) {
+                        LOGGER.warn("Primary term conflict detected for item {}: requested={}, current={}",
+                                   item.getItemId(), requestedPrimaryTerm, existingPrimaryTerm);
+                        return false;
+                    }
                 }
             }
-        }
 
-        // Get sequence number for this item
-        Long currentSeqNo = getSequenceNumber(indexName, true);
+            // Get sequence number for this item
+            Long currentSeqNo = getSequenceNumber(indexName, true);
 
-        // Get primary term for this index
-        Long currentPrimaryTerm = getPrimaryTerm(indexName);
+            // Get primary term for this index
+            Long currentPrimaryTerm = getPrimaryTerm(indexName);
 
-        // Write both key styles so ES-aligned clients and legacy tests both see the values
-        item.setSystemMetadata("seq_no", currentSeqNo);
-        item.setSystemMetadata("primary_term", currentPrimaryTerm);
-        item.setSystemMetadata("_seq_no", currentSeqNo);
-        item.setSystemMetadata("_primary_term", currentPrimaryTerm);
+            // Write both key styles so ES-aligned clients and legacy tests both see the values
+            item.setSystemMetadata("seq_no", currentSeqNo);
+            item.setSystemMetadata("primary_term", currentPrimaryTerm);
+            item.setSystemMetadata("_seq_no", currentSeqNo);
+            item.setSystemMetadata("_primary_term", currentPrimaryTerm);
 
-        // Handle item versioning (the existing version system)
-        if ((existingItem == null || existingItem.getVersion() == null) && (item.getVersion() == null)) {
-            // New item or item without version, set initial version
-            item.setVersion(1L);
-        } else {
-            // Existing item being updated, increment version
-            if (existingItem != null && existingItem.getVersion() != null) {
-                item.setVersion(existingItem.getVersion() + 1);
+            // Handle item versioning (the existing version system)
+            if ((existingItem == null || existingItem.getVersion() == null) && (item.getVersion() == null)) {
+                // New item or item without version, set initial version
+                item.setVersion(1L);
             } else {
-                item.setVersion(item.getVersion() + 1);
+                // Existing item being updated, increment version
+                if (existingItem != null && existingItem.getVersion() != null) {
+                    item.setVersion(existingItem.getVersion() + 1);
+                } else {
+                    item.setVersion(item.getVersion() + 1);
+                }
             }
-        }
 
-        // Store a deep copy so later mutations on the caller's instance (or a second node's
-        // local view) cannot silently change the persisted document — matching ES/OpenSearch
-        // deserialize-on-load semantics required for realistic multi-node scheduler tests.
-        itemsById.put(key, deepCopyItem(item));
+            // Store a deep copy so later mutations on the caller's instance (or a second node's
+            // local view) cannot silently change the persisted document — matching ES/OpenSearch
+            // deserialize-on-load semantics required for realistic multi-node scheduler tests.
+            itemsById.put(key, deepCopyItem(item));
+        }
 
         if (fileStorageEnabled) {
             persistItem(item);

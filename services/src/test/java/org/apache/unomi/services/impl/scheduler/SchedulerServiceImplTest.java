@@ -629,10 +629,16 @@ public class SchedulerServiceImplTest {
                 .disallowParallelExecution()
             .schedule();
 
-        // Wait for the task to be scheduled, then simulate a node crash (RUNNING + expired lock)
+        // The task executes immediately on schedule() and its first natural attempt always
+        // throws (no "crashTime" yet), triggering handleTaskError()'s own async
+        // failureCount-increment-and-reschedule save. Wait for that save to land (failureCount
+        // >= 1) before overwriting the task below - otherwise this test's blind saveTask() can
+        // race that background write and lose, silently reverting the simulated-crash setup back
+        // to a plain retry-delayed SCHEDULED state (observed as a deterministic failure once
+        // lock acquisition got fast enough to no longer incidentally happen-after that save).
         ScheduledTask persistedTask = TestHelper.retryUntil(
             () -> schedulerService.getTask(task.getItemId()),
-            Objects::nonNull
+            t -> t != null && t.getFailureCount() >= 1
         );
         persistedTask.setStatus(ScheduledTask.TaskStatus.RUNNING);
         persistedTask.setLockOwner("dead-node");
