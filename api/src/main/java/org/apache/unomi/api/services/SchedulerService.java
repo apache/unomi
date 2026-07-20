@@ -351,10 +351,21 @@ public interface SchedulerService {
         /**
          * Disallows parallel execution.
          * Task will use locking to ensure only one instance runs at a time.
+         * This is the default for {@link #newTask(String)}.
          *
          * @return this builder for method chaining
          */
         TaskBuilder disallowParallelExecution();
+
+        /**
+         * Allows parallel execution (disables exclusive cluster locking for this task).
+         * Use only when duplicate side effects across nodes are intentional; prefer the
+         * default exclusive behaviour for cluster-wide jobs. {@link #runOnAllNodes()}
+         * enables this automatically.
+         *
+         * @return this builder for method chaining
+         */
+        TaskBuilder allowParallelExecution();
 
         /**
          * Sets the task executor.

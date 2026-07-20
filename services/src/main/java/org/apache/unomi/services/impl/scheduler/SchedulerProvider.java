@@ -124,6 +124,21 @@ public interface SchedulerProvider {
     boolean saveTask(ScheduledTask task);
 
     /**
+     * Saves a task using optimistic concurrency (compare-and-set on {@code seq_no}/
+     * {@code primary_term}). Used by distributed lock acquisition so two nodes cannot
+     * both believe they hold the lock after a concurrent write.
+     *
+     * <p>Callers: {@code SchedulerServiceImpl.saveTaskWithRefresh}; implemented by
+     * {@code PersistenceSchedulerProvider.saveTaskCompareAndSet}.
+     *
+     * @param task The task to save (must carry the expected seq_no / primary_term)
+     * @return true if the compare-and-set succeeded, false on version conflict
+     */
+    default boolean saveTaskCompareAndSet(ScheduledTask task) {
+        return saveTask(task);
+    }
+
+    /**
      * Returns the list of currently active cluster nodes.
      * This is used for node affinity in the distributed locking mechanism.
      *

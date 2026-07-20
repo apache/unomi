@@ -34,6 +34,27 @@ import java.util.Map;
 public interface PersistenceService {
 
     /**
+     * {@link Item#getSystemMetadata(String)} key holding this backend's sequence number for an
+     * item, populated by every {@code PersistenceService} implementation after a successful
+     * {@code load()}/{@code save()}. Paired with {@link #SYSTEM_METADATA_PRIMARY_TERM}, this
+     * value changes on every successful write and can be treated as an opaque, monotonically
+     * -changing fencing token — no application-level version counter is needed on top of it for
+     * compare-and-set or distributed-locking use cases (see {@link #save(Item, Boolean, Boolean)}).
+     * This is a persistence-implementation detail, not a generic {@link Item} concept, which is
+     * why it lives here rather than on {@link Item} itself. Every current and planned
+     * {@code PersistenceService} implementation (Elasticsearch, OpenSearch) uses this exact key
+     * name, by convention, so it is declared once here rather than duplicated per implementation.
+     */
+    String SYSTEM_METADATA_SEQ_NO = "seq_no";
+
+    /**
+     * {@link Item#getSystemMetadata(String)} key holding this backend's primary term for an item.
+     * Must always be supplied together with {@link #SYSTEM_METADATA_SEQ_NO} as the
+     * compare-and-set precondition; the pair identifies a specific document generation.
+     */
+    String SYSTEM_METADATA_PRIMARY_TERM = "primary_term";
+
+    /**
      * Returns the unique name of this persistence backend implementation.
      *
      * @return the persistence service name
@@ -108,6 +129,23 @@ public interface PersistenceService {
 
     /**
      * Persists the specified Item in the context server.
+     * <p>
+     * When {@code alwaysOverwrite} is {@code false}, this becomes a compare-and-set (CAS) write:
+     * the backend applies it only if the item's current {@link #SYSTEM_METADATA_SEQ_NO}/
+     * {@link #SYSTEM_METADATA_PRIMARY_TERM} system metadata (typically populated by a prior
+     * {@code load()} or {@code save()} on the same item) still match the backend's current state
+     * for that document. A {@code true} return is itself authoritative proof the write applied —
+     * callers do not need a follow-up read to double-check, since every implementation applies
+     * this precondition atomically. On success, the item's system metadata is updated in place
+     * with the new post-write seq_no/primary_term, which callers may treat as an opaque,
+     * monotonically-changing fencing token (e.g. for distributed-locking use cases — see
+     * {@code TaskLockManager#acquireLock}). A {@code false} return means the precondition did not
+     * match (the caller's view was stale / lost a race); nothing was written, and the caller
+     * should reload and retry rather than treat it as an application error.
+     * <p>
+     * When {@code alwaysOverwrite} is {@code true} (or {@code null}, which falls back to the
+     * implementation's configured default), the write is unconditional and always succeeds
+     * (barring backend errors), regardless of the item's system metadata.
      *
      * @param item            the item to persist
      * @param useBatching     whether to use batching or not for saving the item. If activating there may be a delay between

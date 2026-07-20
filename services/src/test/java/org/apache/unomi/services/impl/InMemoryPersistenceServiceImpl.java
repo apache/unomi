@@ -32,7 +32,11 @@ import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorD
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -66,6 +70,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     private final Map<String, Long> sequenceNumbersByIndex = new ConcurrentHashMap<>();
     private final Map<String, Long> primaryTermsByIndex = new ConcurrentHashMap<>();
     private final Map<String, Object> fileLocks = new ConcurrentHashMap<>();
+    /** Per-item-key mutex guarding save()'s read-check-write CAS sequence (see save()). */
+    private final Map<String, Object> saveLocks = new ConcurrentHashMap<>();
     private final ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private final ExecutionContextManager executionContextManager;
     private final CustomObjectMapper objectMapper;
@@ -167,6 +173,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         this.defaultQueryLimit = defaultQueryLimit > 0 ? defaultQueryLimit : 10;
 
         // Initialize objectMapper even when file storage is disabled - it's needed for property mapping
+        // and file-backed persistence. Isolation copies use Java serialization (see deepCopyItem).
         this.objectMapper = new CustomObjectMapper();
         if (prettyPrintJson) {
             this.objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -612,61 +619,80 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
         String indexName = getIndexName(item);
         String key = getKey(item.getItemId(), indexName);
-        Item existingItem = itemsById.get(key);
 
-        // Handle _seq_no and _primary_term fields using system metadata
-        // Check for optimistic concurrency control
-        if (existingItem != null) {
-            Object existingSeqNo = existingItem.getSystemMetadata("_seq_no");
-            Object existingPrimaryTerm = existingItem.getSystemMetadata("_primary_term");
+        // The read (existingItem), the CAS precondition check, and the write (itemsById.put)
+        // below must happen as a single atomic unit per key - real ES/OS enforce this via
+        // per-document write ordering at the shard level. Without this lock, two threads can
+        // both read the same pre-write state, both pass the CAS check, and both "successfully"
+        // write - a real bug this exact double once had, masked for a long time because a
+        // since-removed caller-side post-write re-verification step (in TaskLockManager)
+        // happened to catch the resulting double-acquisition after the fact. Real ES/OS never
+        // needed that re-verification because they never had this race to begin with.
+        Object lock = saveLocks.computeIfAbsent(key, k -> new Object());
+        synchronized (lock) {
+            Item existingItem = itemsById.get(key);
 
-            // If the item has _seq_no and _primary_term specified, check them against the existing item
-            Object requestedSeqNo = item.getSystemMetadata("_seq_no");
-            Object requestedPrimaryTerm = item.getSystemMetadata("_primary_term");
+            // Optimistic concurrency control — matches ES/OpenSearch: only enforced when
+            // alwaysOverwrite is false. Accept both ES keys (seq_no / primary_term) used by
+            // TaskLockManager and legacy underscore-prefixed keys used by older unit tests.
+            // Default save(item) passes alwaysOverwrite=true and must overwrite (blind put),
+            // otherwise multi-node recovery races fail spuriously when a stale in-memory view
+            // still carries an older seq_no.
+            boolean overwrite = alwaysOverwrite == null || alwaysOverwrite;
+            if (existingItem != null && !overwrite) {
+                Object existingSeqNo = getSequenceMetadata(existingItem, true);
+                Object existingPrimaryTerm = getSequenceMetadata(existingItem, false);
 
-            if (requestedSeqNo != null && requestedPrimaryTerm != null) {
-                // If sequence numbers don't match the existing ones, it's a conflict
-                if (existingSeqNo != null &&
-                    ((Number) requestedSeqNo).longValue() != ((Number) existingSeqNo).longValue()) {
-                    LOGGER.warn("Sequence number conflict detected for item {}: requested={}, current={}",
-                               item.getItemId(), requestedSeqNo, existingSeqNo);
-                    return false;
-                }
+                Object requestedSeqNo = getSequenceMetadata(item, true);
+                Object requestedPrimaryTerm = getSequenceMetadata(item, false);
 
-                // If primary terms don't match, it's a conflict
-                if (existingPrimaryTerm != null &&
-                    ((Number) requestedPrimaryTerm).longValue() != ((Number) existingPrimaryTerm).longValue()) {
-                    LOGGER.warn("Primary term conflict detected for item {}: requested={}, current={}",
-                               item.getItemId(), requestedPrimaryTerm, existingPrimaryTerm);
-                    return false;
+                if (requestedSeqNo != null && requestedPrimaryTerm != null) {
+                    if (existingSeqNo != null &&
+                        ((Number) requestedSeqNo).longValue() != ((Number) existingSeqNo).longValue()) {
+                        LOGGER.warn("Sequence number conflict detected for item {}: requested={}, current={}",
+                                   item.getItemId(), requestedSeqNo, existingSeqNo);
+                        return false;
+                    }
+
+                    if (existingPrimaryTerm != null &&
+                        ((Number) requestedPrimaryTerm).longValue() != ((Number) existingPrimaryTerm).longValue()) {
+                        LOGGER.warn("Primary term conflict detected for item {}: requested={}, current={}",
+                                   item.getItemId(), requestedPrimaryTerm, existingPrimaryTerm);
+                        return false;
+                    }
                 }
             }
-        }
 
-        // Get sequence number for this item
-        Long currentSeqNo = getSequenceNumber(indexName, true);
+            // Get sequence number for this item
+            Long currentSeqNo = getSequenceNumber(indexName, true);
 
-        // Get primary term for this index
-        Long currentPrimaryTerm = getPrimaryTerm(indexName);
+            // Get primary term for this index
+            Long currentPrimaryTerm = getPrimaryTerm(indexName);
 
-        // Set the new sequence number and primary term on the item
-        item.setSystemMetadata("_seq_no", currentSeqNo);
-        item.setSystemMetadata("_primary_term", currentPrimaryTerm);
+            // Write both key styles so ES-aligned clients and legacy tests both see the values
+            item.setSystemMetadata("seq_no", currentSeqNo);
+            item.setSystemMetadata("primary_term", currentPrimaryTerm);
+            item.setSystemMetadata("_seq_no", currentSeqNo);
+            item.setSystemMetadata("_primary_term", currentPrimaryTerm);
 
-        // Handle item versioning (the existing version system)
-        if ((existingItem == null || existingItem.getVersion() == null) && (item.getVersion() == null)) {
-            // New item or item without version, set initial version
-            item.setVersion(1L);
-        } else {
-            // Existing item being updated, increment version
-            if (existingItem != null && existingItem.getVersion() != null) {
-                item.setVersion(existingItem.getVersion() + 1);
+            // Handle item versioning (the existing version system)
+            if ((existingItem == null || existingItem.getVersion() == null) && (item.getVersion() == null)) {
+                // New item or item without version, set initial version
+                item.setVersion(1L);
             } else {
-                item.setVersion(item.getVersion() + 1);
+                // Existing item being updated, increment version
+                if (existingItem != null && existingItem.getVersion() != null) {
+                    item.setVersion(existingItem.getVersion() + 1);
+                } else {
+                    item.setVersion(item.getVersion() + 1);
+                }
             }
-        }
 
-        itemsById.put(key, item);
+            // Store a deep copy so later mutations on the caller's instance (or a second node's
+            // local view) cannot silently change the persisted document — matching ES/OpenSearch
+            // deserialize-on-load semantics required for realistic multi-node scheduler tests.
+            itemsById.put(key, deepCopyItem(item));
+        }
 
         if (fileStorageEnabled) {
             persistItem(item);
@@ -862,8 +888,11 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     public <T extends Item> T load(String itemId, Class<T> clazz) {
         Item item = itemsById.get(getKey(itemId, getIndex(clazz)));
         if (item != null && clazz.isAssignableFrom(item.getClass()) && executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId())) {
+            // Return a deep copy so callers cannot mutate the stored document in place
+            // (matches Elasticsearch/OpenSearch load semantics for multi-node tests).
+            T copy = deepCopyItem((T) item);
             // Apply reverse tenant transformations after load (simulates Elasticsearch/OpenSearch behavior)
-            return (T) handleItemReverseTransformation(item);
+            return handleItemReverseTransformation(copy);
         }
         return null;
     }
@@ -1499,14 +1528,15 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             // Apply tenant transformations before save (simulates Elasticsearch/OpenSearch behavior)
             existingItem = handleItemTransformation(existingItem);
 
-            // Save updated item
-            itemsById.put(key, existingItem);
+            // Persist an isolated copy (same as save) so callers cannot mutate the store in place
+            itemsById.put(key, deepCopyItem(existingItem));
             if (fileStorageEnabled) {
                 persistItem(existingItem);
             }
 
             // Handle refresh policy per item type for updates (same as save)
-            // Request-based override (via system metadata) takes precedence over per-item-type policy
+            // Request-based override lives on the caller's item (API request metadata), not the
+            // stored document — use the request item when resolving refresh.
             if (simulateRefreshDelay) {
                 String itemType = existingItem.getItemType();
                 if (existingItem instanceof CustomItem) {
@@ -1516,7 +1546,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                     }
                 }
                 String indexName = getIndexName(existingItem);
-                RefreshPolicy refreshPolicy = getRefreshPolicy(itemType, existingItem);
+                RefreshPolicy refreshPolicy = getRefreshPolicy(itemType, item);
 
                 switch (refreshPolicy) {
                     case TRUE:
@@ -2583,7 +2613,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                     // Filter out items that are not yet available for querying (refresh delay simulation)
                     return isItemAvailableForQuery(itemKey, indexName);
                 })
-                .map(entry -> (T) entry.getValue())
+                // Deep-copy each result so query callers get isolated instances (ES semantics)
+                .map(entry -> deepCopyItem((T) entry.getValue()))
                 .collect(Collectors.toList());
     }
 
@@ -2899,5 +2930,47 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
      */
     public void setDefaultQueryLimit(Integer defaultQueryLimit) {
         this.defaultQueryLimit = defaultQueryLimit != null && defaultQueryLimit > 0 ? defaultQueryLimit : 10;
+    }
+
+    /**
+     * Reads sequence/primary-term metadata, accepting both ES keys ({@code seq_no},
+     * {@code primary_term}) and legacy underscore-prefixed keys.
+     */
+    private static Object getSequenceMetadata(Item item, boolean sequenceNumber) {
+        if (item == null) {
+            return null;
+        }
+        if (sequenceNumber) {
+            Object value = item.getSystemMetadata("seq_no");
+            return value != null ? value : item.getSystemMetadata("_seq_no");
+        }
+        Object value = item.getSystemMetadata("primary_term");
+        return value != null ? value : item.getSystemMetadata("_primary_term");
+    }
+
+    /**
+     * Deep-copies an item via Java serialization so callers cannot mutate the stored
+     * document in place. Preserves field types (Integer vs Long), {@code @XmlTransient}
+     * scope, systemMetadata, and Date millis — unlike a Jackson round-trip, which drops
+     * or coerces several of those. Falls back to the original instance only if cloning fails.
+     */
+    @SuppressWarnings("unchecked")
+    private <T extends Item> T deepCopyItem(T item) {
+        if (item == null) {
+            return null;
+        }
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+                oos.writeObject(item);
+            }
+            try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()))) {
+                return (T) ois.readObject();
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Deep copy failed for item {} ({}), returning same instance: {}",
+                item.getItemId(), item.getClass().getSimpleName(), e.getMessage());
+            return item;
+        }
     }
 }

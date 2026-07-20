@@ -881,6 +881,7 @@ public class SegmentServiceImplTest {
             Event event = createTestEvent(profile, "view");
             event.setProperty("testProperty", "test");
             eventService.send(event);
+            persistenceService.refresh(); // handles refresh delay, see sibling tests in this file
 
             // Force recalculation
             segmentService.recalculatePastEventConditions();

@@ -121,31 +121,40 @@ public class GoalsServiceImplTest {
 
 
         // Mock action type for goal rules
-        ActionType goalActionType = new ActionType() {
-            private Metadata metadata = new Metadata();
-            @Override
-            public String getItemId() {
-                return "goalMatchedAction";
-            }
-            @Override
-            public String getItemType() {
-                return "actionType";
-            }
-            @Override
-            public Metadata getMetadata() {
-                return metadata;
-            }
-            @Override
-            public void setMetadata(Metadata metadata) {
-                this.metadata = metadata;
-            }
-            @Override
-            public Long getVersion() {
-                return 1L;
-            }
-        };
+        ActionType goalActionType = new GoalMatchedActionType();
         goalActionType.getMetadata().setId("goalMatchedAction");
         definitionsService.setActionType(goalActionType);
+    }
+
+    /**
+     * A named static nested class rather than an anonymous inner class: an anonymous class
+     * declared in an instance method implicitly captures a reference to the enclosing (non
+     * {@code Serializable}) test instance, which fails Java-serialization-based deep copy in
+     * {@code InMemoryPersistenceServiceImpl} and silently falls back to sharing the live
+     * instance instead of an isolated copy.
+     */
+    private static final class GoalMatchedActionType extends ActionType {
+        private Metadata metadata = new Metadata();
+        @Override
+        public String getItemId() {
+            return "goalMatchedAction";
+        }
+        @Override
+        public String getItemType() {
+            return "actionType";
+        }
+        @Override
+        public Metadata getMetadata() {
+            return metadata;
+        }
+        @Override
+        public void setMetadata(Metadata metadata) {
+            this.metadata = metadata;
+        }
+        @Override
+        public Long getVersion() {
+            return 1L;
+        }
     }
 
     @AfterEach

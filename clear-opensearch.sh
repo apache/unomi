@@ -48,13 +48,18 @@ if [ "${_IS_SOURCED}" = false ]; then
     exit 1
 fi
 
-# Clear OpenSearch environment variables
+# Clear OpenSearch environment variables (must cover everything setup-opensearch.sh exports,
+# plus common overrides users may have set manually)
 unset UNOMI_OPENSEARCH_CLUSTERNAME
 unset UNOMI_OPENSEARCH_ADDRESSES
 unset UNOMI_OPENSEARCH_USERNAME
 unset UNOMI_OPENSEARCH_PASSWORD
 unset UNOMI_OPENSEARCH_SSL_ENABLE
 unset UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES
+# Also set by setup-opensearch.sh / setup-elasticsearch.sh
+unset UNOMI_DISTRIBUTION
+
+unset _IS_SOURCED
 
 echo "OpenSearch environment variables cleared."
 

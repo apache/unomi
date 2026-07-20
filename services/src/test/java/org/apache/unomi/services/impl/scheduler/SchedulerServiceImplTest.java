@@ -387,34 +387,12 @@ public class SchedulerServiceImplTest {
     @Test
     @Tag("DependencyTests")
     public void testTaskDependencies() throws Exception {
-        // Test task dependencies and waiting behavior
-        CountDownLatch dep1Latch = new CountDownLatch(1);
+        CountDownLatch dep1Start = new CountDownLatch(1);
+        CountDownLatch dep1Release = new CountDownLatch(1);
         CountDownLatch dep2Latch = new CountDownLatch(1);
-
-        // Create first dependency
-        ScheduledTask dep1 = schedulerService.newTask("dep-test")
-            .withSimpleExecutor(() -> dep1Latch.countDown())
-            .schedule();
-
-        // Create second dependency
-        ScheduledTask dep2 = schedulerService.newTask("dep-test")
-            .withSimpleExecutor(() -> dep2Latch.countDown())
-            .schedule();
-
-        // Create dependent task
+        CountDownLatch dependentLatch = new CountDownLatch(1);
         AtomicBoolean dependentExecuted = new AtomicBoolean(false);
-        ScheduledTask dependentTask = schedulerService.createTask(
-            "dep-test",
-            null,
-            0,
-            0,
-            TimeUnit.MILLISECONDS,
-            true,
-            true,
-            true,
-            true
-        );
-        dependentTask.setDependsOn(new HashSet<>(Arrays.asList(dep1.getItemId(), dep2.getItemId())));
+        AtomicReference<String> dependentTaskId = new AtomicReference<>();
 
         TaskExecutor executor = new TaskExecutor() {
             @Override
@@ -423,26 +401,51 @@ public class SchedulerServiceImplTest {
             }
 
             @Override
-            public void execute(ScheduledTask task, TaskStatusCallback callback) {
-                if (task == dependentTask) {
+            public void execute(ScheduledTask task, TaskStatusCallback callback) throws Exception {
+                if (task.getItemId().equals(dependentTaskId.get())) {
                     dependentExecuted.set(true);
+                    dependentLatch.countDown();
+                    callback.complete();
+                    return;
                 }
+                if ("dep1".equals(task.getParameters().get("name"))) {
+                    dep1Start.countDown();
+                    assertTrue(dep1Release.await(TEST_TIMEOUT, TEST_TIME_UNIT), "dep1 should be released");
+                    callback.complete();
+                    return;
+                }
+                dep2Latch.countDown();
                 callback.complete();
             }
         };
-
         schedulerService.registerTaskExecutor(executor);
-        schedulerService.scheduleTask(dependentTask);
 
-        // Wait for dependencies to complete
-        assertTrue(
-            dep1Latch.await(TEST_TIMEOUT, TEST_TIME_UNIT) &&
-            dep2Latch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
-            "Dependencies should complete");
+        ScheduledTask dep1 = schedulerService.newTask("dep-test")
+            .withParameters(Collections.singletonMap("name", "dep1"))
+            .schedule();
+        ScheduledTask dep2 = schedulerService.newTask("dep-test")
+            .withParameters(Collections.singletonMap("name", "dep2"))
+            .schedule();
 
-        // Verify dependent task execution
-        Thread.sleep(100); // Give time for dependent task to execute
-        assertTrue(dependentExecuted.get(), "Dependent task should execute after dependencies");
+        // Hold dep1 so the dependent cannot legally run yet
+        assertTrue(dep1Start.await(TEST_TIMEOUT, TEST_TIME_UNIT), "dep1 should start");
+
+        ScheduledTask dependentTask = schedulerService.newTask("dep-test")
+            .withParameters(Collections.singletonMap("name", "dependent"))
+            .withDependencies(dep1.getItemId(), dep2.getItemId())
+            .schedule();
+        dependentTaskId.set(dependentTask.getItemId());
+
+        ScheduledTask waiting = schedulerService.getTask(dependentTask.getItemId());
+        assertEquals(ScheduledTask.TaskStatus.WAITING, waiting.getStatus(),
+            "Dependent must wait while dependencies are incomplete");
+        assertFalse(dependentExecuted.get(), "Dependent must not run before dependencies complete");
+
+        dep1Release.countDown();
+        assertTrue(dep2Latch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "dep2 should complete");
+        assertTrue(dependentLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+            "Dependent should run only after both dependencies complete");
+        assertTrue(dependentExecuted.get(), "Dependent task should have executed");
     }
 
     // Clustering support tests
@@ -466,50 +469,74 @@ public class SchedulerServiceImplTest {
             // Also refresh all indexes to ensure tasks are available for querying (handles refresh delay)
             persistenceService.refresh();
 
-            CountDownLatch executionLatch = new CountDownLatch(2);
-            Set<String> executingNodes = ConcurrentHashMap.newKeySet();
+            CountDownLatch exclusiveLatch = new CountDownLatch(1);
+            CountDownLatch allNodesLatch = new CountDownLatch(3); // one execution observed per node
+            Set<String> exclusiveNodes = ConcurrentHashMap.newKeySet();
+            Set<String> allNodesNodes = ConcurrentHashMap.newKeySet();
 
-            TaskExecutor clusterTestExecutor = new TaskExecutor() {
+            TaskExecutor exclusiveExecutor = new TaskExecutor() {
                 @Override
                 public String getTaskType() {
-                    return "cluster-test";
+                    return "cluster-exclusive-test";
                 }
 
                 @Override
                 public void execute(ScheduledTask task, TaskStatusCallback callback) {
-                    executingNodes.add(task.getExecutingNodeId());
-                    executionLatch.countDown();
+                    exclusiveNodes.add(task.getExecutingNodeId());
+                    exclusiveLatch.countDown();
                     callback.complete();
                 }
             };
 
-            // Register executor on all nodes
-            node1.registerTaskExecutor(clusterTestExecutor);
-            node2.registerTaskExecutor(clusterTestExecutor);
-            nonExecutorNode.registerTaskExecutor(clusterTestExecutor);
+            TaskExecutor allNodesExecutor = new TaskExecutor() {
+                @Override
+                public String getTaskType() {
+                    return "cluster-all-nodes-test";
+                }
 
-            // Create tasks with different distribution requirements
-            ScheduledTask normalTask = node1.newTask("cluster-test")
+                @Override
+                public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                    if (allNodesNodes.add(task.getExecutingNodeId())) {
+                        allNodesLatch.countDown();
+                    }
+                    callback.complete();
+                }
+            };
+
+            node1.registerTaskExecutor(exclusiveExecutor);
+            node2.registerTaskExecutor(exclusiveExecutor);
+            nonExecutorNode.registerTaskExecutor(exclusiveExecutor);
+            node1.registerTaskExecutor(allNodesExecutor);
+            node2.registerTaskExecutor(allNodesExecutor);
+            nonExecutorNode.registerTaskExecutor(allNodesExecutor);
+
+            // Non-runOnAllNodes: only executor nodes may run
+            node1.newTask("cluster-exclusive-test")
                 .withPeriod(100, TimeUnit.MILLISECONDS)
                 .schedule();
 
-            ScheduledTask allNodesTask = node1.newTask("cluster-test")
+            // runOnAllNodes: every node including non-executors must poll and run
+            node1.newTask("cluster-all-nodes-test")
                 .runOnAllNodes()
                 .withPeriod(100, TimeUnit.MILLISECONDS)
                 .schedule();
 
-            // Wait for executions
             assertTrue(
-                executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
-                "Tasks should execute on cluster nodes");
-
-            // Verify distribution
+                exclusiveLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+                "Exclusive cluster task should execute on an executor node");
             assertTrue(
-                executingNodes.contains("node1") || executingNodes.contains("node2"),
-                "Task should execute on executor nodes");
+                exclusiveNodes.contains("node1") || exclusiveNodes.contains("node2"),
+                "Exclusive task should execute on an executor node");
             assertFalse(
-                executingNodes.contains("node3"),
-                "Task should not execute on non-executor node");
+                exclusiveNodes.contains("node3"),
+                "Exclusive task must not execute on a non-executor node");
+
+            assertTrue(
+                allNodesLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+                "runOnAllNodes task should execute on every node including non-executors");
+            assertTrue(allNodesNodes.contains("node1"), "runOnAllNodes should run on node1");
+            assertTrue(allNodesNodes.contains("node2"), "runOnAllNodes should run on node2");
+            assertTrue(allNodesNodes.contains("node3"), "runOnAllNodes should run on non-executor node3");
 
             TaskExecutor clusterLockTestExecutor = new TaskExecutor() {
                 @Override
@@ -602,10 +629,16 @@ public class SchedulerServiceImplTest {
                 .disallowParallelExecution()
             .schedule();
 
-        // Wait for the task to be scheduled, then simulate a node crash (RUNNING + expired lock)
+        // The task executes immediately on schedule() and its first natural attempt always
+        // throws (no "crashTime" yet), triggering handleTaskError()'s own async
+        // failureCount-increment-and-reschedule save. Wait for that save to land (failureCount
+        // >= 1) before overwriting the task below - otherwise this test's blind saveTask() can
+        // race that background write and lose, silently reverting the simulated-crash setup back
+        // to a plain retry-delayed SCHEDULED state (observed as a deterministic failure once
+        // lock acquisition got fast enough to no longer incidentally happen-after that save).
         ScheduledTask persistedTask = TestHelper.retryUntil(
             () -> schedulerService.getTask(task.getItemId()),
-            Objects::nonNull
+            t -> t != null && t.getFailureCount() >= 1
         );
         persistedTask.setStatus(ScheduledTask.TaskStatus.RUNNING);
         persistedTask.setLockOwner("dead-node");
@@ -920,6 +953,129 @@ public class SchedulerServiceImplTest {
             TEST_MAX_RETRIES+1,
             executionCount.get(),
             "Should have executed expected number of times");
+    }
+
+    /**
+     * Regression test for a lost one-shot retry dispatch.
+     *
+     * The retry delay countdown starts inside handleTaskError(), i.e. while the failing
+     * execution's wrapper is still running and still holds the task's dispatch claim in
+     * TaskExecutionManager. If the wrapper takes longer than the retry delay to finish
+     * (slow executor cleanup after callback.fail(), GC pause, loaded CI runner), the retry
+     * fires while the claim is still held and is silently dropped as a duplicate dispatch.
+     * Since one-shot retries used to be invisible to the periodic task checker, the task
+     * was then stranded in SCHEDULED state forever. The checker must act as a safety net
+     * and re-dispatch the task once its nextScheduledExecution time is due.
+     */
+    @Test
+    @Tag("RetryTests")
+    public void testOneShotRetryRecoveredWhenRetryDispatchIsDropped() throws Exception {
+        final long retryDelay = 300;
+        CountDownLatch secondExecutionLatch = new CountDownLatch(1);
+        AtomicInteger executionCount = new AtomicInteger(0);
+
+        TaskExecutor executor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return "retry-claim-race-test";
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) throws Exception {
+                int count = executionCount.incrementAndGet();
+                if (count == 1) {
+                    callback.fail("Simulated failure #1");
+                    // Keep this execution's wrapper alive past the retry delay: the retry
+                    // dispatch fires while the dispatch claim is still held and is dropped
+                    // as a duplicate. Only the task checker safety net can then re-dispatch
+                    // the task.
+                    Thread.sleep(retryDelay + 700);
+                } else {
+                    secondExecutionLatch.countDown();
+                    callback.complete();
+                }
+            }
+        };
+
+        ScheduledTask task = schedulerService.newTask("retry-claim-race-test")
+            .withMaxRetries(1)
+            .withRetryDelay(retryDelay, TimeUnit.MILLISECONDS)
+            .withExecutor(executor)
+            .asOneShot()
+            .schedule();
+
+        assertTrue(
+            secondExecutionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+            "Retry should still execute when the direct retry dispatch was dropped");
+
+        ScheduledTask finalTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_WAIT_TIMEOUT, 50);
+        assertEquals(ScheduledTask.TaskStatus.COMPLETED, finalTask.getStatus(), "Task should complete after retry");
+        assertEquals(2, executionCount.get(), "Task should have executed exactly twice");
+    }
+
+    /**
+     * Regression test for crash recovery eating a live execution.
+     *
+     * If an executing thread stalls longer than the lock timeout while the task is RUNNING,
+     * the task checker's crash recovery marks the task CRASHED. When the executor then
+     * reports failure, handleTaskError() used to silently ignore the callback (status no
+     * longer RUNNING), so no retry was scheduled - and recovery refuses to restart one-shot
+     * tasks that already executed, stranding the task in CRASHED state forever. The
+     * execution manager must recognize that the execution it owns is still alive, reclaim
+     * the task and process the failure (and its retry) normally.
+     */
+    @Test
+    @Tag("RetryTests")
+    public void testOneShotRetryAfterRecoveryMarksLiveExecutionCrashed() throws Exception {
+        // setUp() only sets the lock timeout on the scheduler service; the lock manager
+        // created by TestHelper keeps its 10s default. Shorten it here so a stalled
+        // execution's lock actually expires within this test's stall window.
+        schedulerService.getLockManager().setLockTimeout(TEST_LOCK_TIMEOUT);
+
+        CountDownLatch completionLatch = new CountDownLatch(1);
+        AtomicInteger executionCount = new AtomicInteger(0);
+
+        TaskExecutor executor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return "retry-crash-reclaim-test";
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) throws Exception {
+                int count = executionCount.incrementAndGet();
+                if (count == 1) {
+                    callback.fail("Simulated failure #1");
+                } else if (count == 2) {
+                    // Stall while RUNNING for longer than the lock timeout so that crash
+                    // recovery marks this still-live execution as CRASHED before the
+                    // failure is reported.
+                    Thread.sleep(TEST_LOCK_TIMEOUT + 3000);
+                    callback.fail("Simulated failure #2");
+                } else {
+                    completionLatch.countDown();
+                    callback.complete();
+                }
+            }
+        };
+
+        ScheduledTask task = schedulerService.newTask("retry-crash-reclaim-test")
+            .withMaxRetries(TEST_MAX_RETRIES)
+            .withRetryDelay(TEST_RETRY_DELAY, TimeUnit.MILLISECONDS)
+            .withExecutor(executor)
+            .asOneShot()
+            .schedule();
+
+        assertTrue(
+            completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+            "Task should retry and complete even after recovery marked a live execution as crashed");
+
+        ScheduledTask finalTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_WAIT_TIMEOUT, 50);
+        assertEquals(ScheduledTask.TaskStatus.COMPLETED, finalTask.getStatus(), "Task should complete after reclaimed failure");
+        // At least: fail #1, stalled #2 (reclaimed), success. The checker may also dispatch a
+        // CRASHED recovery attempt in parallel with reclaim, so allow >3.
+        assertTrue(executionCount.get() >= 3,
+            "Task should have executed at least three times, was " + executionCount.get());
     }
 
     @Test
@@ -1760,6 +1916,32 @@ public class SchedulerServiceImplTest {
             node1.preDestroy();
             node2.preDestroy();
         }
+    }
+
+    @Test
+    public void testNewTaskDefaultsToExclusiveLocking() {
+        ScheduledTask task = schedulerService.newTask("builder-default-exclusive")
+            .asOneShot()
+            .withSimpleExecutor(() -> {})
+            .schedule();
+        assertFalse(task.isAllowParallelExecution(),
+            "newTask should default to exclusive (allowParallelExecution=false)");
+
+        ScheduledTask parallel = schedulerService.newTask("builder-parallel-opt-in")
+            .allowParallelExecution()
+            .asOneShot()
+            .withSimpleExecutor(() -> {})
+            .schedule();
+        assertTrue(parallel.isAllowParallelExecution());
+
+        ScheduledTask allNodes = schedulerService.newTask("builder-run-all")
+            .runOnAllNodes()
+            .withPeriod(1, TimeUnit.HOURS)
+            .withSimpleExecutor(() -> {})
+            .schedule();
+        assertTrue(allNodes.isRunOnAllNodes());
+        assertTrue(allNodes.isAllowParallelExecution(),
+            "runOnAllNodes must auto-enable allowParallelExecution");
     }
 
     @Test

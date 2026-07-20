@@ -4545,8 +4545,11 @@ public class InMemoryPersistenceServiceImplTest {
             conflictItem.setSystemMetadata("_seq_no", initialSeqNo - 1); // Use wrong sequence number
             conflictItem.setSystemMetadata("_primary_term", initialPrimaryTerm);
 
-            // Try to save with incorrect sequence number, should fail
-            boolean saveResult = persistenceService.save(conflictItem);
+            // Try to save with incorrect sequence number, should fail. OCC is only enforced
+            // when alwaysOverwrite=false (matches ElasticSearchPersistenceServiceImpl/
+            // OpenSearchPersistenceServiceImpl, where plain save(item) defaults to a blind
+            // overwrite and if_seq_no/if_primary_term are only sent via this explicit overload).
+            boolean saveResult = persistenceService.save(conflictItem, false, false);
             assertFalse(saveResult, "Save should fail with incorrect sequence number");
 
             // Original item should still be there unchanged
@@ -4574,8 +4577,11 @@ public class InMemoryPersistenceServiceImplTest {
             conflictItem.setSystemMetadata("_seq_no", initialSeqNo);
             conflictItem.setSystemMetadata("_primary_term", initialPrimaryTerm + 1); // Use wrong primary term
 
-            // Try to save with incorrect primary term, should fail
-            boolean saveResult = persistenceService.save(conflictItem);
+            // Try to save with incorrect primary term, should fail. OCC is only enforced
+            // when alwaysOverwrite=false (matches ElasticSearchPersistenceServiceImpl/
+            // OpenSearchPersistenceServiceImpl, where plain save(item) defaults to a blind
+            // overwrite and if_seq_no/if_primary_term are only sent via this explicit overload).
+            boolean saveResult = persistenceService.save(conflictItem, false, false);
             assertFalse(saveResult, "Save should fail with incorrect primary term");
 
             // Original item should still be there unchanged
@@ -4603,8 +4609,10 @@ public class InMemoryPersistenceServiceImplTest {
             updateItem.setSystemMetadata("_seq_no", initialSeqNo);
             updateItem.setSystemMetadata("_primary_term", initialPrimaryTerm);
 
-            // Try to save with correct sequence number and primary term, should succeed
-            boolean saveResult = persistenceService.save(updateItem);
+            // Try to save with correct sequence number and primary term, should succeed.
+            // Use the CAS overload (matches saveTaskCompareAndSet) so this actually exercises
+            // the OCC-enforced path, not the default blind overwrite.
+            boolean saveResult = persistenceService.save(updateItem, false, false);
             assertTrue(saveResult, "Save should succeed with correct sequence number and primary term");
 
             // Item should be updated with new name and incremented sequence number
@@ -4612,6 +4620,35 @@ public class InMemoryPersistenceServiceImplTest {
             assertEquals(updateItem.getName(), loaded.getName());
             assertEquals(initialSeqNo + 1, ((Number) loaded.getSystemMetadata("_seq_no")).longValue());
             assertEquals(initialPrimaryTerm, ((Number) loaded.getSystemMetadata("_primary_term")).longValue());
+        }
+
+        @Test
+        void shouldBlindlyOverwriteRegardlessOfSequenceNumberByDefault() {
+            // Locks in the intentional blind-put contract of the default save() overload:
+            // it must succeed even with a stale/incorrect seq_no or primary_term, exactly
+            // matching ElasticSearchPersistenceServiceImpl/OpenSearchPersistenceServiceImpl,
+            // where plain save(item) defaults to alwaysOverwrite=true and never sends
+            // if_seq_no/if_primary_term. TaskLockManager and other legacy callers rely on
+            // this: only the explicit save(item, false, false) overload enforces OCC. If this
+            // test starts failing, do not "fix" it by making save(item) reject stale seq_no —
+            // that reintroduces the scheduler double-execution regression fixed in UNOMI-967.
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-blind-overwrite");
+            item.setName("Original Name");
+            persistenceService.save(item);
+            Long initialSeqNo = ((Number) item.getSystemMetadata("_seq_no")).longValue();
+
+            TestMetadataItem staleWrite = new TestMetadataItem();
+            staleWrite.setItemId(item.getItemId());
+            staleWrite.setName("Blindly Overwritten Name");
+            staleWrite.setSystemMetadata("_seq_no", initialSeqNo - 1); // stale on purpose
+            staleWrite.setSystemMetadata("_primary_term", 999L); // wrong on purpose
+
+            boolean saveResult = persistenceService.save(staleWrite);
+            assertTrue(saveResult, "Default save(item) must blindly overwrite regardless of seq_no/primary_term");
+
+            TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            assertEquals("Blindly Overwritten Name", loaded.getName());
         }
     }
 

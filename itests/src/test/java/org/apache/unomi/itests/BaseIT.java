@@ -669,6 +669,13 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.rollover.maxDocs", "300"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.migration.tenant.id", TEST_TENANT_ID),
+                // Default scheduler.thread.poolSize (5) is sized for the near-instant in-memory unit-test
+                // double, not a real ES/OS backend. Under real refresh/write latency, the checker, task
+                // executions, and lease-renewal heartbeats (see scheduler.adoc) compete for the same small
+                // pool; when it saturates, heartbeats starve, locks age out from under live executions, and
+                // crash recovery repeatedly (mis)reclaims them, logging "Lock verification failed... after
+                // CAS" every checker tick. Widen it for ITs so heartbeats/checker never starve.
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.scheduler.thread.poolSize", "10"),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
@@ -746,6 +753,15 @@ public abstract class BaseIT extends KarafTestSupport {
         karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxExam.level", "WARN"));
         karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxStore.name", "org.ops4j.store"));
         karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.paxStore.level", "WARN"));
+
+        // UNOMI-967 diagnostic: DEBUG-level "LOCK-DIAG"-tagged logging was added throughout the
+        // scheduler's lock acquisition/renewal/recovery paths (TaskLockManager, TaskRecoveryManager,
+        // SchedulerServiceImpl, TaskExecutionManager) to root-cause a live-IT-only bug where
+        // "Lock verification failed... after CAS" fires on every checker tick for the whole suite
+        // (a real ES backend, not the in-memory unit-test double). Bump this package to DEBUG for
+        // ITs only so that logging is actually captured. TODO: remove once root-caused and fixed.
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.schedulerDiag.name", "org.apache.unomi.services.impl.scheduler"));
+        karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.schedulerDiag.level", "DEBUG"));
 
         // Enable debug logging for Karaf Resolver to diagnose bundle refresh issues (default: disabled)
         boolean enableResolverDebug = Boolean.parseBoolean(System.getProperty(RESOLVER_DEBUG_PROPERTY, "false"));

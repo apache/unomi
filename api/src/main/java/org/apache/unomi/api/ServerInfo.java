@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -28,7 +29,9 @@ import java.util.Map;
  * operators, and other nodes can read version, build metadata, supported
  * {@link EventInfo} types, optional capability flags, and banner logo lines.
  */
-public class ServerInfo {
+public class ServerInfo implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     /** @api.example unomi */
     private String serverIdentifier;

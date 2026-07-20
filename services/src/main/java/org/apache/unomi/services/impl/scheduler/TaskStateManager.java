@@ -187,13 +187,20 @@ public class TaskStateManager {
      * @return true if all dependencies are completed
      */
     public boolean canRescheduleTask(ScheduledTask task, Map<String, ScheduledTask> dependencies) {
-        if (task.getWaitingOnTasks() == null || task.getWaitingOnTasks().isEmpty()) {
+        // Prefer the runtime waiting set; fall back to the configured dependsOn graph so
+        // dependencies are enforced even when waitingOnTasks was never populated.
+        Set<String> required = task.getWaitingOnTasks();
+        if (required == null || required.isEmpty()) {
+            required = task.getDependsOn();
+        }
+        if (required == null || required.isEmpty()) {
             return true;
         }
 
-        for (String dependencyId : task.getWaitingOnTasks()) {
-            ScheduledTask dependency = dependencies.get(dependencyId);
-            if (dependency != null && dependency.getStatus() != TaskStatus.COMPLETED) {
+        for (String dependencyId : required) {
+            ScheduledTask dependency = dependencies != null ? dependencies.get(dependencyId) : null;
+            // Missing dependency is not satisfied — do not run until it exists and completes
+            if (dependency == null || dependency.getStatus() != TaskStatus.COMPLETED) {
                 return false;
             }
         }

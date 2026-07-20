@@ -48,13 +48,17 @@ if [ "${_IS_SOURCED}" = false ]; then
     exit 1
 fi
 
-# Clear Elasticsearch environment variables
+# Clear Elasticsearch environment variables (must cover everything setup-elasticsearch.sh exports)
 unset UNOMI_ELASTICSEARCH_CLUSTERNAME
 unset UNOMI_ELASTICSEARCH_ADDRESSES
 unset UNOMI_ELASTICSEARCH_USERNAME
 unset UNOMI_ELASTICSEARCH_PASSWORD
 unset UNOMI_ELASTICSEARCH_SSL_ENABLE
 unset UNOMI_ELASTICSEARCH_SSL_TRUST_ALL_CERTIFICATES
+# Also set by setup-elasticsearch.sh / setup-opensearch.sh
+unset UNOMI_DISTRIBUTION
+
+unset _IS_SOURCED
 
 echo "Elasticsearch environment variables cleared."
 
