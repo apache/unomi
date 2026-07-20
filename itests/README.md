@@ -350,7 +350,7 @@ so providers skip what they cannot support instead of checking product names.
    implementations may still fail behavioural tests — unsupported HTTP-admin
    features are skipped via `Assume`, not removed from the suite.
 
-`unomi-itests` publishes a **test-jar** (`mvn -pl itests install`) so external modules can
+`unomi-itests` publishes a **test-jar** (`mvn -Pintegration-tests -pl itests install`) so external modules can
 depend on `BaseIT`, `CorePersistenceITs`, and `PersistenceITBackend` without forking
 sources. Optionally implement `prepareBeforeUnomiSetup` to patch ConfigAdmin (e.g. JDBC
 DataSource) after `UnomiManagementService` is up and before `unomi:setup`.
