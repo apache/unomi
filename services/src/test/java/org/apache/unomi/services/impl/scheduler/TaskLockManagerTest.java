@@ -32,7 +32,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -125,54 +124,36 @@ public class TaskLockManagerTest {
     public void testDistributedLockSuccess() {
         ScheduledTask task = TaskTestFixtures.baseTask("dist");
         task.setNextScheduledExecution(new Date(System.currentTimeMillis() - 10_000));
-        task.setSystemMetadata("seq_no", 3L);
-        task.setSystemMetadata("primary_term", 1L);
-        when(schedulerService.getTask(task.getItemId())).thenReturn(task);
-        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenAnswer(inv -> {
-            ScheduledTask t = inv.getArgument(0);
-            t.setLockOwner(NODE);
-            return true;
-        });
-        // After verification delay, return same owner + matching lockVersion
-        when(schedulerService.getTask(eq(task.getItemId()))).thenAnswer(inv -> {
-            ScheduledTask copy = TaskTestFixtures.baseTask("dist");
-            copy.setItemId(task.getItemId());
-            copy.setLockOwner(NODE);
-            copy.setLockDate(new Date());
-            Object ver = task.getSystemMetadata("lockVersion");
-            if (ver != null) {
-                copy.setSystemMetadata("lockVersion", ver);
-            } else {
-                copy.setSystemMetadata("lockVersion", 1L);
-            }
-            copy.setSystemMetadata("seq_no", 3L);
-            copy.setSystemMetadata("primary_term", 1L);
-            return copy;
-        });
-
-        // First getTask in acquire returns original; verification getTask returns answer above.
-        // Need sequential stubbing:
         ScheduledTask latest = TaskTestFixtures.baseTask("dist");
         latest.setItemId(task.getItemId());
         latest.setNextScheduledExecution(task.getNextScheduledExecution());
         latest.setSystemMetadata("seq_no", 3L);
         latest.setSystemMetadata("primary_term", 1L);
-        ScheduledTask verified = TaskTestFixtures.baseTask("dist");
-        verified.setItemId(task.getItemId());
-        verified.setLockOwner(NODE);
-        verified.setLockDate(new Date());
-        verified.setSystemMetadata("lockVersion", 1L);
-
-        when(schedulerService.getTask(task.getItemId())).thenReturn(latest, verified);
-        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenAnswer(inv -> {
-            ScheduledTask t = inv.getArgument(0);
-            verified.setSystemMetadata("lockVersion", t.getSystemMetadata("lockVersion"));
-            return true;
-        });
+        when(schedulerService.getTask(task.getItemId())).thenReturn(latest);
+        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenReturn(true);
 
         assertTrue(lockManager.acquireLock(task));
         assertEquals(NODE, task.getLockOwner());
         assertEquals(1, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_LOCK_ACQUIRED));
+    }
+
+    @Test
+    public void testDistributedLockSuccessDoesNotReVerify() {
+        // A successful CAS write is itself authoritative proof of acquisition: exactly one
+        // GET-by-id (the pre-CAS read) and one CAS write, no post-write re-read/verification.
+        ScheduledTask task = TaskTestFixtures.baseTask("dist-no-reverify");
+        task.setNextScheduledExecution(new Date(System.currentTimeMillis() - 10_000));
+        ScheduledTask latest = TaskTestFixtures.baseTask("dist-no-reverify");
+        latest.setItemId(task.getItemId());
+        latest.setNextScheduledExecution(task.getNextScheduledExecution());
+        latest.setSystemMetadata("seq_no", 5L);
+        latest.setSystemMetadata("primary_term", 1L);
+        when(schedulerService.getTask(task.getItemId())).thenReturn(latest);
+        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenReturn(true);
+
+        assertTrue(lockManager.acquireLock(task));
+        verify(schedulerService, times(1)).getTask(task.getItemId());
+        verify(schedulerService, times(1)).saveTaskWithRefresh(any(ScheduledTask.class));
     }
 
     @Test
@@ -187,17 +168,8 @@ public class TaskLockManagerTest {
         latest.setNextScheduledExecution(task.getNextScheduledExecution());
         latest.setSystemMetadata("seq_no", 1L);
         latest.setSystemMetadata("primary_term", 1L);
-        ScheduledTask verified = TaskTestFixtures.baseTask("crash");
-        verified.setItemId(task.getItemId());
-        verified.setLockOwner(NODE);
-        verified.setLockDate(new Date());
-        verified.setSystemMetadata("lockVersion", 1L);
-        when(schedulerService.getTask(task.getItemId())).thenReturn(latest, verified);
-        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenAnswer(inv -> {
-            ScheduledTask t = inv.getArgument(0);
-            verified.setSystemMetadata("lockVersion", t.getSystemMetadata("lockVersion"));
-            return true;
-        });
+        when(schedulerService.getTask(task.getItemId())).thenReturn(latest);
+        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenReturn(true);
         assertTrue(lockManager.acquireLock(task));
     }
 
@@ -327,56 +299,6 @@ public class TaskLockManagerTest {
     }
 
     @Test
-    public void testDistributedLockVerificationFailureIncrementsConflict() {
-        ScheduledTask task = TaskTestFixtures.baseTask("dist");
-        task.setNextScheduledExecution(new Date(System.currentTimeMillis() - 10_000));
-        ScheduledTask latest = TaskTestFixtures.baseTask("dist");
-        latest.setItemId(task.getItemId());
-        latest.setNextScheduledExecution(task.getNextScheduledExecution());
-        latest.setSystemMetadata("seq_no", 2L);
-        latest.setSystemMetadata("primary_term", 1L);
-        ScheduledTask stolen = TaskTestFixtures.baseTask("dist");
-        stolen.setItemId(task.getItemId());
-        stolen.setLockOwner("thief");
-        stolen.setLockDate(new Date());
-        stolen.setSystemMetadata("lockVersion", 99L);
-        when(schedulerService.getTask(task.getItemId())).thenReturn(latest, stolen);
-        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenReturn(true);
-
-        assertFalse(lockManager.acquireLock(task));
-        assertEquals(1, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_LOCK_CONFLICTS));
-    }
-
-    @Test
-    public void testDistributedLockInterruptedDuringVerificationReleases() throws Exception {
-        ScheduledTask task = TaskTestFixtures.baseTask("dist");
-        task.setNextScheduledExecution(new Date(System.currentTimeMillis() - 10_000));
-        ScheduledTask latest = TaskTestFixtures.baseTask("dist");
-        latest.setItemId(task.getItemId());
-        latest.setNextScheduledExecution(task.getNextScheduledExecution());
-        latest.setSystemMetadata("seq_no", 1L);
-        latest.setSystemMetadata("primary_term", 1L);
-        when(schedulerService.getTask(task.getItemId())).thenReturn(latest);
-        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenReturn(true);
-        when(schedulerService.getTask(eq(task.getItemId()), eq(true))).thenReturn(task);
-
-        CountDownLatch started = new CountDownLatch(1);
-        AtomicBoolean acquired = new AtomicBoolean(true);
-        Thread t = new Thread(() -> {
-            started.countDown();
-            acquired.set(lockManager.acquireLock(task));
-        }, "lock-interrupt-test");
-        t.start();
-        assertTrue(started.await(2, TimeUnit.SECONDS));
-        // Interrupt during VERIFICATION_DELAY_MS sleep
-        Thread.sleep(20);
-        t.interrupt();
-        t.join(2000);
-        assertFalse(acquired.get());
-        verify(schedulerService, atLeastOnce()).saveTaskWithRefresh(any(ScheduledTask.class), eq(true));
-    }
-
-    @Test
     public void testReleaseLockReturnsFalseWhenPersistFails() {
         ScheduledTask task = TaskTestFixtures.runningTask("rel", NODE);
         when(schedulerService.getTask(eq(task.getItemId()), eq(true))).thenReturn(task);
@@ -407,56 +329,6 @@ public class TaskLockManagerTest {
     }
 
 
-    @Test
-    public void testDistributedLockVerifyFalseNegativeReleasesWhenStillOwned() {
-        ScheduledTask task = TaskTestFixtures.baseTask("verify-miss");
-        task.setNextScheduledExecution(new Date(System.currentTimeMillis() - 10_000));
-        ScheduledTask latest = TaskTestFixtures.baseTask("verify-miss");
-        latest.setItemId(task.getItemId());
-        latest.setNextScheduledExecution(task.getNextScheduledExecution());
-        latest.setSystemMetadata("seq_no", 1L);
-        latest.setSystemMetadata("primary_term", 1L);
-        // After CAS, verification GETs return null (visibility miss / disappear) then still-owned
-        when(schedulerService.getTask(task.getItemId())).thenReturn(latest, null, null);
-        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenReturn(true);
-        when(schedulerService.getTask(eq(task.getItemId()), eq(true))).thenAnswer(inv -> {
-            ScheduledTask owned = TaskTestFixtures.baseTask("verify-miss");
-            owned.setItemId(task.getItemId());
-            owned.setLockOwner(NODE);
-            owned.setLockDate(new Date());
-            owned.setSystemMetadata("lockVersion", task.getSystemMetadata("lockVersion"));
-            return owned;
-        });
-
-        assertFalse(lockManager.acquireLock(task));
-        verify(schedulerService, atLeastOnce()).saveTaskWithRefresh(any(ScheduledTask.class), eq(true));
-        assertEquals(1, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_LOCK_CONFLICTS));
-    }
-
-    @Test
-    public void testDistributedLockVerifyRecheckSucceedsAfterTransientMiss() {
-        ScheduledTask task = TaskTestFixtures.baseTask("verify-retry");
-        task.setNextScheduledExecution(new Date(System.currentTimeMillis() - 10_000));
-        ScheduledTask latest = TaskTestFixtures.baseTask("verify-retry");
-        latest.setItemId(task.getItemId());
-        latest.setNextScheduledExecution(task.getNextScheduledExecution());
-        latest.setSystemMetadata("seq_no", 2L);
-        latest.setSystemMetadata("primary_term", 1L);
-        ScheduledTask verified = TaskTestFixtures.baseTask("verify-retry");
-        verified.setItemId(task.getItemId());
-        verified.setLockOwner(NODE);
-        verified.setLockDate(new Date());
-        verified.setSystemMetadata("lockVersion", 1L);
-        when(schedulerService.getTask(task.getItemId())).thenReturn(latest, null, verified);
-        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenAnswer(inv -> {
-            ScheduledTask t = inv.getArgument(0);
-            verified.setSystemMetadata("lockVersion", t.getSystemMetadata("lockVersion"));
-            return true;
-        });
-
-        assertTrue(lockManager.acquireLock(task));
-        assertEquals(1, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_LOCK_ACQUIRED));
-    }
 
     @Test
     public void testInMemoryExclusiveLockSerializesConcurrentAcquires() throws Exception {
@@ -509,77 +381,30 @@ public class TaskLockManagerTest {
     }
 
     @Test
-    public void testPeerStealDuringVerificationWindowIsNotClobberedByLoser() throws Exception {
-        // Simulates a peer legitimately stealing the lock (via its own CAS, after our lock
-        // aged past a short lockTimeout) while we are inside acquireDistributedLock's
-        // VERIFICATION_DELAY_MS post-CAS sleep — the exact narrow window the CAS+verify
-        // protocol exists to protect. Unlike the canned-sequential-stub tests above, the
-        // steal here is driven by a real background thread racing real wall-clock time
-        // against our verification sleep, not pre-scripted return values.
-        String taskId = "verify-window";
-        java.util.concurrent.atomic.AtomicLong seqNo = new java.util.concurrent.atomic.AtomicLong(1L);
-        java.util.concurrent.atomic.AtomicReference<String> owner = new java.util.concurrent.atomic.AtomicReference<>();
-        java.util.concurrent.atomic.AtomicLong lockVersion = new java.util.concurrent.atomic.AtomicLong(0L);
-        CountDownLatch nodeACasDone = new CountDownLatch(1);
-        CountDownLatch peerStealDone = new CountDownLatch(1);
-
-        when(schedulerService.getTask(eq(taskId))).thenAnswer(inv -> {
-            ScheduledTask snapshot = TaskTestFixtures.baseTask("verify-window");
-            snapshot.setItemId(taskId);
-            snapshot.setSystemMetadata("seq_no", seqNo.get());
-            snapshot.setSystemMetadata("primary_term", 1L);
-            String currentOwner = owner.get();
-            if (currentOwner != null) {
-                snapshot.setLockOwner(currentOwner);
-                snapshot.setLockDate(new Date());
-                snapshot.setSystemMetadata("lockVersion", lockVersion.get());
-            }
-            return snapshot;
-        });
-        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenAnswer(inv -> {
-            ScheduledTask t = inv.getArgument(0);
-            Object givenSeq = t.getSystemMetadata("seq_no");
-            if (!Long.valueOf(seqNo.get()).equals(givenSeq)) {
-                return false;
-            }
-            owner.set(t.getLockOwner());
-            Object ver = t.getSystemMetadata("lockVersion");
-            lockVersion.set(ver instanceof Number ? ((Number) ver).longValue() : 0L);
-            seqNo.incrementAndGet();
-            nodeACasDone.countDown();
-            return true;
-        });
-
-        // Peer steal thread: waits for our CAS to land, then performs its own legitimate
-        // CAS using the now-current seq_no — exactly what a real peer's acquireDistributedLock
-        // would do once it observes our lock as expired (short lockTimeout below). Runs during
-        // our real Thread.sleep(VERIFICATION_DELAY_MS) inside acquireDistributedLock.
-        Thread stealer = new Thread(() -> {
-            try {
-                assertTrue(nodeACasDone.await(2, TimeUnit.SECONDS));
-                long stolenSeq = seqNo.get();
-                owner.set("peer-node");
-                lockVersion.set(999L);
-                seqNo.set(stolenSeq + 1);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            } finally {
-                peerStealDone.countDown();
-            }
-        }, "peer-steal-thread");
-        stealer.start();
-
-        ScheduledTask task = TaskTestFixtures.baseTask("verify-window");
+    public void testDistributedLockLosesRaceToPeerCasWithoutClobbering() {
+        // A peer's CAS lands between our read and our own write attempt (the backend rejects
+        // our write because seq_no/primary_term no longer match what we read). There is no
+        // verification window to race in anymore - the backend's own CAS result is the single,
+        // atomic point of truth - so losing a race must fail closed immediately and must never
+        // attempt to touch (let alone clear) whatever the peer just wrote.
+        String taskId = "peer-race";
+        ScheduledTask task = TaskTestFixtures.baseTask("peer-race");
         task.setItemId(taskId);
+        task.setNextScheduledExecution(new Date(System.currentTimeMillis() - 10_000));
+        ScheduledTask latest = TaskTestFixtures.baseTask("peer-race");
+        latest.setItemId(taskId);
+        latest.setNextScheduledExecution(task.getNextScheduledExecution());
+        latest.setSystemMetadata("seq_no", 1L);
+        latest.setSystemMetadata("primary_term", 1L);
+        when(schedulerService.getTask(taskId)).thenReturn(latest);
+        // Backend rejects our write: precondition (seq_no=1) no longer matches - a peer moved it.
+        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenReturn(false);
 
-        assertFalse(lockManager.acquireLock(task),
-            "Verification must fail once a peer has legitimately stolen the lock mid-window");
-        assertTrue(peerStealDone.await(2, TimeUnit.SECONDS));
+        assertFalse(lockManager.acquireLock(task));
         assertEquals(1, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_LOCK_CONFLICTS));
-
-        // The loser must not have clobbered the peer's win on its way out.
-        assertEquals("peer-node", owner.get(), "Losing node must not clear the peer's legitimate lock");
-        assertEquals(999L, lockVersion.get());
+        // Losing a CAS race must never trigger a release call - releaseLock() always re-loads
+        // via getTask(id, true) first, so its absence proves we never attempted to touch the peer.
+        verify(schedulerService, never()).getTask(eq(taskId), anyBoolean());
     }
 
     @Test
@@ -675,16 +500,7 @@ public class TaskLockManagerTest {
         latest.setNextScheduledExecution(task.getNextScheduledExecution());
         latest.setSystemMetadata("seq_no", 1L);
         latest.setSystemMetadata("primary_term", 1L);
-        ScheduledTask verified = TaskTestFixtures.baseTask(task.getTaskType());
-        verified.setItemId(task.getItemId());
-        verified.setLockOwner(NODE);
-        verified.setLockDate(new Date());
-        verified.setSystemMetadata("lockVersion", 1L);
-        when(schedulerService.getTask(task.getItemId())).thenReturn(latest, verified);
-        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenAnswer(inv -> {
-            ScheduledTask t = inv.getArgument(0);
-            verified.setSystemMetadata("lockVersion", t.getSystemMetadata("lockVersion"));
-            return true;
-        });
+        when(schedulerService.getTask(task.getItemId())).thenReturn(latest);
+        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenReturn(true);
     }
 }

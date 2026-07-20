@@ -18,6 +18,7 @@ package org.apache.unomi.services.impl.scheduler;
 
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,13 +45,23 @@ import java.util.concurrent.ConcurrentHashMap;
  *       if ClusterService is unavailable.</li>
  *   <li><b>Time Windows</b>: Primary nodes get an exclusive time window to acquire locks,
  *       after which backup nodes attempt in sequence.</li>
- *   <li><b>Optimistic Concurrency Control</b>: Uses Elasticsearch's sequence numbers and
- *       primary terms to ensure only one update succeeds when multiple nodes attempt
- *       simultaneous updates.</li>
- *   <li><b>Fencing Tokens</b>: Monotonically increasing version numbers prevent split-brain
- *       scenarios where multiple nodes believe they own a lock.</li>
- *   <li><b>Lock Verification</b>: Double-checking after acquiring a lock ensures it's
- *       still valid after changes have propagated through the cluster.</li>
+ *   <li><b>Optimistic Concurrency Control</b>: Uses the persistence backend's native sequence
+ *       numbers and primary terms ({@link PersistenceService#SYSTEM_METADATA_SEQ_NO}/
+ *       {@link PersistenceService#SYSTEM_METADATA_PRIMARY_TERM}) as the compare-and-set
+ *       precondition, via {@code PersistenceService#save(Item, Boolean, Boolean)}. This is backend-agnostic:
+ *       any persistence implementation that honors that CAS contract (both the Elasticsearch
+ *       and OpenSearch backends do) works here without scheduler-specific changes.</li>
+ *   <li><b>Fencing Tokens</b>: No separate application-level version counter is maintained.
+ *       The backend's own seq_no/primary_term pair already changes atomically on every
+ *       successful write and serves directly as the fencing token — a successful CAS write
+ *       is itself authoritative proof of exclusive acquisition, so no post-write re-read is
+ *       performed. (An earlier version of this class re-verified acquisition with a delayed
+ *       re-read compared against a custom "lockVersion" field; that added a race window of
+ *       its own — a concurrent renewal/recovery write landing between the CAS and the re-read
+ *       could flip the comparison and produce a false "lost the lock" verdict for an
+ *       acquisition that had, in fact, already succeeded — without adding any real safety
+ *       over trusting the CAS result directly, which {@link #renewLock} and {@link #releaseLock}
+ *       always have.)</li>
  *   <li><b>Explicit Refreshes</b>: Forces immediate index refreshes to make lock
  *       information visible more quickly to other nodes.</li>
  * </ul>
@@ -64,10 +75,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class TaskLockManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskLockManager.class);
-    private static final String SEQ_NO = "seq_no";
-    private static final String PRIMARY_TERM = "primary_term";
-    private static final String LOCK_VERSION = "lockVersion";
-    private static final long VERIFICATION_DELAY_MS = 100;
+    private static final String SEQ_NO = PersistenceService.SYSTEM_METADATA_SEQ_NO;
+    private static final String PRIMARY_TERM = PersistenceService.SYSTEM_METADATA_PRIMARY_TERM;
     private static final long PRIMARY_NODE_WINDOW_MS = 3000;
     private static final long BACKUP_NODE_WINDOW_MS = 500;
 
@@ -201,8 +210,11 @@ public class TaskLockManager {
      * acquire the lock at the same time.
      */
     private boolean acquireDistributedLock(ScheduledTask task) {
+        long diagStart = System.currentTimeMillis();
         // Step 1: Check if this node should handle this task based on affinity
         if (!shouldHandleTask(task)) {
+            LOGGER.debug("LOCK-DIAG [{}] node {} : shouldHandleTask()=false, not attempting acquisition",
+                task.getItemId(), nodeId);
             return false;
         }
 
@@ -215,6 +227,10 @@ public class TaskLockManager {
             LOGGER.warn("Task {} not found when attempting to lock", task.getItemId());
             return false;
         }
+        LOGGER.debug("LOCK-DIAG [{}] node {} : pre-CAS read - lockOwner={}, lockDate={}, seq_no={}, "
+                + "primary_term={}, status={}",
+            task.getItemId(), nodeId, latestTask.getLockOwner(), latestTask.getLockDate(),
+            latestTask.getSystemMetadata(SEQ_NO), latestTask.getSystemMetadata(PRIMARY_TERM), latestTask.getStatus());
 
         // Step 4: Check if already locked by another node
         if (latestTask.getLockOwner() != null &&
@@ -224,7 +240,10 @@ public class TaskLockManager {
             return false;
         }
 
-        // Step 5: Use optimistic concurrency control with sequence numbers
+        // Step 5: Use optimistic concurrency control with sequence numbers as the CAS
+        // precondition. The backend rejects this write outright unless seq_no/primary_term
+        // still match what we just read, so a successful write below is itself authoritative
+        // proof of exclusive acquisition - no separate re-read-and-compare step is needed.
         task.setSystemMetadata(SEQ_NO, latestTask.getSystemMetadata(SEQ_NO));
         task.setSystemMetadata(PRIMARY_TERM, latestTask.getSystemMetadata(PRIMARY_TERM));
 
@@ -232,15 +251,21 @@ public class TaskLockManager {
         task.setLockOwner(nodeId);
         task.setLockDate(new Date());
 
-        // Step 7: Add a monotonically increasing fencing token
-        Object lockVersionObj = latestTask.getSystemMetadata(LOCK_VERSION);
-        long newLockVersion = (lockVersionObj instanceof Number)
-            ? ((Number) lockVersionObj).longValue() + 1L
-            : 1L;
-        task.setSystemMetadata(LOCK_VERSION, newLockVersion);
+        LOGGER.debug("LOCK-DIAG [{}] node {} : attempting CAS write - if_seq_no={}, if_primary_term={}, "
+                + "writing lockOwner={}",
+            task.getItemId(), nodeId, task.getSystemMetadata(SEQ_NO), task.getSystemMetadata(PRIMARY_TERM), nodeId);
 
-        // Step 8: Save with WAIT_UNTIL refresh policy
+        // Step 7: Save with WAIT_UNTIL refresh policy. The backend's own CAS result is
+        // authoritative: true means our precondition matched and the write applied atomically,
+        // so we now exclusively hold the lock. task's seq_no/primary_term are updated in place
+        // to the post-write values, which double as an opaque fencing token for this generation
+        // of the lock (see PersistenceService#SYSTEM_METADATA_SEQ_NO).
         boolean acquired = schedulerService.saveTaskWithRefresh(task);
+
+        LOGGER.debug("LOCK-DIAG [{}] node {} : CAS write result acquired={} in {} ms, post-write seq_no={}, "
+                + "post-write primary_term={}",
+            task.getItemId(), nodeId, acquired, System.currentTimeMillis() - diagStart,
+            task.getSystemMetadata(SEQ_NO), task.getSystemMetadata(PRIMARY_TERM));
 
         if (!acquired) {
             LOGGER.debug("Failed to acquire lock for task {} due to version conflict", task.getItemId());
@@ -248,62 +273,8 @@ public class TaskLockManager {
             return false;
         }
 
-        // Step 9: Double-check our lock after a delay to ensure it's still valid
-        try {
-            // Wait for a short time to allow any concurrent operations to complete
-            Thread.sleep(VERIFICATION_DELAY_MS);
-
-            // Force refresh again to ensure we see the latest state
-            schedulerService.refreshTasks();
-
-            // Get the task again to verify our lock
-            ScheduledTask verifiedTask = schedulerService.getTask(task.getItemId());
-            if (isLockVerificationSuccessful(verifiedTask, newLockVersion)) {
-                LOGGER.debug("Successfully acquired and verified lock for task {}", task.getItemId());
-                metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_LOCK_ACQUIRED);
-                return true;
-            }
-
-            // One more GET to absorb brief ES/OS visibility false-negatives after a successful CAS.
-            schedulerService.refreshTasks();
-            ScheduledTask recheck = schedulerService.getTask(task.getItemId());
-            if (isLockVerificationSuccessful(recheck, newLockVersion)) {
-                LOGGER.debug("Lock for task {} verified on recheck after transient visibility miss",
-                    task.getItemId());
-                metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_LOCK_ACQUIRED);
-                return true;
-            }
-
-            LOGGER.warn("Lock verification failed for task {} after CAS; releasing if still owned",
-                task.getItemId());
-            metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_LOCK_CONFLICTS);
-            // Release only when we still own — never wipe a peer that won the race.
-            if (recheck != null && nodeId.equals(recheck.getLockOwner())) {
-                releaseLock(task);
-            } else if (verifiedTask != null && nodeId.equals(verifiedTask.getLockOwner())) {
-                releaseLock(task);
-            } else if (recheck == null && verifiedTask == null) {
-                // Document vanished; best-effort clear local marker
-                releaseLock(task);
-            }
-            return false;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            // Attempt to release the lock since we're being interrupted
-            releaseLock(task);
-            return false;
-        }
-    }
-
-    private boolean isLockVerificationSuccessful(ScheduledTask verifiedTask, long expectedLockVersion) {
-        if (verifiedTask == null || !nodeId.equals(verifiedTask.getLockOwner())) {
-            return false;
-        }
-        Object currentTokenObj = verifiedTask.getSystemMetadata(LOCK_VERSION);
-        long currentToken = (currentTokenObj instanceof Number)
-            ? ((Number) currentTokenObj).longValue()
-            : -1L;
-        return currentToken == expectedLockVersion;
+        metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_LOCK_ACQUIRED);
+        return true;
     }
 
     /**
@@ -387,6 +358,8 @@ public class TaskLockManager {
         if (task == null) {
             return false;
         }
+        LOGGER.debug("LOCK-DIAG [{}] node {} : releaseLock() called - caller's view lockOwner={}, lockDate={}",
+            task.getItemId(), nodeId, task.getLockOwner(), task.getLockDate());
 
         // Fast reject from the caller's view: only the lock owner may release a still-valid lock.
         // Expired locks may be cleared by any recovering node so a dead owner's lock does not
@@ -411,9 +384,15 @@ public class TaskLockManager {
             // view expired. Never wipe a non-expired foreign lock (that would unlock a live
             // peer mid-execution and enable double-dispatch).
             String latestOwner = toSave.getLockOwner();
+            LOGGER.debug("LOCK-DIAG [{}] node {} : releaseLock() fresh store read - lockOwner={}, "
+                    + "lockDate={}, seq_no={}, primary_term={}",
+                task.getItemId(), nodeId, latestOwner, toSave.getLockDate(),
+                toSave.getSystemMetadata(SEQ_NO), toSave.getSystemMetadata(PRIMARY_TERM));
             if (latestOwner == null) {
                 task.setLockOwner(null);
                 task.setLockDate(null);
+                LOGGER.debug("LOCK-DIAG [{}] node {} : releaseLock() no-op, store already unlocked",
+                    task.getItemId(), nodeId);
                 return true;
             }
             boolean weOwnLatest = nodeId.equals(latestOwner);
@@ -442,6 +421,8 @@ public class TaskLockManager {
                 return false;
             }
 
+            LOGGER.debug("LOCK-DIAG [{}] node {} : releaseLock() CAS write succeeded, lock cleared",
+                task.getItemId(), nodeId);
             metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_LOCK_RELEASED);
             return true;
         } catch (Exception e) {
@@ -474,10 +455,18 @@ public class TaskLockManager {
             return true;
         }
         if (!nodeId.equals(task.getLockOwner())) {
+            LOGGER.debug("LOCK-DIAG [{}] node {} : renewLock() skipped - caller's view lockOwner={} != nodeId",
+                task.getItemId(), nodeId, task.getLockOwner());
             return false;
         }
         try {
             ScheduledTask latest = schedulerService.getTask(task.getItemId());
+            LOGGER.debug("LOCK-DIAG [{}] node {} : renewLock() fresh store read - lockOwner={}, lockDate={}, "
+                    + "seq_no={}, primary_term={}",
+                task.getItemId(), nodeId, latest != null ? latest.getLockOwner() : "<null-task>",
+                latest != null ? latest.getLockDate() : null,
+                latest != null ? latest.getSystemMetadata(SEQ_NO) : null,
+                latest != null ? latest.getSystemMetadata(PRIMARY_TERM) : null);
             if (latest == null || !nodeId.equals(latest.getLockOwner())) {
                 LOGGER.debug("Not renewing lock for task {}: store owner is {}",
                     task.getItemId(), latest != null ? latest.getLockOwner() : null);
@@ -498,6 +487,8 @@ public class TaskLockManager {
             // store's current version, not the pre-renewal one.
             task.setLockDate(latest.getLockDate());
             copyOccMetadata(latest, task);
+            LOGGER.debug("LOCK-DIAG [{}] node {} : renewLock() succeeded, new lockDate={}",
+                task.getItemId(), nodeId, latest.getLockDate());
             return true;
         } catch (Exception e) {
             LOGGER.warn("Error renewing lock for task {}", task.getItemId(), e);
@@ -541,10 +532,17 @@ public class TaskLockManager {
      */
     public boolean isLockExpired(ScheduledTask task) {
         if (task == null || task.getLockDate() == null) {
+            LOGGER.debug("LOCK-DIAG isLockExpired() : task={}, lockDate=null -> expired=true",
+                task != null ? task.getItemId() : "<null-task>");
             return true;
         }
 
-        long lockAge = System.currentTimeMillis() - task.getLockDate().getTime();
-        return lockAge > lockTimeout;
+        long now = System.currentTimeMillis();
+        long lockAge = now - task.getLockDate().getTime();
+        boolean expired = lockAge > lockTimeout;
+        LOGGER.debug("LOCK-DIAG isLockExpired() : task={}, lockDate={} ({}), now={}, lockAge={}ms, "
+                + "lockTimeout={}ms -> expired={}",
+            task.getItemId(), task.getLockDate(), task.getLockDate().getTime(), now, lockAge, lockTimeout, expired);
+        return expired;
     }
 }
