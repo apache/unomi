@@ -22,8 +22,6 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Route;
 import org.apache.camel.ServiceStatus;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
@@ -54,6 +52,9 @@ import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
+import org.apache.unomi.itests.persistence.PersistenceITBackend;
+import org.apache.unomi.itests.persistence.PersistenceITBackendResolver;
+import org.apache.unomi.itests.persistence.PersistenceITCapabilities;
 import org.apache.unomi.itests.tools.LogChecker;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.lifecycle.BundleWatcher;
@@ -98,9 +99,11 @@ import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -135,16 +138,23 @@ public abstract class BaseIT extends KarafTestSupport {
     protected static final int DEFAULT_TRYING_TRIES = 10;
     protected static final int DEFAULT_SHOULDBETRUE_TRIES = 5;
 
-    protected static final String SEARCH_ENGINE_PROPERTY = "unomi.search.engine";
+    /** @deprecated use {@link PersistenceITBackendResolver#PROVIDER_PROPERTY}. */
+    @Deprecated
+    protected static final String SEARCH_ENGINE_PROPERTY = PersistenceITBackendResolver.SEARCH_ENGINE_PROPERTY;
     protected static final String SEARCH_ENGINE_HTTPREQUEST_LOG_LEVEL = "unomi.search.engine.httprequest.log.level";
-    protected static final String SEARCH_ENGINE_ELASTICSEARCH = "elasticsearch";
-    protected static final String SEARCH_ENGINE_OPENSEARCH = "opensearch";
+    protected static final String SEARCH_ENGINE_ELASTICSEARCH = PersistenceITBackendResolver.PROVIDER_ELASTICSEARCH;
+    protected static final String SEARCH_ENGINE_OPENSEARCH = PersistenceITBackendResolver.PROVIDER_OPENSEARCH;
+    protected static final String PERSISTENCE_PROVIDER_PROPERTY = PersistenceITBackendResolver.PROVIDER_PROPERTY;
     protected static final String RESOLVER_DEBUG_PROPERTY = "it.unomi.resolver.debug";
     protected static final String ENABLE_LOG_CHECKING_PROPERTY = "it.unomi.log.checking.enabled";
     protected static final String CAMEL_DEBUG_PROPERTY = "it.unomi.camel.debug";
 
     protected static boolean unomiStarted = false;
+    /**
+     * Active provider id. Kept for existing tests; prefer {@link #getPersistenceBackend()}.
+     */
     protected static String searchEngine = SEARCH_ENGINE_ELASTICSEARCH;
+    private static PersistenceITBackend persistenceBackend;
 
     private static boolean searchEngineConfiguredForTesting = false;
     private static boolean searchEngineHealthVerifiedAfterStartup = false;
@@ -239,8 +249,33 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     protected void checkSearchEngine() {
-        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        resolvePersistenceBackend();
         configureSearchEngineForTesting();
+    }
+
+    /**
+     * Resolves (and caches) the active {@link PersistenceITBackend} from system properties /
+     * ServiceLoader. Also updates the legacy {@link #searchEngine} field.
+     */
+    protected static PersistenceITBackend resolvePersistenceBackend() {
+        if (persistenceBackend == null) {
+            persistenceBackend = PersistenceITBackendResolver.resolve();
+            searchEngine = persistenceBackend.providerId();
+        }
+        return persistenceBackend;
+    }
+
+    protected static PersistenceITBackend getPersistenceBackend() {
+        return resolvePersistenceBackend();
+    }
+
+    protected PersistenceITCapabilities persistenceCapabilities() {
+        return getPersistenceBackend().capabilities();
+    }
+
+    /** ConfigAdmin PID for the active persistence provider (e.g. throwExceptions). */
+    protected String persistenceConfigPid() {
+        return getPersistenceBackend().persistenceConfigPid();
     }
 
     @Before
@@ -248,28 +283,37 @@ public abstract class BaseIT extends KarafTestSupport {
         // disable retry
         retry = new KarafTestSupport.Retry(false);
 
-        // Check search engine and apply any necessary fixes (e.g., default_template deletion)
+        // Resolve provider and apply any necessary backend prep (e.g., zero-replica template)
         checkSearchEngine();
+        try {
+            getPersistenceBackend().awaitBackendReady();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException("Persistence backend awaitBackendReady failed", e);
+        }
 
         // Start Unomi if not already done
         if (!unomiStarted) {
             // We must check that the Unomi Management Service is up and running before launching the
             // command otherwise the start configuration will not be properly populated.
             waitForUnomiManagementService();
-            if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
-                LOGGER.info("Starting Unomi with elasticsearch search engine...");
-                System.out.println("==== Starting Unomi with elasticsearch search engine...");
-                executeCommand("unomi:setup -d=unomi-distribution-elasticsearch -f=true");
-                executeCommand("unomi:start");
-            } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)){
-                LOGGER.info("Starting Unomi with opensearch search engine...");
-                System.out.println("==== Starting Unomi with opensearch search engine...");
-                executeCommand("unomi:setup -d=unomi-distribution-opensearch -f=true");
-                executeCommand("unomi:start");
-            } else {
-                LOGGER.error("Unknown search engine: " + searchEngine);
-                throw new InterruptedException("Unknown search engine: " + searchEngine);
+            PersistenceITBackend backend = getPersistenceBackend();
+            try {
+                backend.prepareBeforeUnomiSetup(bundleContext, configurationAdmin);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw e;
+            } catch (Exception e) {
+                throw new IllegalStateException("Persistence backend prepareBeforeUnomiSetup failed", e);
             }
+            String distribution = backend.distributionFeature();
+            LOGGER.info("Starting Unomi with persistence provider {} (distribution {})...", backend.providerId(), distribution);
+            System.out.println("==== Starting Unomi with persistence provider " + backend.providerId()
+                    + " (distribution " + distribution + ")...");
+            executeCommand("unomi:setup -d=" + distribution + " -f=true");
+            executeCommand("unomi:start");
             unomiStarted = true;
         }
 
@@ -542,6 +586,43 @@ public abstract class BaseIT extends KarafTestSupport {
         Thread.sleep(1000);
     }
 
+    /**
+     * Resolves a fixture under {@code src/test/resources} for Pax Exam {@code replaceConfigurationFile}.
+     * Prefers the local filesystem (Unomi itests module); falls back to the classpath so out-of-tree
+     * consumers of the {@code unomi-itests} test-jar can reuse {@link #config()} without copying files.
+     */
+    protected static File resolveTestResource(String pathUnderSrcTestResources) {
+        File local = new File(pathUnderSrcTestResources);
+        if (local.isFile()) {
+            return local;
+        }
+        String classpathName = pathUnderSrcTestResources;
+        final String prefix = "src/test/resources/";
+        if (classpathName.startsWith(prefix)) {
+            classpathName = classpathName.substring(prefix.length());
+        }
+        URL url = BaseIT.class.getClassLoader().getResource(classpathName);
+        if (url == null) {
+            throw new IllegalStateException("Missing test resource: " + pathUnderSrcTestResources
+                    + " (not on filesystem or classpath)");
+        }
+        try {
+            if ("file".equals(url.getProtocol())) {
+                return new File(url.toURI());
+            }
+            String fileName = new File(classpathName).getName();
+            Path tmp = Files.createTempFile("unomi-it-resource-", "-" + fileName);
+            try (InputStream in = url.openStream()) {
+                Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
+            }
+            File out = tmp.toFile();
+            out.deleteOnExit();
+            return out;
+        } catch (Exception e) {
+            throw new IllegalStateException("Cannot resolve test resource " + pathUnderSrcTestResources, e);
+        }
+    }
+
     @Override
     public MavenArtifactUrlReference getKarafDistribution() {
         return maven().groupId("org.apache.unomi").artifactId("unomi").versionAsInProject().type("tar.gz");
@@ -554,120 +635,41 @@ public abstract class BaseIT extends KarafTestSupport {
             System.out.println("==== Configuring container");
         }
 
-        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        resolvePersistenceBackend();
         if (!configLogged) {
-            LOGGER.info("Search Engine: {}", searchEngine);
-            System.out.println("Search Engine: " + searchEngine);
+            LOGGER.info("Persistence provider: {}", searchEngine);
+            System.out.println("Persistence provider: " + searchEngine);
         }
 
-        // Define features option based on search engine
-        Option featuresOption;
-        Option distributionOption;
-        if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
-            featuresOption = features(
-                    maven().groupId("org.apache.unomi").artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
-                    "unomi-base",
-                    "unomi-startup",
-                    "unomi-elasticsearch-core",
-                    "unomi-persistence-core",
-                    "unomi-services",
-                    "unomi-cxs-privacy-extension-services",
-                    "unomi-plugins-base",
-                    "unomi-plugins-request",
-                    "unomi-plugins-mail",
-                    "unomi-plugins-optimization-test",
-                    "unomi-rest-api",
-                    "unomi-cxs-privacy-extension",
-                    "unomi-elasticsearch-conditions",
-                    "unomi-cxs-lists-extension",
-                    "unomi-cxs-geonames-extension",
-                    "unomi-shell-dev-commands",
-                    "unomi-wab",
-                    "unomi-web-tracker",
-                    "unomi-healthcheck-elasticsearch",
-                    "unomi-router-karaf-feature",
-                    "unomi-groovy-actions",
-                    "unomi-rest-ui",
-                    "cdp-graphql-feature",
-                    "unomi-startup-complete"
-            );
-            distributionOption = features(
-                    maven().groupId("org.apache.unomi").artifactId("unomi-distribution").versionAsInProject().type("xml").classifier("features"),
-                    "unomi-distribution-elasticsearch-graphql"
-            );
-        } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-            featuresOption = features(
-                    maven().groupId("org.apache.unomi").artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
-                    "unomi-base",
-                    "unomi-startup",
-                    "unomi-opensearch-core",
-                    "unomi-persistence-core",
-                    "unomi-services",
-                    "unomi-cxs-privacy-extension-services",
-                    "unomi-plugins-base",
-                    "unomi-plugins-request",
-                    "unomi-plugins-mail",
-                    "unomi-plugins-optimization-test",
-                    "unomi-rest-api",
-                    "unomi-cxs-privacy-extension",
-                    "unomi-opensearch-conditions",
-                    "unomi-cxs-lists-extension",
-                    "unomi-cxs-geonames-extension",
-                    "unomi-shell-dev-commands",
-                    "unomi-wab",
-                    "unomi-web-tracker",
-                    "unomi-healthcheck-opensearch",
-                    "unomi-router-karaf-feature",
-                    "unomi-groovy-actions",
-                    "unomi-rest-ui",
-                    "cdp-graphql-feature",
-                    "unomi-startup-complete"
-            );
-            distributionOption = features(
-                    maven().groupId("org.apache.unomi").artifactId("unomi-distribution").versionAsInProject().type("xml").classifier("features"),
-                    "unomi-distribution-opensearch-graphql"
-            );
-        } else {
-            throw new IllegalArgumentException("Unknown search engine: " + searchEngine);
-        }
+        PersistenceITBackend backend = getPersistenceBackend();
+        Option[] backendFeatures = backend.featureOptions();
+        Option[] backendConfig = backend.configurationOptions();
 
         Option[] options = new Option[]{
-                replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File("src/test/resources/org.apache.unomi.router.cfg")),
-                replaceConfigurationFile("data/tmp/1-basic-test.csv", new File("src/test/resources/1-basic-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", new File("src/test/resources/2-surfers-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv", new File("src/test/resources/3-surfers-overwrite-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/4-surfers-delete-test.csv", new File("src/test/resources/4-surfers-delete-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/5-ranking-test.csv", new File("src/test/resources/5-ranking-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/6-actors-test.csv", new File("src/test/resources/6-actors-test.csv")),
-                replaceConfigurationFile("data/tmp/testLogin.json", new File("src/test/resources/testLogin.json")),
-                replaceConfigurationFile("data/tmp/testCopyProperties.json", new File("src/test/resources/testCopyProperties.json")),
-                replaceConfigurationFile("data/tmp/testCopyPropertiesWithoutSystemTags.json", new File("src/test/resources/testCopyPropertiesWithoutSystemTags.json")),
-                replaceConfigurationFile("data/tmp/testLoginEventCondition.json", new File("src/test/resources/testLoginEventCondition.json")),
-                replaceConfigurationFile("data/tmp/testClickEventCondition.json", new File("src/test/resources/testClickEventCondition.json")),
-                replaceConfigurationFile("data/tmp/testRuleGroovyAction.json", new File("src/test/resources/testRuleGroovyAction.json")),
-                replaceConfigurationFile("data/tmp/conditions/testIdsConditionLegacy.json", new File("src/test/resources/conditions/testIdsConditionLegacy.json")),
-                replaceConfigurationFile("data/tmp/conditions/testIdsConditionNew.json", new File("src/test/resources/conditions/testIdsConditionNew.json")),
-                replaceConfigurationFile("data/tmp/conditions/testBooleanConditionLegacy.json", new File("src/test/resources/conditions/testBooleanConditionLegacy.json")),
-                replaceConfigurationFile("data/tmp/conditions/testPropertyConditionLegacy.json", new File("src/test/resources/conditions/testPropertyConditionLegacy.json")),
-                replaceConfigurationFile("data/tmp/groovy/UpdateAddressAction.groovy", new File("src/test/resources/groovy/UpdateAddressAction.groovy")),
+                replaceConfigurationFile("etc/org.apache.unomi.router.cfg", resolveTestResource("src/test/resources/org.apache.unomi.router.cfg")),
+                replaceConfigurationFile("data/tmp/1-basic-test.csv", resolveTestResource("src/test/resources/1-basic-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", resolveTestResource("src/test/resources/2-surfers-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv", resolveTestResource("src/test/resources/3-surfers-overwrite-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/4-surfers-delete-test.csv", resolveTestResource("src/test/resources/4-surfers-delete-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/5-ranking-test.csv", resolveTestResource("src/test/resources/5-ranking-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/6-actors-test.csv", resolveTestResource("src/test/resources/6-actors-test.csv")),
+                replaceConfigurationFile("data/tmp/testLogin.json", resolveTestResource("src/test/resources/testLogin.json")),
+                replaceConfigurationFile("data/tmp/testCopyProperties.json", resolveTestResource("src/test/resources/testCopyProperties.json")),
+                replaceConfigurationFile("data/tmp/testCopyPropertiesWithoutSystemTags.json", resolveTestResource("src/test/resources/testCopyPropertiesWithoutSystemTags.json")),
+                replaceConfigurationFile("data/tmp/testLoginEventCondition.json", resolveTestResource("src/test/resources/testLoginEventCondition.json")),
+                replaceConfigurationFile("data/tmp/testClickEventCondition.json", resolveTestResource("src/test/resources/testClickEventCondition.json")),
+                replaceConfigurationFile("data/tmp/testRuleGroovyAction.json", resolveTestResource("src/test/resources/testRuleGroovyAction.json")),
+                replaceConfigurationFile("data/tmp/conditions/testIdsConditionLegacy.json", resolveTestResource("src/test/resources/conditions/testIdsConditionLegacy.json")),
+                replaceConfigurationFile("data/tmp/conditions/testIdsConditionNew.json", resolveTestResource("src/test/resources/conditions/testIdsConditionNew.json")),
+                replaceConfigurationFile("data/tmp/conditions/testBooleanConditionLegacy.json", resolveTestResource("src/test/resources/conditions/testBooleanConditionLegacy.json")),
+                replaceConfigurationFile("data/tmp/conditions/testPropertyConditionLegacy.json", resolveTestResource("src/test/resources/conditions/testPropertyConditionLegacy.json")),
+                replaceConfigurationFile("data/tmp/groovy/UpdateAddressAction.groovy", resolveTestResource("src/test/resources/groovy/UpdateAddressAction.groovy")),
 
                 editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.rootLogger.level", "INFO"),
                 editConfigurationFilePut("etc/org.apache.karaf.features.cfg", "serviceRequirements", "disable"),
                 editConfigurationFilePut("etc/system.properties", "my.system.property", System.getProperty("my.system.property")),
-                editConfigurationFilePut("etc/system.properties", SEARCH_ENGINE_PROPERTY, System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH)),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.cluster.name", "contextElasticSearchITests"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:" + getSearchPort()),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.rollover.maxDocs", "300"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.minimalClusterState", "YELLOW"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.cluster.name", "contextElasticSearchITests"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.addresses", "localhost:" + getSearchPort()),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.username", "admin"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.password", "Unomi.1ntegrat10n.Tests"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslEnable", "false"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslTrustAllCertificates", "true"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.rollover.maxDocs", "300"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
+                editConfigurationFilePut("etc/system.properties", SEARCH_ENGINE_PROPERTY, searchEngine),
+                editConfigurationFilePut("etc/system.properties", PERSISTENCE_PROVIDER_PROPERTY, searchEngine),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.migration.tenant.id", TEST_TENANT_ID),
                 // Default scheduler.thread.poolSize (5) is sized for the near-instant in-memory unit-test
                 // double, not a real ES/OS backend. Under real refresh/write latency, the checker, task
@@ -680,9 +682,6 @@ public abstract class BaseIT extends KarafTestSupport {
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
 
-                featuresOption,  // Add the features option
-                distributionOption, // Add the distribution option
-
                 configureConsole().startRemoteShell(),
                 logLevel(LogLevel.INFO),
                 keepRuntimeFolder(),
@@ -691,6 +690,8 @@ public abstract class BaseIT extends KarafTestSupport {
         };
         List<Option> karafOptions = new ArrayList<>();
         karafOptions.addAll(Arrays.asList(options));
+        karafOptions.addAll(Arrays.asList(backendConfig));
+        karafOptions.addAll(Arrays.asList(backendFeatures));
 
         String karafDebug = System.getProperty("it.karaf.debug");
         if (karafDebug != null) {
@@ -1435,6 +1436,10 @@ public abstract class BaseIT extends KarafTestSupport {
         if (searchEngineConfiguredForTesting) {
             return;
         }
+        if (!persistenceCapabilities().httpAdminApi()) {
+            searchEngineConfiguredForTesting = true;
+            return;
+        }
         try (CloseableHttpClient client = createSearchEngineHttpClient()) {
             String baseUrl = getSearchEngineBaseUrl();
             ensureZeroReplicaIndexTemplate(client, baseUrl);
@@ -1464,6 +1469,9 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     private void enforceZeroReplicasAndWaitForCluster(String context) {
+        if (!persistenceCapabilities().httpAdminApi()) {
+            return;
+        }
         try (CloseableHttpClient client = createSearchEngineHttpClient()) {
             String baseUrl = getSearchEngineBaseUrl();
             ensureZeroReplicaIndexTemplate(client, baseUrl);
@@ -1517,6 +1525,14 @@ public abstract class BaseIT extends KarafTestSupport {
      * Stage 3 (post-Unomi start): assert cluster health for single-node IT (ES and OpenSearch).
      */
     protected void assertClusterHealthy(String context) {
+        if (!persistenceCapabilities().httpAdminApi()) {
+            try {
+                getPersistenceBackend().assertHealthyAfterUnomiStart();
+            } catch (Exception e) {
+                throw new IllegalStateException("Backend health assertion failed: " + context, e);
+            }
+            return;
+        }
         try (CloseableHttpClient client = createSearchEngineHttpClient()) {
             String baseUrl = getSearchEngineBaseUrl();
             ensureZeroReplicaIndexTemplate(client, baseUrl);
@@ -1550,36 +1566,31 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     protected static String getSearchEngineBaseUrl() {
-        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-            return "http://localhost:" + getSearchPort();
-        }
-        return "http://localhost:" + getSearchPort();
+        requireHttpAdminApi("getSearchEngineBaseUrl");
+        return getPersistenceBackend().searchBaseUrl();
     }
 
     protected CloseableHttpClient createSearchEngineHttpClient() throws IOException {
-        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-            BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-            credentialsProvider.setCredentials(AuthScope.ANY,
-                    new UsernamePasswordCredentials("admin", "Unomi.1ntegrat10n.Tests"));
-            return HttpUtils.initHttpClient(true, credentialsProvider);
-        }
-        return HttpUtils.initHttpClient(true, null);
+        requireHttpAdminApi("createSearchEngineHttpClient");
+        return getPersistenceBackend().createSearchHttpClient();
     }
 
     /**
-     * Gets the appropriate search engine port based on the configured search engine.
+     * Gets the appropriate search engine port based on the configured persistence provider.
      *
      * @return The port number as a string
      */
     protected static String getSearchPort() {
-        String searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
-        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
-            // For OpenSearch, get the port from the system property set by maven-failsafe-plugin
-            return System.getProperty("org.apache.unomi.opensearch.addresses", "localhost:9401")
-                    .split(":")[1]; // Extract port number from "localhost:9401"
-        } else {
-            // For Elasticsearch, use the default port or system property if set
-            return System.getProperty("elasticsearch.port", "9400");
+        requireHttpAdminApi("getSearchPort");
+        return getPersistenceBackend().searchPort();
+    }
+
+    private static void requireHttpAdminApi(String caller) {
+        PersistenceITBackend backend = getPersistenceBackend();
+        if (!backend.capabilities().httpAdminApi()) {
+            throw new UnsupportedOperationException(
+                    caller + " requires httpAdminApi, but provider '" + backend.providerId()
+                            + "' does not advertise it (skip via Assume / SearchBackendIT / CorePersistenceITs)");
         }
     }
 

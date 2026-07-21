@@ -44,8 +44,7 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
 
     @Configuration
     public Option[] config() {
-
-        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        resolvePersistenceBackend();
         System.out.println("Search Engine: " + searchEngine);
 
         List<Option> options = new ArrayList<>();

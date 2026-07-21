@@ -41,7 +41,12 @@ import java.util.concurrent.*;
 import static org.junit.Assert.fail;
 
 /**
- * Health Check Integration Tests
+ * Health Check Integration Tests.
+ * <p>
+ * Always asserts {@code karaf}, {@code unomi}, and {@code persistence} LIVE.
+ * Optional probes ({@code providerNamedHealthProbe}, {@code clusterHealthProbe}) are
+ * asserted only when the active {@link org.apache.unomi.itests.persistence.PersistenceITCapabilities}
+ * advertise them — so the same class covers Elasticsearch, OpenSearch, PostgreSQL, etc.
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
@@ -57,15 +62,10 @@ public class HealthCheckIT extends BaseIT {
     public void testHealthCheck() {
         try {
             List<HealthCheckResponse> response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {});
-            LOGGER.info("configured search engine: {}", searchEngine);
+            LOGGER.info("configured persistence provider: {}", getPersistenceBackend().providerId());
             LOGGER.info("health check response: {}", response);
             Assert.assertNotNull(response);
-            Assert.assertEquals(5, response.size());
-            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
-            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals(searchEngine) && r.getStatus() == HealthCheckResponse.Status.LIVE));
-            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
-            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("persistence") && r.getStatus() == HealthCheckResponse.Status.LIVE));
-            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+            assertHealthCheckLive(response);
         } catch (Exception e) {
             LOGGER.error("Error while executing health check", e);
             fail("Error while executing health check" + e.getMessage());
@@ -88,12 +88,7 @@ public class HealthCheckIT extends BaseIT {
                 }
                 for (Future<List<HealthCheckResponse>> future : futures) {
                     List<HealthCheckResponse> health = future.get(10, TimeUnit.SECONDS);
-                    Assert.assertEquals(5, health.size());
-                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
-                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals(searchEngine) && r.getStatus() == HealthCheckResponse.Status.LIVE));
-                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
-                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("persistence") && r.getStatus() == HealthCheckResponse.Status.LIVE));
-                    Assert.assertTrue(health.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+                    assertHealthCheckLive(health);
                 }
                 Thread.sleep(10);
             }
@@ -106,6 +101,34 @@ public class HealthCheckIT extends BaseIT {
             if ( executorService != null ) {
                 executorService.shutdownNow();
             }
+        }
+    }
+
+    private void assertHealthCheckLive(List<HealthCheckResponse> response) {
+        Assert.assertNotNull(response);
+        Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+        Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+        Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("persistence") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+        int expectedMinProbes = 3; // karaf, unomi, persistence
+        boolean named = persistenceCapabilities().providerNamedHealthProbe();
+        boolean cluster = persistenceCapabilities().clusterHealthProbe();
+        if (named) {
+            expectedMinProbes++;
+            String namedProbe = getPersistenceBackend().providerId();
+            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals(namedProbe) && r.getStatus() == HealthCheckResponse.Status.LIVE));
+        }
+        if (cluster) {
+            expectedMinProbes++;
+            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+        }
+        // ES/OS advertise both optional probes → keep historical exact size (5).
+        // Other backends may expose extra probes; require at least the expected set.
+        if (named && cluster) {
+            Assert.assertEquals("Unexpected health probe count: " + response, expectedMinProbes, response.size());
+        } else {
+            Assert.assertTrue(
+                    "Expected at least " + expectedMinProbes + " health probes, got " + response.size() + ": " + response,
+                    response.size() >= expectedMinProbes);
         }
     }
 

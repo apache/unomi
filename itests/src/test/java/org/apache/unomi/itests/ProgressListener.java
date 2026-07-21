@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.itests;
 
+import org.apache.unomi.itests.persistence.PersistenceITBackendResolver;
 import org.junit.runner.Description;
 import org.junit.runner.Result;
 import org.junit.runner.notification.Failure;
@@ -32,6 +33,7 @@ import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -44,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li>ASCII art logo display at test suite startup</li>
  *   <li>Real-time progress bar with percentage completion</li>
  *   <li>Colorized output (when ANSI is supported)</li>
- *   <li>Estimated time remaining calculations</li>
+ *   <li>Estimated time remaining from a per-persistence-provider historical timing cache</li>
  *   <li>Test success/failure counters</li>
  *   <li>Top 10 slowest tests tracking and reporting</li>
  *   <li>Motivational quotes displayed at progress milestones</li>
@@ -137,15 +139,24 @@ public class ProgressListener extends RunListener {
     private long startTime = System.currentTimeMillis();
     /** Timestamp when the current individual test started */
     private long startTestTime = System.currentTimeMillis();
+    /**
+     * Set in {@link #testFailure} before {@link #testFinished}; failed tests must not update the
+     * timing cache (aborted / assertion failures skew historical ETAs).
+     */
+    private boolean currentTestFailed;
     /** Formatter for human-readable timestamps */
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-    /** Search engine under test (e.g. "elasticsearch", "opensearch"); timings are cached per engine */
-    private final String searchEngine = System.getProperty(BaseIT.SEARCH_ENGINE_PROPERTY, BaseIT.SEARCH_ENGINE_ELASTICSEARCH);
-    /** Cached per-test durations loaded from {@link TestTimingCache} */
+    /** Persistence provider under test (e.g. elasticsearch, opensearch, postgresql); timings cached per provider */
+    private final String persistenceProvider;
+    /** Cached per-test durations loaded from {@link TestTimingCache} for this provider */
     private final Map<String, Long> cachedTimings;
     /** Timing-cache keys for tests not yet completed in this run */
     private final Set<String> remainingTestKeys;
+    /** Durations (ms) of tests completed in this run */
+    private final List<Long> completedDurations = new CopyOnWriteArrayList<>();
+    /** Pairs of [observedMs, cachedMs] for completed tests that had a historical entry */
+    private final List<long[]> observedVsCached = new CopyOnWriteArrayList<>();
 
     /**
      * Creates a new ProgressListener instance.
@@ -162,7 +173,8 @@ public class ProgressListener extends RunListener {
         this.completedTests = completedTests;
         this.slowTests = new PriorityQueue<>((t1, t2) -> Long.compare(t1.time, t2.time));
         this.ansiSupported = isAnsiSupported();
-        this.cachedTimings = TestTimingCache.load(searchEngine);
+        this.persistenceProvider = PersistenceITBackendResolver.resolveProviderId();
+        this.cachedTimings = TestTimingCache.load(persistenceProvider);
         this.remainingTestKeys = ConcurrentHashMap.newKeySet();
         this.remainingTestKeys.addAll(testKeys);
     }
@@ -259,11 +271,12 @@ public class ProgressListener extends RunListener {
         // Print the bottom border
         System.out.println(colorize(bottomBorder, CYAN));
 
-        // Display search engine information once at the start
-        String searchEngine = System.getProperty("unomi.search.engine", "elasticsearch");
-        String searchEngineDisplay = capitalizeSearchEngine(searchEngine);
+        // Display persistence provider + historical timing cache info once at the start
+        String providerDisplay = capitalizeProvider(persistenceProvider);
         System.out.println();
-        System.out.println(colorize("Using search engine: " + searchEngineDisplay, CYAN));
+        System.out.println(colorize("Persistence provider: " + providerDisplay, CYAN));
+        System.out.println(colorize("Historical timings: " + cachedTimings.size() + "/" + totalTests
+                + " tests cached → " + TestTimingCache.cacheFile(persistenceProvider).toAbsolutePath(), CYAN));
         System.out.println();
     }
 
@@ -274,6 +287,7 @@ public class ProgressListener extends RunListener {
      */
     @Override
     public void testStarted(Description description) {
+        currentTestFailed = false;
         startTestTime = System.currentTimeMillis();
         // Print test start boundary with test name
         String testName = extractTestName(description);
@@ -287,7 +301,9 @@ public class ProgressListener extends RunListener {
     }
 
     /**
-     * Called when an individual test finishes successfully. Updates counters and displays progress.
+     * Called when an individual test finishes. Updates counters and displays progress.
+     * Successful tests are written to {@link TestTimingCache} immediately so a killed mid-suite
+     * run still retains timings for every test that completed cleanly.
      *
      * @param description the description of the test that finished
      */
@@ -295,6 +311,9 @@ public class ProgressListener extends RunListener {
     public void testFinished(Description description) {
         long endTestTime = System.currentTimeMillis();
         long testDuration = endTestTime - startTestTime;
+        boolean failed = currentTestFailed;
+        currentTestFailed = false;
+
         completedTests.incrementAndGet();
         successfulTests.incrementAndGet(); // Default to success unless a failure is recorded separately.
         slowTests.add(new TestTime(description.getDisplayName(), testDuration));
@@ -304,10 +323,18 @@ public class ProgressListener extends RunListener {
         }
         String testKey = TestTimingCache.keyFor(description);
         remainingTestKeys.remove(testKey);
-        // Persist immediately (rather than batching until testRunFinished) so a run that gets killed
-        // mid-suite (Ctrl-C, CI timeout, a hung test force-killed) still leaves every test that did
-        // complete recorded in the cache for next time.
-        TestTimingCache.save(searchEngine, Collections.singletonMap(testKey, testDuration));
+
+        // Persist only successes: failure/abort durations pollute the provider cache and ETA scale.
+        // Write after every successful test (not only at suite end) so Ctrl-C / CI kill keeps progress.
+        if (!failed) {
+            completedDurations.add(testDuration);
+            Long historical = cachedTimings.get(testKey);
+            if (historical != null && historical > 0L) {
+                observedVsCached.add(new long[]{testDuration, historical});
+            }
+            TestTimingCache.save(persistenceProvider, Collections.singletonMap(testKey, testDuration));
+        }
+
         // Print test end boundary
         String testName = extractTestName(description);
         String durationStr = formatTime(testDuration);
@@ -323,12 +350,25 @@ public class ProgressListener extends RunListener {
     }
 
     /**
-     * Called when a test fails. Updates failure counters and displays the failure message.
+     * {@code @Ignore}d tests never call {@link #testFinished}; drop them from the remaining set so ETA
+     * does not keep budgeting time for them.
+     */
+    @Override
+    public void testIgnored(Description description) {
+        remainingTestKeys.remove(TestTimingCache.keyFor(description));
+        completedTests.incrementAndGet();
+        displayProgress();
+    }
+
+    /**
+     * Called when a test fails (before {@link #testFinished}). Marks the test so its duration is
+     * not written to the timing cache.
      *
      * @param failure the failure information
      */
     @Override
     public void testFailure(Failure failure) {
+        currentTestFailed = true;
         successfulTests.decrementAndGet(); // Remove the previous success count for this test.
         failedTests.incrementAndGet();
         String testName = extractTestName(failure.getDescription());
@@ -391,26 +431,25 @@ public class ProgressListener extends RunListener {
     }
 
     /**
-     * Capitalizes the search engine name for display.
-     * Converts "opensearch" to "OpenSearch" and "elasticsearch" to "Elasticsearch".
+     * Capitalizes the persistence provider name for display.
      *
-     * @param searchEngine the search engine name (lowercase)
-     * @return the capitalized search engine name
+     * @param provider the provider id (lowercase)
+     * @return a display-friendly name
      */
-    private String capitalizeSearchEngine(String searchEngine) {
-        if (searchEngine == null || searchEngine.isEmpty()) {
-            return searchEngine;
+    private String capitalizeProvider(String provider) {
+        if (provider == null || provider.isEmpty()) {
+            return provider;
         }
-        // Handle special case for "opensearch" -> "OpenSearch"
-        if ("opensearch".equalsIgnoreCase(searchEngine)) {
+        if ("opensearch".equalsIgnoreCase(provider)) {
             return "OpenSearch";
         }
-        // Handle "elasticsearch" -> "Elasticsearch"
-        if ("elasticsearch".equalsIgnoreCase(searchEngine)) {
+        if ("elasticsearch".equalsIgnoreCase(provider)) {
             return "Elasticsearch";
         }
-        // Default: capitalize first letter
-        return searchEngine.substring(0, 1).toUpperCase() + searchEngine.substring(1);
+        if ("postgresql".equalsIgnoreCase(provider)) {
+            return "PostgreSQL";
+        }
+        return provider.substring(0, 1).toUpperCase() + provider.substring(1);
     }
 
     /**
@@ -454,32 +493,20 @@ public class ProgressListener extends RunListener {
     }
 
     /**
-     * Estimates the remaining time for the run by summing, for each test that has not completed yet,
-     * its historical duration from the search-engine-specific {@link TestTimingCache} when one exists,
-     * and falling back to this run's own flat average for any test with no cache entry (e.g. the very
-     * first run on a machine, or a newly added test).
+     * Estimates remaining time using the provider-specific {@link TestTimingCache}, scaled by how
+     * fast/slow this run has been vs history for tests that already completed with a cache hit.
      *
      * @param completed the number of tests completed so far
      * @param elapsedTime the time elapsed since the run started, in milliseconds
      * @return the estimated remaining time, in milliseconds
      */
     private long estimateRemainingTime(int completed, long elapsedTime) {
-        // Avoid division by very low completed count; use a floor value
-        int stableCompleted = Math.max(completed, 1);
-        double averageTestTimeMillis = elapsedTime / (double) stableCompleted;
-
-        long estimate = 0;
-        int uncachedRemaining = 0;
-        for (String key : remainingTestKeys) {
-            Long cached = cachedTimings.get(key);
-            if (cached != null) {
-                estimate += cached;
-            } else {
-                uncachedRemaining++;
-            }
-        }
-        estimate += (long) (averageTestTimeMillis * uncachedRemaining);
-        return estimate;
+        return TestTimingCache.estimateRemainingMs(
+                remainingTestKeys,
+                cachedTimings,
+                observedVsCached,
+                completedDurations,
+                elapsedTime);
     }
 
     /**

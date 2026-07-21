@@ -28,6 +28,7 @@
     <description>Apache Unomi Context Server integration tests</description>
 
     <properties>
+        <unomi.persistence.provider>elasticsearch</unomi.persistence.provider>
         <unomi.search.engine>elasticsearch</unomi.search.engine>
         <use.opensearch>false</use.opensearch>
         <docker.container.name>itests-opensearch</docker.container.name>
@@ -277,6 +278,33 @@
                     </systemPropertyVariables>
                 </configuration>
             </plugin>
+            <!-- Publish test classes so out-of-tree PersistenceService providers can implement
+                 PersistenceITBackend and reuse CorePersistenceITs / BaseIT (UNOMI-968). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>test-jar</id>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Include IT classes and test resources (fixtures used by BaseIT.config). -->
+                            <includes>
+                                <include>org/apache/unomi/itests/**</include>
+                                <include>**/*.cfg</include>
+                                <include>**/*.csv</include>
+                                <include>**/*.json</include>
+                                <include>**/*.groovy</include>
+                                <include>migration/**</include>
+                                <include>schemas/**</include>
+                                <include>META-INF/**</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -306,6 +334,8 @@
                             </includes>
                             <systemPropertyVariables>
                                 <my.system.property>foo</my.system.property>
+                                <unomi.persistence.provider>elasticsearch</unomi.persistence.provider>
+                                <!-- Deprecated alias; keep for older scripts -->
                                 <unomi.search.engine>elasticsearch</unomi.search.engine>
                                 <elasticsearch.port>${elasticsearch.port}</elasticsearch.port>
                                 <it.karaf.heap>${karaf.heap}</it.karaf.heap>
@@ -432,6 +462,8 @@
                             </includes>
                             <systemPropertyVariables>
                                 <my.system.property>foo</my.system.property>
+                                <unomi.persistence.provider>opensearch</unomi.persistence.provider>
+                                <!-- Deprecated alias; keep for older scripts -->
                                 <unomi.search.engine>opensearch</unomi.search.engine>
                                 <org.apache.unomi.opensearch.addresses>localhost:${opensearch.port}</org.apache.unomi.opensearch.addresses>
                                 <org.ops4j.pax.logging.DefaultServiceLog.level>INFO</org.ops4j.pax.logging.DefaultServiceLog.level>

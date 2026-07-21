@@ -25,6 +25,7 @@ import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.itests.persistence.PersistenceITCapabilities;
 import org.apache.unomi.itests.tools.LogChecker;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
@@ -377,16 +378,14 @@ public class JSONSchemaIT extends BaseIT {
         // Refresh to ensure event is queryable
         refreshPersistence(Event.class);
         final Condition finalCondition = condition;
-        // For Elasticsearch, range queries on flattened properties should return null or empty list
-        // For OpenSearch, they may return results
+        // Providers differ on range queries against flattened properties (hits vs empty).
         // We just need to wait for the query to execute (not throw an exception)
         refreshPersistence(Event.class);
         org.apache.unomi.api.PartialList<Event> queryResult = persistenceService.query(finalCondition, null, Event.class, 0, -1);
-        if ("opensearch".equals(searchEngine)) {
-            assertNotNull("OpenSearch should return results for flattened properties", queryResult);
+        if (persistenceCapabilities().flattenedRangeQueryResult() == PersistenceITCapabilities.FlattenedRangeQueryResult.HITS) {
+            assertNotNull("provider that returns flattened range hits should return results", queryResult);
         } else {
-            // Elasticsearch should return null or empty list for range queries on flattened properties
-            assertTrue("Elasticsearch should return null or empty list for flattened properties range query",
+            assertTrue("provider that returns empty for flattened range should return null or empty list",
                 queryResult == null || queryResult.getList() == null || queryResult.getList().isEmpty());
         }
 
