@@ -311,9 +311,13 @@ the `itests` module directory (survives `mvn clean`):
 `.test-timing-cache-<provider>.properties`
 
 One file per persistence provider (`elasticsearch`, `opensearch`, `postgresql`, …)
-so ETAs are not mixed across backends. On later runs the listener sums remaining
-historical times and scales them by how fast/slow the current run is vs history
-(clamped). Safe to delete; missing/unwritable cache falls back to in-run averages.
+so timings are not mixed across backends. ETA is re-evaluated after every test from the
+**live pace of substantive completed tests** (real work, excluding near-instant assume/skip-like
+completions and any failed/aborted test, which are never counted towards pace); historical
+per-test durations are only hints that reweight remaining work when harder/easier tests than
+average are still ahead, and that can additionally raise the ETA if completed tests are
+individually running slower than their own cached history. Safe to delete; missing/unwritable
+cache falls back to the in-run average.
 
 ### Built-in backends
 
