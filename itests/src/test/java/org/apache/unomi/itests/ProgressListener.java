@@ -155,8 +155,8 @@ public class ProgressListener extends RunListener {
     private final Set<String> remainingTestKeys;
     /** Durations (ms) of tests completed in this run */
     private final List<Long> completedDurations = new CopyOnWriteArrayList<>();
-    /** Pairs of [observedMs, cachedMs] for completed tests that had a historical entry */
-    private final List<long[]> observedVsCached = new CopyOnWriteArrayList<>();
+    /** Samples of (observedMs, cachedMs) for completed tests that had a historical entry */
+    private final List<TestTimingCache.TimingSample> observedVsCached = new CopyOnWriteArrayList<>();
 
     /**
      * Creates a new ProgressListener instance.
@@ -330,7 +330,7 @@ public class ProgressListener extends RunListener {
             completedDurations.add(testDuration);
             Long historical = cachedTimings.get(testKey);
             if (historical != null && historical > 0L) {
-                observedVsCached.add(new long[]{testDuration, historical});
+                observedVsCached.add(new TestTimingCache.TimingSample(testDuration, historical));
             }
             TestTimingCache.save(persistenceProvider, Collections.singletonMap(testKey, testDuration));
         }
@@ -493,14 +493,13 @@ public class ProgressListener extends RunListener {
     }
 
     /**
-     * Estimates remaining time from live suite pace ({@code elapsed / completed}), using the
+     * Estimates remaining time from the live pace of substantive completed tests, using the
      * provider-specific {@link TestTimingCache} as hints for how heavy the remaining tests are.
      *
-     * @param completed the number of tests completed so far
      * @param elapsedTime the time elapsed since the run started, in milliseconds
      * @return the estimated remaining time, in milliseconds
      */
-    private long estimateRemainingTime(int completed, long elapsedTime) {
+    private long estimateRemainingTime(long elapsedTime) {
         return TestTimingCache.estimateRemainingMs(
                 remainingTestKeys,
                 cachedTimings,
@@ -518,7 +517,7 @@ public class ProgressListener extends RunListener {
         int completed = completedTests.get();
         long elapsedTime = System.currentTimeMillis() - startTime;
 
-        long estimatedRemainingTime = estimateRemainingTime(completed, elapsedTime);
+        long estimatedRemainingTime = estimateRemainingTime(elapsedTime);
         String progressBar = generateProgressBar(((double) completed / totalTests) * 100);
         String humanReadableTime = formatTime(estimatedRemainingTime);
 

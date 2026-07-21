@@ -56,21 +56,34 @@ final class TestTimingCache {
 
     /**
      * Clamp for the live-run vs historical scale factor so a few outliers cannot make ETA absurd.
-     * Used by {@link #computeScale}; {@link #estimateRemainingMs} prefers wall-clock pace instead.
+     * Used by {@link #computeScale}; {@link #estimateRemainingMs} uses the live substantive-test
+     * average as its primary pace signal and only applies this scale as an additional boost when
+     * completed tests are individually slower than their cached history.
      */
     static final double MIN_SCALE = 0.25;
     static final double MAX_SCALE = 4.0;
 
     /**
-     * Observed durations below this are treated as non-representative for scale (assumes / empty tests).
+     * Observed durations below this are treated as non-representative for pace/scale purposes
+     * (assumes / skipped-in-substance tests that return almost instantly).
      */
     static final long SUBSTANTIVE_OBSERVED_MS = 100L;
 
     /**
-     * Ignore observed/cached pairs more extreme than this when computing {@link #computeScale}
-     * (e.g. historically-slow test that skipped in milliseconds).
+     * Ignore a pair in {@link #computeScale} when its cached entry is more than this many times
+     * bigger than what was actually observed (e.g. a historically-slow test that now looks like it
+     * skipped in milliseconds). This is intentionally one-directional: a pair where {@code observed}
+     * is much bigger than {@code cached} is a genuine regression signal and is not excluded, so it
+     * can still raise the ETA.
      */
     static final double MAX_PAIR_SKEW = 20.0;
+
+    /**
+     * An (observed, cached) duration sample for a single completed test that had a historical cache
+     * entry, used by {@link #computeScale} to judge live pace vs history for individual tests.
+     */
+    record TimingSample(long observedMs, long cachedMs) {
+    }
 
     private TestTimingCache() {
     }
@@ -144,6 +157,10 @@ final class TestTimingCache {
      * Merges freshly observed durations into the persisted cache for the given persistence provider,
      * smoothing each updated entry with an exponential moving average so a single unusually slow/fast
      * run doesn't swing future ETAs too far.
+     * <p>
+     * Durations below {@link #SUBSTANTIVE_OBSERVED_MS} (assume/skip-like) are ignored entirely rather
+     * than blended in — a test that occasionally short-circuits via an early assume/skip would
+     * otherwise gradually drag its historical average down toward that non-representative value.
      *
      * @param persistenceProvider provider id the run just executed against
      * @param observedTimings durations (in milliseconds) observed during the run that just finished
@@ -155,12 +172,21 @@ final class TestTimingCache {
         Path cacheFile = cacheFile(persistenceProvider);
         try {
             Map<String, Long> merged = load(persistenceProvider);
+            boolean changed = false;
             for (Map.Entry<String, Long> entry : observedTimings.entrySet()) {
+                Long observed = entry.getValue();
+                if (observed == null || observed < SUBSTANTIVE_OBSERVED_MS) {
+                    continue;
+                }
                 Long previous = merged.get(entry.getKey());
                 long updated = previous == null
-                        ? entry.getValue()
-                        : Math.round(previous * (1 - SMOOTHING) + entry.getValue() * SMOOTHING);
+                        ? observed
+                        : Math.round(previous * (1 - SMOOTHING) + observed * SMOOTHING);
                 merged.put(entry.getKey(), updated);
+                changed = true;
+            }
+            if (!changed) {
+                return;
             }
             Properties props = new Properties();
             merged.forEach((key, value) -> props.setProperty(key, String.valueOf(value)));
@@ -181,28 +207,37 @@ final class TestTimingCache {
     /**
      * Estimates remaining wall time for unfinished tests.
      * <p>
-     * <strong>Real suite pace is primary:</strong> after every completion the estimate is rebuilt from
-     * {@code elapsed / completed}. Historical per-test durations are only <em>hints</em> that reweight
-     * remaining work when the leftover tests are historically heavier or lighter than the suite average
-     * (so a block of slow tests still ahead raises ETA above a flat per-test rate).
+     * <strong>Live pace is primary:</strong> the pace is the average duration of <em>substantive</em>
+     * completed tests this run (real work, excluding near-instant assume/skip-like completions — see
+     * {@link #SUBSTANTIVE_OBSERVED_MS}). Historical per-test durations are only <em>hints</em> that
+     * reweight remaining work when the leftover tests are historically heavier or lighter than the
+     * suite average (so a block of slow tests still ahead raises ETA above a flat per-test rate).
+     * <p>
+     * Deriving pace from substantive durations only — rather than {@code elapsedTimeMs / completed}
+     * over every finished test — avoids two failure modes: (1) failed/aborted tests are never added to
+     * {@code completedDurations} (see the caller), so their wall time cannot inflate the pace the way a
+     * naive elapsed/count ratio would; (2) a run of fast assumes/skips before a block of heavy tests
+     * cannot drag the pace toward zero, since those near-instant completions are excluded from the
+     * average rather than counted as "typical" tests.
      * <p>
      * A global “this run is 4× faster than cache” scale is <em>not</em> applied to shrink remaining
      * historical time — that is what made ETAs chronically too low after early assumes/skips.
      * If the run is <em>slower</em> than cache on substantive tests, remaining historical time is still
-     * raised accordingly.
+     * raised accordingly via {@link #computeScale}.
      * <p>
-     * Cold start (nothing completed yet) falls back to the sum of historical hints (or a placeholder).
+     * Cold start (nothing substantive completed yet) falls back to the historical average pace, so
+     * remaining tests are estimated at their full cached weight until real live data says otherwise.
      *
      * @param remainingKeys keys still expected to run
      * @param cachedTimings historical durations for this persistence provider
-     * @param observedVsCachedCompleted pairs of (observedMs, cachedMs) for completed tests that had history
-     * @param completedDurations all completed durations this run (for fallback average)
-     * @param elapsedTimeMs wall time since suite start
+     * @param observedVsCachedCompleted samples of (observedMs, cachedMs) for completed tests that had history
+     * @param completedDurations successful completed durations this run (for live pace and fallback average)
+     * @param elapsedTimeMs wall time since suite start (used only to gate the cold-start case)
      * @return estimated remaining milliseconds (never negative)
      */
     static long estimateRemainingMs(Collection<String> remainingKeys,
                                     Map<String, Long> cachedTimings,
-                                    Collection<long[]> observedVsCachedCompleted,
+                                    Collection<TimingSample> observedVsCachedCompleted,
                                     Collection<Long> completedDurations,
                                     long elapsedTimeMs) {
         int remainingCount = remainingKeys == null ? 0 : remainingKeys.size();
@@ -232,7 +267,13 @@ final class TestTimingCache {
             return Math.max(0L, hintRemainingMs);
         }
 
-        double avgActualMs = elapsedTimeMs / (double) completedCount;
+        // Live pace comes only from substantive completions so neither a batch of trivial
+        // assume/skip successes nor (by construction — see caller) any failed/aborted test's wall
+        // time can skew it; fall back to the historical average until we have such a data point.
+        double substantiveAvgMs = averageAtLeast(completedDurations, SUBSTANTIVE_OBSERVED_MS);
+        double avgActualMs = substantiveAvgMs > 0.0 ? substantiveAvgMs
+                : (globalHintAvg > 0.0 ? globalHintAvg : fallbackAvg);
+
         // Flat live pace: every remaining test takes as long as the average so far.
         long rateEtaMs = Math.round(remainingCount * avgActualMs);
 
@@ -266,18 +307,18 @@ final class TestTimingCache {
      * Pairs that look like assumes/skips (tiny observed, huge cached) are ignored so they do not
      * drag the scale to {@link #MIN_SCALE}.
      */
-    static double computeScale(Collection<long[]> observedVsCachedCompleted) {
+    static double computeScale(Collection<TimingSample> observedVsCachedCompleted) {
         if (observedVsCachedCompleted == null || observedVsCachedCompleted.isEmpty()) {
             return 1.0;
         }
         long observedSum = 0L;
         long cachedSum = 0L;
-        for (long[] pair : observedVsCachedCompleted) {
-            if (!isSubstantivePair(pair)) {
+        for (TimingSample sample : observedVsCachedCompleted) {
+            if (!isSubstantivePair(sample)) {
                 continue;
             }
-            observedSum += pair[0];
-            cachedSum += pair[1];
+            observedSum += sample.observedMs();
+            cachedSum += sample.cachedMs();
         }
         if (cachedSum <= 0L || observedSum <= 0L) {
             return 1.0;
@@ -293,29 +334,38 @@ final class TestTimingCache {
     }
 
     /**
-     * {@code true} when the pair is usable for pace scaling (not an assume/skip vs huge cache).
+     * {@code true} when the sample is usable for pace scaling (not an assume/skip vs huge cache).
+     * See {@link #MAX_PAIR_SKEW} for why this is one-directional.
      */
-    static boolean isSubstantivePair(long[] pair) {
-        if (pair == null || pair.length < 2) {
+    static boolean isSubstantivePair(TimingSample sample) {
+        if (sample == null) {
             return false;
         }
-        long observed = pair[0];
-        long cached = pair[1];
+        long observed = sample.observedMs();
+        long cached = sample.cachedMs();
         if (observed < SUBSTANTIVE_OBSERVED_MS || cached <= 0L) {
             return false;
         }
         double skew = cached / (double) observed;
-        return skew <= MAX_PAIR_SKEW && (observed / (double) cached) <= MAX_PAIR_SKEW;
+        return skew <= MAX_PAIR_SKEW;
     }
 
     private static double averagePositive(Collection<Long> values) {
+        return averageAtLeast(values, 1L);
+    }
+
+    /**
+     * Average of the values that are {@code >= minValue}, ignoring everything else (missing,
+     * non-positive, or below the threshold). {@code 0.0} when nothing qualifies.
+     */
+    private static double averageAtLeast(Collection<Long> values, long minValue) {
         if (values == null || values.isEmpty()) {
             return 0.0;
         }
         long sum = 0L;
         int count = 0;
         for (Long value : values) {
-            if (value != null && value > 0L) {
+            if (value != null && value >= minValue) {
                 sum += value;
                 count++;
             }
@@ -326,23 +376,13 @@ final class TestTimingCache {
     private static double fallbackAverageMs(Collection<Long> completedDurations,
                                             Map<String, Long> cachedTimings,
                                             long elapsedTimeMs) {
-        if (completedDurations != null && !completedDurations.isEmpty()) {
-            long sum = 0L;
-            for (Long d : completedDurations) {
-                if (d != null && d > 0L) {
-                    sum += d;
-                }
-            }
-            return sum / (double) completedDurations.size();
+        double avg = averagePositive(completedDurations);
+        if (avg > 0.0) {
+            return avg;
         }
-        if (cachedTimings != null && !cachedTimings.isEmpty()) {
-            long sum = 0L;
-            for (Long d : cachedTimings.values()) {
-                if (d != null && d > 0L) {
-                    sum += d;
-                }
-            }
-            return sum / (double) cachedTimings.size();
+        avg = averagePositive(cachedTimings != null ? cachedTimings.values() : null);
+        if (avg > 0.0) {
+            return avg;
         }
         // Cold start: tiny placeholder so ETA is non-zero until the first test finishes
         return elapsedTimeMs > 0L ? elapsedTimeMs : 30_000L;
