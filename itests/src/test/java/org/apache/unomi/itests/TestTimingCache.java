@@ -56,9 +56,21 @@ final class TestTimingCache {
 
     /**
      * Clamp for the live-run vs historical scale factor so a few outliers cannot make ETA absurd.
+     * Used by {@link #computeScale}; {@link #estimateRemainingMs} prefers wall-clock pace instead.
      */
     static final double MIN_SCALE = 0.25;
     static final double MAX_SCALE = 4.0;
+
+    /**
+     * Observed durations below this are treated as non-representative for scale (assumes / empty tests).
+     */
+    static final long SUBSTANTIVE_OBSERVED_MS = 100L;
+
+    /**
+     * Ignore observed/cached pairs more extreme than this when computing {@link #computeScale}
+     * (e.g. historically-slow test that skipped in milliseconds).
+     */
+    static final double MAX_PAIR_SKEW = 20.0;
 
     private TestTimingCache() {
     }
@@ -169,16 +181,23 @@ final class TestTimingCache {
     /**
      * Estimates remaining wall time for unfinished tests.
      * <p>
-     * For each remaining test with a historical entry, uses that duration scaled by how fast/slow
-     * <em>this</em> run has been relative to history (ratio of observed vs cached for completed
-     * tests that had a cache hit). Uncached remaining tests use the in-run average of completed
-     * durations (or the median of historical values when nothing has completed yet).
+     * <strong>Real suite pace is primary:</strong> after every completion the estimate is rebuilt from
+     * {@code elapsed / completed}. Historical per-test durations are only <em>hints</em> that reweight
+     * remaining work when the leftover tests are historically heavier or lighter than the suite average
+     * (so a block of slow tests still ahead raises ETA above a flat per-test rate).
+     * <p>
+     * A global “this run is 4× faster than cache” scale is <em>not</em> applied to shrink remaining
+     * historical time — that is what made ETAs chronically too low after early assumes/skips.
+     * If the run is <em>slower</em> than cache on substantive tests, remaining historical time is still
+     * raised accordingly.
+     * <p>
+     * Cold start (nothing completed yet) falls back to the sum of historical hints (or a placeholder).
      *
      * @param remainingKeys keys still expected to run
      * @param cachedTimings historical durations for this persistence provider
      * @param observedVsCachedCompleted pairs of (observedMs, cachedMs) for completed tests that had history
      * @param completedDurations all completed durations this run (for fallback average)
-     * @param elapsedTimeMs wall time since suite start (unused for sum; kept for API clarity)
+     * @param elapsedTimeMs wall time since suite start
      * @return estimated remaining milliseconds (never negative)
      */
     static long estimateRemainingMs(Collection<String> remainingKeys,
@@ -186,24 +205,66 @@ final class TestTimingCache {
                                     Collection<long[]> observedVsCachedCompleted,
                                     Collection<Long> completedDurations,
                                     long elapsedTimeMs) {
-        double scale = computeScale(observedVsCachedCompleted);
-        double fallbackAvg = fallbackAverageMs(completedDurations, cachedTimings, elapsedTimeMs);
+        int remainingCount = remainingKeys == null ? 0 : remainingKeys.size();
+        if (remainingCount == 0) {
+            return 0L;
+        }
 
-        long estimate = 0L;
+        int completedCount = completedDurations == null ? 0 : completedDurations.size();
+        double fallbackAvg = fallbackAverageMs(completedDurations, cachedTimings, elapsedTimeMs);
+        double globalHintAvg = averagePositive(cachedTimings != null ? cachedTimings.values() : null);
+        if (globalHintAvg <= 0.0) {
+            globalHintAvg = fallbackAvg;
+        }
+
+        long hintRemainingMs = 0L;
         for (String key : remainingKeys) {
-            Long cached = cachedTimings.get(key);
+            Long cached = cachedTimings != null ? cachedTimings.get(key) : null;
             if (cached != null && cached > 0L) {
-                estimate += Math.round(cached * scale);
+                hintRemainingMs += cached;
             } else {
-                estimate += Math.round(fallbackAvg);
+                hintRemainingMs += Math.round(fallbackAvg);
             }
         }
-        return Math.max(0L, estimate);
+
+        // Cold start: only historical hints (or placeholder average) are available.
+        if (completedCount <= 0 || elapsedTimeMs <= 0L) {
+            return Math.max(0L, hintRemainingMs);
+        }
+
+        double avgActualMs = elapsedTimeMs / (double) completedCount;
+        // Flat live pace: every remaining test takes as long as the average so far.
+        long rateEtaMs = Math.round(remainingCount * avgActualMs);
+
+        // Hint-shaped live pace: same real average, but weight remaining tests by historical
+        // duration relative to the suite's average historical duration.
+        //   predict(r) = avgActual * (hint(r) / globalHintAvg)
+        //   sum        = hintRemaining * avgActual / globalHintAvg
+        long hintShapedEtaMs = rateEtaMs;
+        if (globalHintAvg > 0.0) {
+            hintShapedEtaMs = Math.round(hintRemainingMs * (avgActualMs / globalHintAvg));
+        }
+
+        // Always re-evaluate from live pace; hints may raise ETA when heavier work remains.
+        long eta = Math.max(rateEtaMs, hintShapedEtaMs);
+
+        // If substantive tests are slower than history, raise remaining toward scaled hints.
+        double robustScale = computeScale(observedVsCachedCompleted);
+        if (robustScale > 1.0) {
+            double shrink = completedCount / (double) (completedCount + 15);
+            double softenedScale = 1.0 + shrink * (robustScale - 1.0);
+            eta = Math.max(eta, Math.round(hintRemainingMs * softenedScale));
+        }
+
+        return Math.max(0L, eta);
     }
 
     /**
      * How fast/slow this run is vs the historical cache for the same provider.
      * {@code 1.0} = on pace; {@code >1} = slower than history; {@code <1} = faster.
+     * <p>
+     * Pairs that look like assumes/skips (tiny observed, huge cached) are ignored so they do not
+     * drag the scale to {@link #MIN_SCALE}.
      */
     static double computeScale(Collection<long[]> observedVsCachedCompleted) {
         if (observedVsCachedCompleted == null || observedVsCachedCompleted.isEmpty()) {
@@ -212,13 +273,11 @@ final class TestTimingCache {
         long observedSum = 0L;
         long cachedSum = 0L;
         for (long[] pair : observedVsCachedCompleted) {
-            if (pair == null || pair.length < 2) {
+            if (!isSubstantivePair(pair)) {
                 continue;
             }
-            if (pair[0] > 0L && pair[1] > 0L) {
-                observedSum += pair[0];
-                cachedSum += pair[1];
-            }
+            observedSum += pair[0];
+            cachedSum += pair[1];
         }
         if (cachedSum <= 0L || observedSum <= 0L) {
             return 1.0;
@@ -231,6 +290,37 @@ final class TestTimingCache {
             return MAX_SCALE;
         }
         return scale;
+    }
+
+    /**
+     * {@code true} when the pair is usable for pace scaling (not an assume/skip vs huge cache).
+     */
+    static boolean isSubstantivePair(long[] pair) {
+        if (pair == null || pair.length < 2) {
+            return false;
+        }
+        long observed = pair[0];
+        long cached = pair[1];
+        if (observed < SUBSTANTIVE_OBSERVED_MS || cached <= 0L) {
+            return false;
+        }
+        double skew = cached / (double) observed;
+        return skew <= MAX_PAIR_SKEW && (observed / (double) cached) <= MAX_PAIR_SKEW;
+    }
+
+    private static double averagePositive(Collection<Long> values) {
+        if (values == null || values.isEmpty()) {
+            return 0.0;
+        }
+        long sum = 0L;
+        int count = 0;
+        for (Long value : values) {
+            if (value != null && value > 0L) {
+                sum += value;
+                count++;
+            }
+        }
+        return count == 0 ? 0.0 : sum / (double) count;
     }
 
     private static double fallbackAverageMs(Collection<Long> completedDurations,

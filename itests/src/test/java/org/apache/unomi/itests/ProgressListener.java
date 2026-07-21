@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   <li>ASCII art logo display at test suite startup</li>
  *   <li>Real-time progress bar with percentage completion</li>
  *   <li>Colorized output (when ANSI is supported)</li>
- *   <li>Estimated time remaining from a per-persistence-provider historical timing cache</li>
+ *   <li>Estimated time remaining from live suite pace, with historical timings as hints</li>
  *   <li>Test success/failure counters</li>
  *   <li>Top 10 slowest tests tracking and reporting</li>
  *   <li>Motivational quotes displayed at progress milestones</li>
@@ -493,8 +493,8 @@ public class ProgressListener extends RunListener {
     }
 
     /**
-     * Estimates remaining time using the provider-specific {@link TestTimingCache}, scaled by how
-     * fast/slow this run has been vs history for tests that already completed with a cache hit.
+     * Estimates remaining time from live suite pace ({@code elapsed / completed}), using the
+     * provider-specific {@link TestTimingCache} as hints for how heavy the remaining tests are.
      *
      * @param completed the number of tests completed so far
      * @param elapsedTime the time elapsed since the run started, in milliseconds
