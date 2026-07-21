@@ -71,12 +71,23 @@ final class TestTimingCache {
 
     /**
      * Ignore a pair in {@link #computeScale} when its cached entry is more than this many times
-     * bigger than what was actually observed (e.g. a historically-slow test that now looks like it
-     * skipped in milliseconds). This is intentionally one-directional: a pair where {@code observed}
-     * is much bigger than {@code cached} is a genuine regression signal and is not excluded, so it
-     * can still raise the ETA.
+     * bigger than what was actually observed. This only ever applies to pairs that already passed the
+     * {@link #SUBSTANTIVE_OBSERVED_MS} gate (i.e. {@code observed} is not itself assume/skip-like) but
+     * are still disproportionately faster than their own cached history — an outlier that would
+     * otherwise drag the scale toward {@link #MIN_SCALE}. This is intentionally one-directional: a pair
+     * where {@code observed} is much bigger than {@code cached} is a genuine regression signal and is
+     * not excluded, so it can still raise the ETA.
      */
     static final double MAX_PAIR_SKEW = 20.0;
+
+    /**
+     * Upper bound for the true-cold-start placeholder average in {@link #fallbackAverageMs} (no
+     * completed test and no historical cache at all). Growing with elapsed time keeps the ETA display
+     * from looking frozen while nothing has finished yet, but must stay capped — otherwise a run that
+     * stalls (e.g. several early failures with nothing successful yet) would balloon the placeholder,
+     * and therefore the ETA for every remaining test, to an implausibly large number.
+     */
+    static final long COLD_START_PLACEHOLDER_CAP_MS = 60_000L;
 
     /**
      * An (observed, cached) duration sample for a single completed test that had a historical cache
@@ -147,7 +158,8 @@ final class TestTimingCache {
             try {
                 timings.put(key, Long.parseLong(props.getProperty(key)));
             } catch (NumberFormatException e) {
-                // Ignore a malformed entry rather than failing the whole cache load
+                LOGGER.debug("Ignoring malformed test timing cache entry {}={} in {}: {}",
+                        key, props.getProperty(key), cacheFile, e.getMessage());
             }
         }
         return timings;
@@ -193,14 +205,29 @@ final class TestTimingCache {
 
             Path parent = cacheFile.toAbsolutePath().getParent();
             Path tempFile = Files.createTempFile(parent, "test-timing-cache", ".tmp");
-            try (Writer writer = Files.newBufferedWriter(tempFile, StandardCharsets.UTF_8)) {
-                props.store(writer, "Apache Unomi IT test timing cache per persistence provider "
-                        + "(local dev aid, safe to delete)");
+            try {
+                try (Writer writer = Files.newBufferedWriter(tempFile, StandardCharsets.UTF_8)) {
+                    props.store(writer, "Apache Unomi IT test timing cache per persistence provider "
+                            + "(local dev aid, safe to delete)");
+                }
+                Files.move(tempFile, cacheFile, StandardCopyOption.REPLACE_EXISTING);
+            } finally {
+                // Best-effort cleanup only: after a successful move this is already gone, and any
+                // exception here must not mask a real failure from the write/move above.
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException ignored) {
+                    // Nothing more we can do; the temp file is harmless local dev-workspace clutter.
+                }
             }
-            Files.move(tempFile, cacheFile, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException | RuntimeException e) {
+        } catch (IOException e) {
             LOGGER.debug("Unable to persist test timing cache at {} (ETAs will just use the in-run average next time): {}",
                     cacheFile, e.getMessage());
+        } catch (RuntimeException e) {
+            // Distinct from the expected-I/O-failure case above: an unexpected exception here means a
+            // real bug in the merge/blend logic, not just a read-only/ephemeral workspace.
+            LOGGER.warn("Unexpected error persisting test timing cache at {} (ETAs will just use the in-run average next time)",
+                    cacheFile, e);
         }
     }
 
@@ -210,29 +237,30 @@ final class TestTimingCache {
      * <strong>Live pace is primary:</strong> the pace is the average duration of <em>substantive</em>
      * completed tests this run (real work, excluding near-instant assume/skip-like completions — see
      * {@link #SUBSTANTIVE_OBSERVED_MS}). Historical per-test durations are only <em>hints</em> that
-     * reweight remaining work when the leftover tests are historically heavier or lighter than the
-     * suite average (so a block of slow tests still ahead raises ETA above a flat per-test rate).
+     * reweight remaining work by how each remaining test's historical duration compares to the suite's
+     * average historical duration — a block of historically slow tests still ahead raises the ETA above
+     * a flat per-test rate, and a tail of historically light tests lowers it below that rate.
      * <p>
      * Deriving pace from substantive durations only — rather than {@code elapsedTimeMs / completed}
-     * over every finished test — avoids two failure modes: (1) failed/aborted tests are never added to
-     * {@code completedDurations} (see the caller), so their wall time cannot inflate the pace the way a
-     * naive elapsed/count ratio would; (2) a run of fast assumes/skips before a block of heavy tests
-     * cannot drag the pace toward zero, since those near-instant completions are excluded from the
-     * average rather than counted as "typical" tests.
+     * over every finished test — avoids two failure modes: (1) the caller never adds a failed or
+     * assume-aborted test's duration to {@code completedDurations} (see {@link ProgressListener}), so
+     * its wall time cannot inflate the pace the way a naive elapsed/count ratio would; (2) a run of fast
+     * assumes/skips before a block of heavy tests cannot drag the pace toward zero, since those
+     * near-instant completions are excluded from the average rather than counted as "typical" tests.
      * <p>
      * A global “this run is 4× faster than cache” scale is <em>not</em> applied to shrink remaining
      * historical time — that is what made ETAs chronically too low after early assumes/skips.
      * If the run is <em>slower</em> than cache on substantive tests, remaining historical time is still
      * raised accordingly via {@link #computeScale}.
      * <p>
-     * Cold start (nothing substantive completed yet) falls back to the historical average pace, so
-     * remaining tests are estimated at their full cached weight until real live data says otherwise.
+     * Cold start (no completed test yet, substantive or not) falls back to the historical average pace,
+     * so remaining tests are estimated at their full cached weight until real live data says otherwise.
      *
      * @param remainingKeys keys still expected to run
      * @param cachedTimings historical durations for this persistence provider
      * @param observedVsCachedCompleted samples of (observedMs, cachedMs) for completed tests that had history
      * @param completedDurations successful completed durations this run (for live pace and fallback average)
-     * @param elapsedTimeMs wall time since suite start (used only to gate the cold-start case)
+     * @param elapsedTimeMs wall time since suite start; only its sign is used, to detect the cold-start case
      * @return estimated remaining milliseconds (never negative)
      */
     static long estimateRemainingMs(Collection<String> remainingKeys,
@@ -247,6 +275,7 @@ final class TestTimingCache {
 
         int completedCount = completedDurations == null ? 0 : completedDurations.size();
         double fallbackAvg = fallbackAverageMs(completedDurations, cachedTimings, elapsedTimeMs);
+        // fallbackAvg is guaranteed > 0 (see fallbackAverageMs), so this is always positive too.
         double globalHintAvg = averagePositive(cachedTimings != null ? cachedTimings.values() : null);
         if (globalHintAvg <= 0.0) {
             globalHintAvg = fallbackAvg;
@@ -271,23 +300,16 @@ final class TestTimingCache {
         // assume/skip successes nor (by construction — see caller) any failed/aborted test's wall
         // time can skew it; fall back to the historical average until we have such a data point.
         double substantiveAvgMs = averageAtLeast(completedDurations, SUBSTANTIVE_OBSERVED_MS);
-        double avgActualMs = substantiveAvgMs > 0.0 ? substantiveAvgMs
-                : (globalHintAvg > 0.0 ? globalHintAvg : fallbackAvg);
+        double avgActualMs = substantiveAvgMs > 0.0 ? substantiveAvgMs : globalHintAvg;
 
-        // Flat live pace: every remaining test takes as long as the average so far.
-        long rateEtaMs = Math.round(remainingCount * avgActualMs);
-
-        // Hint-shaped live pace: same real average, but weight remaining tests by historical
-        // duration relative to the suite's average historical duration.
+        // Weight remaining work by how each remaining test's historical duration compares to the
+        // suite's average historical duration, then rescale that shape to today's live pace:
         //   predict(r) = avgActual * (hint(r) / globalHintAvg)
         //   sum        = hintRemaining * avgActual / globalHintAvg
-        long hintShapedEtaMs = rateEtaMs;
-        if (globalHintAvg > 0.0) {
-            hintShapedEtaMs = Math.round(hintRemainingMs * (avgActualMs / globalHintAvg));
-        }
-
-        // Always re-evaluate from live pace; hints may raise ETA when heavier work remains.
-        long eta = Math.max(rateEtaMs, hintShapedEtaMs);
+        // This is genuinely bidirectional: it raises the ETA above a flat live-pace rate when the
+        // remaining tests are historically heavier than average, and lowers it below that rate when
+        // they're historically lighter — both driven by today's real pace, not a historical multiplier.
+        long eta = Math.round(hintRemainingMs * (avgActualMs / globalHintAvg));
 
         // If substantive tests are slower than history, raise remaining toward scaled hints.
         double robustScale = computeScale(observedVsCachedCompleted);
@@ -384,8 +406,9 @@ final class TestTimingCache {
         if (avg > 0.0) {
             return avg;
         }
-        // Cold start: tiny placeholder so ETA is non-zero until the first test finishes
-        return elapsedTimeMs > 0L ? elapsedTimeMs : 30_000L;
+        // True cold start (no completions, no cache at all): a placeholder so ETA is non-zero and
+        // visibly grows until the first test finishes, capped so a stalled start can't balloon it.
+        return elapsedTimeMs > 0L ? Math.min(elapsedTimeMs, COLD_START_PLACEHOLDER_CAP_MS) : 30_000L;
     }
 
     static Path cacheFile(String persistenceProvider) {

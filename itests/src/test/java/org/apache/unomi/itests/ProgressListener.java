@@ -28,6 +28,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -100,6 +101,18 @@ public class ProgressListener extends RunListener {
     };
 
     /**
+     * A single successfully-completed test's duration this run, with its historical cached duration
+     * when one exists. Replaces what used to be two separately-mutated parallel lists (durations, and
+     * observed-vs-cached pairs) with one sample per completed test, so the two views derived from it
+     * (see {@link #estimateRemainingTime}) can never desync from each other.
+     */
+    private record CompletedSample(long durationMs, Long cachedMs) {
+        boolean hasHistoricalMatch() {
+            return cachedMs != null && cachedMs > 0L;
+        }
+    }
+
+    /**
      * Inner class representing a test execution time record.
      * Used to track individual test performance for reporting the slowest tests.
      */
@@ -144,6 +157,13 @@ public class ProgressListener extends RunListener {
      * timing cache (aborted / assertion failures skew historical ETAs).
      */
     private boolean currentTestFailed;
+    /**
+     * Set in {@link #testAssumptionFailure} before {@link #testFinished}. An {@code Assume}-based skip
+     * is not a failure (JUnit does not count it as one — see {@link #testAssumptionFailure}), but its
+     * duration must be excluded from the timing cache/live pace the same way a hard failure's is, or a
+     * capability-check test that occasionally short-circuits via assume would pollute its own history.
+     */
+    private boolean currentTestAssumptionFailed;
     /** Formatter for human-readable timestamps */
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -153,10 +173,8 @@ public class ProgressListener extends RunListener {
     private final Map<String, Long> cachedTimings;
     /** Timing-cache keys for tests not yet completed in this run */
     private final Set<String> remainingTestKeys;
-    /** Durations (ms) of tests completed in this run */
-    private final List<Long> completedDurations = new CopyOnWriteArrayList<>();
-    /** Samples of (observedMs, cachedMs) for completed tests that had a historical entry */
-    private final List<TestTimingCache.TimingSample> observedVsCached = new CopyOnWriteArrayList<>();
+    /** Samples for tests completed successfully in this run; see {@link CompletedSample}. */
+    private final List<CompletedSample> completedSamples = new CopyOnWriteArrayList<>();
 
     /**
      * Creates a new ProgressListener instance.
@@ -288,6 +306,7 @@ public class ProgressListener extends RunListener {
     @Override
     public void testStarted(Description description) {
         currentTestFailed = false;
+        currentTestAssumptionFailed = false;
         startTestTime = System.currentTimeMillis();
         // Print test start boundary with test name
         String testName = extractTestName(description);
@@ -312,7 +331,9 @@ public class ProgressListener extends RunListener {
         long endTestTime = System.currentTimeMillis();
         long testDuration = endTestTime - startTestTime;
         boolean failed = currentTestFailed;
+        boolean skippedByAssumption = currentTestAssumptionFailed;
         currentTestFailed = false;
+        currentTestAssumptionFailed = false;
 
         completedTests.incrementAndGet();
         successfulTests.incrementAndGet(); // Default to success unless a failure is recorded separately.
@@ -324,14 +345,11 @@ public class ProgressListener extends RunListener {
         String testKey = TestTimingCache.keyFor(description);
         remainingTestKeys.remove(testKey);
 
-        // Persist only successes: failure/abort durations pollute the provider cache and ETA scale.
-        // Write after every successful test (not only at suite end) so Ctrl-C / CI kill keeps progress.
-        if (!failed) {
-            completedDurations.add(testDuration);
-            Long historical = cachedTimings.get(testKey);
-            if (historical != null && historical > 0L) {
-                observedVsCached.add(new TestTimingCache.TimingSample(testDuration, historical));
-            }
+        // Persist only substantive successes: a hard failure's or an assume-based skip's duration must
+        // not pollute the provider cache/ETA pace. Write after every such test (not only at suite end)
+        // so Ctrl-C / CI kill keeps progress.
+        if (!failed && !skippedByAssumption) {
+            completedSamples.add(new CompletedSample(testDuration, cachedTimings.get(testKey)));
             TestTimingCache.save(persistenceProvider, Collections.singletonMap(testKey, testDuration));
         }
 
@@ -358,6 +376,20 @@ public class ProgressListener extends RunListener {
         remainingTestKeys.remove(TestTimingCache.keyFor(description));
         completedTests.incrementAndGet();
         displayProgress();
+    }
+
+    /**
+     * Called when a test aborts via {@code Assume.assumeTrue}/{@code assumeFalse} (before
+     * {@link #testFinished}). JUnit does not treat this as a failure — {@link Result#wasSuccessful()}
+     * is unaffected and success/failure counters here are intentionally left untouched — but the test's
+     * duration must still be excluded from the timing cache/live pace, or a capability-gated test (e.g.
+     * {@code RolloverIT}) that occasionally short-circuits via assume would pollute its own history.
+     *
+     * @param failure the assumption-failure information
+     */
+    @Override
+    public void testAssumptionFailure(Failure failure) {
+        currentTestAssumptionFailed = true;
     }
 
     /**
@@ -500,12 +532,27 @@ public class ProgressListener extends RunListener {
      * @return the estimated remaining time, in milliseconds
      */
     private long estimateRemainingTime(long elapsedTime) {
+        List<Long> completedDurations = new ArrayList<>(completedSamples.size());
+        List<TestTimingCache.TimingSample> observedVsCached = new ArrayList<>();
+        for (CompletedSample sample : completedSamples) {
+            completedDurations.add(sample.durationMs());
+            if (sample.hasHistoricalMatch()) {
+                observedVsCached.add(new TestTimingCache.TimingSample(sample.durationMs(), sample.cachedMs()));
+            }
+        }
         return TestTimingCache.estimateRemainingMs(
                 remainingTestKeys,
                 cachedTimings,
                 observedVsCached,
                 completedDurations,
                 elapsedTime);
+    }
+
+    /**
+     * Test-support accessor for the timing-cache keys not yet completed in this run.
+     */
+    Set<String> remainingTestKeysSnapshot() {
+        return new HashSet<>(remainingTestKeys);
     }
 
     /**

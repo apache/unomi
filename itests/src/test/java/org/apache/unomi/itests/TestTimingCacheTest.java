@@ -182,7 +182,36 @@ public class TestTimingCacheTest {
     }
 
     @Test
-    public void estimateRemainingTracksWallClockPaceNotMinScaleCollapse() {
+    public void estimateRemainingLowersBelowFlatRateWhenRemainingIsHistoricallyLighter() {
+        // Suite average historical = (3000+500+500)/3 = 1333.33; remaining B and C are both historically
+        // lighter than that average, so hint-shaped reweighting must lower the ETA below the flat
+        // live-pace rate (remainingCount * avgActual = 2 * 1000 = 2000), not just floor it there.
+        Map<String, Long> cached = new HashMap<>();
+        cached.put("A#a", 3_000L);
+        cached.put("B#b", 500L);
+        cached.put("C#c", 500L);
+
+        Set<String> remaining = new HashSet<>(Arrays.asList("B#b", "C#c"));
+        List<TestTimingCache.TimingSample> observedVsCached =
+                Collections.singletonList(new TestTimingCache.TimingSample(1_000L, 3_000L));
+        List<Long> completed = Collections.singletonList(1_000L);
+        long elapsed = 1_000L;
+
+        long eta = TestTimingCache.estimateRemainingMs(remaining, cached, observedVsCached, completed, elapsed);
+
+        // hintRemaining = 500+500 = 1000; eta = 1000 * (1000/1333.33) = 750, well below the flat-rate 2000.
+        Assert.assertEquals(750L, eta);
+        long flatRateEta = Math.round(remaining.size() * 1_000.0);
+        Assert.assertTrue("hint-shaped ETA must be able to go below the flat live-pace rate",
+                eta < flatRateEta);
+    }
+
+    @Test
+    public void estimateRemainingTracksActualDurationAverageNotElapsedOverCount() {
+        // Elapsed wall time (300s) deliberately does NOT match completedCount * avg duration (50*4s=200s)
+        // — e.g. time lost to setup/teardown between tests. A naive elapsedTimeMs/completedCount pace
+        // (300_000/50 = 6_000ms/test) would overestimate the remaining 250 tests at 1_500_000ms; live
+        // pace must instead come from the actual completed-test durations (avg 4_000ms/test).
         Map<String, Long> cached = new HashMap<>();
         for (int i = 0; i < 50; i++) {
             cached.put("DoneIT#t" + i, 5_000L);
@@ -198,20 +227,20 @@ public class TestTimingCacheTest {
 
         List<TestTimingCache.TimingSample> observedVsCached = new java.util.ArrayList<>();
         List<Long> completed = new java.util.ArrayList<>();
-        // 50 tests in 200s wall (~4s each) while cache said 5s — realistic mild speedup
         for (int i = 0; i < 50; i++) {
             observedVsCached.add(new TestTimingCache.TimingSample(4_000L, 5_000L));
             completed.add(4_000L);
         }
-        long elapsed = 200_000L;
+        long elapsed = 300_000L;
 
         long eta = TestTimingCache.estimateRemainingMs(remaining, cached, observedVsCached, completed, elapsed);
-        // rate / hint-shaped ≈ 250 * 4000 = 1_000_000ms (~16.7m)
+        // avgActual = 4_000 (from completedDurations, not elapsed/count); globalHintAvg = 5_000;
+        // hintRemaining = 250*5_000 = 1_250_000; eta = 1_250_000 * (4_000/5_000) = 1_000_000ms (~16.7m)
         Assert.assertEquals(1_000_000L, eta);
 
-        // Old bug: MIN_SCALE * 250 * 5000 = 312_500 (~5.2m) — chronically too low
-        long oldBuggyEta = Math.round(250 * 5_000L * TestTimingCache.MIN_SCALE);
-        Assert.assertTrue(eta > oldBuggyEta);
+        // The naive elapsed/completedCount pace (6_000ms/test) would have produced 1_500_000ms instead.
+        long naiveElapsedOverCountEta = Math.round(250 * (elapsed / (double) completed.size()));
+        Assert.assertNotEquals(naiveElapsedOverCountEta, eta);
     }
 
     @Test
@@ -287,6 +316,48 @@ public class TestTimingCacheTest {
         // robustScale = 200/50 = 4.0 (MAX_SCALE); shrink = 1/(1+15); softenedScale = 1 + shrink*3 = 1.1875
         // boosted estimate: 1000 * 1.1875 = 1187.5 → 1188, which wins over the un-boosted 381
         Assert.assertEquals(1_188L, eta);
+    }
+
+    @Test
+    public void estimateRemainingSlowdownBoostRampApproachesRobustScaleAtLargeCompletedCount() {
+        // At a small completedCount the shrink ramp (completedCount/(completedCount+15)) heavily damps
+        // the slowdown boost; at a large completedCount it should approach the raw (interior, unclamped)
+        // robustScale instead of staying suppressed — exercising the ramp away from the completedCount=1
+        // case covered by estimateRemainingAppliesSlowdownBoostWhenSubstantiveScaleExceedsOne, and away
+        // from computeScale's own MIN_SCALE/MAX_SCALE clamp boundaries.
+        Map<String, Long> cached = new HashMap<>();
+        cached.put("A#a", 100L);
+        cached.put("R#r", 1_000L);
+
+        Set<String> remaining = new HashSet<>(Collections.singletonList("R#r"));
+        List<TestTimingCache.TimingSample> observedVsCached = new java.util.ArrayList<>();
+        List<Long> completed = new java.util.ArrayList<>();
+        for (int i = 0; i < 100; i++) {
+            observedVsCached.add(new TestTimingCache.TimingSample(200L, 100L));
+            completed.add(200L);
+        }
+        long elapsed = 20_000L;
+
+        long eta = TestTimingCache.estimateRemainingMs(remaining, cached, observedVsCached, completed, elapsed);
+
+        // robustScale = 200/100 = 2.0 (interior, not clamped); shrink = 100/115 ≈ 0.8696;
+        // softenedScale = 1 + 0.8696*(2.0-1.0) ≈ 1.8696; boosted = 1000*1.8696 ≈ 1870, which wins over
+        // the un-boosted hint-shaped estimate (1000 * 200/550 ≈ 364).
+        Assert.assertEquals(1_870L, eta);
+    }
+
+    @Test
+    public void estimateRemainingCapsColdStartPlaceholderForStalledStart() {
+        // No completions yet and no historical cache at all (e.g. the very first-ever run stalls before
+        // its first success) — the per-remaining-test placeholder must not grow unbounded with elapsed
+        // time; it should cap at COLD_START_PLACEHOLDER_CAP_MS rather than ballooning towards hours.
+        Set<String> remaining = new HashSet<>(Arrays.asList("X#x", "Y#y", "Z#z"));
+        long stalledElapsed = 500_000L; // 8+ minutes with nothing completed and no cache
+
+        long eta = TestTimingCache.estimateRemainingMs(
+                remaining, Collections.emptyMap(), Collections.emptyList(), Collections.emptyList(), stalledElapsed);
+
+        Assert.assertEquals(3 * TestTimingCache.COLD_START_PLACEHOLDER_CAP_MS, eta);
     }
 
     @Test
