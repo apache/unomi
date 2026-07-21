@@ -303,6 +303,18 @@ The IT harness follows the same idea: `BaseIT` resolves a test-only
 Default CI cells set both `unomi.persistence.provider` and the deprecated
 `unomi.search.engine` so existing `--use-opensearch` / scripts keep working.
 
+### Progress / ETA (local timing cache)
+
+`ProgressSuite` + `ProgressListener` write a best-effort per-test duration cache under
+the `itests` module directory (survives `mvn clean`):
+
+`.test-timing-cache-<provider>.properties`
+
+One file per persistence provider (`elasticsearch`, `opensearch`, `postgresql`, …)
+so ETAs are not mixed across backends. On later runs the listener sums remaining
+historical times and scales them by how fast/slow the current run is vs history
+(clamped). Safe to delete; missing/unwritable cache falls back to in-run averages.
+
 ### Built-in backends
 
 | Id | Class | Suite for CI |
