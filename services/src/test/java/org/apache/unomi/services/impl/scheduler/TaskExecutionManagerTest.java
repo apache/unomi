@@ -324,8 +324,22 @@ public class TaskExecutionManagerTest {
 
         executionManager.executeTask(task, executor);
         assertTrue(inFlight.await(5, TimeUnit.SECONDS));
+        // Ignore the stubbing / any pre-shutdown registry lookups; we only care about retries after shutdown.
+        clearInvocations(executorRegistry);
+        // Release the in-flight task shortly after shutdown starts so awaitTermination can finish
+        // without waiting the full timeout (shutdown cancels futures then awaits the pool).
+        Thread releaser = new Thread(() -> {
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            allowFail.countDown();
+        }, "shut-retry-releaser");
+        releaser.setDaemon(true);
+        releaser.start();
         executionManager.shutdown();
-        allowFail.countDown();
+        releaser.join(2000);
         Thread.sleep(200);
         assertEquals(ScheduledTask.TaskStatus.SCHEDULED, task.getStatus());
         assertEquals(1, task.getFailureCount());

@@ -47,6 +47,13 @@ public class TaskExecutionManager {
     private final Map<String, Set<String>> executingTasksByType;
     private final Map<String, LockRenewalHandle> activeLockRenewals = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
+    /**
+     * Set at the start of {@link #shutdown()} before canceling in-flight work. Failures that race
+     * with shutdown must not schedule retries: {@link ScheduledExecutorService#isShutdown()} only
+     * flips after {@code scheduler.shutdown()}, which runs after {@code future.cancel(true)} and
+     * can race with {@link #handleTaskError}.
+     */
+    private final AtomicBoolean shuttingDown = new AtomicBoolean(false);
     private ScheduledFuture<?> taskCheckerFuture;
     private SchedulerServiceImpl schedulerService;
     private TaskExecutorRegistry executorRegistry;
@@ -776,8 +783,10 @@ public class TaskExecutionManager {
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_EXECUTION_TIME, executionTime);
 
         if (scheduleRetry) {
-            // Only schedule retry if scheduler is not shutting down
-            if (!scheduler.isShutdown() && !scheduler.isTerminated()) {
+            // Only schedule retry if this manager is not shutting down. Check shuttingDown before
+            // scheduler.isShutdown(): canceling in-flight futures can invoke handleTaskError before
+            // scheduler.shutdown() runs, which would otherwise queue a retry that fires after teardown.
+            if (!shuttingDown.get() && !scheduler.isShutdown() && !scheduler.isTerminated()) {
                 try {
                     Runnable retryTask = () -> {
                         TaskExecutor executor = executorRegistry.getExecutor(task.getTaskType());
@@ -844,6 +853,8 @@ public class TaskExecutionManager {
      * Shuts down the execution manager
      */
     public void shutdown() {
+        // Mark before canceling futures so in-flight failures cannot schedule retries.
+        shuttingDown.set(true);
         stopTaskChecker();
 
         // Stop all lock heartbeats so held locks age out and peers can recover the work
