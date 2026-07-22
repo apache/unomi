@@ -369,37 +369,8 @@
         </site>
     </distributionManagement>
 
-    <repositories>
-        <repository>
-            <id>smx.m2</id>
-            <name>Apache ServiceMix M2</name>
-            <url>https://svn.apache.org/repos/asf/servicemix/m2-repo/</url>
-        </repository>
-        <!-- Apache snapshots -->
-        <repository>
-            <id>apache-snapshots</id>
-            <name>Apache Snapshots Repository</name>
-            <url>https://repository.apache.org/content/groups/snapshots-group</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-        <!-- OPS4J SNAPSHOT repository -->
-        <repository>
-            <id>ops4j.sonatype.snapshots.deploy</id>
-            <name>OPS4J snapshot repository</name>
-            <url>https://oss.sonatype.org/content/repositories/ops4j-snapshots/</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
+    <!-- UNOMI-971: no project repositories — Central + Apache snapshots come from the parent POM.
+         Extra repos (ServiceMix SVN, OPS4J Sonatype snapshots) stalled CI on dead hosts. -->
 
     <modules>
         <module>bom</module>
