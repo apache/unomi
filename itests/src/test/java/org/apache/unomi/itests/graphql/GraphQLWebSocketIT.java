@@ -23,6 +23,7 @@ import io.reactivex.ObservableEmitter;
 import io.reactivex.subscribers.DefaultSubscriber;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
@@ -32,9 +33,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
@@ -52,6 +56,7 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
             URI echoUri = new URI("ws://localhost:" + getHttpPort() + "/graphql");
             ClientUpgradeRequest request = new ClientUpgradeRequest();
+            request.setHeader("Authorization", basicAuthHeader(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
 
             Future<Session> onConnected = client.connect(socket, echoUri, request);
             RemoteEndpoint remote = onConnected.get().getRemote();
@@ -74,13 +79,50 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
             LOGGER.info("Waiting for socket to close...");
 
-            CloseStatus status = socket.waitClose().get(10, TimeUnit.SECONDS);
-            // Assert.assertEquals(1000, (int) status.getStatus()); TODO skip for now
+            socket.waitClose().get(10, TimeUnit.SECONDS);
 
         } finally {
             client.stop();
             LOGGER.info("Web socket client stopped.");
         }
+    }
+
+    @Test
+    public void testWebSocketUpgrade_withoutAuth_returns401() throws Exception {
+        assertWebSocketUpgradeRejected(new ClientUpgradeRequest());
+    }
+
+
+    @Test
+    public void testWebSocketUpgrade_withWrongJaasPassword_returns401() throws Exception {
+        ClientUpgradeRequest request = new ClientUpgradeRequest();
+        request.setHeader("Authorization", basicAuthHeader(BASIC_AUTH_USER_NAME, "definitely-not-the-password"));
+        assertWebSocketUpgradeRejected(request);
+    }
+
+
+    private void assertWebSocketUpgradeRejected(ClientUpgradeRequest request) throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            URI echoUri = new URI("ws://localhost:" + getHttpPort() + "/graphql");
+            Future<Session> onConnected = client.connect(socket, echoUri, request);
+            try {
+                onConnected.get(10, TimeUnit.SECONDS);
+                Assert.fail("Unauthenticated GraphQL WebSocket upgrade should be rejected");
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                Assert.assertTrue("Expected UpgradeException, got: " + cause, cause instanceof UpgradeException);
+                Assert.assertEquals(401, ((UpgradeException) cause).getResponseStatusCode());
+            }
+        } finally {
+            client.stop();
+        }
+    }
+
+    private static String basicAuthHeader(String user, String password) {
+        return "Basic " + Base64.getEncoder().encodeToString((user + ":" + password).getBytes(StandardCharsets.UTF_8));
     }
 
     private class Socket extends WebSocketAdapter {

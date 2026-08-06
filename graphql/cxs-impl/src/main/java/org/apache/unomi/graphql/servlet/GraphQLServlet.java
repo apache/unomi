@@ -84,6 +84,9 @@ public class GraphQLServlet extends WebSocketServlet {
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         if (factory.isUpgradeRequest(request, response)) {
             try {
+                if (!validator.validateWebSocketUpgrade(request, response)) {
+                    return;
+                }
                 final ServletUpgradeRequest upReq = new ServletUpgradeRequest(request);
                 for (String subProtocol : upReq.getSubProtocols()) {
                     if (subProtocol.startsWith("graphql")) {
