@@ -65,6 +65,25 @@ public class GraphQLServletSecurityValidator {
         this.executionContextManager = executionContextManager;
     }
 
+    /**
+     * Authenticates a WebSocket upgrade. Subscriptions are never public, so only Basic
+     * (JAAS or tenant private key) is accepted.
+     *
+     * @return true when the caller is authenticated and a security context was established
+     */
+    public boolean validateWebSocketUpgrade(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        if (req.getHeader("Authorization") == null) {
+            res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
+            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            return false;
+        }
+        if (isAuthenticatedUser(req)) {
+            return true;
+        }
+        res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        return false;
+    }
+
     public boolean validate(String query, String operationName, HttpServletRequest req, HttpServletResponse res) throws IOException {
         if (isPublicOperation(query)) {
             // For public operations, check API key

@@ -20,6 +20,9 @@ package org.apache.unomi.graphql.servlet.websocket;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
+import org.apache.unomi.api.ExecutionContext;
+import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
@@ -27,6 +30,7 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.security.auth.Subject;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,15 +39,30 @@ import java.util.Map;
 public class SubscriptionWebSocket extends WebSocketAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionWebSocket.class);
 
-    private GraphQL graphQL;
+    private final GraphQL graphQL;
 
-    private ServiceManager serviceManager;
+    private final ServiceManager serviceManager;
+
+    private final Subject subject;
+
+    private final ExecutionContext executionContext;
+
+    private final SecurityService securityService;
+
+    private final ExecutionContextManager executionContextManager;
 
     private Map<String, ExecutionResultSubscriber> subscriptions = new HashMap<String, ExecutionResultSubscriber>();
 
-    public SubscriptionWebSocket(GraphQL graphQL, ServiceManager serviceManager) {
+    public SubscriptionWebSocket(GraphQL graphQL, ServiceManager serviceManager,
+                                 Subject subject, ExecutionContext executionContext,
+                                 SecurityService securityService,
+                                 ExecutionContextManager executionContextManager) {
         this.graphQL = graphQL;
         this.serviceManager = serviceManager;
+        this.subject = subject;
+        this.executionContext = executionContext;
+        this.securityService = securityService;
+        this.executionContextManager = executionContextManager;
     }
 
     @Override
@@ -106,33 +125,50 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
     private void subscribe(GraphQLMessage message) {
         final Map<String, Object> payload = message.getPayload();
 
-        ExecutionInput executionInput = ExecutionInput.newExecutionInput()
-                .query((String) payload.get("query"))
-                .variables((Map<String, Object>) payload.get("variables"))
-                .operationName((String) payload.get("operationName"))
-                .context(serviceManager)
-                .build();
+        try {
+            securityService.setCurrentSubject(subject);
+            executionContextManager.setCurrentContext(executionContext);
 
-        ExecutionResult executionResult = this.graphQL.execute(executionInput);
-        if (executionResult.getErrors() != null && !executionResult.getErrors().isEmpty()) {
-            sendMessage(GraphQLMessage.create(message.getId())
-                    .errors(executionResult.getErrors())
-                    .build());
-            closeConnection(message, "Error executing graphQL query");
-            return;
-        } else if (!(executionResult.getData() instanceof Publisher)) {
-            final String error = "Fetched value should be instance of Publisher, was: " + executionResult.getClass().getName();
-            sendMessage(GraphQLMessage.create(message.getId())
-                    .errors(Collections.singletonList(error))
-                    .build());
-            closeConnection(message, error);
-            return;
+            Map<String, Object> variables = (Map<String, Object>) payload.get("variables");
+            if (variables == null) {
+                variables = new HashMap<>();
+            }
+
+            ExecutionInput executionInput = ExecutionInput.newExecutionInput()
+                    .query((String) payload.get("query"))
+                    .variables(variables)
+                    .operationName((String) payload.get("operationName"))
+                    .context(serviceManager)
+                    .build();
+
+            ExecutionResult executionResult = this.graphQL.execute(executionInput);
+            if (executionResult.getErrors() != null && !executionResult.getErrors().isEmpty()) {
+                sendMessage(GraphQLMessage.create(message.getId())
+                        .errors(executionResult.getErrors())
+                        .build());
+                closeConnection(message, "Error executing graphQL query");
+                return;
+            } else if (!(executionResult.getData() instanceof Publisher)) {
+                final String error = "Fetched value should be instance of Publisher, was: " + executionResult.getClass().getName();
+                sendMessage(GraphQLMessage.create(message.getId())
+                        .errors(Collections.singletonList(error))
+                        .build());
+                closeConnection(message, error);
+                return;
+            }
+
+            Publisher<ExecutionResult> publisher = executionResult.getData();
+            ExecutionResultSubscriber subscriber = new ExecutionResultSubscriber(message.getId(), getRemote());
+            publisher.subscribe(subscriber);
+
+            subscriptions.put(message.getId(), subscriber);
+        } finally {
+            try {
+                securityService.clearCurrentSubject();
+                executionContextManager.setCurrentContext(null);
+            } catch (Exception e) {
+                LOGGER.error("Error clearing GraphQL WebSocket security context", e);
+            }
         }
-
-        Publisher<ExecutionResult> publisher = executionResult.getData();
-        ExecutionResultSubscriber subscriber = new ExecutionResultSubscriber(message.getId(), getRemote());
-        publisher.subscribe(subscriber);
-
-        subscriptions.put(message.getId(), subscriber);
     }
 }

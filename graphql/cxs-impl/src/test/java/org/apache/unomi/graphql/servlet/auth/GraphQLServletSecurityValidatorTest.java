@@ -138,6 +138,40 @@ class GraphQLServletSecurityValidatorTest {
         verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
     }
 
+    @Test
+    void validateWebSocketUpgrade_withoutAuthorization_isRejected() throws IOException {
+        when(request.getHeader("Authorization")).thenReturn(null);
+
+        boolean authenticated = validator.validateWebSocketUpgrade(request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        verify(securityService, never()).setCurrentSubject(any());
+    }
+
+    @Test
+    void validateWebSocketUpgrade_withBasicAuth_isAccepted() throws IOException {
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
+        when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
+
+        boolean authenticated = validator.validateWebSocketUpgrade(request, response);
+
+        assertTrue(authenticated);
+        verify(securityService).setCurrentSubject(any(Subject.class));
+        verify(response, never()).sendError(any(Integer.class));
+    }
+
+    @Test
+    void validateWebSocketUpgrade_rejectsPublicApiKeyOnly() throws IOException {
+        // No Authorization header — public API key alone must not open subscriptions
+        when(request.getHeader("Authorization")).thenReturn(null);
+
+        boolean authenticated = validator.validateWebSocketUpgrade(request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
     /**
      * Minimal JAAS configuration that makes {@code new LoginContext("karaf", ...)} succeed
      * without requiring a real Karaf realm, so the post-login branches under test can run

@@ -108,8 +108,9 @@ public class GraphQLServlet extends WebSocketServlet {
     public void configure(WebSocketServletFactory factory) {
         LOGGER.debug("GraphQLServlet configured");
         this.factory = factory;
-        // Wrap the WebSocket creator to handle security context for WebSocket connections
-        SubscriptionWebSocketFactory originalCreator = new SubscriptionWebSocketFactory(graphQLSchemaUpdater.getGraphQL(), serviceManager);
+        // Wrap the WebSocket creator to bind the authenticated subject established during upgrade
+        SubscriptionWebSocketFactory originalCreator = new SubscriptionWebSocketFactory(
+                graphQLSchemaUpdater.getGraphQL(), serviceManager, securityService, executionContextManager);
         factory.setCreator((req, resp) -> {
             try {
                 return originalCreator.createWebSocket(req, resp);
@@ -125,6 +126,9 @@ public class GraphQLServlet extends WebSocketServlet {
         LOGGER.debug("GraphQLServlet service called with request: {}", request.getRequestURI());
         if (factory.isUpgradeRequest(request, response)) {
             try {
+                if (!validator.validateWebSocketUpgrade(request, response)) {
+                    return;
+                }
                 final ServletUpgradeRequest upReq = new ServletUpgradeRequest(request);
                 for (String subProtocol : upReq.getSubProtocols()) {
                     if (subProtocol.startsWith("graphql")) {
@@ -133,6 +137,7 @@ public class GraphQLServlet extends WebSocketServlet {
                     }
                 }
             } catch (URISyntaxException e) {
+                cleanupSecurityContext();
                 throw new RuntimeException(e);
             }
         }

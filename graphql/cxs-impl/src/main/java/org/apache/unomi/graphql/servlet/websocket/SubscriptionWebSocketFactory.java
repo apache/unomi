@@ -18,10 +18,15 @@
 package org.apache.unomi.graphql.servlet.websocket;
 
 import graphql.GraphQL;
+import org.apache.unomi.api.ExecutionContext;
+import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.eclipse.jetty.websocket.server.WebSocketServerFactory;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
+
+import javax.security.auth.Subject;
 
 public class SubscriptionWebSocketFactory extends WebSocketServerFactory {
 
@@ -29,13 +34,28 @@ public class SubscriptionWebSocketFactory extends WebSocketServerFactory {
 
     private final ServiceManager serviceManager;
 
-    public SubscriptionWebSocketFactory(GraphQL graphQL, ServiceManager serviceManager) {
+    private final SecurityService securityService;
+
+    private final ExecutionContextManager executionContextManager;
+
+    public SubscriptionWebSocketFactory(GraphQL graphQL, ServiceManager serviceManager,
+                                        SecurityService securityService,
+                                        ExecutionContextManager executionContextManager) {
         this.graphQL = graphQL;
         this.serviceManager = serviceManager;
+        this.securityService = securityService;
+        this.executionContextManager = executionContextManager;
     }
 
     @Override
     public Object createWebSocket(ServletUpgradeRequest req, ServletUpgradeResponse resp) {
-        return new SubscriptionWebSocket(graphQL, serviceManager);
+        Subject subject = securityService.getCurrentSubject();
+        ExecutionContext executionContext = executionContextManager.getCurrentContext();
+        if (subject == null) {
+            resp.setStatusCode(401);
+            return null;
+        }
+        return new SubscriptionWebSocket(graphQL, serviceManager, subject, executionContext,
+                securityService, executionContextManager);
     }
 }
