@@ -21,7 +21,9 @@ import org.apache.commons.io.IOUtils;
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
+import org.apache.unomi.rest.security.RequiresRole;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -35,6 +37,7 @@ import java.io.IOException;
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
 @Path("/groovyActions")
+@RequiresRole(UnomiRoles.ADMINISTRATOR)
 @Component(service = GroovyActionsEndPoint.class, property = "osgi.jaxrs.resource=true")
 public class GroovyActionsEndPoint {
 
@@ -55,6 +58,7 @@ public class GroovyActionsEndPoint {
      * Uploads a Groovy action script and registers a matching action type.
      * <p>
      * The multipart field {@code file} must be a {@code .groovy} file; the action id is derived from the filename.
+     * Restricted to system administrators (JAAS); tenant administrators cannot upload scripts.
      *
      * @param file the Groovy script upload
      * @return an empty success response
@@ -79,6 +83,7 @@ public class GroovyActionsEndPoint {
 
     /**
      * Deletes the Groovy action and its action type entry.
+     * Restricted to system administrators (JAAS).
      *
      * @param actionId the action identifier
      * @api.status 204 empty Action deleted.

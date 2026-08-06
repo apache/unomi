@@ -34,6 +34,36 @@ export KARAF_OPTS="-Dunomi.autoStart=${UNOMI_AUTO_START} -Dunomi.distribution=${
 
 echo "KARAF_OPTS: $KARAF_OPTS"
 
+if [ -z "${UNOMI_ROOT_PASSWORD}" ] && [ "${UNOMI_SKIP_ROOT_PASSWORD_CHECK}" != "true" ]; then
+    cat >&2 <<'EOF'
+ERROR: UNOMI_ROOT_PASSWORD is not set.
+
+Apache Unomi does not ship a known default admin password.
+Pass it when starting the container, for example:
+
+  docker run -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
+             -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' ...
+
+Or with docker compose, export both UNOMI_ROOT_PASSWORD and UNOMI_HEALTHCHECK_PASSWORD first.
+EOF
+    exit 1
+fi
+
+if [ -z "${UNOMI_HEALTHCHECK_PASSWORD}" ] && [ "${UNOMI_SKIP_HEALTHCHECK_PASSWORD_CHECK}" != "true" ]; then
+    cat >&2 <<'EOF'
+ERROR: UNOMI_HEALTHCHECK_PASSWORD is not set.
+
+Apache Unomi does not ship a known default health-check password.
+Pass it when starting the container, for example:
+
+  docker run -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
+             -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' ...
+
+Or with docker compose, export both UNOMI_ROOT_PASSWORD and UNOMI_HEALTHCHECK_PASSWORD first.
+EOF
+    exit 1
+fi
+
 # Function to check cluster health for a specific node
 check_node_health() {
     local node_url="$1"

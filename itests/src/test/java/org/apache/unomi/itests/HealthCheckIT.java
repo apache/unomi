@@ -54,8 +54,6 @@ public class HealthCheckIT extends BaseIT {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(HealthCheckIT.class);
 
-    protected static final String HEALTHCHECK_AUTH_USER_NAME = "health";
-    protected static final String HEALTHCHECK_AUTH_PASSWORD = "health";
     protected static final String HEALTHCHECK_ENDPOINT = "/health/check";
 
     @Test
@@ -129,6 +127,15 @@ public class HealthCheckIT extends BaseIT {
             Assert.assertTrue(
                     "Expected at least " + expectedMinProbes + " health probes, got " + response.size() + ": " + response,
                     response.size() >= expectedMinProbes);
+        }
+    }
+
+    @Test
+    public void testHealthCheck_wrongPasswordRejected() throws Exception {
+        final HttpGet httpGet = new HttpGet(getFullUrl(HEALTHCHECK_ENDPOINT));
+        try (CloseableHttpResponse response = executeHttpRequest(
+                httpGet, AuthType.CUSTOM_BASIC, HEALTHCHECK_AUTH_USER_NAME, "wrong-password")) {
+            Assert.assertEquals(401, response.getStatusLine().getStatusCode());
         }
     }
 

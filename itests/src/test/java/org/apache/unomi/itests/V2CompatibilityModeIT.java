@@ -225,7 +225,7 @@ public class V2CompatibilityModeIT extends BaseIT {
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
 
         BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
+        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
 
         RequestConfig requestConfig = RequestConfig.custom()
                 .setAuthenticationEnabled(true)
@@ -283,7 +283,7 @@ public class V2CompatibilityModeIT extends BaseIT {
         HttpGet getRequest = new HttpGet(getFullUrl("/cxs/profiles/" + TEST_PROFILE_ID));
 
         BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
+        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
 
         RequestConfig requestConfig = RequestConfig.custom()
                 .setAuthenticationEnabled(true)

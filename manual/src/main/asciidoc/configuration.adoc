@@ -248,7 +248,10 @@ At the end, you should have about 4 million entries in the geonames index.
 === REST API Security
 
 The Apache Unomi Context Server REST API is protected using JAAS authentication and using Basic or Digest HTTP auth.
-By default, the login/password for the REST API full administrative access is "karaf/karaf".
+You must set an admin password via `UNOMI_ROOT_PASSWORD` (or `org.apache.unomi.security.root.password`)
+and a health-check password via `UNOMI_HEALTHCHECK_PASSWORD` (or `org.apache.unomi.healthcheck.password`);
+Unomi does not ship known defaults.
+The default JAAS user name is `karaf`.
 
 The generated package is also configured with a default SSL certificate. You can change it by following these steps :
 
@@ -267,8 +270,9 @@ org.ops4j.pax.web.ssl.keypassword=${env:UNOMI_SSL_KEYPASSWORD:-changeme}
 
 You should now have SSL setup on Karaf with your certificate, and you can test it by trying to access it on port 9443.
 
-Changing the default Karaf password can be done by modifying the `org.apache.unomi.security.root.password` in the
-`$MY_KARAF_HOME/etc/unomi.custom.system.properties` file
+Changing the Karaf admin password is done by setting `UNOMI_ROOT_PASSWORD` or by modifying
+`org.apache.unomi.security.root.password` in the
+`$MY_KARAF_HOME/etc/unomi.custom.system.properties` file. Unomi does not ship a known default password.
 
 === Tenant Management and API Access
 
@@ -278,7 +282,7 @@ Apache Unomi supports multi-tenancy, allowing multiple organizations to use the 
 
 IMPORTANT: All tenant management operations (create, list, update, delete, API key management) are restricted to administrators only and require JAAS authentication. These endpoints cannot be accessed using tenant API keys.
 
-To manage tenants, you need administrator access to Unomi (default credentials: karaf/karaf). You can manage tenants using either the REST API or the Karaf shell commands:
+To manage tenants, you need administrator access to Unomi (`karaf` / your `UNOMI_ROOT_PASSWORD`). You can manage tenants using either the REST API or the Karaf shell commands:
 
 Using REST API (requires admin credentials):
 [source,bash]
@@ -1178,23 +1182,29 @@ documentation for here :
 
 * https://karaf.apache.org/manual/latest/#_security_2[https://karaf.apache.org/manual/latest/#_security_2]
 
-The default username/password is
+You must set an admin password and a health-check password before using the REST API / health endpoints.
+There are **no** known default passwords shipped with Unomi.
 
-[source]
+Set the environment variables `UNOMI_ROOT_PASSWORD` and `UNOMI_HEALTHCHECK_PASSWORD`, or set
+`org.apache.unomi.security.root.password` and `org.apache.unomi.healthcheck.password` in
+`$MY_KARAF_HOME/etc/unomi.custom.system.properties` (or `etc/custom.system.properties`).
+
+Example:
+
+[source,bash]
 ----
-karaf/karaf
+export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
+export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
 ----
 
-You should really change this default username/password as soon as possible. Changing the default Karaf password can be
-done by modifying the `org.apache.unomi.security.root.password` in the `$MY_KARAF_HOME/etc/unomi.custom.system.properties` file
+The JAAS admin user name defaults to `karaf`. Authenticate with `karaf:$UNOMI_ROOT_PASSWORD`.
+The health-check user name defaults to `health`. Authenticate with `health:$UNOMI_HEALTHCHECK_PASSWORD`.
 
-Or if you want to also change the user name you could modify the following file :
+To change the admin user name, edit `$MY_KARAF_HOME/etc/users.properties` and also set:
 
-    $MY_KARAF_HOME/etc/users.properties
+    karaf.local.user = <your-user>
 
-But you will also need to change the following property in the $MY_KARAF_HOME/etc/unomi.custom.system.properties :
-
-    karaf.local.user = karaf
+in `unomi.custom.system.properties`.
 
 For your context servers, and for any standalone Elasticsearch nodes you will need to open the following ports for proper
 node-to-node communication : 9200 (Elasticsearch REST API), 9300 (Elasticsearch TCP transport)

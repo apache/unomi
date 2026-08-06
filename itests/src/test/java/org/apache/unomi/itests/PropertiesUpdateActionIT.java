@@ -20,6 +20,7 @@ package org.apache.unomi.itests;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.plugins.baseplugin.actions.UpdatePropertiesAction;
 import org.junit.Assert;
 import org.junit.Before;
@@ -116,6 +117,81 @@ public class PropertiesUpdateActionIT extends BaseIT {
         eventService.send(updateProperties);
 
         waitForProfileProperty(PROFILE_TEST_ID, "firstName", "UPDATED FIRST NAME");
+    }
+
+    @Test
+    public void testUntrustedCaller_cannotUpdateAnotherProfile() throws InterruptedException {
+        Profile caller = profileService.load(PROFILE_TARGET_TEST_ID);
+        Profile other = profileService.load(PROFILE_TEST_ID);
+        Assert.assertNull(other.getProperty("firstName"));
+
+        Event updateProperties = new Event("updateProperties", null, caller, null, null, null, new Date());
+        updateProperties.setPersistent(false);
+        Map<String, Object> propertyToUpdate = new HashMap<>();
+        propertyToUpdate.put("properties.firstName", "SHOULD_NOT_APPLY");
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
+
+        javax.security.auth.Subject previous = securityService.getCurrentSubject();
+        try {
+            securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, false));
+            int changes = eventService.send(updateProperties);
+            Assert.assertEquals(EventService.NO_CHANGE, changes);
+        } finally {
+            securityService.setCurrentSubject(previous);
+        }
+
+        shouldBeTrueUntilEnd("Other profile must remain unchanged",
+                () -> profileService.load(PROFILE_TEST_ID),
+                p -> p.getProperty("firstName") == null,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
+    }
+
+    @Test
+    public void testUntrustedCaller_cannotWriteSystemProperties() throws InterruptedException {
+        Profile caller = profileService.load(PROFILE_TEST_ID);
+        Assert.assertNull(caller.getSystemProperties().get("mergeIdentifier"));
+
+        Event updateProperties = new Event("updateProperties", null, caller, null, null, null, new Date());
+        updateProperties.setPersistent(false);
+        Map<String, Object> propertyToUpdate = new HashMap<>();
+        propertyToUpdate.put("systemProperties.mergeIdentifier", "stolen");
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+
+        javax.security.auth.Subject previous = securityService.getCurrentSubject();
+        try {
+            securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, false));
+            eventService.send(updateProperties);
+        } finally {
+            securityService.setCurrentSubject(previous);
+        }
+
+        Assert.assertNull(profileService.load(PROFILE_TEST_ID).getSystemProperties().get("mergeIdentifier"));
+    }
+
+    @Test
+    public void testTrustedPrivateKeySubject_canUpdateAnotherProfile() throws InterruptedException {
+        Profile caller = profileService.load(PROFILE_TARGET_TEST_ID);
+        Assert.assertNull(profileService.load(PROFILE_TEST_ID).getProperty("firstName"));
+
+        Event updateProperties = new Event("updateProperties", null, caller, null, null, null, new Date());
+        updateProperties.setPersistent(false);
+        Map<String, Object> propertyToUpdate = new HashMap<>();
+        propertyToUpdate.put("properties.firstName", "TRUSTED UPDATE");
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
+
+        javax.security.auth.Subject previous = securityService.getCurrentSubject();
+        try {
+            securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, true));
+            eventService.send(updateProperties);
+        } finally {
+            securityService.setCurrentSubject(previous);
+        }
+
+        waitForProfileProperty(PROFILE_TEST_ID, "firstName", "TRUSTED UPDATE");
     }
 
     @Test

@@ -63,3 +63,46 @@ rem SET KARAF_DEBUG
 
 set MY_DIRNAME=%~dp0%
 set MY_KARAF_HOME=%DIRNAME%..
+
+rem Fail fast when starting without admin/health passwords (no known defaults are shipped).
+rem Set UNOMI_SKIP_*_PASSWORD_CHECK=true if you configured the matching password another way.
+if /I "%KARAF_SCRIPT%"=="karaf.bat" goto checkPasswords
+if /I "%KARAF_SCRIPT%"=="start.bat" goto checkPasswords
+if /I "%KARAF_SCRIPT%"=="daemon.bat" goto checkPasswords
+if /I "%KARAF_SCRIPT%"=="run.bat" goto checkPasswords
+if /I "%KARAF_SCRIPT%"=="debug.bat" goto checkPasswords
+goto afterPasswordChecks
+
+:checkPasswords
+if not "%UNOMI_ROOT_PASSWORD%"=="" goto afterRootPasswordCheck
+if /I "%UNOMI_SKIP_ROOT_PASSWORD_CHECK%"=="true" goto afterRootPasswordCheck
+echo ERROR: UNOMI_ROOT_PASSWORD is not set.
+echo.
+echo Apache Unomi does not ship a known default admin password.
+echo Set one before starting, for example:
+echo.
+echo   set UNOMI_ROOT_PASSWORD=choose-a-strong-password
+echo   set UNOMI_HEALTHCHECK_PASSWORD=choose-a-strong-health-password
+echo   bin\karaf.bat
+echo.
+echo Or set org.apache.unomi.security.root.password in etc\custom.system.properties
+echo and set UNOMI_SKIP_ROOT_PASSWORD_CHECK=true.
+exit /b 1
+
+:afterRootPasswordCheck
+if not "%UNOMI_HEALTHCHECK_PASSWORD%"=="" goto afterPasswordChecks
+if /I "%UNOMI_SKIP_HEALTHCHECK_PASSWORD_CHECK%"=="true" goto afterPasswordChecks
+echo ERROR: UNOMI_HEALTHCHECK_PASSWORD is not set.
+echo.
+echo Apache Unomi does not ship a known default health-check password.
+echo Set one before starting, for example:
+echo.
+echo   set UNOMI_ROOT_PASSWORD=choose-a-strong-password
+echo   set UNOMI_HEALTHCHECK_PASSWORD=choose-a-strong-health-password
+echo   bin\karaf.bat
+echo.
+echo Or set org.apache.unomi.healthcheck.password in etc\custom.system.properties
+echo and set UNOMI_SKIP_HEALTHCHECK_PASSWORD_CHECK=true.
+exit /b 1
+
+:afterPasswordChecks

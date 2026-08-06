@@ -24,6 +24,8 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
+import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
@@ -51,6 +53,7 @@ public class UpdatePropertiesAction implements ActionExecutor {
     private ProfileService profileService;
     private EventService eventService;
     private TracerService tracerService;
+    private SecurityService securityService;
 
     public int execute(Action action, Event event) {
         RequestTracer tracer = null;
@@ -74,6 +77,13 @@ public class UpdatePropertiesAction implements ActionExecutor {
             }
 
             if (StringUtils.isNotBlank(targetId) && event.getProfile() != null && !targetId.equals(event.getProfile().getItemId())) {
+                if (!isTrustedIdentityCaller()) {
+                    LOGGER.warn("Refusing cross-profile property update for untrusted caller (targetId={})", targetId);
+                    if (tracer != null) {
+                        tracer.endOperation(false, "Untrusted caller cannot update another profile");
+                    }
+                    return EventService.NO_CHANGE;
+                }
                 target = TARGET_TYPE_PROFILE.equals(targetType) ? profileService.load(targetId) : profileService.loadPersona(targetId);
                 if (target == null) {
                     if (tracer != null) {
@@ -105,6 +115,10 @@ public class UpdatePropertiesAction implements ActionExecutor {
             List<String> propsToDelete = (List<String>) event.getProperties().get(PROPS_TO_DELETE);
             if (propsToDelete != null) {
                 for (String prop : propsToDelete) {
+                    if (!isTrustedIdentityCaller() && prop.startsWith("systemProperties.")) {
+                        LOGGER.warn("Refusing systemProperties delete for untrusted caller: {}", prop);
+                        continue;
+                    }
                     isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, null, "remove");
                 }
             }
@@ -143,6 +157,10 @@ public class UpdatePropertiesAction implements ActionExecutor {
     private boolean processProperties(Profile target, Map<String, Object> propsMap, String strategy) {
         boolean isProfileOrPersonaUpdated = false;
         for (String prop : propsMap.keySet()) {
+            if (!isTrustedIdentityCaller() && prop.startsWith("systemProperties.")) {
+                LOGGER.warn("Refusing systemProperties update for untrusted caller: {}", prop);
+                continue;
+            }
             PropertyType propType = null;
             if (prop.startsWith("properties.") || prop.startsWith("systemProperties.")) {
                 propType = profileService.getPropertyType(prop.substring(prop.indexOf('.') + 1));
@@ -162,6 +180,11 @@ public class UpdatePropertiesAction implements ActionExecutor {
         return isProfileOrPersonaUpdated;
     }
 
+    private boolean isTrustedIdentityCaller() {
+        return securityService != null
+                && (securityService.isAdmin() || securityService.hasRole(UnomiRoles.TENANT_ADMINISTRATOR));
+    }
+
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
     }
@@ -172,6 +195,10 @@ public class UpdatePropertiesAction implements ActionExecutor {
 
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
+    }
+
+    public void setSecurityService(SecurityService securityService) {
+        this.securityService = securityService;
     }
 
 }

@@ -50,6 +50,50 @@
 MY_DIRNAME=`dirname $0`
 MY_KARAF_HOME=`cd "$MY_DIRNAME/.."; pwd`
 
+# Fail fast when starting without admin/health passwords (no known defaults are shipped).
+# Skip for stop/status/etc., or set UNOMI_SKIP_*_PASSWORD_CHECK=true if you configured
+# the matching property another way (e.g. edited users.properties / custom.system.properties).
+case "${KARAF_SCRIPT}" in
+  karaf|start|daemon|run|debug)
+    if [ -z "${UNOMI_ROOT_PASSWORD}" ] && [ "${UNOMI_SKIP_ROOT_PASSWORD_CHECK}" != "true" ]; then
+      cat >&2 <<'EOF'
+ERROR: UNOMI_ROOT_PASSWORD is not set.
+
+Apache Unomi does not ship a known default admin password.
+Set one before starting, for example:
+
+  export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
+  export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
+  ./bin/karaf
+
+Or set org.apache.unomi.security.root.password in etc/custom.system.properties
+and export UNOMI_SKIP_ROOT_PASSWORD_CHECK=true.
+
+See getting started / configuration documentation for details.
+EOF
+      exit 1
+    fi
+    if [ -z "${UNOMI_HEALTHCHECK_PASSWORD}" ] && [ "${UNOMI_SKIP_HEALTHCHECK_PASSWORD_CHECK}" != "true" ]; then
+      cat >&2 <<'EOF'
+ERROR: UNOMI_HEALTHCHECK_PASSWORD is not set.
+
+Apache Unomi does not ship a known default health-check password.
+Set one before starting, for example:
+
+  export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
+  export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
+  ./bin/karaf
+
+Or set org.apache.unomi.healthcheck.password in etc/custom.system.properties
+and export UNOMI_SKIP_HEALTHCHECK_PASSWORD_CHECK=true.
+
+See getting started / configuration documentation for details.
+EOF
+      exit 1
+    fi
+    ;;
+esac
+
 # In order to activate the Yourkit Profiler agent, uncomment one of the following lines depending on the operating
 # system and adjust the path to the location of the installation directory.
 # On MacOS:
