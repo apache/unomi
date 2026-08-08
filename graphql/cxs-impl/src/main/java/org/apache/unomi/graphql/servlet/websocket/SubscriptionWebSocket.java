@@ -149,8 +149,8 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
                 closeConnection(message, "Error executing graphQL query");
                 return;
             } else if (!(executionResult.getData() instanceof Publisher)) {
-                final String error = "Fetched value should be instance of Publisher, was: " + executionResult.getClass().getName();
-                sendMessage(GraphQLMessage.create(message.getId())
+                Object data = executionResult.getData();
+                final String error = "Fetched value should be instance of Publisher, was: " + (data == null ? "null" : data.getClass().getName());
                         .errors(Collections.singletonList(error))
                         .build());
                 closeConnection(message, error);
