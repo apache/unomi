@@ -165,6 +165,7 @@ class GraphQLServletSecurityValidatorTest {
     void validateWebSocketUpgrade_rejectsPublicApiKeyOnly() throws IOException {
         // No Authorization header — public API key alone must not open subscriptions
         when(request.getHeader("Authorization")).thenReturn(null);
+        when(request.getHeader("X-Unomi-Api-Key")).thenReturn("public-api-key");
 
         boolean authenticated = validator.validateWebSocketUpgrade(request, response);
 
