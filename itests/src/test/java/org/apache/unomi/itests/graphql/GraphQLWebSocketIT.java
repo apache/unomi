@@ -59,7 +59,7 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
             request.setHeader("Authorization", basicAuthHeader(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
 
             Future<Session> onConnected = client.connect(socket, echoUri, request);
-            RemoteEndpoint remote = onConnected.get().getRemote();
+            RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
 
             LOGGER.info("Connected, initializing... ");
 
