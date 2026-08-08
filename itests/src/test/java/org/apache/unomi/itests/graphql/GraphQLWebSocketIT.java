@@ -42,6 +42,19 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * End-to-end GraphQL WebSocket auth regression.
+ * <p>
+ * Maps to the reported unauthenticated-subscription scenarios:
+ * <ul>
+ *   <li>Upgrade with no credentials → HTTP 401 (not 101)</li>
+ *   <li>Upgrade with public API key only → HTTP 401 (subscriptions are never public)</li>
+ *   <li>Upgrade with wrong Basic password → HTTP 401</li>
+ *   <li>Upgrade with malformed Basic → HTTP 401</li>
+ *   <li>Upgrade with valid JAAS / private key → 101, then connection_init / start work</li>
+ * </ul>
+ * Unauthenticated clients must never reach {@code connection_ack} or {@code GQL_START}.
+ */
 public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(GraphQLWebSocketIT.class);
@@ -107,6 +120,13 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
     }
 
     @Test
+    public void testWebSocketUpgrade_withMalformedBasic_returns401() throws Exception {
+        ClientUpgradeRequest request = new ClientUpgradeRequest();
+        request.setHeader("Authorization", "Basic !!!");
+        assertWebSocketUpgradeRejected(request);
+    }
+
+    @Test
     public void testWebSocketUpgrade_withPrivateKey_succeeds() throws Exception {
         WebSocketClient client = new WebSocketClient();
         Socket socket = new Socket();
@@ -125,6 +145,42 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
             remote.sendString(resourceAsString("graphql/socket/out/term.json"));
             socket.waitClose().get(10, TimeUnit.SECONDS);
+        } finally {
+            client.stop();
+        }
+    }
+
+    /**
+     * Exercises GQL_START with the subject/context captured at upgrade time. A successful
+     * subscription setup leaves the socket open (no error close); stop + terminate then clean up.
+     */
+    @Test
+    public void testWebSocketSubscriptionStart_withPrivateKey_acceptsStart() throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            URI echoUri = new URI("ws://localhost:" + getHttpPort() + "/graphql");
+            ClientUpgradeRequest request = new ClientUpgradeRequest();
+            request.setHeader("Authorization", basicAuthHeader(TEST_TENANT_ID, testPrivateKeyValue));
+
+            Future<Session> onConnected = client.connect(socket, echoUri, request);
+            RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
+            Future<CloseStatus> closeFuture = socket.waitClose();
+
+            remote.sendString(resourceAsString("graphql/socket/out/init.json"));
+            Assert.assertEquals(resourceAsString("graphql/socket/in/ack.json"),
+                    socket.waitMessage().get(10, TimeUnit.SECONDS));
+
+            remote.sendString(resourceAsString("graphql/socket/out/start.json"));
+            // Successful subscribe() registers a publisher and does not emit until events arrive.
+            // Give the server a moment; an auth/context failure would close the socket with an error.
+            Thread.sleep(500);
+            Assert.assertFalse("Subscription start should not close the socket", closeFuture.isDone());
+
+            remote.sendString(resourceAsString("graphql/socket/out/stop.json"));
+            remote.sendString(resourceAsString("graphql/socket/out/term.json"));
+            closeFuture.get(10, TimeUnit.SECONDS);
         } finally {
             client.stop();
         }

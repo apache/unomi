@@ -38,6 +38,7 @@ import javax.security.auth.login.LoginException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -165,7 +166,16 @@ public class GraphQLServletSecurityValidator {
             return false;
         }
 
-        String usernameAndPassword = new String(Base64.getDecoder().decode(authHeader.substring(6).getBytes()));
+        final String usernameAndPassword;
+        try {
+            usernameAndPassword = new String(
+                    Base64.getDecoder().decode(authHeader.substring(6).getBytes(StandardCharsets.UTF_8)),
+                    StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            // Malformed Base64 must be treated as an authentication failure (401), not a 500.
+            LOG.debug("Malformed Basic Authorization header", e);
+            return false;
+        }
         int userNameIndex = usernameAndPassword.indexOf(":");
         if (userNameIndex == -1) {
             return false;

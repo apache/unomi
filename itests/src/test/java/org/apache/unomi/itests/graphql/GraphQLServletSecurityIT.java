@@ -78,6 +78,7 @@ public class GraphQLServletSecurityIT extends BaseGraphQLIT {
 
     @Test
     public void testAnonymousSubscriptionRequest() throws Exception {
+        // HTTP contrast to the WebSocket finding: anonymous subscription POST must stay 401.
         try (CloseableHttpResponse response = postAnonymous("graphql/security/subscribe.json")) {
 
             Assert.assertEquals(401, response.getStatusLine().getStatusCode());
