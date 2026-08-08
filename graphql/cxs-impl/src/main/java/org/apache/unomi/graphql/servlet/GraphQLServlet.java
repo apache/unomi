@@ -125,8 +125,8 @@ public class GraphQLServlet extends WebSocketServlet {
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         LOGGER.debug("GraphQLServlet service called with request: {}", request.getRequestURI());
         if (factory.isUpgradeRequest(request, response)) {
-            try {
                 if (!validator.validateWebSocketUpgrade(request, response)) {
+                    cleanupSecurityContext();
                     return;
                 }
                 final ServletUpgradeRequest upReq = new ServletUpgradeRequest(request);
