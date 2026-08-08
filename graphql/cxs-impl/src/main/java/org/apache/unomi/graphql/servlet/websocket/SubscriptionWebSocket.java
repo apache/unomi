@@ -151,6 +151,7 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
             } else if (!(executionResult.getData() instanceof Publisher)) {
                 Object data = executionResult.getData();
                 final String error = "Fetched value should be instance of Publisher, was: " + (data == null ? "null" : data.getClass().getName());
+                sendMessage(GraphQLMessage.create(message.getId())
                         .errors(Collections.singletonList(error))
                         .build());
                 closeConnection(message, error);
