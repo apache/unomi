@@ -30,9 +30,13 @@ required Unomi tarball.
 
 ## Launching docker-compose using Maven project
 
-Unomi requires a search engine (ElasticSearch or OpenSearch) so it is recommended to run Unomi and the search engine using docker-compose:
+Unomi requires a search engine (ElasticSearch or OpenSearch) so it is recommended to run Unomi and the search engine using docker-compose.
+
+Set admin and health passwords first (required; no known defaults are shipped):
 
 ```
+export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
+export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
 mvn docker:start
 ```
 
@@ -72,6 +76,8 @@ For Unomi (with ElasticSearch):
 ```bash
 docker pull apache/unomi:3.1.0-SNAPSHOT
 docker run -d --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
+    -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
+    -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' \
     -e UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200 \
     apache/unomi:3.1.0-SNAPSHOT
 ```
@@ -81,6 +87,8 @@ For Unomi (with OpenSearch):
 ```bash
 docker pull apache/unomi:3.1.0-SNAPSHOT
 docker run -d --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
+    -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
+    -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' \
     -e UNOMI_DISTRIBUTION=unomi-distribution-opensearch \
     -e UNOMI_OPENSEARCH_ADDRESSES=opensearch:9200 \
     -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
@@ -93,6 +101,8 @@ For ElasticSearch:
 
 ```bash
 docker run -d --name unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
+    -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
+    -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' \
     -e UNOMI_ELASTICSEARCH_ADDRESSES=host.docker.internal:9200 \
     apache/unomi:3.1.0-SNAPSHOT
 ```
@@ -101,6 +111,8 @@ For OpenSearch:
 
 ```bash
 docker run -d --name unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
+    -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
+    -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' \
     -e UNOMI_DISTRIBUTION=unomi-distribution-opensearch \
     -e UNOMI_OPENSEARCH_ADDRESSES=host.docker.internal:9200 \
     -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
@@ -112,6 +124,8 @@ Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it s
 ## Environment Variables
 
 ### Common Variables
+- `UNOMI_ROOT_PASSWORD`: Required admin (`karaf`) password — no known default
+- `UNOMI_HEALTHCHECK_PASSWORD`: Required health-check (`health`) password — no known default
 - `UNOMI_AUTO_START`: Boolean to specify if unomi auto start with karaf (defaults to `true`)
 - `UNOMI_DISTRIBUTION`: Specifies the Unomi Distribution Feature to use (`unomi-distribution-elasticsearch` or `unomi-distribution-opensearch`, defaults to `unomi-distribution-elasticsearch`)
 
@@ -133,7 +147,7 @@ Multi-tenancy requires a tenant before client endpoints such as `/cxs/context.js
 
 ```bash
 curl -X POST http://localhost:8181/cxs/tenants \
-  --user karaf:karaf \
+  --user "karaf:${UNOMI_ROOT_PASSWORD}" \
   -H "Content-Type: application/json" \
   -d '{"requestedId":"default","properties":{"name":"Default Tenant"}}'
 ```

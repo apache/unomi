@@ -56,30 +56,26 @@ _setup_opensearch() {
         return 1
     fi
 
-    # Load only the OpenSearch password from .env.local if it exists
-    # This ensures we don't load the Elasticsearch password
-    if ! load_password_from_env_local "${SCRIPT_DIR}" "UNOMI_OPENSEARCH_PASSWORD"; then
-        # If not found in .env.local, check if it's already set in environment
-        if [ -z "${UNOMI_OPENSEARCH_PASSWORD}" ]; then
-            echo "Note: UNOMI_OPENSEARCH_PASSWORD not found in .env.local or environment"
-        fi
-    fi
-
-    # Check if password is set
-    if ! check_password "UNOMI_OPENSEARCH_PASSWORD"; then
+    # Load required passwords from .env.local (or existing environment).
+    # Engine password is OpenSearch-only so we do not pull Elasticsearch's password.
+    if ! require_password "${SCRIPT_DIR}" "UNOMI_OPENSEARCH_PASSWORD"; then
         return 1
     fi
-
-    # Set OpenSearch 3 password (only override needed - defaults are appropriate for OpenSearch 3)
-    # Password is already set from .env.local or environment, just ensure it's exported
-    export UNOMI_OPENSEARCH_PASSWORD
+    if ! require_password "${SCRIPT_DIR}" "UNOMI_ROOT_PASSWORD"; then
+        return 1
+    fi
+    if ! require_password "${SCRIPT_DIR}" "UNOMI_HEALTHCHECK_PASSWORD"; then
+        return 1
+    fi
 
     # Set the distribution to use OpenSearch
     export UNOMI_DISTRIBUTION=unomi-distribution-opensearch
 
     echo "OpenSearch 3 environment variables configured."
     echo "  Distribution: ${UNOMI_DISTRIBUTION}"
-    echo "  Password: (set from .env.local or environment)"
+    echo "  OpenSearch password: (set from .env.local or environment)"
+    echo "  Root password: (set from .env.local or environment)"
+    echo "  Healthcheck password: (set from .env.local or environment)"
     echo "  Note: Using Unomi defaults for other OpenSearch settings (cluster, addresses, username, SSL)"
     
     return 0

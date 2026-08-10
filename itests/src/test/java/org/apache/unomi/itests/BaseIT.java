@@ -132,7 +132,10 @@ public abstract class BaseIT extends KarafTestSupport {
     protected static final ContentType JSON_CONTENT_TYPE = ContentType.create("application/json");
     protected static final String BASE_URL = "http://localhost";
     protected static final String BASIC_AUTH_USER_NAME = "karaf";
+    /** Explicit IT password — package no longer ships a known default ({@code UNOMI_ROOT_PASSWORD}). */
     protected static final String BASIC_AUTH_PASSWORD = "karaf";
+    protected static final String HEALTHCHECK_AUTH_USER_NAME = "health";
+    protected static final String HEALTHCHECK_AUTH_PASSWORD = "health";
     protected static final int REQUEST_TIMEOUT = 60000;
     protected static final int DEFAULT_TRYING_TIMEOUT = 1000;
     protected static final int DEFAULT_TRYING_TRIES = 10;
@@ -671,6 +674,9 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/system.properties", SEARCH_ENGINE_PROPERTY, searchEngine),
                 editConfigurationFilePut("etc/system.properties", PERSISTENCE_PROVIDER_PROPERTY, searchEngine),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.migration.tenant.id", TEST_TENANT_ID),
+                // Explicit test credentials (package no longer ships a known default password).
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.security.root.password", BASIC_AUTH_PASSWORD),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.healthcheck.password", HEALTHCHECK_AUTH_PASSWORD),
                 // Default scheduler.thread.poolSize (5) is sized for the near-instant in-memory unit-test
                 // double, not a real ES/OS backend. Under real refresh/write latency, the checker, task
                 // executions, and lease-renewal heartbeats (see scheduler.adoc) compete for the same small
