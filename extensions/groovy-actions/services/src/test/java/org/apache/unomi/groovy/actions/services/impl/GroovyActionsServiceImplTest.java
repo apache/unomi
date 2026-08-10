@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.groovy.actions.services.impl;
 
+import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.ExecutionContext;
@@ -46,11 +47,15 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.wiring.BundleWiring;
 
 import java.net.URL;
+import java.io.File;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -170,6 +175,85 @@ public class GroovyActionsServiceImplTest {
 
             assertNotNull(definitionsService.getActionType(actionName));
         });
+    }
+
+    /**
+     * Saving an action compiles it; it must not instantiate it. A Groovy {@code @Field} initializer
+     * runs at instantiation, so if save() ever goes back to {@code GroovyShell#parse} an uploaded
+     * script executes at upload time, before any rule dispatches it — the reported RCE vector.
+     */
+    @Test
+    public void testSaveDoesNotRunFieldInitializers() throws Exception {
+        System.clearProperty("unomi.test.groovyFieldInitializerRan");
+        String groovyScript = loadGroovyScript(
+            "/META-INF/cxs/actions/fieldInitializerAction.groovy",
+            "Could not find the field-initializer test Groovy action file");
+        try {
+            contextManager.executeAsTenant(TENANT_1, () -> {
+                groovyActionsService.save("fieldInitializerAction", groovyScript);
+            });
+            assertNull("Saving a Groovy action must compile it without instantiating it, so a @Field "
+                            + "initializer must not execute at upload time",
+                    System.getProperty("unomi.test.groovyFieldInitializerRan"));
+        } finally {
+            System.clearProperty("unomi.test.groovyFieldInitializerRan");
+        }
+    }
+
+    /**
+     * Regression test for the reported upload-time RCE: uploading a Groovy action whose {@code @Field}
+     * initializer runs an OS command used to execute that command at save time, as the server user,
+     * before any rule dispatched the action.
+     * <p>
+     * The positive control matters as much as the assertion. It runs the same payload through a plain
+     * {@link GroovyShell} first and requires the proof file to appear, which establishes that command
+     * execution really does work on this machine. Without it, a payload that silently failed to run —
+     * wrong shell, restricted environment — would make the real assertion pass while proving nothing.
+     * <p>
+     * Scope: this covers execution at <em>upload</em> time, which is the reported vector. It does not
+     * claim the action is sandboxed when it is later dispatched — a Groovy action is arbitrary code by
+     * design, and uploading one now requires the system ADMINISTRATOR role.
+     */
+    @Test
+    public void testSaveDoesNotExecuteUploadedCommands() throws Exception {
+        assumeTrue("requires a POSIX shell to run the payload", new File("/bin/sh").canExecute());
+        String groovyScript = loadGroovyScript(
+            "/META-INF/cxs/actions/rceProofAction.groovy",
+            "Could not find the RCE proof test Groovy action file");
+
+        Path tempDir = Files.createTempDirectory("unomi-rce-proof");
+        Path proof = tempDir.resolve("rce-proof");
+        System.setProperty("unomi.test.rceProofPath", proof.toString());
+        try {
+            // Positive control: instantiating the script DOES run the payload, so the payload is live.
+            new GroovyShell().parse(stripActionAnnotation(groovyScript));
+            assertTrue("positive control failed: the payload did not execute even via GroovyShell#parse, "
+                            + "so the real assertion below would prove nothing on this machine",
+                    Files.exists(proof));
+            Files.delete(proof);
+
+            // The actual assertion: saving the very same script must not run it.
+            contextManager.executeAsTenant(TENANT_1, () -> {
+                groovyActionsService.save("rceProofAction", groovyScript);
+            });
+
+            assertFalse("Uploading a Groovy action must not execute it: the payload wrote " + proof
+                            + " at save time, which is remote code execution at upload",
+                    Files.exists(proof));
+        } finally {
+            System.clearProperty("unomi.test.rceProofPath");
+            Files.deleteIfExists(proof);
+            Files.deleteIfExists(tempDir);
+        }
+    }
+
+    /**
+     * Drops the {@code @Action} line so the positive control compiles under a bare {@link GroovyShell},
+     * which has neither the service's ImportCustomizer nor its script base class. The {@code @Field}
+     * payload — the only part under test — is untouched.
+     */
+    private static String stripActionAnnotation(String script) {
+        return script.replaceAll("(?m)^@Action\\(.*\\)$", "");
     }
 
     @Test
