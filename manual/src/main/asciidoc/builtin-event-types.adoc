@@ -23,7 +23,9 @@ This event should be “secured”, meaning that it should not be accepted from 
 
 Usually, the login event will contain information passed by the authentication server and may include user properties and any additional information.
 Rules may be set up to copy the information from the event into the profile, but this is not done in the default set of rules provided by Apache Unomi for security reasons.
-You can find an example of such a rule here: https://github.com/apache/unomi/blob/master/samples/login-integration/src/main/resources/META-INF/cxs/rules/exampleLogin.json[https://github.com/apache/unomi/blob/master/samples/login-integration/src/main/resources/META-INF/cxs/rules/exampleLogin.json]
+You can find an example of such a rule here:
+https://github.com/apache/unomi/blob/master/samples/login-integration/src/main/resources/META-INF/cxs/rules/exampleLogin.json[exampleLogin.json]
+(see <<_login_sample,Login sample>> — the event must be sent from a trusted server-side caller).
 
 ===== Structure overview
 
@@ -240,7 +242,9 @@ image::form-event-type.png[]
 
 This event is usually used by user interfaces that make it possible to modify profile properties, for example a form where a user can edit his profile properties, or a management UI to modify.
 
-Note that this event type is a protected event type that is only accepted from configured third-party servers.
+Note that this event type is a protected event type that is only accepted from configured third-party servers
+(or equivalently from a trusted private-key / administrator caller in 3.1). Cross-profile updates and
+`systemProperties.*` writes also require a trusted caller — see <<_client_facing_hardening_3_1,client-facing hardening>>.
 
 ===== Structure definition
 

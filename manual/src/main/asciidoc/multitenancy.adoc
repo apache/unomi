@@ -59,7 +59,7 @@ To create a new tenant, use the Tenant API endpoint:
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/tenants \
-  --user karaf:karaf \
+  --user "karaf:$UNOMI_ROOT_PASSWORD" \
   -H "Content-Type: application/json" \
   -d '{
     "requestedId": "my-tenant",
@@ -102,10 +102,10 @@ IMPORTANT: Store plaintext keys immediately after calling the key creation endpo
 [source,bash]
 ----
 curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/apikeys?type=PUBLIC" \
-  --user karaf:karaf
+  --user "karaf:$UNOMI_ROOT_PASSWORD"
 
 curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/apikeys?type=PRIVATE" \
-  --user karaf:karaf
+  --user "karaf:$UNOMI_ROOT_PASSWORD"
 ----
 
 Example response:
@@ -387,7 +387,7 @@ securityService.executeAsSystemSubject(() -> {
 [source,bash]
 ----
 curl -X GET http://localhost:8181/cxs/tenants \
-  --user karaf:karaf \
+  --user "karaf:$UNOMI_ROOT_PASSWORD" \
   -H "Content-Type: application/json"
 ----
 
@@ -396,7 +396,7 @@ curl -X GET http://localhost:8181/cxs/tenants \
 [source,bash]
 ----
 curl -X PUT http://localhost:8181/cxs/tenants/my-tenant \
-  --user karaf:karaf \
+  --user "karaf:$UNOMI_ROOT_PASSWORD" \
   -H "Content-Type: application/json" \
   -d '{
     "displayName": "Updated Organization Name",
@@ -411,10 +411,10 @@ Regenerating replaces any existing key of the same type. Store `plainTextKey` fr
 [source,bash]
 ----
 curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/apikeys?type=PUBLIC&validityDays=30" \
-  --user karaf:karaf
+  --user "karaf:$UNOMI_ROOT_PASSWORD"
 
 curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/apikeys?type=PRIVATE" \
-  --user karaf:karaf
+  --user "karaf:$UNOMI_ROOT_PASSWORD"
 ----
 
 NOTE: `type` must be `PUBLIC` or `PRIVATE`. Optional `validityDays` sets expiration; omit it (or use `0`) for no expiration.
@@ -424,7 +424,7 @@ NOTE: `type` must be `PUBLIC` or `PRIVATE`. Optional `validityDays` sets expirat
 [source,bash]
 ----
 curl -X DELETE http://localhost:8181/cxs/tenants/my-tenant \
-  --user karaf:karaf \
+  --user "karaf:$UNOMI_ROOT_PASSWORD" \
   -H "Content-Type: application/json"
 ----
 
@@ -464,7 +464,7 @@ Unomi exposes read-only usage metrics per tenant. Quota enforcement belongs in y
 [source,bash]
 ----
 curl -X GET "http://localhost:8181/cxs/tenants/my-tenant/usage?period=current-month" \
-  --user karaf:karaf \
+  --user "karaf:$UNOMI_ROOT_PASSWORD" \
   -H "Content-Type: application/json"
 ----
 
@@ -479,7 +479,7 @@ Upstream control planes can delete old tenant events through Unomi instead of ta
 [source,bash]
 ----
 curl -X POST "http://localhost:8181/cxs/tenants/my-tenant/purge/events?retentionDays=90" \
-  --user karaf:karaf \
+  --user "karaf:$UNOMI_ROOT_PASSWORD" \
   -H "Content-Type: application/json"
 ----
 
@@ -568,7 +568,7 @@ After migration, verify tenant context and data access:
 ----
 # List tenants (JAAS admin)
 curl -X GET http://localhost:8181/cxs/tenants \
-  --user karaf:karaf \
+  --user "karaf:$UNOMI_ROOT_PASSWORD" \
   -H "Accept: application/json"
 
 # List profiles for a tenant (tenant private key auth)
@@ -652,7 +652,7 @@ curl -X GET http://localhost:8181/cxs/jsonSchema \
   -H "Content-Type: application/json"
 ----
 
-NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (`karaf:karaf`).
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`).
 
 You can also validate events against your schema using the validation endpoint:
 
@@ -683,14 +683,22 @@ curl -X POST http://localhost:8181/cxs/jsonSchema/validateEvent \
 
 Once the event type is defined, you can send events:
 
+[NOTE]
+====
+`/cxs/context.json` is a public endpoint, so the profile is carried by the `context-profile-id`
+cookie: since Unomi 3.1 a public caller's body `profileId` is ignored. Only a trusted caller
+(tenant private key or system administrator) may bind a profile explicitly through the body. See
+<<_client_facing_hardening_3_1,client-facing hardening>>.
+====
+
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/context.json \
   -H "X-Unomi-Api-Key: <PUBLIC_KEY>" \
   -H "Content-Type: application/json" \
+  -b "context-profile-id=profile-456" \
   -d '{
     "sessionId": "session-123",
-    "profileId": "profile-456",
     "source": {
       "itemId": "checkout-page",
       "itemType": "page",
@@ -768,9 +776,9 @@ To test that everything works:
 curl -X POST http://localhost:8181/cxs/context.json \
   -H "X-Unomi-Api-Key: <PUBLIC_KEY>" \
   -H "Content-Type: application/json" \
+  -b "context-profile-id=profile-456" \
   -d '{
     "sessionId": "session-123",
-    "profileId": "profile-456",
     "source": {
       "itemId": "checkout-page",
       "itemType": "page",

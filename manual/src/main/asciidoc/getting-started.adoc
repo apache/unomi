@@ -50,6 +50,21 @@ Note for OpenSearch users:
 
 ==== Running Unomi
 
+===== Set the admin and health passwords (required)
+
+Unomi does not ship known default passwords. Set both *before* starting the server
+(otherwise startup fails with a clear error):
+
+[source,bash]
+----
+export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
+export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
+----
+
+Authenticate later with `karaf:$UNOMI_ROOT_PASSWORD`. See the configuration chapter if you prefer to set
+`org.apache.unomi.security.root.password` / `org.apache.unomi.healthcheck.password` in
+`etc/custom.system.properties` instead.
+
 ===== Start Unomi
 
 Start Unomi according to the <<_five_minutes_quickstart,quick start with docker>> or by compiling using the
@@ -67,14 +82,14 @@ Initializing profile service endpoint...
 Initializing cluster service endpoint...
 ----
 
-This indicates that all the Unomi services are started and ready to react to requests. 
+This indicates that all the Unomi services are started and ready to react to requests.
 
-Before you can use the API, you need to create a tenant:
+Create a tenant (using the password you set before startup):
 
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/tenants \
-  --user karaf:karaf \
+  --user "karaf:${UNOMI_ROOT_PASSWORD}" \
   -H "Content-Type: application/json" \
   -d '{
     "requestedId": "default",
@@ -89,8 +104,8 @@ The tenant create response includes **masked** API key metadata only. Regenerate
 
 [source,bash]
 ----
-curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PUBLIC" --user karaf:karaf
-curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PRIVATE" --user karaf:karaf
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PUBLIC" --user "karaf:${UNOMI_ROOT_PASSWORD}"
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PRIVATE" --user "karaf:${UNOMI_ROOT_PASSWORD}"
 ----
 
 Store `plainTextKey` immediately — you'll need the public key for subsequent API calls. See <<_multitenancy,Multi-tenancy>> for authentication details.

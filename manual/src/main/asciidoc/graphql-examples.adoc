@@ -171,13 +171,16 @@ To make this query work you need to supply authorization token in the `HTTP head
 [source,json]
 ----
 {
-  "authorization": "Basic a2FyYWY6a2FyYWY="
+  "authorization": "Basic BASE64_OF_KARAF_AND_ROOT_PASSWORD"
 }
 ----
 
-NOTE: GraphQL requests need authentication. For **mutations and administrative queries**, use HTTP Basic with JAAS (`karaf:karaf`) or `tenantId:privateApiKey`. For **public read** operations on the `cdp` root field, send `X-Unomi-Api-Key` with a tenant public API key. See <<_graphql_api,GraphQL API>> authentication.
+Generate the Base64 value from your own credentials, for example with
+`printf 'karaf:%s' "$UNOMI_ROOT_PASSWORD" | base64`.
 
-When using curl, you can use the `--user` option instead of manually encoding credentials. For example, `--user karaf:karaf` or `--user TENANT_ID:PRIVATE_KEY` automatically handles Base64 encoding for Basic authentication. For public reads:
+NOTE: GraphQL requests need authentication. For **mutations and administrative queries**, use HTTP Basic with JAAS (the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`) or `tenantId:privateApiKey`. For **public read** operations on the `cdp` root field, send `X-Unomi-Api-Key` with a tenant public API key. See <<_graphql_api,GraphQL API>> authentication.
+
+When using curl, you can use the `--user` option instead of manually encoding credentials. For example, `--user "karaf:$UNOMI_ROOT_PASSWORD"` or `--user TENANT_ID:PRIVATE_KEY` automatically handles Base64 encoding for Basic authentication. For public reads:
 
 [source,bash]
 ----

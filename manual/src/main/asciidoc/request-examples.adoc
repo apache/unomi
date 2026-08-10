@@ -25,7 +25,7 @@ First, create a tenant that will own all the data:
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/tenants \
---user karaf:karaf \
+--user "karaf:$UNOMI_ROOT_PASSWORD" \
 -H "Content-Type: application/json" \
 -d '{
     "requestedId": "mytenant",
@@ -67,8 +67,8 @@ Regenerate keys to obtain one-time plaintext values (store them immediately):
 
 [source,bash]
 ----
-curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PUBLIC" --user karaf:karaf
-curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PRIVATE" --user karaf:karaf
+curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PUBLIC" --user "karaf:$UNOMI_ROOT_PASSWORD"
+curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PRIVATE" --user "karaf:$UNOMI_ROOT_PASSWORD"
 ----
 
 After creating the tenant and regenerating keys, use these credentials in the examples:
@@ -549,14 +549,22 @@ The format is always `MM-DD` where:
 
 You can also update the personalization example to use the birthday property:
 
+[NOTE]
+====
+The profile is selected with the `context-profile-id` cookie, not with a `profileId` in the request
+body. `/cxs/context.json` is a public endpoint, and since Unomi 3.1 a public caller's body `profileId`
+is ignored — the cookie is the only profile identity bearer. See
+<<_client_facing_hardening_3_1,Client-facing hardening>> in the 3.0 to 3.1 migration guide.
+====
+
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/context.json \
 -H "Content-Type: application/json" \
 -H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-b "context-profile-id=profile-1" \
 -d '{
     "sessionId": "birthday-session",
-    "profileId": "profile-1",
     "source": {
         "itemId": "homepage",
         "itemType": "page",
@@ -702,9 +710,9 @@ For the birthday profile (should show birthday message):
 curl -X POST http://localhost:8181/cxs/context.json \
 -H "Content-Type: application/json" \
 -H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-b "context-profile-id=profile-1" \
 -d '{
     "sessionId": "birthday-session",
-    "profileId": "profile-1",
     "source": {
         "itemId": "homepage",
         "itemType": "page",
@@ -748,9 +756,9 @@ For the non-birthday profile (should show welcome message):
 curl -X POST http://localhost:8181/cxs/context.json \
 -H "Content-Type: application/json" \
 -H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+-b "context-profile-id=profile-2" \
 -d '{
     "sessionId": "regular-session",
-    "profileId": "profile-2",
     "source": {
         "itemId": "homepage",
         "itemType": "page",
