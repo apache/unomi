@@ -176,6 +176,71 @@ public class ProfileMergeIT extends BaseIT {
      * - a new one, if it's the first time we encounter his own mergeIdentifier
      * - a previous one, if we already have a profile in DB with the same mergeIdentifier. (TESTED in this scenario)
      */
+    /**
+     * Public / untrusted callers must not merge into an existing victim profile (identity takeover).
+     * Suite {@code @Before} installs a tenant-admin subject; this test temporarily downgrades it.
+     */
+    @Test
+    public void testUntrustedCaller_cannotMergeIntoExistingVictimProfile() throws InterruptedException {
+        createAndWaitForRule(createMergeOnPropertyRule(false, "email"));
+
+        Profile victim = new Profile("victimProfileID");
+        victim.setProperty("email", "victim@example.com");
+        victim.setSystemProperty("mergeIdentifier", "victim@example.com");
+        profileService.save(victim);
+
+        keepTrying("Victim profile not found", () -> profileService.load("victimProfileID"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        Profile attacker = new Profile("attackerProfileID");
+        attacker.setProperty("email", "victim@example.com");
+        Session session = new Session("untrustedMergeSession", attacker, new Date(), null);
+        Event event = new Event(TEST_EVENT_TYPE, session, attacker, null, null, attacker, new Date());
+
+        javax.security.auth.Subject previous = securityService.getCurrentSubject();
+        try {
+            securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, false));
+            eventService.send(event);
+        } finally {
+            securityService.setCurrentSubject(previous);
+        }
+
+        Assert.assertEquals("attackerProfileID", event.getProfile().getItemId());
+        Assert.assertEquals("attackerProfileID", event.getSession().getProfile().getItemId());
+        Assert.assertNotNull(profileService.load("victimProfileID"));
+    }
+
+    @Test
+    public void testTrustedPrivateKeySubject_canMergeIntoExistingProfile() throws InterruptedException {
+        createAndWaitForRule(createMergeOnPropertyRule(false, "email"));
+
+        Profile victim = new Profile("trustedVictimProfileID");
+        victim.setProperty("email", "trusted-victim@example.com");
+        victim.setSystemProperty("mergeIdentifier", "trusted-victim@example.com");
+        victim.setProperty("firstVisit", new Date(0));
+        profileService.save(victim);
+
+        keepTrying("Victim profile not found", () -> profileService.load("trustedVictimProfileID"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        Profile caller = new Profile("trustedCallerProfileID");
+        caller.setProperty("email", "trusted-victim@example.com");
+        caller.setProperty("firstVisit", new Date());
+        Session session = new Session("trustedMergeSession", caller, new Date(), null);
+        Event event = new Event(TEST_EVENT_TYPE, session, caller, null, null, caller, new Date());
+
+        javax.security.auth.Subject previous = securityService.getCurrentSubject();
+        try {
+            securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, true));
+            eventService.send(event);
+        } finally {
+            securityService.setCurrentSubject(previous);
+        }
+
+        Assert.assertEquals("trustedVictimProfileID", event.getProfile().getItemId());
+        Assert.assertEquals("trustedVictimProfileID", event.getSession().getProfile().getItemId());
+    }
+
     @Test
     public void testProfileMergeOnPropertyAction_sessionReassigned_existingProfile() throws InterruptedException {
         // create rule
