@@ -181,6 +181,7 @@
             <property name="profileService" ref="profileService"/>
             <property name="eventService" ref="eventService"/>
             <property name="tracerService" ref="tracerService"/>
+            <property name="securityService" ref="securityService"/>
         </bean>
     </service>
 
