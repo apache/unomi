@@ -110,6 +110,10 @@ public class RouterCamelContext implements IRouterCamelContext {
         scheduler = Executors.newSingleThreadScheduledExecutor();
 
         configSharingService.setProperty(RouterConstants.IMPORT_ONESHOT_UPLOAD_DIR, uploadDir);
+        // shared with router-rest, which validates a configuration's endpoint before it is stored
+        configSharingService.setProperty(RouterConstants.CONFIG_ALLOWED_ENDPOINTS, allowedEndpoints);
+        configSharingService.setProperty(RouterConstants.CONFIG_IMPORT_BASE_DIRS, permittedImportBaseDirs);
+        configSharingService.setProperty(RouterConstants.CONFIG_EXPORT_BASE_DIRS, permittedExportBaseDirs);
         configSharingService.setProperty(RouterConstants.KEY_HISTORY_SIZE, execHistorySize);
 
         initCamel();

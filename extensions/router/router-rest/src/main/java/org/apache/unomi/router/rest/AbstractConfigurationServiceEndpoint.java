@@ -16,10 +16,14 @@
  */
 package org.apache.unomi.router.rest;
 
+import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.router.api.EndpointValidator;
+import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.util.List;
 
 /**
@@ -28,6 +32,30 @@ import java.util.List;
 public abstract class AbstractConfigurationServiceEndpoint<T> {
 
     protected ImportExportConfigurationService<T> configurationService;
+
+    protected ConfigSharingService configSharingService;
+
+    /**
+     * Refuses the configuration when the endpoint it names cannot be honoured -- an unsupported scheme,
+     * or a file path outside the directories the deployment permits.
+     *
+     * <p>The route that would carry the configuration is built asynchronously, long after this call has
+     * answered, so a configuration refused there would be stored and answered {@code 200} with nothing
+     * but a log line to show for it. Refusing here gives the caller the reason while it can still act
+     * on it, and keeps the configuration out of the store.
+     *
+     * @param endpointUri              the endpoint URI the configuration names
+     * @param permittedBaseDirsProperty the shared property holding the base directories for this direction
+     */
+    protected void refuseIfEndpointCannotBeHonoured(String endpointUri, String permittedBaseDirsProperty) {
+        String refusal = EndpointValidator.validate(endpointUri,
+                (String) configSharingService.getProperty(RouterConstants.CONFIG_ALLOWED_ENDPOINTS),
+                (String) configSharingService.getProperty(permittedBaseDirsProperty));
+        if (refusal != null) {
+            throw new BadRequestException(refusal, Response.status(Response.Status.BAD_REQUEST)
+                    .type(MediaType.TEXT_PLAIN).entity(refusal).build());
+        }
+    }
 
     /**
      * Retrieves all the configurations.

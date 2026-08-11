@@ -51,6 +51,10 @@ public interface RouterConstants {
     String IMPORT_ONESHOT_ROUTE_ID = "ONE_SHOT_ROUTE";
     String IMPORT_ONESHOT_UPLOAD_DIR = "oneshotImportUploadDir";
 
+    String CONFIG_ALLOWED_ENDPOINTS = "routerAllowedEndpoints";
+    String CONFIG_IMPORT_BASE_DIRS = "routerImportBaseDirs";
+    String CONFIG_EXPORT_BASE_DIRS = "routerExportBaseDirs";
+
     String DEFAULT_FILE_COLUMN_SEPARATOR = ",";
     String DEFAULT_FILE_LINE_SEPARATOR = "\n";
     String KEY_HISTORY_SIZE = "historySize";
