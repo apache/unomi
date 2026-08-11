@@ -93,6 +93,15 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
         }
     }
 
+    /**
+     * Sets the comma-separated list of base directories an export {@code file} endpoint may resolve into.
+     *
+     * @param permittedExportBaseDirs the permitted base directories
+     */
+    public void setPermittedExportBaseDirs(String permittedExportBaseDirs) {
+        this.permittedBaseDirs = permittedExportBaseDirs;
+    }
+
     public void setExportConfigurationList(List<ExportConfiguration> exportConfigurationList) {
         this.exportConfigurationList = exportConfigurationList;
     }

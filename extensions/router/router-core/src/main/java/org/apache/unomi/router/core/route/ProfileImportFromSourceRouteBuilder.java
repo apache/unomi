@@ -132,6 +132,15 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
         }
     }
 
+    /**
+     * Sets the comma-separated list of base directories an import {@code file} endpoint may resolve into.
+     *
+     * @param permittedImportBaseDirs the permitted base directories
+     */
+    public void setPermittedImportBaseDirs(String permittedImportBaseDirs) {
+        this.permittedBaseDirs = permittedImportBaseDirs;
+    }
+
     public void setImportConfigurationList(List<ImportConfiguration> importConfigurationList) {
         this.importConfigurationList = importConfigurationList;
     }

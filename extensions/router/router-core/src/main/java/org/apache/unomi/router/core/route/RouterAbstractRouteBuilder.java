@@ -45,6 +45,7 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
 
     protected String configType;
     protected String allowedEndpoints;
+    protected String permittedBaseDirs;
 
     protected ProfileService profileService;
 
