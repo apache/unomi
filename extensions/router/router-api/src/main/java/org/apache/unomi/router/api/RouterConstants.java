@@ -32,6 +32,13 @@ public interface RouterConstants {
     String CONFIG_STATUS_COMPLETE_ERRORS = "ERRORS";
     String CONFIG_STATUS_COMPLETE_SUCCESS = "SUCCESS";
     String CONFIG_STATUS_COMPLETE_WITH_ERRORS = "WITH_ERRORS";
+    /**
+     * The configuration names an endpoint that cannot be honoured, so no route carries it. Kept apart
+     * from the execution statuses above: those report on a run that happened, this one says no run can.
+     * It is set and cleared by the route builders alone, so that restoring the deployment's permitted
+     * directories brings the configuration back on its own.
+     */
+    String CONFIG_STATUS_INVALID_ENDPOINT = "INVALID_ENDPOINT";
 
     String IMPORT_EXPORT_CONFIG_TYPE_RECURRENT = "recurrent";
     String IMPORT_EXPORT_CONFIG_TYPE_ONESHOT = "oneshot";

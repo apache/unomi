@@ -23,6 +23,7 @@ import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.ProfileToImport;
 import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -382,6 +383,7 @@ public class FileEndpointContainmentTest {
         ProfileImportFromSourceRouteBuilder builder =
                 new ProfileImportFromSourceRouteBuilder(NO_KAFKA, RouterConstants.CONFIG_TYPE_NOBROKER);
         builder.setImportConfigurationList(Arrays.asList(configurations));
+        builder.setImportConfigurationService(discardingConfigurationService());
         builder.setProfileService(noOpProfileService());
         builder.setJacksonDataFormat(new JacksonDataFormat(ProfileToImport.class));
         builder.setAllowedEndpoints(allowedEndpoints);
@@ -394,11 +396,24 @@ public class FileEndpointContainmentTest {
         ProfileExportCollectRouteBuilder builder =
                 new ProfileExportCollectRouteBuilder(NO_KAFKA, RouterConstants.CONFIG_TYPE_NOBROKER);
         builder.setExportConfigurationList(Arrays.asList(configurations));
+        builder.setExportConfigurationService(discardingConfigurationService());
         builder.setJacksonDataFormat(new JacksonDataFormat(ProfileToImport.class));
         builder.setAllowedEndpoints(DEFAULT_ALLOWED_ENDPOINTS);
         builder.setPermittedExportBaseDirs(permittedExportDir.getAbsolutePath());
         builder.setContext(camelContext);
         camelContext.addRoutes(builder);
+    }
+
+    /**
+     * A refused configuration is recorded, and these tests are not about that: what they observe is
+     * whether the route was built.
+     */
+    @SuppressWarnings("unchecked")
+    private static <T> ImportExportConfigurationService<T> discardingConfigurationService() {
+        return (ImportExportConfigurationService<T>) Proxy.newProxyInstance(
+                ImportExportConfigurationService.class.getClassLoader(),
+                new Class<?>[]{ImportExportConfigurationService.class},
+                (proxy, method, args) -> "save".equals(method.getName()) ? args[0] : null);
     }
 
     /**

@@ -98,6 +98,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                 }
 
                 String refusal = EndpointValidator.validate(endpoint, allowedEndpoints, permittedBaseDirs);
+                recordEndpointOutcome(importConfiguration, importConfigurationService, refusal);
                 if (refusal == null) {
                     ProcessorDefinition prDef = from(endpoint)
                             .routeId(importConfiguration.getItemId())// This allow identification of the route for manual start/stop

@@ -23,7 +23,9 @@ import org.apache.camel.component.kafka.KafkaConfiguration;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.router.api.ImportExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 
 import java.util.Map;
 
@@ -59,6 +61,37 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
         this.kafkaConsumerCount = kafkaProps.get("kafkaConsumerCount");
         this.kafkaAutoCommit = kafkaProps.get("kafkaAutoCommit");
         this.configType = configType;
+    }
+
+    /**
+     * Records, on the configuration itself, whether the endpoint it names can be honoured.
+     *
+     * <p>The permitted directories are an operational setting and the configurations are user data, so
+     * the two drift apart: a configuration that was legitimate when it was created can be refused after
+     * the deployment is reconfigured. Refusing it silently leaves the owner with a configuration that
+     * looks fine and does nothing, so the refusal is written where they will see it. It is theirs to
+     * correct or remove — nothing is deleted here.
+     *
+     * <p>The other way round matters just as much: restoring the permitted directories must bring the
+     * configuration back on its own, without anyone having to touch it. Only the status this method
+     * sets is cleared, so the record of a run that genuinely failed survives.
+     *
+     * <p>The configuration is saved without asking for its running route to be refreshed: the refresh
+     * would rebuild the route, refuse it again and save it again, without end.
+     *
+     * @param configuration the configuration whose endpoint was examined
+     * @param service       the service holding that kind of configuration
+     * @param refusal       the reason the endpoint was refused, or {@code null} if it can be honoured
+     */
+    protected <T extends ImportExportConfiguration> void recordEndpointOutcome(
+            T configuration, ImportExportConfigurationService<T> service, String refusal) {
+        if (refusal != null) {
+            configuration.setStatus(RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT);
+            service.save(configuration, false);
+        } else if (RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT.equals(configuration.getStatus())) {
+            configuration.setStatus(null);
+            service.save(configuration, false);
+        }
     }
 
     public Object getEndpointURI(String direction, String operationDepositBuffer) {

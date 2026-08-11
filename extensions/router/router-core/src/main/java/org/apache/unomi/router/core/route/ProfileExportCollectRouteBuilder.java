@@ -23,6 +23,7 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.EndpointValidator;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.core.bean.CollectProfileBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileExportCollectRouteBuilder.class);
 
     private List<ExportConfiguration> exportConfigurationList;
+    private ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
     private PersistenceService persistenceService;
 
     public ProfileExportCollectRouteBuilder(Map<String, String> kafkaProps, String configType) {
@@ -63,6 +65,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                 if ((Map<String, String>) exportConfiguration.getProperties().get("mapping") != null) {
                     String destinationEndpoint = (String) exportConfiguration.getProperties().get("destination");
                     String refusal = EndpointValidator.validate(destinationEndpoint, allowedEndpoints, permittedBaseDirs);
+                    recordEndpointOutcome(exportConfiguration, exportConfigurationService, refusal);
                     if (refusal == null) {
                         String timerString = "timer://collectProfile?fixedRate=true&period=" + (String) exportConfiguration.getProperties().get("period");
                         if ((String) exportConfiguration.getProperties().get("delay") != null) {
@@ -101,6 +104,10 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
      */
     public void setPermittedExportBaseDirs(String permittedExportBaseDirs) {
         this.permittedBaseDirs = permittedExportBaseDirs;
+    }
+
+    public void setExportConfigurationService(ImportExportConfigurationService<ExportConfiguration> exportConfigurationService) {
+        this.exportConfigurationService = exportConfigurationService;
     }
 
     public void setExportConfigurationList(List<ExportConfiguration> exportConfigurationList) {
