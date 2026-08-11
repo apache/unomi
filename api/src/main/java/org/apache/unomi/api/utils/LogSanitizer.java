@@ -63,7 +63,12 @@ public final class LogSanitizer {
         if (input == null) {
             return "null";
         }
-        String value = input.length() > maxLength ? input.substring(0, maxLength) + "...[truncated]" : input;
+        // Clamped: a negative limit would make substring throw, from inside a helper whose whole
+        // contract is that it is always safe to call in a log statement. No caller passes one today,
+        // but a computed limit (a remaining-budget calculation, say) would be an easy way to turn a
+        // security-refusal log line into an uncaught exception.
+        int limit = Math.max(0, maxLength);
+        String value = input.length() > limit ? input.substring(0, limit) + "...[truncated]" : input;
         StringBuilder sanitized = new StringBuilder(value.length());
         for (int i = 0; i < value.length(); i++) {
             char c = value.charAt(i);

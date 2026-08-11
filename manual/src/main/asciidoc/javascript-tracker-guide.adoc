@@ -144,8 +144,8 @@ generateUUID: function() {
     throw new Error(
         'Unomi tracker: no cryptographically secure random source available ' +
         '(neither crypto.randomUUID nor crypto.getRandomValues). This browser is ' +
-        'unsupported. Serve the page over HTTPS (the Web Crypto API is restricted to ' +
-        'secure contexts) or install a Web Crypto polyfill.'
+        'unsupported: install a Web Crypto polyfill, or use a browser that provides ' +
+        'crypto.getRandomValues.'
     );
 },
 
@@ -1058,8 +1058,8 @@ Here's a complete, production-ready tracker implementation combining all the con
             throw new Error(
                 'Unomi tracker: no cryptographically secure random source available ' +
                 '(neither crypto.randomUUID nor crypto.getRandomValues). This browser is ' +
-                'unsupported. Serve the page over HTTPS (the Web Crypto API is restricted to ' +
-                'secure contexts) or install a Web Crypto polyfill.'
+                'unsupported: install a Web Crypto polyfill, or use a browser that provides ' +
+                'crypto.getRandomValues.'
             );
         },
         
@@ -1244,7 +1244,10 @@ Session IDs are security-relevant: a session ID is a bearer identifier, so anyon
 
 **Recommendations:**
 * For production applications, ensure your minimum browser support includes browsers with `crypto.getRandomValues()` support (essentially all browsers from 2013+)
-* Serve your pages over HTTPS: the Web Crypto API is only exposed in secure contexts, so a page served over plain HTTP can hit the fail-closed branch even on a current browser
+* Serve your pages over HTTPS. `crypto.randomUUID()` is restricted to secure contexts, so over plain HTTP the tracker
+  falls back to `crypto.getRandomValues()`, which is available in non-secure contexts too. HTTPS is worth doing on its
+  own merits - a session identifier travelling in clear text is the larger problem - but plain HTTP alone does not reach
+  the fail-closed branch on a current browser
 * If you must support browsers without the Web Crypto API (IE 10 and below), install a Web Crypto polyfill — do not reintroduce a `Math.random()` fallback
 * Never use `Math.random()` for security-sensitive identifiers like session IDs or authentication tokens
 * Handle the thrown error in your integration (for example, disable tracking and log a warning) rather than letting it break unrelated page scripts
@@ -1252,7 +1255,7 @@ Session IDs are security-relevant: a session ID is a bearer identifier, so anyon
 
 **Browser Compatibility:**
 * `crypto.randomUUID()`: Chrome 92+, Firefox 95+, Safari 15.4+, Edge 92+ (2021+), secure contexts only
-* `crypto.getRandomValues()`: All modern browsers (2013+), secure contexts only
+* `crypto.getRandomValues()`: All modern browsers (2013+), available in secure and non-secure contexts
 * Anything older, or any non-secure context: unsupported — the tracker throws rather than generating a weak session ID
 
 The implementation automatically uses the best available secure method, and refuses to generate a session ID when there is none.

@@ -68,7 +68,7 @@ public class LogSanitizerTest {
 
     @Test
     public void oversizedValuesAreTruncatedSoTheyCannotFloodTheLog() {
-        String sanitized = LogSanitizer.forLogging(repeat("a", 5000));
+        String sanitized = LogSanitizer.forLogging("a".repeat(5000));
 
         assertTrue(sanitized.endsWith("...[truncated]"));
         assertTrue("truncated output must stay bounded", sanitized.length() < 300);
@@ -191,7 +191,7 @@ public class LogSanitizerTest {
      */
     @Test
     public void payloadHiddenBeyondTheTruncationPointIsDropped() {
-        String sanitized = LogSanitizer.forLogging(repeat("a", 400) + "\nWARN forged-record");
+        String sanitized = LogSanitizer.forLogging("a".repeat(400) + "\nWARN forged-record");
 
         assertFalse(sanitized.contains("forged-record"));
         assertFalse(sanitized.contains("\n"));
@@ -217,11 +217,11 @@ public class LogSanitizerTest {
         assertEquals(once, LogSanitizer.forLogging(once));
     }
 
-    private static String repeat(String s, int times) {
-        StringBuilder sb = new StringBuilder(s.length() * times);
-        for (int i = 0; i < times; i++) {
-            sb.append(s);
-        }
-        return sb.toString();
+    /** A negative limit must not throw: this helper is called from inside log statements. */
+    @Test
+    public void negativeLimitIsClampedRatherThanThrowing() {
+        assertEquals("...[truncated]", LogSanitizer.forLogging("abcdef", -1));
+        assertEquals("...[truncated]", LogSanitizer.forLogging("abcdef", 0));
     }
+
 }

@@ -19,6 +19,16 @@ Begin by creating a `docker-compose.yml` file. You can choose between Elasticsea
 
 ==== Option 1: Using Elasticsearch
 
+Export the passwords first. The compose files read them from your shell, and the `curl` commands
+further down use the same variables, so setting them once here keeps both consistent. Unomi refuses
+to start if they are unset.
+
+[source,bash]
+----
+export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
+export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
+----
+
 [source,yaml]
 ----
 version: '3.8'
@@ -35,8 +45,8 @@ services:
         environment:
             - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
             - UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES=0.0.0.0/0,::1,127.0.0.1
-            - UNOMI_ROOT_PASSWORD=choose-a-strong-password
-            - UNOMI_HEALTHCHECK_PASSWORD=choose-a-strong-health-password
+            - UNOMI_ROOT_PASSWORD=${UNOMI_ROOT_PASSWORD}
+            - UNOMI_HEALTHCHECK_PASSWORD=${UNOMI_HEALTHCHECK_PASSWORD}
         ports:
             - 8181:8181
             - 9443:9443
@@ -86,8 +96,8 @@ services:
             - UNOMI_OPENSEARCH_SSL_ENABLE=true
             - UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES=true
             - UNOMI_HEALTHCHECK_PROVIDERS=cluster,opensearch,unomi,persistence
-            - UNOMI_ROOT_PASSWORD=choose-a-strong-password
-            - UNOMI_HEALTHCHECK_PASSWORD=choose-a-strong-health-password
+            - UNOMI_ROOT_PASSWORD=${UNOMI_ROOT_PASSWORD}
+            - UNOMI_HEALTHCHECK_PASSWORD=${UNOMI_HEALTHCHECK_PASSWORD}
         ports:
             - 8181:8181
             - 9443:9443
