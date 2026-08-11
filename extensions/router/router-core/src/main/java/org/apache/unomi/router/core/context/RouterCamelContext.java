@@ -71,6 +71,8 @@ public class RouterCamelContext implements IRouterCamelContext {
     private Map<String, String> kafkaProps;
     private String configType;
     private String allowedEndpoints;
+    private String permittedImportBaseDirs;
+    private String permittedExportBaseDirs;
     private BundleContext bundleContext;
     private ConfigSharingService configSharingService;
 
@@ -179,6 +181,7 @@ public class RouterCamelContext implements IRouterCamelContext {
         builderReader.setImportConfigurationService(importConfigurationService);
         builderReader.setJacksonDataFormat(jacksonDataFormat);
         builderReader.setAllowedEndpoints(allowedEndpoints);
+        builderReader.setPermittedImportBaseDirs(permittedImportBaseDirs);
         builderReader.setContext(camelContext);
         camelContext.addRoutes(builderReader);
 
@@ -206,6 +209,7 @@ public class RouterCamelContext implements IRouterCamelContext {
         profileExportCollectRouteBuilder.setExportConfigurationList(exportConfigurationService.getAll());
         profileExportCollectRouteBuilder.setPersistenceService(persistenceService);
         profileExportCollectRouteBuilder.setAllowedEndpoints(allowedEndpoints);
+        profileExportCollectRouteBuilder.setPermittedExportBaseDirs(permittedExportBaseDirs);
         profileExportCollectRouteBuilder.setJacksonDataFormat(jacksonDataFormat);
         profileExportCollectRouteBuilder.setContext(camelContext);
         camelContext.addRoutes(profileExportCollectRouteBuilder);
@@ -249,6 +253,7 @@ public class RouterCamelContext implements IRouterCamelContext {
             builder.setImportConfigurationService(importConfigurationService);
             builder.setProfileService(profileService);
             builder.setAllowedEndpoints(allowedEndpoints);
+            builder.setPermittedImportBaseDirs(permittedImportBaseDirs);
             builder.setJacksonDataFormat(jacksonDataFormat);
             builder.setContext(camelContext);
             camelContext.addRoutes(builder);
@@ -269,6 +274,7 @@ public class RouterCamelContext implements IRouterCamelContext {
             profileExportCollectRouteBuilder.setExportConfigurationList(Collections.singletonList(exportConfiguration));
             profileExportCollectRouteBuilder.setPersistenceService(persistenceService);
             profileExportCollectRouteBuilder.setAllowedEndpoints(allowedEndpoints);
+            profileExportCollectRouteBuilder.setPermittedExportBaseDirs(permittedExportBaseDirs);
             profileExportCollectRouteBuilder.setJacksonDataFormat(jacksonDataFormat);
             profileExportCollectRouteBuilder.setContext(camelContext);
             camelContext.addRoutes(profileExportCollectRouteBuilder);
@@ -333,5 +339,13 @@ public class RouterCamelContext implements IRouterCamelContext {
 
     public void setAllowedEndpoints(String allowedEndpoints) {
         this.allowedEndpoints = allowedEndpoints;
+    }
+
+    public void setPermittedImportBaseDirs(String permittedImportBaseDirs) {
+        this.permittedImportBaseDirs = permittedImportBaseDirs;
+    }
+
+    public void setPermittedExportBaseDirs(String permittedExportBaseDirs) {
+        this.permittedExportBaseDirs = permittedExportBaseDirs;
     }
 }

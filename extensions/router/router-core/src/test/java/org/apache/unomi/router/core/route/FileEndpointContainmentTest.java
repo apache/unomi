@@ -186,6 +186,39 @@ public class FileEndpointContainmentTest {
     }
 
     @Test
+    public void importRouteIsRefusedWhenMoveFailedOptionEscapesPermittedBaseDir() throws Exception {
+        addImportRoutes(recurrentImport("movefailed-escape",
+                fileUri(permittedImportDir, "?fileName=profiles.csv&moveFailed=../" + arbitraryDir.getName())));
+
+        assertRouteRefused("movefailed-escape",
+                "moveFailed carries a path, and the route builder appends one of its own — every occurrence must be contained");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenPreMoveOptionEscapesPermittedBaseDir() throws Exception {
+        addImportRoutes(recurrentImport("premove-escape",
+                fileUri(permittedImportDir, "?fileName=profiles.csv&preMove=../" + arbitraryDir.getName())));
+
+        assertRouteRefused("premove-escape", "preMove carries a path and must be contained too");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenDoneFileNameOptionEscapesPermittedBaseDir() throws Exception {
+        addImportRoutes(recurrentImport("donefilename-escape",
+                fileUri(permittedImportDir, "?fileName=profiles.csv&doneFileName=../" + arbitraryDir.getName() + "/done")));
+
+        assertRouteRefused("donefilename-escape", "doneFileName carries a path and must be contained too");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenPathBearingOptionIsWrappedInRaw() throws Exception {
+        addImportRoutes(recurrentImport("raw-escape",
+                fileUri(permittedImportDir, "?fileName=RAW(../" + arbitraryDir.getName() + "/profiles.csv)")));
+
+        assertRouteRefused("raw-escape", "RAW() only tells Camel not to decode the value — the path it carries is used as-is");
+    }
+
+    @Test
     public void importRouteIsBuiltWhenMoveOptionIsRelativeAndStaysInsidePermittedBaseDir() throws Exception {
         addImportRoutes(recurrentImport("relative-move",
                 fileUri(permittedImportDir, "?fileName=profiles.csv&move=.done")));
@@ -266,6 +299,22 @@ public class FileEndpointContainmentTest {
                 fileUri(permittedExportDir, "?fileName=../" + arbitraryDir.getName() + "/profiles.csv")));
 
         assertRouteRefused("filename-escape", "fileName carries a path and must be contained too");
+    }
+
+    @Test
+    public void exportRouteIsRefusedWhenTempFileNameOptionEscapesPermittedBaseDir() throws Exception {
+        addExportRoutes(recurrentExport("tempfilename-escape",
+                fileUri(permittedExportDir, "?fileName=profiles.csv&tempFileName=../" + arbitraryDir.getName() + "/profiles.tmp")));
+
+        assertRouteRefused("tempfilename-escape", "tempFileName carries a path and must be contained too");
+    }
+
+    @Test
+    public void exportRouteIsRefusedWhenDoneFileNameOptionEscapesPermittedBaseDir() throws Exception {
+        addExportRoutes(recurrentExport("donefilename-escape",
+                fileUri(permittedExportDir, "?fileName=profiles.csv&doneFileName=../" + arbitraryDir.getName() + "/done")));
+
+        assertRouteRefused("donefilename-escape", "doneFileName carries a path and must be contained too");
     }
 
     @Test
