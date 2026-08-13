@@ -77,7 +77,7 @@ If this is not the case or you prefer to deploy using a KAR bundle, see the KAR 
 +
 [source]
 ----
-ssh -p 8102 karaf@localhost (default password is karaf)
+ssh -p 8102 karaf@localhost (the password is your configured UNOMI_ROOT_PASSWORD)
 ----
 +
 . Deploy into Apache Unomi using the following commands from the Apache Karaf shell:
@@ -111,8 +111,9 @@ The first URL will give you information about the version of the connectors, so 
 plugin is properly deployed, started and the correct version. The second URL will actually make a request to the
 Salesforce REST API to retrieve the limits of the Salesforce API.
 +
-Both URLs are password protected by the Apache Unomi (Karaf) password. You can find this user and password information
-in the etc/users.properties file.
+Both URLs are password protected by the Apache Unomi (Karaf) password: the `karaf` user and the
+`UNOMI_ROOT_PASSWORD` you configured at startup. No default password is shipped, and
+`etc/users.properties` only references the configured value rather than containing it.
 
 You can now use the connectors's defined actions in rules to push or pull data to/from the Salesforce CRM. You can
 find more information about rules in the <<_data_model_overview,Data Model>> and the <<_getting_started_with_unomi,Getting Started>> pages.
@@ -152,7 +153,7 @@ mvn clean install
 +
 [source]
 ----
-ssh -p 8102 karaf@localhost (password by default is karaf)
+ssh -p 8102 karaf@localhost (the password is your configured UNOMI_ROOT_PASSWORD)
 ----
 +
 . Execute the following commands in the Karaf shell
@@ -171,7 +172,7 @@ feature:install unomi-salesforce-connector-karaf-feature
 https://localhost:9443/cxs/sfdc/version
 ----
 +
-(if asked for a password it's the same karaf/karaf default)
+(if asked for credentials, use the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`)
 
 ==== Using the Salesforce Workbench for testing REST API
 

@@ -72,7 +72,7 @@ public abstract class BaseGraphQLIT extends BaseIT {
     }
 
     /**
-     * Performs a GraphQL POST request with JAAS admin authentication (karaf:karaf).
+     * Performs a GraphQL POST request with JAAS admin authentication ({@link #BASIC_AUTH_USER_NAME}/{@link #BASIC_AUTH_PASSWORD}).
      * This is equivalent to AuthType.JAAS_ADMIN.
      *
      * @param resource The resource path to the GraphQL query/mutation

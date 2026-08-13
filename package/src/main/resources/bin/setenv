@@ -50,6 +50,94 @@
 MY_DIRNAME=`dirname $0`
 MY_KARAF_HOME=`cd "$MY_DIRNAME/.."; pwd`
 
+# Fail fast when starting without admin/health passwords (no known defaults are shipped).
+#
+# An unset password does NOT resolve to "no account": ${env:...} with no value expands to the
+# empty string, which Karaf's PropertiesLoginModule accepts as a valid (empty) password for the
+# admin account. So "unset" and "blank" are the same failure, and both must be refused.
+#
+# This script is the gate for shell-launched Karaf; the Docker entrypoint covers containers. Any
+# launcher that starts the JVM directly without sourcing this file (systemd units, Kubernetes
+# command overrides, PaxExam) bypasses the check, so those deployments must set the passwords
+# themselves.
+_unomi_etc="${KARAF_ETC:-${MY_KARAF_HOME}/etc}"
+
+# Print the configured value of a property, searching custom.system.properties and the optional
+# overlay it includes. Last assignment wins, comments ignored. Empty output means "not configured".
+_unomi_configured_property() {
+  for _unomi_file in "${_unomi_etc}/custom.system.properties" "${_unomi_etc}/unomi.custom.system.properties"; do
+    [ -f "${_unomi_file}" ] || continue
+    sed -n "s|^[[:space:]]*$1[[:space:]]*=[[:space:]]*\(.*\)$|\1|p" "${_unomi_file}"
+  done | sed -e 's/[[:space:]]*$//' | grep -v '^$' | tail -n 1
+}
+
+# _unomi_require_password ENV_VAR_NAME PROPERTY_NAME SKIP_FLAG_NAME
+# Returns 0 when a non-blank password is available, 1 when startup must be refused.
+_unomi_require_password() {
+  eval _unomi_value=\"\${$1}\"
+  eval _unomi_skip=\"\${$3}\"
+
+  [ -n "${_unomi_value}" ] && return 0
+
+  _unomi_configured=`_unomi_configured_property "$2"`
+  case "${_unomi_configured}" in
+    # An unresolved ${env:...} placeholder is not a configured password — it expands to empty.
+    *'${'*) _unomi_configured='' ;;
+  esac
+  [ -n "${_unomi_configured}" ] && return 0
+
+  if [ "${_unomi_skip}" = "true" ]; then
+    cat >&2 <<EOF
+
+WARNING: $3=true, but neither $1 nor
+         $2 is set to a non-empty value.
+         If nothing else supplies this password, the account will be created with an EMPTY
+         password that authenticates successfully, granting full administrator access.
+
+EOF
+    return 0
+  fi
+
+  cat >&2 <<EOF
+ERROR: $1 is not set.
+
+Apache Unomi does not ship a known default password, and an unset value becomes an EMPTY
+password that still authenticates. Set one before starting, for example:
+
+  export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
+  export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
+  ./bin/karaf
+
+Or set $2 in etc/custom.system.properties
+(then $3=true only suppresses this early check).
+
+See getting started / configuration documentation for details.
+EOF
+  return 1
+}
+
+# Only guard the scripts that actually start the server. bin/stop, bin/status, bin/client and
+# bin/shell set KARAF_SCRIPT to their own name, so the outer case already excludes them.
+#
+# "bin/karaf stop" and "bin/karaf status" reuse KARAF_SCRIPT=karaf, so skip on the subcommand too:
+# those are the only two that replace the main class (with Main.Stop / Main.Status) instead of
+# booting the server. Everything else - including "karaf client", "karaf shell" and any unknown
+# argument - falls through to org.apache.karaf.main.Main and starts a full server, so it must be
+# guarded.
+case "${KARAF_SCRIPT}" in
+  karaf|start|server)
+    case "$1" in
+      stop|status) ;;
+      *)
+        _unomi_require_password UNOMI_ROOT_PASSWORD \
+            org.apache.unomi.security.root.password UNOMI_SKIP_ROOT_PASSWORD_CHECK || exit 1
+        _unomi_require_password UNOMI_HEALTHCHECK_PASSWORD \
+            org.apache.unomi.healthcheck.password UNOMI_SKIP_HEALTHCHECK_PASSWORD_CHECK || exit 1
+        ;;
+    esac
+    ;;
+esac
+
 # In order to activate the Yourkit Profiler agent, uncomment one of the following lines depending on the operating
 # system and adjust the path to the location of the installation directory.
 # On MacOS:

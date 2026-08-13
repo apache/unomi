@@ -645,14 +645,14 @@ NOTE: The REST API is for **monitoring and operations** (list, inspect, cancel, 
 .List all tasks (paginated)
 [source,bash]
 ----
-curl -s -u karaf:karaf \
+curl -s -u "karaf:$UNOMI_ROOT_PASSWORD" \
   "http://localhost:8181/cxs/tasks?offset=0&limit=20"
 ----
 
 .Filter by status
 [source,bash]
 ----
-curl -s -u karaf:karaf \
+curl -s -u "karaf:$UNOMI_ROOT_PASSWORD" \
   "http://localhost:8181/cxs/tasks?status=FAILED&limit=50"
 ----
 
@@ -661,7 +661,7 @@ Valid status values: `SCHEDULED`, `WAITING`, `RUNNING`, `COMPLETED`, `FAILED`, `
 .Filter by task type
 [source,bash]
 ----
-curl -s -u karaf:karaf \
+curl -s -u "karaf:$UNOMI_ROOT_PASSWORD" \
   "http://localhost:8181/cxs/tasks?type=cache-refresh-segment&limit=10"
 ----
 
@@ -689,7 +689,7 @@ curl -s -u karaf:karaf \
 
 [source,bash]
 ----
-curl -s -u karaf:karaf \
+curl -s -u "karaf:$UNOMI_ROOT_PASSWORD" \
   "http://localhost:8181/cxs/tasks/TASK_ID"
 ----
 
@@ -699,7 +699,7 @@ Cancellation stops future runs and marks the task `CANCELLED`. The task record r
 
 [source,bash]
 ----
-curl -s -u karaf:karaf -X DELETE \
+curl -s -u "karaf:$UNOMI_ROOT_PASSWORD" -X DELETE \
   "http://localhost:8181/cxs/tasks/TASK_ID"
 ----
 
@@ -710,11 +710,11 @@ Returns HTTP `204 No Content` on success.
 [source,bash]
 ----
 # Retry keeping failure count
-curl -s -u karaf:karaf -X POST \
+curl -s -u "karaf:$UNOMI_ROOT_PASSWORD" -X POST \
   "http://localhost:8181/cxs/tasks/TASK_ID/retry"
 
 # Retry and reset failure count to zero
-curl -s -u karaf:karaf -X POST \
+curl -s -u "karaf:$UNOMI_ROOT_PASSWORD" -X POST \
   "http://localhost:8181/cxs/tasks/TASK_ID/retry?resetFailureCount=true"
 ----
 
@@ -724,7 +724,7 @@ Use when status is `CRASHED` and the executor supports checkpoint resume.
 
 [source,bash]
 ----
-curl -s -u karaf:karaf -X POST \
+curl -s -u "karaf:$UNOMI_ROOT_PASSWORD" -X POST \
   "http://localhost:8181/cxs/tasks/TASK_ID/resume"
 ----
 

@@ -16,7 +16,7 @@
 
 The JSON schema endpoints are private, so the user has to be authenticated to manage the JSON schema in Unomi.
 
-IMPORTANT: JSON schema endpoints require tenant authentication using Basic Auth with `tenantId:privateKey`. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (`karaf:karaf`).
+IMPORTANT: JSON schema endpoints require tenant authentication using Basic Auth with `tenantId:privateKey`. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`).
 
 ==== List existing schemas
 
