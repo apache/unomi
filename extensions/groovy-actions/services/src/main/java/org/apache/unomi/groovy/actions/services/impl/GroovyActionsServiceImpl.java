@@ -301,7 +301,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             // Extract Action annotation and register the ActionType
             try {
                 synchronized(compilationLock) {
-                    Action actionAnnotation = compilationShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class);
+                    Action actionAnnotation = compileToClass(groovyCodeSource).getMethod("execute").getAnnotation(Action.class);
                     if (actionAnnotation != null) {
                         contextManager.executeAsSystem(() -> {
                             saveActionType(actionAnnotation);
@@ -407,7 +407,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             try {
                 GroovyCodeSource groovyCodeSource = new GroovyCodeSource(script, actionName, "/groovy/script");
                 synchronized(compilationLock) {
-                    compilationShell.parse(groovyCodeSource).getClass().getMethod("execute");
+                    compileToClass(groovyCodeSource).getMethod("execute");
                 }
                 // Note: We don't extract or save the ActionType here
             } catch (NoSuchMethodException e) {
@@ -471,14 +471,31 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         }
     }
 
+
     /**
      * Thread-safe script compilation using synchronized shared shell.
      */
     private Class<? extends Script> compileScript(String actionName, String scriptContent) {
         GroovyCodeSource codeSource = new GroovyCodeSource(scriptContent, actionName, "/groovy/script");
         synchronized(compilationLock) {
-            return compilationShell.parse(codeSource).getClass();
+            return compileToClass(codeSource);
         }
+    }
+
+
+    /**
+     * Compiles a script to its Class without instantiating it.
+     * <p>
+     * Deliberately {@code parseClass} and not {@code GroovyShell#parse}: {@code parse} returns a
+     * {@code Script} <em>instance</em>, and constructing that instance runs the script's field
+     * initializers. An uploaded script carrying a Groovy {@code @Field} initializer would therefore
+     * execute at upload/compile time, before any rule ever dispatches it. Every caller here only
+     * needs the compiled Class (to read the {@code @Action} annotation or check for {@code execute}),
+     * so nothing needs to be instantiated until the action is actually run.
+     */
+    @SuppressWarnings("unchecked")
+    private Class<? extends Script> compileToClass(GroovyCodeSource codeSource) {
+        return (Class<? extends Script>) compilationShell.getClassLoader().parseClass(codeSource, false);
     }
 
     /**
