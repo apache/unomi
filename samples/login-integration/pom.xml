@@ -25,7 +25,7 @@
     </parent>
     <artifactId>login-integration-sample</artifactId>
     <name>Apache Unomi :: Samples :: External Login plugin</name>
-    <description>This is a simple Apache Unomi plugin.</description>
+    <description>Server-side login sample that calls Unomi with trusted credentials so profile merge works (UNOMI-972).</description>
     <packaging>bundle</packaging>
 
     <dependencyManagement>
@@ -42,15 +42,39 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-api</artifactId>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax.servlet.jsp</groupId>
-            <artifactId>jsp-api</artifactId>
-            <version>2.1</version>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.metatype.annotations</artifactId>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -62,10 +86,10 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <_wab>src/main/webapp</_wab>
-                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
-                        <Embed-Directory>WEB-INF/lib</Embed-Directory>
-                        <Web-ContextPath>/login</Web-ContextPath>
+                        <_dsannotations>*</_dsannotations>
+                        <_metatypeannotations>*</_metatypeannotations>
+                        <Export-Package>!*</Export-Package>
+                        <Private-Package>org.apache.unomi.samples.login.*</Private-Package>
                     </instructions>
                 </configuration>
             </plugin>

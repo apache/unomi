@@ -1,0 +1,75 @@
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Unomi login sample</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="javascript/login-example.js"></script>
+</head>
+<body>
+<div class="container" style="max-width: 720px; margin-top: 2em;">
+    <h1>Login integration sample</h1>
+
+    <div id="alert_placeholder"></div>
+
+    <form id="loginForm">
+        <div class="form-group">
+            <label for="firstname">First name</label>
+            <input type="text" name="firstName" id="firstname" class="form-control" placeholder="First name"/>
+        </div>
+        <div class="form-group">
+            <label for="lastname">Last name</label>
+            <input type="text" name="lastName" id="lastname" class="form-control" placeholder="Last name"/>
+        </div>
+        <div class="form-group">
+            <label for="email">Email (merge key)</label>
+            <input type="text" name="email" id="email" class="form-control" placeholder="you@example.com" required/>
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <input type="password" name="password" id="password" class="form-control" placeholder="password printed by setup.sh" required/>
+        </div>
+        <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+
+    <p class="help-block" style="margin-top: 1.5em;">
+        To test merge: login once, note <code>profileId</code>, clear the <code>context-profile-id</code> cookie
+        (or use a private window), login again with the <strong>same email</strong> — you should get the same master profile.
+    </p>
+
+    <div class="panel panel-info" style="margin-top: 1.5em;">
+        <div class="panel-heading"><strong>How this sample works</strong></div>
+        <div class="panel-body">
+            <ol>
+                <li>This page posts the form to a <strong>server-side servlet</strong>
+                    (<code>/login/authenticate</code>) — not to <code>/cxs/context.json</code>.</li>
+                <li>The servlet checks the demo password <code>setup.sh</code> generated and stored as
+                    <code>demoPassword</code>, then calls Unomi with <strong>trusted</strong> Basic
+                    credentials (a tenant private key).</li>
+                <li>The bundled <code>exampleLogin</code> rule merges on email
+                    <code>mergeProfilesOnPropertyAction</code> (trusted callers only, UNOMI-972).</li>
+            </ol>
+        </div>
+    </div>
+</div>
+</body>
+</html>
