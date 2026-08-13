@@ -37,6 +37,7 @@ public class EventsRequestContext {
     private Session session;
 
     private boolean newSession = false;
+    private boolean sessionRefused = false;
     private HttpServletRequest request;
     private HttpServletResponse response;
     private int changes;
@@ -136,6 +137,30 @@ public class EventsRequestContext {
      */
     public void setNewSession(boolean newSession) {
         this.newSession = newSession;
+    }
+
+    /**
+     * Returns whether the session id supplied with the request was refused.
+     * <p>
+     * A public caller may only continue a session that the profile cookie it presented already
+     * owns. When it supplies someone else's session id the session is detached rather than
+     * rebound, and no session exists for the rest of the request. Callers building a response must
+     * not echo the supplied session id back in that case, or the client would believe its session
+     * was accepted and keep replaying the same rejected id.
+     *
+     * @return {@code true} when the supplied session id was rejected
+     */
+    public boolean isSessionRefused() {
+        return sessionRefused;
+    }
+
+    /**
+     * Records that the session id supplied with the request was refused.
+     *
+     * @param sessionRefused {@code true} when the supplied session id was rejected
+     */
+    public void setSessionRefused(boolean sessionRefused) {
+        this.sessionRefused = sessionRefused;
     }
 
     /**

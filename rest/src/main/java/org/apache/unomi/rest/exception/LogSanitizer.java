@@ -48,24 +48,19 @@ final class LogSanitizer {
      * Replaces every character that is not printable ASCII (or is a log-format marker such as
      * {@code \ { } % $}) with an underscore. This removes newlines, tabs and other control
      * characters that could be used for log injection.
+     * <p>
+     * Delegates to {@link org.apache.unomi.api.utils.LogSanitizer}, which is the one implementation
+     * of this filter, shared with the bundles outside {@code rest} that also log request-derived
+     * values. This class keeps only the REST-specific length limits and field shapes below.
+     * <p>
+     * Note the empty-string result for {@code null} is preserved here: the exception mappers embed
+     * this in user-facing messages where the literal {@code "null"} would read as a value.
      */
     static String forLogging(String input) {
         if (input == null) {
             return "";
         }
-        if (input.length() > MAX_MESSAGE_LENGTH) {
-            input = input.substring(0, MAX_MESSAGE_LENGTH) + "...[truncated]";
-        }
-        StringBuilder sanitized = new StringBuilder(input.length());
-        for (int i = 0; i < input.length(); i++) {
-            char c = input.charAt(i);
-            if (c >= 0x20 && c <= 0x7E && c != '\\' && c != '{' && c != '}' && c != '%' && c != '$') {
-                sanitized.append(c);
-            } else {
-                sanitized.append('_');
-            }
-        }
-        return sanitized.toString();
+        return org.apache.unomi.api.utils.LogSanitizer.forLogging(input, MAX_MESSAGE_LENGTH);
     }
 
     static String url(String url) {

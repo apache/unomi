@@ -52,8 +52,9 @@ Here's a minimal tracker structure:
         contextServerUrl: 'http://localhost:8181',
         apiKey: 'YOUR_PUBLIC_API_KEY',
         scope: 'mydigital',
-        sessionCookieName: 'unomi-session-id',
-        profileCookieName: 'context-profile-id'
+        sessionCookieName: 'unomi-session-id'
+        // No profile cookie name here: the profile ID cookie is HttpOnly and
+        // cannot be read from JavaScript. Use response.profileId instead.
     };
 
     // Tracker object
@@ -121,13 +122,13 @@ The tracker needs to generate and maintain a session ID. If no session ID exists
 // Generate a UUID v4
 // Uses crypto.randomUUID() if available (most secure, modern browsers)
 // Falls back to crypto.getRandomValues() (secure, widely supported)
-// Falls back to Math.random() only for very old browsers (less secure)
+// Fails closed if neither is available: session IDs must never be guessable
 generateUUID: function() {
     // Use crypto.randomUUID() if available (Chrome 92+, Firefox 95+, Safari 15.4+, Node.js 19+)
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
     }
-    
+
     // Use crypto.getRandomValues() if available (widely supported, secure)
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -136,14 +137,16 @@ generateUUID: function() {
             return v.toString(16);
         });
     }
-    
-    // Fallback to Math.random() for very old browsers (not cryptographically secure)
-    // Note: This is less secure and should only be used as a last resort
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0;
-        const v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
+
+    // No cryptographically secure source available: fail closed.
+    // Do NOT fall back to Math.random() — its output is predictable and a
+    // guessable session ID lets an untrusted caller take over a visitor's session.
+    throw new Error(
+        'Unomi tracker: no cryptographically secure random source available ' +
+        '(neither crypto.randomUUID nor crypto.getRandomValues). This browser is ' +
+        'unsupported: install a Web Crypto polyfill, or use a browser that provides ' +
+        'crypto.getRandomValues.'
+    );
 },
 
 // Get or create session ID
@@ -843,11 +846,13 @@ getContextWithRetry: function(options, callback, maxRetries) {
 
 ===== Profile ID Synchronization
 
-The profile ID is set by Apache Unomi in a cookie. Make sure to read it from the response:
+The profile ID is set by Apache Unomi in a cookie. By default the cookie is `HttpOnly`, so browser JavaScript
+**cannot** read it via `document.cookie`. Always prefer the `profileId` field in the JSON response. The browser still
+**sends** the cookie on subsequent requests when credentials/cookies are included.
 
 [source,javascript]
 ----
-// Enhanced context request that handles profile ID cookie
+// Enhanced context request that handles profile ID from the response
 getContext: function(options, callback) {
     // ... existing code ...
     
@@ -857,14 +862,10 @@ getContext: function(options, callback) {
                 try {
                     const response = JSON.parse(xhr.responseText);
                     
-                    // Profile ID cookie is automatically set by Apache Unomi
-                    // but we can verify it matches the response
-                    const cookieProfileId = tracker.getCookie(CONFIG.profileCookieName);
-                    if (response.profileId && cookieProfileId !== response.profileId) {
-                        console.warn('Profile ID mismatch:', {
-                            cookie: cookieProfileId,
-                            response: response.profileId
-                        });
+                    // Authoritative profile id for application logic:
+                    // response.profileId (cookie may be HttpOnly and unreadable from JS)
+                    if (response.profileId) {
+                        // store in memory / your app state if needed — do not rely on document.cookie
                     }
                     
                     if (callback) {
@@ -1005,7 +1006,8 @@ Here's a complete, production-ready tracker implementation combining all the con
         apiKey: 'YOUR_PUBLIC_API_KEY',
         scope: 'mydigital',
         sessionCookieName: 'unomi-session-id',
-        profileCookieName: 'context-profile-id',
+        // No profile cookie name here: the profile ID cookie is HttpOnly and
+        // cannot be read from JavaScript. Use response.profileId instead.
         eventQueueSize: 10,
         eventQueueInterval: 5000
     };
@@ -1034,13 +1036,13 @@ Here's a complete, production-ready tracker implementation combining all the con
         // UUID generation
         // Uses crypto.randomUUID() if available (most secure, modern browsers)
         // Falls back to crypto.getRandomValues() (secure, widely supported)
-        // Falls back to Math.random() only for very old browsers (less secure)
+        // Fails closed if neither is available: session IDs must never be guessable
         generateUUID: function() {
             // Use crypto.randomUUID() if available (Chrome 92+, Firefox 95+, Safari 15.4+, Node.js 19+)
             if (typeof crypto !== 'undefined' && crypto.randomUUID) {
                 return crypto.randomUUID();
             }
-            
+
             // Use crypto.getRandomValues() if available (widely supported, secure)
             if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
                 return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -1049,14 +1051,16 @@ Here's a complete, production-ready tracker implementation combining all the con
                     return v.toString(16);
                 });
             }
-            
-            // Fallback to Math.random() for very old browsers (not cryptographically secure)
-            // Note: This is less secure and should only be used as a last resort
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                const r = Math.random() * 16 | 0;
-                const v = c === 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
+
+            // No cryptographically secure source available: fail closed.
+            // Do NOT fall back to Math.random() — its output is predictable and a
+            // guessable session ID lets an untrusted caller take over a visitor's session.
+            throw new Error(
+                'Unomi tracker: no cryptographically secure random source available ' +
+                '(neither crypto.randomUUID nor crypto.getRandomValues). This browser is ' +
+                'unsupported: install a Web Crypto polyfill, or use a browser that provides ' +
+                'crypto.getRandomValues.'
+            );
         },
         
         // Session management
@@ -1230,26 +1234,31 @@ Here's a complete, production-ready tracker implementation combining all the con
 ====
 **Security Considerations for UUID Generation**
 
-The tracker uses UUIDs for session IDs, which should be unpredictable to prevent session hijacking. The implementation in this guide uses a secure fallback chain:
+Session IDs are security-relevant: a session ID is a bearer identifier, so anyone who can predict one can take over the corresponding visitor session. The implementation in this guide therefore uses only cryptographically secure sources, and **fails closed** when none is available:
 
 1. **`crypto.randomUUID()`** (Preferred): Available in modern browsers (Chrome 92+, Firefox 95+, Safari 15.4+, Edge 92+). This is the most secure option and generates RFC 4122-compliant UUIDs using cryptographically secure random number generation.
 
 2. **`crypto.getRandomValues()`** (Fallback): Available in all modern browsers (IE 11+, Chrome 11+, Firefox 21+, Safari 5.1+). Uses the Web Crypto API to generate cryptographically secure random values. This is secure and widely compatible.
 
-3. **`Math.random()`** (Last Resort): Only used for very old browsers that don't support the Web Crypto API. This is **not cryptographically secure** and can be predictable, making it vulnerable to session hijacking attacks.
+3. **No secure source → throw**: if neither Web Crypto entry point exists, `generateUUID()` throws an `Error` instead of returning an identifier. There is deliberately **no `Math.random()` fallback**: `Math.random()` is not cryptographically secure, its output is predictable, and returning such a value would silently hand untrusted callers a guessable session ID. Refusing to track is the safer outcome.
 
 **Recommendations:**
 * For production applications, ensure your minimum browser support includes browsers with `crypto.getRandomValues()` support (essentially all browsers from 2013+)
-* If you need to support very old browsers (IE 10 and below), consider using a polyfill or warning users about security limitations
-* Never use `Math.random()` alone for security-sensitive identifiers like session IDs or authentication tokens
+* Serve your pages over HTTPS. `crypto.randomUUID()` is restricted to secure contexts, so over plain HTTP the tracker
+  falls back to `crypto.getRandomValues()`, which is available in non-secure contexts too. HTTPS is worth doing on its
+  own merits - a session identifier travelling in clear text is the larger problem - but plain HTTP alone does not reach
+  the fail-closed branch on a current browser
+* If you must support browsers without the Web Crypto API (IE 10 and below), install a Web Crypto polyfill — do not reintroduce a `Math.random()` fallback
+* Never use `Math.random()` for security-sensitive identifiers like session IDs or authentication tokens
+* Handle the thrown error in your integration (for example, disable tracking and log a warning) rather than letting it break unrelated page scripts
 * The profile ID is always generated server-side by Apache Unomi using secure UUID generation, so client-side UUID generation is only needed for session IDs
 
 **Browser Compatibility:**
-* `crypto.randomUUID()`: Chrome 92+, Firefox 95+, Safari 15.4+, Edge 92+ (2021+)
-* `crypto.getRandomValues()`: All modern browsers (2013+)
-* `Math.random()`: All browsers (but not secure)
+* `crypto.randomUUID()`: Chrome 92+, Firefox 95+, Safari 15.4+, Edge 92+ (2021+), secure contexts only
+* `crypto.getRandomValues()`: All modern browsers (2013+), available in secure and non-secure contexts
+* Anything older, or any non-secure context: unsupported — the tracker throws rather than generating a weak session ID
 
-For maximum security and compatibility, the implementation automatically uses the best available method.
+The implementation automatically uses the best available secure method, and refuses to generate a session ID when there is none.
 ====
 
 ==== Next Steps
