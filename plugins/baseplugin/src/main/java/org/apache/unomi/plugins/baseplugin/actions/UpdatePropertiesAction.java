@@ -24,6 +24,9 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
+import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.utils.LogSanitizer;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
@@ -46,11 +49,17 @@ public class UpdatePropertiesAction implements ActionExecutor {
 
     public static final String TARGET_TYPE_PROFILE = "profile";
 
+    /** The reserved profile field that only a caller with system access may write. */
+    private static final String SYSTEM_PROPERTIES_KEY = "systemProperties";
+    /** Prefix of the profile properties that only a caller with system access may write. */
+    private static final String SYSTEM_PROPERTIES_PREFIX = SYSTEM_PROPERTIES_KEY + ".";
+
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdatePropertiesAction.class.getName());
 
     private ProfileService profileService;
     private EventService eventService;
     private TracerService tracerService;
+    private SecurityService securityService;
 
     public int execute(Action action, Event event) {
         RequestTracer tracer = null;
@@ -64,6 +73,8 @@ public class UpdatePropertiesAction implements ActionExecutor {
             Profile target = event.getProfile();
             String targetId = (String) event.getProperty(TARGET_ID_KEY);
             String targetType = (String) event.getProperty(TARGET_TYPE_KEY);
+            // Resolved once for the whole action: the caller's roles cannot change while it runs.
+            final boolean trustedCaller = isTrustedIdentityCaller();
 
             if (tracer != null) {
                 Map<String, Object> traceData = new HashMap<>();
@@ -74,12 +85,20 @@ public class UpdatePropertiesAction implements ActionExecutor {
             }
 
             if (StringUtils.isNotBlank(targetId) && event.getProfile() != null && !targetId.equals(event.getProfile().getItemId())) {
+                if (!trustedCaller) {
+                    LOGGER.warn("Refusing cross-profile property update for untrusted caller (targetId={})",
+                            LogSanitizer.forLogging(targetId));
+                    if (tracer != null) {
+                        tracer.endOperation(false, "Untrusted caller cannot update another profile");
+                    }
+                    return EventService.NO_CHANGE;
+                }
                 target = TARGET_TYPE_PROFILE.equals(targetType) ? profileService.load(targetId) : profileService.loadPersona(targetId);
                 if (target == null) {
                     if (tracer != null) {
                         tracer.endOperation(false, "No profile found with Id: " + targetId);
                     }
-                    LOGGER.warn("No profile found with Id : {}. Update skipped.", targetId);
+                    LOGGER.warn("No profile found with Id : {}. Update skipped.", LogSanitizer.forLogging(targetId));
                     return EventService.NO_CHANGE;
                 }
             }
@@ -89,22 +108,26 @@ public class UpdatePropertiesAction implements ActionExecutor {
             Map<String, Object> propsToAdd = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_ADD);
 
             if (propsToAdd != null) {
-                isProfileOrPersonaUpdated |= processProperties(target, propsToAdd, "setIfMissing");
+                isProfileOrPersonaUpdated |= processProperties(target, propsToAdd, "setIfMissing", trustedCaller);
             }
 
             Map<String, Object> propsToUpdate = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_UPDATE);
             if (propsToUpdate != null) {
-                isProfileOrPersonaUpdated |= processProperties(target, propsToUpdate, "alwaysSet");
+                isProfileOrPersonaUpdated |= processProperties(target, propsToUpdate, "alwaysSet", trustedCaller);
             }
 
             Map<String, Object> propsToAddToSet = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_ADD_TO_SET);
             if (propsToAddToSet != null) {
-                isProfileOrPersonaUpdated |= processProperties(target, propsToAddToSet, "addValues");
+                isProfileOrPersonaUpdated |= processProperties(target, propsToAddToSet, "addValues", trustedCaller);
             }
 
             List<String> propsToDelete = (List<String>) event.getProperties().get(PROPS_TO_DELETE);
             if (propsToDelete != null) {
                 for (String prop : propsToDelete) {
+                    if (!trustedCaller && isSystemPropertiesWrite(prop)) {
+                        LOGGER.warn("Refusing systemProperties delete for untrusted caller: {}", LogSanitizer.forLogging(prop));
+                        continue;
+                    }
                     isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, null, "remove");
                 }
             }
@@ -140,11 +163,15 @@ public class UpdatePropertiesAction implements ActionExecutor {
         }
     }
 
-    private boolean processProperties(Profile target, Map<String, Object> propsMap, String strategy) {
+    private boolean processProperties(Profile target, Map<String, Object> propsMap, String strategy, boolean trustedCaller) {
         boolean isProfileOrPersonaUpdated = false;
         for (String prop : propsMap.keySet()) {
+            if (!trustedCaller && isSystemPropertiesWrite(prop)) {
+                LOGGER.warn("Refusing systemProperties update for untrusted caller: {}", LogSanitizer.forLogging(prop));
+                continue;
+            }
             PropertyType propType = null;
-            if (prop.startsWith("properties.") || prop.startsWith("systemProperties.")) {
+            if (prop.startsWith("properties.") || prop.startsWith(SYSTEM_PROPERTIES_PREFIX)) {
                 propType = profileService.getPropertyType(prop.substring(prop.indexOf('.') + 1));
             } else {
                 propType = profileService.getPropertyType(prop);
@@ -162,6 +189,34 @@ public class UpdatePropertiesAction implements ActionExecutor {
         return isProfileOrPersonaUpdated;
     }
 
+
+    /**
+     * Whether a property name writes the reserved {@code systemProperties} area.
+     * <p>
+     * Matching the {@code systemProperties.} prefix alone was not enough: the bare key
+     * {@code systemProperties} has no dot, so it slipped through, and for a flat name
+     * {@link org.apache.unomi.persistence.spi.PropertyHelper#setProperty} falls through to
+     * {@code BeanUtils.setProperty}, which invokes {@code Profile#setSystemProperties(Map)} and
+     * replaces the entire map. That is strictly more than the per-key write this gate blocks — it
+     * is enough to plant {@code mergeIdentifier} and drive the profile-merge action.
+     *
+     * @param propertyName the event-supplied property name
+     * @return true when the name targets systemProperties, whether wholesale or a single entry
+     */
+    private static boolean isSystemPropertiesWrite(String propertyName) {
+        return SYSTEM_PROPERTIES_KEY.equals(propertyName) || propertyName.startsWith(SYSTEM_PROPERTIES_PREFIX);
+    }
+    /**
+     * Whether the caller holds system access, i.e. the administrator or tenant administrator role.
+     * <p>
+     * Cross-profile updates and {@code systemProperties.*} writes are restricted to such callers.
+     * A tenant private key authenticates as {@link UnomiRoles#TENANT_ADMINISTRATOR} and passes; a
+     * tenant public API key or an unauthenticated context event does not.
+     */
+    private boolean isTrustedIdentityCaller() {
+        return securityService != null && securityService.hasSystemAccess();
+    }
+
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
     }
@@ -172,6 +227,10 @@ public class UpdatePropertiesAction implements ActionExecutor {
 
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
+    }
+
+    public void setSecurityService(SecurityService securityService) {
+        this.securityService = securityService;
     }
 
 }
