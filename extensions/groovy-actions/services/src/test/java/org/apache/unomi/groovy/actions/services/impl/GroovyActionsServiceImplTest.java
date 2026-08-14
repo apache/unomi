@@ -55,6 +55,13 @@ import java.util.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import java.io.File;
+import java.nio.file.Path;
+import java.util.List;
+import static org.junit.Assume.assumeTrue;
 
 /**
  * Unit tests for the GroovyActionsServiceImpl class.
@@ -544,5 +551,180 @@ public class GroovyActionsServiceImplTest {
                 return null;
             });
         }
+    }
+
+    /**
+     * The audit record is the only durable trace of an operation the threat model calls equivalent to
+     * shell access, so it needs a test of its own rather than being assumed to work. Captures the real
+     * log events instead of asserting on a helper's return value, because what matters is that a WARN
+     * record actually reaches an appender - a production log config that drops INFO must still get it.
+     */
+    @Test
+    public void testSaveEmitsAnAuditRecordWithOutcomeAndHash() throws Exception {
+        String groovyScript = loadGroovyScript(
+            "/META-INF/cxs/actions/testSaveAction.groovy", "Could not find test Groovy action file");
+        ch.qos.logback.classic.Logger auditLogger = (ch.qos.logback.classic.Logger)
+                org.slf4j.LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        auditLogger.addAppender(appender);
+        try {
+            contextManager.executeAsTenant(TENANT_1, () -> {
+                groovyActionsService.save("auditedAction", groovyScript);
+            });
+
+            List<String> audits = appender.list.stream()
+                    .filter(e -> e.getLevel() == Level.WARN)
+                    .map(ILoggingEvent::getFormattedMessage)
+                    .filter(m -> m.startsWith("AUDIT groovy-action"))
+                    .collect(java.util.stream.Collectors.toList());
+
+            assertEquals("expected an attempt record and an outcome record, got: " + audits, 2, audits.size());
+            assertTrue(audits.get(0), audits.get(0).startsWith("AUDIT groovy-action save attempted:"));
+            assertTrue(audits.get(1), audits.get(1).startsWith("AUDIT groovy-action save success:"));
+            for (String audit : audits) {
+                assertTrue("the action must be identified: " + audit, audit.contains("action=auditedAction"));
+                assertTrue("the tenant must be recorded: " + audit, audit.contains("tenant=" + TENANT_1));
+            }
+            // The hash lets an operator tell an unchanged redeploy from a modified script without
+            // writing the script body to the log.
+            assertTrue("the attempt record must carry the script hash: " + audits.get(0),
+                    audits.get(0).matches(".*scriptSha256=[0-9a-f]{64}$"));
+        } finally {
+            auditLogger.detachAppender(appender);
+        }
+    }
+
+    /** A failed save must not be recorded as if the action had been deployed. */
+    @Test
+    public void testFailedSaveIsAuditedAsFailedNotSuccess() throws Exception {
+        ch.qos.logback.classic.Logger auditLogger = (ch.qos.logback.classic.Logger)
+                org.slf4j.LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        auditLogger.addAppender(appender);
+        try {
+            contextManager.executeAsTenant(TENANT_1, () -> {
+                try {
+                    groovyActionsService.save("brokenAction", "this is not valid groovy {{{");
+                } catch (RuntimeException expected) {
+                    // compilation failure is the point
+                }
+            });
+
+            List<String> audits = appender.list.stream()
+                    .filter(e -> e.getLevel() == Level.WARN)
+                    .map(ILoggingEvent::getFormattedMessage)
+                    .filter(m -> m.startsWith("AUDIT groovy-action"))
+                    .collect(java.util.stream.Collectors.toList());
+
+            assertTrue("a failed save must be audited: " + audits, audits.size() >= 2);
+            assertTrue("the outcome must be failed, not success: " + audits,
+                    audits.stream().anyMatch(a -> a.startsWith("AUDIT groovy-action save failed:")));
+            assertTrue("no success record may be emitted for a failed save: " + audits,
+                    audits.stream().noneMatch(a -> a.startsWith("AUDIT groovy-action save success:")));
+        } finally {
+            auditLogger.detachAppender(appender);
+        }
+    }
+
+    /**
+     * The action name is the uploaded filename on the REST path, so it is caller-controlled, and it
+     * ends up in a dozen log messages including the upload audit record. A newline in it would let
+     * an uploader append injected log lines — hiding their own upload behind a fabricated one. Reject
+     * it at the entry point rather than sanitizing at each log site, which the next log statement
+     * would forget.
+     */
+    @Test
+    public void testSaveRejectsActionNamesWithControlCharacters() throws Exception {
+        String groovyScript = loadGroovyScript(
+            "/META-INF/cxs/actions/testSaveAction.groovy",
+            "Could not find test Groovy action file");
+        String forgedName = "innocent\n2026-08-08 12:00:00 WARN  AUDIT groovy-action save: action=approved";
+
+        contextManager.executeAsTenant(TENANT_1, () -> {
+            try {
+                groovyActionsService.save(forgedName, groovyScript);
+                fail("an action name containing a newline must be rejected");
+            } catch (IllegalArgumentException e) {
+                assertTrue(e.getMessage(), e.getMessage().contains("control, bidirectional-override or zero-width characters"));
+            }
+            try {
+                groovyActionsService.remove(forgedName);
+                fail("remove must reject the same names as save");
+            } catch (IllegalArgumentException e) {
+                assertTrue(e.getMessage(), e.getMessage().contains("control, bidirectional-override or zero-width characters"));
+            }
+            // U+2028 is a line terminator that Character.isISOControl does not report, so a check
+            // written against that predicate alone would let this through.
+            try {
+                groovyActionsService.save("innocent\u2028forged-record", groovyScript);
+                fail("U+2028 LINE SEPARATOR must be rejected too");
+            } catch (IllegalArgumentException e) {
+                assertTrue(e.getMessage(), e.getMessage().contains("control, bidirectional-override or zero-width characters"));
+            }
+        });
+    }
+
+    /**
+     * Rejecting only ISO control characters was narrower than the guarantee the javadoc claimed.
+     * A bidirectional override reverses how the rest of a log line *displays* without changing the
+     * bytes a search matches; zero-width characters split a token so an exact-match alert stops
+     * firing. Both reach the action name's other log sites, so both are rejected at the entry point.
+     * Printable non-ASCII stays allowed - an accented filename is a legitimate action name.
+     */
+    @Test
+    public void testSaveRejectsDisguisingCharactersInActionNames() throws Exception {
+        String groovyScript = loadGroovyScript(
+            "/META-INF/cxs/actions/testSaveAction.groovy", "Could not find test Groovy action file");
+
+        String[] disguised = {
+                "action\u202edesrever",   // right-to-left override
+                "action\u2066isolated",   // bidi isolate
+                "act\u200bion",           // zero-width space
+                "action\ufeff"            // zero-width no-break space / BOM
+        };
+        contextManager.executeAsTenant(TENANT_1, () -> {
+            for (String name : disguised) {
+                try {
+                    groovyActionsService.save(name, groovyScript);
+                    fail("must reject a disguising character in an action name: " + escaped(name));
+                } catch (IllegalArgumentException expected) {
+                    assertTrue(expected.getMessage(), expected.getMessage().contains("zero-width"));
+                }
+            }
+            // An over-long name is bounded too: it is a persistence id and a log field.
+            StringBuilder tooLong = new StringBuilder();
+            for (int i = 0; i < 300; i++) {
+                tooLong.append('a');
+            }
+            try {
+                groovyActionsService.save(tooLong.toString(), groovyScript);
+                fail("must reject an over-long action name");
+            } catch (IllegalArgumentException expected) {
+                assertTrue(expected.getMessage(), expected.getMessage().contains("must not exceed"));
+            }
+        });
+    }
+
+    /** Printable non-ASCII must keep working: rejecting it would break existing action names. */
+    @Test
+    public void testSaveAcceptsAccentedActionNames() throws Exception {
+        String groovyScript = loadGroovyScript(
+            "/META-INF/cxs/actions/testSaveAction.groovy", "Could not find test Groovy action file");
+        contextManager.executeAsTenant(TENANT_1, () -> {
+            groovyActionsService.save("actionAccentu\u00e9e", groovyScript);
+        });
+        contextManager.executeAsTenant(TENANT_1, () -> {
+            assertNotNull(groovyActionsService.getCompiledScript("actionAccentu\u00e9e"));
+        });
+    }
+
+    private static String escaped(String s) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < s.length(); i++) {
+            sb.append(String.format("\\u%04x", (int) s.charAt(i)));
+        }
+        return sb.toString();
     }
 }

@@ -167,9 +167,13 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- logback rather than slf4j-simple: the audit-record test asserts on captured log events
+             via ListAppender, which needs a binding that exposes them. Same version and scope as the
+             services module, which uses the identical pattern. -->
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.13</version>
             <scope>test</scope>
         </dependency>
         <dependency>

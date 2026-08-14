@@ -23,6 +23,7 @@ import groovy.lang.Script;
 import groovy.util.GroovyScriptEngine;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Parameter;
 import org.apache.unomi.api.actions.ActionType;
@@ -32,6 +33,7 @@ import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.api.utils.LogSanitizer;
 import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.GroovyBundleResourceConnector;
 import org.apache.unomi.groovy.actions.ScriptMetadata;
@@ -58,6 +60,8 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -103,6 +107,8 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
     private volatile Map<String, Map<String, ScriptMetadata>> scriptMetadataCacheByTenant = new ConcurrentHashMap<>();
     private final Map<String, Set<String>> loggedRefreshErrors = new ConcurrentHashMap<>();
     private static final int MAX_LOGGED_ERRORS = 100; // Prevent memory leak
+    /** An action name is an identifier and a persistence id; nothing legitimate approaches this. */
+    private static final int MAX_ACTION_NAME_LENGTH = 255;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
     private static final String BASE_SCRIPT_NAME = "BaseScript";
@@ -471,6 +477,50 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         }
     }
 
+    /**
+     * Rejects an action name containing control characters.
+     * <p>
+     * The name is caller-supplied — on the REST path it is the uploaded multipart filename — and it
+     * becomes a persistence id, a cache key, a {@code GroovyCodeSource} name and a field in a dozen
+     * log messages. A newline in it would let an uploader inject log records, including the audit
+     * record of their own upload. Rejecting at the entry point fixes every one of those uses at
+     * once, and keeps future log statements safe without each having to remember to sanitize.
+     * <p>
+     * Deliberately a rejection rather than a rewrite: silently altering the name would change the id
+     * an action is stored and looked up under.
+     */
+    private void validateActionName(String value, String parameterName) {
+        if (value.length() > MAX_ACTION_NAME_LENGTH) {
+            throw new IllegalArgumentException(parameterName + " must not exceed " + MAX_ACTION_NAME_LENGTH
+                    + " characters (was " + value.length() + ")");
+        }
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (isRejectedInIdentifier(c)) {
+                throw new IllegalArgumentException(parameterName
+                        + " must not contain control, bidirectional-override or zero-width characters"
+                        + " (found one at position " + i + ")");
+            }
+        }
+    }
+
+    /**
+     * Characters that have no legitimate place in an identifier and that misrepresent a log record.
+     * <p>
+     * Not just {@link Character#isISOControl}: U+2028 and U+2029 are line terminators that predicate
+     * does not report, bidirectional overrides reverse how the rest of a line *displays* without
+     * changing the bytes a search would match, and zero-width characters split a token so an
+     * exact-match alert stops firing on it. Printable non-ASCII is deliberately still allowed - an
+     * accented filename is a legitimate action name and rejecting it would break existing callers.
+     */
+    private static boolean isRejectedInIdentifier(char c) {
+        return Character.isISOControl(c)
+                || c == '\u2028' || c == '\u2029'                       // line/paragraph separators
+                || (c >= '\u202a' && c <= '\u202e')                     // bidi embedding/override
+                || (c >= '\u2066' && c <= '\u2069')                     // bidi isolates
+                || c == '\u200b' || c == '\u200c' || c == '\u200d'      // zero-width space/joiners
+                || c == '\ufeff';                                       // zero-width no-break space / BOM
+    }
 
     /**
      * Thread-safe script compilation using synchronized shared shell.
@@ -482,6 +532,67 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         }
     }
 
+    /**
+     * Records every change to the deployed Groovy actions at WARN.
+     * <p>
+     * A Groovy action runs unrestricted in the server JVM, so saving one is equivalent to granting
+     * shell access to the host. There is no sandbox to fall back on — the Java SecurityManager is
+     * removed, and Groovy's {@code SecureASTCustomizer} is a compile-time syntax restriction that
+     * dynamic dispatch routes around — so the controls are the ADMINISTRATOR role on the endpoint
+     * and this record of who changed what. WARN rather than INFO deliberately: this must survive a
+     * production log configuration that drops INFO, otherwise there is no trace of the change.
+     * <p>
+     * The script hash lets an operator tell an unchanged redeploy from a modified script, and gives
+     * incident response something to compare against a known-good inventory, without writing
+     * possibly-sensitive script bodies to the log. The tenant and role set come from the current
+     * execution context; the authenticated principal is in the REST access log for the same request.
+     *
+     * Emitted twice per operation: once as {@code attempted} before the work starts, so an upload
+     * that crashes the JVM still leaves a trace, and once with the outcome afterwards. Without the
+     * second record a failed or no-op save was indistinguishable from a deployed change, which made
+     * the trail misleading for exactly the operation this exists to track.
+     *
+     * @param operation  the change being made, {@code save} or {@code remove}
+     * @param actionName the action being changed
+     * @param script     the script being stored, or {@code null} when removing or reporting outcome
+     * @param outcome    {@code attempted}, {@code success}, {@code unchanged} or {@code failed}
+     */
+    private void auditScriptChange(String operation, String actionName, String script, String outcome) {
+        String tenantId = "unknown";
+        String roles = "unknown";
+        try {
+            ExecutionContext context = contextManager.getCurrentContext();
+            if (context != null) {
+                tenantId = context.getTenantId();
+                roles = String.valueOf(context.getRoles());
+            }
+        } catch (RuntimeException e) {
+            // An audit record with less detail beats losing the record, and beats failing the
+            // operation over its own logging.
+            LOGGER.debug("Could not resolve the execution context for the Groovy action audit record", e);
+        }
+        // actionName is caller-supplied (the uploaded multipart filename, or the DELETE path
+        // parameter), so it must not reach the log verbatim: a newline in it would let an uploader
+        // inject additional audit records and hide their own. The hash and the role set are
+        // server-generated and safe as-is.
+        LOGGER.warn("AUDIT groovy-action {} {}: action={} tenant={} roles={} scriptSha256={}",
+                operation, outcome, LogSanitizer.forLogging(actionName), LogSanitizer.forLogging(tenantId), roles,
+                script == null ? "n/a" : sha256(script));
+    }
+
+    private static String sha256(String value) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 is mandated by the JLS, so this cannot happen on a valid JRE.
+            return "unavailable";
+        }
+    }
 
     /**
      * Compiles a script to its Class without instantiating it.
@@ -537,9 +648,11 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
     @Override
     public void save(String actionName, String groovyScript) {
         validateNotEmpty(actionName, "Action name");
+        validateActionName(actionName, "Action name");
         validateNotEmpty(groovyScript, "Groovy script");
 
         long startTime = System.currentTimeMillis();
+        auditScriptChange("save", actionName, groovyScript, "attempted");
         LOGGER.info("Saving script: {}", actionName);
 
         try {
@@ -547,6 +660,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
 
             ScriptMetadata existingMetadata = scriptMetadataMap.get(actionName);
             if (existingMetadata != null && !existingMetadata.hasChanged(groovyScript)) {
+                auditScriptChange("save", actionName, null, "unchanged");
                 LOGGER.info("Script {} unchanged, skipping recompilation ({}ms)", actionName,
                     System.currentTimeMillis() - startTime);
                 return;
@@ -569,11 +683,13 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             scriptMetadataMap.put(actionName, metadata);
 
             long totalTime = System.currentTimeMillis() - startTime;
+            auditScriptChange("save", actionName, groovyScript, "success");
             LOGGER.info("Script {} saved and compiled successfully (total: {}ms, compilation: {}ms)",
                 actionName, totalTime, compilationTime);
 
         } catch (Exception e) {
             long totalTime = System.currentTimeMillis() - startTime;
+            auditScriptChange("save", actionName, null, "failed");
             LOGGER.error("Failed to save script: {} ({}ms)", actionName, totalTime, e);
             throw new RuntimeException("Failed to save script: " + actionName, e);
         }
@@ -601,7 +717,9 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
     @Override
     public void remove(String actionName) {
         validateNotEmpty(actionName, "Action name");
+        validateActionName(actionName, "Action name");
 
+        auditScriptChange("remove", actionName, null, "attempted");
         LOGGER.info("Removing script: {}", actionName);
 
         // Snapshot the metadata before the locked removal so we can extract the @Action
@@ -633,6 +751,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             }
         }
 
+        auditScriptChange("remove", actionName, null, "success");
         LOGGER.info("Script {} removed successfully", actionName);
     }
 
