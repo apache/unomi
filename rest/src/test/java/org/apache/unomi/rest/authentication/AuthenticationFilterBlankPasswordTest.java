@@ -141,6 +141,36 @@ class AuthenticationFilterBlankPasswordTest {
     }
 
     /**
+     * The ordinary V3 branch: not {@code tenants}, not a public path, V2 compatibility off. This is
+     * the route most private REST calls take, and it consumes the Basic credential at its own call
+     * site — with only the {@code tenants} and V2 tests above, deleting the guard here would leave
+     * the whole suite green.
+     */
+    @Test
+    void filterRejectsBlankPasswordOnAPrivatePath() throws IOException {
+        when(restAuthenticationConfig.getPublicPathPatterns()).thenReturn(Collections.emptyList());
+        ContainerRequestContext requestContext = request("profiles", basic("karaf:"));
+
+        filter.filter(requestContext);
+
+        assertUnauthorizedWithoutReachingJaas(requestContext);
+    }
+
+    /**
+     * Control for the ordinary V3 branch: a non-blank credential must still be offered to the tenant
+     * private-key check and then to JAAS.
+     */
+    @Test
+    void filterPassesNonBlankPasswordToJaasOnAPrivatePath() throws IOException {
+        when(restAuthenticationConfig.getPublicPathPatterns()).thenReturn(Collections.emptyList());
+        ContainerRequestContext requestContext = request("profiles", basic("karaf:a-strong-password"));
+
+        filter.filter(requestContext);
+
+        verify(jaasAuthenticationFilter).filter(requestContext);
+    }
+
+    /**
      * V2 compatibility mode routes every request through {@link AuthenticationFilter}'s own
      * private-endpoint branch, which consumes the Basic credential at a third, separate call site.
      * Without this test that call site is unreachable from the suite: the other tests leave

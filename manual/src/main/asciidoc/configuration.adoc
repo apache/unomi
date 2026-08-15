@@ -1756,7 +1756,9 @@ is up and running and can serve requests.
 The health check endpoint is available at the following URL: /health/check and returns a simple JSON response that includes all health check provider responses.
 
 Basic Http Authentication enforce security for the health check endpoint using the existing karaf realm. The user needs to have the specific role **health**
-to access the endpoint. Users and roles can be configured in the etc/users.properties file. By default, a login/pass health/health is configured.
+to access the endpoint. Users and roles can be configured in the etc/users.properties file. The shipped `health` user has no default password: its
+password comes from `UNOMI_HEALTHCHECK_PASSWORD`, which must be set before starting (see <<_rest_api_security,REST API security>>). An empty password is
+never accepted, on this endpoint or any other.
 
 Specific configuration is located in : org.apache.unomi.healthcheck.cfg  Existing health checks are using configuration from that file, including authentication realm.
 

@@ -139,6 +139,41 @@ class GraphQLServletSecurityValidatorTest {
     }
 
     /**
+     * An unset {@code org.apache.unomi.security.root.password} resolves to the empty string, which
+     * {@code PropertiesLoginModule} accepts as the shipped administrator's password (UNOMI-974).
+     * This servlet logs in against the karaf realm directly, outside the REST
+     * {@code AuthenticationFilter}, so it carries its own refusal.
+     * <p>
+     * The realm stubbed here accepts <em>any</em> credential, so this only passes if the empty
+     * password is refused before JAAS is ever consulted — asserting on the 401 alone would prove
+     * nothing, since a rejecting realm answers 401 too.
+     */
+    @Test
+    void validate_withBlankPassword_isRejectedBeforeReachingJaas() throws IOException {
+        when(request.getHeader("Authorization"))
+                .thenReturn("Basic " + Base64.getEncoder().encodeToString("karaf:".getBytes()));
+
+        boolean authenticated = validator.validate(null, null, request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        verify(securityService, never()).setCurrentSubject(any());
+        verify(executionContextManager, never()).setCurrentContext(any());
+    }
+
+    /** Control: a non-blank credential still reaches the realm and is accepted by it. */
+    @Test
+    void validate_withNonBlankPassword_reachesJaas() throws IOException {
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
+        when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
+
+        boolean authenticated = validator.validate(null, null, request, response);
+
+        assertTrue(authenticated);
+        verify(response, never()).sendError(any(Integer.class));
+    }
+
+    /**
      * Minimal JAAS configuration that makes {@code new LoginContext("karaf", ...)} succeed
      * without requiring a real Karaf realm, so the post-login branches under test can run
      * as a plain unit test.

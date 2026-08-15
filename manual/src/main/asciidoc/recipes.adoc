@@ -27,7 +27,7 @@ you might be tempted to modify them to fit your use case, which might result in 
 The best approach during development is to enable Apache Unomi debug mode, which will provide 
 you with more detailed logs about events processing.
 
-The debug mode can be activated via the karaf SSH console (default credentials are karaf/karaf):
+The debug mode can be activated via the karaf SSH console (user `karaf`, with the password you set in `UNOMI_ROOT_PASSWORD` — no default is shipped):
 
 [source]
 ----
