@@ -339,6 +339,15 @@ The "package" sub-project generates a pre-configured Apache Karaf installation t
 Simply uncompress the package/target/unomi-VERSION.tar.gz (for Linux or Mac OS X) or
  package/target/unomi-VERSION.zip (for Windows) archive into the directory of your choice.
 
+Apache Unomi ships no default administrator password, and `bin/karaf` refuses to start until one is
+set, so export both passwords first:
+
+[source]
+----
+export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
+export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
+----
+
 You can then start the server simply by using the command on UNIX/Linux/MacOS X :
 
 [source]
@@ -350,8 +359,15 @@ or on Windows shell :
 
 [source]
 ----
+set UNOMI_ROOT_PASSWORD=choose-a-strong-password
+set UNOMI_HEALTHCHECK_PASSWORD=choose-a-strong-health-password
 bin\karaf.bat
 ----
+
+WARNING: On Windows, `karaf.bat` does not check the exit code of `setenv.bat`, so a missing password
+is reported but startup continues anyway with an account whose password is empty. Set both variables
+before launching, and verify with `curl -i -u "karaf:" http://localhost:8181/cxs/tenants`, which must
+return 401.
 
 You will then need to launch (only on the first Karaf start) the Apache Unomi packages using the following Apache Karaf
 shell command:
@@ -397,7 +413,7 @@ Create a new $MY_KARAF_HOME/etc/org.apache.cxf.osgi.cfg file and put the followi
 ----
 
 If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster[http://localhost:8181/cxs/cluster] .
- You should be able to login with karaf / karaf and see basic server information. If not something went wrong during the install.
+ You should be able to login as `karaf` with the password you set in `UNOMI_ROOT_PASSWORD` and see basic server information. If not something went wrong during the install.
 
 ==== Installing GraphViz for Manual Generation
 

@@ -34,6 +34,47 @@ export KARAF_OPTS="-Dunomi.autoStart=${UNOMI_AUTO_START} -Dunomi.distribution=${
 
 echo "KARAF_OPTS: $KARAF_OPTS"
 
+# Refuse to start without admin/health passwords. An unset password is not "no account": it
+# expands to the empty string, which Karaf's PropertiesLoginModule accepts as a valid password.
+# This is the gate for container launches: exiting here means the container fails to start rather
+# than booting with an administrator account that accepts an empty password.
+check_required_password() {
+    # $1 env var name, $2 property name, $3 skip flag name
+    eval _value=\"\${$1}\"
+    eval _skip=\"\${$3}\"
+
+    [ -n "${_value}" ] && return 0
+
+    if [ "${_skip}" = "true" ]; then
+        cat >&2 <<EOF
+
+WARNING: $3=true but $1 is empty.
+         Unless $2 is supplied another way, the
+         account will have an EMPTY password that grants full administrator access.
+
+EOF
+        return 0
+    fi
+
+    cat >&2 <<EOF
+ERROR: $1 is not set.
+
+Apache Unomi does not ship a known default password, and an unset value becomes an EMPTY
+password that still authenticates. Pass it when starting the container, for example:
+
+  docker run -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \\
+             -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' ...
+
+Or with docker compose, export both UNOMI_ROOT_PASSWORD and UNOMI_HEALTHCHECK_PASSWORD first.
+EOF
+    return 1
+}
+
+check_required_password UNOMI_ROOT_PASSWORD \
+    org.apache.unomi.security.root.password UNOMI_SKIP_ROOT_PASSWORD_CHECK || exit 1
+check_required_password UNOMI_HEALTHCHECK_PASSWORD \
+    org.apache.unomi.healthcheck.password UNOMI_SKIP_HEALTHCHECK_PASSWORD_CHECK || exit 1
+
 # Function to check cluster health for a specific node
 check_node_health() {
     local node_url="$1"

@@ -190,7 +190,7 @@ public class TenantIT extends BaseIT {
 
         // Create test tenant for API key tests
         BasicCredentialsProvider adminCredsProvider = new BasicCredentialsProvider();
-        adminCredsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
+        adminCredsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
 
         try (CloseableHttpClient adminClient = HttpClients.custom().setDefaultCredentialsProvider(adminCredsProvider).build()) {
             Map<String, Object> requestBody = new HashMap<>();
@@ -273,7 +273,7 @@ public class TenantIT extends BaseIT {
 
             // Test with JAAS auth (should succeed) — use a fresh request to avoid carrying X-Unomi-Api-Key from previous step
             BasicCredentialsProvider adminCredsProvider = new BasicCredentialsProvider();
-            adminCredsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
+            adminCredsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
             try (CloseableHttpClient adminClient = HttpClients.custom().setDefaultCredentialsProvider(adminCredsProvider).build();
                  CloseableHttpResponse response = adminClient.execute(new HttpGet(getFullUrl("/context.json?sessionId=" + sessionId)))) {
                 Assert.assertEquals("JAAS auth should grant access to public endpoints", 200, response.getStatusLine().getStatusCode());
@@ -325,7 +325,7 @@ public class TenantIT extends BaseIT {
 
             // Test with JAAS auth (should succeed) — use a fresh request to avoid carrying Authorization from previous step
             BasicCredentialsProvider adminCredsProvider = new BasicCredentialsProvider();
-            adminCredsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
+            adminCredsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
             try (CloseableHttpClient adminClient = HttpClients.custom().setDefaultCredentialsProvider(adminCredsProvider).build();
                  CloseableHttpResponse response = adminClient.execute(new HttpGet(getFullUrl("/cxs/profiles/count")))) {
                 Assert.assertEquals("JAAS auth should grant access to private endpoints", 200, response.getStatusLine().getStatusCode());
@@ -378,7 +378,7 @@ public class TenantIT extends BaseIT {
 
             // Test with JAAS authentication (should succeed)
             getRequest = new HttpGet(getFullUrl("/cxs/profiles/count"));
-            getRequest.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(("karaf:karaf").getBytes()));
+            getRequest.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString((BASIC_AUTH_USER_NAME + ":" + BASIC_AUTH_PASSWORD).getBytes()));
             try (CloseableHttpResponse response = executeHttpRequest(getRequest, AuthType.JAAS_ADMIN)) {
                 Assert.assertEquals("JAAS authentication should grant access to private endpoints", 200, response.getStatusLine().getStatusCode());
             }

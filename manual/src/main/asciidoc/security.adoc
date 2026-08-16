@@ -31,11 +31,13 @@ Unomi 3.1 authenticates every request so the server can resolve a **tenant** (or
 | Server-side integrations, admin UIs
 
 | Tenant administration (`/cxs/tenants`)
-| JAAS system administrator (for example `karaf:karaf`)
+| JAAS system administrator (for example `karaf:$UNOMI_ROOT_PASSWORD`)
 | Create tenants, rotate keys
 |===
 
 Temporary exception: <<_v2_compatibility_mode,V2 compatibility mode>> allows public endpoints without API keys while migrating 2.x clients.
+
+Public context callers must present the profile cookie as the profile bearer (body `profileId` is ignored for public callers). See <<_client_facing_hardening_3_1,client-facing hardening>> and <<_how_profile_tracking_works,How profile tracking works>>.
 
 ===== Auth resolution sequence
 

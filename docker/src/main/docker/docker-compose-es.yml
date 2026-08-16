@@ -45,6 +45,9 @@ services:
       - UNOMI_AUTO_START=true
       - UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
+      # Required admin password (no known default is shipped). Override via .env / shell.
+      - UNOMI_ROOT_PASSWORD=${UNOMI_ROOT_PASSWORD:?Set UNOMI_ROOT_PASSWORD}
+      - UNOMI_HEALTHCHECK_PASSWORD=${UNOMI_HEALTHCHECK_PASSWORD:?Set UNOMI_HEALTHCHECK_PASSWORD}
       # Debug settings
       - KARAF_DEBUG=${DEBUG:-false}
       - KARAF_DEBUG_PORT=${DEBUG_PORT:-5005}

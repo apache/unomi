@@ -63,3 +63,64 @@ rem SET KARAF_DEBUG
 
 set MY_DIRNAME=%~dp0%
 set MY_KARAF_HOME=%DIRNAME%..
+
+rem Warn early when starting without admin/health passwords (no known defaults are shipped).
+rem
+rem An unset password does NOT mean "no account": it expands to the empty string, which Karaf's
+rem PropertiesLoginModule accepts as a valid password for the admin account.
+rem
+rem KNOWN LIMITATION: karaf.bat invokes this file with "call" and does not test errorlevel
+rem afterwards, so the "exit /b 1" below returns from this script but does NOT stop the launcher.
+rem The error message is printed and startup continues. Windows operators must therefore act on the
+rem message; there is no way to fail closed from here without also killing the operator's console
+rem (plain "exit 1" would terminate the whole cmd.exe session, including an interactive prompt).
+rem
+rem karaf.bat sets KARAF_SCRIPT with the quotes included in the value (SET KARAF_SCRIPT="karaf.bat"),
+rem so strip them before comparing - otherwise every comparison below silently fails to match.
+set _UNOMI_KARAF_SCRIPT=%KARAF_SCRIPT:"=%
+if /I "%_UNOMI_KARAF_SCRIPT%"=="karaf.bat" goto checkPasswords
+if /I "%_UNOMI_KARAF_SCRIPT%"=="start.bat" goto checkPasswords
+if /I "%_UNOMI_KARAF_SCRIPT%"=="karaf" goto checkPasswords
+if /I "%_UNOMI_KARAF_SCRIPT%"=="start" goto checkPasswords
+goto afterPasswordChecks
+
+:checkPasswords
+if not "%UNOMI_ROOT_PASSWORD%"=="" goto afterRootPasswordCheck
+if /I "%UNOMI_SKIP_ROOT_PASSWORD_CHECK%"=="true" goto afterRootPasswordCheck
+echo ERROR: UNOMI_ROOT_PASSWORD is not set.
+echo.
+echo Apache Unomi does not ship a known default admin password, and an unset value becomes
+echo an EMPTY password that still authenticates. Set one before starting, for example:
+echo.
+echo   set UNOMI_ROOT_PASSWORD=choose-a-strong-password
+echo   set UNOMI_HEALTHCHECK_PASSWORD=choose-a-strong-health-password
+echo   bin\karaf.bat
+echo.
+echo Or set org.apache.unomi.security.root.password in etc\custom.system.properties
+echo and set UNOMI_SKIP_ROOT_PASSWORD_CHECK=true.
+echo.
+echo WARNING: startup continues anyway on Windows - see the note at the top of this file.
+set _UNOMI_KARAF_SCRIPT=
+exit /b 1
+
+:afterRootPasswordCheck
+if not "%UNOMI_HEALTHCHECK_PASSWORD%"=="" goto afterPasswordChecks
+if /I "%UNOMI_SKIP_HEALTHCHECK_PASSWORD_CHECK%"=="true" goto afterPasswordChecks
+echo ERROR: UNOMI_HEALTHCHECK_PASSWORD is not set.
+echo.
+echo Apache Unomi does not ship a known default health-check password, and an unset value
+echo becomes an EMPTY password that still authenticates. Set one before starting, for example:
+echo.
+echo   set UNOMI_ROOT_PASSWORD=choose-a-strong-password
+echo   set UNOMI_HEALTHCHECK_PASSWORD=choose-a-strong-health-password
+echo   bin\karaf.bat
+echo.
+echo Or set org.apache.unomi.healthcheck.password in etc\custom.system.properties
+echo and set UNOMI_SKIP_HEALTHCHECK_PASSWORD_CHECK=true.
+echo.
+echo WARNING: startup continues anyway on Windows - see the note at the top of this file.
+set _UNOMI_KARAF_SCRIPT=
+exit /b 1
+
+:afterPasswordChecks
+set _UNOMI_KARAF_SCRIPT=

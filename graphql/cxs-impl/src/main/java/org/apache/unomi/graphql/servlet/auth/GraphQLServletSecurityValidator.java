@@ -155,6 +155,17 @@ public class GraphQLServletSecurityValidator {
         String username = usernameAndPassword.substring(0, userNameIndex);
         String password = usernameAndPassword.substring(userNameIndex + 1);
 
+        // An unset org.apache.unomi.security.root.password resolves to the empty string, which
+        // PropertiesLoginModule then accepts as the shipped administrator's password (UNOMI-974).
+        // This servlet authenticates against the karaf realm directly rather than through the REST
+        // AuthenticationFilter, so it needs its own refusal: it stays reachable on launch paths the
+        // startup guards in bin/setenv and the Docker entrypoint cannot cover, notably karaf.bat.
+        // Checked ahead of the API key lookup too — an empty private key is never a valid one.
+        if (password.isEmpty()) {
+            LOG.warn("Rejecting Basic authentication with an empty password");
+            return false;
+        }
+
         // First try API key authentication
         if (username.length() > 0) {
             Tenant tenant = tenantService.getTenantByApiKey(password, ApiKey.ApiKeyType.PRIVATE);

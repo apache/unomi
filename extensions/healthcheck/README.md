@@ -25,7 +25,7 @@ The health check endpoint is available at
 ``` 
 and returns a simple JSON response that includes all health check provider responses.  
 
-Basic Http Authentication is enabled by default for the health check endpoint. The user needs to have the role `health` to access the endpoint. Users and roles can be configured in the etc/users.properties file. By default a user health/health is configured. 
+Basic Http Authentication is enabled by default for the health check endpoint. The user needs to have the role `health` to access the endpoint. Users and roles can be configured in the etc/users.properties file. The shipped `health` user has no default password: its password comes from the `UNOMI_HEALTHCHECK_PASSWORD` environment variable, which must be set before starting. An empty password is never accepted. 
 
 The healthcheck is available even if unomi is not started. It gives health information about :   
   - Karaf (as soon as the karaf container is started)

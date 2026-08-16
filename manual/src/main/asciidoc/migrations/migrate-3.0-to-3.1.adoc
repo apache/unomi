@@ -34,7 +34,7 @@ The main change in 3.1 is the introduction of tenant-based authentication. The s
 |Aspect |Unomi 3.0 |Unomi 3.1
 
 |Authentication Method
-|System Administrator Authentication (karaf/karaf)
+|System Administrator Authentication (configured admin password)
 |Tenant-based API Keys + System Administrator Authentication
 
 |Public API Endpoints
@@ -46,8 +46,8 @@ The main change in 3.1 is the introduction of tenant-based authentication. The s
 |Tenant Authentication (tenantId/privateKey) OR System Administrator Authentication
 
 |Tenant Administration
-|System Administrator Authentication (karaf/karaf)
-|System Administrator Authentication (karaf/karaf)
+|System Administrator Authentication
+|System Administrator Authentication (configured `UNOMI_ROOT_PASSWORD`)
 |===
 
 ==== API Key Types (3.1 Only)
@@ -68,12 +68,12 @@ The main change in 3.1 is the introduction of tenant-based authentication. The s
 |Public API Key only
 
 |Administrative Operations
-|System Admin (karaf/karaf)
-|Tenant Auth (tenantId/privateKey) OR System Admin (karaf/karaf)
+|System Admin (`karaf:$UNOMI_ROOT_PASSWORD`)
+|Tenant Auth (tenantId/privateKey) OR System Admin (`karaf:$UNOMI_ROOT_PASSWORD`)
 
 |Tenant Administration (`/cxs/tenants`)
-|System Admin (karaf/karaf)
-|System Admin (karaf/karaf)
+|System Admin (`karaf:$UNOMI_ROOT_PASSWORD`)
+|System Admin (`karaf:$UNOMI_ROOT_PASSWORD`)
 |===
 
 ==== Authentication Flow (3.1)
@@ -84,7 +84,7 @@ The AuthenticationFilter in 3.1 follows this resolution order:
 2. **Public endpoints** (e.g., `/context.json`): Requires public API key via `X-Unomi-Api-Key` header
 3. **Private endpoints**: Tries tenant authentication first, then falls back to system administrator authentication:
    - **Tenant Authentication**: Basic Auth with `tenantId:privateKey`
-   - **System Administrator Authentication**: Basic Auth with `karaf:karaf` (or configured admin credentials)
+   - **System Administrator Authentication**: Basic Auth with `karaf:$UNOMI_ROOT_PASSWORD` (or configured admin credentials)
 
 ==== Code Examples
 
@@ -94,7 +94,7 @@ The AuthenticationFilter in 3.1 follows this resolution order:
 ----
 // Global system administrator authentication for all endpoints
 RestAssured.authentication = RestAssured.preemptive()
-    .basic("karaf", "karaf");
+    .basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"));
 
 // Context requests require no authentication
 RestAssured.given()
@@ -124,14 +124,14 @@ given()
 
 // For private endpoints using system administrator authentication
 given()
-    .auth().preemptive().basic("karaf", "karaf")
+    .auth().preemptive().basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"))
     .contentType(ContentType.JSON)
     .body(payload)
     .post("/cxs/profiles");
 
 // For tenant administration (system admin only)
 given()
-    .auth().preemptive().basic("karaf", "karaf")
+    .auth().preemptive().basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"))
     .contentType(ContentType.JSON)
     .body(tenantPayload)
     .post("/cxs/tenants");
@@ -164,7 +164,7 @@ public class UnomiConfiguration {
 public void init() {
     RestAssured.baseURI = baseUrl;
     RestAssured.authentication = RestAssured.preemptive()
-        .basic("karaf", "karaf");
+        .basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"));
 }
 
 // 3.1 Client
@@ -210,10 +210,87 @@ When migrating to 3.1, you need to understand that:
    - Keep system administrator authentication as fallback for administrative operations
    - Continue using system administrator authentication for tenant administration
 
-4. **No API Contract Changes**
-   - All endpoints remain the same
-   - Request/response payloads are unchanged
-   - Only authentication mechanism differs
+4. **Related client contract changes (3.1 hardening)**
+   - Public `/context.json` and `/eventcollector` no longer treat body/query `profileId` as identity — see below
+   - Endpoint paths and most payload shapes remain the same; authentication and public profile-binding rules change
+
+[#_client_facing_hardening_3_1]
+==== Client-facing hardening (profile cookie, passwords, privileged APIs)
+
+In addition to tenant API keys, Unomi 3.1 hardens several contracts that can break older clients and scripts. See also <<_how_profile_tracking_works,How profile tracking works>> and https://issues.apache.org/jira/browse/UNOMI-972[UNOMI-972].
+
+**Why cookie-only for public profile identity?** On public context endpoints the profile id is a bearer token. Accepting a client-chosen body/query `profileId` let any public caller try to continue another visitor's context if they obtained that UUID. The cookie is issued by Unomi, sent automatically by the browser, and (with default `HttpOnly`) is not readable from page script — so public clients prove continuity with a server-issued bearer instead of an application-supplied id. Trusted callers may still override with body `profileId` when a backend intentionally selects a profile. Full rationale: <<_how_profile_tracking_works,How profile tracking works>> (section _Why the cookie is safer…_).
+
+[cols="1,2,2", options="header"]
+|===
+|Area |Old common pattern |Required in 3.1
+
+|Public profile identity
+|Body/query `profileId` often selected the profile (sometimes ahead of the cookie)
+|Public callers: **cookie only**. Body/query `profileId` is ignored. Trusted callers (tenant private key / system admin) may still override.
+
+|Session resume without cookie
+|Sending only `sessionId` could switch onto that session's profile
+|Public callers switch only if the cookie already owns the session; otherwise the session is detached for the request.
+
+|Profile cookie `HttpOnly`
+|Often defaulted to `false` (JS could read `document.cookie`)
+|Default **`true`**. Prefer `profileId` from the JSON response. Opt out with `org.apache.unomi.profile.cookie.httpOnly=false` only if you accept the tradeoff.
+
+|Admin / health passwords
+|Known defaults such as `karaf` / `karaf` were common in samples
+|Set `UNOMI_ROOT_PASSWORD` and `UNOMI_HEALTHCHECK_PASSWORD` before start (no shipped known defaults).
+
+|Groovy Actions / Router import-export REST
+|Often callable with tenant private key
+|Requires **system administrator** (`ADMINISTRATOR`), not tenant administrator.
+
+|Startup without a password
+|Started with the shipped default
+|`bin/karaf` and the Docker entrypoint refuse to start. On Windows startup continues — see the warning below.
+
+|`mergeProfilesOnProperty` / cross-profile `updateProperties` / `systemProperties.*`
+|Sometimes driven from public context events
+|Cross-profile merge/update and `systemProperties` writes require a trusted caller (system or tenant admin). Public callers may still update the **current** cookie-bound profile's normal properties when the event type allows it.
+|===
+
+[WARNING]
+====
+**Windows: the startup check cannot stop the launcher.**
+
+On Linux and macOS, `bin/karaf` sources `bin/setenv` directly, so a missing password aborts startup.
+The Docker entrypoint behaves the same way and the container exits.
+
+On Windows, `karaf.bat` runs `setenv.bat` with `call` and does not test the exit code, so the error
+message is printed and **startup continues anyway**. This is a limitation of the Karaf launcher that
+Unomi cannot work around without replacing `karaf.bat`.
+
+This matters because an unset password is not the same as a disabled account. `${env:UNOMI_ROOT_PASSWORD}`
+resolves to the *empty string*, so `etc/users.properties` creates the `karaf` administrator with an
+empty password that authenticates successfully.
+
+Windows operators must therefore treat the message as fatal and verify the password took effect
+before exposing the instance — for example by confirming that an empty password is rejected:
+
+[source,bash]
+----
+# Must return 401. A 200 means the account has a blank password.
+curl -i -u "karaf:" http://localhost:8181/cxs/tenants
+----
+
+Unomi additionally refuses any REST call presenting Basic authentication with an empty password, so
+the admin API is not reachable that way even if the server did start unconfigured. The Karaf SSH
+console (port 8102) is not covered by that check.
+====
+
+===== Migration checklist for client applications
+
+* Browser / tracker clients: ensure cookies are sent (`withCredentials` / same-site setup); stop treating body `profileId` as authoritative for public calls.
+* Headless or mobile public clients that stored a UUID and posted it only in the body: switch to sending the profile cookie, or call with a **private key** when you intentionally bind a profile.
+* Login / merge flows: emit merge-triggering events from a trusted server-side caller after real authentication — not from the public key alone.
+* Ops scripts and Docker: export both password env vars; replace `karaf:karaf` with `karaf:$UNOMI_ROOT_PASSWORD`.
+* Windows deployments: confirm the passwords actually took effect after upgrading — the startup check warns but cannot halt `karaf.bat` (see the warning above).
+* Automation that uploaded Groovy actions or managed Router import/export with a tenant private key: switch to system administrator credentials.
 
 ==== Benefits of Multi-Tenancy in 3.1
 
@@ -232,6 +309,7 @@ Before starting the migration, please ensure that:
 - You are currently running Apache Unomi 3.0 (or a later 3.0.x version)
 - You understand the multi-tenancy impact on your data model
 - You have a plan to update client applications to tenant API keys (or temporary <<_v2_compatibility_mode,V2 compatibility mode>> only if coming from 2.x)
+- You have reviewed the <<_client_facing_hardening_3_1,client-facing hardening>> notes (cookie-only public profile binding, HttpOnly default, required passwords, privileged REST roles)
 - You know how to obtain plaintext API keys after upgrade (regenerate via `/cxs/tenants/{id}/apikeys`; create responses expose masked keys only)
 
 === Migration Process
@@ -293,7 +371,7 @@ The fundamental difference between Unomi 3.0 and 3.1 is the introduction of **co
 
 - **3.0**: Single-tenant architecture with system administrator authentication for all operations
 - **3.1**: Multi-tenant architecture with complete data isolation and tenant-specific authentication
-- **API Endpoints**: Identical between versions - no breaking changes to existing integrations
+- **API Endpoints**: Paths remain the same; authentication and public profile-binding rules change (see client-facing hardening above)
 - **Data Model**: All entities (profiles, events, segments, rules, schemas) become tenant-specific in 3.1
 - **Authentication**: New tenant-based authentication model with system administrator authentication as fallback
 

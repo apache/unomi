@@ -101,17 +101,33 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                               TenantService tenantService,
                               SecurityService securityService,
                               ExecutionContextManager executionContextManager) {
+        this(restAuthenticationConfig, tenantService, securityService, executionContextManager, buildJaasFilter());
+    }
+
+    /**
+     * Test seam: lets a test supply a stub JAAS filter so it can assert that a credential was
+     * refused <em>before</em> it reached JAAS. Asserting on the response status alone proves
+     * nothing here — every refusal path in this class ends in the same 401.
+     */
+    AuthenticationFilter(RestAuthenticationConfig restAuthenticationConfig,
+                              TenantService tenantService,
+                              SecurityService securityService,
+                              ExecutionContextManager executionContextManager,
+                              JAASAuthenticationFilter jaasAuthenticationFilter) {
         this.restAuthenticationConfig = restAuthenticationConfig;
         this.tenantService = tenantService;
         this.securityService = securityService;
         this.executionContextManager = executionContextManager;
+        this.jaasAuthenticationFilter = jaasAuthenticationFilter;
+    }
 
-        // Build wrapped jaas filter
-        jaasAuthenticationFilter = new JAASAuthenticationFilter();
-        jaasAuthenticationFilter.setRoleClassifier(ROLE_CLASSIFIER);
-        jaasAuthenticationFilter.setRoleClassifierType(ROLE_CLASSIFIER_TYPE);
-        jaasAuthenticationFilter.setContextName(CONTEXT_NAME);
-        jaasAuthenticationFilter.setRealmName(REALM_NAME);
+    private static JAASAuthenticationFilter buildJaasFilter() {
+        JAASAuthenticationFilter jaasFilter = new JAASAuthenticationFilter();
+        jaasFilter.setRoleClassifier(ROLE_CLASSIFIER);
+        jaasFilter.setRoleClassifierType(ROLE_CLASSIFIER_TYPE);
+        jaasFilter.setContextName(CONTEXT_NAME);
+        jaasFilter.setRealmName(REALM_NAME);
+        return jaasFilter;
     }
 
     @Override
@@ -131,6 +147,9 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 if (authHeader == null || !authHeader.startsWith(BASIC_AUTH_PREFIX)) {
                     logger.debug("Tenant endpoint access denied: Missing or invalid Basic Auth header");
                     unauthorized(requestContext);
+                    return;
+                }
+                if (rejectBlankBasicAuthPassword(requestContext, authHeader)) {
                     return;
                 }
 
@@ -192,6 +211,9 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             // For all other cases, try tenant private key first, then fall back to JAAS
             String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
             if (authHeader != null && authHeader.startsWith(BASIC_AUTH_PREFIX)) {
+                if (rejectBlankBasicAuthPassword(requestContext, authHeader)) {
+                    return;
+                }
                 // Try tenant private key authentication first
                 String[] credentials = extractBasicAuthCredentials(authHeader);
                 if (credentials != null && credentials.length == 2) {
@@ -299,6 +321,9 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         // For private endpoints, require system administrator authentication (like V2)
         String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
         if (authHeader != null && authHeader.startsWith(BASIC_AUTH_PREFIX)) {
+            if (rejectBlankBasicAuthPassword(requestContext, authHeader)) {
+                return;
+            }
             try {
                 jaasAuthenticationFilter.filter(requestContext);
                 // JAASAuthenticationFilter handles credential failures internally (calls abortWith + returns normally).
@@ -350,6 +375,45 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
         // If we get here, no valid authentication was provided
         unauthorized(requestContext);
+    }
+
+    /**
+     * Rejects the request when the Basic credential about to be used carries an empty password.
+     * <p>
+     * Defence in depth against a blank administrator password (UNOMI-972). If
+     * {@code org.apache.unomi.security.root.password} is unset, Karaf resolves it to the empty
+     * string and the shipped JAAS account authenticates with an empty password. {@code bin/karaf}
+     * and the Docker entrypoint refuse to start in that state, but they cannot cover every launcher
+     * (notably {@code karaf.bat}), so an empty credential is never accepted over REST either.
+     * <p>
+     * Deliberately called at each point where a Basic credential is actually consumed rather than
+     * once at the top of {@link #filter}: anonymous traffic on public paths — and every path in V2
+     * compatibility mode — ignores {@code Authorization} entirely, so rejecting up front would turn
+     * a stray or stale Basic header (a cached browser credential, an injecting proxy) into a 401 on
+     * a request that is supposed to succeed without authentication.
+     *
+     * @return {@code true} when the request has been aborted and the caller must return
+     */
+    private boolean rejectBlankBasicAuthPassword(ContainerRequestContext requestContext, String authHeader) {
+        if (!hasBlankBasicAuthPassword(authHeader)) {
+            return false;
+        }
+        logger.warn("Rejecting Basic authentication with an empty password");
+        unauthorized(requestContext);
+        return true;
+    }
+
+    /**
+     * Whether a Basic {@code Authorization} header carries an empty password. A missing, malformed
+     * or non-Basic header is not treated as blank here — those are rejected by the normal
+     * authentication paths instead.
+     */
+    boolean hasBlankBasicAuthPassword(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith(BASIC_AUTH_PREFIX)) {
+            return false;
+        }
+        String[] credentials = extractBasicAuthCredentials(authHeader);
+        return credentials != null && credentials.length == 2 && credentials[1].isEmpty();
     }
 
     private String[] extractBasicAuthCredentials(String authHeader) {

@@ -139,6 +139,33 @@ check_password() {
     return 0
 }
 
+# Load a password from .env.local (if present) and require it to be set.
+# Usage: require_password SCRIPT_DIR PASSWORD_VAR_NAME
+# Returns: 0 if set, 1 if missing
+require_password() {
+    local script_dir="$1"
+    local password_var="$2"
+
+    if ! load_password_from_env_local "${script_dir}" "${password_var}"; then
+        if [ -n "${ZSH_VERSION}" ]; then
+            local password_value="${(P)password_var}"
+        else
+            local password_value="${!password_var}"
+        fi
+        if [ -z "${password_value}" ]; then
+            echo "Note: ${password_var} not found in .env.local or environment"
+        fi
+    fi
+
+    if ! check_password "${password_var}"; then
+        return 1
+    fi
+
+    # Ensure the variable is exported into the current shell
+    eval "export ${password_var}"
+    return 0
+}
+
 # Clear the opposite search engine's environment variables
 # Usage: clear_opposite SCRIPT_DIR OPPOSITE_TYPE
 # OPPOSITE_TYPE should be "opensearch" or "elasticsearch"
