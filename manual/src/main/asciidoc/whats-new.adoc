@@ -21,8 +21,16 @@ Apache Unomi 3.1 builds on the 3.0 platform (Elasticsearch 9 client, Karaf 4.4, 
 Complete tenant isolation for profiles, events, segments, rules, and schemas. Public endpoints (for example `/cxs/context.json`) require a tenant public API key; administrative work uses tenant private keys or system administrator credentials.
 
 * Operator guide: <<_multitenancy,Multi-tenancy>>
-* Migration: <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>>
+* Migration: <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> (includes <<_client_facing_hardening_3_1,client-facing hardening>>)
 * Migrating from Unomi 2.x: <<_v2_compatibility_mode,V2 compatibility mode>> (`v2.compatibilitymode.enabled` in `org.apache.unomi.rest.authentication.cfg`)
+
+==== Security hardening (credentials, profile binding, privileged APIs)
+
+Unomi 3.1 requires explicit admin and health-check passwords at startup, treats the profile cookie as the only public profile bearer on `/context.json` and `/eventcollector`, defaults the profile cookie to `HttpOnly`, restricts Groovy Actions and Router import/export REST to system administrator, and gates cross-profile merge / `updateProperties` / `systemProperties` writes to trusted callers.
+
+* Details and migration table: <<_client_facing_hardening_3_1,Client-facing hardening>>
+* Profile tracking contract: <<_how_profile_tracking_works,How profile tracking works>>
+* Jira: https://issues.apache.org/jira/browse/UNOMI-972[UNOMI-972]
 
 ==== Cluster-aware task scheduler
 

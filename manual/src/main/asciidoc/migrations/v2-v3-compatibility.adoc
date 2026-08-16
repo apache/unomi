@@ -40,7 +40,7 @@ This multi-tenancy support necessitates the authentication changes described bel
 |Aspect |Unomi V2 |Unomi 3.1
 
 |Authentication Method
-|System Administrator Authentication (karaf/karaf)
+|System Administrator Authentication (`karaf` user)
 |Tenant-based API Keys + System Administrator Authentication
 
 |Public API Endpoints
@@ -52,8 +52,8 @@ This multi-tenancy support necessitates the authentication changes described bel
 |Tenant Authentication (tenantId/privateKey) OR System Administrator Authentication
 
 |Tenant Administration
-|System Administrator Authentication (karaf/karaf)
-|System Administrator Authentication (karaf/karaf)
+|System Administrator Authentication (`karaf` user)
+|System Administrator Authentication (`karaf` user)
 |===
 
 ===== API Key Types (V3 Only)
@@ -74,12 +74,12 @@ V3 introduces two types of API keys per tenant:
 |Public API Key only
 
 |Administrative Operations
-|System Admin (karaf/karaf)
-|Tenant Auth (tenantId/privateKey) OR System Admin (karaf/karaf)
+|System Admin (`karaf` user)
+|Tenant Auth (tenantId/privateKey) OR System Admin (`karaf` user)
 
 |Tenant Administration (`/cxs/tenants`)
-|System Admin (karaf/karaf)
-|System Admin (karaf/karaf)
+|System Admin (`karaf` user)
+|System Admin (`karaf` user)
 |===
 
 ==== Authentication Flow (V3)
@@ -90,7 +90,7 @@ The AuthenticationFilter in V3 follows this resolution order:
 2. **Public endpoints** (e.g., `/context.json`): Requires public API key via `X-Unomi-Api-Key` header
 3. **Private endpoints**: Tries tenant authentication first, then falls back to system administrator authentication:
    - **Tenant Authentication**: Basic Auth with `tenantId:privateKey`
-   - **System Administrator Authentication**: Basic Auth with `karaf:karaf` (or configured admin credentials)
+   - **System Administrator Authentication**: Basic Auth with the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`
 
 ==== Code Examples
 
@@ -100,7 +100,7 @@ The AuthenticationFilter in V3 follows this resolution order:
 ----
 // Global system administrator authentication for all endpoints
 RestAssured.authentication = RestAssured.preemptive()
-    .basic("karaf", "karaf");
+    .basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"));
 
 // Context requests require no authentication
 RestAssured.given()
@@ -130,14 +130,14 @@ given()
 
 // For private endpoints using system administrator authentication
 given()
-    .auth().preemptive().basic("karaf", "karaf")
+    .auth().preemptive().basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"))
     .contentType(ContentType.JSON)
     .body(payload)
     .post("/cxs/profiles");
 
 // For tenant administration (system admin only)
 given()
-    .auth().preemptive().basic("karaf", "karaf")
+    .auth().preemptive().basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"))
     .contentType(ContentType.JSON)
     .body(tenantPayload)
     .post("/cxs/tenants");
@@ -170,7 +170,7 @@ public class UnomiConfiguration {
 public void init() {
     RestAssured.baseURI = baseUrl;
     RestAssured.authentication = RestAssured.preemptive()
-        .basic("karaf", "karaf");
+        .basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"));
 }
 
 // V3 Client

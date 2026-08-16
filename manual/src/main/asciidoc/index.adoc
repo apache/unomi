@@ -181,7 +181,7 @@ UNOMI_HEALTHCHECK_ENABLED=true
 UNOMI_HEALTHCHECK_PROVIDERS=cluster,opensearch,unomi,persistence
 ----
 
-The endpoint is protected by the `health` role (default user `health` / `health`). Full provider configuration, sample JSON, and extension points are documented in the Configuration chapter: <<_health_check,Health check extension>>.
+The endpoint is protected by the `health` role (user `health`, password from `UNOMI_HEALTHCHECK_PASSWORD` — no default is shipped). Full provider configuration, sample JSON, and extension points are documented in the Configuration chapter: <<_health_check,Health check extension>>.
 
 == Reference
 

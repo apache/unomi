@@ -248,7 +248,10 @@ At the end, you should have about 4 million entries in the geonames index.
 === REST API Security
 
 The Apache Unomi Context Server REST API is protected using JAAS authentication and using Basic or Digest HTTP auth.
-By default, the login/password for the REST API full administrative access is "karaf/karaf".
+You must set an admin password via `UNOMI_ROOT_PASSWORD` (or `org.apache.unomi.security.root.password`)
+and a health-check password via `UNOMI_HEALTHCHECK_PASSWORD` (or `org.apache.unomi.healthcheck.password`);
+Unomi does not ship known defaults.
+The default JAAS user name is `karaf`.
 
 The generated package is also configured with a default SSL certificate. You can change it by following these steps :
 
@@ -267,8 +270,9 @@ org.ops4j.pax.web.ssl.keypassword=${env:UNOMI_SSL_KEYPASSWORD:-changeme}
 
 You should now have SSL setup on Karaf with your certificate, and you can test it by trying to access it on port 9443.
 
-Changing the default Karaf password can be done by modifying the `org.apache.unomi.security.root.password` in the
-`$MY_KARAF_HOME/etc/unomi.custom.system.properties` file
+Changing the Karaf admin password is done by setting `UNOMI_ROOT_PASSWORD` or by modifying
+`org.apache.unomi.security.root.password` in the
+`$MY_KARAF_HOME/etc/unomi.custom.system.properties` file. Unomi does not ship a known default password.
 
 === Tenant Management and API Access
 
@@ -278,14 +282,14 @@ Apache Unomi supports multi-tenancy, allowing multiple organizations to use the 
 
 IMPORTANT: All tenant management operations (create, list, update, delete, API key management) are restricted to administrators only and require JAAS authentication. These endpoints cannot be accessed using tenant API keys.
 
-To manage tenants, you need administrator access to Unomi (default credentials: karaf/karaf). You can manage tenants using either the REST API or the Karaf shell commands:
+To manage tenants, you need administrator access to Unomi (`karaf` / your `UNOMI_ROOT_PASSWORD`). You can manage tenants using either the REST API or the Karaf shell commands:
 
 Using REST API (requires admin credentials):
 [source,bash]
 ----
 # Create a new tenant (JAAS auth required)
 curl -X POST "http://localhost:8181/cxs/tenants" \
-  -u karaf:karaf \
+  -u "karaf:$UNOMI_ROOT_PASSWORD" \
   -H "Content-Type: application/json" \
   -d '{
     "requestedId": "mytenant",
@@ -318,17 +322,17 @@ curl -X POST "http://localhost:8181/cxs/tenants" \
 
 # List all tenants (JAAS auth required)
 curl -X GET "http://localhost:8181/cxs/tenants" \
-  -u karaf:karaf \
+  -u "karaf:$UNOMI_ROOT_PASSWORD" \
   -H "Accept: application/json"
 
 # Get tenant details (JAAS auth required)
 curl -X GET "http://localhost:8181/cxs/tenants/mytenant" \
-  -u karaf:karaf \
+  -u "karaf:$UNOMI_ROOT_PASSWORD" \
   -H "Accept: application/json"
 
 # Delete a tenant (JAAS auth required)
 curl -X DELETE "http://localhost:8181/cxs/tenants/mytenant" \
-  -u karaf:karaf
+  -u "karaf:$UNOMI_ROOT_PASSWORD"
 ----
 
 Using Karaf shell (requires admin access to Karaf console). See <<_shell_commands,Shell commands>> for full syntax:
@@ -362,9 +366,9 @@ unomi:crud read tenant -i mytenant
 
 # Obtain plaintext (store immediately; it is not persisted)
 curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PUBLIC" \
-  -u karaf:karaf
+  -u "karaf:$UNOMI_ROOT_PASSWORD"
 curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PRIVATE" \
-  -u karaf:karaf
+  -u "karaf:$UNOMI_ROOT_PASSWORD"
 
 # Response example:
 {
@@ -382,7 +386,7 @@ To generate new API keys (requires admin access):
 ----
 # Using REST API (JAAS auth required). Replaces any existing key of the same type.
 curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PUBLIC&validityDays=30" \
-  -u karaf:karaf
+  -u "karaf:$UNOMI_ROOT_PASSWORD"
 
 # Response (HTTP 200 OK) — store plainTextKey immediately:
 {
@@ -442,7 +446,7 @@ curl -X POST "http://localhost:8181/cxs/profiles/search" \
 [source,bash]
 ----
 curl -X GET "http://localhost:8181/cxs/tenants" \
-  --user "karaf:karaf" \
+  --user "karaf:$UNOMI_ROOT_PASSWORD" \
   -H "Accept: application/json"
 ----
 
@@ -817,9 +821,11 @@ Once the action has been created you need to submit it to Unomi (from the same f
 [source,bash]
 ----
 curl -X POST 'http://localhost:8181/cxs/groovyActions' \
---user "TENANT_ID:PRIVATE_KEY" \
+--user "karaf:${UNOMI_ROOT_PASSWORD}" \
 --form 'file=@helloWorldGroovyAction.groovy'
 ----
+
+NOTE: Groovy Actions REST requires the system `ADMINISTRATOR` role (not a tenant private key). See <<_client_facing_hardening_3_1,client-facing hardening>>.
 
 Important: A bug ( https://issues.apache.org/jira/browse/UNOMI-847[UNOMI-847] ) in Apache Unomi 2.5 and lower requires the filename of a Groovy file being submitted to be the same as the id of the Groovy action (as per the example above).
 
@@ -860,7 +866,7 @@ Once you're done with the Hello World! action, it can be deleted using the follo
 [source,bash]
 ----
 curl -X DELETE 'http://localhost:8181/cxs/groovyActions/helloWorldGroovyAction' \
---user "TENANT_ID:PRIVATE_KEY"
+--user "karaf:${UNOMI_ROOT_PASSWORD}"
 ----
 
 And the corresponding rule can be deleted using the following command:
@@ -1078,7 +1084,7 @@ The `MergeProfilesOnPropertyAction` supports the following parameters:
 
 ==== Security considerations
 
-IMPORTANT: Never trigger profile merges from unauthenticated operations such as form submissions or public-facing APIs. Always verify user identity before performing a merge.
+IMPORTANT: Never trigger profile merges from unauthenticated or public-key-only operations such as form submissions or public-facing context events. Merging into another profile (or switching identity after a merge) requires a **trusted** caller — system administrator or tenant administrator (private key). Always verify user identity on your application server before emitting a merge-triggering event. See <<_client_facing_hardening_3_1,client-facing hardening>>.
 
 The following diagram highlights key security considerations:
 
@@ -1178,23 +1184,29 @@ documentation for here :
 
 * https://karaf.apache.org/manual/latest/#_security_2[https://karaf.apache.org/manual/latest/#_security_2]
 
-The default username/password is
+You must set an admin password and a health-check password before using the REST API / health endpoints.
+There are **no** known default passwords shipped with Unomi.
 
-[source]
+Set the environment variables `UNOMI_ROOT_PASSWORD` and `UNOMI_HEALTHCHECK_PASSWORD`, or set
+`org.apache.unomi.security.root.password` and `org.apache.unomi.healthcheck.password` in
+`$MY_KARAF_HOME/etc/unomi.custom.system.properties` (or `etc/custom.system.properties`).
+
+Example:
+
+[source,bash]
 ----
-karaf/karaf
+export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
+export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
 ----
 
-You should really change this default username/password as soon as possible. Changing the default Karaf password can be
-done by modifying the `org.apache.unomi.security.root.password` in the `$MY_KARAF_HOME/etc/unomi.custom.system.properties` file
+The JAAS admin user name defaults to `karaf`. Authenticate with `karaf:$UNOMI_ROOT_PASSWORD`.
+The health-check user name defaults to `health`. Authenticate with `health:$UNOMI_HEALTHCHECK_PASSWORD`.
 
-Or if you want to also change the user name you could modify the following file :
+To change the admin user name, edit `$MY_KARAF_HOME/etc/users.properties` and also set:
 
-    $MY_KARAF_HOME/etc/users.properties
+    karaf.local.user = <your-user>
 
-But you will also need to change the following property in the $MY_KARAF_HOME/etc/unomi.custom.system.properties :
-
-    karaf.local.user = karaf
+in `unomi.custom.system.properties`.
 
 For your context servers, and for any standalone Elasticsearch nodes you will need to open the following ports for proper
 node-to-node communication : 9200 (Elasticsearch REST API), 9300 (Elasticsearch TCP transport)
@@ -1744,7 +1756,9 @@ is up and running and can serve requests.
 The health check endpoint is available at the following URL: /health/check and returns a simple JSON response that includes all health check provider responses.
 
 Basic Http Authentication enforce security for the health check endpoint using the existing karaf realm. The user needs to have the specific role **health**
-to access the endpoint. Users and roles can be configured in the etc/users.properties file. By default, a login/pass health/health is configured.
+to access the endpoint. Users and roles can be configured in the etc/users.properties file. The shipped `health` user has no default password: its
+password comes from `UNOMI_HEALTHCHECK_PASSWORD`, which must be set before starting (see <<_rest_api_security,REST API security>>). An empty password is
+never accepted, on this endpoint or any other.
 
 Specific configuration is located in : org.apache.unomi.healthcheck.cfg  Existing health checks are using configuration from that file, including authentication realm.
 

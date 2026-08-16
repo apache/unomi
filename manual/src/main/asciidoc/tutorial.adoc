@@ -115,7 +115,7 @@ curl --location --request POST 'http://localhost:8181/cxs/scopes' \
   }'
 ----
 
-NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (`karaf:karaf`). The default `karaf:karaf` credentials should be changed as soon as possible by modifying the `etc/users.properties` file.
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`). Unomi ships no default administrator password: set `UNOMI_ROOT_PASSWORD` (and `UNOMI_HEALTHCHECK_PASSWORD`) before starting the server, or it will refuse to start.
 
 ==== Using tracker in your own JavaScript projects
 
@@ -210,7 +210,7 @@ Another (powerful) way to look at events is to use the SSH Console. You can conn
     ssh -p 8102 karaf@localhost
 ----
 
-Using the same username password (karaf:karaf) and then you can use command such as :
+Using the same credentials (the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`) and then you can use command such as :
 
 - `event-tail` to view in realtime the events as they come in (CTRL+C to stop)
 - `event-list` to view the latest events

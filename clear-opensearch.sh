@@ -58,6 +58,8 @@ unset UNOMI_OPENSEARCH_SSL_ENABLE
 unset UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES
 # Also set by setup-opensearch.sh / setup-elasticsearch.sh
 unset UNOMI_DISTRIBUTION
+unset UNOMI_ROOT_PASSWORD
+unset UNOMI_HEALTHCHECK_PASSWORD
 
 unset _IS_SOURCED
 

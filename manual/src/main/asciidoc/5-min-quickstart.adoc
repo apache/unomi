@@ -19,6 +19,16 @@ Begin by creating a `docker-compose.yml` file. You can choose between Elasticsea
 
 ==== Option 1: Using Elasticsearch
 
+Export the passwords first. The compose files read them from your shell, and the `curl` commands
+further down use the same variables, so setting them once here keeps both consistent. Unomi refuses
+to start if they are unset.
+
+[source,bash]
+----
+export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
+export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
+----
+
 [source,yaml]
 ----
 version: '3.8'
@@ -35,6 +45,8 @@ services:
         environment:
             - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
             - UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES=0.0.0.0/0,::1,127.0.0.1
+            - UNOMI_ROOT_PASSWORD=${UNOMI_ROOT_PASSWORD}
+            - UNOMI_HEALTHCHECK_PASSWORD=${UNOMI_HEALTHCHECK_PASSWORD}
         ports:
             - 8181:8181
             - 9443:9443
@@ -84,6 +96,8 @@ services:
             - UNOMI_OPENSEARCH_SSL_ENABLE=true
             - UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES=true
             - UNOMI_HEALTHCHECK_PROVIDERS=cluster,opensearch,unomi,persistence
+            - UNOMI_ROOT_PASSWORD=${UNOMI_ROOT_PASSWORD}
+            - UNOMI_HEALTHCHECK_PASSWORD=${UNOMI_HEALTHCHECK_PASSWORD}
         ports:
             - 8181:8181
             - 9443:9443
@@ -104,7 +118,7 @@ Once Unomi is running, create a tenant, then **regenerate** API keys and save th
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/tenants \
-  --user karaf:karaf \
+  --user "karaf:${UNOMI_ROOT_PASSWORD}" \
   -H "Content-Type: application/json" \
   -d '{
     "requestedId": "default",
@@ -114,13 +128,13 @@ curl -X POST http://localhost:8181/cxs/tenants \
     }
   }'
 
-curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PUBLIC" --user karaf:karaf
-curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PRIVATE" --user karaf:karaf
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PUBLIC" --user "karaf:${UNOMI_ROOT_PASSWORD}"
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PRIVATE" --user "karaf:${UNOMI_ROOT_PASSWORD}"
 ----
 
 Use the public API key in `X-Unomi-Api-Key` for `/cxs/context.json` requests. See <<_multitenancy,Multi-tenancy>>.
 
-Try accessing https://localhost:9443/cxs/cluster with username/password: karaf/karaf . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
+Try accessing https://localhost:9443/cxs/cluster with username/password: `karaf` / your `UNOMI_ROOT_PASSWORD` . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
 
 === Quick Start manually
 
@@ -159,6 +173,14 @@ discovery.type: single-node
 
 5) Download Apache Unomi here : https://unomi.apache.org/download.html
 
+5b) Before starting Karaf, export required passwords (Unomi will refuse to start without them):
+
+[source,bash]
+----
+export UNOMI_ROOT_PASSWORD='choose-a-strong-password'
+export UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password'
+----
+
 6) Start it using : `./bin/karaf`
 
 7) Start the Apache Unomi packages using:
@@ -173,14 +195,14 @@ which determines which set of features and bundles are installed and started. A 
 
 8) Wait for startup to complete
 
-9) Try accessing https://localhost:9443/cxs/cluster with username/password: `karaf/karaf` . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
+9) Try accessing https://localhost:9443/cxs/cluster with username/password: `karaf` / your `UNOMI_ROOT_PASSWORD` . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
 
 10) Create a tenant that will own all your data, then regenerate keys and store `plainTextKey`:
 
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/tenants \
-  --user karaf:karaf \
+  --user "karaf:${UNOMI_ROOT_PASSWORD}" \
   -H "Content-Type: application/json" \
   -d '{
     "requestedId": "default",
@@ -190,8 +212,8 @@ curl -X POST http://localhost:8181/cxs/tenants \
     }
   }'
 
-curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PUBLIC" --user karaf:karaf
-curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PRIVATE" --user karaf:karaf
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PUBLIC" --user "karaf:${UNOMI_ROOT_PASSWORD}"
+curl -X POST "http://localhost:8181/cxs/tenants/default/apikeys?type=PRIVATE" --user "karaf:${UNOMI_ROOT_PASSWORD}"
 ----
 
 Save the `plainTextKey` values from the key-creation responses — you'll need them for API calls.

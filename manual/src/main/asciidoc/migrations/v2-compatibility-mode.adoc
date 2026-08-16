@@ -111,7 +111,7 @@ Your V2 clients should now work without any changes:
 ```java
 // V2-style authentication still works
 RestAssured.authentication = RestAssured.preemptive()
-    .basic("karaf", "karaf");
+    .basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"));
 
 // Context requests work without API keys
 RestAssured.given()
@@ -137,7 +137,7 @@ Over time, gradually update your clients to use V3 authentication:
 ```java
 // This continues to work in V2 compatibility mode
 RestAssured.authentication = RestAssured.preemptive()
-    .basic("karaf", "karaf");
+    .basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"));
 
 RestAssured.given()
     .auth().none()
@@ -260,7 +260,7 @@ The V2 third-party configuration supports dynamic updates:
 - Ensure the tenant exists and is accessible
 
 **Authentication errors**:
-- Verify system administrator credentials (karaf/karaf)
+- Verify system administrator credentials (the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`)
 - Check that the server is running properly
 - Review logs for authentication errors
 

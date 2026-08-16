@@ -30,7 +30,7 @@ Login into the Unomi Karaf SSH shell using something like this :
 
 [source]
 ----
-ssh -p 8102 karaf@localhost (default password is karaf) 
+ssh -p 8102 karaf@localhost (the password is the one you set in UNOMI_ROOT_PASSWORD; no default is shipped)
 ----
 
 Install the login samples using the following command:

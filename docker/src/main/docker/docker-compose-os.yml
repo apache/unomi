@@ -84,6 +84,9 @@ services:
       - UNOMI_OPENSEARCH_ADDRESSES=opensearch-node1:9200
       - UNOMI_OPENSEARCH_USERNAME=admin
       - UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
+      # Required admin password (no known default is shipped). Override via .env / shell.
+      - UNOMI_ROOT_PASSWORD=${UNOMI_ROOT_PASSWORD:?Set UNOMI_ROOT_PASSWORD}
+      - UNOMI_HEALTHCHECK_PASSWORD=${UNOMI_HEALTHCHECK_PASSWORD:?Set UNOMI_HEALTHCHECK_PASSWORD}
       # Debug settings
       - KARAF_DEBUG=${DEBUG:-false}
       - KARAF_DEBUG_PORT=${DEBUG_PORT:-5005}

@@ -132,7 +132,7 @@ where PROFILE_ID is a profile identifier. This will indeed retrieve all the even
 
 |/health/check
 |GET
-|Health check JSON (role `health`, default user `health`/`health`). See <<_health_check,Health Check extension>>.
+|Health check JSON (role `health`, user `health` with the password from `UNOMI_HEALTHCHECK_PASSWORD` — no default is shipped). See <<_health_check,Health Check extension>>.
 
 |/cxs/context.json?explain=true
 |POST
