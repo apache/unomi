@@ -241,14 +241,16 @@ Apache Unomi attempts to identify the visitor's profile through the following pr
    * **Public callers** (public API key / unauthenticated context): the profile cookie is the **only** profile bearer. A body or query `profileId` is **ignored** (even when no cookie is present).
    * **Trusted callers** (system administrator or tenant private-key / `TENANT_ADMINISTRATOR`): an explicit body/query `profileId` is honored and may differ from the cookie.
    * Cookie name defaults to `context-profile-id` (configurable via `org.apache.unomi.profile.cookie.name`).
-   * Cookie values are validated against a JSON schema — invalid values (for example containing script tags) cause a `400 Bad Request`.
+   * Cookie values are validated against a JSON schema — invalid values (for example containing script tags) cause a `400 Bad Request`. Since 3.1 the cookie is read on every request, so this also applies when the request supplies an explicit `profileId`; before, a malformed cookie went unnoticed on those requests.
    * The resolved profile ID is used to attempt loading the profile from the database.
 
 2. **Session Profile Override** (if session exists):
    * If a session is found (see Step 2) and its profile differs from the request profile, Unomi switches to the session profile **only when**:
      ** the profile cookie already matches the session owner, **or**
      ** the caller is trusted (and is not keeping an explicit trusted body `profileId` override).
-   * Otherwise the session is **detached** for this request (Unomi does not adopt a foreign session profile for a public caller).
+   * Otherwise the session is **detached** for this request (Unomi does not adopt a foreign session profile for a public caller), and the supplied session id is **not echoed back** in the response — a client that saw its own id returned would keep replaying an id the server did not accept.
+   * **Anonymous sessions** are a special case. Anonymity removes the owner from the session (`getAnonymousProfile` returns a profile with no ID, so the session's `profileId` is `null`), which leaves the rule above nothing to compare the cookie against. Binding such a session back to a named profile — what happens when a visitor turns anonymous browsing off — is therefore reserved for **trusted** callers. For a public caller the session stays anonymous, and the visitor gets a named session again once their client uses a new session id.
+   * `invalidateSession=true` re-creates the session under the supplied id, so it observes the same rule: a public caller may only invalidate a session its own cookie owns, and a session with no recorded owner cannot be invalidated this way.
 
 3. **Profile Creation**: If no profile ID is found or the profile doesn't exist:
    * If a profile ID was provided (from cookie, or from a trusted body/query `profileId`) but doesn't exist in the database, creates a new profile with that ID

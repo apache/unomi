@@ -134,8 +134,12 @@ event data to the profile. This is simpler than it sounds, as usually all it req
 defining the corresponding JSON schema and you're ready to update profiles using events. 
 
 - Use the protected built-in "updateProperties" event. This event is designed to be used for administrative purposes
-only. Cross-profile updates and `systemProperties.*` writes require a **trusted** caller (tenant private key or system
-administrator). Prefer custom events for public visitors. Again, prefer the custom events solution because as this is a
+only. Being a protected event type, it is only accepted from an authorized source address — a configured third-party
+server, or in V2 compatibility mode an `X-Unomi-Peer` key valid for that source address. Note that this is an
+address-based gate: it is independent of the public-versus-trusted caller distinction that governs profile and session
+binding (see <<_client_facing_hardening_3_1,client-facing hardening>>), and once the event is accepted its `targetId`
+and `systemProperties.*` writes are not further restricted. Prefer custom events for public visitors. Again, prefer the
+custom events solution because as this is a
 protected event it will require sending trusted credentials, and as Unomi only supports a single key for the moment it
 could be problematic if the key is intercepted. But at least by using an event you will get the benefits of auditing and
 historical property modification tracing (see <<_request_tracing_explain,request tracing>>).

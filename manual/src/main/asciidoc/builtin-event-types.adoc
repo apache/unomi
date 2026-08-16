@@ -242,9 +242,12 @@ image::form-event-type.png[]
 
 This event is usually used by user interfaces that make it possible to modify profile properties, for example a form where a user can edit his profile properties, or a management UI to modify.
 
-Note that this event type is a protected event type that is only accepted from configured third-party servers
-(or equivalently from a trusted private-key / administrator caller in 3.1). Cross-profile updates and
-`systemProperties.*` writes also require a trusted caller — see <<_client_facing_hardening_3_1,client-facing hardening>>.
+Note that this event type is a protected event type that is only accepted from configured third-party servers, which are
+authorized by source IP address (and in V2 compatibility mode by an `X-Unomi-Peer` key valid for that address). That
+gate is separate from the public-versus-trusted caller distinction that governs which profile and session a request may
+bind to — see <<_client_facing_hardening_3_1,client-facing hardening>>. Once the event is accepted, its `targetId`
+cross-profile update and its `systemProperties.*` writes are not subject to a further caller check, so the address
+allowlist is what protects them.
 
 ===== Structure definition
 

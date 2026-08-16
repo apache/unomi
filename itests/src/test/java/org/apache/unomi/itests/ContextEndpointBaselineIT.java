@@ -42,6 +42,7 @@ import java.util.Objects;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -232,7 +233,14 @@ public class ContextEndpointBaselineIT extends BaseIT {
         }
     }
 
-    /** A public caller must not be able to adopt a session belonging to someone else. */
+    /**
+     * A public caller must not be able to adopt a session belonging to someone else.
+     * <p>
+     * Three things have to hold, not just the first: the caller must not end up on the other's
+     * profile, the refused id must not be echoed back (or the client keeps replaying it), and the
+     * other visitor must still hold the session afterwards - refusing by handing the session to the
+     * caller anyway would satisfy the first assertion alone.
+     */
     @Test
     public void hardened_publicCallerCannotAdoptAForeignSession() throws Exception {
         String otherSessionId = "baseline-other-sess-" + System.currentTimeMillis();
@@ -249,6 +257,160 @@ public class ContextEndpointBaselineIT extends BaseIT {
         assertEquals(200, attempt.getStatusCode());
         assertTrue("the untrusted caller must not end up on the other's profile",
                 !otherProfileId.equals(attempt.getContextResponse().getProfileId()));
+        assertNull("a refused session id must not be echoed back to the caller",
+                attempt.getContextResponse().getSessionId());
+
+        // The rightful owner comes back: the session must still be theirs and still be accepted.
+        TestUtils.RequestResponse ownerAgain = postContextJson(newContextRequest(otherSessionId),
+                other.getCookieHeaderValue(), otherSessionId);
+        assertEquals("the rightful owner must keep its profile", otherProfileId,
+                ownerAgain.getContextResponse().getProfileId());
+        assertEquals("and must not have lost the session to the caller that was refused",
+                otherSessionId, ownerAgain.getContextResponse().getSessionId());
+    }
+
+    /**
+     * The same takeover, aimed at an <em>anonymous</em> session.
+     * <p>
+     * An anonymous session records no owner at all - {@code PrivacyService#getAnonymousProfile}
+     * returns a profile with no id, so the session's profileId is null - which left the ownership
+     * rule with nothing to compare the cookie against. Presenting the id was therefore enough to have
+     * the session rebound to the presenter's own profile and saved. The session must stay anonymous.
+     * <p>
+     * The check is made through the rightful owner's next request rather than by reading the session
+     * back: if the takeover had happened the session would now carry a real, foreign profile, and the
+     * owner would be refused by the ownership rule that covers named sessions.
+     */
+    @Test
+    public void hardened_publicCallerCannotTakeOverAnAnonymousSession() throws Exception {
+        String victimSessionId = "baseline-anon-sess-" + System.currentTimeMillis();
+        TestUtils.RequestResponse victim = postContextJson(newContextRequest(victimSessionId), null, victimSessionId);
+        String victimProfileId = victim.getContextResponse().getProfileId();
+
+        try {
+            // The visitor asks for anonymous browsing, then makes one request so the session picks the
+            // anonymous profile up.
+            privacyService.setRequireAnonymousBrowsing(victimProfileId, true, TEST_SCOPE);
+            keepTrying("Profile should require anonymous browsing",
+                    () -> privacyService.isRequireAnonymousBrowsing(victimProfileId),
+                    Boolean.TRUE::equals, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+            postContextJson(newContextRequest(victimSessionId), victim.getCookieHeaderValue(), victimSessionId);
+            keepTrying("Session should have become anonymous",
+                    () -> profileService.loadSession(victimSessionId),
+                    session -> session != null && session.getProfileId() == null,
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+            // Someone else presents that session id with their own cookie.
+            String attackerSessionId = "baseline-anon-attacker-" + System.currentTimeMillis();
+            TestUtils.RequestResponse attacker = postContextJson(newContextRequest(attackerSessionId), null, attackerSessionId);
+            String attackerProfileId = attacker.getContextResponse().getProfileId();
+            postContextJson(newContextRequest(victimSessionId), attacker.getCookieHeaderValue(), victimSessionId);
+
+            keepTrying("The anonymous session must not be reassigned to the caller",
+                    () -> profileService.loadSession(victimSessionId),
+                    session -> session != null && !attackerProfileId.equals(session.getProfileId()),
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+            // And the rightful owner is still served by it.
+            TestUtils.RequestResponse ownerAgain = postContextJson(newContextRequest(victimSessionId),
+                    victim.getCookieHeaderValue(), victimSessionId);
+            assertEquals("the anonymous visitor must keep its own profile", victimProfileId,
+                    ownerAgain.getContextResponse().getProfileId());
+            assertEquals("and must keep its session", victimSessionId,
+                    ownerAgain.getContextResponse().getSessionId());
+        } finally {
+            privacyService.setRequireAnonymousBrowsing(victimProfileId, false, TEST_SCOPE);
+        }
+    }
+
+    /**
+     * The same body-profileId claim, aimed at {@code /eventcollector}.
+     * <p>
+     * Both endpoints share {@code initEventsRequest}, so this passes today - which is exactly why it
+     * is worth pinning. The collector reads its {@code sessionId}/{@code profileId} from a different
+     * request model and even falls back to a query parameter, so a change on that side could route
+     * around the binding rule without any context.json test noticing.
+     * <p>
+     * The collector's response body carries no profile id, so the assertion is on the profile cookie
+     * the request is answered with: that is the profile the server decided the caller is.
+     */
+    @Test
+    public void hardened_eventCollectorIgnoresPublicBodyProfileId() throws Exception {
+        String otherProfileId = "baseline-ec-other-" + System.currentTimeMillis();
+        Profile other = new Profile(otherProfileId);
+        profileService.save(other);
+        keepTrying("Other profile should be saved", () -> profileService.load(otherProfileId),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        try {
+            String sessionId = "baseline-ec-claim-" + System.currentTimeMillis();
+            EventsCollectorRequest claim = newEventsRequest(sessionId);
+            claim.setProfileId(otherProfileId);
+
+            HttpPost post = new HttpPost(getFullUrl(EVENT_COLLECTOR_URL));
+            post.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKeyValue);
+            post.setEntity(new StringEntity(getObjectMapper().writeValueAsString(claim), ContentType.APPLICATION_JSON));
+
+            try (CloseableHttpResponse response = httpClient.execute(post)) {
+                String setCookie = response.getFirstHeader("Set-Cookie") == null
+                        ? "" : response.getFirstHeader("Set-Cookie").getValue();
+                assertFalse("the eventcollector must not bind a public caller to a body profileId, got: " + setCookie,
+                        setCookie.contains(otherProfileId));
+            }
+        } finally {
+            profileService.delete(otherProfileId, false);
+        }
+    }
+
+    /** And the session half of the same rule, again through {@code /eventcollector}. */
+    @Test
+    public void hardened_eventCollectorCannotAdoptAForeignSession() throws Exception {
+        String otherSessionId = "baseline-ec-sess-" + System.currentTimeMillis();
+        TestUtils.RequestResponse other = postContextJson(newContextRequest(otherSessionId), null, otherSessionId);
+        String otherProfileId = other.getContextResponse().getProfileId();
+
+        String callerSessionId = "baseline-ec-caller-" + System.currentTimeMillis();
+        TestUtils.RequestResponse caller = postContextJson(newContextRequest(callerSessionId), null, callerSessionId);
+
+        HttpPost post = new HttpPost(getFullUrl(EVENT_COLLECTOR_URL));
+        post.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKeyValue);
+        post.addHeader("Cookie", caller.getCookieHeaderValue());
+        post.setEntity(new StringEntity(getObjectMapper().writeValueAsString(newEventsRequest(otherSessionId)),
+                ContentType.APPLICATION_JSON));
+
+        try (CloseableHttpResponse response = httpClient.execute(post)) {
+            String setCookie = response.getFirstHeader("Set-Cookie") == null
+                    ? "" : response.getFirstHeader("Set-Cookie").getValue();
+            assertFalse("presenting a foreign session id must not move the caller onto its owner's profile, got: "
+                    + setCookie, setCookie.contains(otherProfileId));
+        }
+
+        // The owner still has the session.
+        TestUtils.RequestResponse ownerAgain = postContextJson(newContextRequest(otherSessionId),
+                other.getCookieHeaderValue(), otherSessionId);
+        assertEquals("the rightful owner must keep its profile", otherProfileId,
+                ownerAgain.getContextResponse().getProfileId());
+        assertEquals("and its session", otherSessionId, ownerAgain.getContextResponse().getSessionId());
+    }
+
+    /**
+     * The profile cookie must actually be issued {@code HttpOnly} by a running server.
+     * <p>
+     * The shipped defaults are checked separately as configuration text; this asserts the value that
+     * survives the whole path from that default through {@code WebConfig} and
+     * {@code ConfigSharingService} into the {@code Set-Cookie} header. Binding a public caller to the
+     * profile its cookie names only means anything while page script cannot read that cookie, so the
+     * flag is part of the security model rather than a preference.
+     */
+    @Test
+    public void hardened_profileCookieIsHttpOnly() throws Exception {
+        String sessionId = "baseline-httponly-" + System.currentTimeMillis();
+        TestUtils.RequestResponse response = postContextJson(newContextRequest(sessionId), null, sessionId);
+
+        String setCookie = response.getCookieHeaderValue();
+        assertNotNull("a first visit must be issued the profile cookie", setCookie);
+        assertTrue("the profile cookie must be HttpOnly, got: " + setCookie,
+                setCookie.toLowerCase().contains("httponly"));
     }
 
     // ------------------------------------------------------------------ helpers

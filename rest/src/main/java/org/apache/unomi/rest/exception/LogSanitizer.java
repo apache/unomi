@@ -49,9 +49,11 @@ final class LogSanitizer {
      * {@code \ { } % $}) with an underscore. This removes newlines, tabs and other control
      * characters that could be used for log injection.
      * <p>
-     * Delegates to {@link org.apache.unomi.api.utils.LogSanitizer}, which is the one implementation
-     * of this filter, shared with the bundles outside {@code rest} that also log request-derived
-     * values. This class keeps only the REST-specific length limits and field shapes below.
+     * Delegates to {@link org.apache.unomi.api.utils.LogSanitizer}, which holds the one
+     * implementation of this filter. It lives in {@code api} so that bundles outside {@code rest}
+     * which log request-derived values can reuse it instead of growing a second copy; as of this
+     * change its only callers are in {@code rest}. This class keeps the REST-specific length limits
+     * and field shapes below.
      * <p>
      * Note the empty-string result for {@code null} is preserved here: the exception mappers embed
      * this in user-facing messages where the literal {@code "null"} would read as a value.

@@ -473,11 +473,16 @@ public class ContextServletIT extends BaseIT {
     }
 
     /**
-     * End-to-end guard for anonymous browsing. The session-ownership check added for public callers
-     * deliberately skips anonymous profiles today; any future tightening of it must not detach the
-     * session of a visitor who is legitimately browsing anonymously. That failure would be invisible
-     * at unit level in the endpoint wiring, hence this IT: it asserts the visitor's own session id is
-     * still echoed back (a refused session is suppressed from the response) after anonymisation.
+     * End-to-end guard for anonymous browsing: a visitor who is legitimately browsing anonymously must
+     * never have their own session detached. That failure would be invisible at unit level in the
+     * endpoint wiring, hence this IT — it asserts the visitor's own session id is still echoed back,
+     * since a refused session is suppressed from the response.
+     * <p>
+     * The de-anonymising step at the end is the one place where the session-ownership rule cannot be
+     * applied: an anonymous session records no owner, so nothing can be matched against the cookie.
+     * A public caller therefore keeps an anonymous session instead of having it bound back to a named
+     * profile. What must hold either way is that the visitor is still served and still holds the
+     * session; being refused here would strand every visitor who turns anonymity off.
      */
     @Test
     public void testAnonymousBrowsing_visitorKeepsItsOwnSession() throws Exception {
@@ -515,7 +520,9 @@ public class ContextServletIT extends BaseIT {
                     anonymousResponse.getContextResponse().getSessionId());
             assertEquals(sessionId, anonymousResponse.getContextResponse().getSessionId());
 
-            // And turning anonymity back off must keep working too (the de-anonymising branch).
+            // And turning anonymity back off must keep serving the visitor. For a public caller the
+            // session stays anonymous rather than being rebound (see this test's javadoc); the profile
+            // it is served as is still its own.
             privacyService.setRequireAnonymousBrowsing(profileId, false, TEST_SCOPE);
             keepTrying("Anonymous browsing should be disabled again",
                     () -> privacyService.isRequireAnonymousBrowsing(profileId),
@@ -532,6 +539,8 @@ public class ContextServletIT extends BaseIT {
             assertEquals(200, deanonymisedResponse.getStatusCode());
             assertNotNull("Leaving anonymous browsing must not refuse the visitor's own session",
                     deanonymisedResponse.getContextResponse().getSessionId());
+            assertEquals("and must keep serving it under the visitor's own profile", profileId,
+                    deanonymisedResponse.getContextResponse().getProfileId());
         } finally {
             privacyService.setRequireAnonymousBrowsing(profileId, false, TEST_SCOPE);
         }

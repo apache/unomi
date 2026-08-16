@@ -281,9 +281,11 @@ class RestServiceUtilsImplProfileBindingTest {
 
     // ---------------------------------------------------------------------------------------
     // Anonymous browsing. All four branches of the anonymity handling in initEventsRequest are
-    // pinned here BEFORE any change to the session-ownership check, because the ownership check
-    // currently skips anonymous profiles entirely: tightening it without this safety net would
-    // silently detach the session of every legitimately anonymous visitor on every request.
+    // pinned here, because the session-ownership check cannot reach an anonymous session: such a
+    // session records no owner (getAnonymousProfile returns a profile with no itemId), so there is
+    // nothing to match the cookie bearer against. Branch 3 is therefore the one place where caller
+    // trust decides the outcome; the other three must stay untouched by that rule so a legitimately
+    // anonymous visitor is not detached on every request.
     // ---------------------------------------------------------------------------------------
 
     /**
@@ -341,13 +343,13 @@ class RestServiceUtilsImplProfileBindingTest {
     }
 
     /**
-     * Branch 3: the visitor has turned anonymity off, so their anonymous session is bound back to
-     * their real profile. This is the branch an ownership check would most easily break, and it is
-     * also the branch an untrusted caller reaches with a reused anonymous session id — so it must keep
-     * working for the legitimate case while the fix is designed.
+     * Branch 3, trusted caller: rebinding an anonymous session to a real profile is a write that
+     * assigns an ownerless session to a named owner, so it stays available to a caller whose
+     * authority to name a profile has been established.
      */
     @Test
-    void anonymousBrowsing_leaving_rebindsSessionToTheRealProfile() {
+    void anonymousBrowsing_leaving_rebindsSessionToTheRealProfileForTrustedCaller() {
+        when(securityService.hasSystemAccess()).thenReturn(true);
         Profile cookieProfile = new Profile("cookie-profile");
         Session session = new Session("anon-sess", anonymous(), new Date(), "systemscope");
 
@@ -364,6 +366,66 @@ class RestServiceUtilsImplProfileBindingTest {
         assertNotNull(ctx.getSession());
         assertEquals("cookie-profile", ctx.getSession().getProfile().getItemId(),
                 "leaving anonymity must bind the session back to the visitor's real profile");
+        assertTrue((ctx.getChanges() & EventService.SESSION_UPDATED) != 0,
+                "the session change must be flagged so it is persisted");
+    }
+
+    /**
+     * Branch 3, public caller: the same rebinding is refused.
+     * <p>
+     * This is the anonymous-session takeover. An anonymous session carries no owner, so presenting
+     * its id was enough to have it rebound to the presenter's own profile and saved — the ownership
+     * rule enforced for named sessions had nothing to bite on. The session must stay anonymous and
+     * unchanged, so nothing is persisted and the real visitor keeps it.
+     */
+    @Test
+    void anonymousBrowsing_leaving_isRefusedForPublicCaller() {
+        Profile callerProfile = new Profile("caller-profile");
+        Session session = new Session("anon-sess", anonymous(), new Date(), "systemscope");
+
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "caller-profile")});
+        when(profileService.load("caller-profile")).thenReturn(callerProfile);
+        when(profileService.loadSession("anon-sess")).thenReturn(session);
+        when(privacyService.isRequireAnonymousBrowsing(callerProfile)).thenReturn(false);
+
+        EventsRequestContext ctx = restServiceUtils.initEventsRequest(
+                "systemscope", "anon-sess", null, null,
+                false, false, request, response, new Date());
+
+        assertNotNull(ctx.getSession());
+        assertTrue(ctx.getSession().getProfile().isAnonymousProfile(),
+                "a public caller must not take over an anonymous session by presenting its id");
+        assertNull(ctx.getSession().getProfileId(),
+                "the session must keep no owner rather than being assigned to the caller");
+        assertEquals(0, ctx.getChanges() & EventService.SESSION_UPDATED,
+                "nothing changed, so the session must not be persisted under the caller's profile");
+        assertEquals("caller-profile", ctx.getProfile().getItemId(),
+                "the caller still acts as its own cookie profile");
+    }
+
+    /**
+     * The same takeover attempted through {@code invalidateSession}, which re-creates the session
+     * under the supplied id. The ownership guard for that path keys off the session's profileId,
+     * which is null for an anonymous session, so it used to wave this through.
+     */
+    @Test
+    void anonymousBrowsing_invalidateSession_cannotTakeOverAnonymousSessionForPublicCaller() {
+        Profile callerProfile = new Profile("caller-profile");
+        Session session = new Session("anon-sess", anonymous(), new Date(), "systemscope");
+
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "caller-profile")});
+        when(profileService.load("caller-profile")).thenReturn(callerProfile);
+        when(profileService.loadSession("anon-sess")).thenReturn(session);
+        when(privacyService.isRequireAnonymousBrowsing(callerProfile)).thenReturn(false);
+
+        EventsRequestContext ctx = restServiceUtils.initEventsRequest(
+                "systemscope", "anon-sess", null, null,
+                false, true, request, response, new Date());
+
+        assertTrue(ctx.isSessionRefused(),
+                "a public caller must not recreate an anonymous session it cannot be shown to own");
+        assertNull(ctx.getSession(),
+                "the refused session must be detached rather than reissued under the caller's profile");
     }
 
     /** Branch 4: the ordinary non-anonymous case — the session is bound to the caller's profile. */
@@ -483,6 +545,34 @@ class RestServiceUtilsImplProfileBindingTest {
 
         assertNotNull(ctx.getProfile());
         assertFalse("cookie-profile".equals(ctx.getProfile().getItemId()));
+    }
+
+    /**
+     * invalidateProfile together with a session the cookie owns: the session's profile wins and the
+     * visitor gets their old profile back, so the invalidation does not take effect.
+     * <p>
+     * Pre-existing behaviour, pinned rather than changed - the session-adoption branch runs after the
+     * new profile is minted and overwrites it. It is also the only route by which an untrusted caller
+     * reaches {@code cookieOwnsSession == true}, so without this test that condition looks dead and
+     * would be an easy thing to "simplify" away. Callers that mean to start over must invalidate the
+     * session too.
+     */
+    @Test
+    void invalidateProfile_withOwnedSession_isUndoneBySessionAdoption() {
+        Profile cookieProfile = new Profile("cookie-profile");
+        Session session = new Session("own-sess", cookieProfile, new Date(), "systemscope");
+
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+        when(profileService.load("cookie-profile")).thenReturn(cookieProfile);
+        when(profileService.loadSession("own-sess")).thenReturn(session);
+
+        EventsRequestContext ctx = restServiceUtils.initEventsRequest(
+                "systemscope", "own-sess", null, null,
+                true, false, request, response, new Date());
+
+        assertFalse(ctx.isSessionRefused(), "the caller's own session must not be refused");
+        assertEquals("cookie-profile", ctx.getProfile().getItemId(),
+                "the session it owns hands the visitor its previous profile back");
     }
 
     /**
