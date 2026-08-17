@@ -39,7 +39,10 @@ source "$SCRIPT_DIR/lib/it-run.sh"
 source "$SCRIPT_DIR/lib/it-run-memory.sh"
 
 TARGET_DIR="$SCRIPT_DIR/target"
-INTERVAL=30
+# 10s, down from 30s: at 30s a sample covers several ITs at once, so a stall cannot be
+# attributed to the test that caused it. Each sample is a few cheap reads plus one
+# `docker stats --no-stream`, and a 50-minute run produces ~300 rows (a few tens of KB).
+INTERVAL=10
 SEARCH_PORT=""
 PRINT_ONLY=false
 COMMAND=""
@@ -58,7 +61,7 @@ Commands:
 
 Options:
   --target-dir DIR   IT target directory (default: itests/target)
-  --interval SEC     Sample interval in seconds for start (default: 30)
+  --interval SEC     Sample interval in seconds for start (default: 10)
   --port PORT        Search engine HTTP port override
   --print-only       With operator-note: print to stdout instead of writing file
   -h, --help         Show this help
@@ -78,7 +81,7 @@ parse_args() {
                 ;;
             --interval)
                 shift
-                INTERVAL="${1:-30}"
+                INTERVAL="${1:-10}"
                 ;;
             --port)
                 shift

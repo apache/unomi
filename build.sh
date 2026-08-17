@@ -279,7 +279,9 @@ RESOLVER_DEBUG=false
 KEEP_CONTAINER=false
 IT_SEARCH_ENGINE_LOGS=false
 IT_MEMORY_SAMPLER=true
-IT_MEMORY_INTERVAL=30
+# 10s, matching itests/sample-it-memory.sh: at 30s a single sample spans several ITs, so a
+# stall cannot be attributed to the test that caused it.
+IT_MEMORY_INTERVAL=10
 JAVADOC=false
 NO_JAVADOC=false
 LOG_FILE=""
@@ -328,7 +330,7 @@ EOF
         echo -e "  ${CYAN}--keep-container${NC}           Keep search engine container running after tests (for post-failure inspection)"
         echo -e "  ${CYAN}--search-engine-logs${NC}       Stream search engine Docker logs to the Maven console during integration tests"
         echo -e "  ${CYAN}--no-memory-sampler${NC}        Disable JVM/system memory sampling during integration tests"
-        echo -e "  ${CYAN}--memory-interval SEC${NC}    Memory sample interval in seconds (default: 30)"
+        echo -e "  ${CYAN}--memory-interval SEC${NC}    Memory sample interval in seconds (default: 10)"
         echo -e "  ${CYAN}--javadoc${NC}                  Build and validate Javadoc after install (doclint errors fail; public/protected tag gaps warn)"
         echo -e "  ${CYAN}--no-javadoc${NC}               Skip Javadoc/checkstyle validation (overrides --ci; use when another job already ran it)"
         echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, non-interactive, includes Javadoc"
@@ -373,7 +375,7 @@ EOF
         echo "  --keep-container          Keep search engine container running after tests (for post-failure inspection)"
         echo "  --search-engine-logs      Stream search engine Docker logs to the Maven console during integration tests"
         echo "  --no-memory-sampler       Disable JVM/system memory sampling during integration tests"
-        echo "  --memory-interval SEC     Memory sample interval in seconds (default: 30)"
+        echo "  --memory-interval SEC     Memory sample interval in seconds (default: 10)"
         echo "  --javadoc                 Build and validate Javadoc after install (doclint errors fail; public/protected tag gaps warn)"
         echo "  --no-javadoc              Skip Javadoc/checkstyle validation (overrides --ci; use when another job already ran it)"
         echo "  --ci                      CI mode: no Karaf, non-interactive, includes Javadoc"
