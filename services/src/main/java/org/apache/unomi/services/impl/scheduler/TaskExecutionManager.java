@@ -502,6 +502,7 @@ public class TaskExecutionManager {
             task.setExecutingNodeId(null);
             task.setLockOwner(null);
             task.setLockDate(null);
+            task.setLockLeaseMillis(0);
             schedulerService.saveTask(task, true);
         } catch (Exception e) {
             LOGGER.warn("Failed to abort prepared task {} during shutdown: {}",
@@ -532,6 +533,16 @@ public class TaskExecutionManager {
             return;
         }
         long interval = Math.max(MIN_LOCK_RENEWAL_INTERVAL_MS, lockManager.getLockTimeout() / 3);
+        if (interval >= lockManager.getLockTimeout()) {
+            // The renewal floor exceeds the configured timeout, so this node cannot renew its own
+            // lease fast enough to keep it alive: peers may legitimately treat its live locks as
+            // expired between two renewals and recover mid-execution tasks. Surface the
+            // misconfiguration instead of leaving sporadic double executions to be diagnosed.
+            LOGGER.warn("Lock timeout {}ms is at or below the minimum renewal interval {}ms: "
+                    + "this node's live locks can expire between renewals and be recovered by peers. "
+                    + "Configure a lock timeout of at least {}ms.",
+                lockManager.getLockTimeout(), interval, MIN_LOCK_RENEWAL_INTERVAL_MS * 3);
+        }
         LockRenewalHandle handle = new LockRenewalHandle();
         activeLockRenewals.put(task.getItemId(), handle);
         try {
@@ -668,6 +679,7 @@ public class TaskExecutionManager {
     private boolean persistTerminalState(ScheduledTask task) {
         task.setLockOwner(null);
         task.setLockDate(null);
+        task.setLockLeaseMillis(0);
         if (!task.isPersistent()) {
             boolean saved = schedulerService.saveTask(task);
             if (!saved) {

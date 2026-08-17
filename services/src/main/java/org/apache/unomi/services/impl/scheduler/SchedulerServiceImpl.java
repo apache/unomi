@@ -493,6 +493,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         if (newStatus == TaskStatus.COMPLETED || newStatus == TaskStatus.FAILED) {
             task.setLockOwner(null);
             task.setLockDate(null);
+            task.setLockLeaseMillis(0);
             task.setWaitingForTaskType(null);
             task.setCurrentStep(null);
             // Update last execution date for completed/failed tasks
@@ -511,6 +512,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         } else if (newStatus == TaskStatus.WAITING) {
             task.setLockOwner(null);
             task.setLockDate(null);
+            task.setLockLeaseMillis(0);
         } else if (newStatus == TaskStatus.RUNNING) {
             // Update status details for running tasks
             Map<String, Object> details = task.getStatusDetails();
@@ -899,6 +901,7 @@ public class SchedulerServiceImpl implements SchedulerService {
                             // and PersistenceSchedulerProvider.preDestroy need not unlock RUNNING.
                             task.setLockOwner(null);
                             task.setLockDate(null);
+                            task.setLockLeaseMillis(0);
                             if (task.isPersistent() && persistenceProvider != null) {
                                 if (!persistenceProvider.saveTask(task)) {
                                     LOGGER.warn("Failed to persist CRASHED state for task {} during shutdown; "

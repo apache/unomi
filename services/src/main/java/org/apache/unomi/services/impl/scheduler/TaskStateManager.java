@@ -148,6 +148,7 @@ public class TaskStateManager {
     private void clearTaskExecution(ScheduledTask task) {
         task.setLockOwner(null);
         task.setLockDate(null);
+        task.setLockLeaseMillis(0);
         task.setWaitingForTaskType(null);
         task.setCurrentStep(null);
     }
@@ -162,6 +163,7 @@ public class TaskStateManager {
     private void clearLockInfo(ScheduledTask task) {
         task.setLockOwner(null);
         task.setLockDate(null);
+        task.setLockLeaseMillis(0);
     }
 
     private void updateRunningState(ScheduledTask task, String nodeId) {

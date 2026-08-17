@@ -331,6 +331,150 @@ public class SchedulerServiceClusterRaceTest {
         assertEquals(1, executors.size(), "Exactly one node should have executed");
     }
 
+    /**
+     * A node configured with a SHORTER lock timeout than a peer must not "recover" that peer's
+     * live, renewed lock.
+     * <p>
+     * The owner renews its lock every {@code lockTimeout/3} — a cadence derived from its OWN
+     * timeout. Before lock leases were recorded ({@link ScheduledTask#getLockLeaseMillis()}),
+     * expiry was judged against the <em>observer's</em> timeout, so an observer whose timeout was
+     * shorter than the owner's renewal cadence saw every renewal gap as an expired lock: it marked
+     * the live execution CRASHED and cleared the lock, and the next peer tick re-dispatched the
+     * task while the original execution was still running. This reproduced deterministically as
+     * {@code maxConcurrent=2} with a 1s-timeout observer against 10s-timeout workers, and is also a
+     * production hazard under config drift or rolling upgrades. The recorded lease makes expiry
+     * owner-relative, so the divergent observer becomes harmless.
+     */
+    @Test
+    public void testShortTimeoutObserverCannotRecoverLiveRenewedLock() throws Exception {
+        SchedulerServiceImpl worker1 = createNode("lease-worker1", true, 10000);
+        SchedulerServiceImpl worker2 = createNode("lease-worker2", true, 10000);
+        // Divergent config: this node judges everything with a 500ms timeout. It registers no
+        // executor for the task type, so any double execution must come via a worker re-dispatch.
+        SchedulerServiceImpl watchdog = createNode("lease-watchdog", true, 500);
+        seedActiveNodes("lease-worker1", "lease-worker2", "lease-watchdog");
+
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicInteger executions = new AtomicInteger(0);
+
+        TaskExecutor executor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return "lease-liveness-test";
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) throws Exception {
+                executions.incrementAndGet();
+                started.countDown();
+                assertTrue(release.await(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+                callback.complete();
+            }
+        };
+        worker1.registerTaskExecutor(executor);
+        worker2.registerTaskExecutor(executor);
+
+        ScheduledTask task = worker1.newTask("lease-liveness-test")
+            .disallowParallelExecution()
+            .asOneShot()
+            .schedule();
+
+        assertTrue(started.await(TEST_TIMEOUT_MS, TimeUnit.MILLISECONDS), "One worker should start the task");
+
+        // Let the lock age past the watchdog's 500ms timeout while staying far inside the owner's
+        // 10s lease (the owner's renewal cadence is 10s/3, so the age check below cannot be
+        // satisfied by a renewal racing us — any observed age > 600ms is a genuine renewal gap).
+        long deadline = System.currentTimeMillis() + TEST_TIMEOUT_MS;
+        while (System.currentTimeMillis() < deadline) {
+            ScheduledTask stored = persistenceService.load(task.getItemId(), ScheduledTask.class);
+            if (stored != null && stored.getLockDate() != null
+                    && System.currentTimeMillis() - stored.getLockDate().getTime() > 600) {
+                break;
+            }
+            Thread.sleep(50);
+        }
+
+        // Force the divergent observer's recovery pass repeatedly — the deterministic version of
+        // the background tick that used to steal the lock.
+        for (int i = 0; i < 3; i++) {
+            watchdog.recoverCrashedTasks();
+        }
+
+        ScheduledTask observed = persistenceService.load(task.getItemId(), ScheduledTask.class);
+        assertEquals(ScheduledTask.TaskStatus.RUNNING, observed.getStatus(),
+            "A live, renewed lock must not be marked CRASHED by a shorter-timeout observer");
+        assertNotNull(observed.getLockOwner(), "The owner's lock must not be cleared");
+
+        release.countDown();
+
+        ScheduledTask done = waitForStatus(worker1, task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_TIMEOUT_MS);
+        assertEquals(ScheduledTask.TaskStatus.COMPLETED, done.getStatus());
+        assertEquals(1, executions.get(),
+            "The task must execute exactly once despite the divergent-timeout observer");
+    }
+
+    /**
+     * The recovery-enabling direction of lease-based expiry: a genuinely DEAD owner must still be
+     * recovered, and the moment that happens is decided by the lease the dead owner recorded, not
+     * by the survivor's own (here much longer) timeout. This is the guarantee that keeps crash
+     * failover working after the lease change — and it is now faster when the dead node ran with
+     * a short timeout, because peers no longer wait out their own longer opinion.
+     */
+    @Test
+    public void testDeadOwnersShortLeaseDrivesPromptRecoveryByPatientSurvivor() throws Exception {
+        SchedulerServiceImpl survivor = createNode("lease-survivor", true, 30_000);
+        seedActiveNodes("lease-survivor");
+
+        CountDownLatch recovered = new CountDownLatch(1);
+        TaskExecutor executor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return "dead-owner-lease-test";
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                recovered.countDown();
+                callback.complete();
+            }
+        };
+        survivor.registerTaskExecutor(executor);
+
+        // Manufacture what a crashed node leaves behind: RUNNING, locked, lease recorded from a
+        // short timeout, and silent (no renewal will ever come). lockDate is backdated past the
+        // lease so the very first recovery pass can act.
+        ScheduledTask ghost = new ScheduledTask();
+        ghost.setItemId("ghost-owned-task");
+        ghost.setTaskType("dead-owner-lease-test");
+        ghost.setEnabled(true);
+        ghost.setPersistent(true);
+        ghost.setOneShot(true);
+        ghost.setStatus(ScheduledTask.TaskStatus.RUNNING);
+        ghost.setExecutingNodeId("ghost-node");
+        ghost.setLockOwner("ghost-node");
+        ghost.setLockDate(new Date(System.currentTimeMillis() - 2000));
+        ghost.setLockLeaseMillis(500);
+        persistenceService.save(ghost);
+        persistenceService.refreshIndex(ScheduledTask.class);
+        persistenceService.refresh();
+
+        // Force recovery passes rather than waiting for background ticks. The survivor's own
+        // timeout is 30s: pre-lease it would have refused to touch this lock for 30s, and this
+        // latch (10s) would time out. The recorded 500ms lease is what lets it act now.
+        long deadline = System.currentTimeMillis() + TEST_TIMEOUT_MS;
+        while (recovered.getCount() > 0 && System.currentTimeMillis() < deadline) {
+            survivor.recoverCrashedTasks();
+            recovered.await(250, TimeUnit.MILLISECONDS);
+        }
+
+        assertTrue(recovered.getCount() == 0,
+            "a patient survivor must recover a dead owner's task as soon as the OWNER's lease expires");
+        ScheduledTask done = waitForStatus(survivor, "ghost-owned-task", ScheduledTask.TaskStatus.COMPLETED, TEST_TIMEOUT_MS);
+        assertEquals(ScheduledTask.TaskStatus.COMPLETED, done.getStatus(),
+            "the recovered task must run to completion on the survivor");
+    }
+
     @Test
     public void testAffinityOpenFieldAfterBackupWindowsWhenPrimaryDead() throws Exception {
         SchedulerServiceImpl backup1 = createNode("aff-backup1", true, 10000);

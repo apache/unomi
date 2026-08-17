@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.api.tasks;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.unomi.api.Item;
 
 import java.io.Serializable;
@@ -40,6 +41,11 @@ import java.util.HashSet;
  * @see org.apache.unomi.api.services.SchedulerService
  * @see TaskExecutor
  */
+// Tolerate unknown properties so a node running THIS version can still deserialize task
+// documents written by a NEWER version that has added fields (rolling upgrade window).
+// Without this, Jackson's default rejects the first unrecognized field and the older node
+// loses access to all scheduler state until it is upgraded.
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ScheduledTask extends Item implements Serializable {
 
     /**
@@ -86,6 +92,7 @@ public class ScheduledTask extends Item implements Serializable {
     private boolean enabled;
     private String lockOwner;
     private Date lockDate;
+    private long lockLeaseMillis;
     private boolean oneShot;
     private boolean allowParallelExecution;
     private TaskStatus status;
@@ -343,11 +350,38 @@ public class ScheduledTask extends Item implements Serializable {
 
     /**
      * Sets the date when the current lock was acquired.
-     * 
+     *
      * @param lockDate the lock acquisition date
      */
     public void setLockDate(Date lockDate) {
         this.lockDate = lockDate;
+    }
+
+    /**
+     * Duration in milliseconds for which the current lock is valid, as declared by the node that
+     * acquired or last renewed it.
+     * <p>
+     * A lock's lifetime is a lease granted by its <em>owner</em>: the owner renews it on a cadence
+     * derived from its own configured lock timeout, so only the owner's timeout describes when a
+     * missing renewal actually means the owner is dead. Observers must judge expiry against this
+     * recorded lease, never against their own configured timeout — a node configured with a shorter
+     * timeout than the owner's renewal cadence would otherwise "recover" a lock whose owner is alive
+     * and mid-execution, and the task would run twice.
+     *
+     * @return the lease duration in milliseconds, or {@code 0} when the lock predates lease
+     *         recording (legacy documents) and the observer's own timeout is the only guide
+     */
+    public long getLockLeaseMillis() {
+        return lockLeaseMillis;
+    }
+
+    /**
+     * Sets the lease duration granted with the current lock.
+     *
+     * @param lockLeaseMillis the lease duration in milliseconds, {@code 0} when unlocked or unknown
+     */
+    public void setLockLeaseMillis(long lockLeaseMillis) {
+        this.lockLeaseMillis = lockLeaseMillis;
     }
 
     /**
