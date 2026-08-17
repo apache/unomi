@@ -143,15 +143,19 @@ jobs:
           MAVEN_EXTRA_OPTS: >-
             -Dopensearch.port=${{ matrix.port }}
             -Delasticsearch.port=${{ matrix.port }}
-        # --skip-unit-tests: the unit-tests job above already ran them on this same commit, and
-        # both IT legs would otherwise run the whole suite a second and third time before getting
-        # to the integration tests they exist for. The flag activates the skip-unit-tests profile,
-        # which sets surefire's skip only -- failsafe, and therefore the ITs, still run.
+        # This job is gated on `needs: unit-tests`, so the unit suite and the Javadoc/checkstyle
+        # validation have already passed on this exact commit. Re-running either here is pure
+        # duplication before the integration tests this job exists for, and the legs run
+        # sequentially (max-parallel: 1), so it costs twice over.
+        #   --skip-unit-tests activates the skip-unit-tests profile, which sets surefire's skip
+        #     only: failsafe, and therefore the ITs, still run.
+        #   --no-javadoc drops the two extra full-reactor invocations --ci adds
+        #     (javadoc:javadoc and javadoc-tags-warn checkstyle:check).
         run: |
           if [ "${{ matrix.search-engine }}" = "opensearch" ]; then
-            ./build.sh --ci --integration-tests --skip-unit-tests --use-opensearch
+            ./build.sh --ci --integration-tests --skip-unit-tests --no-javadoc --use-opensearch
           else
-            ./build.sh --ci --integration-tests --skip-unit-tests
+            ./build.sh --ci --integration-tests --skip-unit-tests --no-javadoc
           fi
       # Keep only third-party dependencies in the post-job Maven cache: Unomi's own
       # snapshots are rebuilt every run and would only bloat the cache / risk staleness

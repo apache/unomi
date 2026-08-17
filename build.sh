@@ -281,6 +281,7 @@ IT_SEARCH_ENGINE_LOGS=false
 IT_MEMORY_SAMPLER=true
 IT_MEMORY_INTERVAL=30
 JAVADOC=false
+NO_JAVADOC=false
 LOG_FILE=""
 LOG_FILE_ONLY=false
 
@@ -329,6 +330,7 @@ EOF
         echo -e "  ${CYAN}--no-memory-sampler${NC}        Disable JVM/system memory sampling during integration tests"
         echo -e "  ${CYAN}--memory-interval SEC${NC}    Memory sample interval in seconds (default: 30)"
         echo -e "  ${CYAN}--javadoc${NC}                  Build and validate Javadoc after install (doclint errors fail; public/protected tag gaps warn)"
+        echo -e "  ${CYAN}--no-javadoc${NC}               Skip Javadoc/checkstyle validation (overrides --ci; use when another job already ran it)"
         echo -e "  ${CYAN}--ci${NC}                       CI mode: no Karaf, non-interactive, includes Javadoc"
         echo -e "  ${CYAN}--log-file PATH${NC}            Tee all output to PATH (console + file)"
         echo -e "  ${CYAN}--log-file-only${NC}            With --log-file: write to file only, suppress console"
@@ -373,6 +375,7 @@ EOF
         echo "  --no-memory-sampler       Disable JVM/system memory sampling during integration tests"
         echo "  --memory-interval SEC     Memory sample interval in seconds (default: 30)"
         echo "  --javadoc                 Build and validate Javadoc after install (doclint errors fail; public/protected tag gaps warn)"
+        echo "  --no-javadoc              Skip Javadoc/checkstyle validation (overrides --ci; use when another job already ran it)"
         echo "  --ci                      CI mode: no Karaf, non-interactive, includes Javadoc"
         echo "  --log-file PATH           Tee all output to PATH (console + file)"
         echo "  --log-file-only           With --log-file: write to file only, suppress console"
@@ -548,6 +551,11 @@ while [ "$1" != "" ]; do
             ;;
         --javadoc)
             JAVADOC=true
+            ;;
+        --no-javadoc)
+            # Explicit veto, applied after argument parsing so it wins regardless of whether it
+            # appears before or after --ci (which turns Javadoc on).
+            NO_JAVADOC=true
             ;;
         --log-file)
             shift
@@ -1167,6 +1175,12 @@ echo "Estimated time: 3-5 minutes for build, 50-60 minutes with integration test
 start_timer
 
 # Build phases with enhanced output
+# Apply the --no-javadoc veto now that all arguments are parsed, so it wins over --ci
+# regardless of flag order.
+if [ "$NO_JAVADOC" = true ]; then
+    JAVADOC=false
+fi
+
 [ "$JAVADOC" = true ] && total_steps=4 || total_steps=2
 current_step=0
 
