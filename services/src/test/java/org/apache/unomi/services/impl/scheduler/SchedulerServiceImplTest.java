@@ -97,6 +97,7 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@ExtendWith(SchedulerDiagnosticsExtension.class)
 public class SchedulerServiceImplTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerServiceImplTest.class);
 

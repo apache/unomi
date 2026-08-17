@@ -44,6 +44,7 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@ExtendWith(SchedulerDiagnosticsExtension.class)
 public class TaskLockManagerTest {
 
     private static final String NODE = "lock-node";

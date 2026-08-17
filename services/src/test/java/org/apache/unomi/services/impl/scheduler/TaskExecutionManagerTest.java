@@ -49,6 +49,7 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@ExtendWith(SchedulerDiagnosticsExtension.class)
 public class TaskExecutionManagerTest {
 
     private static final String NODE = "exec-node";

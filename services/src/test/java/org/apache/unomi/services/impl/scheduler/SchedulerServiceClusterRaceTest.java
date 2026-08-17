@@ -75,6 +75,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 @Tag("ClusterTests")
+@ExtendWith(SchedulerDiagnosticsExtension.class)
 public class SchedulerServiceClusterRaceTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerServiceClusterRaceTest.class);
 
