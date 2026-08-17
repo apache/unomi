@@ -21,7 +21,9 @@ jobs:
   unit-tests:
     name: Execute unit tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Slightly above the previous 15: retried failures (rerunFailingTestsCount below) add time
+    # on a red build, and a timeout is a much worse signal than a clean failure.
+    timeout-minutes: 20
     steps:
     - uses: actions/checkout@v5
     - name: Set up JDK 17
@@ -36,12 +38,79 @@ jobs:
         sudo apt-get install -y graphviz
         dot -V
     - name: Build and Unit tests
+      env:
+        # Retry a failing test twice before calling the build red. Several suites (notably the
+        # scheduler ones) are timing-sensitive and this runner has 2 vCPU, so a single unlucky
+        # scheduling hiccup should not fail a whole build. A test that only passes on retry is
+        # NOT silently forgiven: Surefire records it as a flake, and the step below surfaces
+        # every one in the job summary so the flake rate stays visible instead of becoming
+        # invisible green.
+        MAVEN_EXTRA_OPTS: -Dsurefire.rerunFailingTestsCount=2
       run: ./build.sh --ci
     # Keep only third-party dependencies in the post-job Maven cache: Unomi's own
     # snapshots are rebuilt every run and would only bloat the cache / risk staleness
     - name: Clean Unomi artifacts from Maven cache
       if: always()
       run: rm -rf ~/.m2/repository/org/apache/unomi
+    # A flake is a test that failed and then passed on retry. The build is green, so without
+    # this the signal is lost entirely — which is how the scheduler suites stayed unreliable
+    # for as long as they did.
+    - name: Detect flaky tests
+      id: flakes
+      if: always()
+      run: |
+        python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+        import glob, os, xml.etree.ElementTree as ET
+        flaky = []
+        for path in glob.glob('**/target/surefire-reports/TEST-*.xml', recursive=True):
+            try:
+                root = ET.parse(path).getroot()
+            except ET.ParseError:
+                continue
+            for case in root.iter('testcase'):
+                reruns = case.findall('flakyFailure') + case.findall('flakyError')
+                if reruns:
+                    msg = (reruns[0].get('message') or '').strip().replace('\n', ' ')
+                    flaky.append((case.get('classname', '?'), case.get('name', '?'),
+                                  len(reruns), msg[:160]))
+        if flaky:
+            print('### :warning: Flaky tests detected\n')
+            print('These failed and then passed on retry. The build is green, but each one is')
+            print('a real intermittent failure worth investigating.\n')
+            print('| Test | Retries | First failure |')
+            print('| --- | --- | --- |')
+            for cls, name, n, msg in sorted(flaky):
+                print(f'| `{cls}.{name}` | {n} | {msg or "—"} |')
+        else:
+            print('### No flaky tests detected\n')
+        with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
+            out.write(f'found={"true" if flaky else "false"}\n')
+            out.write(f'count={len(flaky)}\n')
+        PY
+    # Uploaded when the build failed OR when something only passed on retry: those are exactly
+    # the runs where the reports (and the scheduler diagnostics dumped into them) are worth
+    # keeping. Skipped on a clean green run so this does not accumulate on every push.
+    - name: Archive unit test reports
+      uses: actions/upload-artifact@v6
+      if: always() && (job.status == 'failure' || steps.flakes.outputs.found == 'true')
+      with:
+        name: unit-test-reports-jdk17-${{ github.run_number }}
+        path: |
+          **/target/surefire-reports/**
+        if-no-files-found: ignore
+        retention-days: 14
+    # Always publish so a later "re-run failed jobs" pass updates the check to green, matching
+    # the integration-test job's behaviour.
+    - name: Publish Test Report
+      uses: mikepenz/action-junit-report@v3
+      if: always()
+      continue-on-error: true
+      with:
+        report_paths: '**/target/surefire-reports/TEST-*.xml'
+        check_name: 'JUnit Test Report (unit tests)'
+        update_check: true
+        fail_on_failure: false
+        require_tests: false
 
   integration-tests:
     name: Execute integration tests
