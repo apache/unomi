@@ -134,10 +134,15 @@ event data to the profile. This is simpler than it sounds, as usually all it req
 defining the corresponding JSON schema and you're ready to update profiles using events. 
 
 - Use the protected built-in "updateProperties" event. This event is designed to be used for administrative purposes
-only. Again, prefer the custom events solution because as this is a protected event it will require sending the Unomi
-key as a request header, and as Unomi only supports a single key for the moment it could be problematic if the key is
-intercepted. But at least by using an event you will get the benefits of auditing and historical property modification
-tracing (see <<_request_tracing_explain,request tracing>>).
+only. Being a protected event type, it is only accepted from an authorized source address — a configured third-party
+server, or in V2 compatibility mode an `X-Unomi-Peer` key valid for that source address. Note that this is an
+address-based gate: it is independent of the public-versus-trusted caller distinction that governs profile and session
+binding (see <<_client_facing_hardening_3_1,client-facing hardening>>), and once the event is accepted its `targetId`
+and `systemProperties.*` writes are not further restricted. Prefer custom events for public visitors. Again, prefer the
+custom events solution because as this is a
+protected event it will require sending trusted credentials, and as Unomi only supports a single key for the moment it
+could be problematic if the key is intercepted. But at least by using an event you will get the benefits of auditing and
+historical property modification tracing (see <<_request_tracing_explain,request tracing>>).
 
 Let's go into more detail about the preferred way to update a profile. Let's consider the following example of a rule:
 
@@ -208,7 +213,7 @@ curl --location --request POST 'http://localhost:8181/cxs/scopes' \
 }'
 ----
 
-NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (`karaf:karaf`).
+NOTE: Replace `TENANT_ID` and `PRIVATE_KEY` with your actual tenant ID and private API key. Only the Tenant API (`/cxs/tenants`) uses system administrator authentication (the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`).
 
 The next step consist in creating a JSON Schema to validate our event.
 
@@ -485,7 +490,7 @@ much preferred.
 When sending a login event, you can setup a rule that can check a profile property to see if profiles can be merged on an
 universal identifier such as an email address.
 
-In our login sample we provide an example of such a rule. You can find it here:
+In our login sample we provide an example of such a rule (fired from a **server-side** trusted call — see <<_login_sample,Login sample>>). You can find the rule here:
 
 https://github.com/apache/unomi/blob/master/samples/login-integration/src/main/resources/META-INF/cxs/rules/exampleLogin.json
 
@@ -579,7 +584,7 @@ Upon merge:
 
 ===== API
 
-/context.json and /eventcollector will now look up profiles by profile ID or aliases from the same cookie (`context-profile-id`) or body parameters (`profileId`)
+/context.json and /eventcollector look up profiles by profile ID or aliases from the profile cookie (`context-profile-id` by default). Public callers must present that cookie; body/query `profileId` is ignored for public callers. Trusted callers (tenant private key / system admin) may still pass `profileId` explicitly. See <<_how_profile_tracking_works,How profile tracking works>> and <<_client_facing_hardening_3_1,client-facing hardening>>.
 
 |===
 | *Verb* | *Path* | *Description*

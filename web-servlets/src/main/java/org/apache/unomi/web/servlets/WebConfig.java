@@ -58,7 +58,7 @@ public class WebConfig {
         int contextserver_profileIdCookieMaxAgeInSeconds() default 31536000;
 
         @AttributeDefinition
-        boolean contextserver_profileIdCookieHttpOnly() default false;
+        boolean contextserver_profileIdCookieHttpOnly() default true;
 
         @AttributeDefinition
         String allowed_profile_download_formats() default "csv,yaml,json,text";

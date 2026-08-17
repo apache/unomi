@@ -57,6 +57,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ModifyConsentIT.class,
         PatchIT.class,
         ContextServletIT.class,
+        ContextEndpointBaselineIT.class,
         SecurityIT.class,
         RuleServiceIT.class,
         PrivacyServiceIT.class,

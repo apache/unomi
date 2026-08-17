@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language gtestCreateEventWithPropertiesValidation_Successoverning permissions and
+ * See the License for the specific language governing permissions and
  * limitations under the License
  */
 
@@ -34,6 +34,8 @@ import org.apache.http.impl.client.TargetAuthenticationStrategy;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.tenants.ApiKey;
@@ -48,6 +50,8 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.net.URI;
@@ -66,6 +70,8 @@ import static org.junit.Assert.*;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ContextServletIT extends BaseIT {
+    private final static Logger LOGGER = LoggerFactory.getLogger(ContextServletIT.class);
+
     private final static String CONTEXT_URL = "/cxs/context.json";
 
     private final static String UNOMI_API_KEY_HTTP_HEADER_KEY = "X-Unomi-Api-Key";
@@ -123,6 +129,22 @@ public class ContextServletIT extends BaseIT {
 
     @After
     public void tearDown() throws InterruptedException {
+        // The login-merge tests register this rule and remove it on their happy path, but an
+        // assertion failing earlier would leave it behind. The suite shares one Karaf container
+        // (PerSuite), so a stray rule reacting to every login event would leak into later tests.
+        //
+        // Guarded: if this threw, it would abort tearDown before the event/session cleanup below,
+        // silently polluting the shared container for every later test with a failure that looks
+        // unrelated. A rule that cannot be removed is worth reporting, not worth losing the rest
+        // of the cleanup over.
+        try {
+            if (rulesService.getRule("testLogin") != null) {
+                rulesService.removeRule("testLogin");
+            }
+        } catch (RuntimeException e) {
+            LOGGER.warn("Could not remove the testLogin rule during tearDown; later tests in this "
+                    + "suite may see it", e);
+        }
         persistenceService.refresh();
         TestUtils.removeAllEvents(definitionsService, persistenceService, true, tenantService, executionContextManager);
         TestUtils.removeAllSessions(definitionsService, persistenceService, true, tenantService, executionContextManager);
@@ -420,6 +442,324 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
+    public void testPublicCaller_mismatchedBodyProfileId_ignored() throws Exception {
+        String sessionId = "mismatch-session-" + System.currentTimeMillis();
+
+        ContextRequest firstRequest = new ContextRequest();
+        firstRequest.setSessionId(sessionId);
+        HttpPost establish = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(establish);
+        establish.setEntity(new StringEntity(getObjectMapper().writeValueAsString(firstRequest), ContentType.APPLICATION_JSON));
+        RequestResponse established = executeContextJSONRequest(establish, sessionId);
+        assertEquals(200, established.getStatusCode());
+        String cookieProfileId = established.getContextResponse().getProfileId();
+        assertNotNull(cookieProfileId);
+        assertNotNull(established.getCookieHeaderValue());
+
+        String publicCallerProfileId = "public-body-profile-" + System.currentTimeMillis();
+        ContextRequest mismatchRequest = new ContextRequest();
+        mismatchRequest.setSessionId(sessionId);
+        mismatchRequest.setProfileId(publicCallerProfileId);
+        HttpPost mismatch = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(mismatch);
+        mismatch.addHeader("Cookie", established.getCookieHeaderValue());
+        mismatch.setEntity(new StringEntity(getObjectMapper().writeValueAsString(mismatchRequest), ContentType.APPLICATION_JSON));
+        RequestResponse mismatched = executeContextJSONRequest(mismatch, sessionId);
+
+        assertEquals(200, mismatched.getStatusCode());
+        assertEquals("Public caller must keep cookie profile when body profileId differs",
+                cookieProfileId, mismatched.getContextResponse().getProfileId());
+        assertNull("Untrusted caller-supplied profileId must not be created", profileService.load(publicCallerProfileId));
+    }
+
+    /**
+     * End-to-end guard for anonymous browsing: a visitor who is legitimately browsing anonymously must
+     * never have their own session detached. That failure would be invisible at unit level in the
+     * endpoint wiring, hence this IT — it asserts the visitor's own session id is still echoed back,
+     * since a refused session is suppressed from the response.
+     * <p>
+     * The de-anonymising step at the end is the one place where the session-ownership rule cannot be
+     * applied: an anonymous session records no owner, so nothing can be matched against the cookie.
+     * A public caller therefore keeps an anonymous session instead of having it bound back to a named
+     * profile. What must hold either way is that the visitor is still served and still holds the
+     * session; being refused here would strand every visitor who turns anonymity off.
+     */
+    @Test
+    public void testAnonymousBrowsing_visitorKeepsItsOwnSession() throws Exception {
+        String sessionId = "anon-browsing-session-" + System.currentTimeMillis();
+
+        ContextRequest firstRequest = new ContextRequest();
+        firstRequest.setSessionId(sessionId);
+        HttpPost establish = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(establish);
+        establish.setEntity(new StringEntity(getObjectMapper().writeValueAsString(firstRequest), ContentType.APPLICATION_JSON));
+        RequestResponse established = executeContextJSONRequest(establish, sessionId);
+        assertEquals(200, established.getStatusCode());
+        String profileId = established.getContextResponse().getProfileId();
+        assertNotNull(profileId);
+        assertNotNull(established.getCookieHeaderValue());
+
+        // Turn on anonymous browsing for this visitor, exactly as the privacy endpoint would.
+        privacyService.setRequireAnonymousBrowsing(profileId, true, TEST_SCOPE);
+        keepTrying("Anonymous browsing should be enabled for the profile",
+                () -> privacyService.isRequireAnonymousBrowsing(profileId),
+                Boolean.TRUE::equals, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        try {
+            // Same visitor, same cookie, same session: must still be served, and the session kept.
+            ContextRequest secondRequest = new ContextRequest();
+            secondRequest.setSessionId(sessionId);
+            HttpPost anonymous = new HttpPost(getFullUrl(CONTEXT_URL));
+            addPublicTenantAuth(anonymous);
+            anonymous.addHeader("Cookie", established.getCookieHeaderValue());
+            anonymous.setEntity(new StringEntity(getObjectMapper().writeValueAsString(secondRequest), ContentType.APPLICATION_JSON));
+            RequestResponse anonymousResponse = executeContextJSONRequest(anonymous, sessionId);
+
+            assertEquals(200, anonymousResponse.getStatusCode());
+            assertNotNull("An anonymous visitor's own session must not be refused",
+                    anonymousResponse.getContextResponse().getSessionId());
+            assertEquals(sessionId, anonymousResponse.getContextResponse().getSessionId());
+
+            // And turning anonymity back off must keep serving the visitor. For a public caller the
+            // session stays anonymous rather than being rebound (see this test's javadoc); the profile
+            // it is served as is still its own.
+            privacyService.setRequireAnonymousBrowsing(profileId, false, TEST_SCOPE);
+            keepTrying("Anonymous browsing should be disabled again",
+                    () -> privacyService.isRequireAnonymousBrowsing(profileId),
+                    Boolean.FALSE::equals, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+            ContextRequest thirdRequest = new ContextRequest();
+            thirdRequest.setSessionId(sessionId);
+            HttpPost deanonymised = new HttpPost(getFullUrl(CONTEXT_URL));
+            addPublicTenantAuth(deanonymised);
+            deanonymised.addHeader("Cookie", established.getCookieHeaderValue());
+            deanonymised.setEntity(new StringEntity(getObjectMapper().writeValueAsString(thirdRequest), ContentType.APPLICATION_JSON));
+            RequestResponse deanonymisedResponse = executeContextJSONRequest(deanonymised, sessionId);
+
+            assertEquals(200, deanonymisedResponse.getStatusCode());
+            assertNotNull("Leaving anonymous browsing must not refuse the visitor's own session",
+                    deanonymisedResponse.getContextResponse().getSessionId());
+            assertEquals("and must keep serving it under the visitor's own profile", profileId,
+                    deanonymisedResponse.getContextResponse().getProfileId());
+        } finally {
+            privacyService.setRequireAnonymousBrowsing(profileId, false, TEST_SCOPE);
+        }
+    }
+
+    /**
+     * Personas short-circuit profile binding entirely: the profile and session both come from the
+     * persona and none of the cookie/body binding logic runs. Nothing covered that path end to end,
+     * so a change to the binding code could silently break persona preview.
+     */
+    @Test
+    public void testPersona_contextJsonBindsToThePersona() throws Exception {
+        String personaId = "it-persona-" + System.currentTimeMillis();
+        profileService.createPersona(personaId);
+        keepTrying("Persona should be created", () -> profileService.loadPersonaWithSessions(personaId),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        try {
+            ContextRequest contextRequest = new ContextRequest();
+            HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL) + "?personaId=" + personaId);
+            addPublicTenantAuth(request);
+            request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+            RequestResponse response = executeContextJSONRequest(request, null);
+
+            assertEquals(200, response.getStatusCode());
+            assertEquals("The context response must be bound to the persona, not a live profile",
+                    personaId, response.getContextResponse().getProfileId());
+        } finally {
+            profileService.delete(personaId, true);
+        }
+    }
+
+    /**
+     * profileOverrides / sessionPropertiesOverrides are the preview-UI feature that lets a caller
+     * temporarily substitute segments, scores and properties. They had no coverage at all, and they
+     * are only honoured when the active profile is a Persona ({@code ContextJsonEndpoint#processOverrides}),
+     * which is exactly what keeps a public caller from overriding a real profile. Pin both halves:
+     * the override applies for a persona, and the persona path is unaffected by the binding rules.
+     */
+    @Test
+    public void testPersona_profileOverridesAreApplied() throws Exception {
+        String personaId = "it-persona-overrides-" + System.currentTimeMillis();
+        profileService.createPersona(personaId);
+        keepTrying("Persona should be created", () -> profileService.loadPersonaWithSessions(personaId),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        try {
+            Profile overrides = new Profile();
+            overrides.setSegments(new HashSet<>(Arrays.asList("override-segment-a", "override-segment-b")));
+
+            ContextRequest contextRequest = new ContextRequest();
+            contextRequest.setRequireSegments(true);
+            contextRequest.setProfileOverrides(overrides);
+
+            HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL) + "?personaId=" + personaId);
+            addPublicTenantAuth(request);
+            request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+            RequestResponse response = executeContextJSONRequest(request, null);
+
+            assertEquals(200, response.getStatusCode());
+            assertEquals(personaId, response.getContextResponse().getProfileId());
+            assertNotNull("requireSegments must return the segment set", response.getContextResponse().getProfileSegments());
+            assertTrue("profileOverrides segments must be reflected for a persona",
+                    response.getContextResponse().getProfileSegments().contains("override-segment-a"));
+        } finally {
+            profileService.delete(personaId, true);
+        }
+    }
+
+    @Test
+    public void testPublicCaller_sessionProfileSwitchWithoutMatchingCookie_refused() throws Exception {
+        String sessionOwnerId = "session-owner-" + System.currentTimeMillis();
+        String sessionId = "foreign-session-" + System.currentTimeMillis();
+        Profile sessionOwner = new Profile(sessionOwnerId);
+        profileService.save(sessionOwner);
+        Session foreignSession = new Session(sessionId, sessionOwner, new Date(), TEST_SCOPE);
+        profileService.saveSession(foreignSession);
+        keepTrying("Session owner not found", () -> profileService.load(sessionOwnerId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        keepTrying("Foreign session not found", () -> profileService.loadSession(sessionId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        ContextRequest cookieEstablish = new ContextRequest();
+        cookieEstablish.setSessionId("cookie-session-" + System.currentTimeMillis());
+        HttpPost establish = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(establish);
+        establish.setEntity(new StringEntity(getObjectMapper().writeValueAsString(cookieEstablish), ContentType.APPLICATION_JSON));
+        RequestResponse established = executeContextJSONRequest(establish, cookieEstablish.getSessionId());
+        String cookieProfileId = established.getContextResponse().getProfileId();
+        assertNotEquals(sessionOwnerId, cookieProfileId);
+
+        ContextRequest attempt = new ContextRequest();
+        attempt.setSessionId(sessionId);
+        attempt.setProfileId(cookieProfileId);
+        HttpPost attemptRequest = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(attemptRequest);
+        attemptRequest.addHeader("Cookie", established.getCookieHeaderValue());
+        attemptRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(attempt), ContentType.APPLICATION_JSON));
+        RequestResponse result = executeContextJSONRequest(attemptRequest, sessionId);
+
+        assertEquals("Public caller must not adopt a foreign session profile",
+                cookieProfileId, result.getContextResponse().getProfileId());
+        Session reloaded = profileService.loadSession(sessionId);
+        assertEquals("Foreign session ownership must remain unchanged",
+                sessionOwnerId, reloaded.getProfileId());
+    }
+
+    @Test
+    public void testTrustedPrivateKey_mayOverrideBodyProfileId() throws Exception {
+        String cookieSessionId = "trusted-cookie-session-" + System.currentTimeMillis();
+        ContextRequest first = new ContextRequest();
+        first.setSessionId(cookieSessionId);
+        HttpPost establish = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(establish);
+        establish.setEntity(new StringEntity(getObjectMapper().writeValueAsString(first), ContentType.APPLICATION_JSON));
+        RequestResponse established = executeContextJSONRequest(establish, cookieSessionId);
+        assertNotNull(established.getCookieHeaderValue());
+
+        String overrideProfileId = "admin-chosen-profile-" + System.currentTimeMillis();
+        Profile overrideProfile = new Profile(overrideProfileId);
+        profileService.save(overrideProfile);
+        keepTrying("Override profile not found", () -> profileService.load(overrideProfileId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        ContextRequest override = new ContextRequest();
+        override.setSessionId(cookieSessionId);
+        override.setProfileId(overrideProfileId);
+        HttpPost trusted = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(trusted, testTenant, testPrivateKeyValue);
+        trusted.addHeader("Cookie", established.getCookieHeaderValue());
+        trusted.setEntity(new StringEntity(getObjectMapper().writeValueAsString(override), ContentType.APPLICATION_JSON));
+        RequestResponse overridden = executeContextJSONRequest(trusted, cookieSessionId, -1, false);
+
+        assertEquals(200, overridden.getStatusCode());
+        assertEquals("Trusted private key may select body profileId over cookie",
+                overrideProfileId, overridden.getContextResponse().getProfileId());
+    }
+
+
+
+
+
+    /**
+     * invalidateSession replaces the session bound to the supplied id, so it must not be usable as a
+     * way around the cookie-ownership rule.
+     */
+    @Test
+    public void testPublicCaller_invalidateSessionCannotReuseForeignSession() throws Exception {
+        String ownerId = "invalidate-owner-" + System.currentTimeMillis();
+        String foreignSessionId = "invalidate-foreign-session-" + System.currentTimeMillis();
+        Profile owner = new Profile(ownerId);
+        profileService.save(owner);
+        Session foreignSession = new Session(foreignSessionId, owner, new Date(), TEST_SCOPE);
+        profileService.saveSession(foreignSession);
+        keepTrying("Foreign session not found", () -> profileService.loadSession(foreignSessionId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // The untrusted caller establishes their own cookie against an unrelated session.
+        String ownSessionId = "invalidate-public-session-" + System.currentTimeMillis();
+        ContextRequest establishReq = new ContextRequest();
+        establishReq.setSessionId(ownSessionId);
+        HttpPost establish = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(establish);
+        establish.setEntity(new StringEntity(getObjectMapper().writeValueAsString(establishReq), ContentType.APPLICATION_JSON));
+        RequestResponse established = executeContextJSONRequest(establish, ownSessionId);
+        String publicCallerId = established.getContextResponse().getProfileId();
+        assertNotEquals(ownerId, publicCallerId);
+
+        ContextRequest reuse = new ContextRequest();
+        reuse.setSessionId(foreignSessionId);
+        HttpPost probe = new HttpPost(getFullUrl(CONTEXT_URL) + "?invalidateSession=true");
+        addPublicTenantAuth(probe);
+        probe.addHeader("Cookie", established.getCookieHeaderValue());
+        probe.setEntity(new StringEntity(getObjectMapper().writeValueAsString(reuse), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(probe, foreignSessionId);
+
+        shouldBeTrueUntilEnd("Foreign session ownership must survive invalidateSession from a public caller",
+                () -> profileService.loadSession(foreignSessionId),
+                s -> s != null && ownerId.equals(s.getProfileId()),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
+    }
+
+    /**
+     * A refused session is never created, so echoing the requested id back would tell the client its
+     * session is live and make it replay the same rejected id forever.
+     */
+    @Test
+    public void testPublicCaller_refusedSessionIsNotEchoedInResponse() throws Exception {
+        String ownerId = "echo-owner-" + System.currentTimeMillis();
+        String foreignSessionId = "echo-foreign-session-" + System.currentTimeMillis();
+        Profile owner = new Profile(ownerId);
+        profileService.save(owner);
+        Session foreignSession = new Session(foreignSessionId, owner, new Date(), TEST_SCOPE);
+        profileService.saveSession(foreignSession);
+        keepTrying("Foreign session not found", () -> profileService.loadSession(foreignSessionId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String ownSessionId = "echo-public-session-" + System.currentTimeMillis();
+        ContextRequest establishReq = new ContextRequest();
+        establishReq.setSessionId(ownSessionId);
+        HttpPost establish = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(establish);
+        establish.setEntity(new StringEntity(getObjectMapper().writeValueAsString(establishReq), ContentType.APPLICATION_JSON));
+        RequestResponse established = executeContextJSONRequest(establish, ownSessionId);
+
+        ContextRequest attempt = new ContextRequest();
+        attempt.setSessionId(foreignSessionId);
+        HttpPost probe = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(probe);
+        probe.addHeader("Cookie", established.getCookieHeaderValue());
+        probe.setEntity(new StringEntity(getObjectMapper().writeValueAsString(attempt), ContentType.APPLICATION_JSON));
+        RequestResponse refused = executeContextJSONRequest(probe, foreignSessionId);
+
+        assertEquals(200, refused.getStatusCode());
+        assertNull("A refused session id must not be echoed back to the client",
+                refused.getContextResponse().getSessionId());
+    }
+
+    @Test
     public void testCreateEventWithProfileId_Success() throws Exception {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
@@ -432,14 +772,34 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setProfileId(TEST_PROFILE_ID);
         contextRequest.setEvents(Arrays.asList(event));
 
-        //Act
+        //Act — body profileId binding for a chosen id requires a trusted caller
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        addPublicTenantAuth(request);
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        executeContextJSONRequest(request);
+        executeContextJSONRequest(request, null, -1, false);
 
         keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
+    @Test
+    public void testPublicCaller_bodyProfileIdWithoutCookie_rejected() throws Exception {
+        String otherId = "body-only-other-" + System.currentTimeMillis();
+        Profile other = new Profile(otherId);
+        other.setProperty("email", "other-body-only@example.com");
+        profileService.save(other);
+        keepTrying("Other not found", () -> profileService.load(otherId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        ContextRequest probe = new ContextRequest();
+        probe.setProfileId(otherId);
+        probe.setRequiredProfileProperties(Collections.singletonList("*"));
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(request);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(probe), ContentType.APPLICATION_JSON));
+        // Body profileId is ignored for public callers; with no cookie/session → 400, not other data
+        RequestResponse response = executeContextJSONRequest(request, null, 400, false);
+        assertEquals(400, response.getStatusCode());
     }
 
     @Test
@@ -489,11 +849,11 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setProfileId(profileId);
         contextRequest.setEvents(Arrays.asList(event));
 
-        //Act
+        //Act — body profileId requires trusted auth; withAuth=false so the public key is not also attached
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        executeContextJSONRequest(request);
+        executeContextJSONRequest(request, null, -1, false);
 
         //Assert
         shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
@@ -516,11 +876,11 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setProfileId(profileId);
         contextRequest.setEvents(Arrays.asList(event));
 
-        //Act
+        //Act — body profileId requires trusted auth; withAuth=false so the public key is not also attached
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        executeContextJSONRequest(request);
+        executeContextJSONRequest(request, null, -1, false);
 
         //Assert
         shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
@@ -581,9 +941,11 @@ public class ContextServletIT extends BaseIT {
     @Test
     public void testScorePersonalizationStrategy_Interests() throws Exception {
         // Test request before adding interests to current profile.
+        // JSON binds profileId in the body — requires trusted caller (public ignores body profileId).
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = executeContextJSONRequest(request);
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, null, -1, false);
         ContextResponse contextResponse = response.getContextResponse();
         List<String> variants = contextResponse.getPersonalizations().get("perso-by-interest");
         assertEquals("Invalid response code", 200, response.getStatusCode());
@@ -600,8 +962,9 @@ public class ContextServletIT extends BaseIT {
 
         // check results of the perso now
         request = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
-        response = executeContextJSONRequest(request);
+        response = executeContextJSONRequest(request, null, -1, false);
         contextResponse = response.getContextResponse();
         variants = contextResponse.getPersonalizations().get("perso-by-interest");
         assertEquals("Invalid response code", 200, response.getStatusCode());
@@ -637,8 +1000,9 @@ public class ContextServletIT extends BaseIT {
 
         // re test now that profiles has interests
         request = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
-        response = executeContextJSONRequest(request);
+        response = executeContextJSONRequest(request, null, -1, false);
         contextResponse = response.getContextResponse();
         variants = contextResponse.getPersonalizations().get("perso-by-interest");
         assertEquals("Invalid response code", 200, response.getStatusCode());
@@ -675,8 +1039,9 @@ public class ContextServletIT extends BaseIT {
         // first let's make sure everything works without the requireScoring parameter
         parameters = new HashMap<>();
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getValidatedBundleJSON("withoutRequireScores.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = executeContextJSONRequest(request);
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, null, -1, false);
         assertEquals("Invalid response code", 200, response.getStatusCode());
 
         assertNotNull("Context response should not be null", response.getContextResponse());
@@ -686,8 +1051,9 @@ public class ContextServletIT extends BaseIT {
         // now let's test adding it.
         parameters = new HashMap<>();
         request = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getValidatedBundleJSON("withRequireScores.json", parameters), ContentType.APPLICATION_JSON));
-        response = executeContextJSONRequest(request);
+        response = executeContextJSONRequest(request, null, -1, false);
         assertEquals("Invalid response code", 200, response.getStatusCode());
 
         assertNotNull("Context response should not be null", response.getContextResponse());
@@ -874,7 +1240,8 @@ public class ContextServletIT extends BaseIT {
 
         // Test with JAAS authentication (should succeed)
         BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
+        credsProvider.setCredentials(AuthScope.ANY,
+                new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
 
         RequestConfig requestConfig = RequestConfig.custom()
                 .setAuthenticationEnabled(true)
@@ -922,13 +1289,15 @@ public class ContextServletIT extends BaseIT {
         // Test normal personalization should not have control group info in response
 
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        // JSON fixtures bind profileId in the body — requires trusted caller (public ignores body profileId).
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         if (controlGroupConfig != null) {
             request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-control-group.json", controlGroupConfig), ContentType.APPLICATION_JSON));
         } else {
             request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-no-control-group.json", null), ContentType.APPLICATION_JSON));
         }
 
-        TestUtils.RequestResponse response = executeContextJSONRequest(request);
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, null, -1, false);
         ContextResponse contextResponse = response.getContextResponse();
 
         // Check variants
@@ -978,23 +1347,31 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setProfileId(profile.getItemId());
         contextRequest.setSessionId(sessionId);
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        // Body profileId requires trusted caller (public ignores body profileId).
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        assertEquals(executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+        assertEquals(executeContextJSONRequest(request, sessionId, -1, false).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
         // set the property as concealed
         customPropertyType.getMetadata().getSystemTags().add("concealed");
         profileService.deletePropertyType(customPropertyType.getItemId());
         profileService.setPropertyType(customPropertyType);
         // Not in all properties
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        assertNull(executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"));
+        assertNull(executeContextJSONRequest(request, sessionId, -1, false).getContextResponse().getProfileProperties().get("customProperty"));
         // Got it explicitly
         contextRequest.setRequiredProfileProperties(Arrays.asList("customProperty"));
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        assertEquals(executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+        assertEquals(executeContextJSONRequest(request, sessionId, -1, false).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
         // Got it with all
         contextRequest.setRequiredProfileProperties(Arrays.asList("*", "customProperty"));
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        assertEquals(executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+        assertEquals(executeContextJSONRequest(request, sessionId, -1, false).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
 
         // remove the concealed tag on the property type
         customPropertyType.getMetadata().getSystemTags().remove("concealed");
@@ -1003,8 +1380,10 @@ public class ContextServletIT extends BaseIT {
 
         // Got it from all properties
         contextRequest.setRequiredProfileProperties(Arrays.asList("*"));
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        assertEquals(executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+        assertEquals(executeContextJSONRequest(request, sessionId, -1, false).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
     }
 
     @Test

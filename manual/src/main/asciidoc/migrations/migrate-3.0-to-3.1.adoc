@@ -180,7 +180,49 @@ public void updateKeys(String publicKey, String privateKey) {
 
 ==== No API Contract Changes
 
-All API endpoints remain the same between 3.0 and 3.1. The only differences are in the authentication mechanism and tenant resolution. Request/response payloads are unchanged.
+All API endpoints remain the same between 3.0 and 3.1, and request/response payloads are unchanged in shape. The differences are in the authentication mechanism, tenant resolution, and which of the identity fields a public caller sends to `/context.json` and `/eventcollector` the server acts on — see <<_client_facing_hardening_3_1,Client-facing hardening (3.1)>> below.
+
+[#_client_facing_hardening_3_1]
+==== Client-facing hardening (3.1)
+
+`/cxs/context.json` and `/cxs/eventcollector` are reachable without authentication, or with a tenant *public* API key. In 3.1 the identity fields those endpoints accept are treated as claims to be checked rather than as instructions.
+
+A caller is **trusted** when it holds a tenant private key or authenticates as a system administrator (`ROLE_UNOMI_ADMIN` or `ROLE_UNOMI_TENANT_ADMIN`). A tenant *public* API key is **not** trusted: it identifies the tenant, not the visitor.
+
+.What changed for public callers
+[cols="1,2,2", options="header"]
+|===
+| Field | 3.0 | 3.1
+
+| Body/query `profileId`
+| Selected the profile.
+| Ignored. The profile cookie (`context-profile-id` by default) is the only profile bearer, including when no cookie is present. Trusted callers may still pass it, and it may differ from the cookie.
+
+| `sessionId`
+| Any existing session was continued, and was rebound to the caller's profile when the two differed.
+| Continued only when the profile cookie already owns that session. Otherwise the session is *detached* for the request rather than rebound, and its id is not echoed back in the response.
+
+| `sessionId` naming an *anonymous* session
+| Rebound to the caller's profile when the caller was not itself browsing anonymously.
+| Left anonymous. An anonymous session records no owner, so there is nothing to check the cookie against; only a trusted caller may bind it to a named profile. A visitor who turns anonymous browsing off keeps an anonymous session until their client uses a new session id.
+
+| `invalidateSession=true`
+| Re-created the session under the supplied id.
+| Allowed only when the profile cookie owns that session. A session with no recorded owner — an anonymous one — cannot be re-created this way by a public caller.
+|===
+
+Anonymous browsing, personas and profile overrides are otherwise unchanged, and a caller with no cookie is still issued a profile: that is how tracking has always started.
+
+===== Two behaviour changes to check before upgrading
+
+* **The profile cookie now defaults to `HttpOnly`.** The model above holds only while page script cannot read the cookie, so the default is part of the design rather than a preference. If your page code reads `document.cookie` for the profile id, read `profileId` from the JSON response instead. Setting `org.apache.unomi.profile.cookie.httpOnly=false` (env `UNOMI_PROFILE_COOKIE_HTTPONLY`) restores the old default, at the cost of that guarantee.
+* **A malformed profile cookie is rejected on more requests than before.** The cookie is validated against a JSON schema and an invalid value answers `400`. In 3.0 the cookie was only read when no `profileId` was supplied, so a request carrying both an explicit `profileId` and a malformed cookie was still served; in 3.1 it fails. This mainly affects server-side callers that forward a browser's raw `Cookie` header.
+
+===== Migrating a client
+
+* Browser trackers need no change: the browser sends the cookie automatically, and the response still carries `profileId` and `sessionId`.
+* A backend that named a profile through body `profileId` while authenticating with a *public* key must switch to a tenant private key, or to system administrator credentials. Until it does, the server logs a `WARN` naming the ignored `profileId` on every such request.
+* A client that supplied a session id it did not own now finds `sessionId` absent from the response. Treat that as "start a new session" and generate a fresh id rather than replaying the old one.
 
 === Migrating your existing data
 

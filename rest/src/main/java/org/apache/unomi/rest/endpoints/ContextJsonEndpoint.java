@@ -306,7 +306,10 @@ public class ContextJsonEndpoint {
             contextResponse.setProfileId(eventsRequestContext.getProfile().getItemId());
             if (eventsRequestContext.getSession() != null) {
                 contextResponse.setSessionId(eventsRequestContext.getSession().getItemId());
-            } else if (sessionId != null) {
+            } else if (sessionId != null && !eventsRequestContext.isSessionRefused()) {
+                // Only echo the requested id back when it was not rejected: a refused session was
+                // never created, so reporting it would tell the client its session is live and make
+                // it replay the same id on every request.
                 contextResponse.setSessionId(sessionId);
             }
 

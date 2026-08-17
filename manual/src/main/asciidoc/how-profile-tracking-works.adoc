@@ -122,7 +122,7 @@ Starting with Apache Unomi 3.1, tenant resolution is mandatory for all requests 
 
 3. **Tenant ID Header** (When using JAAS authentication):
    * Send the `X-Unomi-Tenant-Id` header with the tenant ID
-   * Used when authenticating via JAAS (e.g., `karaf:karaf`)
+   * Used when authenticating via JAAS (e.g., the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`)
    * The tenant ID must exist in the system
 
 If no tenant can be resolved, the request will fail with an `UNAUTHORIZED` (401) error. This ensures that all data operations are scoped to the correct tenant in multi-tenant deployments.
@@ -173,7 +173,7 @@ The tenant is resolved from the Basic Auth credentials (`mytenant` is the tenant
 [source,bash]
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
---user "karaf:karaf" \
+--user "karaf:$UNOMI_ROOT_PASSWORD" \
 -H "X-Unomi-Tenant-Id: mytenant" \
 -H "Content-Type: application/json" \
 -d '{
@@ -232,24 +232,28 @@ end note
 
 [IMPORTANT]
 ====
-At least one of the following must be provided in the request: `sessionId`, `profileId` (as a parameter or in a cookie), or `personaId`. If none of these are provided, the request will fail with a `BadRequestException` (400 error).
+At least one of the following must be provided in the request: `sessionId`, a profile cookie (`context-profile-id` by default), a body/query `profileId` **from a trusted caller**, or `personaId`. If none of these are available after public-caller rules below, the request fails with a `BadRequestException` (400).
 ====
 
 Apache Unomi attempts to identify the visitor's profile through the following process:
 
-1. **Profile ID Resolution**: 
-   * First checks for a `profileId` parameter in the request
-   * If not found, looks for a cookie named `context-profile-id` (configurable via `org.apache.unomi.profile.cookie.name`)
-   * Cookie values are validated against a JSON schema - invalid values (e.g., containing script tags) will cause a `400 Bad Request` error
-   * The resolved profile ID is used to attempt loading the profile from the database
+1. **Profile ID Resolution** (public vs trusted callers):
+   * **Public callers** (public API key / unauthenticated context): the profile cookie is the **only** profile bearer. A body or query `profileId` is **ignored** (even when no cookie is present).
+   * **Trusted callers** (system administrator or tenant private-key / `TENANT_ADMINISTRATOR`): an explicit body/query `profileId` is honored and may differ from the cookie.
+   * Cookie name defaults to `context-profile-id` (configurable via `org.apache.unomi.profile.cookie.name`).
+   * Cookie values are validated against a JSON schema — invalid values (for example containing script tags) cause a `400 Bad Request`. Since 3.1 the cookie is read on every request, so this also applies when the request supplies an explicit `profileId`; before, a malformed cookie went unnoticed on those requests.
+   * The resolved profile ID is used to attempt loading the profile from the database.
 
 2. **Session Profile Override** (if session exists):
-   * If a session is found (see Step 2) and contains a profile ID that differs from the cookie/profileId parameter
-   * Apache Unomi uses the session's profile ID instead (this handles cases where a user switches accounts)
-   * The profile is reloaded from the database using the session's profile ID
+   * If a session is found (see Step 2) and its profile differs from the request profile, Unomi switches to the session profile **only when**:
+     ** the profile cookie already matches the session owner, **or**
+     ** the caller is trusted (and is not keeping an explicit trusted body `profileId` override).
+   * Otherwise the session is **detached** for this request (Unomi does not adopt a foreign session profile for a public caller), and the supplied session id is **not echoed back** in the response — a client that saw its own id returned would keep replaying an id the server did not accept.
+   * **Anonymous sessions** are a special case. Anonymity removes the owner from the session (`getAnonymousProfile` returns a profile with no ID, so the session's `profileId` is `null`), which leaves the rule above nothing to compare the cookie against. Binding such a session back to a named profile — what happens when a visitor turns anonymous browsing off — is therefore reserved for **trusted** callers. For a public caller the session stays anonymous, and the visitor gets a named session again once their client uses a new session id.
+   * `invalidateSession=true` re-creates the session under the supplied id, so it observes the same rule: a public caller may only invalidate a session its own cookie owns, and a session with no recorded owner cannot be invalidated this way.
 
 3. **Profile Creation**: If no profile ID is found or the profile doesn't exist:
-   * If a profile ID was provided (from parameter or cookie) but doesn't exist in the database, creates a new profile with that ID
+   * If a profile ID was provided (from cookie, or from a trusted body/query `profileId`) but doesn't exist in the database, creates a new profile with that ID
    * If no profile ID was found, generates a new UUID as the profile ID and creates a new profile
    * Sets the `firstVisit` property to the current timestamp
    * Marks the profile for persistence
@@ -259,8 +263,19 @@ This ensures that profiles are always available for processing, even for first-t
 
 [IMPORTANT]
 ====
-The profile ID is always server-generated (UUID format). Even if a client sends a custom profile ID in a cookie or parameter, Apache Unomi validates it exists in the database. If it doesn't exist, a new profile is created (potentially with that ID if provided via parameter, or with a newly generated UUID). This makes profile IDs secure and prevents profile ID manipulation.
+For **public** callers, do not rely on body/query `profileId` as identity — always send the profile cookie (browsers do this automatically when credentials are included). To act as a specific profile from a backend or admin tool, authenticate as a **trusted** caller (tenant private key or system administrator) and then send `profileId`. See <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> for client migration notes.
 ====
+
+====== Why the cookie is safer than a body `profileId` for public callers
+
+On public `/context.json` and `/eventcollector` endpoints, the profile id is a **bearer** identifier: whoever presents it can continue that visitor's tracking context. Unomi therefore prefers the **HTTP cookie** over a body or query `profileId` for public traffic:
+
+* **Browser-enforced delivery** — Once `Set-Cookie` has established the profile cookie (with `HttpOnly` and `SameSite` by default), the browser attaches it on later requests to Unomi. Application JavaScript does not need to copy the id into JSON, so routine front-end code is less likely to mishandle or over-share it.
+* **Harder for page script to exfiltrate** — With `HttpOnly` (the default), script running in the page cannot read the cookie via `document.cookie`. A body/query `profileId` is application-controlled data: anything that can influence the request payload can try to point at another profile id.
+* **Clearer trust boundary** — Public callers prove continuity with the cookie the server previously issued. Selecting an arbitrary id in the body blurred that boundary (knowing or guessing a UUID was enough). Trusted callers (private key / system admin) may still pass `profileId` explicitly when a backend intentionally acts on a chosen profile.
+* **Fewer accidental leaks in URLs and logs** — Query-string `profileId` values show up in browser history, proxies, and access logs more often than `Cookie` headers. Prefer the cookie (and read `profileId` from the JSON **response** when your app needs the value in memory).
+
+Body/query `profileId` remains appropriate for **authenticated** integrations that are supposed to bind a specific profile under operator control — not for anonymous browser trackers.
 
 ===== Example: Profile Identification
 
@@ -327,13 +342,15 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 
 Apache Unomi loaded the existing profile using the profile ID from the cookie.
 
-**Example 3: Using profileId Parameter**
+**Example 3: Trusted caller using body/query `profileId`**
+
+Public callers must send the cookie (Example 2). A trusted caller (tenant private key) may select a profile explicitly:
 
 [source,bash]
 ----
-# Request with explicit profileId parameter
+# Trusted: Basic auth with tenantId:privateKey — body/query profileId is honored
 curl -X POST "http://localhost:8181/cxs/context.json?sessionId=1234&profileId=a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
--H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
+--user "TENANT_ID:PRIVATE_KEY" \
 -H "Content-Type: application/json" \
 -d '{
     "source": {
@@ -344,17 +361,16 @@ curl -X POST "http://localhost:8181/cxs/context.json?sessionId=1234&profileId=a1
 }'
 ----
 
-The `profileId` parameter takes precedence over the cookie value.
+For public callers, a body/query `profileId` without a matching cookie is ignored (it does **not** take precedence over the cookie).
 
 [plantuml]
 ----
 @startuml
 title Profile and Session Identification Flow
 
-RestServiceUtils -> RestServiceUtils: Get profileId from parameter
-alt profileId parameter exists
-    RestServiceUtils -> ProfileService: load(profileId)
-else Check cookie
+alt trusted caller with body/query profileId
+    RestServiceUtils -> ProfileService: load(bodyOrQueryProfileId)
+else public or no explicit trusted profileId
     RestServiceUtils -> HttpServletRequest: getCookie("context-profile-id")
     HttpServletRequest --> RestServiceUtils: profileId from cookie
     RestServiceUtils -> ProfileService: load(profileId)
@@ -374,9 +390,11 @@ alt sessionId provided
     RestServiceUtils -> ProfileService: loadSession(sessionId)
     alt Session found
         RestServiceUtils -> RestServiceUtils: Check session profile
-        alt Session profile differs
+        alt Session profile differs and (cookie owns session or trusted)
             RestServiceUtils -> ProfileService: load(sessionProfileId)
             RestServiceUtils -> RestServiceUtils: Use session's profile
+        else public mismatch
+            RestServiceUtils -> RestServiceUtils: Detach session for this request
         end
     else Session not found
         RestServiceUtils -> RestServiceUtils: Create new Session(sessionId, profile)
@@ -393,7 +411,7 @@ end
 If a `sessionId` is provided in the request:
 
 1. **Session Loading**: Apache Unomi attempts to load the existing session from the database
-2. **Profile Association**: If a session is found, it may contain a profile ID that takes precedence over the cookie/profileId parameter
+2. **Profile Association**: If a session is found and its profile differs from the request profile, Unomi switches only when the cookie owns that session or the caller is trusted (see Step 1). Public callers cannot adopt a foreign session profile.
 3. **Session Creation**: If no session is found or the session is invalidated:
    * Creates a new session with the provided `sessionId`
    * Associates the session with the current profile (or anonymous profile if privacy settings require it)
@@ -804,7 +822,7 @@ Cookies are only set for regular profiles, not for Personas. If a `personaId` is
   * `Max-Age=31536000` - Valid for 1 year by default (configurable via `org.apache.unomi.profile.cookie.maxAgeInSeconds`)
   * `SameSite=Lax` - CSRF protection
   * `Secure` - Set if the request is over HTTPS (configurable)
-  * `HttpOnly` - Configurable via `org.apache.unomi.profile.cookie.httpOnly` (default: false)
+  * `HttpOnly` - Configurable via `org.apache.unomi.profile.cookie.httpOnly` (default: `true`)
   * `Domain` - Configurable via `org.apache.unomi.profile.cookie.domain`
 
 This cookie allows the browser to automatically send the profile ID on subsequent requests, enabling Apache Unomi to load the existing profile.
@@ -1180,7 +1198,7 @@ The following configuration properties control profile tracking behavior:
 
 * `org.apache.unomi.profile.cookie.name` - Cookie name (default: `context-profile-id`)
 * `org.apache.unomi.profile.cookie.maxAgeInSeconds` - Cookie expiration time (default: `31536000` = 1 year)
-* `org.apache.unomi.profile.cookie.httpOnly` - Whether cookie is HTTP-only (default: `false`)
+* `org.apache.unomi.profile.cookie.httpOnly` - Whether cookie is HTTP-only (default: `true`). When `true`, browser JavaScript cannot read the cookie; the browser still sends it on requests. Prefer reading `profileId` from the context JSON response.
 * `org.apache.unomi.profile.cookie.domain` - Cookie domain (optional)
 
-These can be configured in the `org.apache.unomi.web.cfg` configuration file.
+These can be configured in `etc/custom.system.properties` / `org.apache.unomi.web.cfg`.
