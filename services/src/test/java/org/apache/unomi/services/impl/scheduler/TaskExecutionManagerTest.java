@@ -28,8 +28,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -89,6 +93,62 @@ public class TaskExecutionManagerTest {
     @AfterEach
     public void tearDown() {
         executionManager.shutdown();
+    }
+
+    /**
+     * A terminal handler must increment counters from the STORE's values, not from the possibly
+     * stale copy the wrapper is carrying.
+     * <p>
+     * The dispatch path discovers tasks with a search query, which lags the store by up to the
+     * index refresh interval, so the executing instance can hold counters that predate writes
+     * already committed. {@code persistTerminalState}'s compare-and-set protects only the document
+     * version, so incrementing a stale base then CAS-writing it succeeds and silently loses the
+     * newer count. Observed in CI as a periodic task reporting one success after two successful
+     * executions ({@code SchedulerServiceImplTest.testMetricsAndHistory}).
+     */
+    @Test
+    public void testTerminalCompletionRebasesCountersOnStoreValues() throws Exception {
+        CountDownLatch done = new CountDownLatch(1);
+        TaskExecutor executor = new TaskExecutor() {
+            @Override public String getTaskType() { return "stale-counters"; }
+            @Override public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                callback.complete();
+                done.countDown();
+            }
+        };
+
+        // What the wrapper carries: a search-lagged view that has not seen the first success.
+        ScheduledTask stale = TaskTestFixtures.baseTask("stale-counters");
+        stale.setOneShot(false);
+        stale.setPeriod(60_000);
+        stale.setSuccessCount(0);
+        stale.setFailureCount(0);
+
+        // What the store actually holds: one success already recorded, with its history entry.
+        ScheduledTask store = TaskTestFixtures.baseTask("stale-counters");
+        store.setItemId(stale.getItemId());
+        store.setStatus(ScheduledTask.TaskStatus.RUNNING);
+        store.setExecutingNodeId(NODE);
+        store.setSuccessCount(1);
+        Map<String, Object> storeDetails = new HashMap<>();
+        List<Map<String, Object>> storeHistory = new ArrayList<>();
+        storeHistory.add(Collections.singletonMap("status", "SUCCESS"));
+        storeDetails.put("executionHistory", storeHistory);
+        store.setStatusDetails(storeDetails);
+        when(schedulerService.getTask(eq(stale.getItemId()), eq(true))).thenReturn(store);
+
+        executionManager.executeTask(stale, executor);
+        assertTrue(done.await(5, TimeUnit.SECONDS));
+        awaitStatus(stale, ScheduledTask.TaskStatus.SCHEDULED, 5000);
+
+        assertEquals(2, stale.getSuccessCount(),
+            "the second success must count from the store's value (1), not the stale copy's (0)");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> history =
+            (List<Map<String, Object>>) stale.getStatusDetails().get("executionHistory");
+        assertEquals(2, history.size(),
+            "history must extend the store's entries rather than restart from the stale copy's");
     }
 
     @Test

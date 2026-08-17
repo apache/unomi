@@ -1050,12 +1050,34 @@ public class SchedulerServiceImplTest {
             executionLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS),
             "Task should complete all executions");
 
-        // Verify retry delays
+        // Verify retry delays. Deliberately NOT relaxed: an execution landing sooner than the
+        // retry delay means a retry attempt was dispatched early, which is a real contract
+        // violation worth failing on. Suspected mechanism if this fires on CI and not locally:
+        // prepareForExecution() checks due-ness against the task instance it was handed, and the
+        // checker discovers tasks with a search query that lags the store, so a stale copy still
+        // carrying the pre-retry (already past) nextScheduledExecution passes the due check and
+        // executes immediately. Unproven - hence the diagnostics below rather than a weakened
+        // assertion, so the next occurrence is decisive instead of just a boolean.
         for (int i = 1; i < executionTimes.size(); i++) {
-            long delay = executionTimes.get(i) - executionTimes.get(i-1);
-            assertTrue(
-                delay >= TEST_RETRY_DELAY,
-                "Retry delay should be at least " + TEST_RETRY_DELAY + "ms");
+            long delay = executionTimes.get(i) - executionTimes.get(i - 1);
+            if (delay < TEST_RETRY_DELAY) {
+                StringBuilder detail = new StringBuilder();
+                detail.append("Retry delay should be at least ").append(TEST_RETRY_DELAY)
+                    .append("ms but execution #").append(i + 1).append(" came ").append(delay)
+                    .append("ms after #").append(i)
+                    .append(". persistent=").append(persistent)
+                    .append(", executions=").append(executionTimes.size())
+                    .append(" (expected ").append(TEST_MAX_RETRIES + 1).append("), gaps=[");
+                for (int j = 1; j < executionTimes.size(); j++) {
+                    if (j > 1) {
+                        detail.append(", ");
+                    }
+                    detail.append(executionTimes.get(j) - executionTimes.get(j - 1)).append("ms");
+                }
+                detail.append("]. More executions than expected points at a duplicate dispatch; "
+                    + "the right count with a short gap points at an early retry schedule.");
+                fail(detail.toString());
+            }
         }
 
         // Wait for the task to transition from RUNNING to COMPLETED state

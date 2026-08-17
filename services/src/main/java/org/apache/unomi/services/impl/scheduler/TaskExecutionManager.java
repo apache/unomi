@@ -23,6 +23,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.*;
@@ -668,7 +670,55 @@ public class TaskExecutionManager {
 
         // Carry OCC tokens from the fresh load so persistTerminalState can CAS.
         TaskLockManager.copyOccMetadata(latest, task);
+        rebaseAccumulatorsFromStore(task, latest);
         return true;
+    }
+
+    /**
+     * Rebases the running task's accumulating fields on the authoritative store document before a
+     * terminal handler increments them.
+     * <p>
+     * The task instance a wrapper carries comes from the dispatch path, whose discovery query
+     * ({@code findEnabledScheduledOrWaitingTasks}) is search-based and therefore lags the store by
+     * up to the index refresh interval. Its {@code successCount}, {@code failureCount} and
+     * execution history can predate writes that have already landed. The compare-and-set in
+     * {@link #persistTerminalState} protects only the document <em>version</em>, not these values:
+     * incrementing a stale base and then CAS-writing it succeeds and silently loses the newer
+     * count. Observed as a periodic task reporting one success after two successful executions.
+     * <p>
+     * Only accumulators are taken from the store. Status, lock fields and scheduling are the
+     * terminal handler's business and are set from the execution's own outcome.
+     *
+     * @param task   the executing task instance about to be mutated by a terminal handler
+     * @param latest the authoritative document, freshly loaded by id
+     */
+    private static void rebaseAccumulatorsFromStore(ScheduledTask task, ScheduledTask latest) {
+        task.setSuccessCount(latest.getSuccessCount());
+        task.setFailureCount(latest.getFailureCount());
+
+        // Execution history is append-only, so the longer list is the more current one. Other
+        // statusDetails keys stay as the execution left them (checkpoint markers, crash details).
+        Map<String, Object> latestDetails = latest.getStatusDetails();
+        if (latestDetails == null) {
+            return;
+        }
+        Object latestHistory = latestDetails.get("executionHistory");
+        if (!(latestHistory instanceof List)) {
+            return;
+        }
+        Map<String, Object> details = task.getStatusDetails();
+        if (details == null) {
+            details = new HashMap<>();
+            task.setStatusDetails(details);
+        } else if (!(details instanceof HashMap)) {
+            details = new HashMap<>(details);
+            task.setStatusDetails(details);
+        }
+        Object ourHistory = details.get("executionHistory");
+        int ourSize = ourHistory instanceof List ? ((List<?>) ourHistory).size() : 0;
+        if (((List<?>) latestHistory).size() > ourSize) {
+            details.put("executionHistory", new ArrayList<>((List<?>) latestHistory));
+        }
     }
 
     /**
