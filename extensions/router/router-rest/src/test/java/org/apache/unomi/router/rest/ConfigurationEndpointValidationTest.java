@@ -117,6 +117,14 @@ public class ConfigurationEndpointValidationTest {
     }
 
     @Test
+    public void savingARecurrentImportWhoseSourceIsNotAUsablePathIsRefused() {
+        ImportConfiguration configuration = recurrentImport(fileUri(permittedImportDir, "?fileName=profiles%00.csv"));
+
+        assertRefused(() -> importEndpoint.saveConfiguration(configuration));
+        assertFalse("a refused configuration must not be stored", importConfigurations.contains("in-bounds"));
+    }
+
+    @Test
     public void savingAOneshotImportThatCarriesNoSourceStoresIt() {
         ImportConfiguration configuration = new ImportConfiguration();
         configuration.setItemId("oneshot");

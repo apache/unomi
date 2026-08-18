@@ -55,8 +55,13 @@ import static org.junit.Assert.assertTrue;
  *
  * <p>Containment covers the directory named by the URI <em>and</em> every path-bearing option it
  * carries ({@code fileName}, {@code move}, {@code moveFailed}, {@code preMove}, {@code doneFileName},
- * {@code include}, ...) — validating only the directory part would leave
- * {@code file:///permitted/?fileName=../../elsewhere} open.
+ * ...) — validating only the directory part would leave
+ * {@code file:///permitted/?fileName=../../elsewhere} open. It is decided on what Camel will use, so
+ * the URI is read the way Camel reads it: percent-encoded option names, {@code RAW()} values that
+ * carry an ampersand, and the File Language expressions a path-bearing option may hold.
+ *
+ * <p>Selection options ({@code include}, {@code antInclude}) are patterns matched against the files
+ * the directory already offers, not paths Camel resolves, and are not held to containment.
  *
  * <p>Remote schemes ({@code ftp}, {@code sftp}, {@code ftps}) carry no local path and are not
  * subject to directory containment; the scheme allow-list keeps governing them.
@@ -228,6 +233,99 @@ public class FileEndpointContainmentTest {
     }
 
     @Test
+    public void importRouteIsRefusedWhenPathBearingOptionNameIsPercentEncoded() throws Exception {
+        addImportRoutes(recurrentImport("encoded-option-name",
+                fileUri(permittedImportDir, "?file%4Eame=../" + arbitraryDir.getName() + "/profiles.csv")));
+
+        assertRouteRefused("encoded-option-name",
+                "Camel decodes an option name before it binds it, so 'file%4Eame' is the fileName option");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenRawOptionValueCarriesTheEscapeBehindAnAmpersand() throws Exception {
+        addImportRoutes(recurrentImport("raw-ampersand",
+                fileUri(permittedImportDir, "?fileName=RAW(x&/../../" + arbitraryDir.getName() + "/profiles.csv)")));
+
+        assertRouteRefused("raw-ampersand",
+                "a RAW value ends at the marker that closes it, so the ampersand it carries does not start a new option");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenMoveOptionUsesAnExpressionThatLeavesPermittedBaseDir() throws Exception {
+        addImportRoutes(recurrentImport("expression-escape",
+                fileUri(permittedImportDir, "?fileName=profiles.csv&move=${file:parent}/../" + arbitraryDir.getName())));
+
+        assertRouteRefused("expression-escape",
+                "Camel evaluates move as an expression, and this one sends the consumed file to a sibling directory");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenMoveOptionUsesAnExpressionThatCannotBeValidated() throws Exception {
+        addImportRoutes(recurrentImport("opaque-expression",
+                fileUri(permittedImportDir, "?fileName=profiles.csv&move=${header.destination}")));
+
+        assertRouteRefused("opaque-expression", "a header can hold any path at all, so there is nothing left to validate");
+    }
+
+    @Test
+    public void importRouteIsBuiltWhenMoveOptionUsesTheParentExpressionAndStaysInsidePermittedBaseDir() throws Exception {
+        addImportRoutes(recurrentImport("parent-expression",
+                fileUri(permittedImportDir, "?fileName=profiles.csv&move=${file:parent}/.done/${file:onlyname}")));
+
+        assertRouteBuilt("parent-expression", "moving a consumed file next to itself is how the feature is normally used");
+    }
+
+    @Test
+    public void importRouteIsBuiltWhenSelectionPatternsAreNotPaths() throws Exception {
+        addImportRoutes(recurrentImport("selection-patterns",
+                fileUri(permittedImportDir, "?include=..&antInclude=**/*.csv&consumer.delay=10m")));
+
+        assertRouteBuilt("selection-patterns",
+                "a selection pattern is matched against the files the directory offers, so '..' asks for a two-character "
+                        + "name — it is not a path Camel resolves, and holding it to containment only refuses patterns");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenSourceIsADanglingSymlinkInsidePermittedBaseDir() throws Exception {
+        File link = new File(permittedImportDir, "dangling");
+        try {
+            Files.createSymbolicLink(link.toPath(), new File(tmp.getRoot(), "not-created-yet").toPath());
+        } catch (IOException | UnsupportedOperationException e) {
+            Assume.assumeNoException("this file system does not support symbolic links", e);
+        }
+
+        addImportRoutes(recurrentImport("dangling-symlink", fileUri(link, "?fileName=profiles.csv")));
+
+        assertRouteRefused("dangling-symlink",
+                "a link whose target cannot be resolved would leave the base directory as soon as its target is created");
+    }
+
+    @Test
+    public void unusablePathIsSkippedWithoutPreventingTheOtherRoutesFromBeingBuilt() throws Exception {
+        addImportRoutes(
+                recurrentImport("nul-character", fileUri(permittedImportDir, "?fileName=profiles%00.csv")),
+                recurrentImport("well-formed", fileUri(permittedImportDir, "?fileName=profiles.csv")));
+
+        assertRouteRefused("nul-character", "the file system cannot use a path that holds a nul character");
+        assertRouteBuilt("well-formed",
+                "a path the file system rejects is a refusal, not an exception that costs the deployment its other routes");
+    }
+
+    @Test
+    public void importRouteIsBuiltWhenPermittedBaseDirIsNonAsciiAndTheUriIsPartlyEncoded() throws Exception {
+        File nonAsciiBaseDir = tmp.newFolder("caf\u00e9-import");
+        Assume.assumeTrue("this file system does not keep non-ASCII directory names", nonAsciiBaseDir.isDirectory());
+        File dropDir = new File(nonAsciiBaseDir, "drop zone");
+        assertTrue("could not prepare the test fixture", dropDir.mkdir());
+
+        addImportRoutesInto(nonAsciiBaseDir,
+                recurrentImport("non-ascii", fileUri(nonAsciiBaseDir, "/drop%20zone?fileName=profiles.csv")));
+
+        assertRouteBuilt("non-ascii",
+                "decoding an escape must not corrupt the characters around it, or containment is decided on another path");
+    }
+
+    @Test
     public void remoteImportEndpointIsNotSubjectToDirectoryContainment() throws Exception {
         addImportRoutes(recurrentImport("remote", "ftp://ftp.example.com/profiles?fileName=profiles.csv"));
 
@@ -319,6 +417,15 @@ public class FileEndpointContainmentTest {
     }
 
     @Test
+    public void exportRouteIsBuiltWhenFileNameOptionUsesADateExpression() throws Exception {
+        addExportRoutes(recurrentExport("date-expression",
+                fileUri(permittedExportDir, "?fileName=profiles-export-${date:now:yyyyMMddHHmm}.csv")));
+
+        assertRouteBuilt("date-expression",
+                "a date cannot hold a parent segment, and naming an export after it is what the documentation shows");
+    }
+
+    @Test
     public void remoteExportEndpointIsNotSubjectToDirectoryContainment() throws Exception {
         addExportRoutes(recurrentExport("remote", "ftp://ftp.example.com/profiles?fileName=profiles.csv"));
 
@@ -380,6 +487,13 @@ public class FileEndpointContainmentTest {
     }
 
     private void addImportRoutes(String allowedEndpoints, ImportConfiguration... configurations) throws Exception {
+        ProfileImportFromSourceRouteBuilder builder = importRouteBuilder(allowedEndpoints, configurations);
+        builder.setPermittedImportBaseDirs(permittedImportDir.getAbsolutePath());
+        builder.setContext(camelContext);
+        camelContext.addRoutes(builder);
+    }
+
+    private ProfileImportFromSourceRouteBuilder importRouteBuilder(String allowedEndpoints, ImportConfiguration... configurations) {
         ProfileImportFromSourceRouteBuilder builder =
                 new ProfileImportFromSourceRouteBuilder(NO_KAFKA, RouterConstants.CONFIG_TYPE_NOBROKER);
         builder.setImportConfigurationList(Arrays.asList(configurations));
@@ -387,7 +501,12 @@ public class FileEndpointContainmentTest {
         builder.setProfileService(noOpProfileService());
         builder.setJacksonDataFormat(new JacksonDataFormat(ProfileToImport.class));
         builder.setAllowedEndpoints(allowedEndpoints);
-        builder.setPermittedImportBaseDirs(permittedImportDir.getAbsolutePath());
+        return builder;
+    }
+
+    private void addImportRoutesInto(File permittedBaseDir, ImportConfiguration... configurations) throws Exception {
+        ProfileImportFromSourceRouteBuilder builder = importRouteBuilder(DEFAULT_ALLOWED_ENDPOINTS, configurations);
+        builder.setPermittedImportBaseDirs(permittedBaseDir.getAbsolutePath());
         builder.setContext(camelContext);
         camelContext.addRoutes(builder);
     }
