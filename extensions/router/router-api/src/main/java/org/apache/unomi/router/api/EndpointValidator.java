@@ -111,7 +111,8 @@ public final class EndpointValidator {
         }
 
         for (String[] parameter : parseQuery(query)) {
-            if (!PATH_BEARING_OPTIONS.contains(parameter[0].toLowerCase(Locale.ROOT))) {
+            String optionName = decode(parameter[0]);
+            if (!PATH_BEARING_OPTIONS.contains(optionName.toLowerCase(Locale.ROOT))) {
                 continue;
             }
             String value = stripRaw(decode(parameter[1]));
@@ -119,7 +120,7 @@ public final class EndpointValidator {
                 continue;
             }
             if (!isContained(directory.resolve(value), baseDirs)) {
-                return "option '" + parameter[0] + "' points outside the permitted directories";
+                return "option '" + optionName + "' points outside the permitted directories";
             }
         }
 
