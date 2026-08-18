@@ -28,8 +28,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -45,6 +49,7 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@ExtendWith(SchedulerDiagnosticsExtension.class)
 public class TaskExecutionManagerTest {
 
     private static final String NODE = "exec-node";
@@ -91,6 +96,62 @@ public class TaskExecutionManagerTest {
         executionManager.shutdown();
     }
 
+    /**
+     * A terminal handler must increment counters from the STORE's values, not from the possibly
+     * stale copy the wrapper is carrying.
+     * <p>
+     * The dispatch path discovers tasks with a search query, which lags the store by up to the
+     * index refresh interval, so the executing instance can hold counters that predate writes
+     * already committed. {@code persistTerminalState}'s compare-and-set protects only the document
+     * version, so incrementing a stale base then CAS-writing it succeeds and silently loses the
+     * newer count. Observed in CI as a periodic task reporting one success after two successful
+     * executions ({@code SchedulerServiceImplTest.testMetricsAndHistory}).
+     */
+    @Test
+    public void testTerminalCompletionRebasesCountersOnStoreValues() throws Exception {
+        CountDownLatch done = new CountDownLatch(1);
+        TaskExecutor executor = new TaskExecutor() {
+            @Override public String getTaskType() { return "stale-counters"; }
+            @Override public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                callback.complete();
+                done.countDown();
+            }
+        };
+
+        // What the wrapper carries: a search-lagged view that has not seen the first success.
+        ScheduledTask stale = TaskTestFixtures.baseTask("stale-counters");
+        stale.setOneShot(false);
+        stale.setPeriod(60_000);
+        stale.setSuccessCount(0);
+        stale.setFailureCount(0);
+
+        // What the store actually holds: one success already recorded, with its history entry.
+        ScheduledTask store = TaskTestFixtures.baseTask("stale-counters");
+        store.setItemId(stale.getItemId());
+        store.setStatus(ScheduledTask.TaskStatus.RUNNING);
+        store.setExecutingNodeId(NODE);
+        store.setSuccessCount(1);
+        Map<String, Object> storeDetails = new HashMap<>();
+        List<Map<String, Object>> storeHistory = new ArrayList<>();
+        storeHistory.add(Collections.singletonMap("status", "SUCCESS"));
+        storeDetails.put("executionHistory", storeHistory);
+        store.setStatusDetails(storeDetails);
+        when(schedulerService.getTask(eq(stale.getItemId()), eq(true))).thenReturn(store);
+
+        executionManager.executeTask(stale, executor);
+        assertTrue(done.await(5, TimeUnit.SECONDS));
+        awaitStatus(stale, ScheduledTask.TaskStatus.SCHEDULED, 5000);
+
+        assertEquals(2, stale.getSuccessCount(),
+            "the second success must count from the store's value (1), not the stale copy's (0)");
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> history =
+            (List<Map<String, Object>>) stale.getStatusDetails().get("executionHistory");
+        assertEquals(2, history.size(),
+            "history must extend the store's entries rather than restart from the stale copy's");
+    }
+
     @Test
     public void testPrepareForExecutionRejectsDisabledAndWrongStatus() {
         ScheduledTask disabled = TaskTestFixtures.baseTask("p");
@@ -128,6 +189,19 @@ public class TaskExecutionManagerTest {
         assertEquals(ScheduledTask.TaskStatus.SCHEDULED, task.getStatus());
     }
 
+    /**
+     * Waits for the wrapper's asynchronous terminal transition to land on the shared task object.
+     * The executor's callback returns before the wrapper finishes its bookkeeping, so asserting
+     * the final status right after the latch (or after a fixed sleep) races the wrapper thread.
+     */
+    private static void awaitStatus(ScheduledTask task, ScheduledTask.TaskStatus expected, long timeoutMs)
+            throws InterruptedException {
+        long deadline = System.currentTimeMillis() + timeoutMs;
+        while (task.getStatus() != expected && System.currentTimeMillis() < deadline) {
+            Thread.sleep(20);
+        }
+    }
+
     @Test
     public void testExecuteTaskDuplicateDispatchIsSkipped() throws Exception {
         CountDownLatch started = new CountDownLatch(1);
@@ -148,6 +222,9 @@ public class TaskExecutionManagerTest {
         // Second dispatch while claim held
         executionManager.executeTask(task, executor);
         release.countDown();
+        // Deliberate quiet window for a NEGATIVE assertion: a wrongly accepted duplicate
+        // dispatch would start within milliseconds. Too short can only miss a violation
+        // (false green), never fail a healthy run.
         Thread.sleep(200);
         assertEquals(1, runs.get());
     }
@@ -273,7 +350,7 @@ public class TaskExecutionManagerTest {
 
         executionManager.executeTask(task, executor);
         assertTrue(done.await(5, TimeUnit.SECONDS));
-        Thread.sleep(100);
+        awaitStatus(task, ScheduledTask.TaskStatus.FAILED, 5000);
         assertEquals(ScheduledTask.TaskStatus.FAILED, task.getStatus());
         assertEquals(1, task.getFailureCount());
         assertTrue(task.isEnabled());
@@ -298,7 +375,7 @@ public class TaskExecutionManagerTest {
 
         executionManager.executeTask(task, executor);
         assertTrue(done.await(5, TimeUnit.SECONDS));
-        Thread.sleep(100);
+        awaitStatus(task, ScheduledTask.TaskStatus.SCHEDULED, 5000);
         assertEquals(0, task.getFailureCount());
         assertEquals(ScheduledTask.TaskStatus.SCHEDULED, task.getStatus());
         assertNotNull(task.getNextScheduledExecution());
@@ -340,7 +417,7 @@ public class TaskExecutionManagerTest {
         releaser.start();
         executionManager.shutdown();
         releaser.join(2000);
-        Thread.sleep(200);
+        awaitStatus(task, ScheduledTask.TaskStatus.SCHEDULED, 5000);
         assertEquals(ScheduledTask.TaskStatus.SCHEDULED, task.getStatus());
         assertEquals(1, task.getFailureCount());
         // No second attempt — retry schedule skipped after scheduler shutdown
@@ -362,7 +439,7 @@ public class TaskExecutionManagerTest {
 
         executionManager.executeTask(task, executor);
         assertTrue(done.await(5, TimeUnit.SECONDS));
-        Thread.sleep(100);
+        awaitStatus(task, ScheduledTask.TaskStatus.COMPLETED, 5000);
         assertEquals(ScheduledTask.TaskStatus.COMPLETED, task.getStatus());
         assertFalse(task.isEnabled());
         assertNull(task.getNextScheduledExecution());
@@ -384,7 +461,7 @@ public class TaskExecutionManagerTest {
 
         executionManager.executeTask(task, executor);
         assertTrue(done.await(5, TimeUnit.SECONDS));
-        Thread.sleep(100);
+        awaitStatus(task, ScheduledTask.TaskStatus.SCHEDULED, 5000);
         assertEquals(ScheduledTask.TaskStatus.SCHEDULED, task.getStatus());
         assertNotNull(task.getNextScheduledExecution());
         assertTrue(task.getNextScheduledExecution().getTime() >= before + 5_000);
@@ -406,7 +483,7 @@ public class TaskExecutionManagerTest {
 
         executionManager.executeTask(task, executor);
         assertTrue(done.await(5, TimeUnit.SECONDS));
-        Thread.sleep(100);
+        awaitStatus(task, ScheduledTask.TaskStatus.COMPLETED, 5000);
         assertEquals(ScheduledTask.TaskStatus.COMPLETED, task.getStatus());
     }
 
@@ -427,6 +504,8 @@ public class TaskExecutionManagerTest {
 
         executionManager.executeTask(task, executor);
         assertTrue(done.await(5, TimeUnit.SECONDS));
+        // Deliberate quiet window for a NEGATIVE assertion (callbacks must have been ignored);
+        // a poll cannot confirm that nothing happened.
         Thread.sleep(100);
         assertEquals(ScheduledTask.TaskStatus.CANCELLED, task.getStatus());
         assertEquals(completedBefore, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_COMPLETED));
@@ -448,7 +527,7 @@ public class TaskExecutionManagerTest {
 
         executionManager.executeTask(task, executor);
         assertTrue(done.await(5, TimeUnit.SECONDS));
-        Thread.sleep(100);
+        awaitStatus(task, ScheduledTask.TaskStatus.COMPLETED, 5000);
         assertEquals(ScheduledTask.TaskStatus.COMPLETED, task.getStatus());
         assertFalse(task.isEnabled());
     }
@@ -545,12 +624,12 @@ public class TaskExecutionManagerTest {
         ScheduledTask task = TaskTestFixtures.baseTask("cancel-race");
         executionManager.executeTask(task, executor);
         assertTrue(done.await(5, TimeUnit.SECONDS));
-        Thread.sleep(100);
-        assertEquals(ScheduledTask.TaskStatus.CANCELLED, task.getStatus());
         // persistTerminalState() is skipped (terminal transition correctly bailed out above), but
         // the wrapper's cleanup still CAS-clears executingNodeId once; that write is expected to
         // fail harmlessly against a real store since the document moved on to CANCELLED.
-        verify(schedulerService, times(1)).saveTaskWithRefresh(any());
+        // timeout() waits for the asynchronous cleanup instead of betting a fixed sleep on it.
+        verify(schedulerService, timeout(5000).times(1)).saveTaskWithRefresh(any());
+        assertEquals(ScheduledTask.TaskStatus.CANCELLED, task.getStatus());
         assertEquals(0, metricsManager.getMetric(TaskMetricsManager.METRIC_TASKS_COMPLETED));
     }
 
@@ -572,12 +651,12 @@ public class TaskExecutionManagerTest {
         ScheduledTask task = TaskTestFixtures.baseTask("peer-lock");
         executionManager.executeTask(task, executor);
         assertTrue(done.await(5, TimeUnit.SECONDS));
-        Thread.sleep(100);
-        assertEquals(ScheduledTask.TaskStatus.RUNNING, task.getStatus());
         // persistTerminalState() is skipped (peer holds the lock), but the wrapper's cleanup still
         // CAS-clears executingNodeId once; that write is expected to fail harmlessly against a real
         // store since the peer is the authoritative owner.
-        verify(schedulerService, times(1)).saveTaskWithRefresh(any());
+        // timeout() waits for the asynchronous cleanup instead of betting a fixed sleep on it.
+        verify(schedulerService, timeout(5000).times(1)).saveTaskWithRefresh(any());
+        assertEquals(ScheduledTask.TaskStatus.RUNNING, task.getStatus());
     }
 
     @Test
@@ -600,9 +679,11 @@ public class TaskExecutionManagerTest {
         };
         ScheduledTask task = TaskTestFixtures.baseTask("abort-prep");
         executionManager.executeTask(task, executor);
-        Thread.sleep(300);
-        assertEquals(1, executed.getCount(), "executor must not run after shutdown-abort");
+        // Positive half: wait for the asynchronous abort to land instead of a fixed sleep.
+        awaitStatus(task, ScheduledTask.TaskStatus.CRASHED, 5000);
         assertEquals(ScheduledTask.TaskStatus.CRASHED, task.getStatus());
+        // Negative half: the executor must never have run (green-direction check).
+        assertEquals(1, executed.getCount(), "executor must not run after shutdown-abort");
         assertNull(task.getLockOwner());
         verify(schedulerService, atLeastOnce()).saveTask(any(ScheduledTask.class), eq(true));
     }

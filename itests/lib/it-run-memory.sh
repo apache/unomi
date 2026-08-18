@@ -27,7 +27,7 @@ IT_MEMORY_SAMPLER_LOG="memory-sampler.log"
 IT_MEMORY_SAMPLER_CACHE="memory-sampler.cache"
 IT_MEMORY_SWAP_PRESSURE_MB=2048
 
-IT_MEMORY_TSV_HEADER=$'timestamp_utc\tkaraf_pid\tkaraf_heap_used_mb\tkaraf_heap_max_mb\tkaraf_gct_s\tes_heap_used_mb\tes_heap_max_mb\tdocker_rss_mb\tsystem_mem_available_mb\tsystem_swap_used_mb\tsystem_load_1m'
+IT_MEMORY_TSV_HEADER=$'timestamp_utc\tkaraf_pid\tkaraf_heap_used_mb\tkaraf_heap_max_mb\tkaraf_gct_s\tes_heap_used_mb\tes_heap_max_mb\tdocker_rss_mb\tsystem_mem_available_mb\tsystem_swap_used_mb\tsystem_load_1m\tkaraf_cpu_pct\tkaraf_io_read_mb_s\tkaraf_io_write_mb_s\tsearch_cpu_pct\tsearch_io_read_mb_s\tsearch_io_write_mb_s'
 
 _IT_MEMORY_OS=""
 
@@ -350,7 +350,12 @@ it_memory_parse_docker_mem_to_mb() {
 }
 
 it_memory_find_karaf_pid() {
-    pgrep -f 'org.apache.karaf.main.Main' 2>/dev/null | head -1
+    # `|| true`: pgrep exits non-zero when nothing matches, and with `set -euo pipefail` that
+    # aborted the whole sample. The sampler starts before Karaf does, so every sample taken
+    # during startup was discarded -- exactly the window where the search engine is booting and
+    # its resource use is most interesting. No match now yields an empty pid, which the callers
+    # and the summarizer already treat as "no Karaf yet" (guarded by `if ($2+0 > 0)`).
+    pgrep -f 'org.apache.karaf.main.Main' 2>/dev/null | head -1 || true
 }
 
 it_memory_karaf_max_mb_cached() {
@@ -446,20 +451,138 @@ it_memory_search_engine_stats() {
     echo -e "$(it_memory_mb_from_bytes "${used_bytes:-0}")\t$(it_memory_mb_from_bytes "${max_bytes:-0}")"
 }
 
-it_memory_docker_rss_mb() {
-    local target_dir="$1"
-    local container rss
+# --- CPU and disk I/O sampling -------------------------------------------------
+#
+# Added to answer "is the run CPU-bound, I/O-bound, or waiting?". The memory columns alone
+# could not distinguish a busy run from an idle one blocked on a remote call, which is exactly
+# the question raised by the Elasticsearch/OpenSearch IT duration gap: system load was near
+# idle on the slower engine, so the extra time was spent waiting rather than computing.
+#
+# CPU is measured as a TRUE INTERVAL PERCENTAGE, not ps(1)'s %cpu -- that is an average over the
+# whole process lifetime, so a JVM that was busy at startup reads as busy forever and the number
+# is useless for spotting a stall. On Linux -- which is what CI runs, and the only place these
+# numbers are compared across runs -- we delta /proc/<pid>/stat between samples for a true
+# interval figure. macOS has no procfs, so it falls back to ps(1)'s lifetime average: good enough
+# to see that a process is alive and roughly how hard it has worked, but NOT comparable with a
+# Linux sample and not to be read as "CPU right now". Everything here is best-effort: a missing
+# file, a dead pid or an absent docker CLI yields 0 and never fails a run.
 
-    if ! command -v docker >/dev/null 2>&1; then
+# Stores "value timestamp" pairs so the next sample can compute a delta.
+_it_memory_counter_cache() {
+    local target_dir="$1" key="$2"
+    echo "$target_dir/.it-memory-counter-$key"
+}
+
+# Echoes the per-second rate between this reading and the previous one, or 0 on the first call.
+_it_memory_rate_per_sec() {
+    local target_dir="$1" key="$2" value="$3"
+    local cache prev_value prev_ts now delta_v delta_t
+    cache="$(_it_memory_counter_cache "$target_dir" "$key")"
+    now="$(date +%s)"
+
+    if [ -r "$cache" ]; then
+        read -r prev_value prev_ts < "$cache" 2>/dev/null || true
+    fi
+    printf '%s %s\n' "$value" "$now" > "$cache" 2>/dev/null || true
+
+    if [ -z "${prev_value:-}" ] || [ -z "${prev_ts:-}" ]; then
+        echo "0"
+        return
+    fi
+    delta_t=$((now - prev_ts))
+    [ "$delta_t" -le 0 ] && { echo "0"; return; }
+    delta_v="$(awk -v a="$value" -v b="$prev_value" 'BEGIN { d = a - b; print (d > 0 ? d : 0) }')"
+    awk -v d="$delta_v" -v t="$delta_t" 'BEGIN { printf "%.2f", d / t }'
+}
+
+# Interval CPU% for a pid. >100 is legitimate on multi-core (sum across threads).
+it_memory_process_cpu_pct() {
+    local target_dir="$1" pid="${2:-}"
+    local ticks hz cpu_s rate
+
+    if [ -z "$pid" ] || [ "$pid" = "0" ] || ! kill -0 "$pid" 2>/dev/null; then
         echo "0"
         return
     fi
 
-    container="$(it_memory_resolve_docker_container "$target_dir")"
-    rss="$(docker stats --no-stream --format '{{.MemUsage}}' "$container" 2>/dev/null | head -1 | cut -d/ -f1 | tr -d ' ')"
+    if it_memory_is_linux && [ -r "/proc/$pid/stat" ]; then
+        # Fields 14 (utime) and 15 (stime), in clock ticks. comm (field 2) is parenthesised and
+        # may itself contain spaces AND parentheses, so split after the LAST ')' rather than the
+        # first: a process named e.g. "java (worker)" otherwise shifts every subsequent index.
+        ticks="$(awk '{
+                        i = length($0)
+                        while (i > 0 && substr($0, i, 1) != ")") i--
+                        n = split(substr($0, i + 2), f, " ")
+                        if (n >= 13) print f[12] + f[13]; else print 0
+                      }' "/proc/$pid/stat" 2>/dev/null)"
+        [ -z "$ticks" ] && { echo "0"; return; }
+        hz="$(getconf CLK_TCK 2>/dev/null || echo 100)"
+        cpu_s="$(awk -v t="$ticks" -v hz="$hz" 'BEGIN { printf "%.4f", t / hz }')"
+        rate="$(_it_memory_rate_per_sec "$target_dir" "cpu-$pid" "$cpu_s")"
+        awk -v r="$rate" 'BEGIN { printf "%.1f", r * 100 }'
+        return
+    fi
 
-    it_memory_parse_docker_mem_to_mb "$rss"
+    # macOS / no procfs: lifetime average, better than nothing for a local run.
+    ps -o %cpu= -p "$pid" 2>/dev/null | tr -d ' ' | awk 'NF { printf "%.1f", $1; found = 1 } END { if (!found) print 0 }'
 }
+
+# Interval disk read/write in MB/s for a pid (Linux only; /proc/<pid>/io).
+it_memory_process_io_mb_s() {
+    local target_dir="$1" pid="${2:-}"
+    local read_bytes write_bytes read_rate write_rate
+
+    if [ -z "$pid" ] || [ "$pid" = "0" ] || ! it_memory_is_linux || [ ! -r "/proc/$pid/io" ]; then
+        echo -e "0\t0"
+        return
+    fi
+
+    read_bytes="$(awk '/^read_bytes:/ { print $2 }' "/proc/$pid/io" 2>/dev/null)"
+    write_bytes="$(awk '/^write_bytes:/ { print $2 }' "/proc/$pid/io" 2>/dev/null)"
+    read_rate="$(_it_memory_rate_per_sec "$target_dir" "ior-$pid" "${read_bytes:-0}")"
+    write_rate="$(_it_memory_rate_per_sec "$target_dir" "iow-$pid" "${write_bytes:-0}")"
+    awk -v r="$read_rate" -v w="$write_rate" 'BEGIN { printf "%.2f\t%.2f", r / 1048576, w / 1048576 }'
+}
+
+# One docker stats call per sample, returning RSS, CPU% and block I/O together.
+#
+# Deliberately a single invocation: `docker stats --no-stream` costs ~1s and briefly loads the
+# daemon, and the sampler now runs 3x more often (10s rather than 30s). Two calls per sample
+# would have meant six times the docker traffic of the original sampler, perturbing the very
+# run being measured and tripling the exposure to a hung daemon. CPUPerc is already an interval
+# measurement; BlockIO is cumulative and is deltaed here.
+#
+# Echoes: rss_mb \t cpu_pct \t io_read_mb_s \t io_write_mb_s
+it_memory_docker_sample() {
+    local target_dir="$1"
+    local container stats mem cpu blockio read_raw write_raw read_b write_b read_rate write_rate
+
+    if ! command -v docker >/dev/null 2>&1; then
+        echo -e "0\t0\t0\t0"
+        return
+    fi
+
+    container="$(it_memory_resolve_docker_container "$target_dir")"
+    stats="$(docker stats --no-stream --format '{{.MemUsage}}|{{.CPUPerc}}|{{.BlockIO}}' "$container" 2>/dev/null | head -1)"
+    if [ -z "$stats" ]; then
+        echo -e "0\t0\t0\t0"
+        return
+    fi
+
+    mem="$(echo "$stats" | cut -d'|' -f1 | cut -d/ -f1 | tr -d ' ')"
+    cpu="$(echo "$stats" | cut -d'|' -f2 | tr -d ' %')"
+    blockio="$(echo "$stats" | cut -d'|' -f3)"
+    read_raw="$(echo "$blockio" | cut -d/ -f1 | tr -d ' ')"
+    write_raw="$(echo "$blockio" | cut -d/ -f2 | tr -d ' ')"
+    read_b="$(it_memory_parse_docker_mem_to_mb "$read_raw")"
+    write_b="$(it_memory_parse_docker_mem_to_mb "$write_raw")"
+    read_rate="$(_it_memory_rate_per_sec "$target_dir" "dior" "${read_b:-0}")"
+    write_rate="$(_it_memory_rate_per_sec "$target_dir" "diow" "${write_b:-0}")"
+
+    printf '%s\t%.1f\t%.2f\t%.2f\n' \
+        "$(it_memory_parse_docker_mem_to_mb "$mem")" "${cpu:-0}" "${read_rate:-0}" "${write_rate:-0}"
+}
+
 
 it_memory_system_stats() {
     local mem_available swap_used load_1m
@@ -482,13 +605,22 @@ it_memory_sample_once() {
     es_line="$(it_memory_search_engine_stats "$port")"
     sys_line="$(it_memory_system_stats)"
 
-    printf '%s\t%s\t%s\t%s\t%s\t%s\n' \
+    # One docker call per sample; split into the RSS column (8) and the CPU/IO columns (15-17).
+    local docker_line docker_rss docker_cpu_io
+    docker_line="$(it_memory_docker_sample "$target_dir")"
+    docker_rss="$(printf '%s' "$docker_line" | cut -f1)"
+    docker_cpu_io="$(printf '%s' "$docker_line" | cut -f2-4)"
+
+    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
         "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
         "${karaf_pid:-0}" \
         "$karaf_line" \
         "$es_line" \
-        "$(it_memory_docker_rss_mb "$target_dir")" \
-        "$sys_line"
+        "${docker_rss:-0}" \
+        "$sys_line" \
+        "$(it_memory_process_cpu_pct "$target_dir" "$karaf_pid")" \
+        "$(it_memory_process_io_mb_s "$target_dir" "$karaf_pid")" \
+        "${docker_cpu_io:-$(printf '0\t0\t0')}"
 }
 
 it_memory_write_samples_header() {
@@ -508,7 +640,7 @@ it_memory_summarize_samples() {
 
     awk -F'\t' -v summary="$summary_file" -v swap_pressure_mb="$IT_MEMORY_SWAP_PRESSURE_MB" '
         NR == 1 { next }
-        NF < 11 { next }
+        NF < 11 { next }   # pre-CPU/IO samples still summarize
         {
             samples++
             if ($2+0 > 0) {
@@ -524,6 +656,18 @@ it_memory_summarize_samples() {
             if ($11+0 > peak_load) peak_load = $11+0
             if (samples == 1) first_swap = $10+0
             last_swap = $10+0
+            # CPU / IO columns are absent in samples written before they were added.
+            if (NF >= 17) {
+                cpu_samples++
+                karaf_cpu_sum += $12+0; if ($12+0 > peak_karaf_cpu) peak_karaf_cpu = $12+0
+                search_cpu_sum += $15+0; if ($15+0 > peak_search_cpu) peak_search_cpu = $15+0
+                io_sum += $13+0 + $14+0 + $16+0 + $17+0
+                if ($13+0 + $14+0 > peak_karaf_io) peak_karaf_io = $13+0 + $14+0
+                if ($16+0 + $17+0 > peak_search_io) peak_search_io = $16+0 + $17+0
+                # "Idle" = neither process using meaningful CPU: the signature of a run that is
+                # waiting on latency rather than doing work.
+                if ($12+0 < 10 && $15+0 < 10) idle_samples++
+            }
         }
         END {
             if (samples == 0) exit 1
@@ -541,6 +685,24 @@ it_memory_summarize_samples() {
             printf("memory.min.system.mem.available.mb=%d\n", min_mem_avail+0) >> summary
             printf("memory.peak.system.swap.used.mb=%d\n", peak_swap+0) >> summary
             printf("memory.peak.system.load.1m=%.2f\n", peak_load+0) >> summary
+            if (cpu_samples > 0) {
+                printf("cpu.samples.count=%d\n", cpu_samples) >> summary
+                printf("cpu.mean.karaf.pct=%.1f\n", karaf_cpu_sum / cpu_samples) >> summary
+                printf("cpu.peak.karaf.pct=%.1f\n", peak_karaf_cpu+0) >> summary
+                printf("cpu.mean.search.pct=%.1f\n", search_cpu_sum / cpu_samples) >> summary
+                printf("cpu.peak.search.pct=%.1f\n", peak_search_cpu+0) >> summary
+                printf("cpu.idle.samples.pct=%d\n", idle_samples * 100 / cpu_samples) >> summary
+                printf("io.peak.karaf.mb.s=%.2f\n", peak_karaf_io+0) >> summary
+                printf("io.peak.search.mb.s=%.2f\n", peak_search_io+0) >> summary
+                printf("io.mean.total.mb.s=%.2f\n", io_sum / cpu_samples) >> summary
+                # Mostly-idle CPU with negligible I/O means the run is latency-bound: time is
+                # going on waiting (polls, refresh intervals, timeouts), not on work.
+                if (idle_samples * 100 / cpu_samples >= 70 && io_sum / cpu_samples < 5) {
+                    printf("cpu.warning.mostly.idle=true\n") >> summary
+                } else {
+                    printf("cpu.warning.mostly.idle=false\n") >> summary
+                }
+            }
             printf("memory.karaf.headroom.pct=%d\n", karaf_headroom+0) >> summary
             printf("memory.search.headroom.pct=%d\n", es_headroom+0) >> summary
             if (swap_pressure) {

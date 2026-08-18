@@ -44,6 +44,7 @@ import static org.mockito.Mockito.*;
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
+@ExtendWith(SchedulerDiagnosticsExtension.class)
 public class TaskLockManagerTest {
 
     private static final String NODE = "lock-node";
@@ -214,6 +215,188 @@ public class TaskLockManagerTest {
         ScheduledTask task = TaskTestFixtures.baseTask("exp");
         task.setLockDate(new Date(System.currentTimeMillis() - 1000));
         assertFalse(lockManager.isLockExpired(task));
+    }
+
+    /**
+     * Expiry must be judged against the lease the OWNER recorded with the lock, not this
+     * observer's own timeout. An observer configured shorter than the owner's renewal cadence
+     * would otherwise "recover" a live, renewed lock between two renewals and double-run the
+     * task (see SchedulerServiceClusterRaceTest#testShortTimeoutObserverCannotRecoverLiveRenewedLock
+     * for the end-to-end version).
+     */
+    @Test
+    public void testIsLockExpiredHonoursRecordedLeaseOverObserverTimeout() {
+        ScheduledTask task = TaskTestFixtures.baseTask("lease");
+        task.setLockDate(new Date(System.currentTimeMillis() - 5000));
+
+        // 5s-old lock, observer timeout 1s: expired by observer maths, but the owner granted 10s.
+        task.setLockLeaseMillis(10000);
+        assertFalse(lockManager.isLockExpired(task),
+            "a lock inside its owner-recorded lease must not expire under a shorter observer timeout");
+
+        // The reverse also holds: an owner that granted itself a SHORT lease is expired even
+        // when the observer's own timeout would still consider it live.
+        task.setLockDate(new Date(System.currentTimeMillis() - 500));
+        task.setLockLeaseMillis(100);
+        assertTrue(lockManager.isLockExpired(task),
+            "a lock past its owner-recorded lease is expired regardless of the observer timeout");
+    }
+
+    /** Locks written before lease recording (lease 0) fall back to the observer's own timeout. */
+    @Test
+    public void testIsLockExpiredFallsBackToObserverTimeoutForLegacyLocks() {
+        ScheduledTask task = TaskTestFixtures.baseTask("legacy");
+        task.setLockDate(new Date(System.currentTimeMillis() - 5000));
+        task.setLockLeaseMillis(0);
+        assertTrue(lockManager.isLockExpired(task));
+
+        task.setLockDate(new Date());
+        assertFalse(lockManager.isLockExpired(task));
+    }
+
+    /** A corrupt negative lease must not wedge or widen the lock: treat it like a legacy lock. */
+    @Test
+    public void testIsLockExpiredNegativeLeaseFallsBackToObserverTimeout() {
+        ScheduledTask task = TaskTestFixtures.baseTask("corrupt");
+        task.setLockDate(new Date(System.currentTimeMillis() - 5000));
+        task.setLockLeaseMillis(-1);
+        assertTrue(lockManager.isLockExpired(task), "negative lease + old lock: observer timeout applies");
+
+        task.setLockDate(new Date());
+        assertFalse(lockManager.isLockExpired(task), "negative lease + fresh lock: observer timeout applies");
+    }
+
+    /** Boundary parity with the observer-timeout path: age == lease is NOT yet expired. */
+    @Test
+    public void testIsLockExpiredFalseWhenAgeEqualsRecordedLease() {
+        ScheduledTask task = TaskTestFixtures.baseTask("edge");
+        task.setLockLeaseMillis(2000);
+        task.setLockDate(new Date(System.currentTimeMillis() - 2000));
+        assertFalse(lockManager.isLockExpired(task));
+    }
+
+    /**
+     * An absurd lease (misconfigured or corrupt owner) must not overflow the arithmetic. The lock
+     * is honoured as unexpired — the owner declared it, and stealing it risks double execution;
+     * a genuinely wedged task from a dead misconfigured node is an operator decision, not one a
+     * peer may take unilaterally with a shorter opinion.
+     */
+    @Test
+    public void testIsLockExpiredHugeLeaseIsHonouredWithoutOverflow() {
+        ScheduledTask task = TaskTestFixtures.baseTask("huge");
+        task.setLockLeaseMillis(Long.MAX_VALUE);
+        task.setLockDate(new Date(System.currentTimeMillis() - 100_000));
+        assertFalse(lockManager.isLockExpired(task));
+    }
+
+    // ------------------------------------------------------------------ lease stamping
+    // Every path that writes a lock must record the owner's lease with it, and every path that
+    // clears a lock must clear the lease: a cleared owner with a leftover lease (or the reverse)
+    // would make expiry decisions against a lock that no longer exists.
+
+    @Test
+    public void testParallelAcquireStampsLease() {
+        ScheduledTask task = TaskTestFixtures.baseTask("parallel-lease");
+        task.setAllowParallelExecution(true);
+        assertTrue(lockManager.acquireLock(task));
+        assertEquals(1000, task.getLockLeaseMillis(), "parallel marker must record the owner's lease");
+    }
+
+    @Test
+    public void testInMemoryAcquireStampsLease() {
+        ScheduledTask task = TaskTestFixtures.baseTask("mem-lease");
+        task.setPersistent(false);
+        assertTrue(lockManager.acquireLock(task));
+        assertEquals(1000, task.getLockLeaseMillis(), "in-memory lock must record the owner's lease");
+    }
+
+    @Test
+    public void testDistributedAcquireStampsLease() {
+        ScheduledTask task = TaskTestFixtures.baseTask("dist-lease");
+        task.setNextScheduledExecution(new Date(System.currentTimeMillis() - 10_000));
+        ScheduledTask latest = TaskTestFixtures.baseTask("dist-lease");
+        latest.setItemId(task.getItemId());
+        latest.setSystemMetadata("seq_no", 3L);
+        latest.setSystemMetadata("primary_term", 1L);
+        when(schedulerService.getTask(task.getItemId())).thenReturn(latest);
+        when(schedulerService.saveTaskWithRefresh(any(ScheduledTask.class))).thenReturn(true);
+
+        assertTrue(lockManager.acquireLock(task));
+        assertEquals(1000, task.getLockLeaseMillis(), "distributed lock must record the owner's lease");
+    }
+
+    /**
+     * Renewal re-stamps the lease from the owner's CURRENT timeout, so a runtime configuration
+     * change (ConfigAdmin update) propagates to the store within one renewal interval instead of
+     * peers judging against a stale grant for the rest of the execution.
+     */
+    @Test
+    public void testRenewLockRestampsLeaseFromCurrentTimeout() {
+        ScheduledTask task = TaskTestFixtures.baseTask("renew-lease");
+        task.setLockOwner(NODE);
+        task.setLockDate(new Date());
+        task.setLockLeaseMillis(1000);
+
+        ScheduledTask storeView = TaskTestFixtures.baseTask("renew-lease");
+        storeView.setItemId(task.getItemId());
+        storeView.setLockOwner(NODE);
+        storeView.setLockDate(task.getLockDate());
+        storeView.setLockLeaseMillis(1000);
+        when(schedulerService.getTask(task.getItemId())).thenReturn(storeView);
+        when(schedulerService.saveTaskWithRefresh(storeView)).thenReturn(true);
+
+        lockManager.setLockTimeout(5000);
+        assertTrue(lockManager.renewLock(task));
+        assertEquals(5000, storeView.getLockLeaseMillis(), "store must carry the current lease");
+        assertEquals(5000, task.getLockLeaseMillis(), "caller's view must be synced to the current lease");
+    }
+
+    @Test
+    public void testReleaseLockClearsLease() {
+        ScheduledTask task = TaskTestFixtures.baseTask("release-lease");
+        task.setLockOwner(NODE);
+        task.setLockDate(new Date());
+        task.setLockLeaseMillis(1000);
+
+        ScheduledTask stored = TaskTestFixtures.baseTask("release-lease");
+        stored.setItemId(task.getItemId());
+        stored.setLockOwner(NODE);
+        stored.setLockDate(task.getLockDate());
+        stored.setLockLeaseMillis(1000);
+        when(schedulerService.getTask(eq(task.getItemId()), eq(true))).thenReturn(stored);
+
+        assertTrue(lockManager.releaseLock(task));
+        assertEquals(0, task.getLockLeaseMillis(), "release must clear the caller's lease");
+        assertEquals(0, stored.getLockLeaseMillis(), "release must clear the persisted lease");
+    }
+
+    /**
+     * The recovery-enabling direction: a dead owner that granted itself a SHORT lease is
+     * recoverable by an observer configured with a much longer timeout — the observer must not
+     * impose its own, slower opinion on a lock whose owner promised to renew far sooner.
+     */
+    @Test
+    public void testNonOwnerCanReleaseLockPastItsShortRecordedLease() {
+        lockManager.setLockTimeout(60_000); // observer is very patient by its own config
+
+        ScheduledTask stored = TaskTestFixtures.baseTask("dead-short-lease");
+        stored.setLockOwner("dead-node");
+        stored.setLockDate(new Date(System.currentTimeMillis() - 2000));
+        stored.setLockLeaseMillis(500); // owner promised renewal every ~166ms and is silent for 2s
+
+        ScheduledTask callerView = TaskTestFixtures.baseTask("dead-short-lease");
+        callerView.setItemId(stored.getItemId());
+        callerView.setLockOwner("dead-node");
+        callerView.setLockDate(stored.getLockDate());
+        callerView.setLockLeaseMillis(500);
+        when(schedulerService.getTask(eq(callerView.getItemId()), eq(true))).thenReturn(stored);
+
+        assertTrue(lockManager.isLockExpired(callerView),
+            "a lock silent past its own lease is expired even for a patient observer");
+        assertTrue(lockManager.releaseLock(callerView),
+            "recovery must be able to clear a dead owner's expired-by-lease lock");
+        assertNull(stored.getLockOwner());
+        assertEquals(0, stored.getLockLeaseMillis());
     }
 
     @Test

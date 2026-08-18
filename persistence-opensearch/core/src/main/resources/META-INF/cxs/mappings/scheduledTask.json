@@ -78,6 +78,9 @@
     "lockDate": {
       "type": "date"
     },
+    "lockLeaseMillis": {
+      "type": "long"
+    },
     "lastExecutionDate": {
       "type": "date"
     },

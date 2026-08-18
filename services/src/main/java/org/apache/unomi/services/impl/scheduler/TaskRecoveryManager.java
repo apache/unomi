@@ -255,6 +255,7 @@ public class TaskRecoveryManager {
         }
         latest.setLockOwner(null);
         latest.setLockDate(null);
+        latest.setLockLeaseMillis(0);
 
         // Record the crash in execution history
         recordCrash(latest, previousOwner);
@@ -273,6 +274,7 @@ public class TaskRecoveryManager {
         task.setStatus(latest.getStatus());
         task.setLockOwner(null);
         task.setLockDate(null);
+        task.setLockLeaseMillis(0);
         task.setStatusDetails(latest.getStatusDetails());
         task.setCurrentStep(latest.getCurrentStep());
         task.setLastError(latest.getLastError());

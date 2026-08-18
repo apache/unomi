@@ -161,6 +161,7 @@ public class TaskLockManager {
             // Just set lock info but don't enforce exclusivity
             task.setLockOwner(nodeId);
             task.setLockDate(new Date());
+            task.setLockLeaseMillis(lockTimeout);
             metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_LOCK_ACQUIRED);
             return true;
         }
@@ -194,8 +195,10 @@ public class TaskLockManager {
 
             latest.setLockOwner(nodeId);
             latest.setLockDate(new Date());
+            latest.setLockLeaseMillis(lockTimeout);
             task.setLockOwner(nodeId);
             task.setLockDate(latest.getLockDate());
+            task.setLockLeaseMillis(lockTimeout);
             metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_LOCK_ACQUIRED);
 
             // For non-persistent tasks, we just update the in-memory map
@@ -247,9 +250,12 @@ public class TaskLockManager {
         task.setSystemMetadata(SEQ_NO, latestTask.getSystemMetadata(SEQ_NO));
         task.setSystemMetadata(PRIMARY_TERM, latestTask.getSystemMetadata(PRIMARY_TERM));
 
-        // Step 6: Set lock information
+        // Step 6: Set lock information. The lease records THIS node's timeout with the lock:
+        // renewal cadence is derived from the owner's timeout, so only the owner's timeout says
+        // when a missing renewal means the owner is dead (see isLockExpired()).
         task.setLockOwner(nodeId);
         task.setLockDate(new Date());
+        task.setLockLeaseMillis(lockTimeout);
 
         LOGGER.debug("LOCK-DIAG [{}] node {} : attempting CAS write - if_seq_no={}, if_primary_term={}, "
                 + "writing lockOwner={}",
@@ -391,6 +397,7 @@ public class TaskLockManager {
             if (latestOwner == null) {
                 task.setLockOwner(null);
                 task.setLockDate(null);
+                task.setLockLeaseMillis(0);
                 LOGGER.debug("LOCK-DIAG [{}] node {} : releaseLock() no-op, store already unlocked",
                     task.getItemId(), nodeId);
                 return true;
@@ -406,8 +413,10 @@ public class TaskLockManager {
 
             toSave.setLockOwner(null);
             toSave.setLockDate(null);
+            toSave.setLockLeaseMillis(0);
             task.setLockOwner(null);
             task.setLockDate(null);
+            task.setLockLeaseMillis(0);
 
             // Compare-and-set on the freshly loaded seq_no/primary_term, not a blind overwrite:
             // a peer may win a legitimate CAS-based lock acquisition in the window between our
@@ -474,6 +483,7 @@ public class TaskLockManager {
             }
 
             latest.setLockDate(new Date());
+            latest.setLockLeaseMillis(lockTimeout);
 
             // Compare-and-set on the fresh store view: if a peer stole the lock between the
             // read above and this write, renewal fails closed instead of resurrecting our lock.
@@ -486,6 +496,7 @@ public class TaskLockManager {
             // the executing thread's later compare-and-set writes are checked against the
             // store's current version, not the pre-renewal one.
             task.setLockDate(latest.getLockDate());
+            task.setLockLeaseMillis(latest.getLockLeaseMillis());
             copyOccMetadata(latest, task);
             LOGGER.debug("LOCK-DIAG [{}] node {} : renewLock() succeeded, new lockDate={}",
                 task.getItemId(), nodeId, latest.getLockDate());
@@ -537,12 +548,22 @@ public class TaskLockManager {
             return true;
         }
 
+        // Judge expiry against the lease the OWNER recorded with the lock, not this node's own
+        // configured timeout. The owner renews on a cadence derived from its own timeout
+        // (lockTimeout/3, see TaskExecutionManager#startLockRenewal), so a node configured with a
+        // shorter timeout than the owner's renewal cadence would otherwise declare a live,
+        // renewed lock dead in the gap between two renewals and "recover" a task that is still
+        // executing — observed as double execution under divergent per-node configuration.
+        // Locks written before lease recording carry no lease (0); only for those does this
+        // node's own timeout remain the best available guess.
+        long lease = task.getLockLeaseMillis() > 0 ? task.getLockLeaseMillis() : lockTimeout;
         long now = System.currentTimeMillis();
         long lockAge = now - task.getLockDate().getTime();
-        boolean expired = lockAge > lockTimeout;
+        boolean expired = lockAge > lease;
         LOGGER.debug("LOCK-DIAG isLockExpired() : task={}, lockDate={} ({}), now={}, lockAge={}ms, "
-                + "lockTimeout={}ms -> expired={}",
-            task.getItemId(), task.getLockDate(), task.getLockDate().getTime(), now, lockAge, lockTimeout, expired);
+                + "lease={}ms (recorded={}ms, own timeout={}ms) -> expired={}",
+            task.getItemId(), task.getLockDate(), task.getLockDate().getTime(), now, lockAge,
+            lease, task.getLockLeaseMillis(), lockTimeout, expired);
         return expired;
     }
 }
