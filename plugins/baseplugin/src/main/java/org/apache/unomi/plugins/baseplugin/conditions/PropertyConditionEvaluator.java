@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import java.util.stream.Collectors;
 
 import static org.apache.unomi.persistence.spi.conditions.DateUtils.getDate;
@@ -57,6 +58,28 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     private static final ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(PropertyConditionEvaluator.class.getClassLoader());
     private static final HardcodedPropertyAccessorRegistry hardcodedPropertyAccessorRegistry = new HardcodedPropertyAccessorRegistry();
     private ExpressionFilterFactory expressionFilterFactory;
+
+    // The matchesRegex operator compiles and evaluates a regular expression that can originate from an
+    // untrusted, unauthenticated caller (a condition tree on the public context/eventcollector endpoints,
+    // or a GraphQL filter). java.util.regex is a backtracking engine, so an unbounded evaluation is a
+    // single-request CPU-exhaustion primitive. These guards bound the pattern length, the matched value
+    // length, and the total work the matcher may perform. All limits are overridable via system property
+    // for the rare deployment with legitimate larger needs.
+    private static final int MAX_REGEX_PATTERN_LENGTH =
+            Integer.getInteger("org.apache.unomi.conditions.regex.maxPatternLength", 512);
+    private static final int MAX_REGEX_INPUT_LENGTH =
+            Integer.getInteger("org.apache.unomi.conditions.regex.maxInputLength", 10000);
+    private static final long MAX_REGEX_CHAR_ACCESSES =
+            Long.getLong("org.apache.unomi.conditions.regex.maxCharAccesses", 1000000L);
+    private static final int MAX_CACHED_REGEX_PATTERNS = 1000;
+
+    private static final Map<String, Pattern> compiledRegexCache =
+            Collections.synchronizedMap(new LinkedHashMap<String, Pattern>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Pattern> eldest) {
+                    return size() > MAX_CACHED_REGEX_PATTERNS;
+                }
+            });
 
     private TracerService tracerService;
 
@@ -441,7 +464,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("endsWith")) {
             return actualValue.toString().endsWith(expectedValue);
         } else if (op.equals("matchesRegex")) {
-            return expectedValue != null && Pattern.compile(expectedValue).matcher(actualValue.toString()).matches();
+            return expectedValue != null && matchesRegexSafely(expectedValue, actualValue.toString());
         } else if (op.equals("in") || op.equals("inContains") || op.equals("notIn") || op.equals("hasSomeOf") || op.equals("hasNoneOf") || op.equals("all")) {
             Collection<?> expectedValues = ConditionContextHelper.foldToASCII((Collection<?>) condition.getParameter("propertyValues"));
             Collection<?> expectedValuesInteger = (Collection<?>) condition.getParameter("propertyValuesInteger");
@@ -483,6 +506,79 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             return expectedCenter.distanceTo(actualCenter) <= distanceInMeters;
         }
         return false;
+    }
+
+    /**
+     * Evaluates the {@code matchesRegex} operator with ReDoS protections: the pattern and the matched
+     * value are length-capped, compiled patterns are cached, and the match runs against a budget-limited
+     * {@link CharSequence} so that catastrophic backtracking is cut off instead of pinning a request
+     * thread. Any guard violation or invalid pattern evaluates to {@code false} (the condition does not
+     * match) and is logged. Regex semantics are otherwise unchanged, so legitimate patterns behave as before.
+     */
+    protected static boolean matchesRegexSafely(String regex, String value) {
+        if (regex.length() > MAX_REGEX_PATTERN_LENGTH) {
+            LOGGER.warn("matchesRegex pattern longer than {} characters rejected", MAX_REGEX_PATTERN_LENGTH);
+            return false;
+        }
+        if (value.length() > MAX_REGEX_INPUT_LENGTH) {
+            LOGGER.warn("matchesRegex evaluation skipped: value longer than {} characters", MAX_REGEX_INPUT_LENGTH);
+            return false;
+        }
+        try {
+            Pattern pattern = compiledRegexCache.computeIfAbsent(regex, Pattern::compile);
+            return pattern.matcher(new BudgetedCharSequence(value, new long[]{MAX_REGEX_CHAR_ACCESSES})).matches();
+        } catch (PatternSyntaxException e) {
+            LOGGER.warn("matchesRegex evaluation skipped: invalid pattern: {}", e.getMessage());
+            return false;
+        } catch (RegexBudgetExceededException e) {
+            LOGGER.warn("matchesRegex evaluation aborted after {} character accesses (possible ReDoS pattern)",
+                    MAX_REGEX_CHAR_ACCESSES);
+            return false;
+        }
+    }
+
+    private static final class RegexBudgetExceededException extends RuntimeException {
+        RegexBudgetExceededException() {
+            super(null, null, false, false);
+        }
+    }
+
+    /**
+     * A {@link CharSequence} wrapper that throws once a shared budget of {@code charAt} accesses is
+     * exhausted, bounding the total work a backtracking regex engine can perform on it. The budget is a
+     * single-element array so it is shared across the sub-sequences the engine may create.
+     */
+    private static final class BudgetedCharSequence implements CharSequence {
+        private final CharSequence delegate;
+        private final long[] budget;
+
+        BudgetedCharSequence(CharSequence delegate, long[] budget) {
+            this.delegate = delegate;
+            this.budget = budget;
+        }
+
+        @Override
+        public char charAt(int index) {
+            if (--budget[0] < 0) {
+                throw new RegexBudgetExceededException();
+            }
+            return delegate.charAt(index);
+        }
+
+        @Override
+        public int length() {
+            return delegate.length();
+        }
+
+        @Override
+        public CharSequence subSequence(int start, int end) {
+            return new BudgetedCharSequence(delegate.subSequence(start, end), budget);
+        }
+
+        @Override
+        public String toString() {
+            return delegate.toString();
+        }
     }
 
     protected Object getPropertyValue(Item item, String expression) throws Exception {
