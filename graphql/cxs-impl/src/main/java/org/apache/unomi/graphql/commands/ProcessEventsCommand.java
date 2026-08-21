@@ -20,7 +20,9 @@ import graphql.language.InputObjectTypeDefinition;
 import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.CDPGraphQLConstants;
 import org.apache.unomi.graphql.types.input.CDPConsentUpdateEventInput;
@@ -161,12 +163,36 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
     }
 
     private void processEvent(final Event event) {
-        int eventCode = serviceManager.getService(EventService.class).send(event);
+        final EventService eventService = serviceManager.getService(EventService.class);
+
+        if (!isEventAllowedForCurrentTenant(event, eventService)) {
+            LOGGER.debug("Event type {} is not authorized for this tenant, skipping it", event.getEventType());
+            return;
+        }
+
+        int eventCode = eventService.send(event);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             serviceManager.getService(ProfileService.class).save(event.getProfile());
         }
         processedEventsQty.incrementAndGet();
+    }
+
+    /**
+     * Applies the same restricted-event-type gate the REST event paths apply before handing an event to
+     * {@link EventService#send(Event)}, which performs no such check of its own. Without this, an event
+     * submitted through this mutation skipped a control the REST path enforces.
+     * <p>
+     * This transport carries no source IP to match against a tenant's authorized IP list, so a restricted
+     * event type is refused whenever such a list is configured.
+     */
+    private boolean isEventAllowedForCurrentTenant(final Event event, final EventService eventService) {
+        final ExecutionContextManager executionContextManager = serviceManager.getService(ExecutionContextManager.class);
+        final ExecutionContext executionContext = executionContextManager != null
+                ? executionContextManager.getCurrentContext() : null;
+        final String tenantId = executionContext != null ? executionContext.getTenantId() : null;
+
+        return eventService.isEventAllowedForTenant(event, tenantId, null);
     }
 
     public static Builder create(final List<CDPEventInput> eventInputs) {
