@@ -19,6 +19,7 @@ package org.apache.unomi.graphql.servlet.auth;
 
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
@@ -94,8 +95,16 @@ class GraphQLServletSecurityValidatorTest {
         Configuration.setConfiguration(previousConfiguration);
     }
 
+    /** Grants the administrator role the JAAS branch now requires before it will authorize anything. */
+    private void givenAdministratorRole() {
+        lenient().when(securityService.hasRole(UnomiRoles.ADMINISTRATOR)).thenReturn(true);
+    }
+
     @Test
-    void validate_withInvalidTenantHeader_fallsBackToSystemContext() throws IOException {
+    void validate_withInvalidTenantHeader_isRejected() throws IOException {
+        // A tenant header that names no known tenant is refused; it must not fall back to the system
+        // context, which is inherited by every tenant.
+        givenAdministratorRole();
         when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
         when(request.getHeader(TENANT_HEADER)).thenReturn("not-a-real-tenant");
         when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
@@ -103,9 +112,60 @@ class GraphQLServletSecurityValidatorTest {
 
         boolean authenticated = validator.validate(null, null, request, response);
 
-        assertTrue(authenticated);
-        verify(executionContextManager).setCurrentContext(refEq(ExecutionContext.systemContext()));
-        verify(response, never()).sendError(any(Integer.class));
+        assertFalse(authenticated);
+        verify(executionContextManager, never()).setCurrentContext(refEq(ExecutionContext.systemContext()));
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
+    @Test
+    void validate_withoutUnomiRole_isRejected() throws IOException {
+        // A realm account that carries no Unomi role (the shipped health-check account, for one) must
+        // not obtain access, even though the realm login itself succeeds.
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
+        when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
+
+        boolean authenticated = validator.validate(null, null, request, response);
+
+        assertFalse(authenticated);
+        verify(executionContextManager, never()).setCurrentContext(any());
+        verify(securityService).clearCurrentSubject();
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
+    @Test
+    void validate_withTenantHeaderButNoAuthorityOverIt_isRejected() throws IOException {
+        Tenant tenant = new Tenant();
+        tenant.setItemId("someone-elses-tenant");
+
+        givenAdministratorRole();
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
+        when(request.getHeader(TENANT_HEADER)).thenReturn("someone-elses-tenant");
+        when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
+        when(tenantService.getTenant("someone-elses-tenant")).thenReturn(tenant);
+        when(securityService.hasSystemAccess()).thenReturn(false);
+        when(securityService.hasTenantAccess("someone-elses-tenant")).thenReturn(false);
+
+        boolean authenticated = validator.validate(null, null, request, response);
+
+        assertFalse(authenticated);
+        verify(executionContextManager, never()).createContext("someone-elses-tenant");
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
+    @Test
+    void validate_withoutTenantHeaderAndNoSystemAccess_isRejected() throws IOException {
+        // The system context is not the default for an authenticated caller.
+        givenAdministratorRole();
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
+        when(request.getHeader(TENANT_HEADER)).thenReturn(null);
+        when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
+        when(securityService.hasSystemAccess()).thenReturn(false);
+
+        boolean authenticated = validator.validate(null, null, request, response);
+
+        assertFalse(authenticated);
+        verify(executionContextManager, never()).setCurrentContext(refEq(ExecutionContext.systemContext()));
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
     }
 
     @Test
@@ -113,10 +173,12 @@ class GraphQLServletSecurityValidatorTest {
         Tenant tenant = new Tenant();
         tenant.setItemId("known-tenant");
 
+        givenAdministratorRole();
         when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
         when(request.getHeader(TENANT_HEADER)).thenReturn("known-tenant");
         when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
         when(tenantService.getTenant("known-tenant")).thenReturn(tenant);
+        when(securityService.hasTenantAccess("known-tenant")).thenReturn(true);
         ExecutionContext tenantContext = new ExecutionContext("known-tenant", null, null);
         when(executionContextManager.createContext("known-tenant")).thenReturn(tenantContext);
 
@@ -126,6 +188,21 @@ class GraphQLServletSecurityValidatorTest {
         verify(executionContextManager).createContext("known-tenant");
         verify(executionContextManager).setCurrentContext(tenantContext);
         verify(executionContextManager, never()).setCurrentContext(refEq(ExecutionContext.systemContext()));
+    }
+
+    @Test
+    void validate_withSystemAccessAndNoTenantHeader_usesSystemContext() throws IOException {
+        givenAdministratorRole();
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
+        when(request.getHeader(TENANT_HEADER)).thenReturn(null);
+        when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
+        when(securityService.hasSystemAccess()).thenReturn(true);
+
+        boolean authenticated = validator.validate(null, null, request, response);
+
+        assertTrue(authenticated);
+        verify(executionContextManager).setCurrentContext(refEq(ExecutionContext.systemContext()));
+        verify(response, never()).sendError(any(Integer.class));
     }
 
     @Test
@@ -151,6 +228,8 @@ class GraphQLServletSecurityValidatorTest {
 
     @Test
     void validateWebSocketUpgrade_withBasicAuth_isAccepted() throws IOException {
+        givenAdministratorRole();
+        when(securityService.hasSystemAccess()).thenReturn(true);
         when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
         when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
 
