@@ -19,30 +19,43 @@
 # OpenID OID4VCI/OID4VP conformance runner (CI).
 #
 # Runs the OpenID Foundation conformance test modules for the DID-VC
-# credential edge. The conformance suite is hosted at
-# https://www.certification.openid.net (API: https://api.certification.openid.net)
-# and must be able to reach the edge's issuer/verifier endpoints over HTTPS,
-# which this script provides through a cloudflared quick tunnel.
+# credential edge. The hosted suite (https://www.certification.openid.net,
+# API: https://api.certification.openid.net) must be able to reach the
+# edge's issuer/verifier endpoints over HTTPS, which this script provides
+# through a cloudflared quick tunnel when available.
 #
-# Prerequisites (in CI): mvn + java 17, curl, jq, and cloudflared on PATH.
-# The workflow (.github/workflows/didvc-conformance.yml) wires this together.
+# The API calls mirror the official suite automation wrapper:
+# https://gitlab.com/openid/conformance-suite/-/blob/master/scripts/conformance.py
+#   GET  api/runner/available                         list test modules
+#   POST api/plan?planName=..&variant=<json-string>   create test plan (body = config)
+#   POST api/runner?test=<name>&plan=<id>             create module instance
+#   POST api/runner/<module-id>                       start the module
+#   GET  api/runner/<module-id>/wait-state?states=..  long-poll until FINISHED
+#   GET  api/log/<module-id>                          module log
 #
-# Usage: run-openid-conformance.sh <issuer-url> <verifier-url>
-#   e.g. run-openid-conformance.sh https://<tunnel>/hkt https://<tunnel>/bank-a
+# Usage: run-openid-conformance.sh [issuer-url] [verifier-url]
+# Plan names are overridable:
+#   OPENID_VCI_PLAN_NAME (default oid4vci-issuer-test-plan)
+#   OPENID_VP_PLAN_NAME  (default oid4vp-verifier-test-plan)
 #
 set -euo pipefail
 
-ISSUER_URL="${1:?issuer-url required}"
-VERIFIER_URL="${2:?verifier-url required}"
+ISSUER_URL="${1:-}"
+VERIFIER_URL="${2:-}"
 SUITE_API="${OPENID_SUITE_API:-https://api.certification.openid.net}"
+VCI_PLAN_NAME="${OPENID_VCI_PLAN_NAME:-oid4vci-issuer-test-plan}"
+VP_PLAN_NAME="${OPENID_VP_PLAN_NAME:-oid4vp-verifier-test-plan}"
 CLIENT_NAME="hkt-didvc-${GITHUB_RUN_ID:-local}"
 
 log() { echo "[conformance] $*"; }
 
+# Expose the local edge through a cloudflared quick tunnel when cloudflared
+# is installed (GitHub Actions has public egress for trycloudflare.com).
 start_cloudflared_tunnel() {
   if command -v cloudflared >/dev/null 2>&1; then
     log "Starting cloudflared quick tunnel to http://localhost:8081"
     nohup cloudflared tunnel --url http://localhost:8081 --no-autoupdate >/tmp/cloudflared.log 2>&1 &
+    TUNNEL_URL=""
     for _ in $(seq 1 60); do
       TUNNEL_URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/cloudflared.log | head -1 || true)
       [ -n "${TUNNEL_URL}" ] && break
@@ -59,59 +72,99 @@ start_cloudflared_tunnel() {
   fi
 }
 
+list_available_modules() {
+  curl -fsS "${SUITE_API}/api/runner/available" \
+    | jq -r '.[].testModuleIdentifier // empty' 2>/dev/null | sort | head -50 || true
+}
+
+# Runs one test plan. $1 = plan name, $2 = configuration JSON, $3 = variant JSON or ""
 run_test_plan() {
-  local plan_name="$1"  # e.g. oid4vci-issuer or oid4vp-verifier
-  local test_plan="$2"  # test plan JSON
-  log "Creating test plan ${plan_name}"
+  local plan_name="$1"
+  local configuration="$2"
+  local variant="$3"
+
+  log "Creating test plan '${plan_name}'"
+  local create_args=("${SUITE_API}/api/plan?planName=${plan_name}")
+  if [ -n "${variant}" ]; then
+    create_args+=("&variant=$(python3 -c "import json,sys;print(__import__('urllib.parse',fromlist=['quote']).quote(json.dumps(${variant})))")")
+  fi
+  local plan_response
+  plan_response=$(curl -fsS -X POST "${create_args[*]}" \
+    -H 'Content-Type: application/json' --data "${configuration}")
   local plan_id
-  plan_id=$(curl -fsS -X POST "${SUITE_API}/plan" \
-    -H 'Content-Type: application/json' \
-    -d "${test_plan}" | jq -r '.id // .planId // empty')
+  plan_id=$(echo "${plan_response}" | jq -r '.id // .planId // empty')
   if [ -z "${plan_id}" ]; then
-    log "ERROR: could not create test plan ${plan_name} (API response above)"
+    log "ERROR: could not create test plan '${plan_name}': ${plan_response}"
     return 1
   fi
-  log "Polling plan ${plan_id}"
-  local status=""
-  for _ in $(seq 1 120); do
-    status=$(curl -fsS "${SUITE_API}/plan/${plan_id}" | jq -r '.status // empty')
-    log "plan ${plan_id}: ${status}"
-    case "${status}" in
-      FINISHED|finished) return 0 ;;
-      INTERRUPTED|interrupted|CANCELLED|cancelled)
-        curl -fsS "${SUITE_API}/plan/${plan_id}/log" || true
-        return 1 ;;
-    esac
-    sleep 15
+  log "Plan '${plan_name}' created with id ${plan_id}"
+
+  # The plan response carries the test module identifiers; tolerate both
+  # 'modules[].testModule.testModuleIdentifier' and 'modules[].id' shapes.
+  local test_names
+  test_names=$(echo "${plan_response}" \
+    | jq -r '.modules[]? | (.testModule.testModuleIdentifier // .testModuleIdentifier // .id // empty)' 2>/dev/null || true)
+  if [ -z "${test_names}" ]; then
+    log "WARN: no test module identifiers found in plan response; dumping response for diagnosis"
+    echo "${plan_response}" | jq . || true
+  fi
+
+  local failed=0
+  for test_name in ${test_names}; do
+    log "Creating test module instance for '${test_name}'"
+    local module_response
+    module_response=$(curl -fsS -X POST \
+      "${SUITE_API}/api/runner?test=${test_name}&plan=${plan_id}")
+    local module_id
+    module_id=$(echo "${module_response}" | jq -r '.id // .moduleId // empty')
+    if [ -z "${module_id}" ]; then
+      log "ERROR: no module id in create response: ${module_response}"
+      failed=1
+      continue
+    fi
+
+    log "Starting module ${module_id} (${test_name})"
+    curl -fsS -X POST "${SUITE_API}/api/runner/${module_id}" >/dev/null
+
+    log "Waiting for module ${module_id} to finish"
+    local state=""
+    for _ in $(seq 1 40); do
+      state=$(curl -fsS \
+        "${SUITE_API}/api/runner/${module_id}/wait-state?states=FINISHED,INTERRUPTED&timeoutMs=30000" \
+        | jq -r '.state // .status // empty')
+      case "${state}" in
+        FINISHED) break ;;
+        INTERRUPTED) break ;;
+        *) sleep 5 ;;
+      esac
+    done
+    log "Module ${module_id} final state: ${state:-unknown}"
+    if [ "${state}" != "FINISHED" ]; then
+      failed=1
+    fi
+    log "Module ${module_id} log:"
+    curl -fsS "${SUITE_API}/api/log/${module_id}" | jq . || true
   done
-  log "ERROR: test plan ${plan_id} timed out"
-  curl -fsS "${SUITE_API}/plan/${plan_id}/log" || true
-  return 1
+  return "${failed}"
 }
 
 start_cloudflared_tunnel
 
-log "Issuer under test: ${ISSUER_URL}"
-log "Verifier under test: ${VERIFIER_URL}"
+log "Available test modules (informational):"
+list_available_modules
 
-# OID4VCI issuer plan: the suite acts as the wallet and exercises the
-# issuer metadata, pre-authorized code and authorization-code flows.
-log "Running OID4VCI issuer conformance"
-run_test_plan "oid4vci-issuer" "$(jq -nc --arg issuer "${ISSUER_URL}" --arg client "${CLIENT_NAME}" '{
-  testPlan: "oid4vci-issuer",
-  clientName: $client,
-  variant: { client_auth_type: "none" },
-  config: { issuer: $issuer }
-}')"
+if [ -n "${ISSUER_URL}" ]; then
+  log "Issuer under test: ${ISSUER_URL}"
+  run_test_plan "${VCI_PLAN_NAME}" \
+    "$(jq -nc --arg issuer "${ISSUER_URL}" '{issuer: $issuer}')" \
+    '{"client_auth_type":"none"}' || exit 1
+fi
 
-# OID4VP verifier plan: the suite acts as the holder and presents
-# SD-JWT VC credentials against the verifier endpoints.
-log "Running OID4VP verifier conformance"
-run_test_plan "oid4vp-verifier" "$(jq -nc --arg verifier "${VERIFIER_URL}" --arg client "${CLIENT_NAME}" '{
-  testPlan: "oid4vp-verifier",
-  clientName: $client,
-  variant: { credential_format: "vc+sd-jwt", client_auth_type: "none" },
-  config: { verifier: $verifier }
-}')"
+if [ -n "${VERIFIER_URL}" ]; then
+  log "Verifier under test: ${VERIFIER_URL}"
+  run_test_plan "${VP_PLAN_NAME}" \
+    "$(jq -nc --arg verifier "${VERIFIER_URL}" '{verifier: $verifier}')" \
+    '{"client_auth_type":"none"}' || exit 1
+fi
 
 log "CONFORMANCE COMPLETE"
