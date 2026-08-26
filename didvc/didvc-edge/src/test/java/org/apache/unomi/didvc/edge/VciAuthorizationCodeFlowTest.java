@@ -133,7 +133,7 @@ class VciAuthorizationCodeFlowTest {
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode credentialResponse = objectMapper.readTree(credentialResult.getResponse().getContentAsString());
-        assertEquals("vc+sd-jwt", credentialResponse.get("format").asText());
+        assertEquals("dc+sd-jwt", credentialResponse.get("format").asText());
 
         SdJwtPresentation presentation = new SdJwtParser()
                 .parse(credentialResponse.get("credential").asText());

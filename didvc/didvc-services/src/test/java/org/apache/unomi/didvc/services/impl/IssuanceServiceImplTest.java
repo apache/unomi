@@ -126,7 +126,7 @@ class IssuanceServiceImplTest {
         var record = issuanceService.issueCredential(kycRequest());
 
         assertEquals(TENANT + "-kyc-v1", record.getSchemaId());
-        assertEquals("vc+sd-jwt", record.getFormat());
+        assertEquals("dc+sd-jwt", record.getFormat());
         assertNotNull(record.getCredential());
         assertNotNull(record.getStatusListId());
         assertTrue(record.getStatusListIndex() >= 0);

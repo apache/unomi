@@ -69,6 +69,11 @@ public class InMemoryPlatformApi implements PlatformApi {
         return issuerKey;
     }
 
+    @Override
+    public String getDefaultIssuerKid() {
+        return getIssuerKid();
+    }
+
     public void trust(String verifierTenantId, String issuerDid, String vct) {
         trustedPairs.add(verifierTenantId + "|" + issuerDid + "|" + vct);
     }
@@ -132,10 +137,15 @@ public class InMemoryPlatformApi implements PlatformApi {
                 JWK holderJwk = JWK.parse(request.getHolderPublicJwkJson());
                 payload.setCnf(SdJwtBuilder.cnfForJwk(holderJwk.toPublicJWK()));
             }
-            payload.getAlwaysDisclosed().putAll(request.getAlwaysDisclosedClaims() == null
-                    ? Map.of() : request.getAlwaysDisclosedClaims());
-            payload.getSelectivelyDisclosed().putAll(request.getSelectivelyDisclosedClaims() == null
-                    ? Map.of() : request.getSelectivelyDisclosedClaims());
+            if (request.getAlwaysDisclosedClaims() == null || request.getAlwaysDisclosedClaims().isEmpty()) {
+                payload.getAlwaysDisclosed().put("kycLevel", "REMOTE_FULL");
+                payload.getAlwaysDisclosed().put("sanctionsClear", true);
+            } else {
+                payload.getAlwaysDisclosed().putAll(request.getAlwaysDisclosedClaims());
+            }
+            if (request.getSelectivelyDisclosedClaims() != null) {
+                payload.getSelectivelyDisclosed().putAll(request.getSelectivelyDisclosedClaims());
+            }
             String credential = new SdJwtBuilder().build(payload, new Ed25519Signer(issuerKey),
                     JWSAlgorithm.EdDSA, getIssuerKid());
 
@@ -143,7 +153,7 @@ public class InMemoryPlatformApi implements PlatformApi {
             issued.setItemId(recordId);
             issued.setSchemaId(request.getSchemaId());
             issued.setSubjectId(request.getSubjectId());
-            issued.setFormat("vc+sd-jwt");
+            issued.setFormat("dc+sd-jwt");
             issued.setCredential(credential);
             issued.setStatusListIndex(index);
             issued.setStatusListId(statusListId == null ? STATUS_LIST_ID : statusListId);

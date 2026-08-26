@@ -26,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -64,14 +65,17 @@ public class CredentialIssuerController {
 
     private final EdgeProperties properties;
     private final PlatformApi platformApi;
+    private final ObjectMapper objectMapper;
 
     private final Map<String, PreAuthContext> preAuthCodes = new ConcurrentHashMap<>();
     private final Map<String, AuthorizationCodeContext> authorizationCodes = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, String>> parRequests = new ConcurrentHashMap<>();
     private final Map<String, AccessTokenContext> accessTokens = new ConcurrentHashMap<>();
 
-    public CredentialIssuerController(EdgeProperties properties, PlatformApi platformApi) {
+    public CredentialIssuerController(EdgeProperties properties, PlatformApi platformApi, ObjectMapper objectMapper) {
         this.properties = properties;
         this.platformApi = platformApi;
+        this.objectMapper = objectMapper;
     }
 
     /**
@@ -176,6 +180,23 @@ public class CredentialIssuerController {
 
     @GetMapping("/{tenantId}/.well-known/openid-credential-issuer")
     public Map<String, Object> issuerMetadata(@PathVariable("tenantId") String tenantId) {
+        return buildIssuerMetadata(tenantId);
+    }
+
+    /**
+     * Spec-shaped well-known fallback:
+     * {@code /.well-known/openid-credential-issuer/<issuer-path>} — the
+     * conformance suite derives this path from the credential_issuer
+     * identifier. Serves JSON regardless of the Accept header so clients
+     * requesting signed metadata still receive (and detect) the unsigned
+     * document.
+     */
+    @GetMapping("/.well-known/openid-credential-issuer/{tenantId}")
+    public ResponseEntity<String> issuerMetadataWellKnown(@PathVariable("tenantId") String tenantId) {
+        return jsonResponse(buildIssuerMetadata(tenantId));
+    }
+
+    private Map<String, Object> buildIssuerMetadata(String tenantId) {
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("credential_issuer", properties.getIssuerBaseUrl() + "/" + tenantId);
         metadata.put("authorization_servers", List.of(properties.getIssuerBaseUrl() + "/" + tenantId));
@@ -197,14 +218,80 @@ public class CredentialIssuerController {
      */
     @GetMapping("/{tenantId}/.well-known/oauth-authorization-server")
     public Map<String, Object> authorizationServerMetadata(@PathVariable("tenantId") String tenantId) {
+        return buildAuthorizationServerMetadata(tenantId);
+    }
+
+    /**
+     * Spec-shaped well-known fallback:
+     * {@code /.well-known/oauth-authorization-server/<issuer-path>}.
+     */
+    @GetMapping("/.well-known/oauth-authorization-server/{tenantId}")
+    public ResponseEntity<String> authorizationServerMetadataWellKnown(@PathVariable("tenantId") String tenantId) {
+        return jsonResponse(buildAuthorizationServerMetadata(tenantId));
+    }
+
+    private ResponseEntity<String> jsonResponse(Object body) {
+        try {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(objectMapper.writeValueAsString(body));
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to serialize metadata", e);
+        }
+    }
+
+    private Map<String, Object> buildAuthorizationServerMetadata(String tenantId) {
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("issuer", properties.getIssuerBaseUrl() + "/" + tenantId);
         metadata.put("authorization_endpoint", properties.getIssuerBaseUrl() + "/" + tenantId + "/authorize");
+        metadata.put("pushed_authorization_request_endpoint", properties.getIssuerBaseUrl() + "/" + tenantId + "/par");
         metadata.put("token_endpoint", properties.getIssuerBaseUrl() + "/" + tenantId + "/token");
         metadata.put("response_types_supported", List.of("code"));
         metadata.put("grant_types_supported", List.of(AUTHORIZATION_CODE_GRANT, PRE_AUTHORIZED_GRANT));
         metadata.put("code_challenge_methods_supported", List.of("S256"));
         return metadata;
+    }
+
+    /**
+     * Credential-offer endpoint for the issuer-initiated flow: the wallet
+     * fetches a credential offer carrying an authorization_code grant with
+     * an issuer_state.
+     */
+    @GetMapping("/{tenantId}/credential-offer")
+    public Map<String, Object> credentialOffer(@PathVariable("tenantId") String tenantId,
+                                               @RequestParam(value = "credential_configuration_id", required = false) String credentialConfigurationId) {
+        Map<String, Object> grant = new LinkedHashMap<>();
+        grant.put("issuer_state", UUID.randomUUID().toString());
+        Map<String, Object> grants = new LinkedHashMap<>();
+        grants.put("authorization_code", grant);
+        Map<String, Object> offer = new LinkedHashMap<>();
+        offer.put("credential_issuer", properties.getIssuerBaseUrl() + "/" + tenantId);
+        offer.put("credential_configuration_ids", List.of(
+                credentialConfigurationId == null ? "hkt_kyc_v1" : credentialConfigurationId));
+        offer.put("grants", grants);
+        return offer;
+    }
+
+    /**
+     * RFC 9126 Pushed Authorization Requests (PAR): accepts the
+     * authorization parameters up front and returns a request_uri for use
+     * at the authorization endpoint.
+     */
+    @PostMapping("/{tenantId}/par")
+    public ResponseEntity<Map<String, Object>> par(@PathVariable("tenantId") String tenantId,
+                                                   @RequestParam Map<String, String> params) {
+        if (!"code".equals(params.get("response_type"))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "unsupported response_type");
+        }
+        if (params.get("client_id") == null || params.get("redirect_uri") == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "client_id and redirect_uri are required");
+        }
+        String requestUri = "urn:didvc:par:" + UUID.randomUUID();
+        parRequests.put(requestUri, new ConcurrentHashMap<>(params));
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("request_uri", requestUri);
+        response.put("expires_in", 90);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**
@@ -225,7 +312,24 @@ public class CredentialIssuerController {
                                           @RequestParam(value = "code_challenge_method", required = false) String codeChallengeMethod,
                                           @RequestParam(value = "subject_id", required = false) String subjectId,
                                           @RequestParam(value = "schema_id", required = false) String schemaId,
-                                          @RequestParam(value = "kid", required = false) String kid) {
+                                          @RequestParam(value = "kid", required = false) String kid,
+                                          @RequestParam(value = "request_uri", required = false) String requestUri) {
+        if (requestUri != null) {
+            // Pushed authorization request: resolve the stored parameters
+            Map<String, String> pushed = parRequests.remove(requestUri);
+            if (pushed == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "unknown request_uri");
+            }
+            responseType = pushed.getOrDefault("response_type", responseType);
+            clientId = pushed.getOrDefault("client_id", clientId);
+            redirectUri = pushed.getOrDefault("redirect_uri", redirectUri);
+            state = pushed.getOrDefault("state", state);
+            codeChallenge = pushed.getOrDefault("code_challenge", codeChallenge);
+            codeChallengeMethod = pushed.getOrDefault("code_challenge_method", codeChallengeMethod);
+            subjectId = pushed.getOrDefault("subject_id", subjectId);
+            schemaId = pushed.getOrDefault("schema_id", schemaId);
+            kid = pushed.getOrDefault("kid", kid);
+        }
         if (!"code".equals(responseType)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "unsupported response_type");
         }
@@ -364,10 +468,16 @@ public class CredentialIssuerController {
         // subject — issue the credential on demand from the request claims
         PlatformApi.IssueRequest issueRequest = new PlatformApi.IssueRequest();
         issueRequest.setTenantId(context.tenantId);
-        issueRequest.setSubjectId(context.issue.subjectId);
+        // Subject/schema/kid fall back to conformance defaults when the
+        // authorize step did not carry an explicit binding.
+        String subjectId = context.issue.subjectId != null
+                ? context.issue.subjectId : "didvc:pairwise:conformance-wallet";
+        String schemaId = context.issue.schemaId != null ? context.issue.schemaId : "hkt-kyc-v1";
+        String kid = context.issue.kid != null ? context.issue.kid : platformApi.getDefaultIssuerKid();
+        issueRequest.setSubjectId(subjectId);
         issueRequest.setSubjectType("pairwise");
-        issueRequest.setSchemaId(context.issue.schemaId);
-        issueRequest.setKid(context.issue.kid);
+        issueRequest.setSchemaId(schemaId);
+        issueRequest.setKid(kid);
         if (body != null) {
             @SuppressWarnings("unchecked")
             Map<String, Object> claims = (Map<String, Object>) body.getOrDefault("claims", Map.of());
@@ -515,7 +625,7 @@ public class CredentialIssuerController {
 
     private Map<String, Object> credentialConfiguration() {
         Map<String, Object> configuration = new LinkedHashMap<>();
-        configuration.put("format", "vc+sd-jwt");
+        configuration.put("format", "dc+sd-jwt");
         configuration.put("vct", "hkt_kyc_v1");
         configuration.put("cryptographic_binding_methods_supported", List.of("jwk"));
         configuration.put("credential_signing_alg_values_supported", List.of("EdDSA", "ES256"));

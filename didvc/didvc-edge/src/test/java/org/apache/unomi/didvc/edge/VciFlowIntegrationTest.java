@@ -82,7 +82,7 @@ class VciFlowIntegrationTest {
                 .andReturn();
         JsonNode metadata = objectMapper.readTree(metadataResult.getResponse().getContentAsString());
         assertTrue(metadata.get("credential_endpoint").asText().contains("/hkt/credential"));
-        assertEquals("vc+sd-jwt",
+        assertEquals("dc+sd-jwt",
                 metadata.get("credential_configurations_supported").get("hkt_kyc_v1").get("format").asText());
 
         // Internal offer creation (admin API key)
@@ -128,7 +128,7 @@ class VciFlowIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode credentialResponse = objectMapper.readTree(credentialResult.getResponse().getContentAsString());
-        assertEquals("vc+sd-jwt", credentialResponse.get("format").asText());
+        assertEquals("dc+sd-jwt", credentialResponse.get("format").asText());
         String credential = credentialResponse.get("credential").asText();
 
         // The delivered credential verifies against the issuer key and

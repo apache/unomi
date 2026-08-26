@@ -78,6 +78,14 @@ public interface PlatformApi {
     boolean isTrusted(String tenantId, String issuerDid, String vct);
 
     /**
+     * The default issuer key id, or null when the platform requires an
+     * explicit kid on every issue request.
+     */
+    default String getDefaultIssuerKid() {
+        return null;
+    }
+
+    /**
      * Resolves an issuer's public JWK from its DID document.
      *
      * @param issuerDid the issuer DID

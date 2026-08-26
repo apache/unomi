@@ -276,7 +276,7 @@ class VpVerificationIntegrationTest {
         }
         Map<String, Object> credential = new LinkedHashMap<>();
         credential.put("id", "kyc_credential");
-        credential.put("format", "vc+sd-jwt");
+        credential.put("format", "dc+sd-jwt");
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("vct_values", List.of("hkt_kyc_v1"));
         credential.put("meta", meta);
@@ -330,7 +330,7 @@ class VpVerificationIntegrationTest {
     void dcqlUnrequestedVctRejected() throws Exception {
         Map<String, Object> credential = new LinkedHashMap<>();
         credential.put("id", "other");
-        credential.put("format", "vc+sd-jwt");
+        credential.put("format", "dc+sd-jwt");
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("vct_values", List.of("hkt_profcred_v1"));
         credential.put("meta", meta);

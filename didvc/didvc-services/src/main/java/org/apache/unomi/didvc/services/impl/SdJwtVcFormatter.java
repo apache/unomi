@@ -42,7 +42,7 @@ import java.util.Map;
 @Component(service = CredentialFormatter.class, property = "didvc.format=vc+sd-jwt", immediate = true)
 public class SdJwtVcFormatter implements CredentialFormatter {
 
-    public static final String FORMAT = "vc+sd-jwt";
+    public static final String FORMAT = "dc+sd-jwt";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SdJwtVcFormatter.class);
 
