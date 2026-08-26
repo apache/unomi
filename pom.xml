@@ -411,6 +411,16 @@
         <module>web-servlets</module>
         <module>wab</module>
         <module>rest</module>
+        <!-- didvc: DID/VC identity module (HKT Trusted-Identity CDP extension).
+             Must build before unomi-kar, whose feature.xml references the bundles. -->
+        <module>didvc</module>
+        <module>didvc/didvc-api</module>
+        <module>didvc/didvc-sd-jwt</module>
+        <module>didvc/didvc-metering</module>
+        <module>didvc/didvc-services</module>
+        <module>didvc/didvc-rest</module>
+        <module>didvc/didvc-edge</module>
+        <module>didvc/didvc-openid-gateway</module>
         <module>manual</module>
         <module>kar</module>
         <!-- other extensions -->
@@ -418,14 +428,6 @@
         <module>extensions/router</module>
         <module>extensions/salesforce-connector</module>
         <module>extensions/weather-update</module>
-        <!-- didvc: DID/VC identity module (HKT Trusted-Identity CDP extension) -->
-        <module>didvc</module>
-        <module>didvc/didvc-api</module>
-        <module>didvc/didvc-services</module>
-        <module>didvc/didvc-rest</module>
-        <module>didvc/didvc-edge</module>
-        <module>didvc/didvc-openid-gateway</module>
-        <module>didvc/didvc-metering</module>
         <module>graphql</module>
         <module>samples</module>
         <module>distribution</module>

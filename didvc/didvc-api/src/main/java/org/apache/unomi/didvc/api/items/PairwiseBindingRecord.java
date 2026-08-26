@@ -32,7 +32,7 @@ public class PairwiseBindingRecord extends Item {
     /**
      * The PairwiseBindingRecord ITEM_TYPE.
      */
-    public static final String ITEM_TYPE = "didvc:pairwise-binding";
+    public static final String ITEM_TYPE = "didvc-pairwise-binding";
     private static final long serialVersionUID = 7992458362288032527L;
 
     private String profileId;

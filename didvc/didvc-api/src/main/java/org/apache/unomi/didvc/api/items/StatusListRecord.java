@@ -28,7 +28,7 @@ public class StatusListRecord extends Item {
     /**
      * The StatusListRecord ITEM_TYPE.
      */
-    public static final String ITEM_TYPE = "didvc:status-list";
+    public static final String ITEM_TYPE = "didvc-status-list";
     private static final long serialVersionUID = 2951849889360368812L;
 
     private String statusPurpose;

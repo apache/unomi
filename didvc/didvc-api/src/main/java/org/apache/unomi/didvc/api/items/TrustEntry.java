@@ -30,7 +30,7 @@ public class TrustEntry extends Item {
     /**
      * The TrustEntry ITEM_TYPE.
      */
-    public static final String ITEM_TYPE = "didvc:trust-entry";
+    public static final String ITEM_TYPE = "didvc-trust-entry";
     private static final long serialVersionUID = 120900975795369222L;
 
     private String issuerDid;

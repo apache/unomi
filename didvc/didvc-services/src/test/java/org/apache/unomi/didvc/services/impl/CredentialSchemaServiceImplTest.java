@@ -73,7 +73,7 @@ class CredentialSchemaServiceImplTest {
         schemaService.saveSchema(saved);
         DidSchema loaded = schemaService.getSchema(saved.getItemId());
         assertEquals("hkt_kyc_v1", loaded.getVct());
-        assertEquals("didvc:schema", loaded.getItemType());
+        assertEquals("didvc-schema", loaded.getItemType());
         assertEquals("didvc", loaded.getScope());
         assertEquals(3, loaded.getAllowedClaims().size());
     }

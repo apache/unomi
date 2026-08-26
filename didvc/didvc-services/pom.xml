@@ -57,6 +57,10 @@
             <artifactId>unomi-did-vc-api</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-did-vc-sd-jwt</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.osgi</groupId>
@@ -123,6 +127,21 @@
                     <instructions>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
+                            <!-- Packages referenced only by optional/excluded Tink transitive
+                                 dependencies (GCP KMS client, protobuf keyset I/O, gson); the
+                                 Ed25519/Ed448 paths used here never touch them. -->
+                            !com.google.api.client.*,
+                            !com.google.auth.*,
+                            !com.google.protobuf.*,
+                            !com.google.gson.*,
+                            <!-- CLASS-retention annotations from nimbus's provided-scope
+                                 jcip dependency: never needed at runtime. -->
+                            net.jcip.annotations;resolution:=optional,
+                            <!-- Optional TLS provider and annotation-only packages
+                                 referenced by Tink paths the DID-VC module never invokes. -->
+                            org.conscrypt;resolution:=optional,
+                            javax.annotation;resolution:=optional,
+                            com.google.errorprone.annotations;resolution:=optional,
                             sun.misc;resolution:=optional,
                             *
                         </Import-Package>

@@ -34,7 +34,7 @@ public class DidSchema extends Item {
     /**
      * The DidSchema ITEM_TYPE.
      */
-    public static final String ITEM_TYPE = "didvc:schema";
+    public static final String ITEM_TYPE = "didvc-schema";
     private static final long serialVersionUID = 1298364344951983734L;
 
     private String name;

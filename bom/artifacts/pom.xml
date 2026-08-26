@@ -102,6 +102,16 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-did-vc-sd-jwt</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-did-vc-metering</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-did-vc-services</artifactId>
                 <version>${project.version}</version>
             </dependency>

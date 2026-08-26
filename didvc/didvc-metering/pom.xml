@@ -25,7 +25,47 @@
         <relativePath>../pom.xml</relativePath>
     </parent>
     <artifactId>unomi-did-vc-metering</artifactId>
-    <name>Apache Unomi :: DID-VC :: Metering</name>
-    <description>Placeholder for the verification-metering pipeline (Kafka consumers, billing feed) — implemented in Phase 2+</description>
+    <name>Apache Unomi :: DID-VC :: Metering and Audit</name>
+    <description>Verification metering (billable records, Kafka sink) and the immutable hash-chained audit log for the DID-VC module</description>
     <packaging>jar</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+        </dependency>
+
+        <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.2.224</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

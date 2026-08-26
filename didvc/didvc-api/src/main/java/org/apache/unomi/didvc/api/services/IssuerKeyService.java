@@ -72,6 +72,17 @@ public interface IssuerKeyService {
     String sign(String kid, String payloadJson);
 
     /**
+     * Signs a payload with an explicit JOSE type header (e.g.
+     * {@code vc+sd-jwt}) and returns the compact JWS.
+     *
+     * @param kid         the key identifier
+     * @param payloadJson the payload to sign
+     * @param typ         the JOSE type header value; null for none
+     * @return the compact JWS
+     */
+    String signTyped(String kid, String payloadJson, String typ);
+
+    /**
      * Verifies a compact JWS signature against a kid's public key.
      *
      * @param kid        the key identifier

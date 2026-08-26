@@ -28,7 +28,7 @@ public class DidDocumentRecord extends Item {
     /**
      * The DidDocumentRecord ITEM_TYPE.
      */
-    public static final String ITEM_TYPE = "didvc:did-document";
+    public static final String ITEM_TYPE = "didvc-did-document";
     private static final long serialVersionUID = -4347390670551173831L;
 
     private String did;

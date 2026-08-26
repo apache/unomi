@@ -30,7 +30,7 @@ public class KeyDescriptor extends Item {
     /**
      * The KeyDescriptor ITEM_TYPE.
      */
-    public static final String ITEM_TYPE = "didvc:key-descriptor";
+    public static final String ITEM_TYPE = "didvc-key-descriptor";
     private static final long serialVersionUID = 6806377569896859132L;
 
     private String kid;

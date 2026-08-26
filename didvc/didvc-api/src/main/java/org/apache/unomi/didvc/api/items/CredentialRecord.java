@@ -20,6 +20,7 @@ package org.apache.unomi.didvc.api.items;
 import org.apache.unomi.api.Item;
 
 import java.util.Date;
+import java.util.Map;
 
 /**
  * Metadata for one issued verifiable credential: schema, subject, issuer key,
@@ -31,13 +32,14 @@ public class CredentialRecord extends Item {
     /**
      * The CredentialRecord ITEM_TYPE.
      */
-    public static final String ITEM_TYPE = "didvc:credential-record";
+    public static final String ITEM_TYPE = "didvc-credential-record";
     private static final long serialVersionUID = -8973084450948835440L;
 
     private String schemaId;
     private String subjectId;
     private String subjectType;
     private String kid;
+    private String verifierCategory;
     private String statusListId;
     private Integer statusListIndex;
     private String format;
@@ -45,6 +47,10 @@ public class CredentialRecord extends Item {
     private Date issuedAt;
     private Date expiresAt;
     private boolean revoked;
+    private boolean refreshDue;
+    private Map<String, Object> alwaysDisclosedClaims;
+    private Map<String, Object> selectivelyDisclosedClaims;
+    private String holderPublicJwkJson;
 
     /**
      * Default constructor.
@@ -158,5 +164,64 @@ public class CredentialRecord extends Item {
 
     public void setRevoked(boolean revoked) {
         this.revoked = revoked;
+    }
+
+    /**
+     * True when the credential is inside its re-verification window or its
+     * subject's identity evidence changed (e.g. SIM re-registration).
+     */
+    public boolean isRefreshDue() {
+        return refreshDue;
+    }
+
+    public void setRefreshDue(boolean refreshDue) {
+        this.refreshDue = refreshDue;
+    }
+
+    /**
+     * The verifier category the disclosure consent was scoped to at
+     * issuance; retained for re-issuance with holder binding.
+     */
+    public String getVerifierCategory() {
+        return verifierCategory;
+    }
+
+    public void setVerifierCategory(String verifierCategory) {
+        this.verifierCategory = verifierCategory;
+    }
+
+    /**
+     * The always-disclosed claims as issued; retained so the credential can
+     * be re-issued with a holder key at credential-request time.
+     */
+    public Map<String, Object> getAlwaysDisclosedClaims() {
+        return alwaysDisclosedClaims;
+    }
+
+    public void setAlwaysDisclosedClaims(Map<String, Object> alwaysDisclosedClaims) {
+        this.alwaysDisclosedClaims = alwaysDisclosedClaims;
+    }
+
+    /**
+     * The selectively-disclosable claims as issued.
+     */
+    public Map<String, Object> getSelectivelyDisclosedClaims() {
+        return selectivelyDisclosedClaims;
+    }
+
+    public void setSelectivelyDisclosedClaims(Map<String, Object> selectivelyDisclosedClaims) {
+        this.selectivelyDisclosedClaims = selectivelyDisclosedClaims;
+    }
+
+    /**
+     * The holder public JWK the credential is bound to via cnf.jwk; null
+     * for bearer credentials.
+     */
+    public String getHolderPublicJwkJson() {
+        return holderPublicJwkJson;
+    }
+
+    public void setHolderPublicJwkJson(String holderPublicJwkJson) {
+        this.holderPublicJwkJson = holderPublicJwkJson;
     }
 }

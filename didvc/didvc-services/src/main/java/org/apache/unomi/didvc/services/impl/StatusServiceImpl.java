@@ -171,6 +171,16 @@ public class StatusServiceImpl implements StatusService {
     private StatusListRecord requireRecord(String statusListId) {
         StatusListRecord record = persistenceService.load(statusListId, StatusListRecord.class);
         if (record == null) {
+            // Fall back to lookup by the public status-list id (urn) so
+            // verifiers can reference a list by its published identifier
+            for (StatusListRecord candidate : persistenceService.getAllItems(StatusListRecord.class)) {
+                if (statusListId.equals(candidate.getStatusListId())) {
+                    record = candidate;
+                    break;
+                }
+            }
+        }
+        if (record == null) {
             throw new IllegalArgumentException("Unknown status list: " + statusListId);
         }
         return record;

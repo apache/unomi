@@ -133,15 +133,22 @@ public class IssuerKeyServiceImpl implements IssuerKeyService {
 
     @Override
     public String sign(String kid, String payloadJson) {
+        return signTyped(kid, payloadJson, null);
+    }
+
+    @Override
+    public String signTyped(String kid, String payloadJson, String typ) {
         KeyMaterial material = keyMaterial.get(kid);
         if (material == null) {
             throw new IllegalStateException("Private key material not available for kid " + kid
                     + ": after a restart, keys must be re-loaded from the HSM/KMS provider");
         }
         try {
-            JWSObject jwsObject = new JWSObject(
-                    new JWSHeader.Builder(material.algorithm).keyID(kid).build(),
-                    new Payload(payloadJson));
+            JWSHeader.Builder headerBuilder = new JWSHeader.Builder(material.algorithm).keyID(kid);
+            if (typ != null) {
+                headerBuilder.type(new com.nimbusds.jose.JOSEObjectType(typ));
+            }
+            JWSObject jwsObject = new JWSObject(headerBuilder.build(), new Payload(payloadJson));
             jwsObject.sign(signerFor(material.jwk));
             return jwsObject.serialize();
         } catch (JOSEException e) {
