@@ -84,7 +84,8 @@ import org.junit.runners.Suite.SuiteClasses;
         SchedulerIT.class,
         EventsCollectorIT.class,
         RolloverIT.class,
-        HealthCheckIT.class
+        HealthCheckIT.class,
+        DidvcSmokeIT.class
 })
 public class AllITs {
 }

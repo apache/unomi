@@ -94,6 +94,9 @@
         <guava.version>16.0.1</guava.version>
         <guava.version>16.0.1</guava.version>
         <org-json.version>20250517</org-json.version>
+        <nimbus-jose-jwt.version>9.37.3</nimbus-jose-jwt.version>
+        <!-- Tink is an optional dependency of nimbus-jose-jwt 9.x, required for Ed25519/Ed448 support -->
+        <tink.version>1.12.0</tink.version>
         <jsr305.version>3.0.2</jsr305.version>
         <jakarta-annotation-api.version>3.0.0</jakarta-annotation-api.version>
         <jakarta-json-api.version>2.1.2</jakarta-json-api.version>
@@ -415,6 +418,14 @@
         <module>extensions/router</module>
         <module>extensions/salesforce-connector</module>
         <module>extensions/weather-update</module>
+        <!-- didvc: DID/VC identity module (HKT Trusted-Identity CDP extension) -->
+        <module>didvc</module>
+        <module>didvc/didvc-api</module>
+        <module>didvc/didvc-services</module>
+        <module>didvc/didvc-rest</module>
+        <module>didvc/didvc-edge</module>
+        <module>didvc/didvc-openid-gateway</module>
+        <module>didvc/didvc-metering</module>
         <module>graphql</module>
         <module>samples</module>
         <module>distribution</module>
