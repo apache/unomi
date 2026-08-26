@@ -80,3 +80,4 @@ jobs:
         run: bash didvc/scripts/run-openid-conformance.sh
         env:
           OPENID_SUITE_API: https://api.certification.openid.net
+          OPENID_SUITE_TOKEN: ${{ secrets.OPENID_SUITE_TOKEN }}

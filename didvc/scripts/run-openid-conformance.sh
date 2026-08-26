@@ -49,6 +49,16 @@ CLIENT_NAME="hkt-didvc-${GITHUB_RUN_ID:-local}"
 
 log() { echo "[conformance] $*"; }
 
+# The hosted suite requires a Bearer token for API access. Supply it via
+# the OPENID_SUITE_TOKEN secret (workflow: actions secrets) or env var.
+suite_curl() {
+  local args=()
+  if [ -n "${OPENID_SUITE_TOKEN:-}" ]; then
+    args+=(-H "Authorization: Bearer ${OPENID_SUITE_TOKEN}")
+  fi
+  curl -fsS "${args[@]}" "$@"
+}
+
 # Expose the local edge through a cloudflared quick tunnel when cloudflared
 # is installed (GitHub Actions has public egress for trycloudflare.com).
 start_cloudflared_tunnel() {
@@ -73,7 +83,7 @@ start_cloudflared_tunnel() {
 }
 
 list_available_modules() {
-  curl -fsS "${SUITE_API}/api/runner/available" \
+  suite_curl "${SUITE_API}/api/runner/available" \
     | jq -r '.[].testModuleIdentifier // empty' 2>/dev/null | sort | head -50 || true
 }
 
@@ -89,7 +99,7 @@ run_test_plan() {
     create_args+=("&variant=$(python3 -c "import json,sys;print(__import__('urllib.parse',fromlist=['quote']).quote(json.dumps(${variant})))")")
   fi
   local plan_response
-  plan_response=$(curl -fsS -X POST "${create_args[*]}" \
+  plan_response=$(suite_curl -X POST "${create_args[*]}" \
     -H 'Content-Type: application/json' --data "${configuration}")
   local plan_id
   plan_id=$(echo "${plan_response}" | jq -r '.id // .planId // empty')
@@ -113,7 +123,7 @@ run_test_plan() {
   for test_name in ${test_names}; do
     log "Creating test module instance for '${test_name}'"
     local module_response
-    module_response=$(curl -fsS -X POST \
+    module_response=$(suite_curl -X POST \
       "${SUITE_API}/api/runner?test=${test_name}&plan=${plan_id}")
     local module_id
     module_id=$(echo "${module_response}" | jq -r '.id // .moduleId // empty')
@@ -124,12 +134,12 @@ run_test_plan() {
     fi
 
     log "Starting module ${module_id} (${test_name})"
-    curl -fsS -X POST "${SUITE_API}/api/runner/${module_id}" >/dev/null
+    suite_curl -X POST "${SUITE_API}/api/runner/${module_id}" >/dev/null
 
     log "Waiting for module ${module_id} to finish"
     local state=""
     for _ in $(seq 1 40); do
-      state=$(curl -fsS \
+      state=$(suite_curl \
         "${SUITE_API}/api/runner/${module_id}/wait-state?states=FINISHED,INTERRUPTED&timeoutMs=30000" \
         | jq -r '.state // .status // empty')
       case "${state}" in
@@ -143,7 +153,7 @@ run_test_plan() {
       failed=1
     fi
     log "Module ${module_id} log:"
-    curl -fsS "${SUITE_API}/api/log/${module_id}" | jq . || true
+    suite_curl "${SUITE_API}/api/log/${module_id}" | jq . || true
   done
   return "${failed}"
 }
