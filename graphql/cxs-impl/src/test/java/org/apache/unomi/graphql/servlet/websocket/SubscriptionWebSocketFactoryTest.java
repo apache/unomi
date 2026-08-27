@@ -22,6 +22,7 @@ import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -55,21 +56,26 @@ class SubscriptionWebSocketFactoryTest {
     @Mock
     private ServletUpgradeResponse upgradeResponse;
 
+    @Mock
+    private GraphQLServletSecurityValidator validator;
+
     private SubscriptionWebSocketFactory factory;
 
     @BeforeEach
     void setUp() {
-        factory = new SubscriptionWebSocketFactory(graphQL, serviceManager, securityService, executionContextManager);
+        factory = new SubscriptionWebSocketFactory(graphQL, serviceManager, securityService, executionContextManager, validator);
     }
 
     @Test
-    void createWebSocket_withoutSubject_returnsNullAndSets401() {
+    void createWebSocket_withoutSubject_returnsUnauthenticatedSocket() {
         when(securityService.getCurrentSubject()).thenReturn(null);
 
         Object socket = factory.createWebSocket(upgradeRequest, upgradeResponse);
 
-        assertNull(socket);
-        verify(upgradeResponse).setStatusCode(401);
+        // A browser cannot authenticate on the handshake, so the socket is created unauthenticated
+        // instead of refused; it can do nothing until it authenticates through connection_init.
+        assertNotNull(socket);
+        verify(upgradeResponse, never()).setStatusCode(401);
     }
 
     @Test

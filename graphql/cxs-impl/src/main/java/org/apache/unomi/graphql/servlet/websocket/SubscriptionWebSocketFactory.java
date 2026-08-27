@@ -22,6 +22,7 @@ import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
 import org.eclipse.jetty.websocket.server.WebSocketServerFactory;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
@@ -38,24 +39,27 @@ public class SubscriptionWebSocketFactory extends WebSocketServerFactory {
 
     private final ExecutionContextManager executionContextManager;
 
+    private final GraphQLServletSecurityValidator validator;
+
     public SubscriptionWebSocketFactory(GraphQL graphQL, ServiceManager serviceManager,
                                         SecurityService securityService,
-                                        ExecutionContextManager executionContextManager) {
+                                        ExecutionContextManager executionContextManager,
+                                        GraphQLServletSecurityValidator validator) {
         this.graphQL = graphQL;
         this.serviceManager = serviceManager;
         this.securityService = securityService;
         this.executionContextManager = executionContextManager;
+        this.validator = validator;
     }
 
     @Override
     public Object createWebSocket(ServletUpgradeRequest req, ServletUpgradeResponse resp) {
+        // A subject here means the upgrade authenticated (header route). Its absence is not an error:
+        // a browser cannot send credentials on the handshake, so the socket is created unauthenticated
+        // and must authenticate through connection_init before it can do anything.
         Subject subject = securityService.getCurrentSubject();
-        ExecutionContext executionContext = executionContextManager.getCurrentContext();
-        if (subject == null) {
-            resp.setStatusCode(401);
-            return null;
-        }
+        ExecutionContext executionContext = subject != null ? executionContextManager.getCurrentContext() : null;
         return new SubscriptionWebSocket(graphQL, serviceManager, subject, executionContext,
-                securityService, executionContextManager);
+                securityService, executionContextManager, validator);
     }
 }

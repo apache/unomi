@@ -68,6 +68,9 @@ class GraphQLServletTest {
     @Mock
     private HttpServletResponse response;
 
+    private static final String BASIC_AUTH =
+            "Basic " + java.util.Base64.getEncoder().encodeToString("user:pass".getBytes());
+
     private TrackingGraphQLServlet servlet;
 
     @BeforeEach
@@ -88,9 +91,42 @@ class GraphQLServletTest {
         verifyNoInteractions(securityService);
     }
 
+    /** A WebSocket handshake bypasses CORS, so a foreign origin must be refused outright. */
+    @Test
+    void service_upgrade_crossOrigin_isRefused() throws Exception {
+        when(factory.isUpgradeRequest(request, response)).thenReturn(true);
+        when(request.getHeader("Origin")).thenReturn("https://evil.example.com");
+        when(request.getServerName()).thenReturn("unomi.example.com");
+
+        servlet.service(request, response);
+
+        verify(response).sendError(eq(HttpServletResponse.SC_FORBIDDEN), anyString());
+        verify(factory, never()).acceptWebSocket(any(), any());
+        verify(validator, never()).validateWebSocketUpgrade(any(), any());
+    }
+
+    /** Without a credential the upgrade proceeds unauthenticated; the socket then gates on connection_init. */
+    @Test
+    void service_upgrade_withoutCredential_upgradesUnauthenticated() throws Exception {
+        when(factory.isUpgradeRequest(request, response)).thenReturn(true);
+        when(request.getHeader("Origin")).thenReturn(null);
+        when(request.getHeader("Authorization")).thenReturn(null);
+        when(request.getHeaders("Sec-WebSocket-Protocol")).thenReturn(Collections.emptyEnumeration());
+        when(factory.acceptWebSocket(request, response)).thenReturn(true);
+
+        servlet.service(request, response);
+
+        verify(validator, never()).validateWebSocketUpgrade(any(), any());
+        verify(factory).acceptWebSocket(request, response);
+        assertFalse(servlet.nonUpgradeCalled.get());
+    }
+
     @Test
     void service_upgrade_authRejected_doesNotAccept_clearsContext() throws Exception {
         when(factory.isUpgradeRequest(request, response)).thenReturn(true);
+        // No Origin: a non-browser client, which the upgrade accepts (it cannot be driven by a page).
+        when(request.getHeader("Origin")).thenReturn(null);
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
         when(validator.validateWebSocketUpgrade(request, response)).thenReturn(false);
 
         servlet.service(request, response);
@@ -105,6 +141,9 @@ class GraphQLServletTest {
     @Test
     void service_upgrade_authAccepted_acceptSucceeds_clearsContext() throws Exception {
         when(factory.isUpgradeRequest(request, response)).thenReturn(true);
+        // No Origin: a non-browser client, which the upgrade accepts (it cannot be driven by a page).
+        when(request.getHeader("Origin")).thenReturn(null);
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
         when(validator.validateWebSocketUpgrade(request, response)).thenReturn(true);
         when(request.getHeaders("Sec-WebSocket-Protocol")).thenReturn(Collections.emptyEnumeration());
         when(factory.acceptWebSocket(request, response)).thenReturn(true);
@@ -124,6 +163,9 @@ class GraphQLServletTest {
     @Test
     void service_upgrade_acceptFailsUncommitted_sends400_neverFallsThroughToHttp() throws Exception {
         when(factory.isUpgradeRequest(request, response)).thenReturn(true);
+        // No Origin: a non-browser client, which the upgrade accepts (it cannot be driven by a page).
+        when(request.getHeader("Origin")).thenReturn(null);
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
         when(validator.validateWebSocketUpgrade(request, response)).thenReturn(true);
         when(request.getHeaders("Sec-WebSocket-Protocol")).thenReturn(Collections.emptyEnumeration());
         when(factory.acceptWebSocket(request, response)).thenReturn(false);
@@ -140,6 +182,9 @@ class GraphQLServletTest {
     @Test
     void service_upgrade_acceptFailsCommitted_doesNotSendErrorAgain() throws Exception {
         when(factory.isUpgradeRequest(request, response)).thenReturn(true);
+        // No Origin: a non-browser client, which the upgrade accepts (it cannot be driven by a page).
+        when(request.getHeader("Origin")).thenReturn(null);
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
         when(validator.validateWebSocketUpgrade(request, response)).thenReturn(true);
         when(request.getHeaders("Sec-WebSocket-Protocol")).thenReturn(Collections.emptyEnumeration());
         when(factory.acceptWebSocket(request, response)).thenReturn(false);
@@ -157,6 +202,9 @@ class GraphQLServletTest {
         when(request.getHeaders("Sec-WebSocket-Protocol"))
                 .thenReturn(enumerationOf("graphql-ws, other"));
         when(factory.isUpgradeRequest(request, response)).thenReturn(true);
+        // No Origin: a non-browser client, which the upgrade accepts (it cannot be driven by a page).
+        when(request.getHeader("Origin")).thenReturn(null);
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
         when(validator.validateWebSocketUpgrade(request, response)).thenReturn(true);
         when(factory.acceptWebSocket(request, response)).thenReturn(true);
 
@@ -178,6 +226,9 @@ class GraphQLServletTest {
     @Test
     void service_upgrade_clearsContextEvenWhenAcceptThrows() throws Exception {
         when(factory.isUpgradeRequest(request, response)).thenReturn(true);
+        // No Origin: a non-browser client, which the upgrade accepts (it cannot be driven by a page).
+        when(request.getHeader("Origin")).thenReturn(null);
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
         when(validator.validateWebSocketUpgrade(request, response)).thenReturn(true);
         when(request.getHeaders("Sec-WebSocket-Protocol")).thenReturn(Collections.emptyEnumeration());
         when(factory.acceptWebSocket(request, response)).thenThrow(new IOException("boom"));

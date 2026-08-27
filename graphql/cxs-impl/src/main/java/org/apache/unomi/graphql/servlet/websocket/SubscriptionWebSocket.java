@@ -24,6 +24,7 @@ import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 import org.reactivestreams.Publisher;
@@ -43,9 +44,18 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
 
     private final ServiceManager serviceManager;
 
-    private final Subject subject;
+    /** Closes a socket that has not authenticated within this window (milliseconds). */
+    private static final long AUTHENTICATION_DEADLINE_MS = 10_000L;
 
-    private final ExecutionContext executionContext;
+    private final GraphQLServletSecurityValidator validator;
+
+    /** Set at upgrade for header-authenticated clients, or at connection_init for browser clients. */
+    private volatile Subject subject;
+
+    private volatile ExecutionContext executionContext;
+
+    /** No operation is executed on this socket until this is true. */
+    private volatile boolean authenticated;
 
     private final SecurityService securityService;
 
@@ -56,19 +66,29 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
     public SubscriptionWebSocket(GraphQL graphQL, ServiceManager serviceManager,
                                  Subject subject, ExecutionContext executionContext,
                                  SecurityService securityService,
-                                 ExecutionContextManager executionContextManager) {
+                                 ExecutionContextManager executionContextManager,
+                                 GraphQLServletSecurityValidator validator) {
         this.graphQL = graphQL;
         this.serviceManager = serviceManager;
         this.subject = subject;
         this.executionContext = executionContext;
         this.securityService = securityService;
         this.executionContextManager = executionContextManager;
+        this.validator = validator;
+        // A subject supplied here came from an authenticated upgrade; otherwise the socket starts
+        // unauthenticated and must present credentials through connection_init.
+        this.authenticated = subject != null;
     }
 
     @Override
     public void onWebSocketConnect(Session sess) {
         LOGGER.info("Opening web socket");
         super.onWebSocketConnect(sess);
+        if (!authenticated) {
+            // Bound how long an unauthenticated socket may sit open, so sockets that never authenticate
+            // cannot accumulate. Jetty closes the session when this idle window elapses.
+            sess.setIdleTimeout(AUTHENTICATION_DEADLINE_MS);
+        }
     }
 
     @Override
@@ -79,14 +99,30 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
 
     @Override
     public void onWebSocketText(String textMessage) {
-        LOGGER.info("Got web socket messages {}", textMessage);
+        // Deliberately not logging the message: connection_init carries the client's credentials.
+        LOGGER.debug("Got web socket message of {} characters", textMessage == null ? 0 : textMessage.length());
         final GraphQLMessage message = GraphQLMessage.fromJson(textMessage);
         if (message == null) {
             return;
         }
 
+        // Until the socket has authenticated, connection_init is the only message that is acted on.
+        // Everything else - including any attempt to start an operation - closes the socket.
+        if (!authenticated && !GraphQLMessage.TYPE_CONNECTION_INIT.equals(message.getType())) {
+            LOGGER.warn("Refusing '{}' on an unauthenticated GraphQL WebSocket", message.getType());
+            sendMessage(GraphQLMessage.create(message.getId())
+                    .type(GraphQLMessage.TYPE_CONNECTION_ERROR)
+                    .errors(Collections.singletonList("Not authenticated"))
+                    .build());
+            closeConnection(message, "Not authenticated");
+            return;
+        }
+
         switch (message.getType()) {
             case GraphQLMessage.TYPE_CONNECTION_INIT:
+                if (!handleConnectionInit(message)) {
+                    return;
+                }
                 sendMessage(GraphQLMessage.connectionAck(message.getId()));
                 break;
             case GraphQLMessage.GQL_START:
@@ -119,6 +155,88 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
         if (sub != null) {
             sub.unsubscribe();
             subscriptions.remove(message.getId());
+        }
+    }
+
+    /**
+     * Authenticates the socket from the {@code connection_init} payload, which is how a browser client
+     * presents credentials (it cannot set request headers on the handshake). A socket that already
+     * authenticated on the upgrade is left as it is - the payload cannot replace an established identity.
+     *
+     * @return true when the socket may proceed, false when it has been closed
+     */
+    private boolean handleConnectionInit(GraphQLMessage message) {
+        if (authenticated) {
+            return true;
+        }
+
+        final String credential = basicCredentialFrom(message.getPayload());
+        if (credential == null || validator == null || !validator.authenticateBasicCredential(credential)) {
+            LOGGER.warn("Refusing GraphQL WebSocket connection_init without a valid credential");
+            sendMessage(GraphQLMessage.create(message.getId())
+                    .type(GraphQLMessage.TYPE_CONNECTION_ERROR)
+                    .errors(Collections.singletonList("Not authenticated"))
+                    .build());
+            closeConnection(message, "Not authenticated");
+            return false;
+        }
+
+        // The validator establishes the identity on this thread; capture it onto the socket and unbind,
+        // since this is a shared Jetty IO thread that must not keep carrying it.
+        try {
+            this.subject = securityService != null ? securityService.getCurrentSubject() : null;
+            this.executionContext = executionContextManager != null
+                    ? executionContextManager.getCurrentContext() : null;
+        } finally {
+            clearThreadSecurityContext();
+        }
+
+        if (this.subject == null) {
+            LOGGER.warn("Refusing GraphQL WebSocket connection_init that produced no subject");
+            closeConnection(message, "Not authenticated");
+            return false;
+        }
+
+        this.authenticated = true;
+        final Session session = getSession();
+        if (session != null) {
+            // Authenticated: drop the short unauthenticated deadline.
+            session.setIdleTimeout(0);
+        }
+        return true;
+    }
+
+    /**
+     * Reads a {@code Basic} credential from a connection_init payload. The same credential format as the
+     * HTTP path, so both routes are verified identically.
+     */
+    private static String basicCredentialFrom(Map<String, Object> payload) {
+        if (payload == null) {
+            return null;
+        }
+        for (Map.Entry<String, Object> entry : payload.entrySet()) {
+            if (entry.getKey() != null && "authorization".equalsIgnoreCase(entry.getKey().trim())
+                    && entry.getValue() instanceof String) {
+                return (String) entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    private void clearThreadSecurityContext() {
+        try {
+            if (securityService != null) {
+                securityService.clearCurrentSubject();
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error clearing GraphQL WebSocket security context", e);
+        }
+        try {
+            if (executionContextManager != null) {
+                executionContextManager.setCurrentContext(null);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error clearing GraphQL WebSocket execution context", e);
         }
     }
 

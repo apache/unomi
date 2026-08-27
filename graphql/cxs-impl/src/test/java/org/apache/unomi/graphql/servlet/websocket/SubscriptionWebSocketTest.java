@@ -26,6 +26,7 @@ import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +48,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -78,14 +81,74 @@ class SubscriptionWebSocketTest {
     private final Subject subject = new Subject();
     private final ExecutionContext executionContext = new ExecutionContext("test-tenant", null, null);
 
+    @Mock
+    private GraphQLServletSecurityValidator validator;
+
     private SubscriptionWebSocket socket;
 
     @BeforeEach
     void setUp() {
         socket = new SubscriptionWebSocket(graphQL, serviceManager, subject, executionContext,
-                securityService, executionContextManager);
+                securityService, executionContextManager, validator);
         when(session.getRemote()).thenReturn(remote);
         socket.onWebSocketConnect(session);
+    }
+
+    /** An unauthenticated socket (the browser path) must not execute anything before it authenticates. */
+    @Test
+    void unauthenticated_startIsRefusedAndSocketClosed() {
+        SubscriptionWebSocket unauth = new SubscriptionWebSocket(graphQL, serviceManager, null, null,
+                securityService, executionContextManager, validator);
+        unauth.onWebSocketConnect(session);
+
+        unauth.onWebSocketText(startMessage("\"variables\":null"));
+
+        verifyNoInteractions(graphQL);
+        verify(session).close(anyInt(), anyString());
+    }
+
+    @Test
+    void unauthenticated_connectionInitWithoutCredential_isRefused() {
+        SubscriptionWebSocket unauth = new SubscriptionWebSocket(graphQL, serviceManager, null, null,
+                securityService, executionContextManager, validator);
+        unauth.onWebSocketConnect(session);
+
+        unauth.onWebSocketText("{\"type\":\"connection_init\",\"id\":\"1\"}");
+
+        verify(validator, never()).authenticateBasicCredential(anyString());
+        verify(session).close(anyInt(), anyString());
+    }
+
+    @Test
+    void unauthenticated_connectionInitWithBadCredential_isRefused() {
+        when(validator.authenticateBasicCredential(anyString())).thenReturn(false);
+        SubscriptionWebSocket unauth = new SubscriptionWebSocket(graphQL, serviceManager, null, null,
+                securityService, executionContextManager, validator);
+        unauth.onWebSocketConnect(session);
+
+        unauth.onWebSocketText("{\"type\":\"connection_init\",\"id\":\"1\","
+                + "\"payload\":{\"Authorization\":\"Basic Ym9ndXM6Ym9ndXM=\"}}");
+
+        verify(session).close(anyInt(), anyString());
+    }
+
+    /** A valid connection_init credential authenticates the socket and lifts the unauthenticated deadline. */
+    @Test
+    void unauthenticated_connectionInitWithValidCredential_authenticatesSocket() {
+        when(validator.authenticateBasicCredential(anyString())).thenReturn(true);
+        when(securityService.getCurrentSubject()).thenReturn(subject);
+        when(executionContextManager.getCurrentContext()).thenReturn(executionContext);
+        SubscriptionWebSocket unauth = new SubscriptionWebSocket(graphQL, serviceManager, null, null,
+                securityService, executionContextManager, validator);
+        unauth.onWebSocketConnect(session);
+
+        unauth.onWebSocketText("{\"type\":\"connection_init\",\"id\":\"1\","
+                + "\"payload\":{\"Authorization\":\"Basic dXNlcjpwYXNz\"}}");
+
+        // Identity captured onto the socket, and not left bound to this shared IO thread.
+        verify(securityService).clearCurrentSubject();
+        verify(session, never()).close(anyInt(), anyString());
+        verify(session).setIdleTimeout(0);
     }
 
     @Test

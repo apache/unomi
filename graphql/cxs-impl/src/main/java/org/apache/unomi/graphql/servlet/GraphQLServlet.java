@@ -43,6 +43,8 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -109,7 +111,7 @@ public class GraphQLServlet extends WebSocketServlet {
         this.factory = factory;
         // Wrap the WebSocket creator to bind the authenticated subject established during upgrade
         SubscriptionWebSocketFactory originalCreator = new SubscriptionWebSocketFactory(
-                graphQLSchemaUpdater.getGraphQL(), serviceManager, securityService, executionContextManager);
+                graphQLSchemaUpdater.getGraphQL(), serviceManager, securityService, executionContextManager, validator);
         factory.setCreator((req, resp) -> {
             try {
                 return originalCreator.createWebSocket(req, resp);
@@ -152,7 +154,23 @@ public class GraphQLServlet extends WebSocketServlet {
      */
     void serviceWebSocketUpgrade(HttpServletRequest request, HttpServletResponse response) throws IOException {
         try {
-            if (!validator.validateWebSocketUpgrade(request, response)) {
+            // A WebSocket handshake is not subject to the same-origin policy and triggers no CORS
+            // preflight, so any page on any origin can open one against this endpoint. Refuse handshakes
+            // that declare a foreign origin before doing anything else.
+            if (!isOriginAllowed(request)) {
+                LOGGER.warn("Refusing cross-origin WebSocket upgrade from origin {}", request.getHeader("Origin"));
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Cross-origin WebSocket upgrade refused");
+                return;
+            }
+
+            // Credentials on the upgrade request are the strongest path: the socket is never created
+            // unauthenticated. They stay mandatory for any client that can set request headers.
+            //
+            // A browser cannot set headers on a WebSocket handshake, so a request that carries none is
+            // upgraded in an unauthenticated state instead of being refused. That socket can do nothing
+            // until it authenticates through connection_init: SubscriptionWebSocket rejects every other
+            // message until then, and closes the socket if credentials do not arrive promptly.
+            if (request.getHeader("Authorization") != null && !validator.validateWebSocketUpgrade(request, response)) {
                 return;
             }
             negotiateGraphqlSubProtocol(request, response);
@@ -162,6 +180,36 @@ public class GraphQLServlet extends WebSocketServlet {
             }
         } finally {
             cleanupSecurityContext();
+        }
+    }
+
+    /**
+     * Accepts a handshake that declares no origin (a non-browser client, which cannot be driven into
+     * making the request by a hostile page) or one whose origin is this same host. Anything else is a
+     * page on another origin trying to open a socket here, which is refused.
+     */
+    static boolean isOriginAllowed(HttpServletRequest request) {
+        final String origin = request.getHeader("Origin");
+        if (origin == null || origin.trim().isEmpty()) {
+            return true;
+        }
+        try {
+            final URI originUri = new URI(origin);
+            final String originHost = originUri.getHost();
+            if (originHost == null) {
+                return false;
+            }
+            if (!originHost.equalsIgnoreCase(request.getServerName())) {
+                return false;
+            }
+            int originPort = originUri.getPort();
+            if (originPort == -1) {
+                originPort = "https".equalsIgnoreCase(originUri.getScheme()) ? 443 : 80;
+            }
+            return originPort == request.getServerPort();
+        } catch (URISyntaxException e) {
+            LOGGER.debug("Refusing WebSocket upgrade with unparseable Origin", e);
+            return false;
         }
     }
 
