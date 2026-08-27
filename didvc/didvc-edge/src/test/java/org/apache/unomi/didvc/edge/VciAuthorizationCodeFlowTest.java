@@ -126,6 +126,11 @@ class VciAuthorizationCodeFlowTest {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("claims", Map.of("kycLevel", "REMOTE_FULL", "givenName", "Yat"));
         body.put("selectiveClaims", List.of("givenName"));
+        com.nimbusds.jose.jwk.OctetKeyPair holderKey = new com.nimbusds.jose.jwk.gen.OctetKeyPairGenerator(
+                com.nimbusds.jose.jwk.Curve.Ed25519).generate();
+        body.put("format", "dc+sd-jwt");
+        body.put("vct", "hkt_kyc_v1");
+        body.put("proof", Map.of("proof_type", "jwt", "jwt", buildProofJwt(holderKey)));
         MvcResult credentialResult = mockMvc.perform(post("/" + TENANT + "/credential")
                         .header("Authorization", "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -188,5 +193,29 @@ class VciAuthorizationCodeFlowTest {
                 .andReturn();
         JsonNode metadata = objectMapper.readTree(metadataResult.getResponse().getContentAsString());
         assertTrue(metadata.get("authorization_servers").get(0).asText().contains("/" + TENANT));
+    }
+
+    private String buildProofJwt(com.nimbusds.jose.jwk.OctetKeyPair holderKey) throws Exception {
+        com.nimbusds.jose.jwk.OctetKeyPair publicJwk = holderKey.toPublicJWK();
+        Map<String, Object> header = new LinkedHashMap<>();
+        header.put("typ", "openid4vci-proof+jwt");
+        header.put("alg", "EdDSA");
+        header.put("jwk", publicJwk.toJSONObject());
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("iss", "hkt-didvc-wallet");
+        payload.put("aud", "http://localhost:8081/hkt");
+        payload.put("iat", System.currentTimeMillis() / 1000);
+        String headerB64 = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(objectMapper.writeValueAsBytes(header));
+        String payloadB64 = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(objectMapper.writeValueAsBytes(payload));
+        com.nimbusds.jose.JWSObject jws = new com.nimbusds.jose.JWSObject(
+                new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.EdDSA)
+                        .type(new com.nimbusds.jose.JOSEObjectType("openid4vci-proof+jwt"))
+                        .jwk(publicJwk)
+                        .build(),
+                new com.nimbusds.jose.Payload(objectMapper.writeValueAsBytes(payload)));
+        jws.sign(new com.nimbusds.jose.crypto.Ed25519Signer(holderKey));
+        return jws.serialize();
     }
 }

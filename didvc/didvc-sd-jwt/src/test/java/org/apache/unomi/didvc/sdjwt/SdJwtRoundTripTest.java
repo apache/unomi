@@ -79,6 +79,7 @@ class SdJwtRoundTripTest {
         String sdJwt = issueCredential();
         String[] parts = sdJwt.split("~");
         assertEquals(3, parts.length, "JWS plus two disclosures");
+        assertTrue(sdJwt.endsWith("~"), "issuance serialization must end with the RFC 9701 trailing tilde");
 
         SdJwtPresentation presentation = new SdJwtParser().parse(sdJwt);
         assertTrue(presentation.verifySignature(issuerKey.toPublicJWK()));

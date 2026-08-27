@@ -122,9 +122,15 @@ class VciFlowIntegrationTest {
         String accessToken = tokenResponse.get("access_token").asText();
         assertNotNull(accessToken);
 
-        // Credential delivery
+        // Credential delivery (with a key proof, as the wallet would send)
+        com.nimbusds.jose.jwk.OctetKeyPair holderKey = new OctetKeyPairGenerator(Curve.Ed25519).generate();
         MvcResult credentialResult = mockMvc.perform(post("/hkt/credential")
-                        .header("Authorization", "Bearer " + accessToken))
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "format", "dc+sd-jwt",
+                                "vct", "hkt_kyc_v1",
+                                "proof", Map.of("proof_type", "jwt", "jwt", buildProofJwt(holderKey))))))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode credentialResponse = objectMapper.readTree(credentialResult.getResponse().getContentAsString());
@@ -178,7 +184,12 @@ class VciFlowIntegrationTest {
         String accessToken = objectMapper.readTree(tokenResult.getResponse().getContentAsString())
                 .get("access_token").asText();
         MvcResult credentialResult = mockMvc.perform(post("/hkt/credential")
-                        .header("Authorization", "Bearer " + accessToken))
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "format", "dc+sd-jwt",
+                                "vct", "hkt_kyc_v1",
+                                "proof", Map.of("proof_type", "jwt", "jwt", buildProofJwt(holderKey))))))
                 .andExpect(status().isOk())
                 .andReturn();
         String credential = objectMapper.readTree(credentialResult.getResponse().getContentAsString())
@@ -189,5 +200,29 @@ class VciFlowIntegrationTest {
                 com.nimbusds.jose.jwk.JWK.parse(
                         (Map<String, Object>) ((Map<String, Object>) presentation.getClaims().get("cnf")).get("jwk"))
                         .computeThumbprint().toString());
+    }
+
+    private String buildProofJwt(com.nimbusds.jose.jwk.OctetKeyPair holderKey) throws Exception {
+        com.nimbusds.jose.jwk.OctetKeyPair publicJwk = holderKey.toPublicJWK();
+        Map<String, Object> header = new LinkedHashMap<>();
+        header.put("typ", "openid4vci-proof+jwt");
+        header.put("alg", "EdDSA");
+        header.put("jwk", publicJwk.toJSONObject());
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("iss", "hkt-didvc-wallet");
+        payload.put("aud", "http://localhost:8081/hkt");
+        payload.put("iat", System.currentTimeMillis() / 1000);
+        String headerB64 = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(objectMapper.writeValueAsBytes(header));
+        String payloadB64 = java.util.Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(objectMapper.writeValueAsBytes(payload));
+        com.nimbusds.jose.JWSObject jws = new com.nimbusds.jose.JWSObject(
+                new com.nimbusds.jose.JWSHeader.Builder(com.nimbusds.jose.JWSAlgorithm.EdDSA)
+                        .type(new com.nimbusds.jose.JOSEObjectType("openid4vci-proof+jwt"))
+                        .jwk(publicJwk)
+                        .build(),
+                new com.nimbusds.jose.Payload(objectMapper.writeValueAsBytes(payload)));
+        jws.sign(new com.nimbusds.jose.crypto.Ed25519Signer(holderKey));
+        return jws.serialize();
     }
 }

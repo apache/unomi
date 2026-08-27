@@ -217,7 +217,7 @@ public class SdJwtBuilder {
         BuildResult result = buildClaims(payload);
 
         JWSHeader header = new JWSHeader.Builder(algorithm)
-                .type(new com.nimbusds.jose.JOSEObjectType("vc+sd-jwt"))
+                .type(new com.nimbusds.jose.JOSEObjectType("dc+sd-jwt"))
                 .keyID(kid)
                 .build();
         com.nimbusds.jose.JWSObject jwsObject = new com.nimbusds.jose.JWSObject(header,
@@ -228,6 +228,8 @@ public class SdJwtBuilder {
         for (String disclosure : result.getDisclosures()) {
             sb.append('~').append(disclosure);
         }
+        // RFC 9701: the issuance serialization ends with a trailing '~'
+        sb.append('~');
         return sb.toString();
     }
 

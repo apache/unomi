@@ -70,18 +70,34 @@ Per module: `POST /api/runner?test=<name>&plan=<id>` → `POST /api/runner/<modu
 
 ## Verified results (local run, suite 5.2.4)
 
-`oid4vci-1_0-issuer-test-plan`, 15 modules, 5 FINISHED:
+`oid4vci-1_0-issuer-test-plan`, 15 modules, **13 FINISHED**:
 
 | Module | Result |
 |---|---|
 | oid4vci-1_0-issuer-metadata-test | FINISHED |
 | oid4vci-1_0-issuer-metadata-test-signed | FINISHED (skip: unsigned metadata) |
+| oid4vci-1_0-issuer-happy-flow | FINISHED |
+| oid4vci-1_0-issuer-happy-flow-additional-requests | FINISHED |
+| oid4vci-1_0-issuer-happy-flow-skip-notification | FINISHED |
 | oid4vci-1_0-issuer-batch-issuance | FINISHED |
+| oid4vci-1_0-issuer-fail-invalid-nonce | not yet (suite's injected nonce does not reach the proof; alpha quirk) |
+| oid4vci-1_0-issuer-fail-invalid-jwt-proof-signature | FINISHED |
 | oid4vci-1_0-issuer-fail-invalid-key-attestation-signature | FINISHED |
+| oid4vci-1_0-issuer-fail-missing-proof | FINISHED |
 | oid4vci-1_0-issuer-fail-unsupported-encryption-algorithm | FINISHED |
+| oid4vci-1_0-issuer-fail-unknown-credential-configuration | FINISHED |
+| oid4vci-1_0-issuer-fail-unknown-credential-identifier | FINISHED |
+| oid4vci-1_0-issuer-fail-on-access-token-in-query | FINISHED |
+| oid4vci-1_0-issuer-happy-flow-multiple-clients | not yet (2nd client cnf binding + status-list token endpoint) |
 
-The remaining 10 flow modules reach PAR + the authorization redirect but
-stall inside the suite's HtmlUnit-driven redirect wait (suite-internal
-browser step); they are documented here rather than claimed as passed. The
-plan itself is marked alpha by the OpenID Foundation
-("alpha version - may be incomplete or incorrect").
+The driver must perform the suite's out-of-band steps per module:
+credential-offer delivery (query param), the browser step
+(`GET /api/runner/browser/{id}` → follow each pending URL → `POST
+.../visit`), and the fragment submission (POST the empty fragment to the
+`implicit_submit.fullUrl` from the module log). The plan itself is marked
+alpha by the OpenID Foundation.
+
+The `oid4vp-1final-verifier-test-plan` was created (11 modules) but the
+suite's verifier flow requires a browser-redirect authorize flow that the
+edge's API-only verifier does not yet implement; the modules stall at the
+verifier initiation step.
