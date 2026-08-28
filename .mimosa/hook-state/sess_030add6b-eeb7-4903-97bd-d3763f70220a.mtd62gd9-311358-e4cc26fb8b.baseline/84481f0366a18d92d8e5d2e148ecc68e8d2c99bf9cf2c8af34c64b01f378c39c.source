@@ -20,7 +20,8 @@ const sha256 = (data) => createHash('sha256').update(data).digest()
 
 async function main() {
   // ---- Holder key (the wallet's key) ----
-  const holderKey = await jose.generateKeyPair('Ed25519', { extractable: true })
+  // jose 5.x takes an alg, with the curve as a crv option
+  const holderKey = await jose.generateKeyPair('EdDSA', { crv: 'Ed25519', extractable: true })
   const holderPrivateJwk = await jose.exportJWK(holderKey.privateKey)
   holderPrivateJwk.alg = 'EdDSA'
   const holderPublicJwk = await jose.exportJWK(holderKey.publicKey)

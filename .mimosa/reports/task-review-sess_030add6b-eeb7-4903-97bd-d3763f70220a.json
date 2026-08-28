@@ -1,0 +1,477 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260828T162839505Z-310459-dbcbb97416b6",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "scan",
+      "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "didvc/scripts/drive-openid-plan.py",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VciAuthorizationCodeFlowTest.java",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "didvc/scripts/run-openid-conformance.sh",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vp/VerificationController.java",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "didvc/interop/wallet-roundtrip.ts",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    },
+    {
+      "stage": "scan",
+      "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+      "reason": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 1312,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 7
+    },
+    "change_tracking": {
+      "touched_observed": 7,
+      "touched_retained": 7,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 7,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 7,
+      "selected_files": 7,
+      "limit": 20,
+      "truncated": false
+    },
+    "scanning": {
+      "required_files": 7,
+      "scanned_files": 0,
+      "skipped_files": 0,
+      "failed_files": 7,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {
+      "scanner_failed": 7,
+      "project_check_failed": 7
+    },
+    "reasons": [
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/scripts/drive-openid-plan.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VciAuthorizationCodeFlowTest.java",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/scripts/run-openid-conformance.sh",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vp/VerificationController.java",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/interop/wallet-roundtrip.ts",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/scripts/drive-openid-plan.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VciAuthorizationCodeFlowTest.java",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/scripts/run-openid-conformance.sh",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vp/VerificationController.java",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/interop/wallet-roundtrip.ts",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-08-28T16:28:39.505Z",
+  "session_id": "sess_030add6b-eeb7-4903-97bd-d3763f70220a",
+  "target": ".",
+  "revision": "3be3228e817b530528b595078bef72b41b5064fb",
+  "rules_version": "unavailable",
+  "diff_hash": "508348278e62cc93f34ae67d8e83c842619c847e50c948636f998a6795e04be8",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 7,
+    "changed_files": [
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+        "ranges": [
+          {
+            "start": 221,
+            "end": 246
+          },
+          {
+            "start": 255,
+            "end": 262
+          }
+        ],
+        "before_hash": "0bae4503a4dfb7f59e4670f5786178d1db9ba4ea6bd81392c7a106a06875144b",
+        "after_hash": "4b76fcceb7a3c347b1cd0045ef0f42db2dd5a3ad3a5a75a38fc667e409f1f8e9"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+        "ranges": [
+          {
+            "start": 257,
+            "end": 259
+          },
+          {
+            "start": 671,
+            "end": 671
+          }
+        ],
+        "before_hash": "9948cc0854860aedba1077cf56187bd7057bfeac7b721b20a148c0ffa8d8ca69",
+        "after_hash": "af18efb5350a754d16e9fa9a4e0faf5b865d1f31b7f9d96c2933aae8d162b341"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vp/VerificationController.java",
+        "ranges": [
+          {
+            "start": 39,
+            "end": 39
+          },
+          {
+            "start": 49,
+            "end": 52
+          },
+          {
+            "start": 83,
+            "end": 96
+          },
+          {
+            "start": 242,
+            "end": 246
+          },
+          {
+            "start": 258,
+            "end": 276
+          },
+          {
+            "start": 279,
+            "end": 279
+          },
+          {
+            "start": 282,
+            "end": 282
+          },
+          {
+            "start": 284,
+            "end": 284
+          },
+          {
+            "start": 286,
+            "end": 296
+          },
+          {
+            "start": 298,
+            "end": 298
+          },
+          {
+            "start": 301,
+            "end": 314
+          },
+          {
+            "start": 316,
+            "end": 316
+          },
+          {
+            "start": 339,
+            "end": 341
+          },
+          {
+            "start": 392,
+            "end": 420
+          },
+          {
+            "start": 423,
+            "end": 427
+          },
+          {
+            "start": 432,
+            "end": 432
+          },
+          {
+            "start": 437,
+            "end": 438
+          },
+          {
+            "start": 445,
+            "end": 451
+          },
+          {
+            "start": 460,
+            "end": 485
+          },
+          {
+            "start": 532,
+            "end": 534
+          },
+          {
+            "start": 642,
+            "end": 684
+          }
+        ],
+        "before_hash": "d4801aa30099a1842709e539e490dd7bb936f98110fc6bb56ef1d62298fc0bc4",
+        "after_hash": "ff65f55fb8d8909d52174f102c23050e80a8f43ccc7408f35cc8deffcc1b4a0e"
+      },
+      {
+        "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VciAuthorizationCodeFlowTest.java",
+        "ranges": [
+          {
+            "start": 153,
+            "end": 194
+          },
+          {
+            "start": 241,
+            "end": 253
+          }
+        ],
+        "before_hash": "31530199d71924ed7ab490d0400883850cb15210d23848caaf65c2a292afd402",
+        "after_hash": "d964838abaa28885756ba29b08bce25a4d71eb223e148aadb0fb9f1f9d59dcbc"
+      },
+      {
+        "file": "didvc/interop/wallet-roundtrip.ts",
+        "ranges": [
+          {
+            "start": 23,
+            "end": 24
+          }
+        ],
+        "before_hash": "b98c7fb28aa1505bccf8a37bd5c5e59f5a60e79be585d29054e67a579d95c9b0",
+        "after_hash": "5513caeddd6d1a65d519275cbb9eda570092879177c0362b9af60e48822f6d92"
+      },
+      {
+        "file": "didvc/scripts/drive-openid-plan.py",
+        "ranges": [
+          {
+            "start": 63,
+            "end": 63
+          },
+          {
+            "start": 65,
+            "end": 65
+          },
+          {
+            "start": 67,
+            "end": 68
+          },
+          {
+            "start": 177,
+            "end": 189
+          },
+          {
+            "start": 290,
+            "end": 291
+          },
+          {
+            "start": 310,
+            "end": 311
+          },
+          {
+            "start": 372,
+            "end": 379
+          },
+          {
+            "start": 398,
+            "end": 403
+          },
+          {
+            "start": 408,
+            "end": 462
+          },
+          {
+            "start": 466,
+            "end": 466
+          },
+          {
+            "start": 468,
+            "end": 468
+          },
+          {
+            "start": 473,
+            "end": 473
+          },
+          {
+            "start": 495,
+            "end": 498
+          },
+          {
+            "start": 527,
+            "end": 533
+          },
+          {
+            "start": 535,
+            "end": 541
+          }
+        ],
+        "before_hash": "a559b89e4272e729bd9cf811134f28cb5c7435236d21e7063645290bc4076f07",
+        "after_hash": "50e5f887b2b0ac9cbaabd2b0fb6fd251a62d4a5fd4f4f5f4841ca0a9e49f1a38"
+      },
+      {
+        "file": "didvc/scripts/run-openid-conformance.sh",
+        "ranges": [
+          {
+            "start": 101,
+            "end": 107
+          }
+        ],
+        "before_hash": "5b4120b8fb677ca7e607d85095618965cd8864a429e5352aacf821dd6fc2254a",
+        "after_hash": "92a3aed3c9580d89eaddbeda43a46962ee7900cd4b9bf1a58e921a27280f999c"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-08-28T16:28:36.765Z",
+    "completed_at": "2026-08-28T16:28:39.505Z",
+    "duration_ms": 2740,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 2740,
+    "peakMemoryBytes": 156610560,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 0,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_030add6b-eeb7-4903-97bd-d3763f70220a-20260828T162839505Z-310459-dbcbb97416b6.json",
+    "latest_report": ".mimosa/reports/task-review-sess_030add6b-eeb7-4903-97bd-d3763f70220a.json",
+    "history_summary": ".mimosa/history/run-20260828T162839505Z-310459-dbcbb97416b6.json"
+  }
+}

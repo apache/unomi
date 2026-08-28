@@ -218,7 +218,32 @@ public class InMemoryPlatformApi implements PlatformApi {
 
     @Override
     public boolean isTrusted(String tenantId, String issuerDid, String vct) {
-        return trustedPairs.contains(tenantId + "|" + issuerDid + "|" + vct);
+        if (trustedPairs.contains(tenantId + "|" + issuerDid + "|" + vct)) {
+            return true;
+        }
+        // Demo external issuers act as trust roots: a credential whose iss
+        // names a sub-resource of a registered issuer (e.g. the conformance
+        // suite's per-test-instance issuer ids, .../test/<id>) inherits the
+        // root's trust entries
+        String root = externalIssuerRootFor(issuerDid);
+        return root != null && trustedPairs.contains(tenantId + "|" + root + "|" + vct);
+    }
+
+    /**
+     * The registered external-issuer DID that the given issuer DID names a
+     * sub-resource of, or null when there is no such root.
+     */
+    private String externalIssuerRootFor(String issuerDid) {
+        if (issuerDid == null) {
+            return null;
+        }
+        for (String root : externalIssuerKeys.keySet()) {
+            if (!root.isEmpty() && issuerDid.length() > root.length() && issuerDid.startsWith(root)
+                    && issuerDid.charAt(root.length()) == '/') {
+                return root;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -227,6 +252,14 @@ public class InMemoryPlatformApi implements PlatformApi {
             return issuerKey.toPublicJWK();
         }
         JWK external = externalIssuerKeys.get(issuerDid);
+        if (external == null) {
+            // sub-resource of a registered demo external issuer root (see
+            // externalIssuerRootFor)
+            String root = externalIssuerRootFor(issuerDid);
+            if (root != null) {
+                external = externalIssuerKeys.get(root);
+            }
+        }
         if (external != null && (kid == null || kid.equals(keyIdOf(external)))) {
             return external;
         }

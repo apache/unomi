@@ -254,6 +254,9 @@ public class CredentialIssuerController {
         metadata.put("response_types_supported", List.of("code"));
         metadata.put("grant_types_supported", List.of(AUTHORIZATION_CODE_GRANT, PRE_AUTHORIZED_GRANT));
         metadata.put("code_challenge_methods_supported", List.of("S256"));
+        // The authorize/credential endpoints accept authorization_details of
+        // the openid_credential type (OID4VCI §5.1.1)
+        metadata.put("authorization_details_types_supported", List.of("openid_credential"));
         return metadata;
     }
 
@@ -665,14 +668,7 @@ public class CredentialIssuerController {
 
     @SuppressWarnings("unchecked")
     private String extractHolderJwkFromProof(Map<String, Object> body) {
-        if (body == null || body.get("proof") == null) {
-            return null;
-        }
-        Object proofValue = body.get("proof");
-        if (!(proofValue instanceof Map)) {
-            return null;
-        }
-        Object jwt = ((Map<String, Object>) proofValue).get("jwt");
+        Object jwt = extractProofJwt(body);
         if (!(jwt instanceof String)) {
             return null;
         }

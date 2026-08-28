@@ -1,0 +1,122 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260828T162839505Z-310459-dbcbb97416b6",
+  "runId": "20260828T162839505Z-310459-dbcbb97416b6",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/scripts/drive-openid-plan.py",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VciAuthorizationCodeFlowTest.java",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/scripts/run-openid-conformance.sh",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vp/VerificationController.java",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/interop/wallet-roundtrip.ts",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "scanner_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/scripts/drive-openid-plan.py",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VciAuthorizationCodeFlowTest.java",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/scripts/run-openid-conformance.sh",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vp/VerificationController.java",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/interop/wallet-roundtrip.ts",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "scan",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+        "detail": "scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "3be3228e817b530528b595078bef72b41b5064fb",
+  "diffHash": "508348278e62cc93f34ae67d8e83c842619c847e50c948636f998a6795e04be8",
+  "rulesVersion": "unavailable",
+  "sessionHash": "87b25b28727f2fffcd70a1cfc3807359914fed552bf4c0c6cba615e1b68d7b07",
+  "reportRef": ".mimosa/reports/task-review-sess_030add6b-eeb7-4903-97bd-d3763f70220a-20260828T162839505Z-310459-dbcbb97416b6.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-08-28T16:28:40.156Z"
+}

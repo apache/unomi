@@ -98,6 +98,13 @@ fi
 if [ -n "${TUNNEL_HOST}" ]; then
   DRIVER_ARGS+=(--allow-host "${TUNNEL_HOST}")
 fi
+if printf '%s' "${SUITE_API}" | grep -q '://localhost'; then
+  # A local plain-HTTP suite reaches a plain-HTTP edge; the suite's
+  # HTTPS/TLS metadata and connection checks cannot pass there (they do
+  # over the https tunnel in CI), so tolerate those error events.
+  DRIVER_ARGS+=(--tolerate-test-errors)
+  log "Local suite: HTTPS/TLS test errors will be tolerated"
+fi
 
 log "Issuer under test: ${ISSUER_URL}"
 python3 "${SCRIPT_DIR}/drive-openid-plan.py" "${DRIVER_ARGS[@]}"
