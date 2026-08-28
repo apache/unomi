@@ -60,8 +60,12 @@ Usage:
       [--modules a,b,c] [--module-timeout 300] [--verbose]
 """
 import argparse
+import base64
 import ipaddress
+import io
 import json
+import os
+import re
 import socket
 import sys
 import time
@@ -170,6 +174,19 @@ class SuiteClient:
             return {}
         return json.loads(raw)
 
+    def upload_image(self, module_id, placeholder, content, content_type="image/png"):
+        """Upload certification evidence for a pending upload placeholder
+        (suite ImageAPI: POST /api/log/{id}/images/{ph} with a data-URL
+        string body, base64 of the image bytes)."""
+        data_url = "data:%s;base64,%s" % (content_type,
+                                          base64.b64encode(content).decode("ascii"))
+        status, raw = self._request(
+            "POST", "/api/log/%s/images/%s" % (module_id, urllib.parse.quote(placeholder)),
+            data_url, {"Content-Type": "text/plain"})
+        if status >= 400:
+            raise RuntimeError("image upload failed: HTTP %s: %s" % (status, raw[:200]))
+        return raw
+
     def create_plan(self, plan_name, variant, config):
         path = "/api/plan?planName=%s" % urllib.parse.quote(plan_name)
         if variant:
@@ -270,6 +287,8 @@ class ModuleDriver:
         self.delivered_offers = set()
         self.submitted_urls = set()
         self.visited_urls = set()
+        self.result_page_urls = {}
+        self.uploaded_placeholders = {}
 
     def run(self, module_name, plan_id):
         client = self.client
@@ -350,6 +369,14 @@ class ModuleDriver:
                 log("verifier start URL did not redirect (HTTP %s)" % status)
                 continue
             query = urllib.parse.urlparse(location).query
+            # remember the verifier's result page for the evidence-upload
+            # step: <edge-origin>/<tenant>/vp/result/<state>
+            state = urllib.parse.parse_qs(query).get("state", [None])[0]
+            if state:
+                origin = urllib.parse.urlparse(start_url)
+                tenant = origin.path.strip("/").split("/")[0]
+                self.result_page_urls[module_id] = "%s://%s/%s/vp/result/%s" % (
+                    origin.scheme, origin.netloc, tenant, state)
             target = submit_url + ("?" + query if query else "")
             code, _ = fetch(target, self.allowlist, follow=True)
             log("delivered authorization request to %s (HTTP %s)" % (submit_url, code))
@@ -367,6 +394,66 @@ class ModuleDriver:
                 self.submitted_urls.add(full_url)
                 code, _ = fetch_post(full_url, self.allowlist)
                 log("implicit submit to %s (HTTP %s)" % (full_url, code))
+
+        # 4. evidence uploads: some modules (e.g. the OID4VP verifier
+        # happy-flow) require a screenshot of the verifier's result page;
+        # render the page and upload it for the pending placeholder
+        self.satisfy_uploads(module_id)
+
+    def satisfy_uploads(self, module_id):
+        try:
+            events = self.client.module_log(module_id)
+        except RuntimeError:
+            return
+        uploaded = self.uploaded_placeholders.setdefault(module_id, set())
+        placeholders = []
+        for event in events if isinstance(events, list) else []:
+            placeholder = event.get("upload")
+            if placeholder and placeholder not in uploaded:
+                placeholders.append(placeholder)
+        # the suite permits at most 2 image uploads per test
+        for placeholder in placeholders[:2 - len(uploaded)]:
+            image = self.render_result_page_image(module_id)
+            if not image:
+                log("pending evidence upload %s but no result page to render" % placeholder)
+                continue
+            try:
+                self.client.upload_image(module_id, placeholder, image)
+                uploaded.add(placeholder)
+                log("uploaded result-page screenshot for placeholder %s" % placeholder)
+            except RuntimeError as e:
+                log("image upload failed (continuing): %s" % e)
+
+    def render_result_page_image(self, module_id):
+        """Renders the verifier's verification-result page (the direct_post
+        redirect_uri) into a PNG as the required evidence screenshot."""
+        url = self.result_page_urls.get(module_id)
+        if not url:
+            return None
+        code, body = fetch(url, self.allowlist)
+        if code != 200 or not body:
+            return None
+        text = re.sub(r"<[^>]+>", " ", body.decode("utf-8", "replace"))
+        text = re.sub(r"\s+", " ", text).strip()
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+        except ImportError:
+            return None
+        width, height = 780, 420
+        image = Image.new("RGB", (width, height), "white")
+        draw = ImageDraw.Draw(image)
+        font_path = "/usr/share/fonts/truetype/lato/Lato-Medium.ttf"
+        font = (ImageFont.truetype(font_path, 15)
+                if os.path.exists(font_path) else ImageFont.load_default())
+        draw.text((16, 14), "Verifier verification-result page (evidence)", fill="#333333", font=font)
+        draw.text((16, 40), url, fill="#777777", font=font)
+        # naive wrapping at ~88 columns, up to 16 lines
+        lines = [text[i:i + 88] for i in range(0, min(len(text), 88 * 16), 88)]
+        for idx, line in enumerate(lines):
+            draw.text((16, 72 + idx * 22), line, fill="black", font=font)
+        buffer = io.BytesIO()
+        image.save(buffer, "PNG")
+        return buffer.getvalue()
 
     def report_errors(self, module_id):
         try:

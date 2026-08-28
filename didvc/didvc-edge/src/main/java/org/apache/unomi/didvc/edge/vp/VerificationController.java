@@ -80,6 +80,20 @@ public class VerificationController {
     private final DcqlQueryParser dcqlQueryParser = new DcqlQueryParser();
 
     private final Map<String, VpRequestContext> requests = new ConcurrentHashMap<>();
+    private final Map<String, VerificationResult> verificationResults = new ConcurrentHashMap<>();
+
+    /** The outcome of one completed verification, for the result page. */
+    private static final class VerificationResult {
+        private final String tenantId;
+        private final Map<String, Object> result;
+        private final long expiresAt;
+
+        private VerificationResult(String tenantId, Map<String, Object> result, long expiresAt) {
+            this.tenantId = tenantId;
+            this.result = result;
+            this.expiresAt = expiresAt;
+        }
+    }
 
     public VerificationController(EdgeProperties properties, PlatformApi platformApi,
                                   AuditLogService auditLogService, MeteringService meteringService,
@@ -380,6 +394,9 @@ public class VerificationController {
      * {@code application/x-www-form-urlencoded} parameters ({@code state},
      * {@code vp_token}, optional {@code presentation_submission}); the
      * freshness nonce lives in the key-binding JWT, not as a form field.
+     * Per OID4VP §8.2 the response carries only the {@code redirect_uri}
+     * the wallet sends the user's browser to (the verification-result
+     * page).
      */
     @PostMapping(value = "/{tenantId}/vp/direct_post",
             consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
@@ -389,7 +406,11 @@ public class VerificationController {
         VpSubmission submission = new VpSubmission();
         submission.setState(state);
         submission.setVpToken(vpToken);
-        return verifyPresentationBody(tenantId, submission, false);
+        Map<String, Object> result = verifyPresentationBody(tenantId, submission, false);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("redirect_uri",
+                properties.getIssuerBaseUrl() + "/" + tenantId + "/vp/result/" + submission.getState());
+        return response;
     }
 
     /**
@@ -422,13 +443,44 @@ public class VerificationController {
         }
         try {
             SdJwtPresentation presentation = new SdJwtParser().parse(extractVpToken(context, submission.getVpToken()));
-            return verifyPresentation(tenantId, context, presentation);
+            Map<String, Object> result = verifyPresentation(tenantId, context, presentation);
+            // kept for the redirect_uri result page the wallet's browser
+            // lands on after a successful direct_post
+            verificationResults.put(submission.getState(),
+                    new VerificationResult(tenantId, result, System.currentTimeMillis() + REQUEST_TTL_MILLIS));
+            return result;
         } catch (ResponseStatusException e) {
             throw e;
         } catch (Exception e) {
             LOGGER.warn("Presentation rejected: {}", e.getMessage());
             throw invalid(e.getMessage());
         }
+    }
+
+    /**
+     * The browser landing page after a completed wallet flow: shows the
+     * verification outcome and the disclosed claims (OID4VP §8.2
+     * redirect_uri target).
+     */
+    @GetMapping(value = "/{tenantId}/vp/result/{requestId}", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> verificationResultPage(@PathVariable("tenantId") String tenantId,
+                                                         @PathVariable("requestId") String requestId) {
+        VerificationResult result = verificationResults.get(requestId);
+        if (result == null || !tenantId.equals(result.tenantId) || result.expiresAt < System.currentTimeMillis()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "unknown or expired verification");
+        }
+        StringBuilder page = new StringBuilder();
+        page.append("<!doctype html><html lang=\"en\"><head><title>Verification result</title></head><body>")
+                .append("<h1>Verification successful</h1>")
+                .append("<p>Tenant <strong>").append(tenantId).append("</strong> verified the presented credential.</p>")
+                .append("<table border=\"1\" cellpadding=\"4\" cellspacing=\"0\"><tr><th>Claim</th><th>Value</th></tr>");
+        for (Map.Entry<String, Object> entry : result.result.entrySet()) {
+            page.append("<tr><td>").append(entry.getKey()).append("</td><td>")
+                    .append(String.valueOf(entry.getValue()).replace("<", "&lt;").replace(">", "&gt;"))
+                    .append("</td></tr>");
+        }
+        page.append("</table></body></html>");
+        return ResponseEntity.ok(page.toString());
     }
 
     private Map<String, Object> verifyPresentation(String tenantId, VpRequestContext context,

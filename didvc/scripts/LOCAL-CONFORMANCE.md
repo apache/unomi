@@ -134,7 +134,38 @@ credential-offer delivery (query param), the browser step
 `implicit_submit.fullUrl` from the module log). The plan itself is marked
 alpha by the OpenID Foundation.
 
-The `oid4vp-1final-verifier-test-plan` was created (11 modules) but the
-suite's verifier flow requires a browser-redirect authorize flow that the
-edge's API-only verifier does not yet implement; the modules stall at the
-verifier initiation step.
+The `oid4vp-1final-verifier-test-plan` (11 modules) is **11/11 FINISHED**
+(2026-08-28) now that the edge implements the browser-redirect verifier
+flow. The edge's `GET /{tenant}/vp/authorize` redirects to the wallet with
+an OID4VP 1.0-final authorization request (DCQL query for the requested
+vct, mandatory `client_metadata.vp_formats_supported`, no removed
+`client_id_scheme` parameter, form-style query encoding so `+`/`[`/`{`
+survive), accepts the wallet's form-urlencoded `direct_post` (vp_token may
+be a JSON object keyed by credential-query id whose values are token
+arrays), responds with only `redirect_uri` (OID4VP §8.2) pointing at the
+verification-result page, and resolves the suite's per-test-instance
+issuer ids as sub-resources of the configured demo external-issuer root.
+
+Local run (suite 5.2.4, plain-HTTP edge — the sole remaining error on
+every module is the `response_uri` https check, which passes over the
+cloudflared https tunnel in CI):
+
+```bash
+python3 didvc/scripts/drive-openid-plan.py \
+  --suite-api http://localhost:8080 \
+  --plan-name oid4vp-1final-verifier-test-plan \
+  --variant '{"credential_format":"sd_jwt_vc","request_method":"url_query","vp_profile":"plain_vp","client_id_prefix":"redirect_uri","response_mode":"direct_post"}' \
+  --config-file <(echo '{"description":"hkt-didvc verifier","credential":{"signing_jwk":<same JWK as didvc.edge.demo-external-issuer-jwk>}}') \
+  --offer-url http://localhost:8081/hkt/credential-offer \
+  --verifier-start-url 'http://localhost:8081/bank-a/vp/authorize?wallet_authorization_endpoint={wallet_authorization_endpoint}&vct=urn:eudi:pid:1' \
+  --module-timeout 300
+```
+
+The edge must run with `--didvc.edge.demo-external-issuer-did
+http://localhost:8080 --didvc.edge.demo-external-issuer-jwk <EC JWK>
+--didvc.edge.demo-external-issuer-vct urn:eudi:pid:1` (same JWK as the
+suite config) so the demo verifier trusts the suite-issued test
+credential. The driver automates the evidence step: when a module waits
+on a screenshot upload (`ExpectVerifierSuccessfulVerificationPage`), it
+renders the verifier's result page into a PNG (PIL) and uploads it via
+`POST /api/log/{id}/images/{placeholder}` (data-URL body).
