@@ -1,0 +1,5 @@
+{
+  "operationName": "IntrospectionQuery",
+  "variables": {},
+  "query": "query IntrospectionQuery {\n  cdp {\n    findProfiles(first: 100) {\n      edges {\n        node {\n          cdp_profileIDs {\n            id\n          }\n        }\n      }\n    }\n  }\n}\n"
+}

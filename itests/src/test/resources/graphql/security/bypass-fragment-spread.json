@@ -1,0 +1,5 @@
+{
+  "operationName": "Privileged",
+  "variables": {},
+  "query": "query Privileged {\n  cdp {\n    ...privileged\n  }\n}\n\nfragment privileged on CDP_Query {\n  findProfiles(first: 100) {\n    edges {\n      node {\n        cdp_profileIDs {\n          id\n        }\n      }\n    }\n  }\n}\n"
+}
