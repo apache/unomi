@@ -1,0 +1,95 @@
+---
+description: GitHub PR descriptions — plain-language summary, self-contained context, concise structure
+alwaysApply: true
+---
+
+# GitHub pull requests (Apache Unomi)
+
+When the user asks you to **draft, revise, or create a PR description**, follow this style. Write for reviewers who may use **English as a second language** — see **Simple English** below.
+
+## Simple English (required)
+
+Apply to the **whole** description, not only the plain-language summary.
+
+- Use **short sentences** (one idea each). Prefer **common words** over formal or idiomatic ones.
+- Prefer: _fix_, _stop_, _allow_, _check_, _save_, _run_, _before_, _after_. Avoid: _leverage_, _remediate_, _no-op_, _land in that window_, _close those race windows_ (say _fix the race_ or _prevent the bug_ instead).
+- Use **active voice**: “This PR adds a lock” not “A lock is introduced by this PR”.
+- Avoid idioms, slang, and culture-specific phrases (_at the wrong moment_, _say the word_, _stand on its own_ → _can be read without other tickets_).
+- Avoid double negatives and nested clauses. Split long sentences into two.
+- Technical terms are fine when needed (scheduler, cache, lock), but explain the **effect** in plain words nearby.
+- Bullets: start with a **verb**; keep each bullet to one or two short lines.
+
+## Plain-language summary (required)
+
+- Open with **2–3 sentences** a **non-technical reader** can understand (PM, release manager, new contributor).
+- Explain **what Unomi feature or behavior** is affected in everyday terms (background jobs, rules/segments cache, REST API, etc.).
+- State the **user or operator pain** (duplicate work, wrong data, failed shutdown, flaky CI) — not the fix.
+- Avoid file names, class names, JIRA keys, and stack jargon in this section unless the user explicitly wants a technical opener.
+
+## Self-contained (required)
+
+- The description must **stand alone**: a reviewer who has not read linked tickets should understand **what changed and why**.
+- Do **not** rely on “see UNOMI-xxx” or “as discussed in …” as the main explanation.
+- JIRA keys and issue links belong in a **References** line at the bottom, not in the summary.
+
+## Technical summary (required, concise)
+
+- One short section with **3–5 bullets** on the actual fix — enough for a developer to orient without reading every commit.
+- Name subsystems (scheduler, cache, REST) not individual methods unless a method name is the whole point.
+- Skip commit hashes and per-commit review maps unless the PR is unusually large or the user asks for one.
+- Keep the same **Simple English** rules: short lines, clear verbs, no idioms.
+
+## Test plan (required)
+
+- Checklist of what was run or what CI will run.
+- Keep it factual; do not repeat the summary.
+
+## Stacked PRs (when applicable)
+
+This repo uses Git Town stacked PRs (see `.cursor/rules/git-town-stack.mdc`). When the PR is **not** based directly on `master`:
+
+- Add a **Stack** section near the top (after the plain-language summary).
+- Link the **parent PR** (the PR whose branch is the base branch) with title and number, e.g. `[UNOMI-880 (#763)](https://github.com/apache/unomi/pull/763)`.
+- List any **known child PRs** at write time (same link format). If none exist yet, say so explicitly: _No child PRs yet._
+- One sentence on **where this PR sits** in the merge order (e.g. “Merge after #763; #766 depends on this branch.”).
+- The plain-language summary and **What changed** must still stand alone — stack links are navigation, not a substitute for explaining this PR’s scope.
+
+Verify stack relationships with `bash "$GTS" status` before writing; do not guess parent/child numbers.
+
+Skip the Stack section when the PR targets `master` directly and has no stack children.
+
+## Structure (Markdown for GitHub)
+
+```markdown
+## Plain-language summary
+
+…
+
+## Stack
+
+- **Parent:** [title (#nnn)](https://github.com/apache/unomi/pull/nnn) — merge this PR first
+- **Children:** [title (#mmm)](https://github.com/apache/unomi/pull/mmm) — or _None yet_
+- **Order:** …
+
+## What changed
+
+* …
+
+## Test plan
+
+- [ ] …
+
+## References
+
+UNOMI-xxx, UNOMI-yyy
+```
+
+## Title
+
+- Short and outcome-oriented; JIRA keys in the title are fine when the repo convention uses them.
+- Prefer describing the fix domain over internal ticket-only wording.
+
+## Conciseness
+
+- Target **~15–25 lines** total for typical bug-fix PRs (add ~3–5 lines when a Stack section is needed).
+- Omit anti-patterns: duplicate bullets, “Review map” tables keyed only by ticket, empty boilerplate sections.

@@ -1,0 +1,127 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.unomi.rest.endpoints;
+
+import org.apache.cxf.jaxrs.ext.MessageContext;
+import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.apache.unomi.api.ClusterNode;
+import org.apache.unomi.api.services.ClusterService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.List;
+
+/**
+ * JAX-RS endpoint for cluster node visibility and data purge operations.
+ */
+@Produces(MediaType.APPLICATION_JSON)
+@CrossOriginResourceSharing(
+        allowAllOrigins = true,
+        allowCredentials = true
+)
+@Path("/cluster")
+@Component(service=ClusterServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
+public class ClusterServiceEndPoint {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClusterServiceEndPoint.class.getName());
+
+    @Context
+    private MessageContext messageContext;
+
+    @Reference
+    private ClusterService clusterService;
+
+    /**
+     * Creates the cluster service endpoint.
+     */
+    public ClusterServiceEndPoint() {
+        LOGGER.info("Initializing cluster service endpoint...");
+    }
+
+    /**
+     * Sets the cluster service.
+     *
+     * @param clusterService the cluster service
+     */
+    public void setClusterService(ClusterService clusterService) {
+        this.clusterService = clusterService;
+    }
+
+    /**
+     * Sets the CXF message context.
+     *
+     * @param messageContext the message context
+     */
+    public void setMessageContext(MessageContext messageContext) {
+        this.messageContext = messageContext;
+    }
+
+    /**
+     * Returns cluster nodes known to this server instance.
+     *
+     * @return the available cluster nodes
+     * @api.status 200 array org.apache.unomi.api.ClusterNode Cluster nodes (may be empty).
+     * @api.example [{"itemId":"node-1","itemType":"clusterNode","publicHostAddress":"10.0.0.1","master":true,"data":true}]
+     */
+    @GET
+    @Path("/")
+    public List<ClusterNode> getClusterNodes() {
+        return clusterService.getClusterNodes();
+    }
+
+    /**
+     * Removes all data before the specified date from the context server.
+     * <p>
+     * The date must use {@code yyyy-MM-dd} format; unparseable values are logged and no purge is performed.
+     *
+     * @param date the date before which all data is removed ({@code yyyy-MM-dd})
+     * @deprecated As of version 1.1.0-incubating, use scope-scoped purge instead
+     * @api.status 204 empty Purge requested when the date parsed successfully.
+     * @api.example {}
+     */
+    @GET
+    @Path("/purge/{date}")
+    @Deprecated
+    public void purge(@PathParam("date") String date) {
+        try {
+            clusterService.purge(new SimpleDateFormat("yyyy-MM-dd").parse(date));
+        } catch (ParseException e) {
+            LOGGER.error("Cannot parse date, expected format is: yyyy-MM-dd. See debug log level for more information");
+            LOGGER.debug("Cannot parse date: {}", date, e);
+        }
+    }
+
+    /**
+     * Removes all data associated with the provided scope.
+     *
+     * @param scope the scope for which data is removed
+     * @api.status 204 empty Scope data purge requested.
+     * @api.example {}
+     */
+    @DELETE
+    @Path("{scope}")
+    public void deleteScopedData(@PathParam("scope") String scope) {
+        clusterService.purge(scope);
+    }
+}

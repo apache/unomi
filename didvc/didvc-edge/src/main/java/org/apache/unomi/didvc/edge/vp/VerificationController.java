@@ -36,6 +36,7 @@ import org.apache.unomi.didvc.sdjwt.SdJwtPresentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -44,8 +45,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import org.springframework.web.util.UriComponentsBuilder;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -221,6 +225,11 @@ public class VerificationController {
      * OID4VP 1.0 Final §5.9.3-3.1.1; set {@code use_request_uri=1} to
      * instead pass a {@code request_uri} pointing at the signed request
      * object (for client-id schemes that support it).
+     *
+     * The request carries a DCQL query for the requested vct plus the
+     * mandatory {@code client_metadata.vp_formats_supported}; per OpenID4VP
+     * 1.0 Final there is no {@code client_id_scheme} parameter (the
+     * URI-shaped {@code client_id} conveys the redirect_uri scheme).
      */
     @GetMapping("/{tenantId}/vp/authorize")
     public ResponseEntity<Void> authorizeBrowser(@PathVariable("tenantId") String tenantId,
@@ -232,34 +241,65 @@ public class VerificationController {
         String requestId = UUID.randomUUID().toString();
         String effectiveResponseUri = responseUri != null ? responseUri
                 : properties.getIssuerBaseUrl() + "/" + tenantId + "/vp/direct_post";
-        Map<String, List<String>> claims = new LinkedHashMap<>();
-        claims.put(vct != null ? vct : "hkt_kyc_v1", List.of());
+        String requestedVct = vct != null ? vct : "hkt_kyc_v1";
+        String dcqlJson;
+        try {
+            Map<String, Object> vctMeta = new LinkedHashMap<>();
+            vctMeta.put("vct_values", List.of(requestedVct));
+            Map<String, Object> credentialQuery = new LinkedHashMap<>();
+            credentialQuery.put("id", "credential-1");
+            credentialQuery.put("format", "dc+sd-jwt");
+            credentialQuery.put("meta", vctMeta);
+            dcqlJson = objectMapper.writeValueAsString(Map.of("credentials", List.of(credentialQuery)));
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to build dcql_query", e);
+        }
+        DcqlQueryParser.Query dcql;
+        try {
+            dcql = dcqlQueryParser.parse(dcqlJson);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "unreadable dcql_query", e);
+        }
         nonceStore.issue(tenantId + ":" + nonce, REQUEST_TTL_MILLIS / 1000);
         requests.put(requestId, new VpRequestContext(tenantId, effectiveResponseUri, effectiveResponseUri,
-                nonce, claims, null, null,
+                nonce, null, dcql, dcqlJson,
                 System.currentTimeMillis() + REQUEST_TTL_MILLIS, walletEndpoint));
 
-        String claimsJson;
+        String clientMetadataJson;
         try {
-            claimsJson = objectMapper.writeValueAsString(claims);
+            clientMetadataJson = objectMapper.writeValueAsString(sdJwtClientMetadata());
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to serialize claims", e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to serialize client_metadata", e);
         }
-        UriComponentsBuilder target = UriComponentsBuilder.fromHttpUrl(walletEndpoint)
-                .queryParam("client_id", effectiveResponseUri)
-                .queryParam("client_id_scheme", "redirect_uri")
-                .queryParam("response_uri", effectiveResponseUri)
-                .queryParam("response_type", "vp_token")
-                .queryParam("response_mode", "direct_post")
-                .queryParam("nonce", nonce)
-                .queryParam("state", requestId)
-                .queryParam("claims", claimsJson);
+        Map<String, String> parameters = new LinkedHashMap<>();
+        parameters.put("client_id", effectiveResponseUri);
+        parameters.put("response_uri", effectiveResponseUri);
+        parameters.put("response_type", "vp_token");
+        parameters.put("response_mode", "direct_post");
+        parameters.put("nonce", nonce);
+        parameters.put("state", requestId);
+        parameters.put("dcql_query", dcqlJson);
+        parameters.put("client_metadata", clientMetadataJson);
         if (useRequestUri != null) {
-            target.queryParam("request_uri",
+            parameters.put("request_uri",
                     properties.getIssuerBaseUrl() + "/" + tenantId + "/vp/request/" + requestId);
         }
+        // URLEncoder (not UriComponentsBuilder.encode(), which leaves '+'
+        // raw): form-style encoding keeps '+' (as %2B), '{', '[', ':', '/'
+        // and '"' intact across the redirect — wallets reject a request
+        // target containing raw reserved characters with HTTP 400, and a
+        // '+' decodes to a space on the receiving side
+        StringBuilder target = new StringBuilder(walletEndpoint);
+        target.append(walletEndpoint.contains("?") ? '&' : '?');
+        for (Map.Entry<String, String> entry : parameters.entrySet()) {
+            if (target.charAt(target.length() - 1) != '?' && target.charAt(target.length() - 1) != '&') {
+                target.append('&');
+            }
+            target.append(entry.getKey()).append('=')
+                    .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
+        }
         return ResponseEntity.status(HttpStatus.FOUND)
-                .location(target.build().toUri())
+                .location(URI.create(target.toString()))
                 .build();
     }
 
@@ -282,6 +322,9 @@ public class VerificationController {
         } else {
             payload.put("claims", context.claims);
         }
+        // OID4VP 1.0 Final: vp_formats_supported is mandatory in every
+        // authorization request, inline or in the request object
+        payload.put("client_metadata", sdJwtClientMetadata());
         payload.put("iat", System.currentTimeMillis() / 1000);
         payload.put("exp", context.expiresAt / 1000);
         try {
@@ -332,26 +375,53 @@ public class VerificationController {
         return jwks;
     }
 
-    @PostMapping("/{tenantId}/vp/direct_post")
+    /**
+     * OID4VP direct_post from a remote wallet: the vp_token arrives as
+     * {@code application/x-www-form-urlencoded} parameters ({@code state},
+     * {@code vp_token}, optional {@code presentation_submission}); the
+     * freshness nonce lives in the key-binding JWT, not as a form field.
+     */
+    @PostMapping(value = "/{tenantId}/vp/direct_post",
+            consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public Map<String, Object> verifyPresentationForm(@PathVariable("tenantId") String tenantId,
+                                                      @RequestParam("vp_token") String vpToken,
+                                                      @RequestParam(value = "state", required = false) String state) {
+        VpSubmission submission = new VpSubmission();
+        submission.setState(state);
+        submission.setVpToken(vpToken);
+        return verifyPresentationBody(tenantId, submission, false);
+    }
+
+    /**
+     * JSON presentation submission (programmatic verifiers and tests): the
+     * nonce may be carried alongside the vp_token.
+     */
+    @PostMapping(value = "/{tenantId}/vp/direct_post", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Map<String, Object> verifyPresentation(@PathVariable("tenantId") String tenantId,
                                                   @RequestBody VpSubmission submission) {
+        return verifyPresentationBody(tenantId, submission, true);
+    }
+
+    private Map<String, Object> verifyPresentationBody(String tenantId, VpSubmission submission,
+                                                       boolean requireBodyNonce) {
         VpRequestContext context = requests.remove(submission == null ? null : submission.getState());
         if (context == null || !tenantId.equals(context.tenantId) || context.expiresAt < System.currentTimeMillis()) {
             throw invalid("invalid or expired authorization request state");
         }
-        if (!context.nonce.equals(submission.getNonce())) {
+        if (requireBodyNonce && !context.nonce.equals(submission.getNonce())) {
             throw invalid("nonce does not match the authorization request");
         }
         // Fleet-wide single-use enforcement: the nonce is consumed here and
         // never accepted again, even if the request context were replayed
-        if (!nonceStore.consume(tenantId + ":" + submission.getNonce())) {
+        // (for form posts the nonce itself is verified inside the KB-JWT)
+        if (!nonceStore.consume(tenantId + ":" + context.nonce)) {
             throw invalid("nonce was not issued or has already been consumed");
         }
         if (submission.getVpToken() == null) {
             throw invalid("vp_token is missing");
         }
         try {
-            SdJwtPresentation presentation = new SdJwtParser().parse(submission.getVpToken());
+            SdJwtPresentation presentation = new SdJwtParser().parse(extractVpToken(context, submission.getVpToken()));
             return verifyPresentation(tenantId, context, presentation);
         } catch (ResponseStatusException e) {
             throw e;
@@ -515,6 +585,49 @@ public class VerificationController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "unknown authorization request");
         }
         return context;
+    }
+
+    /**
+     * The verifier's client_metadata: the SD-JWT VC formats this edge
+     * accepts (issuer and key-binding signature algorithms).
+     */
+    private Map<String, Object> sdJwtClientMetadata() {
+        Map<String, Object> sdJwtFormats = new LinkedHashMap<>();
+        sdJwtFormats.put("sd-jwt_alg_values", List.of("EdDSA", "ES256"));
+        sdJwtFormats.put("kb-jwt_alg_values", List.of("EdDSA", "ES256"));
+        Map<String, Object> clientMetadata = new LinkedHashMap<>();
+        clientMetadata.put("vp_formats_supported", Map.of("dc+sd-jwt", sdJwtFormats));
+        return clientMetadata;
+    }
+
+    /**
+     * The vp_token of a DCQL presentation may be a JSON object keyed by
+     * credential-query id (whose value is a token or an array of tokens,
+     * OID4VP multiple-credentials form) instead of the bare SD-JWT;
+     * resolve to the single presented token.
+     */
+    private String extractVpToken(VpRequestContext context, String vpToken) throws IOException {
+        String trimmed = vpToken.trim();
+        if (!trimmed.startsWith("{")) {
+            return trimmed;
+        }
+        com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(trimmed);
+        if (!node.isObject() || node.isEmpty()) {
+            throw invalid("vp_token object does not carry a credential");
+        }
+        String credentialId = context.dcql != null && !context.dcql.getCredentials().isEmpty()
+                ? context.dcql.getCredentials().get(0).getId() : null;
+        com.fasterxml.jackson.databind.JsonNode selected = credentialId != null ? node.get(credentialId) : null;
+        if (selected == null) {
+            selected = node.iterator().next();
+        }
+        if (selected != null && selected.isArray() && !selected.isEmpty()) {
+            selected = selected.get(0);
+        }
+        if (selected == null || !selected.isTextual()) {
+            throw invalid("vp_token object does not carry a credential token");
+        }
+        return selected.asText();
     }
 
     private ResponseStatusException invalid(String message) {

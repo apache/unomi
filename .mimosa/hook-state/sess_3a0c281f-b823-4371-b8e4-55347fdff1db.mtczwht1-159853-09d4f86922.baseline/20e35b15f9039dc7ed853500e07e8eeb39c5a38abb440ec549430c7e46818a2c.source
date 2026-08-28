@@ -1,0 +1,92 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.unomi.rest.models;
+
+import org.apache.unomi.tracing.api.TraceNode;
+import java.io.Serializable;
+
+/**
+ * REST response returned after the events collector processes a batch.
+ * Reports bitwise change flags (session/profile updated, errors) and may include
+ * a {@link TraceNode} tree when request tracing is enabled for the call.
+ */
+public class EventCollectorResponse implements Serializable {
+    /**
+     * Bitwise change flags from event processing:
+     * {@code 0}=NO_CHANGE, {@code 1}=ERROR, {@code 2}=SESSION_UPDATED, {@code 4}=PROFILE_UPDATED
+     * (combine with OR, e.g. {@code 6}=session+profile updated).
+     * @api.example 6
+     */
+    private int updated;
+
+    /**
+     * Present only when {@code explain=true} and the caller is an administrator / tenant administrator.
+     */
+    private TraceNode requestTracing;
+
+    /**
+     * Creates an empty event collector response.
+     */
+    public EventCollectorResponse() {
+    }
+
+    /**
+     * Creates a new EventCollectorResponse with the specified update flags.
+     *
+     * @param updated The bitwise combination of EventService flags indicating what was updated
+     */
+    public EventCollectorResponse(int updated) {
+        this.updated = updated;
+    }
+
+    /**
+     * Sets the update flags indicating what was modified during event processing.
+     *
+     * @param updated The bitwise combination of EventService flags
+     */
+    public void setUpdated(int updated) {
+        this.updated = updated;
+    }
+
+    /**
+     * Gets the update flags indicating what was modified during event processing.
+     *
+     * @return The bitwise combination of EventService flags
+     */
+    public int getUpdated() {
+        return updated;
+    }
+
+    /**
+     * Gets the tracing information for the request.
+     *
+     * @return The TraceNode containing request tracing information
+     */
+    public TraceNode getRequestTracing() {
+        return requestTracing;
+    }
+
+    /**
+     * Sets the tracing information for the request.
+     *
+     * @param requestTracing The TraceNode containing request tracing information
+     */
+    public void setRequestTracing(TraceNode requestTracing) {
+        this.requestTracing = requestTracing;
+    }
+}

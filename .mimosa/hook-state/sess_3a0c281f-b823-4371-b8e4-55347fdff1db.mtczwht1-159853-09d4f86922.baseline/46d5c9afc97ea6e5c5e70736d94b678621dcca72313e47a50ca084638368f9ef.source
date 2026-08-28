@@ -1,0 +1,33 @@
+---
+description: Git Town stacked PR workflow — use external git-town-stack for merges and tree ops
+alwaysApply: true
+---
+
+# Git Town stack (mandatory)
+
+This repo uses Git Town stacked PRs. Tool lives **outside** this repo (do not add scripts/docs here):
+
+```bash
+GTS="${GIT_TOWN_STACK:-${GIT_TOWN_STACK_HOME:-$HOME/projects/sergehuber/git-town-stack}/git-town-stack.sh}"
+cd "$(git rev-parse --show-toplevel)"
+bash "$GTS" doctor
+bash "$GTS" status
+```
+
+**Doctor** also flags unfinished Git Town runstate, mid-rebase, unmerged index, index lock.
+
+For merge, rebase, sync, branch delete, or PR base changes on stack branches: run **doctor** and **status** first.
+
+**After each squash-merge on GitHub:** `bash "$GTS" after-merge <pr#> --dry-run` then `after-merge <pr#>`.
+
+**Routine sync (parent not merged):** `bash "$GTS" sync-stack`
+
+**Never:** delete a remote branch while a child PR uses it as base; blind `git town sync --stack` after parent squash-merge; commit `git-town-stack.sh` into Unomi PRs.
+
+**Dirty tree:** `git stash push -u` before `git town continue` / sync.
+
+**Stale Git Town runstate** (blocks switch/sync): `git town status reset` if stack already fixed; never `git town undo` after good force-push.
+
+**Squash-merge conflicts:** `git rebase --onto master <merged-parent-tip> <child>` then `git push --force-with-lease`. Tool docs: `~/projects/sergehuber/git-town-stack/docs/KNOWN-ISSUES.md`
+
+**Current stack (verify with status):** master → UNOMI-880 (#763) → UNOMI-139 (#766). Merge top-down.

@@ -1,0 +1,1057 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["vendors-node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensProviderStyling_js"],{
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/core/eolCounter.js"
+/*!**************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/core/eolCounter.js ***!
+  \**************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   countEOL: () => (/* binding */ countEOL)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+function countEOL(text) {
+  let eolCount = 0;
+  let firstLineLength = 0;
+  let lastLineStart = 0;
+  let eol = 0 /* StringEOL.Unknown */;
+  for (let i = 0, len = text.length; i < len; i++) {
+    const chr = text.charCodeAt(i);
+    if (chr === 13 /* CharCode.CarriageReturn */) {
+      if (eolCount === 0) {
+        firstLineLength = i;
+      }
+      eolCount++;
+      if (i + 1 < len && text.charCodeAt(i + 1) === 10 /* CharCode.LineFeed */) {
+        // \r\n... case
+        eol |= 2 /* StringEOL.CRLF */;
+        i++; // skip \n
+      } else {
+        // \r... case
+        eol |= 3 /* StringEOL.Invalid */;
+      }
+      lastLineStart = i + 1;
+    } else if (chr === 10 /* CharCode.LineFeed */) {
+      // \n... case
+      eol |= 1 /* StringEOL.LF */;
+      if (eolCount === 0) {
+        firstLineLength = i;
+      }
+      eolCount++;
+      lastLineStart = i + 1;
+    }
+  }
+  if (eolCount === 0) {
+    firstLineLength = text.length;
+  }
+  return [eolCount, firstLineLength, text.length - lastLineStart, eol];
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/encodedTokenAttributes.js"
+/*!*********************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/encodedTokenAttributes.js ***!
+  \*********************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   TokenMetadata: () => (/* binding */ TokenMetadata)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+/**
+ */
+class TokenMetadata {
+  static getLanguageId(metadata) {
+    return (metadata & 255 /* MetadataConsts.LANGUAGEID_MASK */) >>> 0 /* MetadataConsts.LANGUAGEID_OFFSET */;
+  }
+  static getTokenType(metadata) {
+    return (metadata & 768 /* MetadataConsts.TOKEN_TYPE_MASK */) >>> 8 /* MetadataConsts.TOKEN_TYPE_OFFSET */;
+  }
+  static containsBalancedBrackets(metadata) {
+    return (metadata & 1024 /* MetadataConsts.BALANCED_BRACKETS_MASK */) !== 0;
+  }
+  static getFontStyle(metadata) {
+    return (metadata & 30720 /* MetadataConsts.FONT_STYLE_MASK */) >>> 11 /* MetadataConsts.FONT_STYLE_OFFSET */;
+  }
+  static getForeground(metadata) {
+    return (metadata & 16744448 /* MetadataConsts.FOREGROUND_MASK */) >>> 15 /* MetadataConsts.FOREGROUND_OFFSET */;
+  }
+  static getBackground(metadata) {
+    return (metadata & 4278190080 /* MetadataConsts.BACKGROUND_MASK */) >>> 24 /* MetadataConsts.BACKGROUND_OFFSET */;
+  }
+  static getClassNameFromMetadata(metadata) {
+    const foreground = this.getForeground(metadata);
+    let className = 'mtk' + foreground;
+    const fontStyle = this.getFontStyle(metadata);
+    if (fontStyle & 1 /* FontStyle.Italic */) {
+      className += ' mtki';
+    }
+    if (fontStyle & 2 /* FontStyle.Bold */) {
+      className += ' mtkb';
+    }
+    if (fontStyle & 4 /* FontStyle.Underline */) {
+      className += ' mtku';
+    }
+    if (fontStyle & 8 /* FontStyle.Strikethrough */) {
+      className += ' mtks';
+    }
+    return className;
+  }
+  static getInlineStyleFromMetadata(metadata, colorMap) {
+    const foreground = this.getForeground(metadata);
+    const fontStyle = this.getFontStyle(metadata);
+    let result = `color: ${colorMap[foreground]};`;
+    if (fontStyle & 1 /* FontStyle.Italic */) {
+      result += 'font-style: italic;';
+    }
+    if (fontStyle & 2 /* FontStyle.Bold */) {
+      result += 'font-weight: bold;';
+    }
+    let textDecoration = '';
+    if (fontStyle & 4 /* FontStyle.Underline */) {
+      textDecoration += ' underline';
+    }
+    if (fontStyle & 8 /* FontStyle.Strikethrough */) {
+      textDecoration += ' line-through';
+    }
+    if (textDecoration) {
+      result += `text-decoration:${textDecoration};`;
+    }
+    return result;
+  }
+  static getPresentationFromMetadata(metadata) {
+    const foreground = this.getForeground(metadata);
+    const fontStyle = this.getFontStyle(metadata);
+    return {
+      foreground: foreground,
+      italic: Boolean(fontStyle & 1 /* FontStyle.Italic */),
+      bold: Boolean(fontStyle & 2 /* FontStyle.Bold */),
+      underline: Boolean(fontStyle & 4 /* FontStyle.Underline */),
+      strikethrough: Boolean(fontStyle & 8 /* FontStyle.Strikethrough */)
+    };
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/languages/language.js"
+/*!*****************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/languages/language.js ***!
+  \*****************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ILanguageService: () => (/* binding */ ILanguageService)
+/* harmony export */ });
+/* harmony import */ var _platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../platform/instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+const ILanguageService = (0,_platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__.createDecorator)('languageService');
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensProviderStyling.js"
+/*!*************************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensProviderStyling.js ***!
+  \*************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   SemanticTokensProviderStyling: () => (/* binding */ SemanticTokensProviderStyling),
+/* harmony export */   toMultilineTokens2: () => (/* binding */ toMultilineTokens2)
+/* harmony export */ });
+/* harmony import */ var _encodedTokenAttributes_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../encodedTokenAttributes.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/encodedTokenAttributes.js");
+/* harmony import */ var _platform_theme_common_themeService_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../platform/theme/common/themeService.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/theme/common/themeService.js");
+/* harmony import */ var _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../platform/log/common/log.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/log/common/log.js");
+/* harmony import */ var _tokens_sparseMultilineTokens_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../tokens/sparseMultilineTokens.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/tokens/sparseMultilineTokens.js");
+/* harmony import */ var _languages_language_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../languages/language.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/languages/language.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+var __decorate = undefined && undefined.__decorate || function (decorators, target, key, desc) {
+  var c = arguments.length,
+    r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+    d;
+  if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+  return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __param = undefined && undefined.__param || function (paramIndex, decorator) {
+  return function (target, key) {
+    decorator(target, key, paramIndex);
+  };
+};
+
+
+
+
+
+const ENABLE_TRACE = false;
+let SemanticTokensProviderStyling = class SemanticTokensProviderStyling {
+  constructor(_legend, _themeService, _languageService, _logService) {
+    this._legend = _legend;
+    this._themeService = _themeService;
+    this._languageService = _languageService;
+    this._logService = _logService;
+    this._hasWarnedOverlappingTokens = false;
+    this._hasWarnedInvalidLengthTokens = false;
+    this._hasWarnedInvalidEditStart = false;
+    this._hashTable = new HashTable();
+  }
+  getMetadata(tokenTypeIndex, tokenModifierSet, languageId) {
+    const encodedLanguageId = this._languageService.languageIdCodec.encodeLanguageId(languageId);
+    const entry = this._hashTable.get(tokenTypeIndex, tokenModifierSet, encodedLanguageId);
+    let metadata;
+    if (entry) {
+      metadata = entry.metadata;
+      if (ENABLE_TRACE && this._logService.getLevel() === _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_2__.LogLevel.Trace) {
+        this._logService.trace(`SemanticTokensProviderStyling [CACHED] ${tokenTypeIndex} / ${tokenModifierSet}: foreground ${_encodedTokenAttributes_js__WEBPACK_IMPORTED_MODULE_0__.TokenMetadata.getForeground(metadata)}, fontStyle ${_encodedTokenAttributes_js__WEBPACK_IMPORTED_MODULE_0__.TokenMetadata.getFontStyle(metadata).toString(2)}`);
+      }
+    } else {
+      let tokenType = this._legend.tokenTypes[tokenTypeIndex];
+      const tokenModifiers = [];
+      if (tokenType) {
+        let modifierSet = tokenModifierSet;
+        for (let modifierIndex = 0; modifierSet > 0 && modifierIndex < this._legend.tokenModifiers.length; modifierIndex++) {
+          if (modifierSet & 1) {
+            tokenModifiers.push(this._legend.tokenModifiers[modifierIndex]);
+          }
+          modifierSet = modifierSet >> 1;
+        }
+        if (ENABLE_TRACE && modifierSet > 0 && this._logService.getLevel() === _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_2__.LogLevel.Trace) {
+          this._logService.trace(`SemanticTokensProviderStyling: unknown token modifier index: ${tokenModifierSet.toString(2)} for legend: ${JSON.stringify(this._legend.tokenModifiers)}`);
+          tokenModifiers.push('not-in-legend');
+        }
+        const tokenStyle = this._themeService.getColorTheme().getTokenStyleMetadata(tokenType, tokenModifiers, languageId);
+        if (typeof tokenStyle === 'undefined') {
+          metadata = 2147483647 /* SemanticTokensProviderStylingConstants.NO_STYLING */;
+        } else {
+          metadata = 0;
+          if (typeof tokenStyle.italic !== 'undefined') {
+            const italicBit = (tokenStyle.italic ? 1 /* FontStyle.Italic */ : 0) << 11 /* MetadataConsts.FONT_STYLE_OFFSET */;
+            metadata |= italicBit | 1 /* MetadataConsts.SEMANTIC_USE_ITALIC */;
+          }
+          if (typeof tokenStyle.bold !== 'undefined') {
+            const boldBit = (tokenStyle.bold ? 2 /* FontStyle.Bold */ : 0) << 11 /* MetadataConsts.FONT_STYLE_OFFSET */;
+            metadata |= boldBit | 2 /* MetadataConsts.SEMANTIC_USE_BOLD */;
+          }
+          if (typeof tokenStyle.underline !== 'undefined') {
+            const underlineBit = (tokenStyle.underline ? 4 /* FontStyle.Underline */ : 0) << 11 /* MetadataConsts.FONT_STYLE_OFFSET */;
+            metadata |= underlineBit | 4 /* MetadataConsts.SEMANTIC_USE_UNDERLINE */;
+          }
+          if (typeof tokenStyle.strikethrough !== 'undefined') {
+            const strikethroughBit = (tokenStyle.strikethrough ? 8 /* FontStyle.Strikethrough */ : 0) << 11 /* MetadataConsts.FONT_STYLE_OFFSET */;
+            metadata |= strikethroughBit | 8 /* MetadataConsts.SEMANTIC_USE_STRIKETHROUGH */;
+          }
+          if (tokenStyle.foreground) {
+            const foregroundBits = tokenStyle.foreground << 15 /* MetadataConsts.FOREGROUND_OFFSET */;
+            metadata |= foregroundBits | 16 /* MetadataConsts.SEMANTIC_USE_FOREGROUND */;
+          }
+          if (metadata === 0) {
+            // Nothing!
+            metadata = 2147483647 /* SemanticTokensProviderStylingConstants.NO_STYLING */;
+          }
+        }
+      } else {
+        if (ENABLE_TRACE && this._logService.getLevel() === _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_2__.LogLevel.Trace) {
+          this._logService.trace(`SemanticTokensProviderStyling: unknown token type index: ${tokenTypeIndex} for legend: ${JSON.stringify(this._legend.tokenTypes)}`);
+        }
+        metadata = 2147483647 /* SemanticTokensProviderStylingConstants.NO_STYLING */;
+        tokenType = 'not-in-legend';
+      }
+      this._hashTable.add(tokenTypeIndex, tokenModifierSet, encodedLanguageId, metadata);
+      if (ENABLE_TRACE && this._logService.getLevel() === _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_2__.LogLevel.Trace) {
+        this._logService.trace(`SemanticTokensProviderStyling ${tokenTypeIndex} (${tokenType}) / ${tokenModifierSet} (${tokenModifiers.join(' ')}): foreground ${_encodedTokenAttributes_js__WEBPACK_IMPORTED_MODULE_0__.TokenMetadata.getForeground(metadata)}, fontStyle ${_encodedTokenAttributes_js__WEBPACK_IMPORTED_MODULE_0__.TokenMetadata.getFontStyle(metadata).toString(2)}`);
+      }
+    }
+    return metadata;
+  }
+  warnOverlappingSemanticTokens(lineNumber, startColumn) {
+    if (!this._hasWarnedOverlappingTokens) {
+      this._hasWarnedOverlappingTokens = true;
+      this._logService.warn(`Overlapping semantic tokens detected at lineNumber ${lineNumber}, column ${startColumn}`);
+    }
+  }
+  warnInvalidLengthSemanticTokens(lineNumber, startColumn) {
+    if (!this._hasWarnedInvalidLengthTokens) {
+      this._hasWarnedInvalidLengthTokens = true;
+      this._logService.warn(`Semantic token with invalid length detected at lineNumber ${lineNumber}, column ${startColumn}`);
+    }
+  }
+  warnInvalidEditStart(previousResultId, resultId, editIndex, editStart, maxExpectedStart) {
+    if (!this._hasWarnedInvalidEditStart) {
+      this._hasWarnedInvalidEditStart = true;
+      this._logService.warn(`Invalid semantic tokens edit detected (previousResultId: ${previousResultId}, resultId: ${resultId}) at edit #${editIndex}: The provided start offset ${editStart} is outside the previous data (length ${maxExpectedStart}).`);
+    }
+  }
+};
+SemanticTokensProviderStyling = __decorate([__param(1, _platform_theme_common_themeService_js__WEBPACK_IMPORTED_MODULE_1__.IThemeService), __param(2, _languages_language_js__WEBPACK_IMPORTED_MODULE_4__.ILanguageService), __param(3, _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_2__.ILogService)], SemanticTokensProviderStyling);
+
+function toMultilineTokens2(tokens, styling, languageId) {
+  const srcData = tokens.data;
+  const tokenCount = tokens.data.length / 5 | 0;
+  const tokensPerArea = Math.max(Math.ceil(tokenCount / 1024 /* SemanticColoringConstants.DesiredMaxAreas */), 400 /* SemanticColoringConstants.DesiredTokensPerArea */);
+  const result = [];
+  let tokenIndex = 0;
+  let lastLineNumber = 1;
+  let lastStartCharacter = 0;
+  while (tokenIndex < tokenCount) {
+    const tokenStartIndex = tokenIndex;
+    let tokenEndIndex = Math.min(tokenStartIndex + tokensPerArea, tokenCount);
+    // Keep tokens on the same line in the same area...
+    if (tokenEndIndex < tokenCount) {
+      let smallTokenEndIndex = tokenEndIndex;
+      while (smallTokenEndIndex - 1 > tokenStartIndex && srcData[5 * smallTokenEndIndex] === 0) {
+        smallTokenEndIndex--;
+      }
+      if (smallTokenEndIndex - 1 === tokenStartIndex) {
+        // there are so many tokens on this line that our area would be empty, we must now go right
+        let bigTokenEndIndex = tokenEndIndex;
+        while (bigTokenEndIndex + 1 < tokenCount && srcData[5 * bigTokenEndIndex] === 0) {
+          bigTokenEndIndex++;
+        }
+        tokenEndIndex = bigTokenEndIndex;
+      } else {
+        tokenEndIndex = smallTokenEndIndex;
+      }
+    }
+    let destData = new Uint32Array((tokenEndIndex - tokenStartIndex) * 4);
+    let destOffset = 0;
+    let areaLine = 0;
+    let prevLineNumber = 0;
+    let prevEndCharacter = 0;
+    while (tokenIndex < tokenEndIndex) {
+      const srcOffset = 5 * tokenIndex;
+      const deltaLine = srcData[srcOffset];
+      const deltaCharacter = srcData[srcOffset + 1];
+      // Casting both `lineNumber`, `startCharacter` and `endCharacter` here to uint32 using `|0`
+      // to validate below with the actual values that will be inserted in the Uint32Array result
+      const lineNumber = lastLineNumber + deltaLine | 0;
+      const startCharacter = deltaLine === 0 ? lastStartCharacter + deltaCharacter | 0 : deltaCharacter;
+      const length = srcData[srcOffset + 2];
+      const endCharacter = startCharacter + length | 0;
+      const tokenTypeIndex = srcData[srcOffset + 3];
+      const tokenModifierSet = srcData[srcOffset + 4];
+      if (endCharacter <= startCharacter) {
+        // this token is invalid (most likely a negative length casted to uint32)
+        styling.warnInvalidLengthSemanticTokens(lineNumber, startCharacter + 1);
+      } else if (prevLineNumber === lineNumber && prevEndCharacter > startCharacter) {
+        // this token overlaps with the previous token
+        styling.warnOverlappingSemanticTokens(lineNumber, startCharacter + 1);
+      } else {
+        const metadata = styling.getMetadata(tokenTypeIndex, tokenModifierSet, languageId);
+        if (metadata !== 2147483647 /* SemanticTokensProviderStylingConstants.NO_STYLING */) {
+          if (areaLine === 0) {
+            areaLine = lineNumber;
+          }
+          destData[destOffset] = lineNumber - areaLine;
+          destData[destOffset + 1] = startCharacter;
+          destData[destOffset + 2] = endCharacter;
+          destData[destOffset + 3] = metadata;
+          destOffset += 4;
+          prevLineNumber = lineNumber;
+          prevEndCharacter = endCharacter;
+        }
+      }
+      lastLineNumber = lineNumber;
+      lastStartCharacter = startCharacter;
+      tokenIndex++;
+    }
+    if (destOffset !== destData.length) {
+      destData = destData.subarray(0, destOffset);
+    }
+    const tokens = _tokens_sparseMultilineTokens_js__WEBPACK_IMPORTED_MODULE_3__.SparseMultilineTokens.create(areaLine, destData);
+    result.push(tokens);
+  }
+  return result;
+}
+class HashTableEntry {
+  constructor(tokenTypeIndex, tokenModifierSet, languageId, metadata) {
+    this.tokenTypeIndex = tokenTypeIndex;
+    this.tokenModifierSet = tokenModifierSet;
+    this.languageId = languageId;
+    this.metadata = metadata;
+    this.next = null;
+  }
+}
+class HashTable {
+  static {
+    this._SIZES = [3, 7, 13, 31, 61, 127, 251, 509, 1021, 2039, 4093, 8191, 16381, 32749, 65521, 131071, 262139, 524287, 1048573, 2097143];
+  }
+  constructor() {
+    this._elementsCount = 0;
+    this._currentLengthIndex = 0;
+    this._currentLength = HashTable._SIZES[this._currentLengthIndex];
+    this._growCount = Math.round(this._currentLengthIndex + 1 < HashTable._SIZES.length ? 2 / 3 * this._currentLength : 0);
+    this._elements = [];
+    HashTable._nullOutEntries(this._elements, this._currentLength);
+  }
+  static _nullOutEntries(entries, length) {
+    for (let i = 0; i < length; i++) {
+      entries[i] = null;
+    }
+  }
+  _hash2(n1, n2) {
+    return (n1 << 5) - n1 + n2 | 0; // n1 * 31 + n2, keep as int32
+  }
+  _hashFunc(tokenTypeIndex, tokenModifierSet, languageId) {
+    return this._hash2(this._hash2(tokenTypeIndex, tokenModifierSet), languageId) % this._currentLength;
+  }
+  get(tokenTypeIndex, tokenModifierSet, languageId) {
+    const hash = this._hashFunc(tokenTypeIndex, tokenModifierSet, languageId);
+    let p = this._elements[hash];
+    while (p) {
+      if (p.tokenTypeIndex === tokenTypeIndex && p.tokenModifierSet === tokenModifierSet && p.languageId === languageId) {
+        return p;
+      }
+      p = p.next;
+    }
+    return null;
+  }
+  add(tokenTypeIndex, tokenModifierSet, languageId, metadata) {
+    this._elementsCount++;
+    if (this._growCount !== 0 && this._elementsCount >= this._growCount) {
+      // expand!
+      const oldElements = this._elements;
+      this._currentLengthIndex++;
+      this._currentLength = HashTable._SIZES[this._currentLengthIndex];
+      this._growCount = Math.round(this._currentLengthIndex + 1 < HashTable._SIZES.length ? 2 / 3 * this._currentLength : 0);
+      this._elements = [];
+      HashTable._nullOutEntries(this._elements, this._currentLength);
+      for (const first of oldElements) {
+        let p = first;
+        while (p) {
+          const oldNext = p.next;
+          p.next = null;
+          this._add(p);
+          p = oldNext;
+        }
+      }
+    }
+    this._add(new HashTableEntry(tokenTypeIndex, tokenModifierSet, languageId, metadata));
+  }
+  _add(element) {
+    const hash = this._hashFunc(element.tokenTypeIndex, element.tokenModifierSet, element.languageId);
+    element.next = this._elements[hash];
+    this._elements[hash] = element;
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/tokens/sparseMultilineTokens.js"
+/*!***************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/tokens/sparseMultilineTokens.js ***!
+  \***************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   SparseLineTokens: () => (/* binding */ SparseLineTokens),
+/* harmony export */   SparseMultilineTokens: () => (/* binding */ SparseMultilineTokens)
+/* harmony export */ });
+/* harmony import */ var _core_position_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../core/position.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/core/position.js");
+/* harmony import */ var _core_range_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../core/range.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/core/range.js");
+/* harmony import */ var _core_eolCounter_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../core/eolCounter.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/core/eolCounter.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+
+/**
+ * Represents sparse tokens over a contiguous range of lines.
+ */
+class SparseMultilineTokens {
+  static create(startLineNumber, tokens) {
+    return new SparseMultilineTokens(startLineNumber, new SparseMultilineTokensStorage(tokens));
+  }
+  /**
+   * (Inclusive) start line number for these tokens.
+   */
+  get startLineNumber() {
+    return this._startLineNumber;
+  }
+  /**
+   * (Inclusive) end line number for these tokens.
+   */
+  get endLineNumber() {
+    return this._endLineNumber;
+  }
+  constructor(startLineNumber, tokens) {
+    this._startLineNumber = startLineNumber;
+    this._tokens = tokens;
+    this._endLineNumber = this._startLineNumber + this._tokens.getMaxDeltaLine();
+  }
+  toString() {
+    return this._tokens.toString(this._startLineNumber);
+  }
+  _updateEndLineNumber() {
+    this._endLineNumber = this._startLineNumber + this._tokens.getMaxDeltaLine();
+  }
+  isEmpty() {
+    return this._tokens.isEmpty();
+  }
+  getLineTokens(lineNumber) {
+    if (this._startLineNumber <= lineNumber && lineNumber <= this._endLineNumber) {
+      return this._tokens.getLineTokens(lineNumber - this._startLineNumber);
+    }
+    return null;
+  }
+  getRange() {
+    const deltaRange = this._tokens.getRange();
+    if (!deltaRange) {
+      return deltaRange;
+    }
+    return new _core_range_js__WEBPACK_IMPORTED_MODULE_1__.Range(this._startLineNumber + deltaRange.startLineNumber, deltaRange.startColumn, this._startLineNumber + deltaRange.endLineNumber, deltaRange.endColumn);
+  }
+  removeTokens(range) {
+    const startLineIndex = range.startLineNumber - this._startLineNumber;
+    const endLineIndex = range.endLineNumber - this._startLineNumber;
+    this._startLineNumber += this._tokens.removeTokens(startLineIndex, range.startColumn - 1, endLineIndex, range.endColumn - 1);
+    this._updateEndLineNumber();
+  }
+  split(range) {
+    // split tokens to two:
+    // a) all the tokens before `range`
+    // b) all the tokens after `range`
+    const startLineIndex = range.startLineNumber - this._startLineNumber;
+    const endLineIndex = range.endLineNumber - this._startLineNumber;
+    const [a, b, bDeltaLine] = this._tokens.split(startLineIndex, range.startColumn - 1, endLineIndex, range.endColumn - 1);
+    return [new SparseMultilineTokens(this._startLineNumber, a), new SparseMultilineTokens(this._startLineNumber + bDeltaLine, b)];
+  }
+  applyEdit(range, text) {
+    const [eolCount, firstLineLength, lastLineLength] = (0,_core_eolCounter_js__WEBPACK_IMPORTED_MODULE_2__.countEOL)(text);
+    this.acceptEdit(range, eolCount, firstLineLength, lastLineLength, text.length > 0 ? text.charCodeAt(0) : 0 /* CharCode.Null */);
+  }
+  acceptEdit(range, eolCount, firstLineLength, lastLineLength, firstCharCode) {
+    this._acceptDeleteRange(range);
+    this._acceptInsertText(new _core_position_js__WEBPACK_IMPORTED_MODULE_0__.Position(range.startLineNumber, range.startColumn), eolCount, firstLineLength, lastLineLength, firstCharCode);
+    this._updateEndLineNumber();
+  }
+  _acceptDeleteRange(range) {
+    if (range.startLineNumber === range.endLineNumber && range.startColumn === range.endColumn) {
+      // Nothing to delete
+      return;
+    }
+    const firstLineIndex = range.startLineNumber - this._startLineNumber;
+    const lastLineIndex = range.endLineNumber - this._startLineNumber;
+    if (lastLineIndex < 0) {
+      // this deletion occurs entirely before this block, so we only need to adjust line numbers
+      const deletedLinesCount = lastLineIndex - firstLineIndex;
+      this._startLineNumber -= deletedLinesCount;
+      return;
+    }
+    const tokenMaxDeltaLine = this._tokens.getMaxDeltaLine();
+    if (firstLineIndex >= tokenMaxDeltaLine + 1) {
+      // this deletion occurs entirely after this block, so there is nothing to do
+      return;
+    }
+    if (firstLineIndex < 0 && lastLineIndex >= tokenMaxDeltaLine + 1) {
+      // this deletion completely encompasses this block
+      this._startLineNumber = 0;
+      this._tokens.clear();
+      return;
+    }
+    if (firstLineIndex < 0) {
+      const deletedBefore = -firstLineIndex;
+      this._startLineNumber -= deletedBefore;
+      this._tokens.acceptDeleteRange(range.startColumn - 1, 0, 0, lastLineIndex, range.endColumn - 1);
+    } else {
+      this._tokens.acceptDeleteRange(0, firstLineIndex, range.startColumn - 1, lastLineIndex, range.endColumn - 1);
+    }
+  }
+  _acceptInsertText(position, eolCount, firstLineLength, lastLineLength, firstCharCode) {
+    if (eolCount === 0 && firstLineLength === 0) {
+      // Nothing to insert
+      return;
+    }
+    const lineIndex = position.lineNumber - this._startLineNumber;
+    if (lineIndex < 0) {
+      // this insertion occurs before this block, so we only need to adjust line numbers
+      this._startLineNumber += eolCount;
+      return;
+    }
+    const tokenMaxDeltaLine = this._tokens.getMaxDeltaLine();
+    if (lineIndex >= tokenMaxDeltaLine + 1) {
+      // this insertion occurs after this block, so there is nothing to do
+      return;
+    }
+    this._tokens.acceptInsertText(lineIndex, position.column - 1, eolCount, firstLineLength, lastLineLength, firstCharCode);
+  }
+}
+class SparseMultilineTokensStorage {
+  constructor(tokens) {
+    this._tokens = tokens;
+    this._tokenCount = tokens.length / 4;
+  }
+  toString(startLineNumber) {
+    const pieces = [];
+    for (let i = 0; i < this._tokenCount; i++) {
+      pieces.push(`(${this._getDeltaLine(i) + startLineNumber},${this._getStartCharacter(i)}-${this._getEndCharacter(i)})`);
+    }
+    return `[${pieces.join(',')}]`;
+  }
+  getMaxDeltaLine() {
+    const tokenCount = this._getTokenCount();
+    if (tokenCount === 0) {
+      return -1;
+    }
+    return this._getDeltaLine(tokenCount - 1);
+  }
+  getRange() {
+    const tokenCount = this._getTokenCount();
+    if (tokenCount === 0) {
+      return null;
+    }
+    const startChar = this._getStartCharacter(0);
+    const maxDeltaLine = this._getDeltaLine(tokenCount - 1);
+    const endChar = this._getEndCharacter(tokenCount - 1);
+    return new _core_range_js__WEBPACK_IMPORTED_MODULE_1__.Range(0, startChar + 1, maxDeltaLine, endChar + 1);
+  }
+  _getTokenCount() {
+    return this._tokenCount;
+  }
+  _getDeltaLine(tokenIndex) {
+    return this._tokens[4 * tokenIndex];
+  }
+  _getStartCharacter(tokenIndex) {
+    return this._tokens[4 * tokenIndex + 1];
+  }
+  _getEndCharacter(tokenIndex) {
+    return this._tokens[4 * tokenIndex + 2];
+  }
+  isEmpty() {
+    return this._getTokenCount() === 0;
+  }
+  getLineTokens(deltaLine) {
+    let low = 0;
+    let high = this._getTokenCount() - 1;
+    while (low < high) {
+      const mid = low + Math.floor((high - low) / 2);
+      const midDeltaLine = this._getDeltaLine(mid);
+      if (midDeltaLine < deltaLine) {
+        low = mid + 1;
+      } else if (midDeltaLine > deltaLine) {
+        high = mid - 1;
+      } else {
+        let min = mid;
+        while (min > low && this._getDeltaLine(min - 1) === deltaLine) {
+          min--;
+        }
+        let max = mid;
+        while (max < high && this._getDeltaLine(max + 1) === deltaLine) {
+          max++;
+        }
+        return new SparseLineTokens(this._tokens.subarray(4 * min, 4 * max + 4));
+      }
+    }
+    if (this._getDeltaLine(low) === deltaLine) {
+      return new SparseLineTokens(this._tokens.subarray(4 * low, 4 * low + 4));
+    }
+    return null;
+  }
+  clear() {
+    this._tokenCount = 0;
+  }
+  removeTokens(startDeltaLine, startChar, endDeltaLine, endChar) {
+    const tokens = this._tokens;
+    const tokenCount = this._tokenCount;
+    let newTokenCount = 0;
+    let hasDeletedTokens = false;
+    let firstDeltaLine = 0;
+    for (let i = 0; i < tokenCount; i++) {
+      const srcOffset = 4 * i;
+      const tokenDeltaLine = tokens[srcOffset];
+      const tokenStartCharacter = tokens[srcOffset + 1];
+      const tokenEndCharacter = tokens[srcOffset + 2];
+      const tokenMetadata = tokens[srcOffset + 3];
+      if ((tokenDeltaLine > startDeltaLine || tokenDeltaLine === startDeltaLine && tokenEndCharacter >= startChar) && (tokenDeltaLine < endDeltaLine || tokenDeltaLine === endDeltaLine && tokenStartCharacter <= endChar)) {
+        hasDeletedTokens = true;
+      } else {
+        if (newTokenCount === 0) {
+          firstDeltaLine = tokenDeltaLine;
+        }
+        if (hasDeletedTokens) {
+          // must move the token to the left
+          const destOffset = 4 * newTokenCount;
+          tokens[destOffset] = tokenDeltaLine - firstDeltaLine;
+          tokens[destOffset + 1] = tokenStartCharacter;
+          tokens[destOffset + 2] = tokenEndCharacter;
+          tokens[destOffset + 3] = tokenMetadata;
+        }
+        newTokenCount++;
+      }
+    }
+    this._tokenCount = newTokenCount;
+    return firstDeltaLine;
+  }
+  split(startDeltaLine, startChar, endDeltaLine, endChar) {
+    const tokens = this._tokens;
+    const tokenCount = this._tokenCount;
+    const aTokens = [];
+    const bTokens = [];
+    let destTokens = aTokens;
+    let destOffset = 0;
+    let destFirstDeltaLine = 0;
+    for (let i = 0; i < tokenCount; i++) {
+      const srcOffset = 4 * i;
+      const tokenDeltaLine = tokens[srcOffset];
+      const tokenStartCharacter = tokens[srcOffset + 1];
+      const tokenEndCharacter = tokens[srcOffset + 2];
+      const tokenMetadata = tokens[srcOffset + 3];
+      if (tokenDeltaLine > startDeltaLine || tokenDeltaLine === startDeltaLine && tokenEndCharacter >= startChar) {
+        if (tokenDeltaLine < endDeltaLine || tokenDeltaLine === endDeltaLine && tokenStartCharacter <= endChar) {
+          // this token is touching the range
+          continue;
+        } else {
+          // this token is after the range
+          if (destTokens !== bTokens) {
+            // this token is the first token after the range
+            destTokens = bTokens;
+            destOffset = 0;
+            destFirstDeltaLine = tokenDeltaLine;
+          }
+        }
+      }
+      destTokens[destOffset++] = tokenDeltaLine - destFirstDeltaLine;
+      destTokens[destOffset++] = tokenStartCharacter;
+      destTokens[destOffset++] = tokenEndCharacter;
+      destTokens[destOffset++] = tokenMetadata;
+    }
+    return [new SparseMultilineTokensStorage(new Uint32Array(aTokens)), new SparseMultilineTokensStorage(new Uint32Array(bTokens)), destFirstDeltaLine];
+  }
+  acceptDeleteRange(horizontalShiftForFirstLineTokens, startDeltaLine, startCharacter, endDeltaLine, endCharacter) {
+    // This is a bit complex, here are the cases I used to think about this:
+    //
+    // 1. The token starts before the deletion range
+    // 1a. The token is completely before the deletion range
+    //               -----------
+    //                          xxxxxxxxxxx
+    // 1b. The token starts before, the deletion range ends after the token
+    //               -----------
+    //                      xxxxxxxxxxx
+    // 1c. The token starts before, the deletion range ends precisely with the token
+    //               ---------------
+    //                      xxxxxxxx
+    // 1d. The token starts before, the deletion range is inside the token
+    //               ---------------
+    //                    xxxxx
+    //
+    // 2. The token starts at the same position with the deletion range
+    // 2a. The token starts at the same position, and ends inside the deletion range
+    //               -------
+    //               xxxxxxxxxxx
+    // 2b. The token starts at the same position, and ends at the same position as the deletion range
+    //               ----------
+    //               xxxxxxxxxx
+    // 2c. The token starts at the same position, and ends after the deletion range
+    //               -------------
+    //               xxxxxxx
+    //
+    // 3. The token starts inside the deletion range
+    // 3a. The token is inside the deletion range
+    //                -------
+    //             xxxxxxxxxxxxx
+    // 3b. The token starts inside the deletion range, and ends at the same position as the deletion range
+    //                ----------
+    //             xxxxxxxxxxxxx
+    // 3c. The token starts inside the deletion range, and ends after the deletion range
+    //                ------------
+    //             xxxxxxxxxxx
+    //
+    // 4. The token starts after the deletion range
+    //                  -----------
+    //          xxxxxxxx
+    //
+    const tokens = this._tokens;
+    const tokenCount = this._tokenCount;
+    const deletedLineCount = endDeltaLine - startDeltaLine;
+    let newTokenCount = 0;
+    let hasDeletedTokens = false;
+    for (let i = 0; i < tokenCount; i++) {
+      const srcOffset = 4 * i;
+      let tokenDeltaLine = tokens[srcOffset];
+      let tokenStartCharacter = tokens[srcOffset + 1];
+      let tokenEndCharacter = tokens[srcOffset + 2];
+      const tokenMetadata = tokens[srcOffset + 3];
+      if (tokenDeltaLine < startDeltaLine || tokenDeltaLine === startDeltaLine && tokenEndCharacter <= startCharacter) {
+        // 1a. The token is completely before the deletion range
+        // => nothing to do
+        newTokenCount++;
+        continue;
+      } else if (tokenDeltaLine === startDeltaLine && tokenStartCharacter < startCharacter) {
+        // 1b, 1c, 1d
+        // => the token survives, but it needs to shrink
+        if (tokenDeltaLine === endDeltaLine && tokenEndCharacter > endCharacter) {
+          // 1d. The token starts before, the deletion range is inside the token
+          // => the token shrinks by the deletion character count
+          tokenEndCharacter -= endCharacter - startCharacter;
+        } else {
+          // 1b. The token starts before, the deletion range ends after the token
+          // 1c. The token starts before, the deletion range ends precisely with the token
+          // => the token shrinks its ending to the deletion start
+          tokenEndCharacter = startCharacter;
+        }
+      } else if (tokenDeltaLine === startDeltaLine && tokenStartCharacter === startCharacter) {
+        // 2a, 2b, 2c
+        if (tokenDeltaLine === endDeltaLine && tokenEndCharacter > endCharacter) {
+          // 2c. The token starts at the same position, and ends after the deletion range
+          // => the token shrinks by the deletion character count
+          tokenEndCharacter -= endCharacter - startCharacter;
+        } else {
+          // 2a. The token starts at the same position, and ends inside the deletion range
+          // 2b. The token starts at the same position, and ends at the same position as the deletion range
+          // => the token is deleted
+          hasDeletedTokens = true;
+          continue;
+        }
+      } else if (tokenDeltaLine < endDeltaLine || tokenDeltaLine === endDeltaLine && tokenStartCharacter < endCharacter) {
+        // 3a, 3b, 3c
+        if (tokenDeltaLine === endDeltaLine && tokenEndCharacter > endCharacter) {
+          // 3c. The token starts inside the deletion range, and ends after the deletion range
+          // => the token moves to continue right after the deletion
+          tokenDeltaLine = startDeltaLine;
+          tokenStartCharacter = startCharacter;
+          tokenEndCharacter = tokenStartCharacter + (tokenEndCharacter - endCharacter);
+        } else {
+          // 3a. The token is inside the deletion range
+          // 3b. The token starts inside the deletion range, and ends at the same position as the deletion range
+          // => the token is deleted
+          hasDeletedTokens = true;
+          continue;
+        }
+      } else if (tokenDeltaLine > endDeltaLine) {
+        // 4. (partial) The token starts after the deletion range, on a line below...
+        if (deletedLineCount === 0 && !hasDeletedTokens) {
+          // early stop, there is no need to walk all the tokens and do nothing...
+          newTokenCount = tokenCount;
+          break;
+        }
+        tokenDeltaLine -= deletedLineCount;
+      } else if (tokenDeltaLine === endDeltaLine && tokenStartCharacter >= endCharacter) {
+        // 4. (continued) The token starts after the deletion range, on the last line where a deletion occurs
+        if (horizontalShiftForFirstLineTokens && tokenDeltaLine === 0) {
+          tokenStartCharacter += horizontalShiftForFirstLineTokens;
+          tokenEndCharacter += horizontalShiftForFirstLineTokens;
+        }
+        tokenDeltaLine -= deletedLineCount;
+        tokenStartCharacter -= endCharacter - startCharacter;
+        tokenEndCharacter -= endCharacter - startCharacter;
+      } else {
+        throw new Error(`Not possible!`);
+      }
+      const destOffset = 4 * newTokenCount;
+      tokens[destOffset] = tokenDeltaLine;
+      tokens[destOffset + 1] = tokenStartCharacter;
+      tokens[destOffset + 2] = tokenEndCharacter;
+      tokens[destOffset + 3] = tokenMetadata;
+      newTokenCount++;
+    }
+    this._tokenCount = newTokenCount;
+  }
+  acceptInsertText(deltaLine, character, eolCount, firstLineLength, lastLineLength, firstCharCode) {
+    // Here are the cases I used to think about this:
+    //
+    // 1. The token is completely before the insertion point
+    //            -----------   |
+    // 2. The token ends precisely at the insertion point
+    //            -----------|
+    // 3. The token contains the insertion point
+    //            -----|------
+    // 4. The token starts precisely at the insertion point
+    //            |-----------
+    // 5. The token is completely after the insertion point
+    //            |   -----------
+    //
+    const isInsertingPreciselyOneWordCharacter = eolCount === 0 && firstLineLength === 1 && (firstCharCode >= 48 /* CharCode.Digit0 */ && firstCharCode <= 57 /* CharCode.Digit9 */ || firstCharCode >= 65 /* CharCode.A */ && firstCharCode <= 90 /* CharCode.Z */ || firstCharCode >= 97 /* CharCode.a */ && firstCharCode <= 122 /* CharCode.z */);
+    const tokens = this._tokens;
+    const tokenCount = this._tokenCount;
+    for (let i = 0; i < tokenCount; i++) {
+      const offset = 4 * i;
+      let tokenDeltaLine = tokens[offset];
+      let tokenStartCharacter = tokens[offset + 1];
+      let tokenEndCharacter = tokens[offset + 2];
+      if (tokenDeltaLine < deltaLine || tokenDeltaLine === deltaLine && tokenEndCharacter < character) {
+        // 1. The token is completely before the insertion point
+        // => nothing to do
+        continue;
+      } else if (tokenDeltaLine === deltaLine && tokenEndCharacter === character) {
+        // 2. The token ends precisely at the insertion point
+        // => expand the end character only if inserting precisely one character that is a word character
+        if (isInsertingPreciselyOneWordCharacter) {
+          tokenEndCharacter += 1;
+        } else {
+          continue;
+        }
+      } else if (tokenDeltaLine === deltaLine && tokenStartCharacter < character && character < tokenEndCharacter) {
+        // 3. The token contains the insertion point
+        if (eolCount === 0) {
+          // => just expand the end character
+          tokenEndCharacter += firstLineLength;
+        } else {
+          // => cut off the token
+          tokenEndCharacter = character;
+        }
+      } else {
+        // 4. or 5.
+        if (tokenDeltaLine === deltaLine && tokenStartCharacter === character) {
+          // 4. The token starts precisely at the insertion point
+          // => grow the token (by keeping its start constant) only if inserting precisely one character that is a word character
+          // => otherwise behave as in case 5.
+          if (isInsertingPreciselyOneWordCharacter) {
+            continue;
+          }
+        }
+        // => the token must move and keep its size constant
+        if (tokenDeltaLine === deltaLine) {
+          tokenDeltaLine += eolCount;
+          // this token is on the line where the insertion is taking place
+          if (eolCount === 0) {
+            tokenStartCharacter += firstLineLength;
+            tokenEndCharacter += firstLineLength;
+          } else {
+            const tokenLength = tokenEndCharacter - tokenStartCharacter;
+            tokenStartCharacter = lastLineLength + (tokenStartCharacter - character);
+            tokenEndCharacter = tokenStartCharacter + tokenLength;
+          }
+        } else {
+          tokenDeltaLine += eolCount;
+        }
+      }
+      tokens[offset] = tokenDeltaLine;
+      tokens[offset + 1] = tokenStartCharacter;
+      tokens[offset + 2] = tokenEndCharacter;
+    }
+  }
+}
+class SparseLineTokens {
+  constructor(tokens) {
+    this._tokens = tokens;
+  }
+  getCount() {
+    return this._tokens.length / 4;
+  }
+  getStartCharacter(tokenIndex) {
+    return this._tokens[4 * tokenIndex + 1];
+  }
+  getEndCharacter(tokenIndex) {
+    return this._tokens[4 * tokenIndex + 2];
+  }
+  getMetadata(tokenIndex) {
+    return this._tokens[4 * tokenIndex + 3];
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/theme/common/themeService.js"
+/*!*******************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/theme/common/themeService.js ***!
+  \*******************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Extensions: () => (/* binding */ Extensions),
+/* harmony export */   IThemeService: () => (/* binding */ IThemeService),
+/* harmony export */   Themable: () => (/* binding */ Themable),
+/* harmony export */   getThemeTypeSelector: () => (/* binding */ getThemeTypeSelector),
+/* harmony export */   registerThemingParticipant: () => (/* binding */ registerThemingParticipant),
+/* harmony export */   themeColorFromId: () => (/* binding */ themeColorFromId)
+/* harmony export */ });
+/* harmony import */ var _base_common_event_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/event.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/event.js");
+/* harmony import */ var _base_common_lifecycle_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../base/common/lifecycle.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/lifecycle.js");
+/* harmony import */ var _instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/* harmony import */ var _registry_common_platform_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../registry/common/platform.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/registry/common/platform.js");
+/* harmony import */ var _theme_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./theme.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/theme/common/theme.js");
+
+
+
+
+
+const IThemeService = (0,_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_2__.createDecorator)('themeService');
+function themeColorFromId(id) {
+  return {
+    id
+  };
+}
+function getThemeTypeSelector(type) {
+  switch (type) {
+    case _theme_js__WEBPACK_IMPORTED_MODULE_4__.ColorScheme.DARK:
+      return 'vs-dark';
+    case _theme_js__WEBPACK_IMPORTED_MODULE_4__.ColorScheme.HIGH_CONTRAST_DARK:
+      return 'hc-black';
+    case _theme_js__WEBPACK_IMPORTED_MODULE_4__.ColorScheme.HIGH_CONTRAST_LIGHT:
+      return 'hc-light';
+    default:
+      return 'vs';
+  }
+}
+// static theming participant
+const Extensions = {
+  ThemingContribution: 'base.contributions.theming'
+};
+class ThemingRegistry {
+  constructor() {
+    this.themingParticipants = [];
+    this.themingParticipants = [];
+    this.onThemingParticipantAddedEmitter = new _base_common_event_js__WEBPACK_IMPORTED_MODULE_0__.Emitter();
+  }
+  onColorThemeChange(participant) {
+    this.themingParticipants.push(participant);
+    this.onThemingParticipantAddedEmitter.fire(participant);
+    return (0,_base_common_lifecycle_js__WEBPACK_IMPORTED_MODULE_1__.toDisposable)(() => {
+      const idx = this.themingParticipants.indexOf(participant);
+      this.themingParticipants.splice(idx, 1);
+    });
+  }
+  getThemingParticipants() {
+    return this.themingParticipants;
+  }
+}
+const themingRegistry = new ThemingRegistry();
+_registry_common_platform_js__WEBPACK_IMPORTED_MODULE_3__.Registry.add(Extensions.ThemingContribution, themingRegistry);
+function registerThemingParticipant(participant) {
+  return themingRegistry.onColorThemeChange(participant);
+}
+/**
+ * Utility base class for all themable components.
+ */
+class Themable extends _base_common_lifecycle_js__WEBPACK_IMPORTED_MODULE_1__.Disposable {
+  constructor(themeService) {
+    super();
+    this.themeService = themeService;
+    this.theme = themeService.getColorTheme();
+    // Hook up to theme changes
+    this._register(this.themeService.onDidColorThemeChange(theme => this.onThemeChange(theme)));
+  }
+  onThemeChange(theme) {
+    this.theme = theme;
+    this.updateStyles();
+  }
+  updateStyles() {
+    // Subclasses to override
+  }
+}
+
+/***/ }
+
+}]);
+//# sourceMappingURL=vendors-node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensProviderStyling_js.js.map

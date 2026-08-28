@@ -1,0 +1,70 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.unomi.shell.services;
+
+import org.apache.unomi.shell.services.internal.UnomiSetup;
+import org.osgi.framework.BundleException;
+
+/**
+ * This service provide method to manage unomi
+ * @author dgaillard
+ */
+public interface UnomiManagementService {
+
+    /**
+     * This method will set up Unomi distribution's feature name
+     * @param distribution the distribution feature name to set up
+     * @param overwrite to force setup even if already exists
+     * @throws BundleException if the setup already exists and overwrite is false
+     */
+    void setupUnomiDistribution(String distribution, boolean overwrite) throws Exception;
+
+    /**
+     * This method will start Apache Unomi
+     * @param mustStartFeatures true if features should be started, false if they should not
+     * @throws Exception if there was an error starting Unomi's features
+     */
+    void startUnomi(boolean mustStartFeatures) throws Exception;
+
+    /**
+     * This method will start Apache Unomi
+     * @param mustStartFeatures true if features should be started, false if they should not
+     * @param waitForCompletion true if the method should wait for completion, false if it should not
+     * @throws Exception if there was an error starting Unomi's bundles
+     */
+    void startUnomi(boolean mustStartFeatures, boolean waitForCompletion) throws Exception;
+
+    /**
+     * This method will stop Apache Unomi
+     * @throws Exception if there was an error stopping Unomi's bundles
+     */
+    void stopUnomi() throws Exception;
+
+    /**
+     * This method will stop Apache Unomi
+     * @param waitForCompletion true if the method should wait for completion, false if it should not
+     * @throws Exception if there was an error stopping Unomi's bundles
+     */
+    void stopUnomi(boolean waitForCompletion) throws Exception;
+
+    /**
+     * This method will get the currently configured distribution
+     * @return the distribution feature name, or null if no distribution is configured
+     * @throws Exception if there was an error retrieving the distribution
+     */
+    String getCurrentDistribution() throws Exception;
+}

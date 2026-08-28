@@ -1,0 +1,531 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["vendors-node_modules_monaco-editor_esm_vs_editor_common_services_markerDecorationsService_js"],{
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/base/common/collections.js"
+/*!********************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/base/common/collections.js ***!
+  \********************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   diffSets: () => (/* binding */ diffSets),
+/* harmony export */   intersection: () => (/* binding */ intersection)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+function diffSets(before, after) {
+  const removed = [];
+  const added = [];
+  for (const element of before) {
+    if (!after.has(element)) {
+      removed.push(element);
+    }
+  }
+  for (const element of after) {
+    if (!before.has(element)) {
+      added.push(element);
+    }
+  }
+  return {
+    removed,
+    added
+  };
+}
+/**
+ * Computes the intersection of two sets.
+ *
+ * @param setA - The first set.
+ * @param setB - The second iterable.
+ * @returns A new set containing the elements that are in both `setA` and `setB`.
+ */
+function intersection(setA, setB) {
+  const result = new Set();
+  for (const elem of setB) {
+    if (setA.has(elem)) {
+      result.add(elem);
+    }
+  }
+  return result;
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/base/common/severity.js"
+/*!*****************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/base/common/severity.js ***!
+  \*****************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+/* harmony export */ });
+/* harmony import */ var _strings_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./strings.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/strings.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+var Severity;
+(function (Severity) {
+  Severity[Severity["Ignore"] = 0] = "Ignore";
+  Severity[Severity["Info"] = 1] = "Info";
+  Severity[Severity["Warning"] = 2] = "Warning";
+  Severity[Severity["Error"] = 3] = "Error";
+})(Severity || (Severity = {}));
+(function (Severity) {
+  const _error = 'error';
+  const _warning = 'warning';
+  const _warn = 'warn';
+  const _info = 'info';
+  const _ignore = 'ignore';
+  /**
+   * Parses 'error', 'warning', 'warn', 'info' in call casings
+   * and falls back to ignore.
+   */
+  function fromValue(value) {
+    if (!value) {
+      return Severity.Ignore;
+    }
+    if (_strings_js__WEBPACK_IMPORTED_MODULE_0__.equalsIgnoreCase(_error, value)) {
+      return Severity.Error;
+    }
+    if (_strings_js__WEBPACK_IMPORTED_MODULE_0__.equalsIgnoreCase(_warning, value) || _strings_js__WEBPACK_IMPORTED_MODULE_0__.equalsIgnoreCase(_warn, value)) {
+      return Severity.Warning;
+    }
+    if (_strings_js__WEBPACK_IMPORTED_MODULE_0__.equalsIgnoreCase(_info, value)) {
+      return Severity.Info;
+    }
+    return Severity.Ignore;
+  }
+  Severity.fromValue = fromValue;
+  function toString(severity) {
+    switch (severity) {
+      case Severity.Error:
+        return _error;
+      case Severity.Warning:
+        return _warning;
+      case Severity.Info:
+        return _info;
+      default:
+        return _ignore;
+    }
+  }
+  Severity.toString = toString;
+})(Severity || (Severity = {}));
+/* harmony default export */ const __WEBPACK_DEFAULT_EXPORT__ = (Severity);
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/markerDecorationsService.js"
+/*!********************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/markerDecorationsService.js ***!
+  \********************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   MarkerDecorationsService: () => (/* binding */ MarkerDecorationsService)
+/* harmony export */ });
+/* harmony import */ var _platform_markers_common_markers_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../platform/markers/common/markers.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/markers/common/markers.js");
+/* harmony import */ var _base_common_lifecycle_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../base/common/lifecycle.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/lifecycle.js");
+/* harmony import */ var _model_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../model.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/model.js");
+/* harmony import */ var _platform_theme_common_themeService_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../platform/theme/common/themeService.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/theme/common/themeService.js");
+/* harmony import */ var _core_editorColorRegistry_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../core/editorColorRegistry.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/core/editorColorRegistry.js");
+/* harmony import */ var _model_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./model.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/model.js");
+/* harmony import */ var _core_range_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../core/range.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/core/range.js");
+/* harmony import */ var _base_common_network_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../base/common/network.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/network.js");
+/* harmony import */ var _base_common_event_js__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../../../base/common/event.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/event.js");
+/* harmony import */ var _platform_theme_common_colorRegistry_js__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../../../platform/theme/common/colorRegistry.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/theme/common/colorRegistry.js");
+/* harmony import */ var _base_common_map_js__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../../../base/common/map.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/map.js");
+/* harmony import */ var _base_common_collections_js__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../../../base/common/collections.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/collections.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+var __decorate = undefined && undefined.__decorate || function (decorators, target, key, desc) {
+  var c = arguments.length,
+    r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+    d;
+  if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+  return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __param = undefined && undefined.__param || function (paramIndex, decorator) {
+  return function (target, key) {
+    decorator(target, key, paramIndex);
+  };
+};
+
+
+
+
+
+
+
+
+
+
+
+
+let MarkerDecorationsService = class MarkerDecorationsService extends _base_common_lifecycle_js__WEBPACK_IMPORTED_MODULE_1__.Disposable {
+  constructor(modelService, _markerService) {
+    super();
+    this._markerService = _markerService;
+    this._onDidChangeMarker = this._register(new _base_common_event_js__WEBPACK_IMPORTED_MODULE_8__.Emitter());
+    this._markerDecorations = new _base_common_map_js__WEBPACK_IMPORTED_MODULE_10__.ResourceMap();
+    modelService.getModels().forEach(model => this._onModelAdded(model));
+    this._register(modelService.onModelAdded(this._onModelAdded, this));
+    this._register(modelService.onModelRemoved(this._onModelRemoved, this));
+    this._register(this._markerService.onMarkerChanged(this._handleMarkerChange, this));
+  }
+  dispose() {
+    super.dispose();
+    this._markerDecorations.forEach(value => value.dispose());
+    this._markerDecorations.clear();
+  }
+  getMarker(uri, decoration) {
+    const markerDecorations = this._markerDecorations.get(uri);
+    return markerDecorations ? markerDecorations.getMarker(decoration) || null : null;
+  }
+  _handleMarkerChange(changedResources) {
+    changedResources.forEach(resource => {
+      const markerDecorations = this._markerDecorations.get(resource);
+      if (markerDecorations) {
+        this._updateDecorations(markerDecorations);
+      }
+    });
+  }
+  _onModelAdded(model) {
+    const markerDecorations = new MarkerDecorations(model);
+    this._markerDecorations.set(model.uri, markerDecorations);
+    this._updateDecorations(markerDecorations);
+  }
+  _onModelRemoved(model) {
+    const markerDecorations = this._markerDecorations.get(model.uri);
+    if (markerDecorations) {
+      markerDecorations.dispose();
+      this._markerDecorations.delete(model.uri);
+    }
+    // clean up markers for internal, transient models
+    if (model.uri.scheme === _base_common_network_js__WEBPACK_IMPORTED_MODULE_7__.Schemas.inMemory || model.uri.scheme === _base_common_network_js__WEBPACK_IMPORTED_MODULE_7__.Schemas.internal || model.uri.scheme === _base_common_network_js__WEBPACK_IMPORTED_MODULE_7__.Schemas.vscode) {
+      this._markerService?.read({
+        resource: model.uri
+      }).map(marker => marker.owner).forEach(owner => this._markerService.remove(owner, [model.uri]));
+    }
+  }
+  _updateDecorations(markerDecorations) {
+    // Limit to the first 500 errors/warnings
+    const markers = this._markerService.read({
+      resource: markerDecorations.model.uri,
+      take: 500
+    });
+    if (markerDecorations.update(markers)) {
+      this._onDidChangeMarker.fire(markerDecorations.model);
+    }
+  }
+};
+MarkerDecorationsService = __decorate([__param(0, _model_js__WEBPACK_IMPORTED_MODULE_5__.IModelService), __param(1, _platform_markers_common_markers_js__WEBPACK_IMPORTED_MODULE_0__.IMarkerService)], MarkerDecorationsService);
+
+class MarkerDecorations extends _base_common_lifecycle_js__WEBPACK_IMPORTED_MODULE_1__.Disposable {
+  constructor(model) {
+    super();
+    this.model = model;
+    this._map = new _base_common_map_js__WEBPACK_IMPORTED_MODULE_10__.BidirectionalMap();
+    this._register((0,_base_common_lifecycle_js__WEBPACK_IMPORTED_MODULE_1__.toDisposable)(() => {
+      this.model.deltaDecorations([...this._map.values()], []);
+      this._map.clear();
+    }));
+  }
+  update(markers) {
+    // We use the fact that marker instances are not recreated when different owners
+    // update. So we can compare references to find out what changed since the last update.
+    const {
+      added,
+      removed
+    } = (0,_base_common_collections_js__WEBPACK_IMPORTED_MODULE_11__.diffSets)(new Set(this._map.keys()), new Set(markers));
+    if (added.length === 0 && removed.length === 0) {
+      return false;
+    }
+    const oldIds = removed.map(marker => this._map.get(marker));
+    const newDecorations = added.map(marker => {
+      return {
+        range: this._createDecorationRange(this.model, marker),
+        options: this._createDecorationOption(marker)
+      };
+    });
+    const ids = this.model.deltaDecorations(oldIds, newDecorations);
+    for (const removedMarker of removed) {
+      this._map.delete(removedMarker);
+    }
+    for (let index = 0; index < ids.length; index++) {
+      this._map.set(added[index], ids[index]);
+    }
+    return true;
+  }
+  getMarker(decoration) {
+    return this._map.getKey(decoration.id);
+  }
+  _createDecorationRange(model, rawMarker) {
+    let ret = _core_range_js__WEBPACK_IMPORTED_MODULE_6__.Range.lift(rawMarker);
+    if (rawMarker.severity === _platform_markers_common_markers_js__WEBPACK_IMPORTED_MODULE_0__.MarkerSeverity.Hint && !this._hasMarkerTag(rawMarker, 1 /* MarkerTag.Unnecessary */) && !this._hasMarkerTag(rawMarker, 2 /* MarkerTag.Deprecated */)) {
+      // * never render hints on multiple lines
+      // * make enough space for three dots
+      ret = ret.setEndPosition(ret.startLineNumber, ret.startColumn + 2);
+    }
+    ret = model.validateRange(ret);
+    if (ret.isEmpty()) {
+      const maxColumn = model.getLineLastNonWhitespaceColumn(ret.startLineNumber) || model.getLineMaxColumn(ret.startLineNumber);
+      if (maxColumn === 1 || ret.endColumn >= maxColumn) {
+        // empty line or behind eol
+        // keep the range as is, it will be rendered 1ch wide
+        return ret;
+      }
+      const word = model.getWordAtPosition(ret.getStartPosition());
+      if (word) {
+        ret = new _core_range_js__WEBPACK_IMPORTED_MODULE_6__.Range(ret.startLineNumber, word.startColumn, ret.endLineNumber, word.endColumn);
+      }
+    } else if (rawMarker.endColumn === Number.MAX_VALUE && rawMarker.startColumn === 1 && ret.startLineNumber === ret.endLineNumber) {
+      const minColumn = model.getLineFirstNonWhitespaceColumn(rawMarker.startLineNumber);
+      if (minColumn < ret.endColumn) {
+        ret = new _core_range_js__WEBPACK_IMPORTED_MODULE_6__.Range(ret.startLineNumber, minColumn, ret.endLineNumber, ret.endColumn);
+        rawMarker.startColumn = minColumn;
+      }
+    }
+    return ret;
+  }
+  _createDecorationOption(marker) {
+    let className;
+    let color = undefined;
+    let zIndex;
+    let inlineClassName = undefined;
+    let minimap;
+    switch (marker.severity) {
+      case _platform_markers_common_markers_js__WEBPACK_IMPORTED_MODULE_0__.MarkerSeverity.Hint:
+        if (this._hasMarkerTag(marker, 2 /* MarkerTag.Deprecated */)) {
+          className = undefined;
+        } else if (this._hasMarkerTag(marker, 1 /* MarkerTag.Unnecessary */)) {
+          className = "squiggly-unnecessary" /* ClassName.EditorUnnecessaryDecoration */;
+        } else {
+          className = "squiggly-hint" /* ClassName.EditorHintDecoration */;
+        }
+        zIndex = 0;
+        break;
+      case _platform_markers_common_markers_js__WEBPACK_IMPORTED_MODULE_0__.MarkerSeverity.Info:
+        className = "squiggly-info" /* ClassName.EditorInfoDecoration */;
+        color = (0,_platform_theme_common_themeService_js__WEBPACK_IMPORTED_MODULE_3__.themeColorFromId)(_core_editorColorRegistry_js__WEBPACK_IMPORTED_MODULE_4__.overviewRulerInfo);
+        zIndex = 10;
+        minimap = {
+          color: (0,_platform_theme_common_themeService_js__WEBPACK_IMPORTED_MODULE_3__.themeColorFromId)(_platform_theme_common_colorRegistry_js__WEBPACK_IMPORTED_MODULE_9__.minimapInfo),
+          position: 1 /* MinimapPosition.Inline */
+        };
+        break;
+      case _platform_markers_common_markers_js__WEBPACK_IMPORTED_MODULE_0__.MarkerSeverity.Warning:
+        className = "squiggly-warning" /* ClassName.EditorWarningDecoration */;
+        color = (0,_platform_theme_common_themeService_js__WEBPACK_IMPORTED_MODULE_3__.themeColorFromId)(_core_editorColorRegistry_js__WEBPACK_IMPORTED_MODULE_4__.overviewRulerWarning);
+        zIndex = 20;
+        minimap = {
+          color: (0,_platform_theme_common_themeService_js__WEBPACK_IMPORTED_MODULE_3__.themeColorFromId)(_platform_theme_common_colorRegistry_js__WEBPACK_IMPORTED_MODULE_9__.minimapWarning),
+          position: 1 /* MinimapPosition.Inline */
+        };
+        break;
+      case _platform_markers_common_markers_js__WEBPACK_IMPORTED_MODULE_0__.MarkerSeverity.Error:
+      default:
+        className = "squiggly-error" /* ClassName.EditorErrorDecoration */;
+        color = (0,_platform_theme_common_themeService_js__WEBPACK_IMPORTED_MODULE_3__.themeColorFromId)(_core_editorColorRegistry_js__WEBPACK_IMPORTED_MODULE_4__.overviewRulerError);
+        zIndex = 30;
+        minimap = {
+          color: (0,_platform_theme_common_themeService_js__WEBPACK_IMPORTED_MODULE_3__.themeColorFromId)(_platform_theme_common_colorRegistry_js__WEBPACK_IMPORTED_MODULE_9__.minimapError),
+          position: 1 /* MinimapPosition.Inline */
+        };
+        break;
+    }
+    if (marker.tags) {
+      if (marker.tags.indexOf(1 /* MarkerTag.Unnecessary */) !== -1) {
+        inlineClassName = "squiggly-inline-unnecessary" /* ClassName.EditorUnnecessaryInlineDecoration */;
+      }
+      if (marker.tags.indexOf(2 /* MarkerTag.Deprecated */) !== -1) {
+        inlineClassName = "squiggly-inline-deprecated" /* ClassName.EditorDeprecatedInlineDecoration */;
+      }
+    }
+    return {
+      description: 'marker-decoration',
+      stickiness: 1 /* TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges */,
+      className,
+      showIfCollapsed: true,
+      overviewRuler: {
+        color,
+        position: _model_js__WEBPACK_IMPORTED_MODULE_2__.OverviewRulerLane.Right
+      },
+      minimap,
+      zIndex,
+      inlineClassName
+    };
+  }
+  _hasMarkerTag(marker, tag) {
+    if (marker.tags) {
+      return marker.tags.indexOf(tag) >= 0;
+    }
+    return false;
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/model.js"
+/*!*************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/model.js ***!
+  \*************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   IModelService: () => (/* binding */ IModelService)
+/* harmony export */ });
+/* harmony import */ var _platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../platform/instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+const IModelService = (0,_platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__.createDecorator)('modelService');
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/markers/common/markers.js"
+/*!****************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/markers/common/markers.js ***!
+  \****************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   IMarkerData: () => (/* binding */ IMarkerData),
+/* harmony export */   IMarkerService: () => (/* binding */ IMarkerService),
+/* harmony export */   MarkerSeverity: () => (/* binding */ MarkerSeverity)
+/* harmony export */ });
+/* harmony import */ var _base_common_severity_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/severity.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/severity.js");
+/* harmony import */ var _nls_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../nls.js */ "../../../../node_modules/monaco-editor/esm/vs/nls.js");
+/* harmony import */ var _instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+
+var MarkerSeverity;
+(function (MarkerSeverity) {
+  MarkerSeverity[MarkerSeverity["Hint"] = 1] = "Hint";
+  MarkerSeverity[MarkerSeverity["Info"] = 2] = "Info";
+  MarkerSeverity[MarkerSeverity["Warning"] = 4] = "Warning";
+  MarkerSeverity[MarkerSeverity["Error"] = 8] = "Error";
+})(MarkerSeverity || (MarkerSeverity = {}));
+(function (MarkerSeverity) {
+  function compare(a, b) {
+    return b - a;
+  }
+  MarkerSeverity.compare = compare;
+  const _displayStrings = Object.create(null);
+  _displayStrings[MarkerSeverity.Error] = (0,_nls_js__WEBPACK_IMPORTED_MODULE_1__.localize)('sev.error', "Error");
+  _displayStrings[MarkerSeverity.Warning] = (0,_nls_js__WEBPACK_IMPORTED_MODULE_1__.localize)('sev.warning', "Warning");
+  _displayStrings[MarkerSeverity.Info] = (0,_nls_js__WEBPACK_IMPORTED_MODULE_1__.localize)('sev.info', "Info");
+  function toString(a) {
+    return _displayStrings[a] || '';
+  }
+  MarkerSeverity.toString = toString;
+  function fromSeverity(severity) {
+    switch (severity) {
+      case _base_common_severity_js__WEBPACK_IMPORTED_MODULE_0__["default"].Error:
+        return MarkerSeverity.Error;
+      case _base_common_severity_js__WEBPACK_IMPORTED_MODULE_0__["default"].Warning:
+        return MarkerSeverity.Warning;
+      case _base_common_severity_js__WEBPACK_IMPORTED_MODULE_0__["default"].Info:
+        return MarkerSeverity.Info;
+      case _base_common_severity_js__WEBPACK_IMPORTED_MODULE_0__["default"].Ignore:
+        return MarkerSeverity.Hint;
+    }
+  }
+  MarkerSeverity.fromSeverity = fromSeverity;
+  function toSeverity(severity) {
+    switch (severity) {
+      case MarkerSeverity.Error:
+        return _base_common_severity_js__WEBPACK_IMPORTED_MODULE_0__["default"].Error;
+      case MarkerSeverity.Warning:
+        return _base_common_severity_js__WEBPACK_IMPORTED_MODULE_0__["default"].Warning;
+      case MarkerSeverity.Info:
+        return _base_common_severity_js__WEBPACK_IMPORTED_MODULE_0__["default"].Info;
+      case MarkerSeverity.Hint:
+        return _base_common_severity_js__WEBPACK_IMPORTED_MODULE_0__["default"].Ignore;
+    }
+  }
+  MarkerSeverity.toSeverity = toSeverity;
+})(MarkerSeverity || (MarkerSeverity = {}));
+var IMarkerData;
+(function (IMarkerData) {
+  const emptyString = '';
+  function makeKey(markerData) {
+    return makeKeyOptionalMessage(markerData, true);
+  }
+  IMarkerData.makeKey = makeKey;
+  function makeKeyOptionalMessage(markerData, useMessage) {
+    const result = [emptyString];
+    if (markerData.source) {
+      result.push(markerData.source.replace('¦', '\\¦'));
+    } else {
+      result.push(emptyString);
+    }
+    if (markerData.code) {
+      if (typeof markerData.code === 'string') {
+        result.push(markerData.code.replace('¦', '\\¦'));
+      } else {
+        result.push(markerData.code.value.replace('¦', '\\¦'));
+      }
+    } else {
+      result.push(emptyString);
+    }
+    if (markerData.severity !== undefined && markerData.severity !== null) {
+      result.push(MarkerSeverity.toString(markerData.severity));
+    } else {
+      result.push(emptyString);
+    }
+    // Modifed to not include the message as part of the marker key to work around
+    // https://github.com/microsoft/vscode/issues/77475
+    if (markerData.message && useMessage) {
+      result.push(markerData.message.replace('¦', '\\¦'));
+    } else {
+      result.push(emptyString);
+    }
+    if (markerData.startLineNumber !== undefined && markerData.startLineNumber !== null) {
+      result.push(markerData.startLineNumber.toString());
+    } else {
+      result.push(emptyString);
+    }
+    if (markerData.startColumn !== undefined && markerData.startColumn !== null) {
+      result.push(markerData.startColumn.toString());
+    } else {
+      result.push(emptyString);
+    }
+    if (markerData.endLineNumber !== undefined && markerData.endLineNumber !== null) {
+      result.push(markerData.endLineNumber.toString());
+    } else {
+      result.push(emptyString);
+    }
+    if (markerData.endColumn !== undefined && markerData.endColumn !== null) {
+      result.push(markerData.endColumn.toString());
+    } else {
+      result.push(emptyString);
+    }
+    result.push(emptyString);
+    return result.join('¦');
+  }
+  IMarkerData.makeKeyOptionalMessage = makeKeyOptionalMessage;
+})(IMarkerData || (IMarkerData = {}));
+const IMarkerService = (0,_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_2__.createDecorator)('markerService');
+
+/***/ }
+
+}]);
+//# sourceMappingURL=vendors-node_modules_monaco-editor_esm_vs_editor_common_services_markerDecorationsService_js.js.map

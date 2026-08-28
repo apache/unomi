@@ -1,0 +1,627 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one or more
+  ~ contributor license agreements.  See the NOTICE file distributed with
+  ~ this work for additional information regarding copyright ownership.
+  ~ The ASF licenses this file to You under the Apache License, Version 2.0
+  ~ (the "License"); you may not use this file except in compliance with
+  ~ the License.  You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.apache.unomi</groupId>
+        <artifactId>unomi-root</artifactId>
+        <version>3.1.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>unomi-itests</artifactId>
+    <name>Apache Unomi :: Integration Tests</name>
+    <description>Apache Unomi Context Server integration tests</description>
+
+    <properties>
+        <unomi.persistence.provider>elasticsearch</unomi.persistence.provider>
+        <unomi.search.engine>elasticsearch</unomi.search.engine>
+        <use.opensearch>false</use.opensearch>
+        <docker.container.name>itests-opensearch</docker.container.name>
+        <!-- Set to true to keep the search engine container running after tests (useful for post-failure inspection) -->
+        <it.keepContainer>false</it.keepContainer>
+        <!-- Stream search engine Docker logs to the Maven console (default: file only under target/*0/logs/) -->
+        <docker.showLogs>false</docker.showLogs>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Override awaitility version for integration tests to use older version compatible with hamcrest 1.3 -->
+            <!-- Awaitility 4.0.0+ requires hamcrest 2.1+, but we need hamcrest 1.3 for OSGi bundle compatibility -->
+            <!-- Using awaitility 3.1.6 which works with hamcrest 1.3 -->
+            <dependency>
+                <groupId>org.awaitility</groupId>
+                <artifactId>awaitility</artifactId>
+                <version>3.1.6</version>
+            </dependency>
+            <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-tracing-api</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Provide the KarafTestSupport -->
+        <dependency>
+            <groupId>org.apache.karaf.itests</groupId>
+            <artifactId>common</artifactId>
+            <version>${karaf.version}</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>ch.qos.logback</groupId>
+                    <artifactId>logback-classic</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>ch.qos.logback</groupId>
+                    <artifactId>logback-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Define the Apache Karaf version to download and use for the test -->
+        <!-- We use a released version here to avoid SNAPSHOT resolution -->
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi</artifactId>
+            <version>${project.version}</version>
+            <type>tar.gz</type>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.karaf</groupId>
+                    <artifactId>org.apache.karaf.client</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.httpcomponents</groupId>
+                    <artifactId>httpclient-osgi</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Required to use shell commands in the tests -->
+        <dependency>
+            <groupId>org.apache.karaf.shell</groupId>
+            <artifactId>org.apache.karaf.shell.core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Provide the PaxExam Karaf support -->
+        <dependency>
+            <groupId>org.ops4j.pax.exam</groupId>
+            <artifactId>pax-exam-container-karaf</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Provide the PaxExam JUnit extension -->
+        <dependency>
+            <groupId>org.ops4j.pax.exam</groupId>
+            <artifactId>pax-exam-junit4</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.geronimo.specs</groupId>
+            <artifactId>geronimo-atinject_1.0_spec</artifactId>
+            <version>1.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.servicemix.bundles</groupId>
+            <artifactId>org.apache.servicemix.bundles.hamcrest</artifactId>
+            <version>1.3_1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient-osgi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore-osgi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-client</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-lifecycle-watcher</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>shell-commands</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-groovy-actions-services</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>${groovy.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-rest</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-tracing-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-did-vc-api</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>log4j-extension</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Camel APIs for test visibility (provided scope - available at runtime via OSGi bundles) -->
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-core</artifactId>
+            <version>2.23.1</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.googlecode.maven-download-plugin</groupId>
+                <artifactId>download-maven-plugin</artifactId>
+                <version>1.3.0</version>
+                <executions>
+                    <execution>
+                        <!-- the wget goal actually binds itself to this phase by default -->
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>wget</goal>
+                        </goals>
+                        <configuration>
+                            <url>
+                                https://search.maven.org/remotecontent?filepath=org/jacoco/jacoco/0.8.13/jacoco-0.8.13.zip
+                            </url>
+                            <outputFileName>jacoco.zip</outputFileName>
+                            <unpack>true</unpack>
+                            <outputDirectory>${project.build.directory}/jacoco/</outputDirectory>
+                            <failOnError>false</failOnError>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.servicemix.tooling</groupId>
+                <artifactId>depends-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-depends-file</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>generate-depends-file</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <tasks>
+                                <unzip src="${project.basedir}/src/test/resources/migration/snapshots_repository.zip" dest="${project.build.directory}" />
+                                <!-- Elasticsearch Docker image runs as UID 1000; Maven on Linux CI (e.g. GitHub Actions) often
+                                     owns target/ as another UID, so bind-mounted FS snapshot repos get access_denied
+                                     during repository verification unless the tree is world-writable. Skipped on Windows. -->
+                                <exec executable="chmod" osfamily="unix" failonerror="true">
+                                    <arg value="-R"/>
+                                    <arg value="ugo+rwx"/>
+                                    <arg path="${project.build.directory}/snapshots_repository"/>
+                                </exec>
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- Pax Exam / pax-url log at DEBUG via pax-logging DefaultServiceLog in the test JVM.
+                 BaseIT already sets org.ops4j.pax.exam / org.ops4j.store to WARN inside Karaf only. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <org.ops4j.pax.logging.DefaultServiceLog.level>INFO</org.ops4j.pax.logging.DefaultServiceLog.level>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <!-- Publish test classes so out-of-tree PersistenceService providers can implement
+                 PersistenceITBackend and reuse CorePersistenceITs / BaseIT (UNOMI-968). -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>test-jar</id>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Include IT classes and test resources (fixtures used by BaseIT.config). -->
+                            <includes>
+                                <include>org/apache/unomi/itests/**</include>
+                                <include>**/*.cfg</include>
+                                <include>**/*.csv</include>
+                                <include>**/*.json</include>
+                                <include>**/*.groovy</include>
+                                <include>migration/**</include>
+                                <include>schemas/**</include>
+                                <include>META-INF/**</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <profile>
+            <id>elasticsearch</id>
+            <properties>
+                <elasticsearch.port>9400</elasticsearch.port>
+                <elasticsearch.heap>4g</elasticsearch.heap>
+                <karaf.heap>2g</karaf.heap>
+            </properties>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+                <property>
+                    <name>!use.opensearch</name> <!-- Deactivate if use.opensearch is set -->
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>3.0.0-M4</version>
+                        <configuration>
+                            <includes>
+                                <include>**/*AllITs.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <my.system.property>foo</my.system.property>
+                                <unomi.persistence.provider>elasticsearch</unomi.persistence.provider>
+                                <!-- Deprecated alias; keep for older scripts -->
+                                <unomi.search.engine>elasticsearch</unomi.search.engine>
+                                <elasticsearch.port>${elasticsearch.port}</elasticsearch.port>
+                                <it.karaf.heap>${karaf.heap}</it.karaf.heap>
+                                <org.ops4j.pax.logging.DefaultServiceLog.level>INFO</org.ops4j.pax.logging.DefaultServiceLog.level>
+                            </systemPropertyVariables>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>integration-test</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>verify</id>
+                                <goals>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <configuration>
+                            <containerNamePattern>itests-elasticsearch</containerNamePattern>
+                            <images>
+                                <image>
+                                    <name>docker.elastic.co/elasticsearch/elasticsearch:${elasticsearch.test.version}</name>
+                                    <alias>elasticsearch</alias>
+                                    <run>
+                                        <ports>
+                                            <port>${elasticsearch.port}:9200</port>
+                                        </ports>
+                                        <env>
+                                            <discovery.type>single-node</discovery.type>
+                                            <ES_JAVA_OPTS>-Xms${elasticsearch.heap} -Xmx${elasticsearch.heap}</ES_JAVA_OPTS>
+                                            <xpack.security.enabled>false</xpack.security.enabled>
+                                            <xpack.ml.enabled>false</xpack.ml.enabled>
+                                            <path.repo>/tmp/snapshots_repository</path.repo>
+                                            <cluster.routing.allocation.disk.threshold_enabled>false</cluster.routing.allocation.disk.threshold_enabled>
+                                        </env>
+                                        <volumes>
+                                            <bind>
+                                                <volume>${project.build.directory}/snapshots_repository:/tmp/snapshots_repository</volume>
+                                            </bind>
+                                        </volumes>
+                                        <wait>
+                                            <http>
+                                                <url>http://localhost:${elasticsearch.port}</url>
+                                                <method>GET</method>
+                                                <status>200</status>
+                                            </http>
+                                            <time>120000</time>
+                                        </wait>
+                                        <log>
+                                            <file>${project.build.directory}/elasticsearch0/logs/docker-console.log</file>
+                                        </log>
+                                        <portPropertyFile>${project.build.directory}/elasticsearch-port.properties</portPropertyFile>
+                                    </run>
+                                </image>
+                            </images>
+                        </configuration>
+                        <executions>
+                            <!-- Force remove existing container before starting; ignore failure if no container exists yet -->
+                            <execution>
+                                <id>remove-existing-container</id>
+                                <phase>pre-integration-test</phase>
+                                <configuration>
+                                    <ignoreRunningContainers>true</ignoreRunningContainers>
+                                </configuration>
+                                <goals>
+                                    <goal>stop</goal>
+                                    <goal>remove</goal>
+                                </goals>
+                            </execution>
+
+                            <execution>
+                                <id>start-elasticsearch</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                                <configuration>
+                                    <showLogs>${docker.showLogs}</showLogs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>stop-elasticsearch</id>
+                                <phase>post-integration-test</phase>
+                                <configuration>
+                                    <skip>${it.keepContainer}</skip>
+                                </configuration>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>opensearch</id>
+            <properties>
+                <opensearch.heap>4g</opensearch.heap>
+                <karaf.heap>2g</karaf.heap>
+                <opensearch.port>9401</opensearch.port>
+            </properties>
+            <activation>
+                <property>
+                    <name>use.opensearch</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <version>${maven-failsafe.plugin.version}</version>
+                        <configuration>
+                            <includes>
+                                <include>**/*AllITs.java</include>
+                            </includes>
+                            <systemPropertyVariables>
+                                <my.system.property>foo</my.system.property>
+                                <unomi.persistence.provider>opensearch</unomi.persistence.provider>
+                                <!-- Deprecated alias; keep for older scripts -->
+                                <unomi.search.engine>opensearch</unomi.search.engine>
+                                <org.apache.unomi.opensearch.addresses>localhost:${opensearch.port}</org.apache.unomi.opensearch.addresses>
+                                <org.ops4j.pax.logging.DefaultServiceLog.level>INFO</org.ops4j.pax.logging.DefaultServiceLog.level>
+                            </systemPropertyVariables>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>integration-test</id>
+                                <goals>
+                                    <goal>integration-test</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>verify</id>
+                                <goals>
+                                    <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <version>0.48.0</version>
+                        <configuration>
+                            <containerNamePattern>${docker.container.name}</containerNamePattern>
+                            <images>
+                                <image>
+                                    <name>opensearchproject/opensearch:${opensearch.version}</name>
+                                    <alias>opensearch</alias>
+                                    <run>
+                                        <ports>
+                                            <port>${opensearch.port}:9200</port>
+                                        </ports>
+                                        <env>
+                                            <discovery.type>single-node</discovery.type>
+                                            <OPENSEARCH_JAVA_OPTS>-Xms${opensearch.heap} -Xmx${opensearch.heap}</OPENSEARCH_JAVA_OPTS>
+                                            <path.repo>/tmp/snapshots_repository</path.repo>
+                                            <plugins.security.disabled>true</plugins.security.disabled>
+                                            <OPENSEARCH_INITIAL_ADMIN_PASSWORD>Unomi.1ntegrat10n.Tests</OPENSEARCH_INITIAL_ADMIN_PASSWORD>
+                                        </env>
+                                        <volumes>
+                                            <bind>
+                                                <volume>${project.build.directory}/snapshots_repository:/tmp/snapshots_repository</volume>
+                                            </bind>
+                                        </volumes>
+                                        <wait>
+                                            <http>
+                                                <url>http://localhost:${opensearch.port}</url>
+                                                <method>GET</method>
+                                                <status>200</status>
+                                            </http>
+                                            <time>120000</time>
+                                        </wait>
+                                        <log>
+                                            <file>${project.build.directory}/opensearch0/logs/docker-console.log</file>
+                                        </log>
+                                        <portPropertyFile>${project.build.directory}/opensearch-port.properties</portPropertyFile>
+                                    </run>
+                                </image>
+                            </images>
+                        </configuration>
+                        <executions>
+                            <!-- Force remove existing container before starting; ignore failure if no container exists yet -->
+                            <execution>
+                                <id>remove-existing-container</id>
+                                <phase>pre-integration-test</phase>
+                                <configuration>
+                                    <ignoreRunningContainers>true</ignoreRunningContainers>
+                                </configuration>
+                                <goals>
+                                    <goal>stop</goal>
+                                    <goal>remove</goal>
+                                </goals>
+                            </execution>
+
+                            <execution>
+                                <id>start-opensearch</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>start</goal>
+                                </goals>
+                                <configuration>
+                                    <showLogs>${docker.showLogs}</showLogs>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>stop-opensearch</id>
+                                <phase>post-integration-test</phase>
+                                <configuration>
+                                    <skip>${it.keepContainer}</skip>
+                                </configuration>
+                                <goals>
+                                    <goal>stop</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>jacoco-report-exec</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <executions>
+                            <execution>
+                                <id>Generate code coverage report</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>${basedir}/jacoco-report.sh</executable>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>itest-code-coverage</id>
+            <activation>
+                <property>
+                    <name>it.code.coverage</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>0.8.13</version>
+                        <executions>
+                            <execution>
+                                <phase>post-site</phase>
+                                <id>report</id>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

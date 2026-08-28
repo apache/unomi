@@ -1,0 +1,90 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.unomi.api;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Generic {@link Item} extension for plugin-defined entity types.
+ * Properties live in a flexible map instead of typed fields, which lets
+ * extensions store custom payloads without adding new Java classes.
+ */
+public class CustomItem extends Item {
+    /**
+     * The CustomItem ITEM_TYPE.
+     * @see Item for a discussion of ITEM_TYPE
+     */
+    public static final String ITEM_TYPE = "custom";
+    private static final long serialVersionUID = -7178914125308851922L;
+    private String customItemType;
+    private Map<String,Object> properties = new HashMap<String,Object>();
+
+    /**
+     * Default constructor.
+     */
+    public CustomItem() {
+    }
+
+    /**
+     * Creates a custom item with the given identifier and item type.
+     *
+     * @param itemId   the item id
+     * @param itemType the item type
+     */
+    public CustomItem(String itemId, String itemType) {
+        super(itemId);
+        this.itemType = itemType;
+    }
+
+    /**
+     * Property map for this custom item.
+     *
+     * @return a map of property names to values
+     */
+    public Map<String, Object> getProperties() {
+        return properties;
+    }
+
+    /**
+     * Sets the properties.
+     *
+     * @param properties the properties
+     */
+    public void setProperties(Map<String, Object> properties) {
+        this.properties = properties;
+    }
+
+    /**
+     * Returns the custom item type identifier.
+     *
+     * @return the custom item type identifier
+     */
+    public String getCustomItemType() {
+        return customItemType;
+    }
+
+    /**
+     * Sets the custom item type identifier.
+     *
+     * @param customItemType the custom item type identifier
+     */
+    public void setCustomItemType(String customItemType) {
+        this.customItemType = customItemType;
+    }
+}

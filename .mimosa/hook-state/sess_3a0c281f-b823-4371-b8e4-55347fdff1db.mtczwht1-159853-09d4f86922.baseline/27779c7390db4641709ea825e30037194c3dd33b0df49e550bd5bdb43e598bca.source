@@ -1,0 +1,179 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensDto_js"],{
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/base/common/buffer.js"
+/*!***************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/base/common/buffer.js ***!
+  \***************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   VSBuffer: () => (/* binding */ VSBuffer),
+/* harmony export */   readUInt16LE: () => (/* binding */ readUInt16LE),
+/* harmony export */   readUInt32BE: () => (/* binding */ readUInt32BE),
+/* harmony export */   readUInt8: () => (/* binding */ readUInt8),
+/* harmony export */   writeUInt16LE: () => (/* binding */ writeUInt16LE),
+/* harmony export */   writeUInt32BE: () => (/* binding */ writeUInt32BE),
+/* harmony export */   writeUInt8: () => (/* binding */ writeUInt8)
+/* harmony export */ });
+/* harmony import */ var _lazy_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./lazy.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/lazy.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+const hasBuffer = typeof Buffer !== 'undefined';
+const indexOfTable = new _lazy_js__WEBPACK_IMPORTED_MODULE_0__.Lazy(() => new Uint8Array(256));
+let textDecoder;
+class VSBuffer {
+  /**
+   * When running in a nodejs context, if `actual` is not a nodejs Buffer, the backing store for
+   * the returned `VSBuffer` instance might use a nodejs Buffer allocated from node's Buffer pool,
+   * which is not transferrable.
+   */
+  static wrap(actual) {
+    if (hasBuffer && !Buffer.isBuffer(actual)) {
+      // https://nodejs.org/dist/latest-v10.x/docs/api/buffer.html#buffer_class_method_buffer_from_arraybuffer_byteoffset_length
+      // Create a zero-copy Buffer wrapper around the ArrayBuffer pointed to by the Uint8Array
+      actual = Buffer.from(actual.buffer, actual.byteOffset, actual.byteLength);
+    }
+    return new VSBuffer(actual);
+  }
+  constructor(buffer) {
+    this.buffer = buffer;
+    this.byteLength = this.buffer.byteLength;
+  }
+  toString() {
+    if (hasBuffer) {
+      return this.buffer.toString();
+    } else {
+      if (!textDecoder) {
+        textDecoder = new TextDecoder();
+      }
+      return textDecoder.decode(this.buffer);
+    }
+  }
+}
+function readUInt16LE(source, offset) {
+  return source[offset + 0] << 0 >>> 0 | source[offset + 1] << 8 >>> 0;
+}
+function writeUInt16LE(destination, value, offset) {
+  destination[offset + 0] = value & 0b11111111;
+  value = value >>> 8;
+  destination[offset + 1] = value & 0b11111111;
+}
+function readUInt32BE(source, offset) {
+  return source[offset] * 2 ** 24 + source[offset + 1] * 2 ** 16 + source[offset + 2] * 2 ** 8 + source[offset + 3];
+}
+function writeUInt32BE(destination, value, offset) {
+  destination[offset + 3] = value;
+  value = value >>> 8;
+  destination[offset + 2] = value;
+  value = value >>> 8;
+  destination[offset + 1] = value;
+  value = value >>> 8;
+  destination[offset] = value;
+}
+function readUInt8(source, offset) {
+  return source[offset];
+}
+function writeUInt8(destination, value, offset) {
+  destination[offset] = value;
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensDto.js"
+/*!*************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensDto.js ***!
+  \*************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   encodeSemanticTokensDto: () => (/* binding */ encodeSemanticTokensDto)
+/* harmony export */ });
+/* harmony import */ var _base_common_buffer_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/buffer.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/buffer.js");
+/* harmony import */ var _base_common_platform_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../base/common/platform.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/platform.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+function reverseEndianness(arr) {
+  for (let i = 0, len = arr.length; i < len; i += 4) {
+    // flip bytes 0<->3 and 1<->2
+    const b0 = arr[i + 0];
+    const b1 = arr[i + 1];
+    const b2 = arr[i + 2];
+    const b3 = arr[i + 3];
+    arr[i + 0] = b3;
+    arr[i + 1] = b2;
+    arr[i + 2] = b1;
+    arr[i + 3] = b0;
+  }
+}
+function toLittleEndianBuffer(arr) {
+  const uint8Arr = new Uint8Array(arr.buffer, arr.byteOffset, arr.length * 4);
+  if (!_base_common_platform_js__WEBPACK_IMPORTED_MODULE_1__.isLittleEndian()) {
+    // the byte order must be changed
+    reverseEndianness(uint8Arr);
+  }
+  return _base_common_buffer_js__WEBPACK_IMPORTED_MODULE_0__.VSBuffer.wrap(uint8Arr);
+}
+function encodeSemanticTokensDto(semanticTokens) {
+  const dest = new Uint32Array(encodeSemanticTokensDtoSize(semanticTokens));
+  let offset = 0;
+  dest[offset++] = semanticTokens.id;
+  if (semanticTokens.type === 'full') {
+    dest[offset++] = 1 /* EncodedSemanticTokensType.Full */;
+    dest[offset++] = semanticTokens.data.length;
+    dest.set(semanticTokens.data, offset);
+    offset += semanticTokens.data.length;
+  } else {
+    dest[offset++] = 2 /* EncodedSemanticTokensType.Delta */;
+    dest[offset++] = semanticTokens.deltas.length;
+    for (const delta of semanticTokens.deltas) {
+      dest[offset++] = delta.start;
+      dest[offset++] = delta.deleteCount;
+      if (delta.data) {
+        dest[offset++] = delta.data.length;
+        dest.set(delta.data, offset);
+        offset += delta.data.length;
+      } else {
+        dest[offset++] = 0;
+      }
+    }
+  }
+  return toLittleEndianBuffer(dest);
+}
+function encodeSemanticTokensDtoSize(semanticTokens) {
+  let result = 0;
+  result += +1 // id
+  + 1 // type
+;
+  if (semanticTokens.type === 'full') {
+    result += +1 // data length
+    + semanticTokens.data.length;
+  } else {
+    result += +1 // delta count
+;
+    result += (+1 // start
+    + 1 // deleteCount
+    + 1 // data length
+    ) * semanticTokens.deltas.length;
+    for (const delta of semanticTokens.deltas) {
+      if (delta.data) {
+        result += delta.data.length;
+      }
+    }
+  }
+  return result;
+}
+
+/***/ }
+
+}]);
+//# sourceMappingURL=node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensDto_js.js.map

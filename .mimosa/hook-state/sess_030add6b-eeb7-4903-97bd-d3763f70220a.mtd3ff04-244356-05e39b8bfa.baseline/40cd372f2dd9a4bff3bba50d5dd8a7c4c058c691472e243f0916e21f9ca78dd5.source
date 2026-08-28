@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+################################################################################
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+################################################################################
+#
+# OpenID OID4VCI conformance runner (CI). Drives the issuer test plan via
+# didvc/scripts/drive-openid-plan.py, which performs the out-of-band steps
+# (credential-offer delivery, front-channel browser visits, implicit
+# submit) that a human browser/wallet would otherwise do — see
+# didvc/scripts/LOCAL-CONFORMANCE.md.
+#
+# Two modes:
+#  * Hosted suite (default in CI): the OpenID Foundation suite at
+#    https://api.certification.openid.net must reach the edge over HTTPS,
+#    provided by a cloudflared quick tunnel. Requires OPENID_SUITE_TOKEN
+#    (GitHub secret) for API access.
+#  * Local suite: with OPENID_SUITE_API pointing at a locally built suite
+#    (see LOCAL-CONFORMANCE.md) and no token set.
+#
+# Environment:
+#   OPENID_SUITE_API    suite API base (default https://api.certification.openid.net)
+#   OPENID_SUITE_TOKEN  Bearer token for the hosted suite API (optional locally)
+#   EDGE_URL            edge base URL (default http://localhost:8081)
+#   ISSUER_TENANT       issuer tenant path segment (default hkt)
+#
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SUITE_API="${OPENID_SUITE_API:-https://api.certification.openid.net}"
+EDGE_URL="${EDGE_URL:-http://localhost:8081}"
+ISSUER_TENANT="${ISSUER_TENANT:-hkt}"
+VCI_PLAN_NAME="${OPENID_VCI_PLAN_NAME:-oid4vci-1_0-issuer-test-plan}"
+
+log() { echo "[conformance] $*"; }
+
+TUNNEL_URL=""
+if command -v cloudflared >/dev/null 2>&1 && ! printf '%s' "${SUITE_API}" | grep -q '://localhost'; then
+  log "Starting cloudflared quick tunnel to ${EDGE_URL}"
+  nohup cloudflared tunnel --url "${EDGE_URL}" --no-autoupdate >/tmp/cloudflared.log 2>&1 &
+  for _ in $(seq 1 60); do
+    TUNNEL_URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/cloudflared.log | head -1 || true)
+    [ -n "${TUNNEL_URL}" ] && break
+    sleep 2
+  done
+  if [ -z "${TUNNEL_URL}" ]; then
+    log "ERROR: cloudflared tunnel did not come up; log follows"
+    cat /tmp/cloudflared.log || true
+    exit 1
+  fi
+  log "Tunnel ready: ${TUNNEL_URL}"
+fi
+
+# The issuer under test: the tunnel when the hosted suite drives the run
+# (it must be able to resolve and reach the edge), otherwise the local edge.
+ISSUER_URL="${TUNNEL_URL:-${EDGE_URL}}/${ISSUER_TENANT}"
+OFFER_URL="${ISSUER_URL}/credential-offer"
+TUNNEL_HOST=""
+if [ -n "${TUNNEL_URL}" ]; then
+  TUNNEL_HOST="$(printf '%s' "${TUNNEL_URL}" | sed -e 's|^https://||' -e 's|/$||')"
+fi
+
+VARIANT='{"fapi_profile":"vci","client_auth_type":"private_key_jwt","credential_format":"sd_jwt_vc","fapi_request_method":"unsigned","sender_constrain":"dpop","authorization_request_type":"simple","openid":"plain_oauth","fapi_response_mode":"plain_response","vci_grant_type":"authorization_code","vci_authorization_code_flow_variant":"issuer_initiated","vci_credential_encryption":"plain"}'
+
+CONFIG_FILE="$(mktemp)"
+trap 'rm -f "${CONFIG_FILE}"' EXIT
+cat > "${CONFIG_FILE}" <<EOF
+{
+  "description": "hkt-didvc issuer (CI)",
+  "vci": {
+    "credential_issuer_url": "${ISSUER_URL}",
+    "credential_configuration_id": "hkt_kyc_v1",
+    "credential_offer_endpoint": "${OFFER_URL}"
+  },
+  "client": {"client_id": "hkt-didvc-wallet", "dpop_signing_alg": "ES256"},
+  "client2": {"client_id": "hkt-didvc-wallet-2", "dpop_signing_alg": "ES256"}
+}
+EOF
+
+DRIVER_ARGS=(--suite-api "${SUITE_API}" --plan-name "${VCI_PLAN_NAME}"
+  --variant "${VARIANT}" --config-file "${CONFIG_FILE}"
+  --offer-url "${OFFER_URL}" --module-timeout 420)
+if [ -n "${OPENID_SUITE_TOKEN:-}" ]; then
+  DRIVER_ARGS+=(--token "${OPENID_SUITE_TOKEN}")
+fi
+if [ -n "${TUNNEL_HOST}" ]; then
+  DRIVER_ARGS+=(--allow-host "${TUNNEL_HOST}")
+fi
+
+log "Issuer under test: ${ISSUER_URL}"
+python3 "${SCRIPT_DIR}/drive-openid-plan.py" "${DRIVER_ARGS[@]}"

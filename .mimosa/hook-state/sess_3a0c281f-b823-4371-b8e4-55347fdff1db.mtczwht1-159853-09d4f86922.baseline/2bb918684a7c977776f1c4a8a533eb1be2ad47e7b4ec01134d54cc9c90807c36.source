@@ -1,0 +1,2459 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["vendors-node_modules_graphql-ws_lib_index_mjs"],{
+
+/***/ "../../../../node_modules/graphql-ws/lib/index.mjs"
+/*!*********************************************************!*\
+  !*** ../../../../node_modules/graphql-ws/lib/index.mjs ***!
+  \*********************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   CloseCode: () => (/* reexport safe */ _client_mjs__WEBPACK_IMPORTED_MODULE_0__.CloseCode),
+/* harmony export */   DEPRECATED_GRAPHQL_WS_PROTOCOL: () => (/* reexport safe */ _client_mjs__WEBPACK_IMPORTED_MODULE_0__.DEPRECATED_GRAPHQL_WS_PROTOCOL),
+/* harmony export */   GRAPHQL_TRANSPORT_WS_PROTOCOL: () => (/* reexport safe */ _client_mjs__WEBPACK_IMPORTED_MODULE_0__.GRAPHQL_TRANSPORT_WS_PROTOCOL),
+/* harmony export */   MessageType: () => (/* reexport safe */ _client_mjs__WEBPACK_IMPORTED_MODULE_0__.MessageType),
+/* harmony export */   TerminatedCloseEvent: () => (/* reexport safe */ _client_mjs__WEBPACK_IMPORTED_MODULE_0__.TerminatedCloseEvent),
+/* harmony export */   createClient: () => (/* reexport safe */ _client_mjs__WEBPACK_IMPORTED_MODULE_0__.createClient),
+/* harmony export */   handleProtocols: () => (/* reexport safe */ _server_mjs__WEBPACK_IMPORTED_MODULE_1__.handleProtocols),
+/* harmony export */   isMessage: () => (/* reexport safe */ _client_mjs__WEBPACK_IMPORTED_MODULE_0__.isMessage),
+/* harmony export */   makeServer: () => (/* reexport safe */ _server_mjs__WEBPACK_IMPORTED_MODULE_1__.makeServer),
+/* harmony export */   parseMessage: () => (/* reexport safe */ _client_mjs__WEBPACK_IMPORTED_MODULE_0__.parseMessage),
+/* harmony export */   stringifyMessage: () => (/* reexport safe */ _client_mjs__WEBPACK_IMPORTED_MODULE_0__.stringifyMessage),
+/* harmony export */   validateMessage: () => (/* reexport safe */ _client_mjs__WEBPACK_IMPORTED_MODULE_0__.validateMessage)
+/* harmony export */ });
+/* harmony import */ var _client_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./client.mjs */ "../../../../node_modules/graphql-ws/lib/client.mjs");
+/* harmony import */ var _server_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./server.mjs */ "../../../../node_modules/graphql-ws/lib/server.mjs");
+
+
+
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql-ws/lib/server.mjs"
+/*!**********************************************************!*\
+  !*** ../../../../node_modules/graphql-ws/lib/server.mjs ***!
+  \**********************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   handleProtocols: () => (/* binding */ handleProtocols),
+/* harmony export */   makeServer: () => (/* binding */ makeServer)
+/* harmony export */ });
+/* harmony import */ var graphql__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! graphql */ "../../../../node_modules/graphql/validation/validate.mjs");
+/* harmony import */ var graphql__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! graphql */ "../../../../node_modules/graphql/error/GraphQLError.mjs");
+/* harmony import */ var graphql__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! graphql */ "../../../../node_modules/graphql/utilities/getOperationAST.mjs");
+/* harmony import */ var graphql__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! graphql */ "../../../../node_modules/graphql/execution/execute.mjs");
+/* harmony import */ var graphql__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! graphql */ "../../../../node_modules/graphql/execution/subscribe.mjs");
+/* harmony import */ var graphql__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! graphql */ "../../../../node_modules/graphql/language/parser.mjs");
+/* harmony import */ var _common_mjs__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./common.mjs */ "../../../../node_modules/graphql-ws/lib/common.mjs");
+/* harmony import */ var _utils_mjs__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./utils.mjs */ "../../../../node_modules/graphql-ws/lib/utils.mjs");
+/**
+ *
+ * server
+ *
+ */
+var __asyncValues = (undefined && undefined.__asyncValues) || function (o) {
+    if (!Symbol.asyncIterator) throw new TypeError("Symbol.asyncIterator is not defined.");
+    var m = o[Symbol.asyncIterator], i;
+    return m ? m.call(o) : (o = typeof __values === "function" ? __values(o) : o[Symbol.iterator](), i = {}, verb("next"), verb("throw"), verb("return"), i[Symbol.asyncIterator] = function () { return this; }, i);
+    function verb(n) { i[n] = o[n] && function (v) { return new Promise(function (resolve, reject) { v = o[n](v), settle(resolve, reject, v.done, v.value); }); }; }
+    function settle(resolve, reject, d, v) { Promise.resolve(v).then(function(v) { resolve({ value: v, done: d }); }, reject); }
+};
+
+
+
+/**
+ * Makes a Protocol compliant WebSocket GraphQL server. The server
+ * is actually an API which is to be used with your favourite WebSocket
+ * server library!
+ *
+ * Read more about the [GraphQL over WebSocket Protocol](https://github.com/graphql/graphql-over-http/blob/main/rfcs/GraphQLOverWebSocket.md).
+ *
+ * @category Server
+ */
+function makeServer(options) {
+    const { schema, context, roots, validate, execute, subscribe, connectionInitWaitTimeout = 3000, // 3 seconds
+    onConnect, onDisconnect, onClose, onSubscribe, onOperation, onNext, onError, onComplete, jsonMessageReviver: reviver, jsonMessageReplacer: replacer, } = options;
+    return {
+        opened(socket, extra) {
+            const ctx = {
+                connectionInitReceived: false,
+                acknowledged: false,
+                subscriptions: {},
+                extra,
+            };
+            if (socket.protocol !== _common_mjs__WEBPACK_IMPORTED_MODULE_6__.GRAPHQL_TRANSPORT_WS_PROTOCOL) {
+                socket.close(_common_mjs__WEBPACK_IMPORTED_MODULE_6__.CloseCode.SubprotocolNotAcceptable, 'Subprotocol not acceptable');
+                return async (code, reason) => {
+                    /* nothing was set up, just notify the closure */
+                    await (onClose === null || onClose === void 0 ? void 0 : onClose(ctx, code, reason));
+                };
+            }
+            // kick the client off (close socket) if the connection has
+            // not been initialised after the specified wait timeout
+            const connectionInitWait = connectionInitWaitTimeout > 0 && isFinite(connectionInitWaitTimeout)
+                ? setTimeout(() => {
+                    if (!ctx.connectionInitReceived)
+                        socket.close(_common_mjs__WEBPACK_IMPORTED_MODULE_6__.CloseCode.ConnectionInitialisationTimeout, 'Connection initialisation timeout');
+                }, connectionInitWaitTimeout)
+                : null;
+            socket.onMessage(async function onMessage(data) {
+                var _a, e_1, _b, _c;
+                var _d;
+                let message;
+                try {
+                    message = (0,_common_mjs__WEBPACK_IMPORTED_MODULE_6__.parseMessage)(data, reviver);
+                }
+                catch (err) {
+                    return socket.close(_common_mjs__WEBPACK_IMPORTED_MODULE_6__.CloseCode.BadRequest, 'Invalid message received');
+                }
+                switch (message.type) {
+                    case _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.ConnectionInit: {
+                        if (ctx.connectionInitReceived)
+                            return socket.close(_common_mjs__WEBPACK_IMPORTED_MODULE_6__.CloseCode.TooManyInitialisationRequests, 'Too many initialisation requests');
+                        // @ts-expect-error: I can write
+                        ctx.connectionInitReceived = true;
+                        if ((0,_utils_mjs__WEBPACK_IMPORTED_MODULE_7__.isObject)(message.payload))
+                            // @ts-expect-error: I can write
+                            ctx.connectionParams = message.payload;
+                        const permittedOrPayload = await (onConnect === null || onConnect === void 0 ? void 0 : onConnect(ctx));
+                        if (permittedOrPayload === false)
+                            return socket.close(_common_mjs__WEBPACK_IMPORTED_MODULE_6__.CloseCode.Forbidden, 'Forbidden');
+                        // we should acknowledge before send to avoid race conditions (like those exampled in https://github.com/enisdenjo/graphql-ws/issues/501)
+                        // even if the send fails/throws, the connection should be closed because its malfunctioning
+                        // @ts-expect-error: I can write
+                        ctx.acknowledged = true;
+                        await socket.send((0,_common_mjs__WEBPACK_IMPORTED_MODULE_6__.stringifyMessage)((0,_utils_mjs__WEBPACK_IMPORTED_MODULE_7__.isObject)(permittedOrPayload)
+                            ? {
+                                type: _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.ConnectionAck,
+                                payload: permittedOrPayload,
+                            }
+                            : {
+                                type: _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.ConnectionAck,
+                                // payload is completely absent if not provided
+                            }, replacer));
+                        return;
+                    }
+                    case _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.Ping: {
+                        if (socket.onPing)
+                            // if the onPing listener is registered, automatic pong is disabled
+                            return await socket.onPing(message.payload);
+                        await socket.send((0,_common_mjs__WEBPACK_IMPORTED_MODULE_6__.stringifyMessage)(message.payload
+                            ? { type: _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.Pong, payload: message.payload }
+                            : {
+                                type: _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.Pong,
+                                // payload is completely absent if not provided
+                            }));
+                        return;
+                    }
+                    case _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.Pong:
+                        return await ((_d = socket.onPong) === null || _d === void 0 ? void 0 : _d.call(socket, message.payload));
+                    case _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.Subscribe: {
+                        if (!ctx.acknowledged)
+                            return socket.close(_common_mjs__WEBPACK_IMPORTED_MODULE_6__.CloseCode.Unauthorized, 'Unauthorized');
+                        const { id, payload } = message;
+                        if (id in ctx.subscriptions)
+                            return socket.close(_common_mjs__WEBPACK_IMPORTED_MODULE_6__.CloseCode.SubscriberAlreadyExists, `Subscriber for ${id} already exists`);
+                        // if this turns out to be a streaming operation, the subscription value
+                        // will change to an `AsyncIterable`, otherwise it will stay as is
+                        ctx.subscriptions[id] = null;
+                        const emit = {
+                            next: async (result, args) => {
+                                let nextMessage = {
+                                    id,
+                                    type: _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.Next,
+                                    payload: result,
+                                };
+                                const maybeResult = await (onNext === null || onNext === void 0 ? void 0 : onNext(ctx, nextMessage, args, result));
+                                if (maybeResult)
+                                    nextMessage = Object.assign(Object.assign({}, nextMessage), { payload: maybeResult });
+                                await socket.send((0,_common_mjs__WEBPACK_IMPORTED_MODULE_6__.stringifyMessage)(nextMessage, replacer));
+                            },
+                            error: async (errors) => {
+                                let errorMessage = {
+                                    id,
+                                    type: _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.Error,
+                                    payload: errors,
+                                };
+                                const maybeErrors = await (onError === null || onError === void 0 ? void 0 : onError(ctx, errorMessage, errors));
+                                if (maybeErrors)
+                                    errorMessage = Object.assign(Object.assign({}, errorMessage), { payload: maybeErrors });
+                                await socket.send((0,_common_mjs__WEBPACK_IMPORTED_MODULE_6__.stringifyMessage)(errorMessage, replacer));
+                            },
+                            complete: async (notifyClient) => {
+                                const completeMessage = {
+                                    id,
+                                    type: _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.Complete,
+                                };
+                                await (onComplete === null || onComplete === void 0 ? void 0 : onComplete(ctx, completeMessage));
+                                if (notifyClient)
+                                    await socket.send((0,_common_mjs__WEBPACK_IMPORTED_MODULE_6__.stringifyMessage)(completeMessage, replacer));
+                            },
+                        };
+                        try {
+                            let execArgs;
+                            const maybeExecArgsOrErrors = await (onSubscribe === null || onSubscribe === void 0 ? void 0 : onSubscribe(ctx, message));
+                            if (maybeExecArgsOrErrors) {
+                                if ((0,_utils_mjs__WEBPACK_IMPORTED_MODULE_7__.areGraphQLErrors)(maybeExecArgsOrErrors))
+                                    return id in ctx.subscriptions
+                                        ? await emit.error(maybeExecArgsOrErrors)
+                                        : void 0;
+                                else if (Array.isArray(maybeExecArgsOrErrors))
+                                    throw new Error('Invalid return value from onSubscribe hook, expected an array of GraphQLError objects');
+                                // not errors, is exec args
+                                execArgs = maybeExecArgsOrErrors;
+                            }
+                            else {
+                                // you either provide a schema dynamically through
+                                // `onSubscribe` or you set one up during the server setup
+                                if (!schema)
+                                    throw new Error('The GraphQL schema is not provided');
+                                const args = {
+                                    operationName: payload.operationName,
+                                    document: (0,graphql__WEBPACK_IMPORTED_MODULE_5__.parse)(payload.query),
+                                    variableValues: payload.variables,
+                                };
+                                execArgs = Object.assign(Object.assign({}, args), { schema: typeof schema === 'function'
+                                        ? await schema(ctx, message, args)
+                                        : schema });
+                                const validationErrors = (validate !== null && validate !== void 0 ? validate : graphql__WEBPACK_IMPORTED_MODULE_0__.validate)(execArgs.schema, execArgs.document);
+                                if (validationErrors.length > 0)
+                                    return id in ctx.subscriptions
+                                        ? await emit.error(validationErrors)
+                                        : void 0;
+                            }
+                            const operationAST = (0,graphql__WEBPACK_IMPORTED_MODULE_2__.getOperationAST)(execArgs.document, execArgs.operationName);
+                            if (!operationAST)
+                                return id in ctx.subscriptions
+                                    ? await emit.error([
+                                        new graphql__WEBPACK_IMPORTED_MODULE_1__.GraphQLError('Unable to identify operation'),
+                                    ])
+                                    : void 0;
+                            // if `onSubscribe` didn't specify a rootValue, inject one
+                            if (!('rootValue' in execArgs))
+                                execArgs.rootValue = roots === null || roots === void 0 ? void 0 : roots[operationAST.operation];
+                            // if `onSubscribe` didn't specify a context, inject one
+                            if (!('contextValue' in execArgs))
+                                execArgs.contextValue =
+                                    typeof context === 'function'
+                                        ? await context(ctx, message, execArgs)
+                                        : context;
+                            // the execution arguments have been prepared
+                            // perform the operation and act accordingly
+                            let operationResult;
+                            if (operationAST.operation === 'subscription')
+                                operationResult = await (subscribe !== null && subscribe !== void 0 ? subscribe : graphql__WEBPACK_IMPORTED_MODULE_4__.subscribe)(execArgs);
+                            // operation === 'query' || 'mutation'
+                            else
+                                operationResult = await (execute !== null && execute !== void 0 ? execute : graphql__WEBPACK_IMPORTED_MODULE_3__.execute)(execArgs);
+                            const maybeResult = await (onOperation === null || onOperation === void 0 ? void 0 : onOperation(ctx, message, execArgs, operationResult));
+                            if (maybeResult)
+                                operationResult = maybeResult;
+                            if ((0,_utils_mjs__WEBPACK_IMPORTED_MODULE_7__.isAsyncIterable)(operationResult)) {
+                                /** multiple emitted results */
+                                if (!(id in ctx.subscriptions)) {
+                                    // subscription was completed/canceled before the operation settled
+                                    if ((0,_utils_mjs__WEBPACK_IMPORTED_MODULE_7__.isAsyncGenerator)(operationResult))
+                                        operationResult.return(undefined);
+                                }
+                                else {
+                                    ctx.subscriptions[id] = operationResult;
+                                    try {
+                                        for (var _e = true, operationResult_1 = __asyncValues(operationResult), operationResult_1_1; operationResult_1_1 = await operationResult_1.next(), _a = operationResult_1_1.done, !_a; _e = true) {
+                                            _c = operationResult_1_1.value;
+                                            _e = false;
+                                            const result = _c;
+                                            await emit.next(result, execArgs);
+                                        }
+                                    }
+                                    catch (e_1_1) { e_1 = { error: e_1_1 }; }
+                                    finally {
+                                        try {
+                                            if (!_e && !_a && (_b = operationResult_1.return)) await _b.call(operationResult_1);
+                                        }
+                                        finally { if (e_1) throw e_1.error; }
+                                    }
+                                }
+                            }
+                            else {
+                                /** single emitted result */
+                                // if the client completed the subscription before the single result
+                                // became available, he effectively canceled it and no data should be sent
+                                if (id in ctx.subscriptions)
+                                    await emit.next(operationResult, execArgs);
+                            }
+                            // lack of subscription at this point indicates that the client
+                            // completed the subscription, he doesn't need to be reminded
+                            await emit.complete(id in ctx.subscriptions);
+                        }
+                        finally {
+                            // whatever happens to the subscription, we finally want to get rid of the reservation
+                            delete ctx.subscriptions[id];
+                        }
+                        return;
+                    }
+                    case _common_mjs__WEBPACK_IMPORTED_MODULE_6__.MessageType.Complete: {
+                        const subscription = ctx.subscriptions[message.id];
+                        delete ctx.subscriptions[message.id]; // deleting the subscription means no further activity should take place
+                        if ((0,_utils_mjs__WEBPACK_IMPORTED_MODULE_7__.isAsyncGenerator)(subscription))
+                            await subscription.return(undefined);
+                        return;
+                    }
+                    default:
+                        throw new Error(`Unexpected message of type ${message.type} received`);
+                }
+            });
+            // wait for close, cleanup and the disconnect callback
+            return async (code, reason) => {
+                if (connectionInitWait)
+                    clearTimeout(connectionInitWait);
+                const subs = Object.assign({}, ctx.subscriptions);
+                // @ts-expect-error: I can write
+                ctx.subscriptions = {}; // deleting the subscription means no further activity should take place
+                // we return all iterable subscriptions immediatelly, independant of the order
+                await Promise.all(Object.values(subs)
+                    .filter(_utils_mjs__WEBPACK_IMPORTED_MODULE_7__.isAsyncGenerator)
+                    .map((sub) => sub.return(undefined)));
+                if (ctx.acknowledged)
+                    await (onDisconnect === null || onDisconnect === void 0 ? void 0 : onDisconnect(ctx, code, reason));
+                await (onClose === null || onClose === void 0 ? void 0 : onClose(ctx, code, reason));
+            };
+        },
+    };
+}
+/**
+ * Helper utility for choosing the "graphql-transport-ws" subprotocol from
+ * a set of WebSocket subprotocols.
+ *
+ * Accepts a set of already extracted WebSocket subprotocols or the raw
+ * Sec-WebSocket-Protocol header value. In either case, if the right
+ * protocol appears, it will be returned.
+ *
+ * By specification, the server should not provide a value with Sec-WebSocket-Protocol
+ * if it does not agree with client's subprotocols. The client has a responsibility
+ * to handle the connection afterwards.
+ *
+ * @category Server
+ */
+function handleProtocols(protocols) {
+    switch (true) {
+        case protocols instanceof Set &&
+            protocols.has(_common_mjs__WEBPACK_IMPORTED_MODULE_6__.GRAPHQL_TRANSPORT_WS_PROTOCOL):
+        case Array.isArray(protocols) &&
+            protocols.includes(_common_mjs__WEBPACK_IMPORTED_MODULE_6__.GRAPHQL_TRANSPORT_WS_PROTOCOL):
+        case typeof protocols === 'string' &&
+            protocols
+                .split(',')
+                .map((p) => p.trim())
+                .includes(_common_mjs__WEBPACK_IMPORTED_MODULE_6__.GRAPHQL_TRANSPORT_WS_PROTOCOL):
+            return _common_mjs__WEBPACK_IMPORTED_MODULE_6__.GRAPHQL_TRANSPORT_WS_PROTOCOL;
+        default:
+            return false;
+    }
+}
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql/error/locatedError.mjs"
+/*!***************************************************************!*\
+  !*** ../../../../node_modules/graphql/error/locatedError.mjs ***!
+  \***************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   locatedError: () => (/* binding */ locatedError)
+/* harmony export */ });
+/* harmony import */ var _jsutils_toError_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../jsutils/toError.mjs */ "../../../../node_modules/graphql/jsutils/toError.mjs");
+/* harmony import */ var _GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./GraphQLError.mjs */ "../../../../node_modules/graphql/error/GraphQLError.mjs");
+/** @category Errors */
+
+
+/**
+ * Given an arbitrary value, presumably thrown while attempting to execute a
+ * GraphQL operation, produce a new GraphQLError aware of the location in the
+ * document responsible for the original Error.
+ * @param rawOriginalError - The original error value to wrap.
+ * @param nodes - The AST nodes associated with the error.
+ * @param path - The response path associated with the error.
+ * @returns The GraphQL error.
+ * @example
+ * ```ts
+ * import { parse } from 'graphql/language';
+ * import { locatedError } from 'graphql/error';
+ *
+ * const document = parse('{ viewer { name } }');
+ * const fieldNode = document.definitions[0].selectionSet.selections[0];
+ * const error = locatedError(new Error('Resolver failed'), fieldNode, [
+ *   'viewer',
+ * ]);
+ *
+ * error.message; // => 'Resolver failed'
+ * error.locations; // => [{ line: 1, column: 3 }]
+ * error.path; // => ['viewer']
+ * ```
+ */
+
+function locatedError(rawOriginalError, nodes, path) {
+  var _nodes;
+
+  const originalError = (0,_jsutils_toError_mjs__WEBPACK_IMPORTED_MODULE_0__.toError)(rawOriginalError); // Note: this uses a brand-check to support GraphQL errors originating from other contexts.
+
+  if (isLocatedGraphQLError(originalError)) {
+    return originalError;
+  }
+
+  return new _GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_1__.GraphQLError(originalError.message, {
+    nodes:
+      (_nodes = originalError.nodes) !== null && _nodes !== void 0
+        ? _nodes
+        : nodes,
+    source: originalError.source,
+    positions: originalError.positions,
+    path,
+    originalError,
+  });
+}
+
+function isLocatedGraphQLError(error) {
+  return Array.isArray(error.path);
+}
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql/execution/execute.mjs"
+/*!**************************************************************!*\
+  !*** ../../../../node_modules/graphql/execution/execute.mjs ***!
+  \**************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   assertValidExecutionArguments: () => (/* binding */ assertValidExecutionArguments),
+/* harmony export */   buildExecutionContext: () => (/* binding */ buildExecutionContext),
+/* harmony export */   buildResolveInfo: () => (/* binding */ buildResolveInfo),
+/* harmony export */   defaultFieldResolver: () => (/* binding */ defaultFieldResolver),
+/* harmony export */   defaultTypeResolver: () => (/* binding */ defaultTypeResolver),
+/* harmony export */   execute: () => (/* binding */ execute),
+/* harmony export */   executeSync: () => (/* binding */ executeSync),
+/* harmony export */   getFieldDef: () => (/* binding */ getFieldDef)
+/* harmony export */ });
+/* harmony import */ var _jsutils_devAssert_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../jsutils/devAssert.mjs */ "../../../../node_modules/graphql/jsutils/devAssert.mjs");
+/* harmony import */ var _jsutils_inspect_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../jsutils/inspect.mjs */ "../../../../node_modules/graphql/jsutils/inspect.mjs");
+/* harmony import */ var _jsutils_invariant_mjs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../jsutils/invariant.mjs */ "../../../../node_modules/graphql/jsutils/invariant.mjs");
+/* harmony import */ var _jsutils_isIterableObject_mjs__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../jsutils/isIterableObject.mjs */ "../../../../node_modules/graphql/jsutils/isIterableObject.mjs");
+/* harmony import */ var _jsutils_isObjectLike_mjs__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../jsutils/isObjectLike.mjs */ "../../../../node_modules/graphql/jsutils/isObjectLike.mjs");
+/* harmony import */ var _jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../jsutils/isPromise.mjs */ "../../../../node_modules/graphql/jsutils/isPromise.mjs");
+/* harmony import */ var _jsutils_memoize3_mjs__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../jsutils/memoize3.mjs */ "../../../../node_modules/graphql/jsutils/memoize3.mjs");
+/* harmony import */ var _jsutils_Path_mjs__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../jsutils/Path.mjs */ "../../../../node_modules/graphql/jsutils/Path.mjs");
+/* harmony import */ var _jsutils_promiseForObject_mjs__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ../jsutils/promiseForObject.mjs */ "../../../../node_modules/graphql/jsutils/promiseForObject.mjs");
+/* harmony import */ var _jsutils_promiseReduce_mjs__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ../jsutils/promiseReduce.mjs */ "../../../../node_modules/graphql/jsutils/promiseReduce.mjs");
+/* harmony import */ var _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ../error/GraphQLError.mjs */ "../../../../node_modules/graphql/error/GraphQLError.mjs");
+/* harmony import */ var _error_locatedError_mjs__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ../error/locatedError.mjs */ "../../../../node_modules/graphql/error/locatedError.mjs");
+/* harmony import */ var _language_ast_mjs__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ../language/ast.mjs */ "../../../../node_modules/graphql/language/ast.mjs");
+/* harmony import */ var _language_kinds_mjs__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ../language/kinds.mjs */ "../../../../node_modules/graphql/language/kinds.mjs");
+/* harmony import */ var _type_definition_mjs__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ../type/definition.mjs */ "../../../../node_modules/graphql/type/definition.mjs");
+/* harmony import */ var _type_introspection_mjs__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ../type/introspection.mjs */ "../../../../node_modules/graphql/type/introspection.mjs");
+/* harmony import */ var _type_validate_mjs__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ../type/validate.mjs */ "../../../../node_modules/graphql/type/validate.mjs");
+/* harmony import */ var _collectFields_mjs__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./collectFields.mjs */ "../../../../node_modules/graphql/execution/collectFields.mjs");
+/* harmony import */ var _values_mjs__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./values.mjs */ "../../../../node_modules/graphql/execution/values.mjs");
+/** @category Execution */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * A memoized collection of relevant subfields with regard to the return
+ * type. Memoizing ensures the subfields are not repeatedly calculated, which
+ * saves overhead when resolving lists of values.
+ *
+ * @internal
+ */
+
+const collectSubfields = (0,_jsutils_memoize3_mjs__WEBPACK_IMPORTED_MODULE_6__.memoize3)((exeContext, returnType, fieldNodes) =>
+  (0,_collectFields_mjs__WEBPACK_IMPORTED_MODULE_17__.collectSubfields)(
+    exeContext.schema,
+    exeContext.fragments,
+    exeContext.variableValues,
+    returnType,
+    fieldNodes,
+  ),
+);
+/**
+ * Terminology
+ *
+ * "Definitions" are the generic name for top-level statements in the document.
+ * Examples of this include:
+ * 1) Operations (such as a query)
+ * 2) Fragments
+ *
+ * "Operations" are a generic name for requests in the document.
+ * Examples of this include:
+ * 1) query,
+ * 2) mutation
+ *
+ * "Selections" are the definitions that can appear legally and at
+ * single level of the query. These include:
+ * 1) field references e.g `a`
+ * 2) fragment "spreads" e.g. `...c`
+ * 3) inline fragment "spreads" e.g. `...on Type { a }`
+ */
+
+/**
+ * Data that must be available at all points during query execution.
+ *
+ * Namely, schema of the type system that is currently executing,
+ * and the fragments defined in the query document
+ *
+ * @internal
+ */
+
+class CollectedErrors {
+  constructor() {
+    this._errorPositions = new Set();
+    this._errors = [];
+  }
+
+  get errors() {
+    return this._errors;
+  }
+
+  add(error, path) {
+    // Do not modify errors list if the execution position for this error or
+    // any of its ancestors has already been nulled via error propagation.
+    // This check should be unnecessary for implementations able to implement
+    // actual cancellation.
+    if (this._hasNulledPosition(path)) {
+      return;
+    }
+
+    this._errorPositions.add(path);
+
+    this._errors.push(error);
+  }
+
+  _hasNulledPosition(startPath) {
+    let path = startPath;
+
+    while (path !== undefined) {
+      if (this._errorPositions.has(path)) {
+        return true;
+      }
+
+      path = path.prev;
+    }
+
+    return this._errorPositions.has(undefined);
+  }
+}
+/**
+ * Represents the response produced by executing a GraphQL operation.
+ * @typeParam TData - Shape of the execution data payload.
+ * @typeParam TExtensions - Shape of the extensions payload.
+ */
+
+/**
+ * Implements the "Executing requests" section of the GraphQL specification.
+ *
+ * Returns either a synchronous ExecutionResult (if all encountered resolvers
+ * are synchronous), or a Promise of an ExecutionResult that will eventually be
+ * resolved and never rejected.
+ *
+ * If the arguments to this function do not result in a legal execution context,
+ * a GraphQLError will be thrown immediately explaining the invalid input.
+ *
+ * Field errors are collected into the response instead of rejecting the
+ * returned promise. Only the field that produced the error and its descendants
+ * are omitted; sibling fields continue to execute. Errors from fields of
+ * non-null type may propagate to the nearest nullable parent, which can be the
+ * entire response data.
+ * @param args - The arguments used to perform the operation.
+ * @returns A completed execution result, or a promise resolving to one when execution is asynchronous.
+ * @example
+ * ```ts
+ * // Execute an asynchronous operation with variables.
+ * import { parse } from 'graphql/language';
+ * import { buildSchema } from 'graphql/utilities';
+ * import { execute } from 'graphql/execution';
+ *
+ * const schema = buildSchema(`
+ *   type Query {
+ *     greeting(name: String!): String
+ *   }
+ * `);
+ *
+ * const result = await execute({
+ *   schema,
+ *   document: parse('query ($name: String!) { greeting(name: $name) }'),
+ *   rootValue: {
+ *     greeting: ({ name }) => `Hello, ${name}!`,
+ *   },
+ *   variableValues: { name: 'Ada' },
+ * });
+ *
+ * result; // => { data: { greeting: 'Hello, Ada!' } }
+ * ```
+ * @example
+ * ```ts
+ * // This variant supplies context plus custom field and type resolvers.
+ * import { parse } from 'graphql/language';
+ * import { buildSchema } from 'graphql/utilities';
+ * import { execute } from 'graphql/execution';
+ *
+ * const schema = buildSchema(`
+ *   interface Named {
+ *     name: String!
+ *   }
+ *
+ *   type User implements Named {
+ *     name: String!
+ *   }
+ *
+ *   type Query {
+ *     viewer: Named
+ *   }
+ * `);
+ *
+ * const result = await execute({
+ *   schema,
+ *   document: parse('query Viewer { viewer { __typename name } }'),
+ *   rootValue: { viewer: { kind: 'user', name: 'Ada' } },
+ *   contextValue: { locale: 'en' },
+ *   operationName: 'Viewer',
+ *   fieldResolver: (source, _args, contextValue, info) => {
+ *     contextValue.locale; // => 'en'
+ *     return source[info.fieldName];
+ *   },
+ *   typeResolver: (value) => {
+ *     return value.kind === 'user' ? 'User' : undefined;
+ *   },
+ * });
+ *
+ * result; // => { data: { viewer: { __typename: 'User', name: 'Ada' } } }
+ * ```
+ * @example
+ * ```ts
+ * // This variant shows how resolver errors become field errors in the result.
+ * import { parse } from 'graphql/language';
+ * import { buildSchema } from 'graphql/utilities';
+ * import { execute } from 'graphql/execution';
+ *
+ * const schema = buildSchema(`
+ *   type Query {
+ *     broken: String
+ *   }
+ * `);
+ * const document = parse('{ broken }');
+ *
+ * const result = await execute({
+ *   schema,
+ *   document,
+ *   rootValue: {
+ *     broken: () => {
+ *       throw new Error('Resolver failed.');
+ *     },
+ *   },
+ * });
+ *
+ * result.data.broken; // => null
+ * result.errors[0].message; // => 'Resolver failed.'
+ * ```
+ * @example
+ * ```ts
+ * // This variant limits how many variable coercion errors are reported.
+ * import { parse } from 'graphql/language';
+ * import { buildSchema } from 'graphql/utilities';
+ * import { execute } from 'graphql/execution';
+ *
+ * const schema = buildSchema(`
+ *   input ReviewInput {
+ *     stars: Int!
+ *   }
+ *
+ *   type Query {
+ *     review(input: ReviewInput!): String
+ *   }
+ * `);
+ * const document = parse(`
+ *   query ($first: ReviewInput!, $second: ReviewInput!) {
+ *     first: review(input: $first)
+ *     second: review(input: $second)
+ *   }
+ * `);
+ *
+ * const result = await execute({
+ *   schema,
+ *   document,
+ *   variableValues: {
+ *     first: { stars: 'bad' },
+ *     second: { stars: 'also bad' },
+ *   },
+ *   options: { maxCoercionErrors: 1 },
+ * });
+ *
+ * result.errors.length; // => 2
+ * result.errors[1].message; // matches /error limit reached/
+ * ```
+ */
+function execute(args) {
+  // Temporary for v15 to v16 migration. Remove in v17
+  arguments.length < 2 ||
+    (0,_jsutils_devAssert_mjs__WEBPACK_IMPORTED_MODULE_0__.devAssert)(
+      false,
+      'graphql@16 dropped long-deprecated support for positional arguments, please pass an object instead.',
+    );
+  const { schema, document, variableValues, rootValue } = args; // If arguments are missing or incorrect, throw an error.
+
+  assertValidExecutionArguments(schema, document, variableValues); // If a valid execution context cannot be created due to incorrect arguments,
+  // a "Response" with only errors is returned.
+
+  const exeContext = buildExecutionContext(args); // Return early errors if execution context failed.
+
+  if (!('schema' in exeContext)) {
+    return {
+      errors: exeContext,
+    };
+  }
+
+  try {
+    const { operation } = exeContext;
+    const result = executeOperation(exeContext, operation, rootValue);
+
+    if ((0,_jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__.isPromise)(result)) {
+      return result.then(
+        (data) => buildResponse(data, exeContext.collectedErrors.errors),
+        (error) => {
+          exeContext.collectedErrors.add(error, undefined);
+          return buildResponse(null, exeContext.collectedErrors.errors);
+        },
+      );
+    }
+
+    return buildResponse(result, exeContext.collectedErrors.errors);
+  } catch (error) {
+    exeContext.collectedErrors.add(error, undefined);
+    return buildResponse(null, exeContext.collectedErrors.errors);
+  }
+}
+/**
+ * Also implements the "Executing requests" section of the GraphQL specification.
+ * However, it guarantees to complete synchronously (or throw an error) assuming
+ * that all field resolvers are also synchronous.
+ * @param args - The arguments used to perform the operation.
+ * @returns Completed execution output for a synchronous operation.
+ * @example
+ * ```ts
+ * // Execute an operation synchronously when all resolvers are synchronous.
+ * import { parse } from 'graphql/language';
+ * import { buildSchema } from 'graphql/utilities';
+ * import { executeSync } from 'graphql/execution';
+ *
+ * const schema = buildSchema(`
+ *   type Query {
+ *     greeting: String
+ *   }
+ * `);
+ * const document = parse('{ greeting }');
+ *
+ * const result = executeSync({
+ *   schema,
+ *   document,
+ *   rootValue: {
+ *     greeting: 'Hello',
+ *   },
+ * });
+ *
+ * result; // => { data: { greeting: 'Hello' } }
+ * ```
+ * @example
+ * ```ts
+ * // This variant shows executeSync throwing when a resolver returns a promise.
+ * import { parse } from 'graphql/language';
+ * import { buildSchema } from 'graphql/utilities';
+ * import { executeSync } from 'graphql/execution';
+ *
+ * const schema = buildSchema(`
+ *   type Query {
+ *     greeting: String
+ *   }
+ * `);
+ *
+ * executeSync({
+ *   schema,
+ *   document: parse('{ greeting }'),
+ *   rootValue: {
+ *     greeting: async () => 'Hello',
+ *   },
+ * }); // throws an error
+ * ```
+ */
+
+function executeSync(args) {
+  const result = execute(args); // Assert that the execution was synchronous.
+
+  if ((0,_jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__.isPromise)(result)) {
+    throw new Error('GraphQL execution failed to complete synchronously.');
+  }
+
+  return result;
+}
+/**
+ * Given a completed execution context and data, build the `{ errors, data }`
+ * response defined by the "Response" section of the GraphQL specification.
+ *
+ * @internal
+ */
+
+function buildResponse(data, errors) {
+  return errors.length === 0
+    ? {
+        data,
+      }
+    : {
+        errors,
+        data,
+      };
+}
+/**
+ * Essential assertions before executing to provide developer feedback for
+ * improper use of the GraphQL library. This deprecated internal helper will be
+ * removed in v17; call `assertValidSchema()` and rely on TypeScript checks
+ * instead.
+ *
+ * @deprecated will be removed in v17 in favor of assertValidSchema() and TS checks
+ * @internal
+ */
+
+function assertValidExecutionArguments(
+  schema,
+  document,
+  rawVariableValues,
+) {
+  document || (0,_jsutils_devAssert_mjs__WEBPACK_IMPORTED_MODULE_0__.devAssert)(false, 'Must provide document.'); // If the schema used for execution is invalid, throw an error.
+
+  (0,_type_validate_mjs__WEBPACK_IMPORTED_MODULE_16__.assertValidSchema)(schema); // Variables, if provided, must be an object.
+
+  rawVariableValues == null ||
+    (0,_jsutils_isObjectLike_mjs__WEBPACK_IMPORTED_MODULE_4__.isObjectLike)(rawVariableValues) ||
+    (0,_jsutils_devAssert_mjs__WEBPACK_IMPORTED_MODULE_0__.devAssert)(
+      false,
+      'Variables must be provided as an Object where each property is a variable value. Perhaps look to see if an unparsed JSON string was provided.',
+    );
+}
+/**
+ * Constructs a ExecutionContext object from the arguments passed to
+ * execute, which we will pass throughout the other execution methods.
+ *
+ * Throws a GraphQLError if a valid execution context cannot be created.
+ *
+ * @internal
+ */
+
+function buildExecutionContext(args) {
+  var _definition$name, _operation$variableDe, _options$maxCoercionE;
+
+  const {
+    schema,
+    document,
+    rootValue,
+    contextValue,
+    variableValues: rawVariableValues,
+    operationName,
+    fieldResolver,
+    typeResolver,
+    subscribeFieldResolver,
+    options,
+  } = args;
+  let operation;
+  const fragments = Object.create(null);
+
+  for (const definition of document.definitions) {
+    switch (definition.kind) {
+      case _language_kinds_mjs__WEBPACK_IMPORTED_MODULE_13__.Kind.OPERATION_DEFINITION:
+        if (operationName == null) {
+          if (operation !== undefined) {
+            return [
+              new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError(
+                'Must provide operation name if query contains multiple operations.',
+              ),
+            ];
+          }
+
+          operation = definition;
+        } else if (
+          ((_definition$name = definition.name) === null ||
+          _definition$name === void 0
+            ? void 0
+            : _definition$name.value) === operationName
+        ) {
+          operation = definition;
+        }
+
+        break;
+
+      case _language_kinds_mjs__WEBPACK_IMPORTED_MODULE_13__.Kind.FRAGMENT_DEFINITION:
+        fragments[definition.name.value] = definition;
+        break;
+
+      default: // ignore non-executable definitions
+    }
+  }
+
+  if (!operation) {
+    if (operationName != null) {
+      return [new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError(`Unknown operation named "${operationName}".`)];
+    }
+
+    return [new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError('Must provide an operation.')];
+  } // FIXME: https://github.com/graphql/graphql-js/issues/2203
+
+  /* c8 ignore next */
+
+  const variableDefinitions =
+    (_operation$variableDe = operation.variableDefinitions) !== null &&
+    _operation$variableDe !== void 0
+      ? _operation$variableDe
+      : [];
+  const coercedVariableValues = (0,_values_mjs__WEBPACK_IMPORTED_MODULE_18__.getVariableValues)(
+    schema,
+    variableDefinitions,
+    rawVariableValues !== null && rawVariableValues !== void 0
+      ? rawVariableValues
+      : {},
+    {
+      maxErrors:
+        (_options$maxCoercionE =
+          options === null || options === void 0
+            ? void 0
+            : options.maxCoercionErrors) !== null &&
+        _options$maxCoercionE !== void 0
+          ? _options$maxCoercionE
+          : 50,
+    },
+  );
+
+  if (coercedVariableValues.errors) {
+    return coercedVariableValues.errors;
+  }
+
+  return {
+    schema,
+    fragments,
+    rootValue,
+    contextValue,
+    operation,
+    variableValues: coercedVariableValues.coerced,
+    fieldResolver:
+      fieldResolver !== null && fieldResolver !== void 0
+        ? fieldResolver
+        : defaultFieldResolver,
+    typeResolver:
+      typeResolver !== null && typeResolver !== void 0
+        ? typeResolver
+        : defaultTypeResolver,
+    subscribeFieldResolver:
+      subscribeFieldResolver !== null && subscribeFieldResolver !== void 0
+        ? subscribeFieldResolver
+        : defaultFieldResolver,
+    collectedErrors: new CollectedErrors(),
+  };
+}
+/**
+ * Implements the "Executing operations" section of the spec.
+ *
+ * @internal
+ */
+
+function executeOperation(exeContext, operation, rootValue) {
+  const rootType = exeContext.schema.getRootType(operation.operation);
+
+  if (rootType == null) {
+    throw new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError(
+      `Schema is not configured to execute ${operation.operation} operation.`,
+      {
+        nodes: operation,
+      },
+    );
+  }
+
+  const rootFields = (0,_collectFields_mjs__WEBPACK_IMPORTED_MODULE_17__.collectFields)(
+    exeContext.schema,
+    exeContext.fragments,
+    exeContext.variableValues,
+    rootType,
+    operation.selectionSet,
+  );
+  const path = undefined;
+
+  switch (operation.operation) {
+    case _language_ast_mjs__WEBPACK_IMPORTED_MODULE_12__.OperationTypeNode.QUERY:
+      return executeFields(exeContext, rootType, rootValue, path, rootFields);
+
+    case _language_ast_mjs__WEBPACK_IMPORTED_MODULE_12__.OperationTypeNode.MUTATION:
+      return executeFieldsSerially(
+        exeContext,
+        rootType,
+        rootValue,
+        path,
+        rootFields,
+      );
+
+    case _language_ast_mjs__WEBPACK_IMPORTED_MODULE_12__.OperationTypeNode.SUBSCRIPTION:
+      // TODO: deprecate `subscribe` and move all logic here
+      // Temporary solution until we finish merging execute and subscribe together
+      return executeFields(exeContext, rootType, rootValue, path, rootFields);
+  }
+}
+/**
+ * Implements the "Executing selection sets" section of the spec
+ * for fields that must be executed serially.
+ *
+ * @internal
+ */
+
+function executeFieldsSerially(
+  exeContext,
+  parentType,
+  sourceValue,
+  path,
+  fields,
+) {
+  return (0,_jsutils_promiseReduce_mjs__WEBPACK_IMPORTED_MODULE_9__.promiseReduce)(
+    fields.entries(),
+    (results, [responseName, fieldNodes]) => {
+      const fieldPath = (0,_jsutils_Path_mjs__WEBPACK_IMPORTED_MODULE_7__.addPath)(path, responseName, parentType.name);
+      const result = executeField(
+        exeContext,
+        parentType,
+        sourceValue,
+        fieldNodes,
+        fieldPath,
+      );
+
+      if (result === undefined) {
+        return results;
+      }
+
+      if ((0,_jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__.isPromise)(result)) {
+        return result.then((resolvedResult) => {
+          results[responseName] = resolvedResult;
+          return results;
+        });
+      }
+
+      results[responseName] = result;
+      return results;
+    },
+    Object.create(null),
+  );
+}
+/**
+ * Implements the "Executing selection sets" section of the spec
+ * for fields that may be executed in parallel.
+ *
+ * @internal
+ */
+
+function executeFields(exeContext, parentType, sourceValue, path, fields) {
+  const results = Object.create(null);
+  let containsPromise = false;
+
+  try {
+    for (const [responseName, fieldNodes] of fields.entries()) {
+      const fieldPath = (0,_jsutils_Path_mjs__WEBPACK_IMPORTED_MODULE_7__.addPath)(path, responseName, parentType.name);
+      const result = executeField(
+        exeContext,
+        parentType,
+        sourceValue,
+        fieldNodes,
+        fieldPath,
+      );
+
+      if (result !== undefined) {
+        results[responseName] = result;
+
+        if ((0,_jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__.isPromise)(result)) {
+          containsPromise = true;
+        }
+      }
+    }
+  } catch (error) {
+    if (containsPromise) {
+      // Ensure that any promises returned by other fields are handled, as they may also reject.
+      return (0,_jsutils_promiseForObject_mjs__WEBPACK_IMPORTED_MODULE_8__.promiseForObject)(results).finally(() => {
+        throw error;
+      });
+    }
+
+    throw error;
+  } // If there are no promises, we can just return the object
+
+  if (!containsPromise) {
+    return results;
+  } // Otherwise, results is a map from field name to the result of resolving that
+  // field, which is possibly a promise. Return a promise that will return this
+  // same map, but with any promises replaced with the values they resolved to.
+
+  return (0,_jsutils_promiseForObject_mjs__WEBPACK_IMPORTED_MODULE_8__.promiseForObject)(results);
+}
+/**
+ * Implements the "Executing fields" section of the spec
+ * In particular, this function figures out the value that the field returns by
+ * calling its resolve function, then calls completeValue to complete promises,
+ * serialize scalars, or execute the sub-selection-set for objects.
+ *
+ * @internal
+ */
+
+function executeField(exeContext, parentType, source, fieldNodes, path) {
+  var _fieldDef$resolve;
+
+  const fieldDef = getFieldDef(exeContext.schema, parentType, fieldNodes[0]);
+
+  if (!fieldDef) {
+    return;
+  }
+
+  const returnType = fieldDef.type;
+  const resolveFn =
+    (_fieldDef$resolve = fieldDef.resolve) !== null &&
+    _fieldDef$resolve !== void 0
+      ? _fieldDef$resolve
+      : exeContext.fieldResolver;
+  const info = buildResolveInfo(
+    exeContext,
+    fieldDef,
+    fieldNodes,
+    parentType,
+    path,
+  ); // Get the resolve function, regardless of if its result is normal or abrupt (error).
+
+  try {
+    // Build a JS object of arguments from the field.arguments AST, using the
+    // variables scope to fulfill any variable references.
+    // TODO: find a way to memoize, in case this field is within a List type.
+    const args = (0,_values_mjs__WEBPACK_IMPORTED_MODULE_18__.getArgumentValues)(
+      fieldDef,
+      fieldNodes[0],
+      exeContext.variableValues,
+    ); // The resolve function's optional third argument is a context value that
+    // is provided to every resolve function within an execution. It is commonly
+    // used to represent an authenticated user, or request-specific caches.
+
+    const contextValue = exeContext.contextValue;
+    const result = resolveFn(source, args, contextValue, info);
+    let completed;
+
+    if ((0,_jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__.isPromise)(result)) {
+      completed = result.then((resolved) =>
+        completeValue(exeContext, returnType, fieldNodes, info, path, resolved),
+      );
+    } else {
+      completed = completeValue(
+        exeContext,
+        returnType,
+        fieldNodes,
+        info,
+        path,
+        result,
+      );
+    }
+
+    if ((0,_jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__.isPromise)(completed)) {
+      // Note: we don't rely on a `catch` method, but we do expect "thenable"
+      // to take a second callback for the error case.
+      return completed.then(undefined, (rawError) => {
+        const error = (0,_error_locatedError_mjs__WEBPACK_IMPORTED_MODULE_11__.locatedError)(rawError, fieldNodes, (0,_jsutils_Path_mjs__WEBPACK_IMPORTED_MODULE_7__.pathToArray)(path));
+        return handleFieldError(error, returnType, path, exeContext);
+      });
+    }
+
+    return completed;
+  } catch (rawError) {
+    const error = (0,_error_locatedError_mjs__WEBPACK_IMPORTED_MODULE_11__.locatedError)(rawError, fieldNodes, (0,_jsutils_Path_mjs__WEBPACK_IMPORTED_MODULE_7__.pathToArray)(path));
+    return handleFieldError(error, returnType, path, exeContext);
+  }
+}
+/** @internal */
+
+function buildResolveInfo(
+  exeContext,
+  fieldDef,
+  fieldNodes,
+  parentType,
+  path,
+) {
+  // The resolve function's optional fourth argument is a collection of
+  // information about the current execution state.
+  return {
+    fieldName: fieldDef.name,
+    fieldNodes,
+    returnType: fieldDef.type,
+    parentType,
+    path,
+    schema: exeContext.schema,
+    fragments: exeContext.fragments,
+    rootValue: exeContext.rootValue,
+    operation: exeContext.operation,
+    variableValues: exeContext.variableValues,
+  };
+}
+
+function handleFieldError(error, returnType, path, exeContext) {
+  // If the field type is non-nullable, then it is resolved without any
+  // protection from errors, however it still properly locates the error.
+  if ((0,_type_definition_mjs__WEBPACK_IMPORTED_MODULE_14__.isNonNullType)(returnType)) {
+    throw error;
+  } // Otherwise, error protection is applied, logging the error and resolving
+  // a null value for this field if one is encountered.
+
+  exeContext.collectedErrors.add(error, path);
+  return null;
+}
+/**
+ * Implements the instructions for completeValue as defined in the
+ * "Value Completion" section of the spec.
+ *
+ * If the field type is Non-Null, then this recursively completes the value
+ * for the inner type. It throws a field error if that completion returns null,
+ * as per the "Nullability" section of the spec.
+ *
+ * If the field type is a List, then this recursively completes the value
+ * for the inner type on each item in the list.
+ *
+ * If the field type is a Scalar or Enum, ensures the completed value is a legal
+ * value of the type by calling the `serialize` method of GraphQL type
+ * definition.
+ *
+ * If the field is an abstract type, determine the runtime type of the value
+ * and then complete based on that type
+ *
+ * Otherwise, the field type expects a sub-selection set, and will complete the
+ * value by executing all sub-selections.
+ *
+ * @internal
+ */
+
+function completeValue(exeContext, returnType, fieldNodes, info, path, result) {
+  // If result is an Error, throw a located error.
+  if (result instanceof Error) {
+    throw result;
+  } // If field type is NonNull, complete for inner type, and throw field error
+  // if result is null.
+
+  if ((0,_type_definition_mjs__WEBPACK_IMPORTED_MODULE_14__.isNonNullType)(returnType)) {
+    const completed = completeValue(
+      exeContext,
+      returnType.ofType,
+      fieldNodes,
+      info,
+      path,
+      result,
+    );
+
+    if (completed === null) {
+      throw new Error(
+        `Cannot return null for non-nullable field ${info.parentType.name}.${info.fieldName}.`,
+      );
+    }
+
+    return completed;
+  } // If result value is null or undefined then return null.
+
+  if (result == null) {
+    return null;
+  } // If field type is List, complete each item in the list with the inner type
+
+  if ((0,_type_definition_mjs__WEBPACK_IMPORTED_MODULE_14__.isListType)(returnType)) {
+    return completeListValue(
+      exeContext,
+      returnType,
+      fieldNodes,
+      info,
+      path,
+      result,
+    );
+  } // If field type is a leaf type, Scalar or Enum, serialize to a valid value,
+  // returning null if serialization is not possible.
+
+  if ((0,_type_definition_mjs__WEBPACK_IMPORTED_MODULE_14__.isLeafType)(returnType)) {
+    return completeLeafValue(returnType, result);
+  } // If field type is an abstract type, Interface or Union, determine the
+  // runtime Object type and complete for that type.
+
+  if ((0,_type_definition_mjs__WEBPACK_IMPORTED_MODULE_14__.isAbstractType)(returnType)) {
+    return completeAbstractValue(
+      exeContext,
+      returnType,
+      fieldNodes,
+      info,
+      path,
+      result,
+    );
+  } // If field type is Object, execute and complete all sub-selections.
+
+  if ((0,_type_definition_mjs__WEBPACK_IMPORTED_MODULE_14__.isObjectType)(returnType)) {
+    return completeObjectValue(
+      exeContext,
+      returnType,
+      fieldNodes,
+      info,
+      path,
+      result,
+    );
+  }
+  /* c8 ignore next 6 */
+  // Not reachable, all possible output types have been considered.
+
+   false ||
+    (0,_jsutils_invariant_mjs__WEBPACK_IMPORTED_MODULE_2__.invariant)(
+      false,
+      'Cannot complete value of unexpected output type: ' + (0,_jsutils_inspect_mjs__WEBPACK_IMPORTED_MODULE_1__.inspect)(returnType),
+    );
+}
+/**
+ * Complete a list value by completing each item in the list with the
+ * inner type
+ *
+ * @internal
+ */
+
+function completeListValue(
+  exeContext,
+  returnType,
+  fieldNodes,
+  info,
+  path,
+  result,
+) {
+  if (!(0,_jsutils_isIterableObject_mjs__WEBPACK_IMPORTED_MODULE_3__.isIterableObject)(result)) {
+    throw new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError(
+      `Expected Iterable, but did not find one for field "${info.parentType.name}.${info.fieldName}".`,
+    );
+  } // This is specified as a simple map, however we're optimizing the path
+  // where the list contains no Promises by avoiding creating another Promise.
+
+  const itemType = returnType.ofType;
+  let containsPromise = false;
+  const completedResults = Array.from(result, (item, index) => {
+    // No need to modify the info object containing the path,
+    // since from here on it is not ever accessed by resolver functions.
+    const itemPath = (0,_jsutils_Path_mjs__WEBPACK_IMPORTED_MODULE_7__.addPath)(path, index, undefined);
+
+    try {
+      let completedItem;
+
+      if ((0,_jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__.isPromise)(item)) {
+        completedItem = item.then((resolved) =>
+          completeValue(
+            exeContext,
+            itemType,
+            fieldNodes,
+            info,
+            itemPath,
+            resolved,
+          ),
+        );
+      } else {
+        completedItem = completeValue(
+          exeContext,
+          itemType,
+          fieldNodes,
+          info,
+          itemPath,
+          item,
+        );
+      }
+
+      if ((0,_jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__.isPromise)(completedItem)) {
+        containsPromise = true; // Note: we don't rely on a `catch` method, but we do expect "thenable"
+        // to take a second callback for the error case.
+
+        return completedItem.then(undefined, (rawError) => {
+          const error = (0,_error_locatedError_mjs__WEBPACK_IMPORTED_MODULE_11__.locatedError)(
+            rawError,
+            fieldNodes,
+            (0,_jsutils_Path_mjs__WEBPACK_IMPORTED_MODULE_7__.pathToArray)(itemPath),
+          );
+          return handleFieldError(error, itemType, itemPath, exeContext);
+        });
+      }
+
+      return completedItem;
+    } catch (rawError) {
+      const error = (0,_error_locatedError_mjs__WEBPACK_IMPORTED_MODULE_11__.locatedError)(rawError, fieldNodes, (0,_jsutils_Path_mjs__WEBPACK_IMPORTED_MODULE_7__.pathToArray)(itemPath));
+      return handleFieldError(error, itemType, itemPath, exeContext);
+    }
+  });
+  return containsPromise ? Promise.all(completedResults) : completedResults;
+}
+/**
+ * Complete a Scalar or Enum by serializing to a valid value, returning
+ * null if serialization is not possible.
+ *
+ * @internal
+ */
+
+function completeLeafValue(returnType, result) {
+  const serializedResult = returnType.serialize(result);
+
+  if (serializedResult == null) {
+    throw new Error(
+      `Expected \`${(0,_jsutils_inspect_mjs__WEBPACK_IMPORTED_MODULE_1__.inspect)(returnType)}.serialize(${(0,_jsutils_inspect_mjs__WEBPACK_IMPORTED_MODULE_1__.inspect)(result)})\` to ` +
+        `return non-nullable value, returned: ${(0,_jsutils_inspect_mjs__WEBPACK_IMPORTED_MODULE_1__.inspect)(serializedResult)}`,
+    );
+  }
+
+  return serializedResult;
+}
+/**
+ * Complete a value of an abstract type by determining the runtime object type
+ * of that value, then complete the value for that type.
+ *
+ * @internal
+ */
+
+function completeAbstractValue(
+  exeContext,
+  returnType,
+  fieldNodes,
+  info,
+  path,
+  result,
+) {
+  var _returnType$resolveTy;
+
+  const resolveTypeFn =
+    (_returnType$resolveTy = returnType.resolveType) !== null &&
+    _returnType$resolveTy !== void 0
+      ? _returnType$resolveTy
+      : exeContext.typeResolver;
+  const contextValue = exeContext.contextValue;
+  const runtimeType = resolveTypeFn(result, contextValue, info, returnType);
+
+  if ((0,_jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__.isPromise)(runtimeType)) {
+    return runtimeType.then((resolvedRuntimeType) =>
+      completeObjectValue(
+        exeContext,
+        ensureValidRuntimeType(
+          resolvedRuntimeType,
+          exeContext,
+          returnType,
+          fieldNodes,
+          info,
+          result,
+        ),
+        fieldNodes,
+        info,
+        path,
+        result,
+      ),
+    );
+  }
+
+  return completeObjectValue(
+    exeContext,
+    ensureValidRuntimeType(
+      runtimeType,
+      exeContext,
+      returnType,
+      fieldNodes,
+      info,
+      result,
+    ),
+    fieldNodes,
+    info,
+    path,
+    result,
+  );
+}
+
+function ensureValidRuntimeType(
+  runtimeTypeName,
+  exeContext,
+  returnType,
+  fieldNodes,
+  info,
+  result,
+) {
+  if (runtimeTypeName == null) {
+    throw new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError(
+      `Abstract type "${returnType.name}" must resolve to an Object type at runtime for field "${info.parentType.name}.${info.fieldName}". Either the "${returnType.name}" type should provide a "resolveType" function or each possible type should provide an "isTypeOf" function.`,
+      fieldNodes,
+    );
+  } // releases before 16.0.0 supported returning `GraphQLObjectType` from `resolveType`
+  // TODO: remove in 17.0.0 release
+
+  if ((0,_type_definition_mjs__WEBPACK_IMPORTED_MODULE_14__.isObjectType)(runtimeTypeName)) {
+    throw new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError(
+      'Support for returning GraphQLObjectType from resolveType was removed in graphql-js@16.0.0 please return type name instead.',
+    );
+  }
+
+  if (typeof runtimeTypeName !== 'string') {
+    throw new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError(
+      `Abstract type "${returnType.name}" must resolve to an Object type at runtime for field "${info.parentType.name}.${info.fieldName}" with ` +
+        `value ${(0,_jsutils_inspect_mjs__WEBPACK_IMPORTED_MODULE_1__.inspect)(result)}, received "${(0,_jsutils_inspect_mjs__WEBPACK_IMPORTED_MODULE_1__.inspect)(runtimeTypeName)}".`,
+    );
+  }
+
+  const runtimeType = exeContext.schema.getType(runtimeTypeName);
+
+  if (runtimeType == null) {
+    throw new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError(
+      `Abstract type "${returnType.name}" was resolved to a type "${runtimeTypeName}" that does not exist inside the schema.`,
+      {
+        nodes: fieldNodes,
+      },
+    );
+  }
+
+  if (!(0,_type_definition_mjs__WEBPACK_IMPORTED_MODULE_14__.isObjectType)(runtimeType)) {
+    throw new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError(
+      `Abstract type "${returnType.name}" was resolved to a non-object type "${runtimeTypeName}".`,
+      {
+        nodes: fieldNodes,
+      },
+    );
+  }
+
+  if (!exeContext.schema.isSubType(returnType, runtimeType)) {
+    throw new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError(
+      `Runtime Object type "${runtimeType.name}" is not a possible type for "${returnType.name}".`,
+      {
+        nodes: fieldNodes,
+      },
+    );
+  }
+
+  return runtimeType;
+}
+/**
+ * Complete an Object value by executing all sub-selections.
+ *
+ * @internal
+ */
+
+function completeObjectValue(
+  exeContext,
+  returnType,
+  fieldNodes,
+  info,
+  path,
+  result,
+) {
+  // Collect sub-fields to execute to complete this value.
+  const subFieldNodes = collectSubfields(exeContext, returnType, fieldNodes); // If there is an isTypeOf predicate function, call it with the
+  // current result. If isTypeOf returns false, then raise an error rather
+  // than continuing execution.
+
+  if (returnType.isTypeOf) {
+    const isTypeOf = returnType.isTypeOf(result, exeContext.contextValue, info);
+
+    if ((0,_jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__.isPromise)(isTypeOf)) {
+      return isTypeOf.then((resolvedIsTypeOf) => {
+        if (!resolvedIsTypeOf) {
+          throw invalidReturnTypeError(returnType, result, fieldNodes);
+        }
+
+        return executeFields(
+          exeContext,
+          returnType,
+          result,
+          path,
+          subFieldNodes,
+        );
+      });
+    }
+
+    if (!isTypeOf) {
+      throw invalidReturnTypeError(returnType, result, fieldNodes);
+    }
+  }
+
+  return executeFields(exeContext, returnType, result, path, subFieldNodes);
+}
+
+function invalidReturnTypeError(returnType, result, fieldNodes) {
+  return new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_10__.GraphQLError(
+    `Expected value of type "${returnType.name}" but got: ${(0,_jsutils_inspect_mjs__WEBPACK_IMPORTED_MODULE_1__.inspect)(result)}.`,
+    {
+      nodes: fieldNodes,
+    },
+  );
+}
+/**
+ * If a resolveType function is not given, then a default resolve behavior is
+ * used which attempts two strategies:
+ *
+ * First, See if the provided value has a `__typename` field defined, if so, use
+ * that value as name of the resolved type.
+ *
+ * Otherwise, test each possible type for the abstract type by calling
+ * isTypeOf for the object being coerced, returning the first type that matches.
+ */
+
+const defaultTypeResolver = function (
+  value,
+  contextValue,
+  info,
+  abstractType,
+) {
+  // First, look for `__typename`.
+  if ((0,_jsutils_isObjectLike_mjs__WEBPACK_IMPORTED_MODULE_4__.isObjectLike)(value) && typeof value.__typename === 'string') {
+    return value.__typename;
+  } // Otherwise, test each possible type.
+
+  const possibleTypes = info.schema.getPossibleTypes(abstractType);
+  const promisedIsTypeOfResults = [];
+
+  for (let i = 0; i < possibleTypes.length; i++) {
+    const type = possibleTypes[i];
+
+    if (type.isTypeOf) {
+      const isTypeOfResult = type.isTypeOf(value, contextValue, info);
+
+      if ((0,_jsutils_isPromise_mjs__WEBPACK_IMPORTED_MODULE_5__.isPromise)(isTypeOfResult)) {
+        promisedIsTypeOfResults[i] = isTypeOfResult;
+      } else if (isTypeOfResult) {
+        if (promisedIsTypeOfResults.length) {
+          // Explicitly ignore any promise rejections
+          Promise.allSettled(promisedIsTypeOfResults)
+            /* c8 ignore next 3 */
+            .catch(() => {
+              // Do nothing
+            });
+        }
+
+        return type.name;
+      }
+    }
+  }
+
+  if (promisedIsTypeOfResults.length) {
+    return Promise.all(promisedIsTypeOfResults).then((isTypeOfResults) => {
+      for (let i = 0; i < isTypeOfResults.length; i++) {
+        if (isTypeOfResults[i]) {
+          return possibleTypes[i].name;
+        }
+      }
+    });
+  }
+};
+/**
+ * If a resolve function is not given, then a default resolve behavior is used
+ * which takes the property of the source object of the same name as the field
+ * and returns it as the result, or if it's a function, returns the result
+ * of calling that function while passing along args and context value.
+ */
+
+const defaultFieldResolver = function (
+  source,
+  args,
+  contextValue,
+  info,
+) {
+  // ensure source is a value for which property access is acceptable.
+  if ((0,_jsutils_isObjectLike_mjs__WEBPACK_IMPORTED_MODULE_4__.isObjectLike)(source) || typeof source === 'function') {
+    const property = source[info.fieldName];
+
+    if (typeof property === 'function') {
+      return source[info.fieldName](args, contextValue, info);
+    }
+
+    return property;
+  }
+};
+/**
+ * This method looks up the field on the given type definition.
+ * It has special casing for the three introspection fields,
+ * __schema, __type and __typename. __typename is special because
+ * it can always be queried as a field, even in situations where no
+ * other fields are allowed, like on a Union. __schema and __type
+ * could get automatically added to the query type, but that would
+ * require mutating type definitions, which would cause issues.
+ *
+ * @internal
+ */
+
+function getFieldDef(schema, parentType, fieldNode) {
+  const fieldName = fieldNode.name.value;
+
+  if (
+    fieldName === _type_introspection_mjs__WEBPACK_IMPORTED_MODULE_15__.SchemaMetaFieldDef.name &&
+    schema.getQueryType() === parentType
+  ) {
+    return _type_introspection_mjs__WEBPACK_IMPORTED_MODULE_15__.SchemaMetaFieldDef;
+  } else if (
+    fieldName === _type_introspection_mjs__WEBPACK_IMPORTED_MODULE_15__.TypeMetaFieldDef.name &&
+    schema.getQueryType() === parentType
+  ) {
+    return _type_introspection_mjs__WEBPACK_IMPORTED_MODULE_15__.TypeMetaFieldDef;
+  } else if (fieldName === _type_introspection_mjs__WEBPACK_IMPORTED_MODULE_15__.TypeNameMetaFieldDef.name) {
+    return _type_introspection_mjs__WEBPACK_IMPORTED_MODULE_15__.TypeNameMetaFieldDef;
+  }
+
+  return parentType.getFields()[fieldName];
+}
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql/execution/mapAsyncIterator.mjs"
+/*!***********************************************************************!*\
+  !*** ../../../../node_modules/graphql/execution/mapAsyncIterator.mjs ***!
+  \***********************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   mapAsyncIterator: () => (/* binding */ mapAsyncIterator)
+/* harmony export */ });
+/**
+ * Given an AsyncIterable and a callback function, return an AsyncIterator
+ * which produces values mapped via calling the callback function.
+ *
+ * @internal
+ */
+function mapAsyncIterator(iterable, callback) {
+  const iterator = iterable[Symbol.asyncIterator]();
+
+  async function mapResult(result) {
+    if (result.done) {
+      return result;
+    }
+
+    try {
+      return {
+        value: await callback(result.value),
+        done: false,
+      };
+    } catch (error) {
+      /* c8 ignore start */
+      // FIXME: add test case
+      if (typeof iterator.return === 'function') {
+        try {
+          await iterator.return();
+        } catch (_e) {
+          /* ignore error */
+        }
+      }
+
+      throw error;
+      /* c8 ignore stop */
+    }
+  }
+
+  return {
+    async next() {
+      return mapResult(await iterator.next());
+    },
+
+    async return() {
+      // If iterator.return() does not exist, then type R must be undefined.
+      return typeof iterator.return === 'function'
+        ? mapResult(await iterator.return())
+        : {
+            value: undefined,
+            done: true,
+          };
+    },
+
+    async throw(error) {
+      if (typeof iterator.throw === 'function') {
+        return mapResult(await iterator.throw(error));
+      }
+
+      throw error;
+    },
+
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+  };
+}
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql/execution/subscribe.mjs"
+/*!****************************************************************!*\
+  !*** ../../../../node_modules/graphql/execution/subscribe.mjs ***!
+  \****************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   createSourceEventStream: () => (/* binding */ createSourceEventStream),
+/* harmony export */   subscribe: () => (/* binding */ subscribe)
+/* harmony export */ });
+/* harmony import */ var _jsutils_devAssert_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../jsutils/devAssert.mjs */ "../../../../node_modules/graphql/jsutils/devAssert.mjs");
+/* harmony import */ var _jsutils_inspect_mjs__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../jsutils/inspect.mjs */ "../../../../node_modules/graphql/jsutils/inspect.mjs");
+/* harmony import */ var _jsutils_isAsyncIterable_mjs__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../jsutils/isAsyncIterable.mjs */ "../../../../node_modules/graphql/jsutils/isAsyncIterable.mjs");
+/* harmony import */ var _jsutils_Path_mjs__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../jsutils/Path.mjs */ "../../../../node_modules/graphql/jsutils/Path.mjs");
+/* harmony import */ var _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../error/GraphQLError.mjs */ "../../../../node_modules/graphql/error/GraphQLError.mjs");
+/* harmony import */ var _error_locatedError_mjs__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../error/locatedError.mjs */ "../../../../node_modules/graphql/error/locatedError.mjs");
+/* harmony import */ var _collectFields_mjs__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./collectFields.mjs */ "../../../../node_modules/graphql/execution/collectFields.mjs");
+/* harmony import */ var _execute_mjs__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./execute.mjs */ "../../../../node_modules/graphql/execution/execute.mjs");
+/* harmony import */ var _mapAsyncIterator_mjs__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./mapAsyncIterator.mjs */ "../../../../node_modules/graphql/execution/mapAsyncIterator.mjs");
+/* harmony import */ var _values_mjs__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./values.mjs */ "../../../../node_modules/graphql/execution/values.mjs");
+/** @category Subscriptions */
+
+
+
+
+
+
+
+
+
+
+/**
+ * Implements the "Subscribe" algorithm described in the GraphQL specification.
+ *
+ * Returns a Promise that resolves to either an AsyncIterator (if successful)
+ * or an ExecutionResult (error). The promise will be rejected if the schema or
+ * other arguments to this function are invalid, or if the resolved event stream
+ * is not an async iterable.
+ *
+ * If the client-provided arguments to this function do not result in a
+ * compliant subscription, a GraphQL Response (ExecutionResult) with
+ * descriptive errors and no data will be returned.
+ *
+ * If the source stream could not be created due to faulty subscription
+ * resolver logic or underlying systems, the promise will resolve to a single
+ * ExecutionResult containing `errors` and no `data`.
+ *
+ * If the operation succeeded, the promise resolves to an AsyncIterator, which
+ * yields a stream of ExecutionResults representing the response stream.
+ *
+ * Each payload yielded by the source event stream is executed with the payload
+ * as the root value. This maps the subscription source stream into the response
+ * stream described by the GraphQL specification.
+ *
+ * Accepts an object with named arguments.
+ * @param args - The arguments used to perform the operation.
+ * @returns A source stream mapped to execution results, or an execution result
+ * containing subscription errors.
+ * @example
+ * ```ts
+ * // Use a same-named rootValue function to provide the source event stream.
+ * import assert from 'node:assert';
+ * import { parse } from 'graphql/language';
+ * import { buildSchema } from 'graphql/utilities';
+ * import { subscribe } from 'graphql/execution';
+ *
+ * async function* greetings() {
+ *   yield { greeting: 'Hello' };
+ *   yield { greeting: 'Bonjour' };
+ * }
+ *
+ * const schema = buildSchema(`
+ *   type Query {
+ *     noop: String
+ *   }
+ *
+ *   type Subscription {
+ *     greeting: String
+ *   }
+ * `);
+ *
+ * const result = await subscribe({
+ *   schema,
+ *   document: parse('subscription { greeting }'),
+ *   rootValue: { greeting: () => greetings() },
+ * });
+ *
+ * assert('next' in result);
+ *
+ * const firstPayload = await result.next();
+ * firstPayload.value; // => { data: { greeting: 'Hello' } }
+ * ```
+ * @example
+ * ```ts
+ * // This variant supplies events through a custom subscribeFieldResolver.
+ * import assert from 'node:assert';
+ * import { parse } from 'graphql/language';
+ * import { buildSchema } from 'graphql/utilities';
+ * import { subscribe } from 'graphql/execution';
+ *
+ * async function* defaultGreetings() {
+ *   yield { greeting: 'Hello' };
+ * }
+ *
+ * async function* frenchGreetings() {
+ *   yield { greeting: 'Bonjour' };
+ * }
+ *
+ * const schema = buildSchema(`
+ *   type Query {
+ *     noop: String
+ *   }
+ *
+ *   type Subscription {
+ *     greeting(locale: String): String
+ *   }
+ * `);
+ *
+ * const result = await subscribe({
+ *   schema,
+ *   document: parse(
+ *     'subscription Greeting($locale: String) { greeting(locale: $locale) }',
+ *   ),
+ *   rootValue: {
+ *     greeting: (args, contextValue) => {
+ *       const locale = args.locale ?? contextValue.defaultLocale;
+ *       return locale === 'fr' ? frenchGreetings() : defaultGreetings();
+ *     },
+ *   },
+ *   contextValue: { defaultLocale: 'fr' },
+ *   variableValues: { locale: 'fr' },
+ *   operationName: 'Greeting',
+ *   subscribeFieldResolver: (rootValue, args, contextValue, info) => {
+ *     args.locale; // => 'fr'
+ *     return rootValue[info.fieldName](args, contextValue);
+ *   },
+ * });
+ *
+ * assert('next' in result);
+ *
+ * const firstPayload = await result.next();
+ * firstPayload.value; // => { data: { greeting: 'Bonjour' } }
+ * ```
+ * @example
+ * ```ts
+ * // This variant shows the error result when the schema has no subscription root.
+ * import assert from 'node:assert';
+ * import { parse } from 'graphql/language';
+ * import { buildSchema } from 'graphql/utilities';
+ * import { subscribe } from 'graphql/execution';
+ *
+ * const schema = buildSchema(`
+ *   type Query {
+ *     noop: String
+ *   }
+ * `);
+ *
+ * const result = await subscribe({
+ *   schema,
+ *   document: parse('subscription { greeting }'),
+ * });
+ *
+ * assert('errors' in result);
+ *
+ * result.errors[0].message; // => 'Schema is not configured to execute subscription operation.'
+ * ```
+ */
+
+async function subscribe(args) {
+  // Temporary for v15 to v16 migration. Remove in v17
+  arguments.length < 2 ||
+    (0,_jsutils_devAssert_mjs__WEBPACK_IMPORTED_MODULE_0__.devAssert)(
+      false,
+      'graphql@16 dropped long-deprecated support for positional arguments, please pass an object instead.',
+    );
+  const resultOrStream = await createSourceEventStream(args);
+
+  if (!(0,_jsutils_isAsyncIterable_mjs__WEBPACK_IMPORTED_MODULE_2__.isAsyncIterable)(resultOrStream)) {
+    return resultOrStream;
+  }
+
+  const mapSourceToResponse = (payload) =>
+    (0,_execute_mjs__WEBPACK_IMPORTED_MODULE_7__.execute)({ ...args, rootValue: payload });
+
+  return (0,_mapAsyncIterator_mjs__WEBPACK_IMPORTED_MODULE_8__.mapAsyncIterator)(resultOrStream, mapSourceToResponse);
+}
+
+function toNormalizedArgs(args) {
+  const firstArg = args[0];
+
+  if (firstArg && 'document' in firstArg) {
+    return firstArg;
+  }
+
+  return {
+    schema: firstArg,
+    // FIXME: when underlying TS bug fixed, see https://github.com/microsoft/TypeScript/issues/31613
+    document: args[1],
+    rootValue: args[2],
+    contextValue: args[3],
+    variableValues: args[4],
+    operationName: args[5],
+    subscribeFieldResolver: args[6],
+  };
+}
+/**
+ * Implements the "CreateSourceEventStream" algorithm described in the
+ * GraphQL specification, resolving the subscription source event stream.
+ *
+ * Returns a Promise that resolves to either an AsyncIterable (if successful)
+ * or an ExecutionResult (error). The promise will be rejected if the schema or
+ * other arguments to this function are invalid, or if the resolved event stream
+ * is not an async iterable.
+ *
+ * If the client-provided arguments to this function do not result in a
+ * compliant subscription, a GraphQL Response (ExecutionResult) with
+ * descriptive errors and no data will be returned.
+ *
+ * If the source stream could not be created due to faulty subscription
+ * resolver logic or underlying systems, the promise will resolve to a single
+ * ExecutionResult containing `errors` and no `data`.
+ *
+ * If the operation succeeded, the promise resolves to the AsyncIterable for the
+ * event stream returned by the resolver.
+ *
+ * A Source Event Stream represents a sequence of events, each of which triggers
+ * a GraphQL execution for that event.
+ *
+ * This may be useful when hosting the stateful subscription service in a
+ * different process or machine than the stateless GraphQL execution engine,
+ * or otherwise separating these two steps. For more on this, see the
+ * "Supporting Subscriptions at Scale" information in the GraphQL specification.
+ * @param args - The arguments used to perform the operation.
+ * @returns The source event stream, or an execution result containing subscription errors.
+ * @example
+ * ```ts
+ * import { parse } from 'graphql/language';
+ * import { buildSchema } from 'graphql/utilities';
+ * import { createSourceEventStream } from 'graphql/execution';
+ *
+ * async function* greetings() {
+ *   yield { greeting: 'Hello' };
+ * }
+ *
+ * const schema = buildSchema(`
+ *   type Query {
+ *     noop: String
+ *   }
+ *
+ *   type Subscription {
+ *     greeting: String
+ *   }
+ * `);
+ *
+ * const stream = await createSourceEventStream({
+ *   schema,
+ *   document: parse('subscription { greeting }'),
+ *   rootValue: { greeting: () => greetings() },
+ * });
+ *
+ * Symbol.asyncIterator in stream; // => true
+ * ```
+ */
+
+/** @internal */
+async function createSourceEventStream(...rawArgs) {
+  const args = toNormalizedArgs(rawArgs);
+  const { schema, document, variableValues } = args; // If arguments are missing or incorrectly typed, this is an internal
+  // developer mistake which should throw an early error.
+  // eslint-disable-next-line import/no-deprecated
+
+  (0,_execute_mjs__WEBPACK_IMPORTED_MODULE_7__.assertValidExecutionArguments)(schema, document, variableValues); // If a valid execution context cannot be created due to incorrect arguments,
+  // a "Response" with only errors is returned.
+
+  const exeContext = (0,_execute_mjs__WEBPACK_IMPORTED_MODULE_7__.buildExecutionContext)(args); // Return early errors if execution context failed.
+
+  if (!('schema' in exeContext)) {
+    return {
+      errors: exeContext,
+    };
+  }
+
+  try {
+    const eventStream = await executeSubscription(exeContext); // Assert field returned an event stream, otherwise yield an error.
+
+    if (!(0,_jsutils_isAsyncIterable_mjs__WEBPACK_IMPORTED_MODULE_2__.isAsyncIterable)(eventStream)) {
+      throw new Error(
+        'Subscription field must return Async Iterable. ' +
+          `Received: ${(0,_jsutils_inspect_mjs__WEBPACK_IMPORTED_MODULE_1__.inspect)(eventStream)}.`,
+      );
+    }
+
+    return eventStream;
+  } catch (error) {
+    // If it GraphQLError, report it as an ExecutionResult, containing only errors and no data.
+    // Otherwise treat the error as a system-class error and re-throw it.
+    if (error instanceof _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_4__.GraphQLError) {
+      return {
+        errors: [error],
+      };
+    }
+
+    throw error;
+  }
+}
+
+async function executeSubscription(exeContext) {
+  const { schema, fragments, operation, variableValues, rootValue } =
+    exeContext;
+  const rootType = schema.getSubscriptionType();
+
+  if (rootType == null) {
+    throw new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_4__.GraphQLError(
+      'Schema is not configured to execute subscription operation.',
+      {
+        nodes: operation,
+      },
+    );
+  }
+
+  const rootFields = (0,_collectFields_mjs__WEBPACK_IMPORTED_MODULE_6__.collectFields)(
+    schema,
+    fragments,
+    variableValues,
+    rootType,
+    operation.selectionSet,
+  );
+  const [responseName, fieldNodes] = [...rootFields.entries()][0];
+  const fieldDef = (0,_execute_mjs__WEBPACK_IMPORTED_MODULE_7__.getFieldDef)(schema, rootType, fieldNodes[0]);
+
+  if (!fieldDef) {
+    const fieldName = fieldNodes[0].name.value;
+    throw new _error_GraphQLError_mjs__WEBPACK_IMPORTED_MODULE_4__.GraphQLError(
+      `The subscription field "${fieldName}" is not defined.`,
+      {
+        nodes: fieldNodes,
+      },
+    );
+  }
+
+  const path = (0,_jsutils_Path_mjs__WEBPACK_IMPORTED_MODULE_3__.addPath)(undefined, responseName, rootType.name);
+  const info = (0,_execute_mjs__WEBPACK_IMPORTED_MODULE_7__.buildResolveInfo)(
+    exeContext,
+    fieldDef,
+    fieldNodes,
+    rootType,
+    path,
+  );
+
+  try {
+    var _fieldDef$subscribe;
+
+    // Implements the "ResolveFieldEventStream" algorithm from GraphQL specification.
+    // It differs from "ResolveFieldValue" due to providing a different `resolveFn`.
+    // Build a JS object of arguments from the field.arguments AST, using the
+    // variables scope to fulfill any variable references.
+    const args = (0,_values_mjs__WEBPACK_IMPORTED_MODULE_9__.getArgumentValues)(fieldDef, fieldNodes[0], variableValues); // The resolve function's optional third argument is a context value that
+    // is provided to every resolve function within an execution. It is commonly
+    // used to represent an authenticated user, or request-specific caches.
+
+    const contextValue = exeContext.contextValue; // Call the `subscribe()` resolver or the default resolver to produce an
+    // AsyncIterable yielding raw payloads.
+
+    const resolveFn =
+      (_fieldDef$subscribe = fieldDef.subscribe) !== null &&
+      _fieldDef$subscribe !== void 0
+        ? _fieldDef$subscribe
+        : exeContext.subscribeFieldResolver;
+    const eventStream = await resolveFn(rootValue, args, contextValue, info);
+
+    if (eventStream instanceof Error) {
+      throw eventStream;
+    }
+
+    return eventStream;
+  } catch (error) {
+    throw (0,_error_locatedError_mjs__WEBPACK_IMPORTED_MODULE_5__.locatedError)(error, fieldNodes, (0,_jsutils_Path_mjs__WEBPACK_IMPORTED_MODULE_3__.pathToArray)(path));
+  }
+}
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql/jsutils/isAsyncIterable.mjs"
+/*!********************************************************************!*\
+  !*** ../../../../node_modules/graphql/jsutils/isAsyncIterable.mjs ***!
+  \********************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   isAsyncIterable: () => (/* binding */ isAsyncIterable)
+/* harmony export */ });
+/**
+ * Returns true if the provided object implements the AsyncIterator protocol via
+ * implementing a `Symbol.asyncIterator` method.
+ *
+ * @internal
+ */
+function isAsyncIterable(maybeAsyncIterable) {
+  return (
+    typeof (maybeAsyncIterable === null || maybeAsyncIterable === void 0
+      ? void 0
+      : maybeAsyncIterable[Symbol.asyncIterator]) === 'function'
+  );
+}
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql/jsutils/isPromise.mjs"
+/*!**************************************************************!*\
+  !*** ../../../../node_modules/graphql/jsutils/isPromise.mjs ***!
+  \**************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   isPromise: () => (/* binding */ isPromise)
+/* harmony export */ });
+/**
+ * Returns true if the value acts like a Promise, i.e. has a "then" function,
+ * otherwise returns false.
+ *
+ * @internal
+ */
+function isPromise(value) {
+  return (
+    typeof (value === null || value === void 0 ? void 0 : value.then) ===
+    'function'
+  );
+}
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql/jsutils/memoize3.mjs"
+/*!*************************************************************!*\
+  !*** ../../../../node_modules/graphql/jsutils/memoize3.mjs ***!
+  \*************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   memoize3: () => (/* binding */ memoize3)
+/* harmony export */ });
+/**
+ * Memoizes the provided three-argument function.
+ *
+ * @internal
+ */
+function memoize3(fn) {
+  let cache0;
+  return function memoized(a1, a2, a3) {
+    if (cache0 === undefined) {
+      cache0 = new WeakMap();
+    }
+
+    let cache1 = cache0.get(a1);
+
+    if (cache1 === undefined) {
+      cache1 = new WeakMap();
+      cache0.set(a1, cache1);
+    }
+
+    let cache2 = cache1.get(a2);
+
+    if (cache2 === undefined) {
+      cache2 = new WeakMap();
+      cache1.set(a2, cache2);
+    }
+
+    let fnResult = cache2.get(a3);
+
+    if (fnResult === undefined) {
+      fnResult = fn(a1, a2, a3);
+      cache2.set(a3, fnResult);
+    }
+
+    return fnResult;
+  };
+}
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql/jsutils/promiseForObject.mjs"
+/*!*********************************************************************!*\
+  !*** ../../../../node_modules/graphql/jsutils/promiseForObject.mjs ***!
+  \*********************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   promiseForObject: () => (/* binding */ promiseForObject)
+/* harmony export */ });
+/**
+ * This function transforms a JS object `ObjMap<Promise<T>>` into
+ * a `Promise<ObjMap<T>>`
+ *
+ * This is akin to bluebird's `Promise.props`, but implemented only using
+ * `Promise.all` so it will work with any implementation of ES6 promises.
+ *
+ * @internal
+ */
+function promiseForObject(object) {
+  return Promise.all(Object.values(object)).then((resolvedValues) => {
+    const resolvedObject = Object.create(null);
+
+    for (const [i, key] of Object.keys(object).entries()) {
+      resolvedObject[key] = resolvedValues[i];
+    }
+
+    return resolvedObject;
+  });
+}
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql/jsutils/promiseReduce.mjs"
+/*!******************************************************************!*\
+  !*** ../../../../node_modules/graphql/jsutils/promiseReduce.mjs ***!
+  \******************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   promiseReduce: () => (/* binding */ promiseReduce)
+/* harmony export */ });
+/* harmony import */ var _isPromise_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./isPromise.mjs */ "../../../../node_modules/graphql/jsutils/isPromise.mjs");
+
+
+/**
+ * Similar to Array.prototype.reduce(), however the reducing callback may return
+ * a Promise, in which case reduction will continue after each promise resolves.
+ *
+ * If the callback does not return a Promise, then this function will also not
+ * return a Promise.
+ *
+ * @internal
+ */
+function promiseReduce(values, callbackFn, initialValue) {
+  let accumulator = initialValue;
+
+  for (const value of values) {
+    accumulator = (0,_isPromise_mjs__WEBPACK_IMPORTED_MODULE_0__.isPromise)(accumulator)
+      ? accumulator.then((resolved) => callbackFn(resolved, value))
+      : callbackFn(accumulator, value);
+  }
+
+  return accumulator;
+}
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql/jsutils/toError.mjs"
+/*!************************************************************!*\
+  !*** ../../../../node_modules/graphql/jsutils/toError.mjs ***!
+  \************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   toError: () => (/* binding */ toError)
+/* harmony export */ });
+/* harmony import */ var _inspect_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./inspect.mjs */ "../../../../node_modules/graphql/jsutils/inspect.mjs");
+
+/**
+ * Sometimes a non-error is thrown, wrap it as an Error instance to ensure a consistent Error interface.
+ *
+ * @internal
+ */
+
+function toError(thrownValue) {
+  return thrownValue instanceof Error
+    ? thrownValue
+    : new NonErrorThrown(thrownValue);
+}
+
+class NonErrorThrown extends Error {
+  constructor(thrownValue) {
+    super('Unexpected error value: ' + (0,_inspect_mjs__WEBPACK_IMPORTED_MODULE_0__.inspect)(thrownValue));
+    this.name = 'NonErrorThrown';
+    this.thrownValue = thrownValue;
+  }
+}
+
+
+/***/ },
+
+/***/ "../../../../node_modules/graphql/utilities/getOperationAST.mjs"
+/*!**********************************************************************!*\
+  !*** ../../../../node_modules/graphql/utilities/getOperationAST.mjs ***!
+  \**********************************************************************/
+(__unused_webpack___webpack_module__, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   getOperationAST: () => (/* binding */ getOperationAST)
+/* harmony export */ });
+/* harmony import */ var _language_kinds_mjs__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../language/kinds.mjs */ "../../../../node_modules/graphql/language/kinds.mjs");
+/** @category Operations */
+
+/**
+ * Returns an operation AST given a document AST and optionally an operation
+ * name. If a name is not provided, an operation is only returned if only one is
+ * provided in the document.
+ * @param documentAST - The parsed GraphQL document AST.
+ * @param operationName - The optional operation name to select.
+ * @returns The resolved operation ast.
+ * @example
+ * ```ts
+ * import { parse } from 'graphql/language';
+ * import { getOperationAST } from 'graphql/utilities';
+ *
+ * const document = parse('query GetName { name }');
+ * const operation = getOperationAST(document, 'GetName');
+ *
+ * operation.name.value; // => 'GetName'
+ * getOperationAST(document, 'Missing'); // => undefined
+ * ```
+ */
+
+function getOperationAST(documentAST, operationName) {
+  let operation = null;
+
+  for (const definition of documentAST.definitions) {
+    if (definition.kind === _language_kinds_mjs__WEBPACK_IMPORTED_MODULE_0__.Kind.OPERATION_DEFINITION) {
+      var _definition$name;
+
+      if (operationName == null) {
+        // If no operation name was provided, only return an Operation if there
+        // is one defined in the document. Upon encountering the second, return
+        // null.
+        if (operation) {
+          return null;
+        }
+
+        operation = definition;
+      } else if (
+        ((_definition$name = definition.name) === null ||
+        _definition$name === void 0
+          ? void 0
+          : _definition$name.value) === operationName
+      ) {
+        return definition;
+      }
+    }
+  }
+
+  return operation;
+}
+
+
+/***/ }
+
+}]);
+//# sourceMappingURL=vendors-node_modules_graphql-ws_lib_index_mjs.js.map

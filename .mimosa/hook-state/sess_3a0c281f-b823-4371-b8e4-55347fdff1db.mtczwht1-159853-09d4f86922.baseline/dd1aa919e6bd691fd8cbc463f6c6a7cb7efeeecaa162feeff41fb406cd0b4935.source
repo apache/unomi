@@ -1,0 +1,210 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.unomi.rest.endpoints;
+
+import org.apache.commons.lang3.StringUtils;
+import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.EventsCollectorRequest;
+import org.apache.unomi.api.security.UnomiRoles;
+import org.apache.unomi.rest.exception.InvalidRequestException;
+import org.apache.unomi.rest.models.EventCollectorResponse;
+import org.apache.unomi.rest.service.RestServiceUtils;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.utils.EventsRequestContext;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
+import java.util.Date;
+import java.util.List;
+
+/**
+ * REST endpoint for collecting client events ({@code /eventcollector}).
+ * Accepts a batch of {@link org.apache.unomi.api.Event} objects, attaches them to a profile/session,
+ * runs rules, and returns a bitwise {@code updated} change mask.
+ */
+@Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
+@Consumes(MediaType.APPLICATION_JSON)
+@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
+@Path("/")
+@Component(service = EventsCollectorEndpoint.class, property = "osgi.jaxrs.resource=true")
+public class EventsCollectorEndpoint {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventsCollectorEndpoint.class.getName());
+
+    public static final String SYSTEMSCOPE = "systemscope";
+    @Reference
+    private RestServiceUtils restServiceUtils;
+
+    @Reference
+    private TracerService tracerService;
+
+    @Context
+    HttpServletRequest request;
+    @Context
+    HttpServletResponse response;
+
+    /**
+     * Handles CORS preflight for the event collector endpoint.
+     *
+     * @return an empty CORS preflight response
+     * @api.status 204 empty CORS preflight (no body).
+     * @api.example {}
+     */
+    @OPTIONS
+    @Path("/eventcollector")
+    public Response options() {
+        return Response.status(Response.Status.NO_CONTENT).build();
+    }
+
+    /**
+     * Collects events from a GET request.
+     * The {@link EventsCollectorRequest} is supplied as the {@code payload} query parameter (JSON).
+     * Prefer POST for production traffic.
+     *
+     * @param eventsCollectorRequest collector request decoded from the {@code payload} query parameter
+     * @param timestampAsString optional request time as epoch millis; defaults to server now
+     * @param explain when {@code true}, include {@code requestTracing} (requires administrator or tenant administrator)
+     * @param securityContext the security context
+     * @return the event collector response
+     * @api.status 200 org.apache.unomi.rest.models.EventCollectorResponse Events processed; see {@code updated} bitwise flags.
+     * @api.status 400 empty Missing/empty collector payload or invalid event data.
+     * @api.status 403 empty {@code explain=true} without administrator / tenant administrator role.
+     * @api.example {"updated":6}
+     */
+    @GET
+    @Path("/eventcollector")
+    public EventCollectorResponse collectAsGet(@QueryParam("payload") EventsCollectorRequest eventsCollectorRequest,
+            @QueryParam("timestamp") Long timestampAsString,
+            @QueryParam("explain") boolean explain,
+            @Context SecurityContext securityContext) {
+        return doEvent(eventsCollectorRequest, timestampAsString, explain, securityContext);
+    }
+
+    /**
+     * Collects events from a POST request (preferred).
+     * Submits an {@link org.apache.unomi.api.EventsCollectorRequest} body so Unomi can attach events to a session/profile, run rules, and return bitwise update flags.
+     *
+     * @param eventsCollectorRequest JSON body with {@code events} plus optional {@code sessionId}/{@code profileId}/{@code publicApiKey}
+     * @param timestampAsLong optional request time as epoch millis; defaults to server now
+     * @param explain when {@code true}, include {@code requestTracing} (requires administrator or tenant administrator)
+     * @param securityContext the security context
+     * @return the event collector response
+     * @api.status 200 org.apache.unomi.rest.models.EventCollectorResponse Events processed; see {@code updated} bitwise flags.
+     * @api.status 400 empty Missing/empty collector body or invalid event data.
+     * @api.status 403 empty {@code explain=true} without administrator / tenant administrator role.
+     * @api.example {"updated":6}
+     */
+    @POST
+    @Path("/eventcollector")
+    public EventCollectorResponse collectAsPost(EventsCollectorRequest eventsCollectorRequest,
+            @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("explain") boolean explain,
+            @Context SecurityContext securityContext) {
+        return doEvent(eventsCollectorRequest, timestampAsLong, explain, securityContext);
+    }
+
+    private EventCollectorResponse doEvent(EventsCollectorRequest eventsCollectorRequest, Long timestampAsLong, boolean explain, SecurityContext securityContext) {
+        if (eventsCollectorRequest == null) {
+            throw new InvalidRequestException("events collector cannot be empty", "Invalid received data");
+        }
+
+        // Check if tracing is requested and user has required role
+        if (explain && !(securityContext.isUserInRole(UnomiRoles.ADMINISTRATOR) ||
+                        securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR))) {
+            throw new ForbiddenException("Insufficient privileges to access tracing information");
+        }
+
+        try {
+            if (explain) {
+                tracerService.enableTracing();
+                tracerService.getCurrentTracer().startOperation("event-collection", "Processing event collection request", eventsCollectorRequest);
+            }
+
+            Date timestamp = new Date();
+            if (timestampAsLong != null) {
+                timestamp = new Date(timestampAsLong);
+            }
+
+            String sessionId = eventsCollectorRequest.getSessionId();
+            if (sessionId == null) {
+                sessionId = request.getParameter("sessionId");
+            }
+
+            String profileId = eventsCollectorRequest.getProfileId();
+            // Get the first available scope that is not equal to systemscope otherwise systemscope will be used
+            String scope = SYSTEMSCOPE;
+            List<Event> events = eventsCollectorRequest.getEvents();
+            for (Event event : events) {
+                if (StringUtils.isNotBlank(event.getEventType())) {
+                    if (StringUtils.isNotBlank(event.getScope()) && !event.getScope().equals(SYSTEMSCOPE)) {
+                        scope = event.getScope();
+                        break;
+                    } else if (event.getSource() != null && StringUtils.isNotBlank(event.getSource().getScope()) && !event.getSource()
+                            .getScope().equals(SYSTEMSCOPE)) {
+                        scope = event.getSource().getScope();
+                        break;
+                    }
+                }
+            }
+
+            // build public context, profile + session creation/anonymous etc ...
+            EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId, null, false, false,
+                    request, response, timestamp);
+
+            // process events
+            eventsRequestContext = restServiceUtils.performEventsRequest(eventsCollectorRequest.getEvents(), eventsRequestContext, securityContext);
+
+            // finalize request
+            restServiceUtils.finalizeEventsRequest(eventsRequestContext, true);
+
+            EventCollectorResponse response = new EventCollectorResponse(eventsRequestContext.getChanges());
+
+            // Add tracing information if requested
+            if (explain) {
+                tracerService.getCurrentTracer().endOperation(null, "Event collection request processed successfully");
+                response.setRequestTracing(tracerService.getTraceNode());
+            }
+
+            return response;
+        } finally {
+            try {
+                if (explain && tracerService != null) {
+                    tracerService.disableTracing();
+                }
+            } finally {
+                try {
+                    if (tracerService != null) {
+                        tracerService.cleanup();
+                    }
+                } catch (RuntimeException e) {
+                    LOGGER.warn("Failed to clean up tracer", e);
+                }
+            }
+        }
+    }
+}

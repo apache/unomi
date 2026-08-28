@@ -1,0 +1,791 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["vendors-node_modules_monaco-editor_esm_vs_editor_common_services_editorWorker_js-node_modules-4cdb0c"],{
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/base/common/numbers.js"
+/*!****************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/base/common/numbers.js ***!
+  \****************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   MovingAverage: () => (/* binding */ MovingAverage),
+/* harmony export */   SlidingWindowAverage: () => (/* binding */ SlidingWindowAverage),
+/* harmony export */   clamp: () => (/* binding */ clamp)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+class MovingAverage {
+  constructor() {
+    this._n = 1;
+    this._val = 0;
+  }
+  update(value) {
+    this._val = this._val + (value - this._val) / this._n;
+    this._n += 1;
+    return this._val;
+  }
+  get value() {
+    return this._val;
+  }
+}
+class SlidingWindowAverage {
+  constructor(size) {
+    this._n = 0;
+    this._val = 0;
+    this._values = [];
+    this._index = 0;
+    this._sum = 0;
+    this._values = new Array(size);
+    this._values.fill(0, 0, size);
+  }
+  update(value) {
+    const oldValue = this._values[this._index];
+    this._values[this._index] = value;
+    this._index = (this._index + 1) % this._values.length;
+    this._sum -= oldValue;
+    this._sum += value;
+    if (this._n < this._values.length) {
+      this._n += 1;
+    }
+    this._val = this._sum / this._n;
+    return this._val;
+  }
+  get value() {
+    return this._val;
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/base/common/themables.js"
+/*!******************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/base/common/themables.js ***!
+  \******************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ThemeColor: () => (/* binding */ ThemeColor),
+/* harmony export */   ThemeIcon: () => (/* binding */ ThemeIcon)
+/* harmony export */ });
+/* harmony import */ var _codicons_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./codicons.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/codicons.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+var ThemeColor;
+(function (ThemeColor) {
+  function isThemeColor(obj) {
+    return obj && typeof obj === 'object' && typeof obj.id === 'string';
+  }
+  ThemeColor.isThemeColor = isThemeColor;
+})(ThemeColor || (ThemeColor = {}));
+var ThemeIcon;
+(function (ThemeIcon) {
+  ThemeIcon.iconNameSegment = '[A-Za-z0-9]+';
+  ThemeIcon.iconNameExpression = '[A-Za-z0-9-]+';
+  ThemeIcon.iconModifierExpression = '~[A-Za-z]+';
+  ThemeIcon.iconNameCharacter = '[A-Za-z0-9~-]';
+  const ThemeIconIdRegex = new RegExp(`^(${ThemeIcon.iconNameExpression})(${ThemeIcon.iconModifierExpression})?$`);
+  function asClassNameArray(icon) {
+    const match = ThemeIconIdRegex.exec(icon.id);
+    if (!match) {
+      return asClassNameArray(_codicons_js__WEBPACK_IMPORTED_MODULE_0__.Codicon.error);
+    }
+    const [, id, modifier] = match;
+    const classNames = ['codicon', 'codicon-' + id];
+    if (modifier) {
+      classNames.push('codicon-modifier-' + modifier.substring(1));
+    }
+    return classNames;
+  }
+  ThemeIcon.asClassNameArray = asClassNameArray;
+  function asClassName(icon) {
+    return asClassNameArray(icon).join(' ');
+  }
+  ThemeIcon.asClassName = asClassName;
+  function asCSSSelector(icon) {
+    return '.' + asClassNameArray(icon).join('.');
+  }
+  ThemeIcon.asCSSSelector = asCSSSelector;
+  function isThemeIcon(obj) {
+    return obj && typeof obj === 'object' && typeof obj.id === 'string' && (typeof obj.color === 'undefined' || ThemeColor.isThemeColor(obj.color));
+  }
+  ThemeIcon.isThemeIcon = isThemeIcon;
+  const _regexFromString = new RegExp(`^\\$\\((${ThemeIcon.iconNameExpression}(?:${ThemeIcon.iconModifierExpression})?)\\)$`);
+  function fromString(str) {
+    const match = _regexFromString.exec(str);
+    if (!match) {
+      return undefined;
+    }
+    const [, name] = match;
+    return {
+      id: name
+    };
+  }
+  ThemeIcon.fromString = fromString;
+  function fromId(id) {
+    return {
+      id
+    };
+  }
+  ThemeIcon.fromId = fromId;
+  function modify(icon, modifier) {
+    let id = icon.id;
+    const tildeIndex = id.lastIndexOf('~');
+    if (tildeIndex !== -1) {
+      id = id.substring(0, tildeIndex);
+    }
+    if (modifier) {
+      id = `${id}~${modifier}`;
+    }
+    return {
+      id
+    };
+  }
+  ThemeIcon.modify = modify;
+  function getModifier(icon) {
+    const tildeIndex = icon.id.lastIndexOf('~');
+    if (tildeIndex !== -1) {
+      return icon.id.substring(tildeIndex + 1);
+    }
+    return undefined;
+  }
+  ThemeIcon.getModifier = getModifier;
+  function isEqual(ti1, ti2) {
+    return ti1.id === ti2.id && ti1.color?.id === ti2.color?.id;
+  }
+  ThemeIcon.isEqual = isEqual;
+})(ThemeIcon || (ThemeIcon = {}));
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/editorWorker.js"
+/*!********************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/editorWorker.js ***!
+  \********************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   IEditorWorkerService: () => (/* binding */ IEditorWorkerService)
+/* harmony export */ });
+/* harmony import */ var _platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../platform/instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+const IEditorWorkerService = (0,_platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__.createDecorator)('editorWorkerService');
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/getIconClasses.js"
+/*!**********************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/getIconClasses.js ***!
+  \**********************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   getIconClasses: () => (/* binding */ getIconClasses)
+/* harmony export */ });
+/* harmony import */ var _base_common_network_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/network.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/network.js");
+/* harmony import */ var _base_common_resources_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../base/common/resources.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/resources.js");
+/* harmony import */ var _base_common_uri_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../base/common/uri.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/uri.js");
+/* harmony import */ var _languages_modesRegistry_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../languages/modesRegistry.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/languages/modesRegistry.js");
+/* harmony import */ var _platform_files_common_files_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../platform/files/common/files.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/files/common/files.js");
+/* harmony import */ var _base_common_themables_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../base/common/themables.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/themables.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+
+
+
+
+const fileIconDirectoryRegex = /(?:\/|^)(?:([^\/]+)\/)?([^\/]+)$/;
+function getIconClasses(modelService, languageService, resource, fileKind, icon) {
+  if (_base_common_themables_js__WEBPACK_IMPORTED_MODULE_5__.ThemeIcon.isThemeIcon(icon)) {
+    return [`codicon-${icon.id}`, 'predefined-file-icon'];
+  }
+  if (_base_common_uri_js__WEBPACK_IMPORTED_MODULE_2__.URI.isUri(icon)) {
+    return [];
+  }
+  // we always set these base classes even if we do not have a path
+  const classes = fileKind === _platform_files_common_files_js__WEBPACK_IMPORTED_MODULE_4__.FileKind.ROOT_FOLDER ? ['rootfolder-icon'] : fileKind === _platform_files_common_files_js__WEBPACK_IMPORTED_MODULE_4__.FileKind.FOLDER ? ['folder-icon'] : ['file-icon'];
+  if (resource) {
+    // Get the path and name of the resource. For data-URIs, we need to parse specially
+    let name;
+    if (resource.scheme === _base_common_network_js__WEBPACK_IMPORTED_MODULE_0__.Schemas.data) {
+      const metadata = _base_common_resources_js__WEBPACK_IMPORTED_MODULE_1__.DataUri.parseMetaData(resource);
+      name = metadata.get(_base_common_resources_js__WEBPACK_IMPORTED_MODULE_1__.DataUri.META_DATA_LABEL);
+    } else {
+      const match = resource.path.match(fileIconDirectoryRegex);
+      if (match) {
+        name = cssEscape(match[2].toLowerCase());
+        if (match[1]) {
+          classes.push(`${cssEscape(match[1].toLowerCase())}-name-dir-icon`); // parent directory
+        }
+      } else {
+        name = cssEscape(resource.authority.toLowerCase());
+      }
+    }
+    // Root Folders
+    if (fileKind === _platform_files_common_files_js__WEBPACK_IMPORTED_MODULE_4__.FileKind.ROOT_FOLDER) {
+      classes.push(`${name}-root-name-folder-icon`);
+    }
+    // Folders
+    else if (fileKind === _platform_files_common_files_js__WEBPACK_IMPORTED_MODULE_4__.FileKind.FOLDER) {
+      classes.push(`${name}-name-folder-icon`);
+    }
+    // Files
+    else {
+      // Name & Extension(s)
+      if (name) {
+        classes.push(`${name}-name-file-icon`);
+        classes.push(`name-file-icon`); // extra segment to increase file-name score
+        // Avoid doing an explosive combination of extensions for very long filenames
+        // (most file systems do not allow files > 255 length) with lots of `.` characters
+        // https://github.com/microsoft/vscode/issues/116199
+        if (name.length <= 255) {
+          const dotSegments = name.split('.');
+          for (let i = 1; i < dotSegments.length; i++) {
+            classes.push(`${dotSegments.slice(i).join('.')}-ext-file-icon`); // add each combination of all found extensions if more than one
+          }
+        }
+        classes.push(`ext-file-icon`); // extra segment to increase file-ext score
+      }
+      // Detected Mode
+      const detectedLanguageId = detectLanguageId(modelService, languageService, resource);
+      if (detectedLanguageId) {
+        classes.push(`${cssEscape(detectedLanguageId)}-lang-file-icon`);
+      }
+    }
+  }
+  return classes;
+}
+function detectLanguageId(modelService, languageService, resource) {
+  if (!resource) {
+    return null; // we need a resource at least
+  }
+  let languageId = null;
+  // Data URI: check for encoded metadata
+  if (resource.scheme === _base_common_network_js__WEBPACK_IMPORTED_MODULE_0__.Schemas.data) {
+    const metadata = _base_common_resources_js__WEBPACK_IMPORTED_MODULE_1__.DataUri.parseMetaData(resource);
+    const mime = metadata.get(_base_common_resources_js__WEBPACK_IMPORTED_MODULE_1__.DataUri.META_DATA_MIME);
+    if (mime) {
+      languageId = languageService.getLanguageIdByMimeType(mime);
+    }
+  }
+  // Any other URI: check for model if existing
+  else {
+    const model = modelService.getModel(resource);
+    if (model) {
+      languageId = model.getLanguageId();
+    }
+  }
+  // only take if the language id is specific (aka no just plain text)
+  if (languageId && languageId !== _languages_modesRegistry_js__WEBPACK_IMPORTED_MODULE_3__.PLAINTEXT_LANGUAGE_ID) {
+    return languageId;
+  }
+  // otherwise fallback to path based detection
+  return languageService.guessLanguageIdByFilepathOrFirstLine(resource);
+}
+function cssEscape(str) {
+  return str.replace(/[\s]/g, '/'); // HTML class names can not contain certain whitespace characters (https://dom.spec.whatwg.org/#interface-domtokenlist), use / instead, which doesn't exist in file names.
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeatureDebounce.js"
+/*!*******************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeatureDebounce.js ***!
+  \*******************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ILanguageFeatureDebounceService: () => (/* binding */ ILanguageFeatureDebounceService),
+/* harmony export */   LanguageFeatureDebounceService: () => (/* binding */ LanguageFeatureDebounceService)
+/* harmony export */ });
+/* harmony import */ var _base_common_hash_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/hash.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/hash.js");
+/* harmony import */ var _base_common_map_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../base/common/map.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/map.js");
+/* harmony import */ var _base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../base/common/numbers.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/numbers.js");
+/* harmony import */ var _platform_environment_common_environment_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../platform/environment/common/environment.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/environment/common/environment.js");
+/* harmony import */ var _platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../platform/instantiation/common/extensions.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/extensions.js");
+/* harmony import */ var _platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../platform/instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/* harmony import */ var _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../platform/log/common/log.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/log/common/log.js");
+/* harmony import */ var _base_common_network_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../base/common/network.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/network.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+var __decorate = undefined && undefined.__decorate || function (decorators, target, key, desc) {
+  var c = arguments.length,
+    r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+    d;
+  if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+  return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __param = undefined && undefined.__param || function (paramIndex, decorator) {
+  return function (target, key) {
+    decorator(target, key, paramIndex);
+  };
+};
+
+
+
+
+
+
+
+
+const ILanguageFeatureDebounceService = (0,_platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_5__.createDecorator)('ILanguageFeatureDebounceService');
+var IdentityHash;
+(function (IdentityHash) {
+  const _hashes = new WeakMap();
+  let pool = 0;
+  function of(obj) {
+    let value = _hashes.get(obj);
+    if (value === undefined) {
+      value = ++pool;
+      _hashes.set(obj, value);
+    }
+    return value;
+  }
+  IdentityHash.of = of;
+})(IdentityHash || (IdentityHash = {}));
+class NullDebounceInformation {
+  constructor(_default) {
+    this._default = _default;
+  }
+  get(_model) {
+    return this._default;
+  }
+  update(_model, _value) {
+    return this._default;
+  }
+  default() {
+    return this._default;
+  }
+}
+class FeatureDebounceInformation {
+  constructor(_logService, _name, _registry, _default, _min, _max) {
+    this._logService = _logService;
+    this._name = _name;
+    this._registry = _registry;
+    this._default = _default;
+    this._min = _min;
+    this._max = _max;
+    this._cache = new _base_common_map_js__WEBPACK_IMPORTED_MODULE_1__.LRUCache(50, 0.7);
+  }
+  _key(model) {
+    return model.id + this._registry.all(model).reduce((hashVal, obj) => (0,_base_common_hash_js__WEBPACK_IMPORTED_MODULE_0__.doHash)(IdentityHash.of(obj), hashVal), 0);
+  }
+  get(model) {
+    const key = this._key(model);
+    const avg = this._cache.get(key);
+    return avg ? (0,_base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.clamp)(avg.value, this._min, this._max) : this.default();
+  }
+  update(model, value) {
+    const key = this._key(model);
+    let avg = this._cache.get(key);
+    if (!avg) {
+      avg = new _base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.SlidingWindowAverage(6);
+      this._cache.set(key, avg);
+    }
+    const newValue = (0,_base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.clamp)(avg.update(value), this._min, this._max);
+    if (!(0,_base_common_network_js__WEBPACK_IMPORTED_MODULE_7__.matchesScheme)(model.uri, 'output')) {
+      this._logService.trace(`[DEBOUNCE: ${this._name}] for ${model.uri.toString()} is ${newValue}ms`);
+    }
+    return newValue;
+  }
+  _overall() {
+    const result = new _base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.MovingAverage();
+    for (const [, avg] of this._cache) {
+      result.update(avg.value);
+    }
+    return result.value;
+  }
+  default() {
+    const value = this._overall() | 0 || this._default;
+    return (0,_base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.clamp)(value, this._min, this._max);
+  }
+}
+let LanguageFeatureDebounceService = class LanguageFeatureDebounceService {
+  constructor(_logService, envService) {
+    this._logService = _logService;
+    this._data = new Map();
+    this._isDev = envService.isExtensionDevelopment || !envService.isBuilt;
+  }
+  for(feature, name, config) {
+    const min = config?.min ?? 50;
+    const max = config?.max ?? min ** 2;
+    const extra = config?.key ?? undefined;
+    const key = `${IdentityHash.of(feature)},${min}${extra ? ',' + extra : ''}`;
+    let info = this._data.get(key);
+    if (!info) {
+      if (this._isDev) {
+        this._logService.debug(`[DEBOUNCE: ${name}] is disabled in developed mode`);
+        info = new NullDebounceInformation(min * 1.5);
+      } else {
+        info = new FeatureDebounceInformation(this._logService, name, feature, this._overallAverage() | 0 || min * 1.5,
+        // default is overall default or derived from min-value
+        min, max);
+      }
+      this._data.set(key, info);
+    }
+    return info;
+  }
+  _overallAverage() {
+    // Average of all language features. Not a great value but an approximation
+    const result = new _base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.MovingAverage();
+    for (const info of this._data.values()) {
+      result.update(info.default());
+    }
+    return result.value;
+  }
+};
+LanguageFeatureDebounceService = __decorate([__param(0, _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_6__.ILogService), __param(1, _platform_environment_common_environment_js__WEBPACK_IMPORTED_MODULE_3__.IEnvironmentService)], LanguageFeatureDebounceService);
+
+(0,_platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_4__.registerSingleton)(ILanguageFeatureDebounceService, LanguageFeatureDebounceService, 1 /* InstantiationType.Delayed */);
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/markerDecorations.js"
+/*!*************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/markerDecorations.js ***!
+  \*************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   IMarkerDecorationsService: () => (/* binding */ IMarkerDecorationsService)
+/* harmony export */ });
+/* harmony import */ var _platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../platform/instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+const IMarkerDecorationsService = (0,_platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__.createDecorator)('markerDecorationsService');
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/resolverService.js"
+/*!***********************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/resolverService.js ***!
+  \***********************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ITextModelService: () => (/* binding */ ITextModelService)
+/* harmony export */ });
+/* harmony import */ var _platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../platform/instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+
+const ITextModelService = (0,_platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__.createDecorator)('textModelService');
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensDto.js"
+/*!*************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensDto.js ***!
+  \*************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   encodeSemanticTokensDto: () => (/* binding */ encodeSemanticTokensDto)
+/* harmony export */ });
+/* harmony import */ var _base_common_buffer_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/buffer.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/buffer.js");
+/* harmony import */ var _base_common_platform_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../base/common/platform.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/platform.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+function reverseEndianness(arr) {
+  for (let i = 0, len = arr.length; i < len; i += 4) {
+    // flip bytes 0<->3 and 1<->2
+    const b0 = arr[i + 0];
+    const b1 = arr[i + 1];
+    const b2 = arr[i + 2];
+    const b3 = arr[i + 3];
+    arr[i + 0] = b3;
+    arr[i + 1] = b2;
+    arr[i + 2] = b1;
+    arr[i + 3] = b0;
+  }
+}
+function toLittleEndianBuffer(arr) {
+  const uint8Arr = new Uint8Array(arr.buffer, arr.byteOffset, arr.length * 4);
+  if (!_base_common_platform_js__WEBPACK_IMPORTED_MODULE_1__.isLittleEndian()) {
+    // the byte order must be changed
+    reverseEndianness(uint8Arr);
+  }
+  return _base_common_buffer_js__WEBPACK_IMPORTED_MODULE_0__.VSBuffer.wrap(uint8Arr);
+}
+function encodeSemanticTokensDto(semanticTokens) {
+  const dest = new Uint32Array(encodeSemanticTokensDtoSize(semanticTokens));
+  let offset = 0;
+  dest[offset++] = semanticTokens.id;
+  if (semanticTokens.type === 'full') {
+    dest[offset++] = 1 /* EncodedSemanticTokensType.Full */;
+    dest[offset++] = semanticTokens.data.length;
+    dest.set(semanticTokens.data, offset);
+    offset += semanticTokens.data.length;
+  } else {
+    dest[offset++] = 2 /* EncodedSemanticTokensType.Delta */;
+    dest[offset++] = semanticTokens.deltas.length;
+    for (const delta of semanticTokens.deltas) {
+      dest[offset++] = delta.start;
+      dest[offset++] = delta.deleteCount;
+      if (delta.data) {
+        dest[offset++] = delta.data.length;
+        dest.set(delta.data, offset);
+        offset += delta.data.length;
+      } else {
+        dest[offset++] = 0;
+      }
+    }
+  }
+  return toLittleEndianBuffer(dest);
+}
+function encodeSemanticTokensDtoSize(semanticTokens) {
+  let result = 0;
+  result += +1 // id
+  + 1 // type
+;
+  if (semanticTokens.type === 'full') {
+    result += +1 // data length
+    + semanticTokens.data.length;
+  } else {
+    result += +1 // delta count
+;
+    result += (+1 // start
+    + 1 // deleteCount
+    + 1 // data length
+    ) * semanticTokens.deltas.length;
+    for (const delta of semanticTokens.deltas) {
+      if (delta.data) {
+        result += delta.data.length;
+      }
+    }
+  }
+  return result;
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensStyling.js"
+/*!*****************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensStyling.js ***!
+  \*****************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ISemanticTokensStylingService: () => (/* binding */ ISemanticTokensStylingService)
+/* harmony export */ });
+/* harmony import */ var _platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../platform/instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+const ISemanticTokensStylingService = (0,_platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__.createDecorator)('semanticTokensStylingService');
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensStylingService.js"
+/*!************************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensStylingService.js ***!
+  \************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   SemanticTokensStylingService: () => (/* binding */ SemanticTokensStylingService)
+/* harmony export */ });
+/* harmony import */ var _base_common_lifecycle_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/lifecycle.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/lifecycle.js");
+/* harmony import */ var _languages_language_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../languages/language.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/languages/language.js");
+/* harmony import */ var _platform_theme_common_themeService_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../platform/theme/common/themeService.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/theme/common/themeService.js");
+/* harmony import */ var _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../platform/log/common/log.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/log/common/log.js");
+/* harmony import */ var _semanticTokensProviderStyling_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./semanticTokensProviderStyling.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensProviderStyling.js");
+/* harmony import */ var _semanticTokensStyling_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./semanticTokensStyling.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensStyling.js");
+/* harmony import */ var _platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../platform/instantiation/common/extensions.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/extensions.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+var __decorate = undefined && undefined.__decorate || function (decorators, target, key, desc) {
+  var c = arguments.length,
+    r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+    d;
+  if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+  return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __param = undefined && undefined.__param || function (paramIndex, decorator) {
+  return function (target, key) {
+    decorator(target, key, paramIndex);
+  };
+};
+
+
+
+
+
+
+
+let SemanticTokensStylingService = class SemanticTokensStylingService extends _base_common_lifecycle_js__WEBPACK_IMPORTED_MODULE_0__.Disposable {
+  constructor(_themeService, _logService, _languageService) {
+    super();
+    this._themeService = _themeService;
+    this._logService = _logService;
+    this._languageService = _languageService;
+    this._caches = new WeakMap();
+    this._register(this._themeService.onDidColorThemeChange(() => {
+      this._caches = new WeakMap();
+    }));
+  }
+  getStyling(provider) {
+    if (!this._caches.has(provider)) {
+      this._caches.set(provider, new _semanticTokensProviderStyling_js__WEBPACK_IMPORTED_MODULE_4__.SemanticTokensProviderStyling(provider.getLegend(), this._themeService, this._languageService, this._logService));
+    }
+    return this._caches.get(provider);
+  }
+};
+SemanticTokensStylingService = __decorate([__param(0, _platform_theme_common_themeService_js__WEBPACK_IMPORTED_MODULE_2__.IThemeService), __param(1, _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_3__.ILogService), __param(2, _languages_language_js__WEBPACK_IMPORTED_MODULE_1__.ILanguageService)], SemanticTokensStylingService);
+
+(0,_platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_6__.registerSingleton)(_semanticTokensStyling_js__WEBPACK_IMPORTED_MODULE_5__.ISemanticTokensStylingService, SemanticTokensStylingService, 1 /* InstantiationType.Delayed */);
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/textModelSync/textModelSync.protocol.js"
+/*!********************************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/textModelSync/textModelSync.protocol.js ***!
+  \********************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDnd.js"
+/*!********************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDnd.js ***!
+  \********************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   DraggedTreeItemsIdentifier: () => (/* binding */ DraggedTreeItemsIdentifier),
+/* harmony export */   TreeViewsDnDService: () => (/* binding */ TreeViewsDnDService)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+class TreeViewsDnDService {
+  constructor() {
+    this._dragOperations = new Map();
+  }
+  removeDragOperationTransfer(uuid) {
+    if (uuid && this._dragOperations.has(uuid)) {
+      const operation = this._dragOperations.get(uuid);
+      this._dragOperations.delete(uuid);
+      return operation;
+    }
+    return undefined;
+  }
+}
+class DraggedTreeItemsIdentifier {
+  constructor(identifier) {
+    this.identifier = identifier;
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDndService.js"
+/*!***************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDndService.js ***!
+  \***************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ITreeViewsDnDService: () => (/* binding */ ITreeViewsDnDService)
+/* harmony export */ });
+/* harmony import */ var _platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../platform/instantiation/common/extensions.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/extensions.js");
+/* harmony import */ var _platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../platform/instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/* harmony import */ var _treeViewsDnd_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./treeViewsDnd.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDnd.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+
+const ITreeViewsDnDService = (0,_platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_1__.createDecorator)('treeViewsDndService');
+(0,_platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_0__.registerSingleton)(ITreeViewsDnDService, _treeViewsDnd_js__WEBPACK_IMPORTED_MODULE_2__.TreeViewsDnDService, 1 /* InstantiationType.Delayed */);
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/environment/common/environment.js"
+/*!************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/environment/common/environment.js ***!
+  \************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   IEnvironmentService: () => (/* binding */ IEnvironmentService)
+/* harmony export */ });
+/* harmony import */ var _instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+
+const IEnvironmentService = (0,_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__.createDecorator)('environmentService');
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/files/common/files.js"
+/*!************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/files/common/files.js ***!
+  \************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   FileKind: () => (/* binding */ FileKind)
+/* harmony export */ });
+//#endregion
+//#region Utilities
+var FileKind;
+(function (FileKind) {
+  FileKind[FileKind["FILE"] = 0] = "FILE";
+  FileKind[FileKind["FOLDER"] = 1] = "FOLDER";
+  FileKind[FileKind["ROOT_FOLDER"] = 2] = "ROOT_FOLDER";
+})(FileKind || (FileKind = {}));
+//#endregion
+
+/***/ }
+
+}]);
+//# sourceMappingURL=vendors-node_modules_monaco-editor_esm_vs_editor_common_services_editorWorker_js-node_modules-4cdb0c.js.map

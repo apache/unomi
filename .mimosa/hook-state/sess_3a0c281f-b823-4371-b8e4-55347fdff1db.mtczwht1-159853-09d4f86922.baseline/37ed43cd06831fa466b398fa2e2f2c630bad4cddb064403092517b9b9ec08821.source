@@ -1,0 +1,68 @@
+---
+description: JIRA ticket style — problem-focused descriptions, plain-language summary, Confluence wiki markup
+alwaysApply: true
+---
+
+# JIRA tickets (Apache Unomi / UNOMI-*)
+
+When the user asks you to **draft, revise, or review a JIRA issue** (title, summary, description, acceptance criteria in JIRA), follow this style.
+
+## Summary (plain language)
+
+- One or two sentences a **non-technical reader** can understand (PM, release manager, new contributor).
+- State the **user or team pain**, not the fix.
+- Avoid file names, script names, class names, flags, and stack jargon unless the user explicitly wants a technical summary.
+
+## Description (problem only)
+
+- Describe **what is wrong today**, **who is affected**, and **why it matters**.
+- Use a *What “good” would look like* section for **needs and outcomes** — still no implementation.
+- Do **not** include in the main description: proposed scripts, architecture, file paths, CLI commands, code snippets, or step-by-step build instructions. Put those in a separate sub-task, PR, or “Technical notes” only if the user asks.
+
+## Structure (Confluence wiki markup)
+
+Write the description body in **JIRA / Confluence wiki markup** (not Markdown), so it can be pasted into JIRA’s wiki editor.
+
+| Element | Markup |
+|---------|--------|
+| Heading 2 | `h2. Section title` |
+| Heading 3 | `h3. Subsection` |
+| Bold | `*text*` |
+| Italic | `_text_` |
+| Bullet list | `* item` (one `*` per line) |
+| Numbered list | `# item` |
+| Horizontal rule | `----` |
+| Inline code | `{{monospace}}` |
+| Code block | `{code}...{code}` |
+| Info panel | `{panel:title=Note|borderStyle=solid}...{panel}` |
+| Link | `[label|https://example.com]` |
+
+## Template
+
+```
+h2. Summary
+
+Plain-language summary here (1–2 sentences).
+
+h2. What is going wrong today
+
+* Bullet describing the current pain
+* Another concrete symptom
+
+h2. Impact
+
+* Who suffers and how (developers, CI, releases, …)
+
+h2. Who is affected
+
+* Role or team
+
+h2. What good would look like
+
+* Observable outcome we need — *not* how to build it
+```
+
+## Title
+
+- Short, problem-oriented (e.g. “Integration test runs lack clear memory and resource visibility”).
+- Prefer “lack / hard to / cannot / unreliable” over solution verbs (“Add”, “Implement”, “Introduce”) unless the user wants a delivery-style title.

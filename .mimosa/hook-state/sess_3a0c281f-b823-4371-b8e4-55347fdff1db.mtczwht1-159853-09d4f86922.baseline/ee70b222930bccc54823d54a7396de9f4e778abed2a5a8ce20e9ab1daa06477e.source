@@ -1,0 +1,437 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["vendors-node_modules_monaco-graphql_esm_graphqlMode_js"],{
+
+/***/ "../../../../node_modules/monaco-graphql/esm/graphqlMode.js"
+/*!******************************************************************!*\
+  !*** ../../../../node_modules/monaco-graphql/esm/graphqlMode.js ***!
+  \******************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   setupMode: () => (/* binding */ setupMode)
+/* harmony export */ });
+/* harmony import */ var _monaco_editor__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./monaco-editor */ "../../../../node_modules/monaco-graphql/esm/monaco-editor.js");
+/* harmony import */ var _workerManager__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./workerManager */ "../../../../node_modules/monaco-graphql/esm/workerManager.js");
+/* harmony import */ var _languageFeatures__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./languageFeatures */ "../../../../node_modules/monaco-graphql/esm/languageFeatures.js");
+
+
+
+function setupMode(defaults) {
+  const disposables = [];
+  const providers = [];
+  const client = new _workerManager__WEBPACK_IMPORTED_MODULE_1__.WorkerManager(defaults);
+  disposables.push(client);
+  const worker = (...uris) => {
+    try {
+      return client.getLanguageServiceWorker(...uris);
+    } catch {
+      throw new Error('Error fetching graphql language service worker');
+    }
+  };
+  function registerSchemaLessProviders() {
+    const {
+      modeConfiguration,
+      languageId
+    } = defaults;
+    if (modeConfiguration.documentFormattingEdits) {
+      providers.push(_monaco_editor__WEBPACK_IMPORTED_MODULE_0__.languages.registerDocumentFormattingEditProvider(languageId, new _languageFeatures__WEBPACK_IMPORTED_MODULE_2__.DocumentFormattingAdapter(worker)));
+    }
+  }
+  function registerAllProviders(api) {
+    const {
+      modeConfiguration,
+      languageId
+    } = defaults;
+    disposeAll(providers);
+    if (modeConfiguration.completionItems) {
+      providers.push(_monaco_editor__WEBPACK_IMPORTED_MODULE_0__.languages.registerCompletionItemProvider(languageId, new _languageFeatures__WEBPACK_IMPORTED_MODULE_2__.CompletionAdapter(worker)));
+    }
+    if (modeConfiguration.diagnostics) {
+      providers.push(new _languageFeatures__WEBPACK_IMPORTED_MODULE_2__.DiagnosticsAdapter(api, worker));
+    }
+    if (modeConfiguration.hovers) {
+      providers.push(_monaco_editor__WEBPACK_IMPORTED_MODULE_0__.languages.registerHoverProvider(languageId, new _languageFeatures__WEBPACK_IMPORTED_MODULE_2__.HoverAdapter(worker)));
+    }
+    registerSchemaLessProviders();
+  }
+  let {
+    modeConfiguration,
+    formattingOptions,
+    diagnosticSettings,
+    externalFragmentDefinitions,
+    schemas
+  } = defaults;
+  registerAllProviders(defaults);
+  defaults.onDidChange(newDefaults => {
+    if (newDefaults.modeConfiguration !== modeConfiguration) {
+      modeConfiguration = newDefaults.modeConfiguration;
+      registerAllProviders(newDefaults);
+    }
+    if (newDefaults.formattingOptions !== formattingOptions) {
+      formattingOptions = newDefaults.formattingOptions;
+      registerSchemaLessProviders();
+    }
+    if (newDefaults.externalFragmentDefinitions !== externalFragmentDefinitions) {
+      externalFragmentDefinitions = newDefaults.externalFragmentDefinitions;
+      registerAllProviders(newDefaults);
+    }
+    if (newDefaults.diagnosticSettings !== diagnosticSettings) {
+      diagnosticSettings = newDefaults.diagnosticSettings;
+      registerAllProviders(newDefaults);
+    }
+    if (newDefaults.schemas !== schemas) {
+      schemas = newDefaults.schemas;
+      registerAllProviders(newDefaults);
+    }
+  });
+  disposables.push(asDisposable(providers));
+  return asDisposable(disposables);
+}
+function asDisposable(disposables) {
+  return {
+    dispose: () => disposeAll(disposables)
+  };
+}
+function disposeAll(disposables) {
+  while (disposables.length) {
+    disposables.pop().dispose();
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-graphql/esm/languageFeatures.js"
+/*!***********************************************************************!*\
+  !*** ../../../../node_modules/monaco-graphql/esm/languageFeatures.js ***!
+  \***********************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   CompletionAdapter: () => (/* binding */ CompletionAdapter),
+/* harmony export */   DiagnosticsAdapter: () => (/* binding */ DiagnosticsAdapter),
+/* harmony export */   DocumentFormattingAdapter: () => (/* binding */ DocumentFormattingAdapter),
+/* harmony export */   HoverAdapter: () => (/* binding */ HoverAdapter),
+/* harmony export */   toCompletion: () => (/* binding */ toCompletion),
+/* harmony export */   toCompletionItemKind: () => (/* binding */ toCompletionItemKind)
+/* harmony export */ });
+/* harmony import */ var _monaco_editor__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./monaco-editor */ "../../../../node_modules/monaco-graphql/esm/monaco-editor.js");
+/* harmony import */ var monaco_editor_esm_vs_editor_editor_api__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! monaco-editor/esm/vs/editor/editor.api */ "../../../../node_modules/monaco-editor/esm/vs/editor/editor.api.js");
+/* harmony import */ var graphql_language_service__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! graphql-language-service */ "../../../../node_modules/graphql-language-service/esm/index.js");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./utils */ "../../../../node_modules/monaco-graphql/esm/utils.js");
+
+
+
+
+class DiagnosticsAdapter {
+  defaults;
+  _worker;
+  _disposables = [];
+  _listener = Object.create(null);
+  constructor(defaults, _worker) {
+    this.defaults = defaults;
+    this._worker = _worker;
+    this._worker = _worker;
+    let onChangeTimeout;
+    const onModelAdd = model => {
+      const modeId = (0,_utils__WEBPACK_IMPORTED_MODULE_3__.getModelLanguageId)(model);
+      if (modeId !== this.defaults.languageId) {
+        return;
+      }
+      const modelUri = model.uri.toString();
+      const jsonValidationForModel = defaults.diagnosticSettings.validateVariablesJSON?.[modelUri];
+      onChangeTimeout = setTimeout(() => {
+        void this._doValidate(model.uri, modeId, jsonValidationForModel);
+      }, 400);
+      this._listener[modelUri] = model.onDidChangeContent(() => {
+        clearTimeout(onChangeTimeout);
+        onChangeTimeout = setTimeout(() => {
+          void this._doValidate(model.uri, modeId, jsonValidationForModel);
+        }, 400);
+      });
+    };
+    const onModelRemoved = model => {
+      monaco_editor_esm_vs_editor_editor_api__WEBPACK_IMPORTED_MODULE_1__.editor.setModelMarkers(model, this.defaults.languageId, []);
+      const uriStr = model.uri.toString();
+      const listener = this._listener[uriStr];
+      if (listener) {
+        listener.dispose();
+        delete this._listener[uriStr];
+      }
+    };
+    this._disposables.push(monaco_editor_esm_vs_editor_editor_api__WEBPACK_IMPORTED_MODULE_1__.editor.onDidCreateModel(onModelAdd), {
+      dispose() {
+        clearTimeout(onChangeTimeout);
+      }
+    }, monaco_editor_esm_vs_editor_editor_api__WEBPACK_IMPORTED_MODULE_1__.editor.onWillDisposeModel(model => {
+      onModelRemoved(model);
+    }), monaco_editor_esm_vs_editor_editor_api__WEBPACK_IMPORTED_MODULE_1__.editor.onDidChangeModelLanguage(event => {
+      onModelRemoved(event.model);
+      onModelAdd(event.model);
+    }), {
+      dispose: () => {
+        for (const listener of Object.values(this._listener)) {
+          listener.dispose();
+        }
+      }
+    }, defaults.onDidChange(() => {
+      for (const model of monaco_editor_esm_vs_editor_editor_api__WEBPACK_IMPORTED_MODULE_1__.editor.getModels()) {
+        if ((0,_utils__WEBPACK_IMPORTED_MODULE_3__.getModelLanguageId)(model) === this.defaults.languageId) {
+          onModelRemoved(model);
+          onModelAdd(model);
+        }
+      }
+    }));
+    for (const model of monaco_editor_esm_vs_editor_editor_api__WEBPACK_IMPORTED_MODULE_1__.editor.getModels()) {
+      if ((0,_utils__WEBPACK_IMPORTED_MODULE_3__.getModelLanguageId)(model) === this.defaults.languageId) {
+        onModelAdd(model);
+      }
+    }
+  }
+  dispose() {
+    for (const disposable of this._disposables) {
+      disposable.dispose();
+    }
+    this._disposables = [];
+  }
+  async _doValidate(resource, languageId, variablesUris) {
+    const worker = await this._worker(resource);
+    if (!worker) {
+      return;
+    }
+    const diagnostics = await worker.doValidation(resource.toString());
+    monaco_editor_esm_vs_editor_editor_api__WEBPACK_IMPORTED_MODULE_1__.editor.setModelMarkers(monaco_editor_esm_vs_editor_editor_api__WEBPACK_IMPORTED_MODULE_1__.editor.getModel(resource), languageId, diagnostics);
+    if (variablesUris) {
+      await Promise.resolve(/*! import() */).then(__webpack_require__.bind(__webpack_require__, /*! monaco-editor/esm/vs/language/json/monaco.contribution.js */ "../../../../node_modules/monaco-editor/esm/vs/language/json/monaco.contribution.js"));
+      if (!variablesUris.length) {
+        throw new Error('No variables URI strings provided to validate');
+      }
+      const jsonSchema = await worker.doGetVariablesJSONSchema(resource.toString());
+      if (!jsonSchema) {
+        return;
+      }
+      const schemaUri = _monaco_editor__WEBPACK_IMPORTED_MODULE_0__.Uri.file(variablesUris[0].replace('.json', '-schema.json')).toString();
+      const configResult = {
+        uri: schemaUri,
+        schema: jsonSchema,
+        fileMatch: variablesUris
+      };
+      const currentSchemas = _monaco_editor__WEBPACK_IMPORTED_MODULE_0__.languages.json.jsonDefaults.diagnosticsOptions.schemas?.filter(s => s.uri !== schemaUri) || [];
+      _monaco_editor__WEBPACK_IMPORTED_MODULE_0__.languages.json.jsonDefaults.setDiagnosticsOptions({
+        schemaValidation: 'error',
+        validate: true,
+        ...this.defaults.diagnosticSettings.jsonDiagnosticSettings,
+        schemas: [...currentSchemas, configResult],
+        enableSchemaRequest: false
+      });
+    }
+  }
+}
+const mKind = _monaco_editor__WEBPACK_IMPORTED_MODULE_0__.languages.CompletionItemKind;
+const kindMap = {
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Text]: mKind.Text,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Method]: mKind.Method,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Function]: mKind.Function,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Constructor]: mKind.Constructor,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Field]: mKind.Field,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Variable]: mKind.Variable,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Class]: mKind.Class,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Interface]: mKind.Interface,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Module]: mKind.Module,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Property]: mKind.Property,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Unit]: mKind.Unit,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Value]: mKind.Value,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Enum]: mKind.Enum,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Keyword]: mKind.Keyword,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Snippet]: mKind.Snippet,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Color]: mKind.Color,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.File]: mKind.File,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Reference]: mKind.Reference,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Folder]: mKind.Folder,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.EnumMember]: mKind.EnumMember,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Constant]: mKind.Constant,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Struct]: mKind.Struct,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Event]: mKind.Event,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.Operator]: mKind.Operator,
+  [graphql_language_service__WEBPACK_IMPORTED_MODULE_2__.CompletionItemKind.TypeParameter]: mKind.TypeParameter
+};
+function toCompletionItemKind(kind) {
+  return kind in kindMap ? kindMap[kind] : mKind.Text;
+}
+function toCompletion(entry) {
+  const suggestions = {
+    range: entry.range,
+    kind: toCompletionItemKind(entry.kind),
+    label: entry.label,
+    insertText: entry.insertText ?? entry.label,
+    insertTextRules: entry.insertText ? _monaco_editor__WEBPACK_IMPORTED_MODULE_0__.languages.CompletionItemInsertTextRule.InsertAsSnippet : undefined,
+    sortText: entry.sortText,
+    filterText: entry.filterText,
+    documentation: entry.documentation,
+    detail: entry.detail,
+    command: entry.command
+  };
+  return suggestions;
+}
+class CompletionAdapter {
+  _worker;
+  constructor(_worker) {
+    this._worker = _worker;
+    this._worker = _worker;
+  }
+  get triggerCharacters() {
+    return [':', '$', ' ', '(', '@'];
+  }
+  async provideCompletionItems(model, position, _context, _token) {
+    try {
+      const worker = await this._worker(model.uri);
+      const completionItems = await worker.doComplete(model.uri.toString(), position);
+      return {
+        incomplete: true,
+        suggestions: completionItems.map(toCompletion)
+      };
+    } catch (err) {
+      console.error('Error fetching completion items', err);
+      return {
+        suggestions: []
+      };
+    }
+  }
+}
+class DocumentFormattingAdapter {
+  _worker;
+  constructor(_worker) {
+    this._worker = _worker;
+    this._worker = _worker;
+  }
+  async provideDocumentFormattingEdits(document, _options, _token) {
+    const worker = await this._worker(document.uri);
+    const formatted = await worker.doFormat(document.uri.toString());
+    if (!formatted) {
+      return [];
+    }
+    return [{
+      range: document.getFullModelRange(),
+      text: formatted
+    }];
+  }
+}
+class HoverAdapter {
+  _worker;
+  constructor(_worker) {
+    this._worker = _worker;
+  }
+  async provideHover(model, position, _token) {
+    const resource = model.uri;
+    const worker = await this._worker(model.uri);
+    const hoverItem = await worker.doHover(resource.toString(), position);
+    if (hoverItem) {
+      return {
+        range: hoverItem.range,
+        contents: [{
+          value: hoverItem.content
+        }]
+      };
+    }
+    return {
+      contents: []
+    };
+  }
+  dispose() {}
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-graphql/esm/workerManager.js"
+/*!********************************************************************!*\
+  !*** ../../../../node_modules/monaco-graphql/esm/workerManager.js ***!
+  \********************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   WorkerManager: () => (/* binding */ WorkerManager)
+/* harmony export */ });
+/* harmony import */ var _monaco_editor__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./monaco-editor */ "../../../../node_modules/monaco-graphql/esm/monaco-editor.js");
+/* harmony import */ var _utils__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./utils */ "../../../../node_modules/monaco-graphql/esm/utils.js");
+
+
+const STOP_WHEN_IDLE_FOR = 2 * 60 * 1000;
+class WorkerManager {
+  _defaults;
+  _idleCheckInterval;
+  _lastUsedTime = 0;
+  _configChangeListener;
+  _worker = null;
+  _client = null;
+  constructor(defaults) {
+    this._defaults = defaults;
+    this._idleCheckInterval = window.setInterval(() => this._checkIfIdle(), 30 * 1000);
+    this._configChangeListener = this._defaults.onDidChange(() => {
+      this._stopWorker();
+    });
+  }
+  _stopWorker() {
+    if (this._worker) {
+      this._worker.dispose();
+      this._worker = null;
+    }
+    this._client = null;
+  }
+  dispose() {
+    clearInterval(this._idleCheckInterval);
+    this._configChangeListener.dispose();
+    this._stopWorker();
+  }
+  _checkIfIdle() {
+    if (!this._worker) {
+      return;
+    }
+    const timePassedSinceLastUsed = Date.now() - this._lastUsedTime;
+    if (timePassedSinceLastUsed > STOP_WHEN_IDLE_FOR) {
+      this._stopWorker();
+    }
+  }
+  async _getClient() {
+    this._lastUsedTime = Date.now();
+    if (!this._client && !this._worker) {
+      try {
+        const {
+          languageId,
+          formattingOptions,
+          schemas,
+          externalFragmentDefinitions,
+          completionSettings
+        } = this._defaults;
+        this._worker = _monaco_editor__WEBPACK_IMPORTED_MODULE_0__.editor.createWebWorker({
+          moduleId: 'monaco-graphql/esm/GraphQLWorker.js',
+          label: languageId,
+          createData: {
+            languageId,
+            formattingOptions,
+            languageConfig: {
+              schemas: schemas?.map(_utils__WEBPACK_IMPORTED_MODULE_1__.getStringSchema),
+              externalFragmentDefinitions,
+              fillLeafsOnComplete: completionSettings.__experimental__fillLeafsOnComplete
+            }
+          }
+        });
+        this._client = this._worker.getProxy();
+      } catch (error) {
+        console.error('error loading worker', error);
+      }
+    }
+    return this._client;
+  }
+  async getLanguageServiceWorker(...resources) {
+    const client = await this._getClient();
+    await this._worker.withSyncedResources(resources);
+    return client;
+  }
+}
+
+/***/ }
+
+}]);
+//# sourceMappingURL=vendors-node_modules_monaco-graphql_esm_graphqlMode_js.js.map
