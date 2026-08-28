@@ -100,16 +100,92 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
         }
     }
 
+    /**
+     * A handshake carrying no credential is upgraded rather than refused, because a browser cannot set
+     * request headers on a WebSocket handshake. The security property moved rather than weakened: the
+     * socket that results can do nothing at all until it authenticates through connection_init, which
+     * is what the following tests pin down.
+     */
     @Test
-    public void testWebSocketUpgrade_withoutAuth_returns401() throws Exception {
-        assertWebSocketUpgradeRejected(new ClientUpgradeRequest());
+    public void testWebSocketUpgrade_withoutAuth_upgradesButCannotOperate() throws Exception {
+        assertStartIsRefusedBeforeAuthentication(new ClientUpgradeRequest());
     }
 
+    /** A public API key is not a subscription credential, on the handshake or anywhere else. */
     @Test
-    public void testWebSocketUpgrade_withPublicApiKeyOnly_returns401() throws Exception {
+    public void testWebSocketUpgrade_withPublicApiKeyOnly_cannotOperate() throws Exception {
         ClientUpgradeRequest request = new ClientUpgradeRequest();
         request.setHeader("X-Unomi-Api-Key", testPublicKeyValue);
-        assertWebSocketUpgradeRejected(request);
+        assertStartIsRefusedBeforeAuthentication(request);
+    }
+
+    /** connection_init carrying a valid credential is how a browser client authenticates. */
+    @Test
+    public void testWebSocketConnectionInit_withValidCredentials_authenticatesSocket() throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            Future<Session> onConnected = client.connect(socket, graphqlWebSocketUri(), new ClientUpgradeRequest());
+            RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
+
+            remote.sendString(initWithCredentials(basicAuthHeader(TEST_TENANT_ID, testPrivateKeyValue)));
+            String initResp = socket.waitMessage().get(10, TimeUnit.SECONDS);
+            Assert.assertEquals(resourceAsString("graphql/socket/in/ack.json"), initResp);
+
+            remote.sendString(resourceAsString("graphql/socket/out/term.json"));
+            socket.waitClose().get(10, TimeUnit.SECONDS);
+        } finally {
+            client.stop();
+        }
+    }
+
+    /** A wrong credential in connection_init must not authenticate the socket. */
+    @Test
+    public void testWebSocketConnectionInit_withBadCredentials_isRefused() throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            Future<Session> onConnected = client.connect(socket, graphqlWebSocketUri(), new ClientUpgradeRequest());
+            RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
+
+            remote.sendString(resourceAsString("graphql/socket/out/init-bad-credentials.json"));
+
+            // Refused: the socket is closed rather than acknowledged.
+            socket.waitClose().get(10, TimeUnit.SECONDS);
+        } finally {
+            client.stop();
+        }
+    }
+
+    /**
+     * The core property of the unauthenticated-upgrade path: an operation sent before authenticating is
+     * refused and the socket is closed. Without this, opening the handshake would be a regression.
+     */
+    private void assertStartIsRefusedBeforeAuthentication(ClientUpgradeRequest request) throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            Future<Session> onConnected = client.connect(socket, graphqlWebSocketUri(), request);
+            RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
+
+            remote.sendString(resourceAsString("graphql/socket/out/start.json"));
+
+            socket.waitClose().get(10, TimeUnit.SECONDS);
+        } finally {
+            client.stop();
+        }
+    }
+
+    private URI graphqlWebSocketUri() throws Exception {
+        return new URI("ws://localhost:" + getHttpPort() + "/graphql");
+    }
+
+    private String initWithCredentials(final String authorizationValue) {
+        return resourceAsString("graphql/socket/out/init-with-credentials.json")
+                .replace("__AUTHORIZATION__", authorizationValue);
     }
 
     @Test
