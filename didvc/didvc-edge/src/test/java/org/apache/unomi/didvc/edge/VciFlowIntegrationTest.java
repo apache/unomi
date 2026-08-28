@@ -41,6 +41,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -122,7 +123,7 @@ class VciFlowIntegrationTest {
         String accessToken = tokenResponse.get("access_token").asText();
         assertNotNull(accessToken);
 
-        // Credential delivery (with a key proof, as the wallet would send)
+        // Credential delivery (with a key proof carrying the issued c_nonce)
         com.nimbusds.jose.jwk.OctetKeyPair holderKey = new OctetKeyPairGenerator(Curve.Ed25519).generate();
         MvcResult credentialResult = mockMvc.perform(post("/hkt/credential")
                         .header("Authorization", "Bearer " + accessToken)
@@ -130,7 +131,8 @@ class VciFlowIntegrationTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "format", "dc+sd-jwt",
                                 "vct", "hkt_kyc_v1",
-                                "proof", Map.of("proof_type", "jwt", "jwt", buildProofJwt(holderKey))))))
+                                "proof", Map.of("proof_type", "jwt",
+                                        "jwt", buildProofJwt(holderKey, tokenResponse.get("c_nonce").asText()))))))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode credentialResponse = objectMapper.readTree(credentialResult.getResponse().getContentAsString());
@@ -143,8 +145,8 @@ class VciFlowIntegrationTest {
         assertTrue(presentation.verifySignature(platformApi.getIssuerKey().toPublicJWK()));
         assertEquals("hkt_kyc_v1", presentation.getClaims().get("vct"));
         assertEquals("REMOTE_FULL", presentation.getClaims().get("kycLevel"));
-        assertEquals(2, presentation.getDisclosedClaims().size());
         assertEquals("Yat", presentation.getDisclosedClaims().get("givenName"));
+        assertFalse(presentation.getDisclosedClaims().containsKey("_sd"));
     }
 
     @Test
@@ -181,15 +183,16 @@ class VciFlowIntegrationTest {
                         .param("pre-authorized_code", preAuthCode))
                 .andExpect(status().isOk())
                 .andReturn();
-        String accessToken = objectMapper.readTree(tokenResult.getResponse().getContentAsString())
-                .get("access_token").asText();
+        JsonNode tokenResponse = objectMapper.readTree(tokenResult.getResponse().getContentAsString());
+        String accessToken = tokenResponse.get("access_token").asText();
         MvcResult credentialResult = mockMvc.perform(post("/hkt/credential")
                         .header("Authorization", "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "format", "dc+sd-jwt",
                                 "vct", "hkt_kyc_v1",
-                                "proof", Map.of("proof_type", "jwt", "jwt", buildProofJwt(holderKey))))))
+                                "proof", Map.of("proof_type", "jwt",
+                                        "jwt", buildProofJwt(holderKey, tokenResponse.get("c_nonce").asText()))))))
                 .andExpect(status().isOk())
                 .andReturn();
         String credential = objectMapper.readTree(credentialResult.getResponse().getContentAsString())
@@ -202,7 +205,7 @@ class VciFlowIntegrationTest {
                         .computeThumbprint().toString());
     }
 
-    private String buildProofJwt(com.nimbusds.jose.jwk.OctetKeyPair holderKey) throws Exception {
+    private String buildProofJwt(com.nimbusds.jose.jwk.OctetKeyPair holderKey, String cNonce) throws Exception {
         com.nimbusds.jose.jwk.OctetKeyPair publicJwk = holderKey.toPublicJWK();
         Map<String, Object> header = new LinkedHashMap<>();
         header.put("typ", "openid4vci-proof+jwt");
@@ -212,6 +215,7 @@ class VciFlowIntegrationTest {
         payload.put("iss", "hkt-didvc-wallet");
         payload.put("aud", "http://localhost:8081/hkt");
         payload.put("iat", System.currentTimeMillis() / 1000);
+        payload.put("nonce", cNonce);
         String headerB64 = java.util.Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(objectMapper.writeValueAsBytes(header));
         String payloadB64 = java.util.Base64.getUrlEncoder().withoutPadding()

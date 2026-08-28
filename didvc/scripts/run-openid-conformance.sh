@@ -16,165 +16,95 @@
 # limitations under the License.
 ################################################################################
 #
-# OpenID OID4VCI/OID4VP conformance runner (CI).
+# OpenID OID4VCI conformance runner (CI). Drives the issuer test plan via
+# didvc/scripts/drive-openid-plan.py, which performs the out-of-band steps
+# (credential-offer delivery, front-channel browser visits, implicit
+# submit) that a human browser/wallet would otherwise do — see
+# didvc/scripts/LOCAL-CONFORMANCE.md.
 #
-# Runs the OpenID Foundation conformance test modules for the DID-VC
-# credential edge. The hosted suite (https://www.certification.openid.net,
-# API: https://api.certification.openid.net) must be able to reach the
-# edge's issuer/verifier endpoints over HTTPS, which this script provides
-# through a cloudflared quick tunnel when available.
+# Two modes:
+#  * Hosted suite (default in CI): the OpenID Foundation suite at
+#    https://api.certification.openid.net must reach the edge over HTTPS,
+#    provided by a cloudflared quick tunnel. Requires OPENID_SUITE_TOKEN
+#    (GitHub secret) for API access.
+#  * Local suite: with OPENID_SUITE_API pointing at a locally built suite
+#    (see LOCAL-CONFORMANCE.md) and no token set.
 #
-# The API calls mirror the official suite automation wrapper:
-# https://gitlab.com/openid/conformance-suite/-/blob/master/scripts/conformance.py
-#   GET  api/runner/available                         list test modules
-#   POST api/plan?planName=..&variant=<json-string>   create test plan (body = config)
-#   POST api/runner?test=<name>&plan=<id>             create module instance
-#   POST api/runner/<module-id>                       start the module
-#   GET  api/runner/<module-id>/wait-state?states=..  long-poll until FINISHED
-#   GET  api/log/<module-id>                          module log
-#
-# Usage: run-openid-conformance.sh [issuer-url] [verifier-url]
-# Plan names are overridable:
-#   OPENID_VCI_PLAN_NAME (default oid4vci-issuer-test-plan)
-#   OPENID_VP_PLAN_NAME  (default oid4vp-verifier-test-plan)
+# Environment:
+#   OPENID_SUITE_API    suite API base (default https://api.certification.openid.net)
+#   OPENID_SUITE_TOKEN  Bearer token for the hosted suite API (optional locally)
+#   EDGE_URL            edge base URL (default http://localhost:8081)
+#   ISSUER_TENANT       issuer tenant path segment (default hkt)
 #
 set -euo pipefail
 
-ISSUER_URL="${1:-}"
-VERIFIER_URL="${2:-}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SUITE_API="${OPENID_SUITE_API:-https://api.certification.openid.net}"
-VCI_PLAN_NAME="${OPENID_VCI_PLAN_NAME:-oid4vci-issuer-test-plan}"
-VP_PLAN_NAME="${OPENID_VP_PLAN_NAME:-oid4vp-verifier-test-plan}"
-CLIENT_NAME="hkt-didvc-${GITHUB_RUN_ID:-local}"
+EDGE_URL="${EDGE_URL:-http://localhost:8081}"
+ISSUER_TENANT="${ISSUER_TENANT:-hkt}"
+VCI_PLAN_NAME="${OPENID_VCI_PLAN_NAME:-oid4vci-1_0-issuer-test-plan}"
 
 log() { echo "[conformance] $*"; }
 
-# The hosted suite requires a Bearer token for API access. Supply it via
-# the OPENID_SUITE_TOKEN secret (workflow: actions secrets) or env var.
-suite_curl() {
-  local args=()
-  if [ -n "${OPENID_SUITE_TOKEN:-}" ]; then
-    args+=(-H "Authorization: Bearer ${OPENID_SUITE_TOKEN}")
-  fi
-  curl -fsS "${args[@]}" "$@"
-}
-
-# Expose the local edge through a cloudflared quick tunnel when cloudflared
-# is installed (GitHub Actions has public egress for trycloudflare.com).
-start_cloudflared_tunnel() {
-  if command -v cloudflared >/dev/null 2>&1; then
-    log "Starting cloudflared quick tunnel to http://localhost:8081"
-    nohup cloudflared tunnel --url http://localhost:8081 --no-autoupdate >/tmp/cloudflared.log 2>&1 &
-    TUNNEL_URL=""
-    for _ in $(seq 1 60); do
-      TUNNEL_URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/cloudflared.log | head -1 || true)
-      [ -n "${TUNNEL_URL}" ] && break
-      sleep 2
-    done
-    if [ -z "${TUNNEL_URL}" ]; then
-      log "ERROR: cloudflared tunnel did not come up; log follows"
-      cat /tmp/cloudflared.log || true
-      exit 1
-    fi
-    ISSUER_URL="${TUNNEL_URL}/hkt"
-    VERIFIER_URL="${TUNNEL_URL}/bank-a"
-    log "Tunnel ready: ${TUNNEL_URL}"
-  fi
-}
-
-list_available_modules() {
-  suite_curl "${SUITE_API}/api/runner/available" \
-    | jq -r '.[].testModuleIdentifier // empty' 2>/dev/null | sort | head -50 || true
-}
-
-# Runs one test plan. $1 = plan name, $2 = configuration JSON, $3 = variant JSON or ""
-run_test_plan() {
-  local plan_name="$1"
-  local configuration="$2"
-  local variant="$3"
-
-  log "Creating test plan '${plan_name}'"
-  local create_args=("${SUITE_API}/api/plan?planName=${plan_name}")
-  if [ -n "${variant}" ]; then
-    create_args+=("&variant=$(python3 -c "import json,sys;print(__import__('urllib.parse',fromlist=['quote']).quote(json.dumps(${variant})))")")
-  fi
-  local plan_response
-  plan_response=$(suite_curl -X POST "${create_args[*]}" \
-    -H 'Content-Type: application/json' --data "${configuration}")
-  local plan_id
-  plan_id=$(echo "${plan_response}" | jq -r '.id // .planId // empty')
-  if [ -z "${plan_id}" ]; then
-    log "ERROR: could not create test plan '${plan_name}': ${plan_response}"
-    return 1
-  fi
-  log "Plan '${plan_name}' created with id ${plan_id}"
-
-  # The plan response carries the test module identifiers; tolerate both
-  # 'modules[].testModule.testModuleIdentifier' and 'modules[].id' shapes.
-  local test_names
-  test_names=$(echo "${plan_response}" \
-    | jq -r '.modules[]? | (.testModule.testModuleIdentifier // .testModuleIdentifier // .id // empty)' 2>/dev/null || true)
-  if [ -z "${test_names}" ]; then
-    log "WARN: no test module identifiers found in plan response; dumping response for diagnosis"
-    echo "${plan_response}" | jq . || true
-  fi
-
-  local failed=0
-  for test_name in ${test_names}; do
-    log "Creating test module instance for '${test_name}'"
-    local module_response
-    module_response=$(suite_curl -X POST \
-      "${SUITE_API}/api/runner?test=${test_name}&plan=${plan_id}")
-    local module_id
-    module_id=$(echo "${module_response}" | jq -r '.id // .moduleId // empty')
-    if [ -z "${module_id}" ]; then
-      log "ERROR: no module id in create response: ${module_response}"
-      failed=1
-      continue
-    fi
-
-    log "Starting module ${module_id} (${test_name})"
-    suite_curl -X POST "${SUITE_API}/api/runner/${module_id}" >/dev/null
-
-    log "Waiting for module ${module_id} to finish"
-    local state=""
-    for _ in $(seq 1 40); do
-      state=$(suite_curl \
-        "${SUITE_API}/api/runner/${module_id}/wait-state?states=FINISHED,INTERRUPTED&timeoutMs=30000" \
-        | jq -r '.state // .status // empty')
-      case "${state}" in
-        FINISHED) break ;;
-        INTERRUPTED) break ;;
-        *) sleep 5 ;;
-      esac
-    done
-    log "Module ${module_id} final state: ${state:-unknown}"
-    if [ "${state}" != "FINISHED" ]; then
-      failed=1
-    fi
-    log "Module ${module_id} log:"
-    suite_curl "${SUITE_API}/api/log/${module_id}" | jq . || true
+TUNNEL_URL=""
+if command -v cloudflared >/dev/null 2>&1 && ! printf '%s' "${SUITE_API}" | grep -q '://localhost'; then
+  log "Starting cloudflared quick tunnel to ${EDGE_URL}"
+  nohup cloudflared tunnel --url "${EDGE_URL}" --no-autoupdate >/tmp/cloudflared.log 2>&1 &
+  for _ in $(seq 1 60); do
+    TUNNEL_URL=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/cloudflared.log | head -1 || true)
+    [ -n "${TUNNEL_URL}" ] && break
+    sleep 2
   done
-  return "${failed}"
+  if [ -z "${TUNNEL_URL}" ]; then
+    log "ERROR: cloudflared tunnel did not come up; log follows"
+    cat /tmp/cloudflared.log || true
+    exit 1
+  fi
+  log "Tunnel ready: ${TUNNEL_URL}"
+fi
+
+# The issuer under test: the tunnel when the hosted suite drives the run
+# (it must be able to resolve and reach the edge), otherwise the local edge.
+ISSUER_URL="${TUNNEL_URL:-${EDGE_URL}}/${ISSUER_TENANT}"
+OFFER_URL="${ISSUER_URL}/credential-offer"
+TUNNEL_HOST=""
+if [ -n "${TUNNEL_URL}" ]; then
+  TUNNEL_HOST="$(printf '%s' "${TUNNEL_URL}" | sed -e 's|^https://||' -e 's|/$||')"
+fi
+
+VARIANT='{"fapi_profile":"vci","client_auth_type":"private_key_jwt","credential_format":"sd_jwt_vc","fapi_request_method":"unsigned","sender_constrain":"dpop","authorization_request_type":"simple","openid":"plain_oauth","fapi_response_mode":"plain_response","vci_grant_type":"authorization_code","vci_authorization_code_flow_variant":"issuer_initiated","vci_credential_encryption":"plain"}'
+
+CONFIG_FILE="$(mktemp)"
+trap 'rm -f "${CONFIG_FILE}"' EXIT
+cat > "${CONFIG_FILE}" <<EOF
+{
+  "description": "hkt-didvc issuer (CI)",
+  "vci": {
+    "credential_issuer_url": "${ISSUER_URL}",
+    "credential_configuration_id": "hkt_kyc_v1",
+    "credential_offer_endpoint": "${OFFER_URL}"
+  },
+  "client": {"client_id": "hkt-didvc-wallet", "dpop_signing_alg": "ES256"},
+  "client2": {"client_id": "hkt-didvc-wallet-2", "dpop_signing_alg": "ES256"}
 }
+EOF
 
-start_cloudflared_tunnel
-
-log "Available test modules (informational):"
-list_available_modules
-
-if [ -n "${ISSUER_URL}" ]; then
-  log "Issuer under test: ${ISSUER_URL}"
-  run_test_plan "${VCI_PLAN_NAME}" \
-    "$(jq -nc --arg issuer "${ISSUER_URL}" '{issuer: $issuer}')" \
-    '{"client_auth_type":"none"}' || exit 1
+DRIVER_ARGS=(--suite-api "${SUITE_API}" --plan-name "${VCI_PLAN_NAME}"
+  --variant "${VARIANT}" --config-file "${CONFIG_FILE}"
+  --offer-url "${OFFER_URL}" --module-timeout 420)
+if [ -n "${OPENID_SUITE_TOKEN:-}" ]; then
+  DRIVER_ARGS+=(--token "${OPENID_SUITE_TOKEN}")
+fi
+if [ -n "${TUNNEL_HOST}" ]; then
+  DRIVER_ARGS+=(--allow-host "${TUNNEL_HOST}")
+fi
+if printf '%s' "${SUITE_API}" | grep -q '://localhost'; then
+  # A local plain-HTTP suite reaches a plain-HTTP edge; the suite's
+  # HTTPS/TLS metadata and connection checks cannot pass there (they do
+  # over the https tunnel in CI), so tolerate those error events.
+  DRIVER_ARGS+=(--tolerate-test-errors)
+  log "Local suite: HTTPS/TLS test errors will be tolerated"
 fi
 
-if [ -n "${VERIFIER_URL}" ]; then
-  log "Verifier under test: ${VERIFIER_URL}"
-  run_test_plan "${VP_PLAN_NAME}" \
-    "$(jq -nc --arg verifier "${VERIFIER_URL}" '{verifier: $verifier}')" \
-    '{"client_auth_type":"none"}' || exit 1
-fi
-
-log "CONFORMANCE COMPLETE"
+log "Issuer under test: ${ISSUER_URL}"
+python3 "${SCRIPT_DIR}/drive-openid-plan.py" "${DRIVER_ARGS[@]}"

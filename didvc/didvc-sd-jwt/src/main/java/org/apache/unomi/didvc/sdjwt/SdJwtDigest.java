@@ -27,10 +27,12 @@ import java.util.Base64;
 import java.util.List;
 
 /**
- * Disclosure and digest helpers for SD-JWT (RFC 9901). A disclosure is a
- * JSON array {@code [salt, claimName, claimValue]}; its digest is the
- * base64url SHA-256 of its base64url-encoded form, listed in the signed
- * payload's {@code _sd} array.
+ * Disclosure and digest helpers for SD-JWT (RFC 9901). A disclosure for an
+ * object claim is a JSON array {@code [salt, claimName, claimValue]}; a
+ * disclosure for an array entry is {@code [salt, entryValue]}. Its digest is
+ * the base64url SHA-256 of its base64url-encoded form, listed in a signed
+ * {@code _sd} array or referenced from an array-entry
+ * {@code {"...": "<digest>"}} placeholder.
  */
 public final class SdJwtDigest {
 
@@ -81,15 +83,17 @@ public final class SdJwtDigest {
     }
 
     /**
-     * Computes the base64url SHA-256 of the presented disclosures section
-     * (the disclosures joined with {@code ~}), used as the KB-JWT
-     * {@code sd_hash} claim.
+     * Computes the base64url SHA-256 over the SD-JWT as presented without
+     * the key-binding JWT, used as the KB-JWT {@code sd_hash} claim
+     * (RFC 9901 §4.3.1): the input is the exact US-ASCII bytes of
+     * {@code <Issuer-signed JWT>~<Disclosure 1>~...~<Disclosure N>~}, i.e.
+     * the JWT and every disclosure each followed by a tilde.
      *
-     * @param disclosures the presented disclosures, in order
+     * @param sdJwtWithoutKeyBinding the presentation string without the KB-JWT
      * @return the sd_hash value
      */
-    public static String hashOfDisclosures(List<String> disclosures) {
-        return B64_URL.encodeToString(sha256(String.join("~", disclosures).getBytes(StandardCharsets.US_ASCII)));
+    public static String hashOfSdJwt(String sdJwtWithoutKeyBinding) {
+        return B64_URL.encodeToString(sha256(sdJwtWithoutKeyBinding.getBytes(StandardCharsets.US_ASCII)));
     }
 
     static byte[] sha256(byte[] input) {

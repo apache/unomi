@@ -41,4 +41,16 @@ public interface NonceStore {
      * @return true when the nonce existed and was consumed
      */
     boolean consume(String key);
+
+    /**
+     * Checks whether a nonce is currently valid without consuming it. Used
+     * to accept a proof nonce before the rest of the proof validates; the
+     * caller consumes the nonce once the proof is fully accepted.
+     *
+     * @param key the nonce key
+     * @return true when the nonce exists and has not expired
+     */
+    default boolean contains(String key) {
+        return false;
+    }
 }

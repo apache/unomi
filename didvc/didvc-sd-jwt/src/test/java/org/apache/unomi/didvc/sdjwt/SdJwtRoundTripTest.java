@@ -24,9 +24,7 @@ import com.nimbusds.jose.jwk.gen.OctetKeyPairGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -79,16 +77,18 @@ class SdJwtRoundTripTest {
         String sdJwt = issueCredential();
         String[] parts = sdJwt.split("~");
         assertEquals(3, parts.length, "JWS plus two disclosures");
-        assertTrue(sdJwt.endsWith("~"), "issuance serialization must end with the RFC 9701 trailing tilde");
+        assertTrue(sdJwt.endsWith("~"), "issuance serialization must end with the RFC 9901 trailing tilde");
 
         SdJwtPresentation presentation = new SdJwtParser().parse(sdJwt);
         assertTrue(presentation.verifySignature(issuerKey.toPublicJWK()));
         assertEquals("hkt_kyc_v1", presentation.getClaims().get("vct"));
         assertEquals("REMOTE_FULL", presentation.getClaims().get("kycLevel"));
-        assertEquals(2, presentation.getDisclosedClaims().size());
         assertEquals("Yat", presentation.getDisclosedClaims().get("givenName"));
         assertEquals("HK", presentation.getDisclosedClaims().get("nationality"));
+        // The disclosed view is the full processed payload with _sd removed
         assertNotNull(presentation.getClaims().get("_sd"));
+        assertFalse(presentation.getDisclosedClaims().containsKey("_sd"));
+        assertFalse(presentation.getDisclosedClaims().containsKey("_sd_alg"));
         assertNull(presentation.getKeyBindingJwt());
     }
 
@@ -99,7 +99,6 @@ class SdJwtRoundTripTest {
         // Present only the givenName disclosure
         String partial = parts[0] + "~" + parts[1];
         SdJwtPresentation presentation = new SdJwtParser().parse(partial);
-        assertEquals(1, presentation.getDisclosedClaims().size());
         assertTrue(presentation.getDisclosedClaims().containsKey("givenName"));
         assertFalse(presentation.getDisclosedClaims().containsKey("nationality"));
     }
@@ -132,9 +131,9 @@ class SdJwtRoundTripTest {
     void keyBindingRoundTrip() throws Exception {
         String sdJwt = issueCredential();
         String[] parts = sdJwt.split("~");
-        List<String> disclosures = Arrays.asList(parts[1], parts[2]);
+        String preKeyBinding = parts[0] + "~" + parts[1] + "~" + parts[2] + "~";
         String kbJwt = new KeyBindingJwtBuilder().build(holderKey, "nonce-123", "https://verify.hkt/didvc",
-                disclosures, new Date());
+                preKeyBinding, new Date());
         String presentation = parts[0] + "~" + parts[1] + "~" + parts[2] + "~" + kbJwt;
 
         SdJwtPresentation parsed = new SdJwtParser().parse(presentation);
@@ -148,7 +147,7 @@ class SdJwtRoundTripTest {
         String sdJwt = issueCredential();
         String[] parts = sdJwt.split("~");
         String kbJwt = new KeyBindingJwtBuilder().build(holderKey, "nonce-123", "https://verify.hkt/didvc",
-                Arrays.asList(parts[1], parts[2]), new Date());
+                parts[0] + "~" + parts[1] + "~" + parts[2] + "~", new Date());
         SdJwtPresentation parsed = new SdJwtParser().parse(
                 parts[0] + "~" + parts[1] + "~" + parts[2] + "~" + kbJwt);
         assertThrows(SecurityException.class,
@@ -162,7 +161,7 @@ class SdJwtRoundTripTest {
         String[] parts = sdJwt.split("~");
         OctetKeyPair attackerKey = new OctetKeyPairGenerator(Curve.Ed25519).generate();
         String kbJwt = new KeyBindingJwtBuilder().build(attackerKey, "nonce-123", "https://verify.hkt/didvc",
-                Arrays.asList(parts[1], parts[2]), new Date());
+                parts[0] + "~" + parts[1] + "~" + parts[2] + "~", new Date());
         SdJwtPresentation parsed = new SdJwtParser().parse(
                 parts[0] + "~" + parts[1] + "~" + parts[2] + "~" + kbJwt);
         assertThrows(SecurityException.class,

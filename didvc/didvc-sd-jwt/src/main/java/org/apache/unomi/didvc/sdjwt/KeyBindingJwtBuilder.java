@@ -30,7 +30,6 @@ import com.nimbusds.jose.jwk.OctetKeyPair;
 
 import java.util.Date;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -44,21 +43,24 @@ public class KeyBindingJwtBuilder {
     /**
      * Builds a key-binding JWT.
      *
-     * @param holderPrivateJwk   the holder's private JWK (bound in cnf.jwk)
-     * @param nonce              the verifier nonce
-     * @param audience           the verifier identifier
-     * @param disclosures        the presented disclosures, in order
-     * @param issuedAt           issuance time
+     * @param holderPrivateJwk      the holder's private JWK (bound in cnf.jwk)
+     * @param nonce                 the verifier nonce
+     * @param audience              the verifier identifier
+     * @param sdJwtWithoutKeyBinding the exact presentation string covered by
+     *                              {@code sd_hash} (RFC 9901 §4.3.1):
+     *                              {@code <JWT>~<d1>~...~<dn>~}
+     * @param issuedAt              issuance time
      * @return the compact key-binding JWT
      * @throws JOSEException on signing failure
      */
-    public String build(JWK holderPrivateJwk, String nonce, String audience, List<String> disclosures, Date issuedAt)
+    public String build(JWK holderPrivateJwk, String nonce, String audience, String sdJwtWithoutKeyBinding,
+                        Date issuedAt)
             throws JOSEException {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("nonce", nonce);
         payload.put("aud", audience);
         payload.put("iat", issuedAt.getTime() / 1000);
-        payload.put("sd_hash", SdJwtDigest.hashOfDisclosures(disclosures));
+        payload.put("sd_hash", SdJwtDigest.hashOfSdJwt(sdJwtWithoutKeyBinding));
 
         JWSAlgorithm algorithm = holderPrivateJwk instanceof OctetKeyPair ? JWSAlgorithm.EdDSA : JWSAlgorithm.ES256;
         JWSHeader header = new JWSHeader.Builder(algorithm)

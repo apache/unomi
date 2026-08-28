@@ -228,7 +228,7 @@ public class SdJwtBuilder {
         for (String disclosure : result.getDisclosures()) {
             sb.append('~').append(disclosure);
         }
-        // RFC 9701: the issuance serialization ends with a trailing '~'
+        // RFC 9901: the issuance serialization ends with a trailing '~'
         sb.append('~');
         return sb.toString();
     }

@@ -71,7 +71,11 @@ public class SdJwtPresentation {
     }
 
     /**
-     * The selectively disclosed claims that were revealed.
+     * The Processed SD-JWT Payload (RFC 9901 §8.3): a copy of the signed
+     * payload with {@code _sd}/{@code _sd_alg} removed and every presented
+     * disclosed claim inserted at its position — nested objects get keys
+     * added, array-entry placeholders are replaced by (or, when not
+     * disclosed, dropped in favour of) the disclosed values.
      */
     public Map<String, Object> getDisclosedClaims() {
         return disclosedClaims;
@@ -130,7 +134,15 @@ public class SdJwtPresentation {
         if (!keyBindingJwt.verify(verifierFor(holderJwk))) {
             throw new SecurityException("Key binding JWT signature is invalid");
         }
-        String expectedSdHash = SdJwtDigest.hashOfDisclosures(disclosures);
+        // RFC 9901 §4.3.1: sd_hash covers the Issuer-signed JWT and every
+        // presented disclosure, each followed by a tilde — exactly the
+        // presentation as received, minus the KB-JWT part
+        StringBuilder preKeyBinding = new StringBuilder(credential.serialize());
+        for (String disclosure : disclosures) {
+            preKeyBinding.append('~').append(disclosure);
+        }
+        preKeyBinding.append('~');
+        String expectedSdHash = SdJwtDigest.hashOfSdJwt(preKeyBinding.toString());
         String sdHash = (String) keyBindingClaims.get("sd_hash");
         if (!expectedSdHash.equals(sdHash)) {
             throw new SecurityException("sd_hash does not cover the presented disclosures");

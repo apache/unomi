@@ -41,6 +41,26 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @Configuration
 public class DidvcEdgeConfiguration {
 
+    /**
+     * OAuth/OID4VCI endpoint responses (metadata, tokens, credentials,
+     * status lists) must never be cached by intermediaries — RFC 6749
+     * §5.1 and the OID4VCI metadata requirements.
+     */
+    @Bean
+    public org.springframework.boot.web.servlet.FilterRegistrationBean<jakarta.servlet.Filter> noStoreCacheControlFilter() {
+        org.springframework.boot.web.servlet.FilterRegistrationBean<jakarta.servlet.Filter> registration =
+                new org.springframework.boot.web.servlet.FilterRegistrationBean<>();
+        registration.setFilter((request, response, chain) -> {
+            if (response instanceof jakarta.servlet.http.HttpServletResponse httpResponse) {
+                httpResponse.setHeader("Cache-Control", "no-store");
+            }
+            chain.doFilter(request, response);
+        });
+        registration.addUrlPatterns("/*");
+        registration.setOrder(org.springframework.core.Ordered.HIGHEST_PRECEDENCE + 10);
+        return registration;
+    }
+
     @Bean
     public AuditLogService auditLogService() {
         return new AuditLogService(new InMemoryAuditLogStore());

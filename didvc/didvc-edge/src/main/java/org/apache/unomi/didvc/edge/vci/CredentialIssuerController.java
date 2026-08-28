@@ -66,16 +66,20 @@ public class CredentialIssuerController {
     private final EdgeProperties properties;
     private final PlatformApi platformApi;
     private final ObjectMapper objectMapper;
+    private final org.apache.unomi.didvc.edge.store.NonceStore nonceStore;
+    private final DpopProofValidator dpopValidator = new DpopProofValidator();
 
     private final Map<String, PreAuthContext> preAuthCodes = new ConcurrentHashMap<>();
     private final Map<String, AuthorizationCodeContext> authorizationCodes = new ConcurrentHashMap<>();
     private final Map<String, Map<String, String>> parRequests = new ConcurrentHashMap<>();
     private final Map<String, AccessTokenContext> accessTokens = new ConcurrentHashMap<>();
 
-    public CredentialIssuerController(EdgeProperties properties, PlatformApi platformApi, ObjectMapper objectMapper) {
+    public CredentialIssuerController(EdgeProperties properties, PlatformApi platformApi, ObjectMapper objectMapper,
+                                     org.apache.unomi.didvc.edge.store.NonceStore nonceStore) {
         this.properties = properties;
         this.platformApi = platformApi;
         this.objectMapper = objectMapper;
+        this.nonceStore = nonceStore;
     }
 
     /**
@@ -204,6 +208,7 @@ public class CredentialIssuerController {
         metadata.put("credential_endpoint", properties.getIssuerBaseUrl() + "/" + tenantId + "/credential");
         metadata.put("batch_credential_endpoint", properties.getIssuerBaseUrl() + "/" + tenantId + "/batch-credential");
         metadata.put("deferred_credential_endpoint", properties.getIssuerBaseUrl() + "/" + tenantId + "/deferred-credential");
+        metadata.put("nonce_endpoint", properties.getIssuerBaseUrl() + "/" + tenantId + "/nonce");
         metadata.put("response_types_supported", List.of("code"));
         metadata.put("grant_types_supported", List.of(AUTHORIZATION_CODE_GRANT, PRE_AUTHORIZED_GRANT));
         metadata.put("code_challenge_methods_supported", List.of("S256"));
@@ -249,6 +254,9 @@ public class CredentialIssuerController {
         metadata.put("response_types_supported", List.of("code"));
         metadata.put("grant_types_supported", List.of(AUTHORIZATION_CODE_GRANT, PRE_AUTHORIZED_GRANT));
         metadata.put("code_challenge_methods_supported", List.of("S256"));
+        // The authorize/credential endpoints accept authorization_details of
+        // the openid_credential type (OID4VCI §5.1.1)
+        metadata.put("authorization_details_types_supported", List.of("openid_credential"));
         return metadata;
     }
 
@@ -403,19 +411,35 @@ public class CredentialIssuerController {
     }
 
     @PostMapping("/{tenantId}/token")
-    public Map<String, Object> token(@PathVariable("tenantId") String tenantId,
-                                     @RequestParam("grant_type") String grantType,
-                                     @RequestParam(value = "pre-authorized_code", required = false) String preAuthCode,
-                                     @RequestParam(value = "code", required = false) String code,
-                                     @RequestParam(value = "redirect_uri", required = false) String redirectUri,
-                                     @RequestParam(value = "code_verifier", required = false) String codeVerifier) {
+    public ResponseEntity<Map<String, Object>> token(@PathVariable("tenantId") String tenantId,
+                                                     @RequestParam("grant_type") String grantType,
+                                                     @RequestParam(value = "pre-authorized_code", required = false) String preAuthCode,
+                                                     @RequestParam(value = "code", required = false) String code,
+                                                     @RequestParam(value = "redirect_uri", required = false) String redirectUri,
+                                                     @RequestParam(value = "code_verifier", required = false) String codeVerifier,
+                                                     @RequestHeader(value = "DPoP", required = false) String dpopProof) {
+        // RFC 9449: when the client presents a DPoP proof, validate it and
+        // sender-constrain the issued access token to the proof key (jkt)
+        String dpopJkt = null;
+        if (dpopProof != null) {
+            try {
+                dpopJkt = dpopValidator.validateJkt(dpopProof, "POST",
+                        properties.getIssuerBaseUrl() + "/" + tenantId + "/token", null);
+            } catch (DpopProofValidator.DpopValidationException e) {
+                Map<String, Object> error = new LinkedHashMap<>();
+                error.put("error", e.getErrorCode());
+                error.put("error_description", e.getMessage());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+            }
+        }
         if (PRE_AUTHORIZED_GRANT.equals(grantType)) {
             PreAuthContext context = preAuthCodes.remove(preAuthCode);
             if (context == null || context.expiresAt < System.currentTimeMillis()
                     || !tenantId.equals(context.tenantId)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invalid pre-authorized_code");
             }
-            return tokenResponse(tenantId, new AccessTokenContext(context.tenantId, context.recordId, null, null));
+            return ResponseEntity.ok(tokenResponse(tenantId,
+                    new AccessTokenContext(context.tenantId, context.recordId, null, null, dpopJkt)));
         }
         if (AUTHORIZATION_CODE_GRANT.equals(grantType)) {
             AuthorizationCodeContext context = authorizationCodes.remove(code);
@@ -429,7 +453,8 @@ public class CredentialIssuerController {
             if (!verifyPkce(context.codeChallenge, context.codeChallengeMethod, codeVerifier)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "PKCE verification failed");
             }
-            return tokenResponse(tenantId, new AccessTokenContext(context.tenantId, null, context.issue, null));
+            return ResponseEntity.ok(tokenResponse(tenantId,
+                    new AccessTokenContext(context.tenantId, null, context.issue, null, dpopJkt)));
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "unsupported grant_type");
     }
@@ -437,10 +462,11 @@ public class CredentialIssuerController {
     private Map<String, Object> tokenResponse(String tenantId, AccessTokenContext context) {
         String accessToken = UUID.randomUUID().toString();
         String cNonce = UUID.randomUUID().toString();
-        accessTokens.put(accessToken, new AccessTokenContext(context.tenantId, context.recordId, context.issue, cNonce));
+        accessTokens.put(accessToken, new AccessTokenContext(context.tenantId, context.recordId, context.issue,
+                cNonce, context.dpopJkt));
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("access_token", accessToken);
-        response.put("token_type", "bearer");
+        response.put("token_type", context.dpopJkt != null ? "DPoP" : "bearer");
         response.put("expires_in", 600);
         response.put("c_nonce", cNonce);
         response.put("c_nonce_expires_in", 3600);
@@ -450,8 +476,10 @@ public class CredentialIssuerController {
     @PostMapping("/{tenantId}/credential")
     public ResponseEntity<Map<String, Object>> credential(@PathVariable("tenantId") String tenantId,
                                                           @RequestHeader("Authorization") String authorization,
+                                                          @RequestHeader(value = "DPoP", required = false) String dpopProof,
                                                           @RequestBody(required = false) Map<String, Object> body) {
-        AccessTokenContext context = requireAccessToken(tenantId, authorization);
+        AccessTokenContext context = requireAccessToken(tenantId, authorization, dpopProof,
+                properties.getIssuerBaseUrl() + "/" + tenantId + "/credential");
         if (context.recordId != null) {
             // Pre-authorized-code path: deliver the previously issued credential
             PlatformApi.IssuedCredential issued = platformApi.getCredential(context.tenantId, context.recordId);
@@ -461,9 +489,9 @@ public class CredentialIssuerController {
             // OID4VCI key binding: when the request proof carries the wallet's
             // key, validate the proof (nonce + signature) and re-issue the
             // credential bound to it (cnf.jwk)
-            String[] proofError = validateProof(body, context.cNonce);
+            String[] proofError = validateProof(tenantId, body, context.cNonce);
             if (proofError != null) {
-                return vciError(HttpStatus.BAD_REQUEST, proofError[0], proofError[1]);
+                return proofError(tenantId, proofError);
             }
             String[] requestError = validateCredentialRequest(body);
             if (requestError != null) {
@@ -509,10 +537,12 @@ public class CredentialIssuerController {
             issueRequest.setAlwaysDisclosedClaims(always);
             issueRequest.setSelectivelyDisclosedClaims(selectively);
         }
-        String[] proofError = validateProof(body, context.cNonce);
+        String[] proofError = validateProof(tenantId, body, context.cNonce);
         if (proofError != null) {
-            return vciError(HttpStatus.BAD_REQUEST, proofError[0], proofError[1]);
+            return proofError(tenantId, proofError);
         }
+        // Holder binding: the issued credential's cnf.jwk is the proof key
+        issueRequest.setHolderPublicJwkJson(extractHolderJwkFromProof(body));
         String[] requestError = validateCredentialRequest(body);
         if (requestError != null) {
             return vciError(HttpStatus.BAD_REQUEST, requestError[0], requestError[1]);
@@ -524,11 +554,31 @@ public class CredentialIssuerController {
         }
     }
 
+    /**
+     * Proof validation failure: an {@code invalid_nonce} error carries a
+     * fresh {@code c_nonce} (registered for immediate retry), as
+     * recommended by OID4VCI.
+     */
+    private ResponseEntity<Map<String, Object>> proofError(String tenantId, String[] proofError) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("error", proofError[0]);
+        body.put("error_description", proofError[1]);
+        if ("invalid_nonce".equals(proofError[0])) {
+            String cNonce = UUID.randomUUID().toString();
+            nonceStore.issue(proofNonceKey(tenantId, cNonce), 3600);
+            body.put("c_nonce", cNonce);
+            body.put("c_nonce_expires_in", 3600);
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
     @PostMapping("/{tenantId}/batch-credential")
     public Map<String, Object> batchCredential(@PathVariable("tenantId") String tenantId,
                                                @RequestHeader("Authorization") String authorization,
+                                               @RequestHeader(value = "DPoP", required = false) String dpopProof,
                                                @RequestBody Map<String, Object> body) {
-        AccessTokenContext context = requireAccessToken(tenantId, authorization);
+        AccessTokenContext context = requireAccessToken(tenantId, authorization, dpopProof,
+                properties.getIssuerBaseUrl() + "/" + tenantId + "/batch-credential");
         if (context.recordId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "batch issuance is only available for pre-authorized-code tokens");
@@ -550,10 +600,12 @@ public class CredentialIssuerController {
 
     @PostMapping("/{tenantId}/deferred-credential")
     public Map<String, Object> deferredCredential(@PathVariable("tenantId") String tenantId,
-                                                  @RequestHeader("Authorization") String authorization) {
+                                                  @RequestHeader("Authorization") String authorization,
+                                                  @RequestHeader(value = "DPoP", required = false) String dpopProof) {
         // Issuance is synchronous, so the deferred endpoint returns the
         // credential directly instead of a transaction id.
-        AccessTokenContext context = requireAccessToken(tenantId, authorization);
+        AccessTokenContext context = requireAccessToken(tenantId, authorization, dpopProof,
+                properties.getIssuerBaseUrl() + "/" + tenantId + "/deferred-credential");
         if (context.recordId == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "deferred issuance is only available for pre-authorized-code tokens");
@@ -565,12 +617,37 @@ public class CredentialIssuerController {
         return credentialResponse(issued);
     }
 
+    /**
+     * OID4VCI 1.0 nonce endpoint: mints a fresh c_nonce the wallet must
+     * carry in the next credential request proof. The nonce is registered
+     * in the (single-instance or Redis) nonce store so a proof presenting
+     * it validates across the fleet.
+     */
     @PostMapping("/{tenantId}/nonce")
-    public Map<String, Object> nonce() {
+    public Map<String, Object> nonce(@PathVariable("tenantId") String tenantId) {
+        String cNonce = UUID.randomUUID().toString();
+        nonceStore.issue(proofNonceKey(tenantId, cNonce), 3600);
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("c_nonce", UUID.randomUUID().toString());
+        response.put("c_nonce", cNonce);
         response.put("c_nonce_expires_in", 3600);
         return response;
+    }
+
+    /**
+     * OAuth Token Status List endpoint backing the status URIs embedded in
+     * issued credentials ({@code status.status_list.uri}). Serves the
+     * platform's signed {@code statuslist+jwt}.
+     */
+    @GetMapping("/{tenantId}/status-lists/{statusListId}")
+    public ResponseEntity<String> statusList(@PathVariable("tenantId") String tenantId,
+                                             @PathVariable("statusListId") String statusListId) {
+        String token = platformApi.getStatusListToken(tenantId, statusListId);
+        if (token == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "unknown status list");
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/statuslist+jwt"))
+                .body(token);
     }
 
     private Map<String, Object> credentialResponse(PlatformApi.IssuedCredential issued) {
@@ -583,21 +660,15 @@ public class CredentialIssuerController {
         entry.put("format", issued.getFormat());
         entry.put("credential", issued.getCredential());
         response.put("credentials", List.of(entry));
-        response.put("c_nonce", UUID.randomUUID().toString());
+        String cNonce = UUID.randomUUID().toString();
+        response.put("c_nonce", cNonce);
         response.put("c_nonce_expires_in", 3600);
         return response;
     }
 
     @SuppressWarnings("unchecked")
     private String extractHolderJwkFromProof(Map<String, Object> body) {
-        if (body == null || body.get("proof") == null) {
-            return null;
-        }
-        Object proofValue = body.get("proof");
-        if (!(proofValue instanceof Map)) {
-            return null;
-        }
-        Object jwt = ((Map<String, Object>) proofValue).get("jwt");
+        Object jwt = extractProofJwt(body);
         if (!(jwt instanceof String)) {
             return null;
         }
@@ -618,7 +689,7 @@ public class CredentialIssuerController {
     }
 
     @SuppressWarnings("unchecked")
-    private String[] validateProof(Map<String, Object> body, String expectedNonce) {
+    private String[] validateProof(String tenantId, Map<String, Object> body, String expectedNonce) {
         Object jwt = extractProofJwt(body);
         if (jwt == null) {
             return new String[]{"invalid_proof", "proof is required"};
@@ -640,10 +711,21 @@ public class CredentialIssuerController {
             String payloadJson = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
             JsonNode payload = new ObjectMapper().readTree(payloadJson);
             String nonce = payload.path("nonce").asText(null);
-            if (nonce != null && expectedNonce != null && !expectedNonce.equals(nonce)) {
-                // Checked before the signature so a stale-nonce proof is
-                // rejected as invalid_nonce even when its signature is bad.
-                return new String[]{"invalid_nonce", "proof nonce does not match the issued c_nonce"};
+            // OID4VCI: when a c_nonce was issued (token response or nonce
+            // endpoint) the proof MUST carry it; anything else is
+            // invalid_nonce. Checked before the signature so a stale-nonce
+            // proof is classified as invalid_nonce even when its signature
+            // is bad.
+            boolean nonceMatchesToken = expectedNonce != null && expectedNonce.equals(nonce);
+            boolean nonceFromEndpoint = false;
+            if (expectedNonce != null && !nonceMatchesToken) {
+                if (nonce == null) {
+                    return new String[]{"invalid_nonce", "proof must carry the issued c_nonce"};
+                }
+                if (!nonceStore.contains(proofNonceKey(tenantId, nonce))) {
+                    return new String[]{"invalid_nonce", "proof nonce does not match the issued c_nonce"};
+                }
+                nonceFromEndpoint = true;
             }
             // Signature verification with the holder's key from the proof header
             com.nimbusds.jose.jwk.JWK holderJwk = com.nimbusds.jose.jwk.JWK.parse(
@@ -655,10 +737,18 @@ public class CredentialIssuerController {
             if (!verified) {
                 return new String[]{"invalid_proof", "jwt proof signature is invalid"};
             }
+            if (nonceFromEndpoint) {
+                // Proof accepted: the nonce-endpoint nonce is spent
+                nonceStore.consume(proofNonceKey(tenantId, nonce));
+            }
             return null;
         } catch (Exception e) {
             return new String[]{"invalid_proof", "jwt proof is invalid: " + e.getMessage()};
         }
+    }
+
+    private static String proofNonceKey(String tenantId, String nonce) {
+        return tenantId + ":proof:" + nonce;
     }
 
     /**
@@ -724,7 +814,8 @@ public class CredentialIssuerController {
         return ResponseEntity.status(status).body(body);
     }
 
-    private AccessTokenContext requireAccessToken(String tenantId, String authorization) {
+    private AccessTokenContext requireAccessToken(String tenantId, String authorization, String dpopProof,
+                                                  String endpointUri) {
         if (authorization == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "missing bearer token");
         }
@@ -743,6 +834,19 @@ public class CredentialIssuerController {
         AccessTokenContext context = accessTokens.get(token);
         if (context == null || !tenantId.equals(context.tenantId)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "invalid access token");
+        }
+        if (context.dpopJkt != null) {
+            // Sender-constrained token: the DPoP proof must validate and be
+            // signed by the key the token was issued for
+            try {
+                String jkt = dpopValidator.validateJkt(dpopProof, "POST", endpointUri, token);
+                if (!context.dpopJkt.equals(jkt)) {
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                            "DPoP proof key does not match the access token binding");
+                }
+            } catch (DpopProofValidator.DpopValidationException e) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, e.getMessage());
+            }
         }
         return context;
     }
@@ -837,12 +941,15 @@ public class CredentialIssuerController {
         private final String recordId;
         private final IssueContext issue;
         private final String cNonce;
+        private final String dpopJkt;
 
-        private AccessTokenContext(String tenantId, String recordId, IssueContext issue, String cNonce) {
+        private AccessTokenContext(String tenantId, String recordId, IssueContext issue, String cNonce,
+                                   String dpopJkt) {
             this.tenantId = tenantId;
             this.recordId = recordId;
             this.issue = issue;
             this.cNonce = cNonce;
+            this.dpopJkt = dpopJkt;
         }
     }
 }

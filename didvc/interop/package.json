@@ -1,8 +1,12 @@
 {
   "name": "unomi-didvc-interop-wallet",
   "private": true,
-  "description": "Reference-wallet round trip for the unomi-did-vc credential edge, built on the OpenWallet Foundation @openid4vc client libraries (third-party OID4VCI/OID4VP implementation) plus jose.",
+  "description": "Reference-wallet round trip and load test for the unomi-did-vc credential edge, built on the OpenWallet Foundation @openid4vc client libraries (third-party OID4VCI/OID4VP implementation) plus jose.",
   "type": "module",
+  "scripts": {
+    "roundtrip": "tsx wallet-roundtrip.ts",
+    "loadtest": "tsx load-test.ts"
+  },
   "dependencies": {
     "@openid4vc/oauth2": "0.5.5",
     "@openid4vc/openid4vci": "0.5.5",

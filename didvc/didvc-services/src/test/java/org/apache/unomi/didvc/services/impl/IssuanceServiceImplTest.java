@@ -138,8 +138,9 @@ class IssuanceServiceImplTest {
                 com.nimbusds.jose.jwk.OctetKeyPair.parse(issuerKey.getPublicJwk())));
         assertEquals("hkt_kyc_v1", presentation.getClaims().get("vct"));
         assertEquals("REMOTE_FULL", presentation.getClaims().get("kycLevel"));
-        assertEquals(2, presentation.getDisclosedClaims().size());
         assertEquals("Yat", presentation.getDisclosedClaims().get("givenName"));
+        assertEquals(Boolean.TRUE, presentation.getDisclosedClaims().get("sanctionsClear"));
+        assertFalse(presentation.getDisclosedClaims().containsKey("_sd"));
     }
 
     @Test

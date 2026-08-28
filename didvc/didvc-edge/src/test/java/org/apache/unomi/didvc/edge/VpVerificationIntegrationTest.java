@@ -137,8 +137,10 @@ class VpVerificationIntegrationTest {
 
     private String buildVp(String nonce, List<String> disclosures) throws Exception {
         String[] parts = issuedCredential.split("~");
+        String preKeyBinding = parts[0] + "~" + String.join("~", disclosures) + "~";
+        // OID4VP: the KB-JWT audience is the verifier's client_id
         String kbJwt = new KeyBindingJwtBuilder().build(holderKey, nonce,
-                "http://localhost:8080", disclosures, new Date());
+                "https://bank-a.example.hkt", preKeyBinding, new Date());
         return parts[0] + "~" + parts[1] + "~" + parts[2] + "~" + kbJwt;
     }
 
@@ -242,7 +244,8 @@ class VpVerificationIntegrationTest {
         String[] parts = issuedCredential.split("~");
         OctetKeyPair attacker = new OctetKeyPairGenerator(Curve.Ed25519).generate();
         String kbJwt = new KeyBindingJwtBuilder().build(attacker, NONCE,
-                "http://localhost:8080", Arrays.asList(parts[1], parts[2]), new Date());
+                "https://bank-a.example.hkt",
+                parts[0] + "~" + parts[1] + "~" + parts[2] + "~", new Date());
         String vp = parts[0] + "~" + parts[1] + "~" + parts[2] + "~" + kbJwt;
         mockMvc.perform(post("/" + TENANT + "/vp/direct_post")
                         .contentType(MediaType.APPLICATION_JSON)

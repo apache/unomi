@@ -26,6 +26,7 @@ import com.nimbusds.jose.jwk.gen.OctetKeyPairGenerator;
 import org.apache.unomi.didvc.edge.platform.PlatformApi;
 import org.apache.unomi.didvc.sdjwt.SdJwtBuilder;
 
+import java.util.Base64;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -45,9 +46,15 @@ public class InMemoryPlatformApi implements PlatformApi {
     private final OctetKeyPair issuerKey;
     private final Map<String, IssuedCredential> credentials = new ConcurrentHashMap<>();
     private final Map<String, IssueRequest> issueRequests = new ConcurrentHashMap<>();
+    private final Map<String, JWK> externalIssuerKeys = new ConcurrentHashMap<>();
     private final Set<String> trustedPairs = ConcurrentHashMap.newKeySet();
     private final Set<String> revokedStatuses = ConcurrentHashMap.newKeySet();
     private final AtomicInteger statusCounter = new AtomicInteger();
+    /**
+     * When set (e.g. {@code https://edge/hkt/status-lists/{id}}), credentials
+     * carry a fetchable HTTP status-list URI instead of the bare URN.
+     */
+    private String statusListUriTemplate;
 
     public InMemoryPlatformApi() {
         try {
@@ -67,6 +74,39 @@ public class InMemoryPlatformApi implements PlatformApi {
 
     public OctetKeyPair getIssuerKey() {
         return issuerKey;
+    }
+
+    /**
+     * Registers an external credential issuer whose keys this fake can
+     * resolve — used to let the demo verifier accept credentials issued by
+     * an interop counterpart (e.g. a conformance-suite wallet).
+     *
+     * @param issuerDid the issuer identifier (the credential {@code iss})
+     * @param jwk       the issuer's public JWK
+     */
+    public void addExternalIssuerKey(String issuerDid, JWK jwk) {
+        externalIssuerKeys.put(issuerDid, jwk);
+    }
+
+    /**
+     * The demo platform's key doubles as the verifier's request-object
+     * signing key for every relying tenant (demo deployments have a single
+     * trust domain).
+     */
+    @Override
+    public JWK getVerifierSigningKey(String tenantId) {
+        return issuerKey;
+    }
+
+    /**
+     * Sets the status-list URI template ({@code {tenant}} and {@code {id}}
+     * placeholders) so issued credentials reference the edge's fetchable
+     * status-list endpoint rather than an opaque URN.
+     *
+     * @param statusListUriTemplate the template, or null for the URN form
+     */
+    public void setStatusListUriTemplate(String statusListUriTemplate) {
+        this.statusListUriTemplate = statusListUriTemplate;
     }
 
     @Override
@@ -129,7 +169,7 @@ public class InMemoryPlatformApi implements PlatformApi {
             int index = statusIndex != null ? statusIndex : statusCounter.getAndIncrement();
             Map<String, Object> statusList = new LinkedHashMap<>();
             statusList.put("idx", index);
-            statusList.put("uri", statusListId == null ? STATUS_LIST_ID : statusListId);
+            statusList.put("uri", statusListUri(request.getTenantId(), statusListId));
             Map<String, Object> status = new LinkedHashMap<>();
             status.put("status_list", statusList);
             payload.setStatus(status);
@@ -186,11 +226,104 @@ public class InMemoryPlatformApi implements PlatformApi {
         if (ISSUER_DID.equals(issuerDid) && getIssuerKid().equals(kid)) {
             return issuerKey.toPublicJWK();
         }
+        JWK external = externalIssuerKeys.get(issuerDid);
+        if (external != null && (kid == null || kid.equals(keyIdOf(external)))) {
+            return external;
+        }
         return null;
+    }
+
+    private static String keyIdOf(JWK jwk) {
+        try {
+            return jwk.computeThumbprint().toString();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String vctForSchema(String schemaId) {
         return "hkt_kyc_v1";
+    }
+
+    private String statusListUri(String tenantId, String statusListId) {
+        String id = statusListId == null ? STATUS_LIST_ID : statusListId;
+        if (statusListUriTemplate == null) {
+            return id;
+        }
+        return statusListUriTemplate
+                .replace("{tenant}", tenantId == null ? "" : tenantId)
+                .replace("{id}", id);
+    }
+
+    /**
+     * Builds the OAuth Token Status List JWT for the demo list: a
+     * {@code statuslist+jwt}-typed JWS with the public signing key embedded
+     * in the header (the conformance wallet verifies via the embedded jwk),
+     * claims {@code sub} (the list URI), {@code iat}/{@code exp}/{@code ttl}
+     * and {@code status_list.bits}/{@code status_list.lst}, where
+     * {@code lst} is the zlib-compressed, base64url-encoded bitstring with
+     * bit 0 = valid and bit 1 = revoked at each allocated index.
+     */
+    @Override
+    public String getStatusListToken(String tenantId, String statusListId) {
+        try {
+            int entries = Math.max(131072, (statusCounter.get() + 8));
+            byte[] bits = new byte[(entries + 7) / 8];
+            for (String key : revokedStatuses) {
+                String[] parts = key.split("\\|", 2);
+                if (parts.length == 2 && parts[0].equals(statusListId)) {
+                    int index = Integer.parseInt(parts[1]);
+                    if (index >= 0 && index < entries) {
+                        // OTSL packs entries LSB-first (suite TokenStatusList decoder)
+                        bits[index / 8] |= (byte) (1 << (index % 8));
+                    }
+                }
+            }
+            String lst = Base64.getUrlEncoder().withoutPadding().encodeToString(zlib(bits));
+
+            Map<String, Object> statusListClaim = new LinkedHashMap<>();
+            statusListClaim.put("bits", 1);
+            statusListClaim.put("lst", lst);
+            Map<String, Object> claims = new LinkedHashMap<>();
+            claims.put("sub", statusListUri(tenantId, statusListId));
+            claims.put("iat", System.currentTimeMillis() / 1000);
+            claims.put("exp", System.currentTimeMillis() / 1000 + 600);
+            claims.put("ttl", 720);
+            claims.put("status_list", statusListClaim);
+
+            com.nimbusds.jose.JWSHeader header = new com.nimbusds.jose.JWSHeader.Builder(JWSAlgorithm.EdDSA)
+                    .type(new com.nimbusds.jose.JOSEObjectType("statuslist+jwt"))
+                    .jwk(issuerKey.toPublicJWK())
+                    .build();
+            com.nimbusds.jose.JWSObject jws = new com.nimbusds.jose.JWSObject(header,
+                    new com.nimbusds.jose.Payload(toJsonBytes(claims)));
+            jws.sign(new Ed25519Signer(issuerKey));
+            return jws.serialize();
+        } catch (Exception e) {
+            throw new IllegalStateException("failed to build status list token", e);
+        }
+    }
+
+    private static byte[] toJsonBytes(Map<String, Object> claims) {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsBytes(claims);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private static byte[] zlib(byte[] data) {
+        java.util.zip.Deflater deflater = new java.util.zip.Deflater(java.util.zip.Deflater.BEST_COMPRESSION, false);
+        deflater.setInput(data);
+        deflater.finish();
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        byte[] buf = new byte[4096];
+        while (!deflater.finished()) {
+            int n = deflater.deflate(buf);
+            out.write(buf, 0, n);
+        }
+        deflater.end();
+        return out.toByteArray();
     }
 
     private String statusKey(String statusListId, int index) {

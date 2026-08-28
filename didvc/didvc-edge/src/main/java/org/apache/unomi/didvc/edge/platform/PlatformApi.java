@@ -78,6 +78,31 @@ public interface PlatformApi {
     boolean isTrusted(String tenantId, String issuerDid, String vct);
 
     /**
+     * Builds the OAuth Token Status List JWT served at the status-list
+     * endpoint backing a credential's {@code status.status_list.uri}.
+     *
+     * @param tenantId     the platform tenant
+     * @param statusListId the status list id (last segment of the status uri)
+     * @return the signed status list JWT, or null when not available
+     */
+    default String getStatusListToken(String tenantId, String statusListId) {
+        return null;
+    }
+
+    /**
+     * The verifier's request-object signing key for a relying tenant, so
+     * wallets can verify signed OID4VP authorization requests (published
+     * at the edge's per-tenant JWKS endpoint). Null falls back to the
+     * edge's symmetric request-signing secret.
+     *
+     * @param tenantId the relying tenant
+     * @return the signing JWK (private, for signing), or null
+     */
+    default JWK getVerifierSigningKey(String tenantId) {
+        return null;
+    }
+
+    /**
      * The default issuer key id, or null when the platform requires an
      * explicit kid on every issue request.
      */

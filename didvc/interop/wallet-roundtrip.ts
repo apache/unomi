@@ -20,7 +20,8 @@ const sha256 = (data) => createHash('sha256').update(data).digest()
 
 async function main() {
   // ---- Holder key (the wallet's key) ----
-  const holderKey = await jose.generateKeyPair('Ed25519', { extractable: true })
+  // jose 5.x takes an alg, with the curve as a crv option
+  const holderKey = await jose.generateKeyPair('EdDSA', { crv: 'Ed25519', extractable: true })
   const holderPrivateJwk = await jose.exportJWK(holderKey.privateKey)
   holderPrivateJwk.alg = 'EdDSA'
   const holderPublicJwk = await jose.exportJWK(holderKey.publicKey)
@@ -137,12 +138,15 @@ async function main() {
   console.log('STEP 5 authorization request received:', requestUri.split('/').pop())
 
   // ---- 6. Build key-binding JWT and submit the presentation ----
-  const disclosures = credential.split('~').slice(1)
-  const sdHash = b64url(sha256(disclosures.join('~')))
+  // RFC 9901 §4.3.1: sd_hash covers the Issuer-signed JWT and every presented
+  // disclosure, each followed by a tilde — exactly the pre-KB presentation
+  // (the credential variable already ends with the trailing '~')
+  const sdHash = b64url(sha256(credential))
   const kbJwt = await new jose.CompactSign(
     new TextEncoder().encode(JSON.stringify({
       nonce,
-      aud: EDGE,
+      // OID4VP: the KB-JWT audience is the verifier's client_id
+      aud: 'wallet-demo',
       iat: Math.floor(Date.now() / 1000),
       sd_hash: sdHash,
     })),

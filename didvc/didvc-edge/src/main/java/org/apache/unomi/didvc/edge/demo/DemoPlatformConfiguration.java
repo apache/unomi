@@ -36,11 +36,30 @@ public class DemoPlatformConfiguration {
 
     @Bean
     @Primary
-    public InMemoryPlatformApi demoPlatformApi() {
+    public InMemoryPlatformApi demoPlatformApi(org.apache.unomi.didvc.edge.EdgeProperties properties) {
         InMemoryPlatformApi platformApi = new InMemoryPlatformApi();
         // Demo trust: the demo verifier tenant accepts the demo issuer's
         // KYC credential, so OID4VP verification succeeds end to end.
         platformApi.trust("bank-a", InMemoryPlatformApi.ISSUER_DID, "hkt_kyc_v1");
+        // Credentials reference the edge's fetchable status-list endpoint
+        // (served by CredentialIssuerController) instead of an opaque URN,
+        // so wallets can check revocation over HTTP.
+        platformApi.setStatusListUriTemplate(properties.getIssuerBaseUrl() + "/{tenant}/status-lists/{id}");
+        // Optional external issuer (e.g. a conformance-suite wallet): when
+        // configured, the demo verifier resolves its key and trusts its
+        // credential type for every relying tenant.
+        if (properties.getDemoExternalIssuerDid() != null && properties.getDemoExternalIssuerJwk() != null) {
+            try {
+                platformApi.addExternalIssuerKey(properties.getDemoExternalIssuerDid(),
+                        com.nimbusds.jose.jwk.JWK.parse(properties.getDemoExternalIssuerJwk()));
+                for (String tenant : new String[] {"bank-a", "hkt"}) {
+                    platformApi.trust(tenant, properties.getDemoExternalIssuerDid(),
+                            properties.getDemoExternalIssuerVct());
+                }
+            } catch (java.text.ParseException e) {
+                throw new IllegalStateException("didvc.edge.demo-external-issuer-jwk is not a valid JWK", e);
+            }
+        }
         return platformApi;
     }
 

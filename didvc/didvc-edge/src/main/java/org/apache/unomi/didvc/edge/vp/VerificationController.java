@@ -36,12 +36,15 @@ import org.apache.unomi.didvc.sdjwt.SdJwtPresentation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -204,6 +207,62 @@ public class VerificationController {
         return response;
     }
 
+    /**
+     * Browser-facing authorization request (OID4VP web-wallet flow): starts
+     * the verification by redirecting the user's browser to the wallet's
+     * authorization endpoint. The nonce and state are generated here (never
+     * caller-supplied on this entry point).
+     *
+     * Query parameters: {@code wallet_authorization_endpoint} (required —
+     * where to redirect), {@code vct} (credential type to request; default
+     * {@code hkt_kyc_v1}), optional {@code response_uri}. Parameters are
+     * passed directly in the redirect query (OID4VP url_query style) — the
+     * redirect_uri client-id scheme cannot use signed request objects per
+     * OID4VP 1.0 Final §5.9.3-3.1.1; set {@code use_request_uri=1} to
+     * instead pass a {@code request_uri} pointing at the signed request
+     * object (for client-id schemes that support it).
+     */
+    @GetMapping("/{tenantId}/vp/authorize")
+    public ResponseEntity<Void> authorizeBrowser(@PathVariable("tenantId") String tenantId,
+                                                 @RequestParam("wallet_authorization_endpoint") String walletEndpoint,
+                                                 @RequestParam(value = "vct", required = false) String vct,
+                                                 @RequestParam(value = "response_uri", required = false) String responseUri,
+                                                 @RequestParam(value = "use_request_uri", required = false) String useRequestUri) {
+        String nonce = UUID.randomUUID().toString();
+        String requestId = UUID.randomUUID().toString();
+        String effectiveResponseUri = responseUri != null ? responseUri
+                : properties.getIssuerBaseUrl() + "/" + tenantId + "/vp/direct_post";
+        Map<String, List<String>> claims = new LinkedHashMap<>();
+        claims.put(vct != null ? vct : "hkt_kyc_v1", List.of());
+        nonceStore.issue(tenantId + ":" + nonce, REQUEST_TTL_MILLIS / 1000);
+        requests.put(requestId, new VpRequestContext(tenantId, effectiveResponseUri, effectiveResponseUri,
+                nonce, claims, null, null,
+                System.currentTimeMillis() + REQUEST_TTL_MILLIS, walletEndpoint));
+
+        String claimsJson;
+        try {
+            claimsJson = objectMapper.writeValueAsString(claims);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to serialize claims", e);
+        }
+        UriComponentsBuilder target = UriComponentsBuilder.fromHttpUrl(walletEndpoint)
+                .queryParam("client_id", effectiveResponseUri)
+                .queryParam("client_id_scheme", "redirect_uri")
+                .queryParam("response_uri", effectiveResponseUri)
+                .queryParam("response_type", "vp_token")
+                .queryParam("response_mode", "direct_post")
+                .queryParam("nonce", nonce)
+                .queryParam("state", requestId)
+                .queryParam("claims", claimsJson);
+        if (useRequestUri != null) {
+            target.queryParam("request_uri",
+                    properties.getIssuerBaseUrl() + "/" + tenantId + "/vp/request/" + requestId);
+        }
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(target.build().toUri())
+                .build();
+    }
+
     @GetMapping("/{tenantId}/vp/request/{requestId}")
     public String requestObject(@PathVariable("tenantId") String tenantId,
                                 @PathVariable("requestId") String requestId) {
@@ -212,6 +271,12 @@ public class VerificationController {
         payload.put("client_id", context.clientId);
         payload.put("response_uri", context.responseUri);
         payload.put("nonce", context.nonce);
+        payload.put("response_type", "vp_token");
+        payload.put("response_mode", "direct_post");
+        payload.put("iss", context.clientId);
+        if (context.walletEndpoint != null) {
+            payload.put("aud", context.walletEndpoint);
+        }
         if (context.dcqlQueryJson != null) {
             payload.put("dcql_query", context.dcqlQueryJson);
         } else {
@@ -220,16 +285,51 @@ public class VerificationController {
         payload.put("iat", System.currentTimeMillis() / 1000);
         payload.put("exp", context.expiresAt / 1000);
         try {
-            JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.HS256)
+            com.nimbusds.jose.jwk.JWK verifierKey = platformApi.getVerifierSigningKey(tenantId);
+            if (verifierKey == null) {
+                // No asymmetric verifier key configured: fall back to the
+                // symmetric secret (verification is out-of-band agreed)
+                JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.HS256)
+                        .type(new com.nimbusds.jose.JOSEObjectType("oauth-authz-req+jwt"))
+                        .build();
+                com.nimbusds.jose.JWSObject jws = new com.nimbusds.jose.JWSObject(header,
+                        new Payload(objectMapper.writeValueAsString(payload)));
+                jws.sign(new MACSigner(properties.getRequestSigningSecret().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+                return jws.serialize();
+            }
+            // OID4VP: the request object is signed by the verifier's key so
+            // any wallet can verify it via the verifier's published JWKS
+            JWSAlgorithm algorithm = verifierKey instanceof com.nimbusds.jose.jwk.OctetKeyPair
+                    ? JWSAlgorithm.EdDSA : JWSAlgorithm.ES256;
+            JWSHeader header = new JWSHeader.Builder(algorithm)
                     .type(new com.nimbusds.jose.JOSEObjectType("oauth-authz-req+jwt"))
+                    .keyID(verifierKey.computeThumbprint().toString())
                     .build();
             com.nimbusds.jose.JWSObject jws = new com.nimbusds.jose.JWSObject(header,
                     new Payload(objectMapper.writeValueAsString(payload)));
-            jws.sign(new MACSigner(properties.getRequestSigningSecret().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            jws.sign(verifierKey instanceof com.nimbusds.jose.jwk.OctetKeyPair
+                    ? new com.nimbusds.jose.crypto.Ed25519Signer((com.nimbusds.jose.jwk.OctetKeyPair) verifierKey)
+                    : new com.nimbusds.jose.crypto.ECDSASigner((com.nimbusds.jose.jwk.ECKey) verifierKey));
             return jws.serialize();
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to sign request object");
         }
+    }
+
+    /**
+     * The verifier's public signing keys, so wallets can verify signed
+     * authorization request objects.
+     */
+    @GetMapping("/{tenantId}/.well-known/jwks.json")
+    public Map<String, Object> verifierJwks(@PathVariable("tenantId") String tenantId) {
+        com.nimbusds.jose.jwk.JWK key = platformApi.getVerifierSigningKey(tenantId);
+        Map<String, Object> jwks = new LinkedHashMap<>();
+        if (key != null) {
+            jwks.put("keys", List.of(key.toPublicJWK().toJSONObject()));
+        } else {
+            jwks.put("keys", List.of());
+        }
+        return jwks;
     }
 
     @PostMapping("/{tenantId}/vp/direct_post")
@@ -307,8 +407,10 @@ public class VerificationController {
         if (!platformApi.isTrusted(tenantId, iss, vct)) {
             throw invalid("issuer is not trusted by this verifier");
         }
-        // Key binding: holder possession, sd_hash, nonce, audience, freshness
-        presentation.verifyKeyBinding(context.nonce, properties.getIssuerBaseUrl(), now);
+        // Key binding: holder possession, sd_hash, nonce, and audience (the
+        // verifier's client_id, per OID4VP the KB-JWT aud is the verifier
+        // identifier)
+        presentation.verifyKeyBinding(context.nonce, context.clientId, now);
 
         // DCQL claim matching: path resolution and expected values
         if (context.dcql != null) {
@@ -428,10 +530,21 @@ public class VerificationController {
         private final DcqlQueryParser.Query dcql;
         private final Object dcqlQueryJson;
         private final long expiresAt;
+        /**
+         * The wallet's authorization endpoint, when the browser flow was
+         * used — becomes the signed request object's {@code aud}.
+         */
+        private final String walletEndpoint;
 
         private VpRequestContext(String tenantId, String clientId, String responseUri, String nonce,
                                  Map<String, List<String>> claims, DcqlQueryParser.Query dcql,
                                  Object dcqlQueryJson, long expiresAt) {
+            this(tenantId, clientId, responseUri, nonce, claims, dcql, dcqlQueryJson, expiresAt, null);
+        }
+
+        private VpRequestContext(String tenantId, String clientId, String responseUri, String nonce,
+                                 Map<String, List<String>> claims, DcqlQueryParser.Query dcql,
+                                 Object dcqlQueryJson, long expiresAt, String walletEndpoint) {
             this.tenantId = tenantId;
             this.clientId = clientId;
             this.responseUri = responseUri;
@@ -440,6 +553,7 @@ public class VerificationController {
             this.dcql = dcql;
             this.dcqlQueryJson = dcqlQueryJson;
             this.expiresAt = expiresAt;
+            this.walletEndpoint = walletEndpoint;
         }
     }
 }

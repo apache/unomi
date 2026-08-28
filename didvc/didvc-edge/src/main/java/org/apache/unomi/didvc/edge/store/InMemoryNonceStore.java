@@ -41,4 +41,10 @@ public class InMemoryNonceStore implements NonceStore {
         }
         return expiry >= System.currentTimeMillis();
     }
+
+    @Override
+    public boolean contains(String key) {
+        Long expiry = nonces.get(key);
+        return expiry != null && expiry >= System.currentTimeMillis();
+    }
 }

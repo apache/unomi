@@ -59,6 +59,27 @@ public class EdgeProperties {
 
     private String requestSigningSecret = UUID.randomUUID().toString();
 
+    /**
+     * Demo-only: issuer identifier of an external credential issuer whose
+     * credentials the demo verifier should accept (e.g. a conformance
+     * suite wallet acting as credential issuer). Key material is supplied
+     * via environment or vault — never committed.
+     */
+    private String demoExternalIssuerDid = null;
+
+    /**
+     * Demo-only: public JWK (JSON) of the external credential issuer; both
+     * this and the issuer DID must be set for the demo verifier to resolve
+     * and trust the external issuer.
+     */
+    private String demoExternalIssuerJwk = null;
+
+    /**
+     * Demo-only: vct of the external issuer's credential to register in
+     * the demo trust entries (default {@code hkt_kyc_v1}).
+     */
+    private String demoExternalIssuerVct = "hkt_kyc_v1";
+
     public String getIssuerBaseUrl() {
         return issuerBaseUrl;
     }
@@ -85,6 +106,30 @@ public class EdgeProperties {
 
     public String getInternalApiKey() {
         return internalApiKey;
+    }
+
+    public String getDemoExternalIssuerDid() {
+        return demoExternalIssuerDid;
+    }
+
+    public void setDemoExternalIssuerDid(String demoExternalIssuerDid) {
+        this.demoExternalIssuerDid = demoExternalIssuerDid;
+    }
+
+    public String getDemoExternalIssuerJwk() {
+        return demoExternalIssuerJwk;
+    }
+
+    public void setDemoExternalIssuerJwk(String demoExternalIssuerJwk) {
+        this.demoExternalIssuerJwk = demoExternalIssuerJwk;
+    }
+
+    public String getDemoExternalIssuerVct() {
+        return demoExternalIssuerVct;
+    }
+
+    public void setDemoExternalIssuerVct(String demoExternalIssuerVct) {
+        this.demoExternalIssuerVct = demoExternalIssuerVct;
     }
 
     public void setInternalApiKey(String internalApiKey) {
