@@ -293,6 +293,9 @@ public class InMemoryPlatformApi implements PlatformApi {
         if ("hkt-corporate-v1".equals(schemaId)) {
             return "hkt_corporate_v1";
         }
+        if ("hkt-agent-binding-v1".equals(schemaId)) {
+            return "hkt_agent_binding_v1";
+        }
         return "hkt_kyc_v1";
     }
 

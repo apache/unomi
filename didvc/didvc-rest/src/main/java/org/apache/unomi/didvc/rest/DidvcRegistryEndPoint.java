@@ -26,7 +26,9 @@ import org.apache.unomi.didvc.api.services.ConsentBridgeService;
 import org.apache.unomi.didvc.api.services.CredentialSchemaService;
 import org.apache.unomi.didvc.api.services.PairwiseBindingService;
 import org.apache.unomi.didvc.api.services.StatusService;
-import org.apache.unomi.didvc.api.services.TrustRegistryService;
+import org.apache.unomi.didvc.api.services.TrustRegistryService;import org.apache.unomi.api.security.UnomiRoles;
+import org.apache.unomi.rest.security.RequiresRole;
+
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -174,6 +176,7 @@ public class DidvcRegistryEndPoint {
     // ---- schemas ----
 
     @POST
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/schemas")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response saveSchema(DidSchema schema) {
@@ -201,6 +204,7 @@ public class DidvcRegistryEndPoint {
     }
 
     @DELETE
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/schemas/{schemaId}")
     public Response deleteSchema(@PathParam("schemaId") String schemaId) {
         schemaService.deleteSchema(schemaId);
@@ -210,6 +214,7 @@ public class DidvcRegistryEndPoint {
     // ---- status lists ----
 
     @POST
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/statuslists")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response createStatusList(CreateStatusListRequest request) {
@@ -234,6 +239,7 @@ public class DidvcRegistryEndPoint {
     }
 
     @POST
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/statuslists/{statusListId}/publish")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response publishStatusList(@PathParam("statusListId") String statusListId, PublishRequest request) {
@@ -259,6 +265,7 @@ public class DidvcRegistryEndPoint {
     // ---- trust entries ----
 
     @POST
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/trust-entries")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response saveTrustEntry(TrustEntry entry) {
@@ -277,6 +284,7 @@ public class DidvcRegistryEndPoint {
     }
 
     @DELETE
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/trust-entries/{entryId}")
     public Response deleteTrustEntry(@PathParam("entryId") String entryId) {
         trustRegistryService.deleteTrustEntry(entryId);
@@ -296,6 +304,7 @@ public class DidvcRegistryEndPoint {
     // ---- pairwise bindings ----
 
     @POST
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/pairwise-bindings")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response createPairwiseBinding(PairwiseRequest request) {
@@ -312,6 +321,7 @@ public class DidvcRegistryEndPoint {
     // ---- consent grants ----
 
     @POST
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/consent-grants")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response saveConsentGrant(ConsentGrantRecord grant) {

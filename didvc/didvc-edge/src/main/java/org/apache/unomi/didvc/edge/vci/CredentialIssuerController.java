@@ -66,7 +66,7 @@ public class CredentialIssuerController {
     private static final java.util.Set<String> SUPPORTED_VCTS = java.util.Set.of(
             "hkt_kyc_v1", "hkt_profcred_v1", "hkt_residency_v1",
             "hkt_licensed_institution_v1", "hkt_realname_v1",
-            "hkt_cargo_v1", "hkt_corporate_v1");
+            "hkt_cargo_v1", "hkt_corporate_v1", "hkt_agent_binding_v1");
 
     private final EdgeProperties properties;
     private final PlatformApi platformApi;
@@ -262,6 +262,10 @@ public class CredentialIssuerController {
                         "jurisdiction", Map.of("mandatory", true),
                         "licensedActivities", Map.of("mandatory", true),
                         "lei", Map.of())));
+        configurations.put("hkt_agent_binding_v1", credentialConfiguration("hkt_agent_binding_v1",
+                Map.of("agentPubKeyHash", Map.of("mandatory", true),
+                        "principalBindingLevel", Map.of("mandatory", true),
+                        "policyScope", Map.of())));
         metadata.put("credential_configurations_supported", configurations);
         return metadata;
     }

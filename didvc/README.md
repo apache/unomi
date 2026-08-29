@@ -31,11 +31,11 @@ See the design and build plan in `.local-notes/hkt-did-vc/`
 |---|---|---|---|
 | `didvc-api` | OSGi bundle | **Phase 1–4** | Domain model (8 item types, event types, DID document) + service interfaces (incl. the `DidMethodResolver` SPI and `UniversalDidResolverService`) |
 | `didvc-sd-jwt` | jar | **Phase 2** | SD-JWT (RFC 9901 / SD-JWT VC) builder, parser, key-binding JWT and selective-disclosure verification — shared by services and edge |
-| `didvc-services` | OSGi bundle | **Phase 1–6** | DS components: `DidService` (did:web), `IssuerKeyService` (EdDSA/ES256 JWS), `StatusService` (Bitstring Status List + StatusList2021), `CredentialSchemaService` (claim whitelist), `SdJwtVcFormatter` (vc+sd-jwt), `JsonLdVcFormatter` (ldp_vc, VC DM 2.0), `IssuanceService` (orchestration + consent gating + revocation, format selection), `TrustRegistryService`, `PairwiseBindingService`, `ConsentBridgeService`, `CredentialRefreshService`, `UniversalDidResolverServiceImpl` + did:key/HTTP method resolvers, `Phase4SchemaBootstrap` (hkt_profcred_v1/hkt_residency_v1), `Phase5SchemaBootstrap` (hkt_licensed_institution_v1/hkt_realname_v1, strict minimization), `Phase6SchemaBootstrap` (hkt_cargo_v1/hkt_corporate_v1), plus the `issueCredential` rule action (`didvcIssueCredentialAction`) |
-| `didvc-rest` | OSGi bundle | **Phase 2–4** | CXF endpoints: `/didvc/dids`, `/.well-known/did.json`, `/didvc/credentials`, `/didvc/schemas`, `/didvc/statuslists`, `/didvc/trust-entries`, `/didvc/trust-check`, `/didvc/pairwise-bindings`, `/didvc/consent-grants`, `/didvc/resolver/{did}` (universal DID resolution) |
+| `didvc-services` | OSGi bundle | **Phase 1–7** | DS components: `DidService` (did:web), `IssuerKeyService` (EdDSA/ES256 JWS) over the `KeyMaterialProvider` seam (in-process default; `Pkcs11KeyMaterialProvider` for HSM-held keys — private material never enters app memory), `StatusService` (Bitstring Status List + StatusList2021), `CredentialSchemaService` (claim whitelist), `SdJwtVcFormatter` (vc+sd-jwt), `JsonLdVcFormatter` (ldp_vc, VC DM 2.0), `IssuanceService` (orchestration + consent gating + revocation, format selection), `TrustRegistryService`, `PairwiseBindingService`, `ConsentBridgeService`, `CredentialRefreshService`, `UniversalDidResolverServiceImpl` + did:key/HTTP method resolvers, `SplitKnowledgeService` (two-custodian re-identification), the phase 4–7 schema bootstraps (`hkt_profcred_v1` … `hkt_agent_binding_v1`), plus the `issueCredential` rule action (`didvcIssueCredentialAction`) |
+| `didvc-rest` | OSGi bundle | **Phase 2–7** | CXF endpoints (mutations carry `@RequiresRole(ADMINISTRATOR)`): `/didvc/dids`, `/.well-known/did.json`, `/didvc/credentials`, `/didvc/schemas`, `/didvc/statuslists`, `/didvc/trust-entries`, `/didvc/trust-check`, `/didvc/pairwise-bindings`, `/didvc/consent-grants`, `/didvc/resolver/{did}` (universal DID resolution) |
 | `didvc-metering` | jar | **Phase 3, 5, 6** | Verification metering (billable records, idempotent billing, Kafka sink), the immutable hash-chained audit log (in-memory and JDBC stores), the GBA SCC filing exporter (audit → filing-template field set, zero PII) and the manifest batch processor (per-record audit + Kafka result publishing) |
-| `didvc-edge` | Spring Boot jar | **Phase 2–6** | Credential Edge: OID4VCI issuer (metadata, offers, **pre-authorized-code and authorization-code grants with PKCE**, credential/batch/deferred, nonce), OID4VP verifier (signed authorization requests with **DCQL queries**, `direct_post`, SD-JWT + key-binding validation, **nonce-store-backed replay protection (in-memory or Redis)**, revocation and trust checks, **claim-level zero-PII responses**, audit + metering), the **wallet backend API** (`/wallet/...`: offer redemption, credential storage listing, presentation builder), the **GBA SCC filing-export API** (`/{tenant}/scc/filing-export`), the **M2M verification API** (`/{tenant}/m2m/verify[-batch]`, stateless, API-key auth, sub-second p95) and the **Single Window customs endpoint** (`/{tenant}/customs/declarations`, EDI declaration → manifest batch → verification response) |
-| `didvc-openid-gateway` | jar | Phase 7 | OpenDID Web2/Web3 gateway placeholder (oracle-contract bridge) |
+| `didvc-edge` | Spring Boot jar | **Phase 2–7** | Credential Edge: … the **GB/Z 185 interop bridge** (`/{tenant}/gbz185/verify`) and the **agent admission gate** (`/{tenant}/agents/admit` + per-call `/{tenant}/agents/admission/{keyHash}` with kill-switch semantics) | OID4VCI issuer (metadata, offers, **pre-authorized-code and authorization-code grants with PKCE**, credential/batch/deferred, nonce), OID4VP verifier (signed authorization requests with **DCQL queries**, `direct_post`, SD-JWT + key-binding validation, **nonce-store-backed replay protection (in-memory or Redis)**, revocation and trust checks, **claim-level zero-PII responses**, audit + metering), the **wallet backend API** (`/wallet/...`: offer redemption, credential storage listing, presentation builder), the **GBA SCC filing-export API** (`/{tenant}/scc/filing-export`), the **M2M verification API** (`/{tenant}/m2m/verify[-batch]`, stateless, API-key auth, sub-second p95) and the **Single Window customs endpoint** (`/{tenant}/customs/declarations`, EDI declaration → manifest batch → verification response) |
+| `didvc-openid-gateway` | jar | **Phase 7** | OpenDID Web2↔Web3 gateway: DID anchor/resolve through chain adapters — EVM (`EvmChainAdapter`, hand-encoded DidAnchorRegistry ABI + simulated contract for demos/tests, RPC connection for testnet from env) with Tron/Solana/Aptos stubs |
 
 ## Build
 
@@ -128,6 +128,32 @@ configuration beans.
   a `VERIFICATION` response (status 1 accepted / 2 rejected per line
   item, correlation ids preserved).
 
+## Governance & cross-jurisdiction (Phase 7, on the edge)
+
+- `POST /{tenant}/gbz185/verify` — GB/Z 185 interop bridge: verifies a
+  linkage VP (signed JWT: agent identity code, agent public key hash,
+  policy scope) against the per-tenant trusted-issuer key set
+  (`didvc.edge.gbz185-issuer-jwks`) and policy mapping
+  (`didvc.edge.gbz185-policies`, entries `tenantId|issuerId=scopes`).
+  Every call — accepted or rejected — appends a `didvcGbz185Verified`
+  audit record.
+- `POST /{tenant}/agents/admit` — registers a bound agent from a valid
+  `hkt_agent_binding_v1` credential (non-binding vcts refused).
+- `GET /{tenant}/agents/admission/{agentPubKeyHash}` — the gateway's
+  per-call admission gate: re-verifies the registered binding live, so
+  revocation takes effect at the next verified call (kill-switch
+  semantics); unbound agents are never admitted.
+
+Karaf-platform governance (phase 7): all mutating `/cxs/didvc/*` admin
+endpoints (schemas, status lists, trust entries, DIDs, credentials)
+require the `ROLE_UNOMI_ADMIN` role via `@RequiresRole`; the
+split-knowledge re-identification workflow (`SplitKnowledgeService`)
+requires two distinct custodian approvals before a pairwise reference
+resolves, with every step on the persisted audit trail. The HSM path:
+set `didvc.keyservice.pkcs11.config` to a SunPKCS11 config file and
+`DIDVC_PKCS11_PIN` in the environment — signing then happens inside the
+token (`Pkcs11KeyMaterialProvider`).
+
 ## Wallet backend API (Phase 4, on the edge)
 
 - `POST /wallet/{walletId}/offers` — redeem a credential offer
@@ -187,14 +213,19 @@ plans for the issuer and verifier modules.
 
 ## Verification
 
-- Unit/integration tests: `mvn -pl bom,didvc/didvc-sd-jwt,didvc/didvc-metering,didvc/didvc-api,didvc/didvc-services,didvc/didvc-rest,didvc/didvc-edge -am test`
-  (186 tests: api 8, sd-jwt 22, metering 13, services 105, edge 38 —
-  including the M2M sub-second-p95 load check and the Single Window EDI
-  fixture round-trips).
-- Live ITs against a real Karaf + Elasticsearch container (verified 9/9 —
-  the phase 1-3 smoke suite, phase 4's cross-method resolution tests,
-  phase 5's schema tests and phase 6's logistics schema test, all in
-  `DidvcSmokeIT`):
+- Unit/integration tests: `mvn -pl bom,didvc/didvc-sd-jwt,didvc/didvc-metering,didvc/didvc-api,didvc/didvc-services,didvc/didvc-rest,didvc/didvc-edge,didvc/didvc-openid-gateway -am test`
+  (212 tests: api 8, sd-jwt 22, metering 13, services 115, rest 3,
+  edge 46, openid-gateway 5 — including the M2M sub-second-p95 load
+  check, the Single Window EDI fixture round-trips, the admin RBAC
+  matrix, split-knowledge workflow, GB/Z 185 bridge and agent
+  admission).
+- HSM signing proof (SoftHSM2): `didvc/scripts/run-hsm-softhsm2-proof.sh`
+  — per-run token/PIN, key generated ON the token, JWS verified against
+  the token's public key (prints PROOF-OK).
+- Live ITs against a real Karaf + Elasticsearch container (verified 11/11 —
+  the phase 1-6 suites plus phase 7's admin-RBAC live matrix (anonymous
+  mutation → 401/403, JAAS admin → 2xx) and the split-knowledge
+  two-custodian workflow, all in `DidvcSmokeIT`):
 
 ```bash
 mvn -P integration-tests -pl itests install \

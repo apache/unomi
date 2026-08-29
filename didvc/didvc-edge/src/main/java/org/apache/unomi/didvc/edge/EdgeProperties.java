@@ -202,4 +202,57 @@ public class EdgeProperties {
     public void setManifestKafkaTopic(String manifestKafkaTopic) {
         this.manifestKafkaTopic = manifestKafkaTopic;
     }
+
+    /**
+     * GB/Z 185 interop-bridge issuer keys (FR-ID6): issuer DID/URL →
+     * public JWK JSON. Read from configuration/environment (provisioned
+     * out of band with the mainland trust counterparties); never
+     * committed.
+     */
+    private java.util.Map<String, String> gbz185IssuerJwks = new java.util.LinkedHashMap<>();
+
+    /**
+     * GB/Z 185 per-tenant policy mappings: entries of the form
+     * {@code tenantId|issuerId=scope1,scope2} (empty scope list accepts
+     * any scope from that issuer).
+     */
+    private java.util.List<String> gbz185Policies = new java.util.ArrayList<>();
+
+    public java.util.Map<String, String> getGbz185IssuerJwks() {
+        return gbz185IssuerJwks;
+    }
+
+    public void setGbz185IssuerJwks(java.util.Map<String, String> gbz185IssuerJwks) {
+        this.gbz185IssuerJwks = gbz185IssuerJwks;
+    }
+
+    public java.util.List<String> getGbz185Policies() {
+        return gbz185Policies;
+    }
+
+    public void setGbz185Policies(java.util.List<String> gbz185Policies) {
+        this.gbz185Policies = gbz185Policies;
+    }
+
+    /**
+     * The accepted policy scopes for an issuer under a tenant, or null
+     * when the issuer is not mapped for that tenant.
+     *
+     * @param tenantId the relying tenant
+     * @param issuerId the GB/Z 185 linkage-VP issuer
+     * @return the accepted scopes (empty list = any), or null
+     */
+    public java.util.List<String> gbz185AllowedScopes(String tenantId, String issuerId) {
+        String prefix = tenantId + "|" + issuerId + "=";
+        for (String entry : gbz185Policies) {
+            if (entry.startsWith(prefix)) {
+                String scopes = entry.substring(prefix.length()).trim();
+                if (scopes.isEmpty()) {
+                    return java.util.List.of();
+                }
+                return java.util.Arrays.asList(scopes.split(","));
+            }
+        }
+        return null;
+    }
 }

@@ -19,7 +19,9 @@ package org.apache.unomi.didvc.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.didvc.api.DidDocumentData;
-import org.apache.unomi.didvc.api.services.DidService;
+import org.apache.unomi.didvc.api.services.DidService;import org.apache.unomi.api.security.UnomiRoles;
+import org.apache.unomi.rest.security.RequiresRole;
+
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -114,6 +116,7 @@ public class DidServiceEndPoint {
     }
 
     @POST
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response create(CreateRequest request) {
         if (request == null || request.getTenantId() == null || request.getDomain() == null) {
@@ -147,6 +150,7 @@ public class DidServiceEndPoint {
     }
 
     @POST
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/{did}/rotate")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response rotate(@PathParam("did") String did, RotateRequest request) {
@@ -159,6 +163,7 @@ public class DidServiceEndPoint {
     }
 
     @DELETE
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/{did}")
     public Response deactivate(@PathParam("did") String did) {
         DidDocumentData doc = didService.deactivateDid(did);

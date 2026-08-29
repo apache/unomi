@@ -26,6 +26,42 @@
     </parent>
     <artifactId>unomi-did-vc-openid-gateway</artifactId>
     <name>Apache Unomi :: DID-VC :: OpenDID Gateway</name>
-    <description>Placeholder for the OpenDID Web2/Web3 gateway (oracle-contract bridge, OpenDID-Labs gateway-java) — implemented in Phase 3</description>
+    <description>OpenDID Web2/Web3 gateway: DID document anchoring and resolution through chain adapters (EVM oracle contract first; Tron/Solana/Aptos stubs)</description>
     <packaging>jar</packaging>
+
+    <properties>
+        <bcprov.version>1.84</bcprov.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- Keccak-256 for EVM function selectors and the anchor contract ABI -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>${bcprov.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

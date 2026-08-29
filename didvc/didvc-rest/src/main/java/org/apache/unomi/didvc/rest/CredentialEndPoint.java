@@ -20,7 +20,9 @@ package org.apache.unomi.didvc.rest;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.didvc.api.CredentialIssueRequest;
 import org.apache.unomi.didvc.api.items.CredentialRecord;
-import org.apache.unomi.didvc.api.services.IssuanceService;
+import org.apache.unomi.didvc.api.services.IssuanceService;import org.apache.unomi.api.security.UnomiRoles;
+import org.apache.unomi.rest.security.RequiresRole;
+
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -59,6 +61,7 @@ public class CredentialEndPoint {
     }
 
     @POST
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Consumes(MediaType.APPLICATION_JSON)
     public Response issue(CredentialIssueRequest request) {
         if (request == null || request.getTenantId() == null || request.getSchemaId() == null
@@ -84,6 +87,7 @@ public class CredentialEndPoint {
     }
 
     @DELETE
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/{recordId}")
     public Response revoke(@PathParam("recordId") String recordId) {
         CredentialRecord record = issuanceService.revokeCredential(recordId);
@@ -118,6 +122,7 @@ public class CredentialEndPoint {
     }
 
     @POST
+    @RequiresRole(UnomiRoles.ADMINISTRATOR)
     @Path("/{recordId}/rebind")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response rebind(@PathParam("recordId") String recordId, RebindRequest request) {

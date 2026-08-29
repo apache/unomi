@@ -67,7 +67,28 @@ public class IssuerKeyServiceImpl implements IssuerKeyService {
      */
     static final long DEFAULT_ROTATION_MILLIS = 180L * 24 * 60 * 60 * 1000;
 
-    private final Map<String, KeyMaterial> keyMaterial = new ConcurrentHashMap<>();
+    /**
+     * Key-material provider seam (FR-G2): the default keeps keys in
+     * process memory; the PKCS#11 provider ({@link Pkcs11KeyMaterialProvider})
+     * signs inside an HSM/token so private keys never enter app memory.
+     */
+    private final KeyMaterialProvider keyMaterialProvider;
+
+    /**
+     * Creates the service with the default in-process key-material provider.
+     */
+    public IssuerKeyServiceImpl() {
+        this(new InProcessKeyMaterialProvider());
+    }
+
+    /**
+     * Creates the service with an explicit key-material provider (HSM).
+     *
+     * @param keyMaterialProvider the provider owning the private key material
+     */
+    public IssuerKeyServiceImpl(KeyMaterialProvider keyMaterialProvider) {
+        this.keyMaterialProvider = keyMaterialProvider;
+    }
 
     @Reference
     private PersistenceService persistenceService;
@@ -104,7 +125,7 @@ public class IssuerKeyServiceImpl implements IssuerKeyService {
         descriptor.setScope("didvc");
         descriptor.setTenantId(tenantId);
         persistenceService.save(descriptor);
-        keyMaterial.put(kid, new KeyMaterial(jwk, JWSAlgorithm.parse(algorithm)));
+        keyMaterialProvider.register(kid, jwk, JWSAlgorithm.parse(algorithm));
         LOGGER.info("Generated issuer key {} ({}) for {}; public material only persisted", kid, algorithm, issuerDid);
         return descriptor;
     }
@@ -128,7 +149,7 @@ public class IssuerKeyServiceImpl implements IssuerKeyService {
     @Override
     public void deleteKey(String kid) {
         persistenceService.remove(kid, KeyDescriptor.class);
-        keyMaterial.remove(kid);
+        keyMaterialProvider.remove(kid);
     }
 
     @Override
@@ -138,22 +159,7 @@ public class IssuerKeyServiceImpl implements IssuerKeyService {
 
     @Override
     public String signTyped(String kid, String payloadJson, String typ) {
-        KeyMaterial material = keyMaterial.get(kid);
-        if (material == null) {
-            throw new IllegalStateException("Private key material not available for kid " + kid
-                    + ": after a restart, keys must be re-loaded from the HSM/KMS provider");
-        }
-        try {
-            JWSHeader.Builder headerBuilder = new JWSHeader.Builder(material.algorithm).keyID(kid);
-            if (typ != null) {
-                headerBuilder.type(new com.nimbusds.jose.JOSEObjectType(typ));
-            }
-            JWSObject jwsObject = new JWSObject(headerBuilder.build(), new Payload(payloadJson));
-            jwsObject.sign(signerFor(material.jwk));
-            return jwsObject.serialize();
-        } catch (JOSEException e) {
-            throw new IllegalStateException("Signing failed for kid " + kid, e);
-        }
+        return keyMaterialProvider.sign(kid, payloadJson, typ);
     }
 
     @Override
@@ -171,16 +177,6 @@ public class IssuerKeyServiceImpl implements IssuerKeyService {
         }
     }
 
-    private static JWSSigner signerFor(JWK jwk) throws JOSEException {
-        if (jwk instanceof OctetKeyPair) {
-            return new Ed25519Signer((OctetKeyPair) jwk);
-        }
-        if (jwk instanceof ECKey) {
-            return new ECDSASigner((ECKey) jwk);
-        }
-        throw new JOSEException("Unsupported key type: " + jwk.getKeyType());
-    }
-
     private static JWSVerifier verifierFor(JWK jwk) throws JOSEException {
         if (jwk instanceof OctetKeyPair) {
             return new Ed25519Verifier((OctetKeyPair) jwk);
@@ -191,13 +187,4 @@ public class IssuerKeyServiceImpl implements IssuerKeyService {
         throw new JOSEException("Unsupported key type: " + jwk.getKeyType());
     }
 
-    private static final class KeyMaterial {
-        private final JWK jwk;
-        private final JWSAlgorithm algorithm;
-
-        private KeyMaterial(JWK jwk, JWSAlgorithm algorithm) {
-            this.jwk = jwk;
-            this.algorithm = algorithm;
-        }
-    }
 }

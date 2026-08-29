@@ -27,6 +27,7 @@ import org.apache.unomi.didvc.api.services.DidService;
 import org.apache.unomi.didvc.api.services.IssuerKeyService;
 import org.apache.unomi.didvc.api.services.StatusService;
 import org.apache.unomi.didvc.api.services.UniversalDidResolverService;
+import org.apache.unomi.didvc.api.services.SplitKnowledgeCustodian;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -39,7 +40,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
@@ -306,5 +309,91 @@ public class DidvcSmokeIT extends BaseIT {
                 "registrationNoHash", "jurisdiction", "licensedActivities")));
         schema.setScope("didvc");
         return schema;
+    }
+
+    // ---- Phase 7: admin RBAC on the governance APIs (T-7.1) ----
+
+    @Test
+    public void adminMutationsEnforceRoleMatrix() throws Exception {
+        String schemaJson = "{\"itemId\":\"rbac-smoke-schema\",\"itemType\":\"didvc-schema\","
+                + "\"vct\":\"hkt_rbac_v1\",\"allowedClaims\":[\"status\"]}";
+        org.apache.http.client.methods.HttpPost post =
+                new org.apache.http.client.methods.HttpPost(getFullUrl("/cxs/didvc/schemas"));
+        post.setEntity(new org.apache.http.entity.StringEntity(schemaJson,
+                org.apache.http.entity.ContentType.APPLICATION_JSON));
+
+        // Anonymous caller: the admin trust domain must reject the mutation
+        try (org.apache.http.client.methods.CloseableHttpResponse anonymous =
+                     executeHttpRequest(post, AuthType.NONE)) {
+            int status = anonymous.getStatusLine().getStatusCode();
+            org.junit.Assert.assertTrue(
+                    "anonymous schema save must be rejected (401/403), got " + status,
+                    status == 401 || status == 403);
+        }
+
+        // Administrator (JAAS karaf/karaf): the mutation is allowed
+        org.apache.http.client.methods.HttpPost adminPost =
+                new org.apache.http.client.methods.HttpPost(getFullUrl("/cxs/didvc/schemas"));
+        adminPost.setEntity(new org.apache.http.entity.StringEntity(schemaJson,
+                org.apache.http.entity.ContentType.APPLICATION_JSON));
+        try (org.apache.http.client.methods.CloseableHttpResponse admin =
+                     executeHttpRequest(adminPost, AuthType.JAAS_ADMIN)) {
+            int status = admin.getStatusLine().getStatusCode();
+            org.junit.Assert.assertTrue(
+                    "administrator schema save must succeed (2xx), got " + status,
+                    status >= 200 && status < 300);
+        }
+    }
+
+    // ---- Phase 7: split-knowledge re-identification workflow (T-7.2) ----
+
+    @Test
+    public void splitKnowledgeReidentificationRequiresBothCustodians() {
+        org.apache.unomi.didvc.api.services.SplitKnowledgeService splitKnowledge =
+                getOsgiService(org.apache.unomi.didvc.api.services.SplitKnowledgeService.class, 60000);
+        org.apache.unomi.didvc.api.services.PairwiseBindingService pairwiseBindings =
+                getOsgiService(org.apache.unomi.didvc.api.services.PairwiseBindingService.class, 60000);
+        // The pairwise index is created on first save; the resolver path
+        // scans existing bindings, so seed one to materialize the index
+        org.apache.unomi.didvc.api.items.PairwiseBindingRecord seed =
+                new org.apache.unomi.didvc.api.items.PairwiseBindingRecord("splitknowledge-seed");
+        seed.setProfileId("profile-splitknowledge-seed");
+        seed.setVerifierTenantId("didvc-resolver");
+        seed.setOpaqueReference("didvc:pairwise:splitknowledge-seed");
+        persistenceService.save(seed);
+        String pairwiseRef = pairwiseBindings.getOrCreateOpaqueReference(
+                "profile-splitknowledge-it", "didvc-resolver");
+        // Make the just-created binding visible to the search the
+        // resolution performs (Elasticsearch refresh lag)
+        try {
+            persistenceService.refreshIndex(org.apache.unomi.didvc.api.items.PairwiseBindingRecord.class);
+        } catch (Exception refreshIgnored) {
+            // refresh of a not-yet-created index is harmless here
+        }
+
+        String request = splitKnowledge.createReidentificationRequest(
+                "didvc-resolver", pairwiseRef, "regulatory-notice-2026-11");
+        assertNotNull(request);
+
+        // One custodian alone can never resolve
+        splitKnowledge.approve(request, SplitKnowledgeCustodian.KYC_CUSTODIAN);
+        assertFalse(splitKnowledge.tryResolve(request).isResolved());
+
+        // Duplicate approval by the same custodian does not advance state
+        splitKnowledge.approve(request, SplitKnowledgeCustodian.KYC_CUSTODIAN);
+        assertFalse(splitKnowledge.tryResolve(request).isResolved());
+
+        // The second, distinct custodian unlocks resolution; every step
+        // is recorded on the request's audit trail
+        splitKnowledge.approve(request, SplitKnowledgeCustodian.OPERATOR_CUSTODIAN);
+        org.apache.unomi.didvc.api.services.SplitKnowledgeService.Resolution resolution =
+                splitKnowledge.tryResolve(request);
+        assertTrue(resolution.isResolved());
+        assertEquals("profile-splitknowledge-it", resolution.getSubjectId());
+        assertEquals(2, resolution.getApprovals().size());
+        assertTrue(resolution.getAuditTrail().size() >= 4);
+
+        // A second resolution attempt is refused: single-use workflow
+        assertFalse(splitKnowledge.tryResolve(request).isResolved());
     }
 }
