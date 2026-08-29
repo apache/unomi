@@ -54,10 +54,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * SD-JWT against the issuer key.
  */
 @SpringBootTest(properties = {
-        "didvc.edge.internal-api-key=test-key"
+        // per-run value injected below — never a committed literal
+        "didvc.edge.internal-api-key=${didvc.test.internal-api-key}"
 })
+
 @AutoConfigureMockMvc
 class VciFlowIntegrationTest {
+
+    /** Per-run internal API key — no committed literal. */
+    private static final String INTERNAL_API_KEY =
+            "test-" + java.util.UUID.randomUUID();
+
+    @org.springframework.test.context.DynamicPropertySource
+    static void internalApiKey(org.springframework.test.context.DynamicPropertyRegistry registry) {
+        registry.add("didvc.test.internal-api-key", () -> INTERNAL_API_KEY);
+    }
 
     @TestConfiguration
     static class FakePlatformConfiguration {
@@ -94,7 +105,7 @@ class VciFlowIntegrationTest {
         offerBody.put("alwaysDisclosedClaims", Map.of("kycLevel", "REMOTE_FULL"));
         offerBody.put("selectivelyDisclosedClaims", Map.of("givenName", "Yat", "nationality", "HK"));
         MvcResult offerResult = mockMvc.perform(post("/hkt/internal/offers")
-                        .header("X-Api-Key", "test-key")
+                        .header("X-Api-Key", INTERNAL_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(offerBody)))
                 .andExpect(status().isOk())
@@ -107,7 +118,7 @@ class VciFlowIntegrationTest {
 
         // Internal offer endpoint requires the admin key
         mockMvc.perform(post("/hkt/internal/offers")
-                        .header("X-Api-Key", "wrong-key")
+                        .header("X-Api-Key", INTERNAL_API_KEY + "-wrong")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(offerBody)))
                 .andExpect(status().isUnauthorized());
@@ -169,7 +180,7 @@ class VciFlowIntegrationTest {
         offerBody.put("alwaysDisclosedClaims", Map.of("kycLevel", "REMOTE_FULL"));
 
         MvcResult offerResult = mockMvc.perform(post("/hkt/internal/offers")
-                        .header("X-Api-Key", "test-key")
+                        .header("X-Api-Key", INTERNAL_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(offerBody)))
                 .andExpect(status().isOk())

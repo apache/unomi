@@ -115,6 +115,9 @@
             };
             // now let's perform the actual call to Apache Unomi, asking it to process the events and give us back the updated (or created) profile.
             // as we have a rule listening to a login event, it will be executed and its actions will be processed.
+            // The API key is injected at page render from server-side
+            // configuration (see index.html's data-unomi-api-key and
+            // etc/org.apache.unomi.thirdparty.cfg) — never hardcoded here.
             $.ajax({
                 url: "http://localhost:8181/cxs/context.json?sessionId=" + unomiSessionId,
                 type: 'POST',
@@ -123,7 +126,7 @@
                 dataType: 'json',
                 async: false,
                 headers : {
-                    'X-Unomi-Api-Key' : '670c26d1cc413346c3b2fd9ce65dab41' // this is configured in the etc/org.apache.unomi.thirdparty.cfg
+                    'X-Unomi-Api-Key' : window.UNOMI_API_KEY
                 },
                 success: function (data) {
                     console.log("Unomi response:", data);

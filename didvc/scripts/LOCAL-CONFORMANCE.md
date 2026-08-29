@@ -44,8 +44,13 @@ docker run --rm --network host --name conformance-suite -v $PWD/cs:/cs -w /cs ec
 
 java -jar didvc/didvc-edge/target/unomi-did-vc-edge-*.jar \
   --spring.profiles.active=demo --server.port=8081 \
-  --didvc.edge.internal-api-key=test-key --didvc.edge.issuer-base-url=http://localhost:8081
+  --didvc.edge.internal-api-key="$DIDVC_INTERNAL_API_KEY" --didvc.edge.issuer-base-url=http://localhost:8081
 ```
+
+The internal API key is provisioned per run (e.g.
+`export DIDVC_INTERNAL_API_KEY="$(openssl rand -hex 24)"`) and passed to
+both the edge and the wallet/interop scripts through the environment —
+never a committed literal.
 
 All suite API calls need the `X-Forwarded-Proto: https` header (the suite's
 forwarded-header strategy derives the request scheme from it).

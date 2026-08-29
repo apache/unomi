@@ -198,8 +198,10 @@ request proof) → wallet-side signature check → presentation accepted with
 disclosed claims.
 
 ```bash
-java -jar didvc/didvc-edge/target/unomi-did-vc-edge-*.jar   --spring.profiles.active=demo --server.port=8081   --didvc.edge.internal-api-key=test-key
-cd didvc/interop && npm install && npx tsx wallet-roundtrip.ts
+# Provision the internal API key out of band (never a committed literal)
+export DIDVC_INTERNAL_API_KEY="$(openssl rand -hex 24)"
+java -jar didvc/didvc-edge/target/unomi-did-vc-edge-*.jar   --spring.profiles.active=demo --server.port=8081   --didvc.edge.internal-api-key="$DIDVC_INTERNAL_API_KEY"
+cd didvc/interop && npm install && npx tsx wallet-roundtrip.ts   # reads DIDVC_INTERNAL_API_KEY
 ```
 
 ## Conformance (CI)
@@ -214,11 +216,13 @@ plans for the issuer and verifier modules.
 ## Verification
 
 - Unit/integration tests: `mvn -pl bom,didvc/didvc-sd-jwt,didvc/didvc-metering,didvc/didvc-api,didvc/didvc-services,didvc/didvc-rest,didvc/didvc-edge,didvc/didvc-openid-gateway -am test`
-  (212 tests: api 8, sd-jwt 22, metering 13, services 115, rest 3,
-  edge 46, openid-gateway 5 — including the M2M sub-second-p95 load
-  check, the Single Window EDI fixture round-trips, the admin RBAC
-  matrix, split-knowledge workflow, GB/Z 185 bridge and agent
-  admission).
+  (217 tests: api 8, sd-jwt 22, metering 13, services 122, rest 3,
+  edge 47, openid-gateway 5 — including the M2M and OID4VP
+  sub-second-p95 load guards, the Single Window EDI fixture round-trips,
+  the admin RBAC matrix, split-knowledge workflow, GB/Z 185 bridge,
+  agent admission, the RFC 8032 did:key vectors and the VC DM 2.0
+  Example-2 shape vectors). Credentials in every test are generated
+  per run — no usable literals in source, tests, CI or docs.
 - HSM signing proof (SoftHSM2): `didvc/scripts/run-hsm-softhsm2-proof.sh`
   — per-run token/PIN, key generated ON the token, JWS verified against
   the token's public key (prints PROOF-OK).

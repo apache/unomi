@@ -18,15 +18,38 @@
 # DID-VC security review — Phase 8 (T-8.3)
 
 Scope: the externally reachable surface of `didvc-edge` (OID4VCI issuer,
-OID4VP verifier, internal offer API), reviewed against the OWASP API
-Security Top 10 (2023) and the OAuth/OIDF threat models (RFC 6749 §10,
-RFC 9449 §11, RFC 9901 §10). The OSGi platform side (`didvc-rest`,
-`didvc-services`) is assumed deployed inside the trusted network behind
-Unomi's existing auth; its findings are noted where relevant.
+OID4VP verifier, internal offer API — and, since phases 4–7: the wallet
+backend `/wallet/*`, the M2M verification API, the Single Window
+`/customs/declarations` endpoint, the GB/Z 185 bridge
+`/{tenant}/gbz185/verify` and the agent admission gate), reviewed
+against the OWASP API Security Top 10 (2023) and the OAuth/OIDF threat
+models (RFC 6749 §10, RFC 9449 §11, RFC 9901 §10). The OSGi platform
+side (`didvc-rest`, `didvc-services`) is assumed deployed inside the
+trusted network behind Unomi's existing auth (all mutating governance
+endpoints carry `@RequiresRole(ADMINISTRATOR)` since T-7.1); its
+findings are noted where relevant.
 
 Review type: source review during Phase 8 conformance hardening, plus the
 protocol-level fixes the conformance suite forced. **No third-party
 penetration test has been performed yet** — see "Open items" F-10.
+
+## Credential-handling triage (T-8.3, phase 8)
+
+Static scanning flagged seven hardcoded-credential candidates. Triaged:
+
+| Location | Verdict | Action |
+|---|---|---|
+| `didvc/interop/wallet-roundtrip.ts` (API key) | **Real** — matched the edge launch flag | **Fixed**: reads `DIDVC_INTERNAL_API_KEY` from the environment; README/LOCAL-CONFORMANCE/runbook now generate per-run keys |
+| `didvc/interop/load-test.ts` (API key default) | **Real** — usable default literal | **Fixed**: `EDGE_API_KEY` required, no default |
+| CI workflow `didvc-conformance.yml` (2× launch flag) | **Real** — matched the interop scripts | **Fixed**: per-run `ci-$(date)-$RANDOM` keys |
+| edge test properties (`didvc.edge.internal-api-key` + headers, 7 occurrences) | **Real** (test literals) | **Fixed**: per-run `@DynamicPropertySource` UUID keys |
+| `samples/login-integration` `X-Unomi-Api-Key` value | **Real** — key-shaped literal | **Fixed**: `window.UNOMI_API_KEY` injected at page render (`@UNOMI_API_KEY@` deploy-time placeholder) |
+| `docker/.../entrypoint.sh:65-66` | **False positive** — placeholder example strings inside an error message that *requires* env-provided passwords | none |
+| `HealthCheckConfig.java` / `MigrationConfig.java` (`esPassword`/`osPassword`) | **False positive** — OSGi config property *key names*, not values | none |
+
+Principle enforced: credentials are read only from environment variables
+or a secret service; no usable credential literals remain in source,
+samples, tests, workflows or docs.
 
 ## Findings fixed in this phase
 

@@ -32,6 +32,16 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
             integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
             crossorigin="anonymous"></script>
+    <!--
+      The Unomi API key is injected here at deploy time by the operator's
+      provisioning (template substitution or reverse proxy) from the value
+      configured in etc/org.apache.unomi.thirdparty.cfg. It is deliberately
+      NOT present in this repository — replace the placeholder below when
+      deploying the sample.
+    -->
+    <script>
+        window.UNOMI_API_KEY = "@UNOMI_API_KEY@";
+    </script>
     <script src="javascript/login-example.js"></script>
 </head>
 <body>

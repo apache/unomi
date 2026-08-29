@@ -51,10 +51,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * qualification claims (the T-4.3 reference-verifier acceptance too).
  */
 @SpringBootTest(properties = {
-        "didvc.edge.internal-api-key=test-key"
+        // per-run value injected below — never a committed literal
+        "didvc.edge.internal-api-key=${didvc.test.internal-api-key}"
 })
+
 @AutoConfigureMockMvc
 class WalletFlowIntegrationTest {
+
+    /** Per-run internal API key — no committed literal. */
+    private static final String INTERNAL_API_KEY =
+            "test-" + java.util.UUID.randomUUID();
+
+    @org.springframework.test.context.DynamicPropertySource
+    static void internalApiKey(org.springframework.test.context.DynamicPropertyRegistry registry) {
+        registry.add("didvc.test.internal-api-key", () -> INTERNAL_API_KEY);
+    }
 
     @TestConfiguration
     static class WalletTestConfiguration {
@@ -91,7 +102,7 @@ class WalletFlowIntegrationTest {
                 "issuingBody", "HKIE",
                 "validUntilYear", 2030));
         MvcResult offerResult = mockMvc.perform(post("/hkt/internal/offers")
-                        .header("X-Api-Key", "test-key")
+                        .header("X-Api-Key", INTERNAL_API_KEY)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(offerBody)))
                 .andExpect(status().isOk())

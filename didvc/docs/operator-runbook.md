@@ -103,13 +103,34 @@ by the module tests' H2 equivalents and the live smoke IT
 Running the edge standalone in demo mode:
 
 ```bash
+# Provision the key out of band; the wallet/interop scripts read the
+# same environment variable
+export DIDVC_INTERNAL_API_KEY="$(openssl rand -hex 24)"
 java -jar didvc/didvc-edge/target/unomi-did-vc-edge-*.jar \
   --spring.profiles.active=demo --server.port=8081 \
-  --didvc.edge.internal-api-key=test-key
+  --didvc.edge.internal-api-key="$DIDVC_INTERNAL_API_KEY"
 ```
 
 Local conformance-suite running against the edge:
 [didvc/scripts/LOCAL-CONFORMANCE.md](../scripts/LOCAL-CONFORMANCE.md).
+
+### Edge API surface inventory (phases 2–7)
+
+| Surface | Endpoints | Auth |
+|---|---|---|
+| OID4VCI issuer | `/{tenant}/.well-known/openid-credential-issuer`, `/{tenant}/token`, `/{tenant}/credential`, `/batch-credential`, `/deferred-credential`, `/{tenant}/internal/offers` (admin) | access tokens; internal offers via `X-Api-Key` |
+| OID4VP verifier | `/{tenant}/vp/authorize`, `/{tenant}/vp/request/{id}`, `/{tenant}/vp/direct_post` (`claim_level_response` for zero-PII outcomes) | per-request nonces |
+| Wallet backend | `/wallet/{walletId}/offers`, `/credentials[/{id}]`, `/presentations`, `/jwks` | app-session (front in production) |
+| M2M verification | `/{tenant}/m2m/verify`, `/m2m/verify-batch` | `X-Api-Key` (`didvc.edge.m2m-api-keys`); mTLS at the ingress |
+| Single Window | `/{tenant}/customs/declarations` | `X-Api-Key` |
+| SCC filing | `/{tenant}/scc/filing-export` | platform |
+| GB/Z 185 bridge | `/{tenant}/gbz185/verify` | per-tenant trusted-issuer keys + policy map |
+| Agent admission | `/{tenant}/agents/admit`, `/{tenant}/agents/admission/{keyHash}` | platform; per-call live re-verification |
+
+Operational keys (all environment/secret-service provisioned, never
+committed): `DIDVC_INTERNAL_API_KEY` (internal offers), `DIDVC_PKCS11_PIN`
+(HSM token), `didvc.edge.m2m-api-keys` (M2M/customs), per-run keys in CI
+(`ci-*`). HSM signing proof: `didvc/scripts/run-hsm-softhsm2-proof.sh`.
 
 ## 5. Deploying the platform bundles vs the edge jar
 

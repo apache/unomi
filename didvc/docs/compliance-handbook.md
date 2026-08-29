@@ -58,7 +58,7 @@ Principles (DPP1–DPP6):
 | DPP3 | Use limitation — no new purposes without consent | Disclosure checked against consent grants at issuance, and disclosure at verification never exceeds the granted claim set (SD-JWT selective disclosure + DCQL scope) | Implemented (FR-CS1/CS2) |
 | DPP4 | Security | Private keys never persisted/logged (public JWKs only; HSM/KMS custody planned T-7.3); TLS edge; nonce/replay protection (Redis-backed fleet-wide single-use); hash-chained audit | Partially implemented — HSM, admin RBAC (T-7.1) planned |
 | DPP5 | Transparency | Per-tenant issuer metadata well-known documents; audit log records issuance/verification with actor and verifier-scoped subject reference | Implemented (metadata, audit); transparency reporting is a governance-charter item (W-3, planned) |
-| DPP6 | Access and correction | Subject access flows through the KYC-evidence custodian; re-identification requires the split-knowledge workflow | Designed, not built (T-7.2 planned) |
+| DPP6 | Access and correction | Subject access flows through the KYC-evidence custodian; re-identification requires the split-knowledge workflow | **Implemented** (T-7.2: two-custodian `SplitKnowledgeService`, single-use resolution, full step audit) |
 
 **Data minimisation specifically** (FR-D1/D2): the schema whitelist is
 the gate — e.g. the real-name credential (`hkt_realname_v1`, planned
@@ -109,7 +109,7 @@ For `hkt_kyc_v1` used by HK banks / VATPs (Capital flow, FR-C1–C5):
   response contract for GBA counterparties: valid/invalid, claim type,
   expiry — response contains **zero PII** (FR-D3). Golden-path +
   negative ITs are the acceptance criteria.
-- **SCC filing audit exports (T-5.3, planned)** — audit exports for
+- **SCC filing audit exports (T-5.3, implemented)** — audit exports for
   continuing bilateral-filing obligations under the GBA SCC
   (Standard Contract) regime; export format must match the filing
   template fields (FR-D4). GBA SCC remains voluntary and excludes
@@ -169,10 +169,10 @@ dataset.
 
 | Credential (vct) | Flow / regimes | Required controls | Req IDs | Status |
 |---|---|---|---|---|
-| `hkt_kyc_v1` — reusable KYC | Capital: HK banks/fintechs/VATPs; AMLO CDD-reliance, HKMA expectations, PDPO | Claim whitelist + selective disclosure; consent grants per verifier category; pairwise pseudonyms; bounded validity + refresh triggers; per-verification audit + metering; split-knowledge re-identification | FR-C1–C5, G1, G4, D5, CS1/CS2 | **Implemented** (T-2.4, T-3.3–3.5); split-knowledge workflow planned (T-7.2) |
+| `hkt_kyc_v1` — reusable KYC | Capital: HK banks/fintechs/VATPs; AMLO CDD-reliance, HKMA expectations, PDPO | Claim whitelist + selective disclosure; consent grants per verifier category; pairwise pseudonyms; bounded validity + refresh triggers; per-verification audit + metering; split-knowledge re-identification | FR-C1–C5, G1, G4, D5, CS1/CS2 | **Implemented** (T-2.4, T-3.3–3.5); split-knowledge workflow implemented (T-7.2) |
 | `hkt_profcred_v1` — professional credential | People: employers/universities; PDPO (minimal personal data) | Coded qualification claims, no transcripts; SD-JWT selective disclosure; trust entries per verifier | FR-P1 | **Planned** (T-4.3) |
 | `hkt_residency_v1` — residency | People: cross-border talent/residency checks; PDPO, immigration-data sensitivity | Status-not-document design (no visa numbers); short claim set; expiry-driven refresh | FR-P1 | **Planned** (T-4.3) |
-| `hkt_licensed_institution_v1` / `hkt_realname_v1` — KYB / real-name | Data: GBA counterparties; GBA SCC boundaries, "important data" exclusion | Strict claim minimization (boolean real-name); **schema validation rejects embedded registry data**; zero-PII claim-level responses; SCC filing audit exports | FR-D1–D4 | **Planned** (T-5.1–5.3); status-list revocation recognition already implemented |
+| `hkt_licensed_institution_v1` / `hkt_realname_v1` — KYB / real-name | Data: GBA counterparties; GBA SCC boundaries, "important data" exclusion | Strict claim minimization (boolean real-name); **schema validation rejects embedded registry data**; zero-PII claim-level responses; SCC filing audit exports | FR-D1–D4 | **Implemented** (T-5.1–5.3: schema bootstraps with registry-data rejection, zero-PII claim-level VP responses, `GET /{tenant}/scc/filing-export`); status-list revocation recognition already implemented |
 | `hkt_agent_binding_v1` — agent binding | Agentic-ID: HK/mainland service gateways, GB/Z 185 interop | Key-to-principal binding at issuance; per-call VP verification; audit record per call (accountability surface) | FR-ID6 | **Planned** (T-7.6, with T-7.4 bridge) |
 
 Cross-cutting: PDPO DPP1–DPP6 mapping (§2), governance (W-3 charter:
@@ -190,7 +190,7 @@ T-2.4/T-5.3/T-7.2 GA.
 | Consent grants | `didvc-consent-grant` items | ConsentBridge (implemented) |
 | Key custody records | `didvc-key-descriptor` (public JWKs, rotation windows) | IssuerKeyService (implemented); HSM/KMS logs planned (T-7.3) |
 | Schema registry (minimization evidence) | `didvc-schema` items | CredentialSchemaService (implemented) |
-| SCC filing exports | planned (T-5.3) | audit export job |
+| SCC filing exports | implemented (T-5.3) | `GET /{tenant}/scc/filing-export` from the immutable audit log |
 
 ---
 

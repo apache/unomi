@@ -44,7 +44,10 @@ function arg(name: string, fallback: string): string {
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback
 }
 const EDGE = arg('edge', process.env.EDGE_URL ?? 'http://localhost:8081')
-const API_KEY = process.env.EDGE_API_KEY ?? 'test-key'
+// Required: the edge's internal API key, provisioned out of band and
+// supplied through the environment (no default literal)
+const API_KEY = process.env.EDGE_API_KEY
+if (!API_KEY) throw new Error('Missing required environment variable EDGE_API_KEY')
 const ITERATIONS = parseInt(arg('iterations', '200'), 10)
 const CONCURRENCY = parseInt(arg('concurrency', '8'), 10)
 const P95_TARGET_MS = parseInt(arg('p95-target-ms', '1000'), 10)

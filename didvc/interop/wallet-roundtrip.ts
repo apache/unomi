@@ -30,7 +30,16 @@ import { createHash, randomBytes, webcrypto } from 'node:crypto'
 
 const ISSUER = 'https://localhost:8081/hkt'
 const EDGE = 'https://localhost:8081'
-const API_KEY = 'test-key'
+// The edge's internal API key — provisioned out of band and supplied
+// through the environment; the edge must be started with the same value
+// (--didvc.edge.internal-api-key)
+const API_KEY = requiredEnv('DIDVC_INTERNAL_API_KEY')
+
+function requiredEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) throw new Error(`Missing required environment variable ${name}`)
+  return value
+}
 
 const b64url = (input) => Buffer.from(input).toString('base64url')
 const sha256 = (data) => createHash('sha256').update(data).digest()

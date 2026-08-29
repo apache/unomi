@@ -270,11 +270,13 @@ curl -s http://localhost:8081/hkt/.well-known/oauth-authorization-server
 ```
 
 Create a credential offer from your backend (internal endpoint, guarded
-by `X-Api-Key` = `didvc.edge.internal-api-key`):
+by `X-Api-Key` = `didvc.edge.internal-api-key`; provision the key out of
+band and export it — never a committed literal):
 
 ```bash
+export DIDVC_INTERNAL_API_KEY="$(openssl rand -hex 24)"
 curl -s -X POST http://localhost:8081/hkt/internal/offers \
-  -H 'X-Api-Key: test-key' -H 'Content-Type: application/json' \
+  -H "X-Api-Key: $DIDVC_INTERNAL_API_KEY" -H 'Content-Type: application/json' \
   -d '{
     "schemaId": "hkt-kyc-v1",
     "vct": "hkt_kyc_v1",

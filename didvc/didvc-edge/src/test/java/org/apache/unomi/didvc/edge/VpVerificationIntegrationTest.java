@@ -61,10 +61,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * metering evidence.
  */
 @SpringBootTest(properties = {
-        "didvc.edge.internal-api-key=test-key"
+        // per-run value injected below — never a committed literal
+        "didvc.edge.internal-api-key=${didvc.test.internal-api-key}"
 })
+
 @AutoConfigureMockMvc
 class VpVerificationIntegrationTest {
+
+    /** Per-run internal API key — no committed literal. */
+    private static final String INTERNAL_API_KEY =
+            "test-" + java.util.UUID.randomUUID();
+
+    @org.springframework.test.context.DynamicPropertySource
+    static void internalApiKey(org.springframework.test.context.DynamicPropertyRegistry registry) {
+        registry.add("didvc.test.internal-api-key", () -> INTERNAL_API_KEY);
+    }
 
     @TestConfiguration
     static class FakePlatformConfiguration {
