@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260829T055723557Z-885791-421748584ac4",
+  "runId": "20260829T055723557Z-885791-421748584ac4",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "package/target/unomi-3.1.0-SNAPSHOT/bin/contrib/karaf-service.sh",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "package/target/unomi-3.1.0-SNAPSHOT/bin/contrib/karaf-service.sh",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "dcc19d8f9b07145bde5bb7dbb7b1e7c88196135e",
+  "diffHash": "924c7ce092a6d494dbee80f5c75a9d4dcbb5bfad0bcb91f8034bc9190c842409",
+  "rulesVersion": "unavailable",
+  "sessionHash": "07679adc850d3b0cb3ae54a843f7a8018bc5a95b49818d1d62fa602a9efdb9f8",
+  "reportRef": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T055723557Z-885791-421748584ac4.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "didvc/scripts/run-build-sh-jdk17.sh",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "package/target/unomi-3.1.0-SNAPSHOT/bin/contrib/karaf-service.sh",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-08-29T05:57:24.180Z"
+}

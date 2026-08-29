@@ -1,0 +1,53 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260829T082821064Z-971443-75d0710fc785",
+  "runStatus": "inconclusive",
+  "errors": [
+    "candidate-select:itests/target/exam/6b718769-9d00-4234-ac56-83b5697e061e/bin/contrib/karaf-service.sh: candidate_limit_exceeded: 3 changed reviewable file(s) were not scanned because the limit is 20",
+    "baseline-read:itests/target/jacoco/doc/examples/java/ClassInfo.java: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:itests/target/jacoco/doc/examples/java/CoreTutorial.java: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:itests/target/jacoco/doc/examples/java/ExecDump.java: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:itests/target/jacoco/doc/examples/java/ExecutionDataClient.java: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:itests/target/jacoco/doc/examples/java/ExecutionDataServer.java: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:itests/target/jacoco/doc/examples/java/MBeanClient.java: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:itests/target/jacoco/doc/examples/java/ReportGenerator.java: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:itests/target/exam/cfa63bbc-fa49-476b-b6f4-1a02e239a26e/bin/contrib/karaf-service.sh: baseline_snapshot_unreadable: file is missing from task baseline"
+  ],
+  "target": ".",
+  "revision": "cbfd5926d85d045d417b4dcedf09b52a961a1ca3",
+  "diffHash": "ec89843624f3987e46b7ccb44c3d25668c2fa1f7b16269b564221c879dab93d6",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-08-29T08:28:21.064Z",
+  "timing": {
+    "startedAt": "2026-08-29T08:28:18.456Z",
+    "completedAt": "2026-08-29T08:28:21.064Z",
+    "durationMs": 2608
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 4,
+    "bySeverity": {
+      "high": 4
+    },
+    "byStatus": {
+      "blocked": 2,
+      "candidate": 2
+    }
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "candidate_limit_exceeded": 1,
+      "baseline_snapshot_unreadable": 8,
+      "project_check_failed": 9
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T082821064Z-971443-75d0710fc785.json"
+}

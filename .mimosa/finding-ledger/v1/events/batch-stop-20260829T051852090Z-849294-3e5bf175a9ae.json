@@ -1,0 +1,153 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260829T051852090Z-849294-3e5bf175a9ae",
+  "runId": "20260829T051852090Z-849294-3e5bf175a9ae",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "changed_file_unreadable",
+        "stage": "candidate-select",
+        "target": "itests/src/test/java/org/apache/unomi/itests/DidvcPhase4ResolverIT.java",
+        "detail": "observed changed file no longer exists or cannot be read",
+        "affectsCompletion": true
+      },
+      {
+        "code": "candidate_limit_exceeded",
+        "stage": "candidate-select",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/wallet/StoredCredential.java",
+        "detail": "17 changed reviewable file(s) were not scanned because the limit is 20",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "itests/src/test/java/org/apache/unomi/itests/DidvcPhase4ResolverIT.java",
+        "detail": "changed_file_unreadable: observed changed file no longer exists or cannot be read",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/wallet/StoredCredential.java",
+        "detail": "candidate_limit_exceeded: 17 changed reviewable file(s) were not scanned because the limit is 20",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "8f76b41584487dbdc4c58aff81d253c4b653c90c",
+  "diffHash": "cc690022c50bccafb5b1561a446947884cd870916d9c892419f09bbf8a8dde89",
+  "rulesVersion": "unavailable",
+  "sessionHash": "07679adc850d3b0cb3ae54a843f7a8018bc5a95b49818d1d62fa602a9efdb9f8",
+  "reportRef": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T051852090Z-849294-3e5bf175a9ae.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "didvc/didvc-api/src/main/java/org/apache/unomi/didvc/api/services/DidMethodResolver.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-api/src/main/java/org/apache/unomi/didvc/api/services/UniversalDidResolverService.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-api/src/main/java/org/apache/unomi/didvc/api/CredentialIssueRequest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/UniversalDidResolverServiceImpl.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/DidKeyMethodResolver.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/HttpDidMethodResolver.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-rest/src/main/java/org/apache/unomi/didvc/rest/DidResolverEndPoint.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/DidKeyMethodResolverTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/UniversalDidResolverServiceImplTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/HttpDidMethodResolverTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/JsonLdVcFormatter.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/JsonLdVcParser.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/IssuanceServiceImpl.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/JsonLdVcFormatterTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/IssuanceServiceImplTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/Phase4SchemaBootstrap.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase4SchemaBootstrapTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/platform/PlatformApi.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-08-29T05:18:52.709Z"
+}

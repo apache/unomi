@@ -1,0 +1,826 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.unomi.didvc.edge.vp;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import com.nimbusds.jose.JWSAlgorithm;
+import com.nimbusds.jose.JWSHeader;
+import com.nimbusds.jose.Payload;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jwt.SignedJWT;
+import org.apache.unomi.didvc.audit.AuditLogService;
+import org.apache.unomi.didvc.edge.EdgeProperties;
+import org.apache.unomi.didvc.edge.platform.PlatformApi;
+import org.apache.unomi.didvc.edge.store.NonceStore;
+import org.apache.unomi.didvc.metering.MeteringService;
+import org.apache.unomi.didvc.sdjwt.SdJwtParser;
+import org.apache.unomi.didvc.sdjwt.SdJwtPresentation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * OpenID4VP 1.0 verifier: creates signed authorization requests with
+ * claim queries and a per-request nonce, and verifies submitted SD-JWT
+ * presentations end to end — credential signature (issuer DID resolution),
+ * time validity, revocation status, trust registry, and key binding with
+ * nonce/audience/replay protection. Every accepted verification is
+ * appended to the immutable audit log and billed through the metering
+ * service.
+ */
+@RestController
+public class VerificationController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(VerificationController.class);
+    private static final long REQUEST_TTL_MILLIS = 10 * 60 * 1000L;
+
+    private final EdgeProperties properties;
+    private final PlatformApi platformApi;
+    private final AuditLogService auditLogService;
+    private final MeteringService meteringService;
+    private final NonceStore nonceStore;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final DcqlQueryParser dcqlQueryParser = new DcqlQueryParser();
+
+    private final Map<String, VpRequestContext> requests = new ConcurrentHashMap<>();
+    private final Map<String, VerificationResult> verificationResults = new ConcurrentHashMap<>();
+
+    /** The outcome of one completed verification, for the result page. */
+    private static final class VerificationResult {
+        private final String tenantId;
+        private final Map<String, Object> result;
+        private final long expiresAt;
+
+        private VerificationResult(String tenantId, Map<String, Object> result, long expiresAt) {
+            this.tenantId = tenantId;
+            this.result = result;
+            this.expiresAt = expiresAt;
+        }
+    }
+
+    public VerificationController(EdgeProperties properties, PlatformApi platformApi,
+                                  AuditLogService auditLogService, MeteringService meteringService,
+                                  NonceStore nonceStore) {
+        this.properties = properties;
+        this.platformApi = platformApi;
+        this.auditLogService = auditLogService;
+        this.meteringService = meteringService;
+        this.nonceStore = nonceStore;
+    }
+
+    /**
+     * Authorization request: the verifier asks for specific claims of a
+     * credential type and pins a nonce for the presentation.
+     */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public static class AuthorizeRequest {
+        private String clientId;
+        private String responseUri;
+        private String nonce;
+        private Map<String, List<String>> claims;
+        private Object dcqlQuery;
+        private Boolean claimLevelResponse;
+
+        public String getClientId() {
+            return clientId;
+        }
+
+        public void setClientId(String clientId) {
+            this.clientId = clientId;
+        }
+
+        public String getResponseUri() {
+            return responseUri;
+        }
+
+        public void setResponseUri(String responseUri) {
+            this.responseUri = responseUri;
+        }
+
+        public String getNonce() {
+            return nonce;
+        }
+
+        public void setNonce(String nonce) {
+            this.nonce = nonce;
+        }
+
+        public Map<String, List<String>> getClaims() {
+            return claims;
+        }
+
+        public void setClaims(Map<String, List<String>> claims) {
+            this.claims = claims;
+        }
+
+        /**
+         * A DCQL query as raw JSON — the preferred query format. When
+         * present it replaces the plain claims map.
+         */
+        public Object getDcqlQuery() {
+            return dcqlQuery;
+        }
+
+        public void setDcqlQuery(Object dcqlQuery) {
+            this.dcqlQuery = dcqlQuery;
+        }
+
+        /**
+         * Claim-level response mode (FR-D3): the verification result
+         * carries booleans only — {@code valid}, the credential type, the
+         * credential expiry and per-requested-claim {@code satisfied}
+         * flags — never claim values or any other subject data, for GBA
+         * data-flow counterparties that must learn the outcome without
+         * receiving personal data.
+         */
+        public Boolean getClaimLevelResponse() {
+            return claimLevelResponse;
+        }
+
+        public void setClaimLevelResponse(Boolean claimLevelResponse) {
+            this.claimLevelResponse = claimLevelResponse;
+        }
+    }
+
+    /**
+     * Submitted presentation.
+     */
+    @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
+    public static class VpSubmission {
+        private String state;
+        private String nonce;
+        private String vpToken;
+
+        public String getState() {
+            return state;
+        }
+
+        public void setState(String state) {
+            this.state = state;
+        }
+
+        public String getNonce() {
+            return nonce;
+        }
+
+        public void setNonce(String nonce) {
+            this.nonce = nonce;
+        }
+
+        public String getVpToken() {
+            return vpToken;
+        }
+
+        public void setVpToken(String vpToken) {
+            this.vpToken = vpToken;
+        }
+    }
+
+    @PostMapping("/{tenantId}/vp/authorize")
+    public Map<String, Object> authorize(@PathVariable("tenantId") String tenantId,
+                                         @RequestBody AuthorizeRequest request) {
+        if (request.getClientId() == null || request.getNonce() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "clientId and nonce are required");
+        }
+        DcqlQueryParser.Query dcql = null;
+        if (request.getDcqlQuery() != null) {
+            try {
+                dcql = dcqlQueryParser.parse(objectMapper.writeValueAsString(request.getDcqlQuery()));
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "unreadable dcql_query: " + e.getMessage());
+            }
+        }
+        if ((request.getClaims() == null || request.getClaims().isEmpty()) && dcql == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "claims or dcql_query are required");
+        }
+        // Issue the nonce into the (possibly shared) nonce store so
+        // presentations can only be consumed once, fleet-wide
+        nonceStore.issue(tenantId + ":" + request.getNonce(), REQUEST_TTL_MILLIS / 1000);
+        String requestId = UUID.randomUUID().toString();
+        requests.put(requestId, new VpRequestContext(tenantId, request.getClientId(), request.getResponseUri(),
+                request.getNonce(), request.getClaims(), dcql, request.getDcqlQuery(),
+                System.currentTimeMillis() + REQUEST_TTL_MILLIS, Boolean.TRUE.equals(request.getClaimLevelResponse())));
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("request_uri", properties.getIssuerBaseUrl() + "/" + tenantId + "/vp/request/" + requestId);
+        return response;
+    }
+
+    /**
+     * Browser-facing authorization request (OID4VP web-wallet flow): starts
+     * the verification by redirecting the user's browser to the wallet's
+     * authorization endpoint. The nonce and state are generated here (never
+     * caller-supplied on this entry point).
+     *
+     * Query parameters: {@code wallet_authorization_endpoint} (required —
+     * where to redirect), {@code vct} (credential type to request; default
+     * {@code hkt_kyc_v1}), optional {@code response_uri}. Parameters are
+     * passed directly in the redirect query (OID4VP url_query style) — the
+     * redirect_uri client-id scheme cannot use signed request objects per
+     * OID4VP 1.0 Final §5.9.3-3.1.1; set {@code use_request_uri=1} to
+     * instead pass a {@code request_uri} pointing at the signed request
+     * object (for client-id schemes that support it).
+     *
+     * The request carries a DCQL query for the requested vct plus the
+     * mandatory {@code client_metadata.vp_formats_supported}; per OpenID4VP
+     * 1.0 Final there is no {@code client_id_scheme} parameter (the
+     * URI-shaped {@code client_id} conveys the redirect_uri scheme).
+     */
+    @GetMapping("/{tenantId}/vp/authorize")
+    public ResponseEntity<Void> authorizeBrowser(@PathVariable("tenantId") String tenantId,
+                                                 @RequestParam("wallet_authorization_endpoint") String walletEndpoint,
+                                                 @RequestParam(value = "vct", required = false) String vct,
+                                                 @RequestParam(value = "response_uri", required = false) String responseUri,
+                                                 @RequestParam(value = "use_request_uri", required = false) String useRequestUri) {
+        String nonce = UUID.randomUUID().toString();
+        String requestId = UUID.randomUUID().toString();
+        String effectiveResponseUri = responseUri != null ? responseUri
+                : properties.getIssuerBaseUrl() + "/" + tenantId + "/vp/direct_post";
+        String requestedVct = vct != null ? vct : "hkt_kyc_v1";
+        String dcqlJson;
+        try {
+            Map<String, Object> vctMeta = new LinkedHashMap<>();
+            vctMeta.put("vct_values", List.of(requestedVct));
+            Map<String, Object> credentialQuery = new LinkedHashMap<>();
+            credentialQuery.put("id", "credential-1");
+            credentialQuery.put("format", "dc+sd-jwt");
+            credentialQuery.put("meta", vctMeta);
+            dcqlJson = objectMapper.writeValueAsString(Map.of("credentials", List.of(credentialQuery)));
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to build dcql_query", e);
+        }
+        DcqlQueryParser.Query dcql;
+        try {
+            dcql = dcqlQueryParser.parse(dcqlJson);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "unreadable dcql_query", e);
+        }
+        nonceStore.issue(tenantId + ":" + nonce, REQUEST_TTL_MILLIS / 1000);
+        requests.put(requestId, new VpRequestContext(tenantId, effectiveResponseUri, effectiveResponseUri,
+                nonce, null, dcql, dcqlJson,
+                System.currentTimeMillis() + REQUEST_TTL_MILLIS, walletEndpoint));
+
+        String clientMetadataJson;
+        try {
+            clientMetadataJson = objectMapper.writeValueAsString(sdJwtClientMetadata());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to serialize client_metadata", e);
+        }
+        Map<String, String> parameters = new LinkedHashMap<>();
+        parameters.put("client_id", effectiveResponseUri);
+        parameters.put("response_uri", effectiveResponseUri);
+        parameters.put("response_type", "vp_token");
+        parameters.put("response_mode", "direct_post");
+        parameters.put("nonce", nonce);
+        parameters.put("state", requestId);
+        parameters.put("dcql_query", dcqlJson);
+        parameters.put("client_metadata", clientMetadataJson);
+        if (useRequestUri != null) {
+            parameters.put("request_uri",
+                    properties.getIssuerBaseUrl() + "/" + tenantId + "/vp/request/" + requestId);
+        }
+        // URLEncoder (not UriComponentsBuilder.encode(), which leaves '+'
+        // raw): form-style encoding keeps '+' (as %2B), '{', '[', ':', '/'
+        // and '"' intact across the redirect — wallets reject a request
+        // target containing raw reserved characters with HTTP 400, and a
+        // '+' decodes to a space on the receiving side
+        StringBuilder target = new StringBuilder(walletEndpoint);
+        target.append(walletEndpoint.contains("?") ? '&' : '?');
+        for (Map.Entry<String, String> entry : parameters.entrySet()) {
+            if (target.charAt(target.length() - 1) != '?' && target.charAt(target.length() - 1) != '&') {
+                target.append('&');
+            }
+            target.append(entry.getKey()).append('=')
+                    .append(URLEncoder.encode(entry.getValue(), StandardCharsets.UTF_8));
+        }
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(target.toString()))
+                .build();
+    }
+
+    @GetMapping("/{tenantId}/vp/request/{requestId}")
+    public String requestObject(@PathVariable("tenantId") String tenantId,
+                                @PathVariable("requestId") String requestId) {
+        VpRequestContext context = requireContext(tenantId, requestId);
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("client_id", context.clientId);
+        payload.put("response_uri", context.responseUri);
+        payload.put("nonce", context.nonce);
+        payload.put("response_type", "vp_token");
+        payload.put("response_mode", "direct_post");
+        payload.put("iss", context.clientId);
+        if (context.walletEndpoint != null) {
+            payload.put("aud", context.walletEndpoint);
+        }
+        if (context.dcqlQueryJson != null) {
+            payload.put("dcql_query", context.dcqlQueryJson);
+        } else {
+            payload.put("claims", context.claims);
+        }
+        // OID4VP 1.0 Final: vp_formats_supported is mandatory in every
+        // authorization request, inline or in the request object
+        payload.put("client_metadata", sdJwtClientMetadata());
+        payload.put("iat", System.currentTimeMillis() / 1000);
+        payload.put("exp", context.expiresAt / 1000);
+        try {
+            com.nimbusds.jose.jwk.JWK verifierKey = platformApi.getVerifierSigningKey(tenantId);
+            if (verifierKey == null) {
+                // No asymmetric verifier key configured: fall back to the
+                // symmetric secret (verification is out-of-band agreed)
+                JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.HS256)
+                        .type(new com.nimbusds.jose.JOSEObjectType("oauth-authz-req+jwt"))
+                        .build();
+                com.nimbusds.jose.JWSObject jws = new com.nimbusds.jose.JWSObject(header,
+                        new Payload(objectMapper.writeValueAsString(payload)));
+                jws.sign(new MACSigner(properties.getRequestSigningSecret().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+                return jws.serialize();
+            }
+            // OID4VP: the request object is signed by the verifier's key so
+            // any wallet can verify it via the verifier's published JWKS
+            JWSAlgorithm algorithm = verifierKey instanceof com.nimbusds.jose.jwk.OctetKeyPair
+                    ? JWSAlgorithm.EdDSA : JWSAlgorithm.ES256;
+            JWSHeader header = new JWSHeader.Builder(algorithm)
+                    .type(new com.nimbusds.jose.JOSEObjectType("oauth-authz-req+jwt"))
+                    .keyID(verifierKey.computeThumbprint().toString())
+                    .build();
+            com.nimbusds.jose.JWSObject jws = new com.nimbusds.jose.JWSObject(header,
+                    new Payload(objectMapper.writeValueAsString(payload)));
+            jws.sign(verifierKey instanceof com.nimbusds.jose.jwk.OctetKeyPair
+                    ? new com.nimbusds.jose.crypto.Ed25519Signer((com.nimbusds.jose.jwk.OctetKeyPair) verifierKey)
+                    : new com.nimbusds.jose.crypto.ECDSASigner((com.nimbusds.jose.jwk.ECKey) verifierKey));
+            return jws.serialize();
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "failed to sign request object");
+        }
+    }
+
+    /**
+     * The verifier's public signing keys, so wallets can verify signed
+     * authorization request objects.
+     */
+    @GetMapping("/{tenantId}/.well-known/jwks.json")
+    public Map<String, Object> verifierJwks(@PathVariable("tenantId") String tenantId) {
+        com.nimbusds.jose.jwk.JWK key = platformApi.getVerifierSigningKey(tenantId);
+        Map<String, Object> jwks = new LinkedHashMap<>();
+        if (key != null) {
+            jwks.put("keys", List.of(key.toPublicJWK().toJSONObject()));
+        } else {
+            jwks.put("keys", List.of());
+        }
+        return jwks;
+    }
+
+    /**
+     * OID4VP direct_post from a remote wallet: the vp_token arrives as
+     * {@code application/x-www-form-urlencoded} parameters ({@code state},
+     * {@code vp_token}, optional {@code presentation_submission}); the
+     * freshness nonce lives in the key-binding JWT, not as a form field.
+     * Per OID4VP §8.2 the response carries only the {@code redirect_uri}
+     * the wallet sends the user's browser to (the verification-result
+     * page).
+     */
+    @PostMapping(value = "/{tenantId}/vp/direct_post",
+            consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public Map<String, Object> verifyPresentationForm(@PathVariable("tenantId") String tenantId,
+                                                      @RequestParam("vp_token") String vpToken,
+                                                      @RequestParam(value = "state", required = false) String state) {
+        VpSubmission submission = new VpSubmission();
+        submission.setState(state);
+        submission.setVpToken(vpToken);
+        Map<String, Object> result = verifyPresentationBody(tenantId, submission, false);
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("redirect_uri",
+                properties.getIssuerBaseUrl() + "/" + tenantId + "/vp/result/" + submission.getState());
+        return response;
+    }
+
+    /**
+     * JSON presentation submission (programmatic verifiers and tests): the
+     * nonce may be carried alongside the vp_token.
+     */
+    @PostMapping(value = "/{tenantId}/vp/direct_post", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Map<String, Object> verifyPresentation(@PathVariable("tenantId") String tenantId,
+                                                  @RequestBody VpSubmission submission) {
+        return verifyPresentationBody(tenantId, submission, true);
+    }
+
+    private Map<String, Object> verifyPresentationBody(String tenantId, VpSubmission submission,
+                                                       boolean requireBodyNonce) {
+        VpRequestContext context = requests.remove(submission == null ? null : submission.getState());
+        if (context == null || !tenantId.equals(context.tenantId) || context.expiresAt < System.currentTimeMillis()) {
+            throw invalid("invalid or expired authorization request state");
+        }
+        boolean claimLevel = context.claimLevelResponse;
+        try {
+            if (requireBodyNonce && !context.nonce.equals(submission.getNonce())) {
+                throw invalid("nonce does not match the authorization request");
+            }
+            // Fleet-wide single-use enforcement: the nonce is consumed here and
+            // never accepted again, even if the request context were replayed
+            // (for form posts the nonce itself is verified inside the KB-JWT)
+            if (!nonceStore.consume(tenantId + ":" + context.nonce)) {
+                throw invalid("nonce was not issued or has already been consumed");
+            }
+            if (submission.getVpToken() == null) {
+                throw invalid("vp_token is missing");
+            }
+            SdJwtPresentation presentation = new SdJwtParser().parse(extractVpToken(context, submission.getVpToken()));
+            Map<String, Object> result = verifyPresentation(tenantId, context, presentation);
+            // kept for the redirect_uri result page the wallet's browser
+            // lands on after a successful direct_post
+            verificationResults.put(submission.getState(),
+                    new VerificationResult(tenantId, result, System.currentTimeMillis() + REQUEST_TTL_MILLIS));
+            return result;
+        } catch (ResponseStatusException e) {
+            if (claimLevel) {
+                // FR-D3: claim-level counterparties receive a deterministic
+                // boolean outcome instead of an error response
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("valid", false);
+                result.put("reason", e.getReason() == null ? e.getMessage() : e.getReason());
+                return result;
+            }
+            throw e;
+        } catch (Exception e) {
+            LOGGER.warn("Presentation rejected: {}", e.getMessage());
+            if (claimLevel) {
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("valid", false);
+                result.put("reason", e.getMessage());
+                return result;
+            }
+            throw invalid(e.getMessage());
+        }
+    }
+
+    /**
+     * The browser landing page after a completed wallet flow: shows the
+     * verification outcome and the disclosed claims (OID4VP §8.2
+     * redirect_uri target).
+     */
+    @GetMapping(value = "/{tenantId}/vp/result/{requestId}", produces = MediaType.TEXT_HTML_VALUE)
+    public ResponseEntity<String> verificationResultPage(@PathVariable("tenantId") String tenantId,
+                                                         @PathVariable("requestId") String requestId) {
+        VerificationResult result = verificationResults.get(requestId);
+        if (result == null || !tenantId.equals(result.tenantId) || result.expiresAt < System.currentTimeMillis()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "unknown or expired verification");
+        }
+        StringBuilder page = new StringBuilder();
+        page.append("<!doctype html><html lang=\"en\"><head><title>Verification result</title></head><body>")
+                .append("<h1>Verification successful</h1>")
+                .append("<p>Tenant <strong>").append(tenantId).append("</strong> verified the presented credential.</p>")
+                .append("<table border=\"1\" cellpadding=\"4\" cellspacing=\"0\"><tr><th>Claim</th><th>Value</th></tr>");
+        for (Map.Entry<String, Object> entry : result.result.entrySet()) {
+            page.append("<tr><td>").append(entry.getKey()).append("</td><td>")
+                    .append(String.valueOf(entry.getValue()).replace("<", "&lt;").replace(">", "&gt;"))
+                    .append("</td></tr>");
+        }
+        page.append("</table></body></html>");
+        return ResponseEntity.ok(page.toString());
+    }
+
+    private Map<String, Object> verifyPresentation(String tenantId, VpRequestContext context,
+                                                   SdJwtPresentation presentation) throws Exception {
+        Map<String, Object> claims = presentation.getClaims();
+        String iss = (String) claims.get("iss");
+        String vct = (String) claims.get("vct");
+        String kid = presentation.getCredential().getHeader().getKeyID();
+        long now = System.currentTimeMillis() / 1000;
+
+        // Signature against the issuer's DID document
+        com.nimbusds.jose.jwk.JWK issuerKey = platformApi.resolveIssuerKey(iss, kid);
+        if (issuerKey == null || !presentation.verifySignature(issuerKey)) {
+            throw invalid("credential signature is invalid or issuer key is unknown");
+        }
+        // Time validity
+        Number exp = (Number) claims.get("exp");
+        Number nbf = (Number) claims.get("nbf");
+        if (exp != null && now >= exp.longValue()) {
+            throw invalid("credential has expired");
+        }
+        if (nbf != null && now < nbf.longValue()) {
+            throw invalid("credential is not yet valid");
+        }
+        // Requested credential type (plain claims map or DCQL query)
+        boolean vctRequested = (context.claims != null && context.claims.containsKey(vct))
+                || (context.dcql != null && context.dcql.matchesVct(vct));
+        if (!vctRequested) {
+            throw invalid("credential type " + vct + " was not requested");
+        }
+        // Revocation status (checked per verification)
+        @SuppressWarnings("unchecked")
+        Map<String, Object> status = (Map<String, Object>) claims.get("status");
+        if (status != null && status.get("status_list") instanceof Map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> statusList = (Map<String, Object>) status.get("status_list");
+            String uri = (String) statusList.get("uri");
+            Number idx = (Number) statusList.get("idx");
+            if (uri != null && idx != null) {
+                if (platformApi.isStatusRevoked(tenantId, uri, idx.intValue())) {
+                    throw invalid("credential is revoked");
+                }
+            }
+        }
+        // Trust registry
+        if (!platformApi.isTrusted(tenantId, iss, vct)) {
+            throw invalid("issuer is not trusted by this verifier");
+        }
+        // Key binding: holder possession, sd_hash, nonce, and audience (the
+        // verifier's client_id, per OID4VP the KB-JWT aud is the verifier
+        // identifier)
+        presentation.verifyKeyBinding(context.nonce, context.clientId, now);
+
+        // DCQL claim matching: path resolution and expected values. In
+        // claim-level mode the outcome per claim is a boolean; otherwise
+        // mismatches reject the presentation.
+        boolean claimLevel = context.claimLevelResponse;
+        Map<String, Object> combinedClaims = new LinkedHashMap<>();
+        combinedClaims.putAll(extractAlwaysDisclosed(claims));
+        combinedClaims.putAll(presentation.getDisclosedClaims());
+        Map<String, Object> claimResults = null;
+        if (context.dcql != null) {
+            if (claimLevel) {
+                claimResults = evaluateDcqlClaims(context.dcql, vct, combinedClaims);
+            } else {
+                verifyDcqlClaims(context.dcql, vct, combinedClaims);
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("valid", true);
+        result.put("issuer", iss);
+        result.put("vct", vct);
+        if (claimLevel) {
+            // FR-D3: the claim-level contract discloses booleans and the
+            // credential expiry only — never claim values or subject data
+            result.put("expiresAt", claims.get("exp"));
+            result.put("claimResults", claimResults == null ? Map.of() : claimResults);
+        } else {
+            result.put("subject", claims.get("sub"));
+            result.put("claims", presentation.getDisclosedClaims());
+            result.put("alwaysDisclosed", extractAlwaysDisclosed(claims));
+        }
+
+        audit(tenantId, iss, vct, (String) claims.get("sub"), result);
+        return result;
+    }
+
+    /**
+     * Claim-level evaluation (FR-D3): each requested claim resolves to a
+     * {@code satisfied} boolean; the verifier learns the outcome without
+     * ever receiving the claim value.
+     */
+    private Map<String, Object> evaluateDcqlClaims(DcqlQueryParser.Query dcql, String vct,
+                                                   Map<String, Object> combinedClaims) {
+        Map<String, Object> results = new LinkedHashMap<>();
+        for (DcqlQueryParser.CredentialQuery credential : dcql.getCredentials()) {
+            if (!vct.equals(credential.getVct())) {
+                continue;
+            }
+            for (DcqlQueryParser.ClaimQuery claim : credential.getClaims()) {
+                String claimPath = String.join(".", claim.getPath());
+                Object actual = resolvePath(combinedClaims, claim.getPath());
+                boolean satisfied = actual != null;
+                if (satisfied && claim.getValues() != null && !claim.getValues().isEmpty()) {
+                    satisfied = false;
+                    for (Object expected : claim.getValues()) {
+                        if (valuesEqual(expected, actual)) {
+                            satisfied = true;
+                            break;
+                        }
+                    }
+                }
+                results.put(claimPath, Map.of("satisfied", satisfied));
+            }
+        }
+        return results;
+    }
+
+    private void verifyDcqlClaims(DcqlQueryParser.Query dcql, String vct, Map<String, Object> combinedClaims) {
+        for (DcqlQueryParser.CredentialQuery credential : dcql.getCredentials()) {
+            if (!vct.equals(credential.getVct())) {
+                continue;
+            }
+            for (DcqlQueryParser.ClaimQuery claim : credential.getClaims()) {
+                String claimPath = String.join(".", claim.getPath());
+                Object actual = resolvePath(combinedClaims, claim.getPath());
+                if (actual == null) {
+                    throw invalid("required claim " + claimPath + " is not disclosed");
+                }
+                if (claim.getValues() != null && !claim.getValues().isEmpty()) {
+                    boolean matched = false;
+                    for (Object expected : claim.getValues()) {
+                        if (valuesEqual(expected, actual)) {
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if (!matched) {
+                        throw invalid("claim " + claimPath + " does not match the expected values");
+                    }
+                }
+            }
+        }
+    }
+
+    private Object resolvePath(Map<String, Object> claims, List<String> path) {
+        Object current = claims;
+        for (String segment : path) {
+            if (!(current instanceof Map)) {
+                return null;
+            }
+            current = ((Map<?, ?>) current).get(segment);
+        }
+        return current;
+    }
+
+    private boolean valuesEqual(Object expected, Object actual) {
+        if (expected == null || actual == null) {
+            return expected == actual;
+        }
+        if (expected instanceof Number && actual instanceof Number) {
+            return ((Number) expected).doubleValue() == ((Number) actual).doubleValue();
+        }
+        return expected.equals(actual);
+    }
+
+    private Map<String, Object> extractAlwaysDisclosed(Map<String, Object> claims) {
+        Map<String, Object> always = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : claims.entrySet()) {
+            String key = entry.getKey();
+            if (!key.equals("vct") && !key.equals("iss") && !key.equals("sub")
+                    && !key.equals("iat") && !key.equals("nbf") && !key.equals("exp")
+                    && !key.equals("status") && !key.equals("cnf")
+                    && !key.equals("_sd") && !key.equals("_sd_alg")) {
+                always.put(key, entry.getValue());
+            }
+        }
+        return always;
+    }
+
+    private void audit(String tenantId, String issuerDid, String vct, String subjectRef,
+                       Map<String, Object> result) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("issuer", issuerDid);
+        payload.put("vct", vct);
+        // claim-level responses carry claimResults (booleans) instead of
+        // disclosed claim values
+        Object claims = result.get("claims") != null ? result.get("claims") : result.get("claimResults");
+        payload.put("claims", claims);
+        try {
+            auditLogService.append("didvpVerified", tenantId, subjectRef, objectMapper.writeValueAsString(payload));
+            meteringService.recordVerification(tenantId, issuerDid, vct, subjectRef,
+                    properties.getVerificationFeeMinorUnits(), properties.getVerificationFeeCurrency());
+        } catch (Exception e) {
+            LOGGER.warn("Audit or metering failed for verification by {}", tenantId, e);
+        }
+    }
+
+    private VpRequestContext requireContext(String tenantId, String requestId) {
+        VpRequestContext context = requests.get(requestId);
+        if (context == null || !tenantId.equals(context.tenantId) || context.expiresAt < System.currentTimeMillis()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "unknown authorization request");
+        }
+        return context;
+    }
+
+    /**
+     * The verifier's client_metadata: the SD-JWT VC formats this edge
+     * accepts (issuer and key-binding signature algorithms).
+     */
+    private Map<String, Object> sdJwtClientMetadata() {
+        Map<String, Object> sdJwtFormats = new LinkedHashMap<>();
+        sdJwtFormats.put("sd-jwt_alg_values", List.of("EdDSA", "ES256"));
+        sdJwtFormats.put("kb-jwt_alg_values", List.of("EdDSA", "ES256"));
+        Map<String, Object> clientMetadata = new LinkedHashMap<>();
+        clientMetadata.put("vp_formats_supported", Map.of("dc+sd-jwt", sdJwtFormats));
+        return clientMetadata;
+    }
+
+    /**
+     * The vp_token of a DCQL presentation may be a JSON object keyed by
+     * credential-query id (whose value is a token or an array of tokens,
+     * OID4VP multiple-credentials form) instead of the bare SD-JWT;
+     * resolve to the single presented token.
+     */
+    private String extractVpToken(VpRequestContext context, String vpToken) throws IOException {
+        String trimmed = vpToken.trim();
+        if (!trimmed.startsWith("{")) {
+            return trimmed;
+        }
+        com.fasterxml.jackson.databind.JsonNode node = objectMapper.readTree(trimmed);
+        if (!node.isObject() || node.isEmpty()) {
+            throw invalid("vp_token object does not carry a credential");
+        }
+        String credentialId = context.dcql != null && !context.dcql.getCredentials().isEmpty()
+                ? context.dcql.getCredentials().get(0).getId() : null;
+        com.fasterxml.jackson.databind.JsonNode selected = credentialId != null ? node.get(credentialId) : null;
+        if (selected == null) {
+            selected = node.iterator().next();
+        }
+        if (selected != null && selected.isArray() && !selected.isEmpty()) {
+            selected = selected.get(0);
+        }
+        if (selected == null || !selected.isTextual()) {
+            throw invalid("vp_token object does not carry a credential token");
+        }
+        return selected.asText();
+    }
+
+    private ResponseStatusException invalid(String message) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    }
+
+    private static final class VpRequestContext {
+        private final String tenantId;
+        private final String clientId;
+        private final String responseUri;
+        private final String nonce;
+        private final Map<String, List<String>> claims;
+        private final DcqlQueryParser.Query dcql;
+        private final Object dcqlQueryJson;
+        private final long expiresAt;
+        /**
+         * The wallet's authorization endpoint, when the browser flow was
+         * used — becomes the signed request object's {@code aud}.
+         */
+        private final String walletEndpoint;
+        /**
+         * Claim-level response mode: the result must carry booleans and
+         * expiry only, never claim values or subject data.
+         */
+        private final boolean claimLevelResponse;
+
+        private VpRequestContext(String tenantId, String clientId, String responseUri, String nonce,
+                                 Map<String, List<String>> claims, DcqlQueryParser.Query dcql,
+                                 Object dcqlQueryJson, long expiresAt) {
+            this(tenantId, clientId, responseUri, nonce, claims, dcql, dcqlQueryJson, expiresAt, null);
+        }
+
+        private VpRequestContext(String tenantId, String clientId, String responseUri, String nonce,
+                                 Map<String, List<String>> claims, DcqlQueryParser.Query dcql,
+                                 Object dcqlQueryJson, long expiresAt, String walletEndpoint) {
+            this(tenantId, clientId, responseUri, nonce, claims, dcql, dcqlQueryJson, expiresAt,
+                    walletEndpoint, false);
+        }
+
+        private VpRequestContext(String tenantId, String clientId, String responseUri, String nonce,
+                                 Map<String, List<String>> claims, DcqlQueryParser.Query dcql,
+                                 Object dcqlQueryJson, long expiresAt, boolean claimLevelResponse) {
+            this(tenantId, clientId, responseUri, nonce, claims, dcql, dcqlQueryJson, expiresAt,
+                    null, claimLevelResponse);
+        }
+
+        private VpRequestContext(String tenantId, String clientId, String responseUri, String nonce,
+                                 Map<String, List<String>> claims, DcqlQueryParser.Query dcql,
+                                 Object dcqlQueryJson, long expiresAt, String walletEndpoint,
+                                 boolean claimLevelResponse) {
+            this.tenantId = tenantId;
+            this.clientId = clientId;
+            this.responseUri = responseUri;
+            this.nonce = nonce;
+            this.claims = claims;
+            this.dcql = dcql;
+            this.dcqlQueryJson = dcqlQueryJson;
+            this.expiresAt = expiresAt;
+            this.walletEndpoint = walletEndpoint;
+            this.claimLevelResponse = claimLevelResponse;
+        }
+    }
+}

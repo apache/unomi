@@ -1,0 +1,353 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260829T082821064Z-971443-75d0710fc785",
+  "runId": "20260829T082821064Z-971443-75d0710fc785",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "candidate_limit_exceeded",
+        "stage": "candidate-select",
+        "target": "itests/target/exam/6b718769-9d00-4234-ac56-83b5697e061e/bin/contrib/karaf-service.sh",
+        "detail": "3 changed reviewable file(s) were not scanned because the limit is 20",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/CoreTutorial.java",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecutionDataClient.java",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecutionDataServer.java",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/MBeanClient.java",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/exam/cfa63bbc-fa49-476b-b6f4-1a02e239a26e/bin/contrib/karaf-service.sh",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "itests/target/exam/6b718769-9d00-4234-ac56-83b5697e061e/bin/contrib/karaf-service.sh",
+        "detail": "candidate_limit_exceeded: 3 changed reviewable file(s) were not scanned because the limit is 20",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/CoreTutorial.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecutionDataClient.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecutionDataServer.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/MBeanClient.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/exam/cfa63bbc-fa49-476b-b6f4-1a02e239a26e/bin/contrib/karaf-service.sh",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "cbfd5926d85d045d417b4dcedf09b52a961a1ca3",
+  "diffHash": "ec89843624f3987e46b7ccb44c3d25668c2fa1f7b16269b564221c879dab93d6",
+  "rulesVersion": "unavailable",
+  "sessionHash": "07679adc850d3b0cb3ae54a843f7a8018bc5a95b49818d1d62fa602a9efdb9f8",
+  "reportRef": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T082821064Z-971443-75d0710fc785.json",
+  "events": [
+    {
+      "eventId": "hook-8174a6810dd1e2a24fbf1eeab102ab03",
+      "findingId": "mimosa-d5e5537495d763cf2795df1e",
+      "type": "finding_observed",
+      "at": "2026-08-29T08:28:21.064Z",
+      "identity": {
+        "projectRelativeFile": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+        "ruleId": "security",
+        "codeEvidenceHash": "0a05dba40f732bfbd6f93a880c6b008ee0e44c68116ec1975c4e03652e60050d",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 82,
+      "endLine": 82,
+      "reasonCode": "observe",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "0a05dba40f732bfbd6f93a880c6b008ee0e44c68116ec1975c4e03652e60050d"
+      },
+      "sequence": 0
+    },
+    {
+      "eventId": "hook-d15fd319f55c520396965102d1a2d0c4",
+      "findingId": "mimosa-8bf00ad5de05b740e7c7dc68",
+      "type": "finding_observed",
+      "at": "2026-08-29T08:28:21.064Z",
+      "identity": {
+        "projectRelativeFile": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+        "ruleId": "security",
+        "codeEvidenceHash": "0caa95ef0c2e2a480141e307a7585b2378ba3649a5424a00e6598854cc2389c7",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 104,
+      "endLine": 104,
+      "reasonCode": "observe",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "0caa95ef0c2e2a480141e307a7585b2378ba3649a5424a00e6598854cc2389c7"
+      },
+      "sequence": 1
+    },
+    {
+      "eventId": "hook-473265384ebceb68950355eb98d4ad3f",
+      "findingId": "mimosa-b591db5a3ba1ba72aed639bc",
+      "type": "finding_observed",
+      "at": "2026-08-29T08:28:21.064Z",
+      "identity": {
+        "projectRelativeFile": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+        "ruleId": "security",
+        "codeEvidenceHash": "e04466598b1e9082aa99497212d4151396e7112ac6c988cd440a99078434dbec",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 133,
+      "endLine": 133,
+      "reasonCode": "observe",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "e04466598b1e9082aa99497212d4151396e7112ac6c988cd440a99078434dbec"
+      },
+      "sequence": 2
+    },
+    {
+      "eventId": "hook-4811ba020453f880c25a4c6befb8336e",
+      "findingId": "mimosa-75f31a6762ad0e28586bde37",
+      "type": "finding_observed",
+      "at": "2026-08-29T08:28:21.064Z",
+      "identity": {
+        "projectRelativeFile": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+        "ruleId": "security",
+        "codeEvidenceHash": "c11c967ad9d075571ec47f9d21f00f65a903e0938c7fb18f50315a8df4e87dd9",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 134,
+      "endLine": 134,
+      "reasonCode": "observe",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "c11c967ad9d075571ec47f9d21f00f65a903e0938c7fb18f50315a8df4e87dd9"
+      },
+      "sequence": 3
+    }
+  ],
+  "observedFindingIds": [
+    "mimosa-d5e5537495d763cf2795df1e",
+    "mimosa-8bf00ad5de05b740e7c7dc68",
+    "mimosa-b591db5a3ba1ba72aed639bc",
+    "mimosa-75f31a6762ad0e28586bde37"
+  ],
+  "verifiedFiles": [
+    {
+      "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/Phase5SchemaBootstrap.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase5SchemaBootstrapTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vp/VerificationController.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-metering/src/main/java/org/apache/unomi/didvc/scc/SccFilingExport.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-metering/src/main/java/org/apache/unomi/didvc/scc/SccFilingExporter.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/scc/SccFilingController.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/config/DidvcEdgeConfiguration.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-metering/src/test/java/org/apache/unomi/didvc/scc/SccFilingExporterTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VpVerificationIntegrationTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/src/test/java/org/apache/unomi/itests/DidvcSmokeIT.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/target/jacoco/doc/examples/java/CoreTutorial.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/target/jacoco/doc/examples/java/ExecutionDataClient.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/target/jacoco/doc/examples/java/ExecutionDataServer.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/target/jacoco/doc/examples/java/MBeanClient.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/target/exam/cfa63bbc-fa49-476b-b6f4-1a02e239a26e/bin/contrib/karaf-service.sh",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-08-29T08:28:21.699Z"
+}

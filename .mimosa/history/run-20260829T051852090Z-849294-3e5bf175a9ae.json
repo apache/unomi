@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260829T051852090Z-849294-3e5bf175a9ae",
+  "runStatus": "inconclusive",
+  "errors": [
+    "candidate-select:itests/src/test/java/org/apache/unomi/itests/DidvcPhase4ResolverIT.java: changed_file_unreadable: observed changed file no longer exists or cannot be read",
+    "candidate-select:didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/wallet/StoredCredential.java: candidate_limit_exceeded: 17 changed reviewable file(s) were not scanned because the limit is 20"
+  ],
+  "target": ".",
+  "revision": "8f76b41584487dbdc4c58aff81d253c4b653c90c",
+  "diffHash": "cc690022c50bccafb5b1561a446947884cd870916d9c892419f09bbf8a8dde89",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-08-29T05:18:52.090Z",
+  "timing": {
+    "startedAt": "2026-08-29T05:18:49.808Z",
+    "completedAt": "2026-08-29T05:18:52.090Z",
+    "durationMs": 2282
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 0,
+    "bySeverity": {},
+    "byStatus": {}
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "changed_file_unreadable": 1,
+      "candidate_limit_exceeded": 1,
+      "project_check_failed": 2
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T051852090Z-849294-3e5bf175a9ae.json"
+}

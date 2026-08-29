@@ -1,0 +1,222 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260829T095046194Z-1017578-c00659b8590d",
+  "runId": "20260829T095046194Z-1017578-c00659b8590d",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/exam/09224145-581f-4ded-9014-402c52551005/bin/contrib/karaf-service.sh",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase6SchemaBootstrapTest.java",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "didvc/didvc-metering/src/test/java/org/apache/unomi/didvc/batch/ManifestBatchProcessorTest.java",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/exam/09224145-581f-4ded-9014-402c52551005/bin/contrib/karaf-service.sh",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase6SchemaBootstrapTest.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "didvc/didvc-metering/src/test/java/org/apache/unomi/didvc/batch/ManifestBatchProcessorTest.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "5f06d210bd3a8e80f1f871fc9747fd684225603f",
+  "diffHash": "18224d27c51cceee2399118f79b9e782302a77a257a06bf96470996773e7fbc3",
+  "rulesVersion": "unavailable",
+  "sessionHash": "07679adc850d3b0cb3ae54a843f7a8018bc5a95b49818d1d62fa602a9efdb9f8",
+  "reportRef": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T095046194Z-1017578-c00659b8590d.json",
+  "events": [
+    {
+      "eventId": "hook-01f5d65c5c116cb437d3cd56c4f9d6dc",
+      "findingId": "mimosa-df21bce647dbd1c26eaab216",
+      "type": "finding_observed",
+      "at": "2026-08-29T09:32:21.333Z",
+      "identity": {
+        "projectRelativeFile": "didvc/scripts/run-didvc-its.sh",
+        "ruleId": "security",
+        "codeEvidenceHash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 26,
+      "endLine": 26,
+      "reasonCode": "advisory",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22"
+      },
+      "sequence": 0
+    },
+    {
+      "eventId": "hook-8d583300bbb857e03255c5e4fd8861d7",
+      "findingId": "mimosa-df21bce647dbd1c26eaab216",
+      "type": "finding_observed",
+      "at": "2026-08-29T09:33:48.391Z",
+      "identity": {
+        "projectRelativeFile": "didvc/scripts/run-didvc-its.sh",
+        "ruleId": "security",
+        "codeEvidenceHash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 21,
+      "endLine": 21,
+      "reasonCode": "advisory",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22"
+      },
+      "sequence": 1
+    },
+    {
+      "eventId": "hook-042ec7b1c31a7fbd96eb89e4f276a66b",
+      "findingId": "mimosa-df21bce647dbd1c26eaab216",
+      "type": "finding_observed",
+      "at": "2026-08-29T09:50:46.194Z",
+      "identity": {
+        "projectRelativeFile": "didvc/scripts/run-didvc-its.sh",
+        "ruleId": "security",
+        "codeEvidenceHash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 76,
+      "endLine": 76,
+      "reasonCode": "observe",
+      "reportedToAgent": false,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22"
+      },
+      "sequence": 2
+    }
+  ],
+  "observedFindingIds": [
+    "mimosa-df21bce647dbd1c26eaab216"
+  ],
+  "verifiedFiles": [
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/m2m/BearerCredentialVerifier.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/m2m/M2mVerificationController.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/EdgeProperties.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-metering/src/main/java/org/apache/unomi/didvc/batch/ManifestRecord.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-metering/src/main/java/org/apache/unomi/didvc/batch/KafkaManifestResultSink.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/Phase6SchemaBootstrap.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/customs/CustomsEdiAdapter.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/customs/CustomsEdiController.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/m2m/M2mVerificationIntegrationTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/scripts/run-didvc-its.sh",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/target/exam/09224145-581f-4ded-9014-402c52551005/bin/contrib/karaf-service.sh",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/src/test/java/org/apache/unomi/itests/DidvcSmokeIT.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase6SchemaBootstrapTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-metering/src/test/java/org/apache/unomi/didvc/batch/ManifestBatchProcessorTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-08-29T09:50:46.815Z"
+}

@@ -1,0 +1,574 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260829T113025022Z-1106504-f7aa4acb38e9",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "candidate-select",
+      "target": "didvc/didvc-openid-gateway/src/main/java/org/apache/unomi/didvc/gateway/DidAnchor.java",
+      "reason": "candidate_limit_exceeded: 18 changed reviewable file(s) were not scanned because the limit is 20"
+    },
+    {
+      "stage": "supply-chain-check",
+      "target": ".",
+      "reason": "spawnSync /usr/bin/node ETIMEDOUT"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 1377,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 35
+    },
+    "change_tracking": {
+      "touched_observed": 27,
+      "touched_retained": 27,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 38,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 38,
+      "selected_files": 20,
+      "limit": 20,
+      "truncated": true
+    },
+    "scanning": {
+      "required_files": 19,
+      "scanned_files": 19,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 1,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 1,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": true
+    },
+    "reason_counts": {
+      "candidate_limit_exceeded": 1,
+      "project_check_failed": 2
+    },
+    "reasons": [
+      {
+        "code": "candidate_limit_exceeded",
+        "stage": "candidate-select",
+        "target": "didvc/didvc-openid-gateway/src/main/java/org/apache/unomi/didvc/gateway/DidAnchor.java",
+        "detail": "18 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "didvc/didvc-openid-gateway/src/main/java/org/apache/unomi/didvc/gateway/DidAnchor.java",
+        "detail": "candidate_limit_exceeded: 18 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "supply-chain-check",
+        "target": ".",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-08-29T11:30:25.022Z",
+  "session_id": "sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd",
+  "target": ".",
+  "revision": "51f6bbec62fe7eec5a3b722088273f9bb437b449",
+  "rules_version": "unavailable",
+  "diff_hash": "715bd84142834c3cb5dc0328e81b84c18acf0703cf2f9ed532d4e8dd1d61ef34",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 20,
+    "changed_files": [
+      {
+        "file": "didvc/didvc-api/src/main/java/org/apache/unomi/didvc/api/items/ReidentificationRequest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 125
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "0b48bc9b81aeab438f6749b2522d2fe3c31d981847c5dd85862ccf543f56d567"
+      },
+      {
+        "file": "didvc/didvc-api/src/main/java/org/apache/unomi/didvc/api/services/SplitKnowledgeCustodian.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 43
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "03200dd68a91c32b05191dcc356bd38cba989f71778e12aea7a9aed6e5a26d50"
+      },
+      {
+        "file": "didvc/didvc-api/src/main/java/org/apache/unomi/didvc/api/services/SplitKnowledgeService.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 104
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "7c899c8a4cf142326c78fde715bc948c26d1bf7e607403eaf9a41ed68d99e474"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/agent/AgentAdmissionController.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 164
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "6c5f3d4e365815aff18ac07b181fe65e69b1db2b181810c347da16c8ba6e7d2d"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/EdgeProperties.java",
+        "ranges": [
+          {
+            "start": 205,
+            "end": 257
+          }
+        ],
+        "before_hash": "f088032310c863f2ff8e4bc5cf072f6e20ba382a64c1b2ed74f8bbe2cb4e5dcf",
+        "after_hash": "3f218831f1ab4592dad3b72c0b4d7cbf03e06f12d3fc99e0a902ab0789ed4eb4"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/gbz185/Gbz185BridgeController.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 176
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "8e988b66ca4c4dbc560edb9136431b9ba946e4ec027cff96c518a154d8d574e1"
+      },
+      {
+        "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/agent/AgentAdmissionIntegrationTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 164
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "1ebcd417978277773333c850df6f1d461b484c8c607ff8130d43961f398ddb6f"
+      },
+      {
+        "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/gbz185/Gbz185BridgeIntegrationTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 197
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "3b84a58a97ba76e7c1b54f85f1f4ce41e2951ed01a2c1f4fd21efe02e1bc1099"
+      },
+      {
+        "file": "didvc/didvc-openid-gateway/pom.xml",
+        "ranges": [
+          {
+            "start": 29,
+            "end": 29
+          },
+          {
+            "start": 31,
+            "end": 66
+          }
+        ],
+        "before_hash": "beb158279856424c323435bb2b16d87a12b929af1d5eb2f17f0a7d4b81bbfaf7",
+        "after_hash": "3d9fca44f4610f3816da5fb2482865841719465e8f3ed78e92dd3e9c9ffebbf1"
+      },
+      {
+        "file": "didvc/didvc-rest/src/test/java/org/apache/unomi/didvc/rest/AdminAuthorizationMatrixTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 125
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "aedbc9b406d1e8046d38f7aaf6f26eaea893783c3a1994c9a1b315ae1d35cbca"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/AgentBindingSchemaBootstrap.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 77
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "e34c6a8e2a378f34fa017b896446da276545cc0ec1454d66df7bb0fc7db48a73"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/InProcessKeyMaterialProvider.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 93
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "3e5ba8e504463e880dcf450f943db949250a83a7d3334e547ad97644db23adf2"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/KeyMaterialProvider.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 59
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "d6c0c0ea78b004556f862f52bed088d6a0a83d6ad9afc4fe872a13920c5e1ff7"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/Pkcs11KeyMaterialProvider.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 215
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "00d7ed0b6fa87857359aff79dfdb37bcd4f18cc22c4c7cf3564f9402fa53aff5"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/SplitKnowledgeServiceImpl.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 153
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "3cf58b4dc8f3e049d50431581cc7d7e3a3698dafe838f2b175b84dd703ac5e22"
+      },
+      {
+        "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Pkcs11KeyMaterialProviderTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 81
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "2c11d0cc41d8d1525bec3daf86ec5eba41f71742654fccb6512c6ebe09a5ead2"
+      },
+      {
+        "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Pkcs11Softhsm2Proof.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 92
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "89dfa48b2aa3df35b2f41ac328777ed68f39c5e5011e8fc4fd9c718f84e6bf48"
+      },
+      {
+        "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/SplitKnowledgeServiceImplTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 131
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "19e7644906e9d22ddc496bad25c722a21c576738edeefff1974aa36778015bc1"
+      },
+      {
+        "file": "didvc/scripts/run-hsm-softhsm2-proof.sh",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 81
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "dec927e030bc0f7afd6d7e30c4994a20ab87730d19ed6486b609a85ec62426d3"
+      },
+      {
+        "file": "itests/src/test/java/org/apache/unomi/itests/DidvcSmokeIT.java",
+        "ranges": [
+          {
+            "start": 30,
+            "end": 30
+          },
+          {
+            "start": 43,
+            "end": 43
+          },
+          {
+            "start": 45,
+            "end": 45
+          },
+          {
+            "start": 313,
+            "end": 398
+          }
+        ],
+        "before_hash": "ae83a795e8f7c4202f36d71393a45fada9fd0b34c1054ac2e49b0a9cc9d31793",
+        "after_hash": "201930e40cec3c193986c0927e87c5f4410f5720aab543039542bd73f253692f"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-08-29T11:30:22.226Z",
+    "completed_at": "2026-08-29T11:30:25.022Z",
+    "duration_ms": 2796,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 2796,
+    "peakMemoryBytes": 178782208,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 19,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 1,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [
+    {
+      "finding_id": "mimosa-6b83b4090a361285dfc4b9d4",
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Pkcs11KeyMaterialProviderTest.java",
+      "line": 109,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "命令注入",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-08-29T10:03:29.859Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "958ad8f7ca6b9db8710f20489b51161a4e0653f18e336a5cd2d82308277ea222",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-34541f18fe794e05ff5d0bde",
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Pkcs11KeyMaterialProviderTest.java",
+      "line": 121,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "命令注入",
+      "status": "blocked",
+      "decision": "deny",
+      "at": "2026-08-29T10:04:03.614Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "fd406a10dcbdadd200034dabf56d4581f46ec280e71294ceac64d7d114ed4a69",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-6b83b4090a361285dfc4b9d4",
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Pkcs11KeyMaterialProviderTest.java",
+      "line": 109,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "命令注入",
+      "status": "fixed_candidate",
+      "decision": "repair_observed",
+      "at": "2026-08-29T10:04:35.436Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "958ad8f7ca6b9db8710f20489b51161a4e0653f18e336a5cd2d82308277ea222",
+        "candidate_before_evidence_hash": "958ad8f7ca6b9db8710f20489b51161a4e0653f18e336a5cd2d82308277ea222",
+        "post_change_evidence_hash_at_previous_location": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-6b83b4090a361285dfc4b9d4",
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Pkcs11KeyMaterialProviderTest.java",
+      "line": 109,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "命令注入",
+      "status": "static_verified",
+      "decision": "static_rescan_passed",
+      "at": "2026-08-29T10:04:35.436Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "958ad8f7ca6b9db8710f20489b51161a4e0653f18e336a5cd2d82308277ea222",
+        "candidate_before_evidence_hash": "958ad8f7ca6b9db8710f20489b51161a4e0653f18e336a5cd2d82308277ea222",
+        "post_change_evidence_hash_at_previous_location": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-34541f18fe794e05ff5d0bde",
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Pkcs11KeyMaterialProviderTest.java",
+      "line": 121,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "命令注入",
+      "status": "fixed_candidate",
+      "decision": "repair_observed",
+      "at": "2026-08-29T10:04:35.436Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "fd406a10dcbdadd200034dabf56d4581f46ec280e71294ceac64d7d114ed4a69",
+        "candidate_before_evidence_hash": "fd406a10dcbdadd200034dabf56d4581f46ec280e71294ceac64d7d114ed4a69",
+        "post_change_evidence_hash_at_previous_location": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-34541f18fe794e05ff5d0bde",
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Pkcs11KeyMaterialProviderTest.java",
+      "line": 121,
+      "rule_id": "security",
+      "severity": "high",
+      "category": "命令注入",
+      "status": "static_verified",
+      "decision": "static_rescan_passed",
+      "at": "2026-08-29T10:04:35.436Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "observed",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "fd406a10dcbdadd200034dabf56d4581f46ec280e71294ceac64d7d114ed4a69",
+        "candidate_before_evidence_hash": "fd406a10dcbdadd200034dabf56d4581f46ec280e71294ceac64d7d114ed4a69",
+        "post_change_evidence_hash_at_previous_location": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "runtime_oracle": false,
+        "verification": {
+          "method": "mimosa-posttool-static-rescan",
+          "finding_absent": true,
+          "runtime_oracle": false
+        }
+      }
+    },
+    {
+      "finding_id": "mimosa-c7763c38b8a141f810eeb780",
+      "file": "didvc/scripts/run-hsm-softhsm2-proof.sh",
+      "line": 80,
+      "severity": "medium",
+      "category": "命令注入",
+      "status": "candidate",
+      "decision": "observe",
+      "at": "2026-08-29T11:30:25.022Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22",
+        "runtime_oracle": false
+      }
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "mimosa-c7763c38b8a141f810eeb780",
+      "file": "didvc/scripts/run-hsm-softhsm2-proof.sh",
+      "line": 80,
+      "end_line": 80,
+      "severity": "medium",
+      "category": "命令注入",
+      "kind": "semgrep",
+      "advisory": true,
+      "status": "candidate",
+      "evidence_boundary": "candidate",
+      "evidence": [
+        {
+          "kind": "static_scan",
+          "boundary": "candidate",
+          "producer": "deterministic",
+          "source": "semgrep",
+          "file": "didvc/scripts/run-hsm-softhsm2-proof.sh",
+          "line": 80,
+          "evidence_hash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22",
+          "runtime_oracle": false
+        }
+      ],
+      "already_reported_to_agent": false,
+      "selected_for_rewake": false
+    }
+  ],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T113025022Z-1106504-f7aa4acb38e9.json",
+    "latest_report": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd.json",
+    "history_summary": ".mimosa/history/run-20260829T113025022Z-1106504-f7aa4acb38e9.json"
+  }
+}
