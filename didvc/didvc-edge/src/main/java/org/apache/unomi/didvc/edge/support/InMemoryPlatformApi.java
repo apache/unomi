@@ -275,6 +275,12 @@ public class InMemoryPlatformApi implements PlatformApi {
     }
 
     private String vctForSchema(String schemaId) {
+        if ("hkt-profcred-v1".equals(schemaId)) {
+            return "hkt_profcred_v1";
+        }
+        if ("hkt-residency-v1".equals(schemaId)) {
+            return "hkt_residency_v1";
+        }
         return "hkt_kyc_v1";
     }
 

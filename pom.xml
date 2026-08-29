@@ -701,6 +701,10 @@
                                 <exclude>**/dependency_tree.txt</exclude>
                                 <!-- exclude Cursor IDE files -->
                                 <exclude>.cursor/**</exclude>
+                                <!-- agent tooling state directories (mimosa security-scan
+                                     state, video-agent plugin state — not project source) -->
+                                <exclude>.mimosa/**</exclude>
+                                <exclude>.video_agent/**</exclude>
                                 <!-- local developer notes (not part of the release) -->
                                 <exclude>**/.local-notes/**</exclude>
                                 <!-- exclude ElasticSearch snapshots repository -->

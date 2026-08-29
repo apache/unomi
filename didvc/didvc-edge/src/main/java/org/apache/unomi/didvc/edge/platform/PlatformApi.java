@@ -217,6 +217,7 @@ public interface PlatformApi {
         private String kid;
         private String verifierCategory;
         private String holderPublicJwkJson;
+        private String format;
         private Integer validityDays;
         private Map<String, Object> alwaysDisclosedClaims;
         private Map<String, Object> selectivelyDisclosedClaims;
@@ -275,6 +276,18 @@ public interface PlatformApi {
 
         public void setHolderPublicJwkJson(String holderPublicJwkJson) {
             this.holderPublicJwkJson = holderPublicJwkJson;
+        }
+
+        /**
+         * Requested credential format ({@code dc+sd-jwt} or {@code ldp_vc});
+         * null selects the platform default.
+         */
+        public String getFormat() {
+            return format;
+        }
+
+        public void setFormat(String format) {
+            this.format = format;
         }
 
         public Integer getValidityDays() {

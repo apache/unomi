@@ -183,4 +183,28 @@ class IssuanceServiceImplTest {
         assertTrue(issuanceService.isCredentialRevoked(record.getItemId()));
         assertTrue(issuanceService.getCredential(record.getItemId()).isRevoked());
     }
+
+    @Test
+    void explicitFormatSelectsRegisteredFormatter() {
+        org.apache.unomi.didvc.api.CredentialFormatter ldpVc =
+                org.mockito.Mockito.mock(org.apache.unomi.didvc.api.CredentialFormatter.class);
+        org.mockito.Mockito.when(ldpVc.getFormat()).thenReturn("ldp_vc");
+        org.mockito.Mockito.when(ldpVc.format(org.mockito.ArgumentMatchers.any())).thenReturn("ldp-credential");
+        ((IssuanceServiceImpl) issuanceService).addFormatter(ldpVc);
+
+        CredentialIssueRequest request = kycRequest();
+        request.setFormat("ldp_vc");
+        var record = issuanceService.issueCredential(request);
+        assertEquals("ldp_vc", record.getFormat());
+        assertEquals("ldp-credential", record.getCredential());
+
+        ((IssuanceServiceImpl) issuanceService).removeFormatter(ldpVc);
+    }
+
+    @Test
+    void unknownFormatRejected() {
+        CredentialIssueRequest request = kycRequest();
+        request.setFormat("nonexistent-format");
+        assertThrows(IllegalArgumentException.class, () -> issuanceService.issueCredential(request));
+    }
 }

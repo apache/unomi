@@ -102,10 +102,13 @@ Design notes:
   before expiry or on identity change (e.g. SIM re-registration) —
   FR-C5.
 
-## 4. Worked example 2 — professional credential (`hkt_profcred_v1`, planned T-4.3)
+## 4. Worked example 2 — professional credential (`hkt_profcred_v1`, T-4.3 done)
 
 People-flow qualification checks by employers/universities (FR-P1).
-Follows the KYC pattern — category over document:
+Follows the KYC pattern — category over document. This schema is
+bootstrapped automatically by the platform (`Phase4SchemaBootstrap`),
+and the professional-body issuer tenant settings are documented in
+[`professional-body-tenant-config.json`](professional-body-tenant-config.json):
 
 ```json
 {
@@ -128,7 +131,7 @@ Coded reference (`qualificationCode`, `issuingBody`) instead of free-text
 qualification transcripts; no holder PII beyond what the pairwise
 `sub` already provides.
 
-## 5. Worked example 3 — residency (`hkt_residency_v1`, planned T-4.3)
+## 5. Worked example 3 — residency (`hkt_residency_v1`, T-4.3 done)
 
 ```json
 {

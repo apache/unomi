@@ -70,6 +70,10 @@ public class OpenSearchITBackend implements PersistenceITBackend {
                         "unomi-groovy-actions",
                         "unomi-rest-ui",
                         "cdp-graphql-feature",
+                        // Installed explicitly (not via the distribution feature's
+                        // async dependency deployment) so the DID-VC bundles are
+                        // in place before the PaxExam probe starts running tests
+                        "unomi-did-vc",
                         "unomi-startup-complete"
                 ),
                 features(

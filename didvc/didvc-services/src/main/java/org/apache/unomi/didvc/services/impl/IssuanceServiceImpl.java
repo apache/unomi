@@ -35,11 +35,13 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -70,6 +72,11 @@ public class IssuanceServiceImpl implements IssuanceService {
     private CredentialFormatter defaultFormatter;
     @Reference(cardinality = ReferenceCardinality.OPTIONAL)
     private EventService eventService;
+    /**
+     * All registered credential formatters (SD-JWT, JSON-LD, …); a request's
+     * {@code format} selects among them, null selects the default.
+     */
+    private final List<CredentialFormatter> formatters = new java.util.concurrent.CopyOnWriteArrayList<>();
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -95,15 +102,26 @@ public class IssuanceServiceImpl implements IssuanceService {
         this.defaultFormatter = defaultFormatter;
     }
 
+    /**
+     * OSGi DS bind method for the multi-cardinality formatter reference;
+     * also usable from tests to register formatters directly.
+     */
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+    public void addFormatter(CredentialFormatter formatter) {
+        formatters.add(formatter);
+    }
+
+    public void removeFormatter(CredentialFormatter formatter) {
+        formatters.remove(formatter);
+    }
+
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }
 
     @Override
     public CredentialRecord issueCredential(CredentialIssueRequest request) {
-        if (defaultFormatter == null) {
-            throw new IllegalStateException("No default credential formatter (didvc.format=vc+sd-jwt) is bound");
-        }
+        CredentialFormatter formatter = selectFormatter(request);
         DidSchema schema = schemaService.getSchema(request.getSchemaId());
         if (schema == null) {
             throw new IllegalArgumentException("Unknown schema: " + request.getSchemaId());
@@ -130,7 +148,7 @@ public class IssuanceServiceImpl implements IssuanceService {
         }
 
         CredentialIssueRequest effective = copyWithStatus(request, statusIndex, statusListUri);
-        String credential = defaultFormatter.format(effective);
+        String credential = formatter.format(effective);
 
         CredentialRecord record = new CredentialRecord("didvc-cred-" + UUID.randomUUID());
         record.setSchemaId(request.getSchemaId());
@@ -140,7 +158,7 @@ public class IssuanceServiceImpl implements IssuanceService {
         record.setVerifierCategory(request.getVerifierCategory());
         record.setStatusListId(statusListId);
         record.setStatusListIndex(statusIndex);
-        record.setFormat(defaultFormatter.getFormat());
+        record.setFormat(formatter.getFormat());
         record.setCredential(credential);
         record.setIssuedAt(new Date());
         record.setExpiresAt(new Date(System.currentTimeMillis()
@@ -196,6 +214,7 @@ public class IssuanceServiceImpl implements IssuanceService {
         request.setSubjectType(record.getSubjectType());
         request.setKid(record.getKid());
         request.setVerifierCategory(record.getVerifierCategory());
+        request.setFormat(record.getFormat());
         request.setHolderPublicJwkJson(holderPublicJwkJson);
         long remainingMillis = record.getExpiresAt() == null ? 0 : record.getExpiresAt().getTime() - System.currentTimeMillis();
         request.setValidityDays((int) Math.max(1, remainingMillis / (24L * 3600 * 1000)));
@@ -207,7 +226,7 @@ public class IssuanceServiceImpl implements IssuanceService {
         if (record.getSelectivelyDisclosedClaims() != null) {
             request.getSelectivelyDisclosedClaims().putAll(record.getSelectivelyDisclosedClaims());
         }
-        String credential = defaultFormatter.format(request);
+        String credential = selectFormatter(request).format(request);
         record.setCredential(credential);
         record.setHolderPublicJwkJson(holderPublicJwkJson);
         persistenceService.save(record);
@@ -246,6 +265,27 @@ public class IssuanceServiceImpl implements IssuanceService {
             }
         }
         return statusService.createStatusList(tenantId, issuerDid, DEFAULT_STATUS_PURPOSE, DEFAULT_STATUS_LIST_SIZE);
+    }
+
+    /**
+     * Selects the credential formatter for a request: an explicit
+     * {@code format} picks the matching registered formatter, null picks
+     * the default (SD-JWT) formatter.
+     */
+    private CredentialFormatter selectFormatter(CredentialIssueRequest request) {
+        String format = request.getFormat();
+        if (format == null || format.isEmpty()) {
+            if (defaultFormatter == null) {
+                throw new IllegalStateException("No default credential formatter (didvc.format=vc+sd-jwt) is bound");
+            }
+            return defaultFormatter;
+        }
+        for (CredentialFormatter formatter : formatters) {
+            if (format.equals(formatter.getFormat())) {
+                return formatter;
+            }
+        }
+        throw new IllegalArgumentException("No credential formatter is bound for format " + format);
     }
 
     private CredentialIssueRequest copyWithStatus(CredentialIssueRequest request, int statusIndex, String statusListUri) {

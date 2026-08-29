@@ -29,13 +29,13 @@ See the design and build plan in `.local-notes/hkt-did-vc/`
 
 | Module | Packaging | Status | Purpose |
 |---|---|---|---|
-| `didvc-api` | OSGi bundle | **Phase 1–3** | Domain model (8 item types, event types, DID document) + service interfaces |
+| `didvc-api` | OSGi bundle | **Phase 1–4** | Domain model (8 item types, event types, DID document) + service interfaces (incl. the `DidMethodResolver` SPI and `UniversalDidResolverService`) |
 | `didvc-sd-jwt` | jar | **Phase 2** | SD-JWT (RFC 9901 / SD-JWT VC) builder, parser, key-binding JWT and selective-disclosure verification — shared by services and edge |
-| `didvc-services` | OSGi bundle | **Phase 1–3** | DS components: `DidService` (did:web), `IssuerKeyService` (EdDSA/ES256 JWS), `StatusService` (Bitstring Status List + StatusList2021), `CredentialSchemaService` (claim whitelist), `SdJwtVcFormatter` (vc+sd-jwt), `IssuanceService` (orchestration + consent gating + revocation), `TrustRegistryService`, `PairwiseBindingService`, `ConsentBridgeService`, `CredentialRefreshService`, plus the `issueCredential` rule action (`didvcIssueCredentialAction`) |
-| `didvc-rest` | OSGi bundle | **Phase 2–3** | CXF endpoints: `/didvc/dids`, `/.well-known/did.json`, `/didvc/credentials`, `/didvc/schemas`, `/didvc/statuslists`, `/didvc/trust-entries`, `/didvc/trust-check`, `/didvc/pairwise-bindings`, `/didvc/consent-grants` |
+| `didvc-services` | OSGi bundle | **Phase 1–4** | DS components: `DidService` (did:web), `IssuerKeyService` (EdDSA/ES256 JWS), `StatusService` (Bitstring Status List + StatusList2021), `CredentialSchemaService` (claim whitelist), `SdJwtVcFormatter` (vc+sd-jwt), `JsonLdVcFormatter` (ldp_vc, VC DM 2.0), `IssuanceService` (orchestration + consent gating + revocation, format selection), `TrustRegistryService`, `PairwiseBindingService`, `ConsentBridgeService`, `CredentialRefreshService`, `UniversalDidResolverServiceImpl` + did:key/HTTP method resolvers, `Phase4SchemaBootstrap` (hkt_profcred_v1/hkt_residency_v1), plus the `issueCredential` rule action (`didvcIssueCredentialAction`) |
+| `didvc-rest` | OSGi bundle | **Phase 2–4** | CXF endpoints: `/didvc/dids`, `/.well-known/did.json`, `/didvc/credentials`, `/didvc/schemas`, `/didvc/statuslists`, `/didvc/trust-entries`, `/didvc/trust-check`, `/didvc/pairwise-bindings`, `/didvc/consent-grants`, `/didvc/resolver/{did}` (universal DID resolution) |
 | `didvc-metering` | jar | **Phase 3** | Verification metering (billable records, idempotent billing, Kafka sink) and the immutable hash-chained audit log (in-memory and JDBC stores) |
-| `didvc-edge` | Spring Boot jar | **Phase 2–3** | Credential Edge: OID4VCI issuer (metadata, offers, **pre-authorized-code and authorization-code grants with PKCE**, credential/batch/deferred, nonce) and OID4VP verifier (signed authorization requests with **DCQL queries**, `direct_post`, SD-JWT + key-binding validation, **nonce-store-backed replay protection (in-memory or Redis)**, revocation and trust checks, audit + metering) |
-| `didvc-openid-gateway` | jar | Phase 4 | OpenDID Web2/Web3 gateway placeholder (oracle-contract bridge) |
+| `didvc-edge` | Spring Boot jar | **Phase 2–4** | Credential Edge: OID4VCI issuer (metadata, offers, **pre-authorized-code and authorization-code grants with PKCE**, credential/batch/deferred, nonce), OID4VP verifier (signed authorization requests with **DCQL queries**, `direct_post`, SD-JWT + key-binding validation, **nonce-store-backed replay protection (in-memory or Redis)**, revocation and trust checks, audit + metering) and the **wallet backend API** (`/wallet/...`: offer redemption, credential storage listing, presentation builder) |
+| `didvc-openid-gateway` | jar | Phase 7 | OpenDID Web2/Web3 gateway placeholder (oracle-contract bridge) |
 
 ## Build
 
@@ -74,9 +74,10 @@ codes and access tokens are held locally. In production, swap the
 in-memory audit/metering stores for JDBC (PostgreSQL) and Kafka via
 configuration beans.
 
-## REST API (Phase 2–3)
+## REST API (Phase 2–4)
 
-- `POST /didvc/credentials` — issue (schema whitelist + consent-gated)
+- `POST /didvc/credentials` — issue (schema whitelist + consent-gated;
+  `format` selects the credential formatter, default `dc+sd-jwt`, `ldp_vc` for JSON-LD)
 - `GET /didvc/credentials/{recordId}`, `DELETE` (revoke), `GET .../revoked`
 - `POST /didvc/schemas`, `GET /didvc/schemas[/{schemaId}]`, `DELETE`
 - `POST /didvc/statuslists`, `GET /didvc/statuslists/{id}`,
@@ -86,6 +87,8 @@ configuration beans.
 - `POST /didvc/pairwise-bindings` (returns the verifier-scoped opaque
   reference; profile resolution is never exposed)
 - `POST /didvc/consent-grants`
+- `GET /didvc/resolver/{did}` — universal DID resolution (did:web, did:key,
+  iAM Smart / RealDID drivers, registry stubs)
 - OID4VCI: `GET /{tenant}/.well-known/openid-credential-issuer`,
   `GET /{tenant}/authorize` (authorization-code grant, PKCE),
   `POST /{tenant}/internal/offers`, `POST /{tenant}/token` (both grant
@@ -93,6 +96,19 @@ configuration beans.
   `/deferred-credential`
 - OID4VP: `POST /{tenant}/vp/authorize` (claims map or `dcql_query`),
   `GET /{tenant}/vp/request/{id}`, `POST /{tenant}/vp/direct_post`
+
+## Wallet backend API (Phase 4, on the edge)
+
+- `POST /wallet/{walletId}/offers` — redeem a credential offer
+  (pre-authorized-code grant): token exchange, holder-proof credential
+  request, key binding; holds the delivered credential
+- `GET /wallet/{walletId}/credentials` — storage listing (metadata only)
+- `GET|DELETE /wallet/{walletId}/credentials/{credentialId}`
+- `POST /wallet/{walletId}/presentations` — build a key-bound
+  presentation for a verifier authorization request (`requestUri`) and
+  submit it to the verifier's `direct_post` endpoint; returns the
+  verification result
+- `GET /wallet/{walletId}/jwks` — the wallet's public holder key
 
 ## Conventions
 
@@ -141,10 +157,17 @@ plans for the issuer and verifier modules.
 ## Verification
 
 - Unit/integration tests: `mvn -pl bom,didvc/didvc-sd-jwt,didvc/didvc-metering,didvc/didvc-api,didvc/didvc-services,didvc/didvc-rest,didvc/didvc-edge -am test`
-  (112 tests).
-- Live IT against a real Karaf + Elasticsearch container (verified 3/3):
+  (137 tests: api 8, sd-jwt 9, metering 6, services 89, edge 25).
+- Live ITs against a real Karaf + Elasticsearch container (verified 7/7 —
+  the phase 1-3 smoke suite plus phase 4's cross-method resolution tests,
+  all in `DidvcSmokeIT`):
 
 ```bash
 mvn -P integration-tests -pl itests install \
   -Dit.test=DidvcSmokeIT -Dfailsafe.includes=**/DidvcSmokeIT.java
 ```
+
+Run the didvc suite with `didvc/scripts/run-didvc-its.sh` (docker, host
+network, Dockerized Elasticsearch). The IT backends install the
+`unomi-did-vc` feature explicitly so the DID-VC bundles are deployed
+before the PaxExam probe starts.

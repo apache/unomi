@@ -62,6 +62,9 @@ public class CredentialIssuerController {
     private static final String PRE_AUTHORIZED_GRANT = "urn:ietf:params:oauth:grant-type:pre-authorized_code";
     private static final String AUTHORIZATION_CODE_GRANT = "authorization_code";
     private static final long CODE_TTL_MILLIS = 10 * 60 * 1000L;
+    /** Credential configurations the issuer serves (phase 2 KYC + phase 4 People flow). */
+    private static final java.util.Set<String> SUPPORTED_VCTS = java.util.Set.of(
+            "hkt_kyc_v1", "hkt_profcred_v1", "hkt_residency_v1");
 
     private final EdgeProperties properties;
     private final PlatformApi platformApi;
@@ -93,6 +96,7 @@ public class CredentialIssuerController {
         private String kid;
         private String verifierCategory;
         private String holderPublicJwkJson;
+        private String format;
         private Integer validityDays;
         private Map<String, Object> alwaysDisclosedClaims;
         private Map<String, Object> selectivelyDisclosedClaims;
@@ -157,6 +161,18 @@ public class CredentialIssuerController {
             this.holderPublicJwkJson = holderPublicJwkJson;
         }
 
+        /**
+         * Requested credential format ({@code dc+sd-jwt} or {@code ldp_vc});
+         * null selects the platform default.
+         */
+        public String getFormat() {
+            return format;
+        }
+
+        public void setFormat(String format) {
+            this.format = format;
+        }
+
         public Integer getValidityDays() {
             return validityDays;
         }
@@ -213,7 +229,21 @@ public class CredentialIssuerController {
         metadata.put("grant_types_supported", List.of(AUTHORIZATION_CODE_GRANT, PRE_AUTHORIZED_GRANT));
         metadata.put("code_challenge_methods_supported", List.of("S256"));
         metadata.put("credential_configurations_supported", Map.of(
-                "hkt_kyc_v1", credentialConfiguration()));
+                "hkt_kyc_v1", credentialConfiguration("hkt_kyc_v1",
+                        Map.of("kycLevel", Map.of("mandatory", true),
+                                "sanctionsClear", Map.of("mandatory", true),
+                                "givenName", Map.of(),
+                                "nationality", Map.of())),
+                "hkt_profcred_v1", credentialConfiguration("hkt_profcred_v1",
+                        Map.of("qualificationCode", Map.of("mandatory", true),
+                                "issuingBody", Map.of("mandatory", true),
+                                "gradeLevel", Map.of(),
+                                "validUntilYear", Map.of(),
+                                "registrationRegion", Map.of())),
+                "hkt_residency_v1", credentialConfiguration("hkt_residency_v1",
+                        Map.of("residencyStatus", Map.of("mandatory", true),
+                                "jurisdiction", Map.of("mandatory", true),
+                                "validUntil", Map.of()))));
         return metadata;
     }
 
@@ -383,6 +413,7 @@ public class CredentialIssuerController {
         issueRequest.setKid(request.getKid());
         issueRequest.setVerifierCategory(request.getVerifierCategory());
         issueRequest.setHolderPublicJwkJson(request.getHolderPublicJwkJson());
+        issueRequest.setFormat(request.getFormat());
         issueRequest.setValidityDays(request.getValidityDays());
         issueRequest.setAlwaysDisclosedClaims(request.getAlwaysDisclosedClaims());
         issueRequest.setSelectivelyDisclosedClaims(request.getSelectivelyDisclosedClaims());
@@ -798,10 +829,10 @@ public class CredentialIssuerController {
         }
         String requestedVct = vct != null ? String.valueOf(vct) : null;
         String requestedConfigId = configId != null ? String.valueOf(configId) : null;
-        if (requestedVct != null && !"hkt_kyc_v1".equals(requestedVct)) {
+        if (requestedVct != null && !SUPPORTED_VCTS.contains(requestedVct)) {
             return new String[]{"unknown_credential_configuration", "unsupported vct: " + requestedVct};
         }
-        if (requestedConfigId != null && !"hkt_kyc_v1".equals(requestedConfigId)) {
+        if (requestedConfigId != null && !SUPPORTED_VCTS.contains(requestedConfigId)) {
             return new String[]{"unknown_credential_configuration", "unsupported credential configuration: " + requestedConfigId};
         }
         return null;
@@ -874,19 +905,15 @@ public class CredentialIssuerController {
         return false;
     }
 
-    private Map<String, Object> credentialConfiguration() {
+    private Map<String, Object> credentialConfiguration(String vct, Map<String, Object> claims) {
         Map<String, Object> configuration = new LinkedHashMap<>();
         configuration.put("format", "dc+sd-jwt");
-        configuration.put("vct", "hkt_kyc_v1");
+        configuration.put("vct", vct);
         configuration.put("cryptographic_binding_methods_supported", List.of("jwk"));
         configuration.put("credential_signing_alg_values_supported", List.of("EdDSA", "ES256"));
         configuration.put("proof_types_supported", Map.of(
                 "jwt", Map.of("proof_signing_alg_values_supported", List.of("EdDSA", "ES256"))));
-        configuration.put("claims", Map.of(
-                "kycLevel", Map.of("mandatory", true),
-                "sanctionsClear", Map.of("mandatory", true),
-                "givenName", Map.of(),
-                "nationality", Map.of()));
+        configuration.put("claims", claims);
         return configuration;
     }
 

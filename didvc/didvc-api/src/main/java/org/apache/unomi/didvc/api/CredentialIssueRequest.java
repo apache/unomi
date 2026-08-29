@@ -35,6 +35,7 @@ public class CredentialIssueRequest {
     private String kid;
     private String verifierCategory;
     private String holderPublicJwkJson;
+    private String format;
     private int validityDays = 365;
     private int statusListIndex = -1;
     private String statusListUri;
@@ -110,6 +111,18 @@ public class CredentialIssueRequest {
 
     public void setHolderPublicJwkJson(String holderPublicJwkJson) {
         this.holderPublicJwkJson = holderPublicJwkJson;
+    }
+
+    /**
+     * Requested credential format ({@code dc+sd-jwt} or {@code ldp_vc});
+     * null selects the platform's default formatter.
+     */
+    public String getFormat() {
+        return format;
+    }
+
+    public void setFormat(String format) {
+        this.format = format;
     }
 
     public int getValidityDays() {

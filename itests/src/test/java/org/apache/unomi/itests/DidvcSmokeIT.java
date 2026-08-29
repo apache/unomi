@@ -26,6 +26,7 @@ import org.apache.unomi.didvc.api.services.CredentialSchemaService;
 import org.apache.unomi.didvc.api.services.DidService;
 import org.apache.unomi.didvc.api.services.IssuerKeyService;
 import org.apache.unomi.didvc.api.services.StatusService;
+import org.apache.unomi.didvc.api.services.UniversalDidResolverService;
 import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -42,15 +43,23 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 /**
- * Smoke tests for the DID-VC module inside the real Karaf container: service
- * presence and a did:web create/resolve round trip against the live
- * persistence backend.
+ * Tests for the DID-VC module inside the real Karaf container: service
+ * presence, a did:web create/resolve round trip against the live
+ * persistence backend, and (phase 4) cross-method DID resolution — did:web
+ * through the universal resolver, did:key derived in-process, and iAM
+ * Smart/RealDID-style external methods served from stub documents in the
+ * DID-document registry.
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class DidvcSmokeIT extends BaseIT {
 
     private static final String SMOKE_TENANT = "didvc-smoke";
+    private static final String RESOLVER_TENANT = "didvc-resolver";
+
+    /** did:key test vector: ed25519-pub multicodec (0xed 0x01) + bytes 0x01..0x20. */
+    private static final String DID_KEY_VECTOR = "did:key:z6MkeXCES4onVW4up9Qgz1KRnZsKmGufcaZxF6Zpv2w5QwUK";
+    private static final String DID_KEY_VECTOR_X = "AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA";
 
     @After
     public void cleanUp() throws InterruptedException {
@@ -94,5 +103,81 @@ public class DidvcSmokeIT extends BaseIT {
         } catch (IllegalArgumentException expected) {
             // expected: raw PII is not in the allowed claim set
         }
+    }
+
+    // ---- Phase 4: universal DID resolution (T-4.1) ----
+
+    @Test
+    public void universalResolverServiceIsAvailable() {
+        assertNotNull(getOsgiService(UniversalDidResolverService.class, 60000));
+    }
+
+    @Test
+    public void resolvesDidWebThroughUniversalResolver() {
+        DidService didService = getOsgiService(DidService.class, 60000);
+        UniversalDidResolverService resolver = getOsgiService(UniversalDidResolverService.class, 60000);
+        String did = "did:web:resolver.example.hkt:didvc";
+        didService.createDid(RESOLVER_TENANT, "resolver.example.hkt", "didvc", "EdDSA");
+
+        DidDocumentData resolved = resolver.resolve(did);
+        assertNotNull(resolved);
+        assertEquals(did, resolved.getId());
+        assertEquals(1, resolved.getVerificationMethod().size());
+    }
+
+    @Test
+    public void resolvesDidKeyInProcess() {
+        UniversalDidResolverService resolver = getOsgiService(UniversalDidResolverService.class, 60000);
+        DidDocumentData resolved = resolver.resolve(DID_KEY_VECTOR);
+        assertNotNull(resolved);
+        assertEquals(DID_KEY_VECTOR, resolved.getId());
+        assertEquals(java.util.Collections.singletonList("https://www.w3.org/ns/did/v1"), resolved.getContext());
+        assertEquals(1, resolved.getVerificationMethod().size());
+        DidDocumentData.VerificationMethod method = resolved.getVerificationMethod().get(0);
+        assertEquals("JsonWebKey2020", method.getType());
+        assertEquals("OKP", method.getPublicKeyJwk().get("kty"));
+        assertEquals("Ed25519", method.getPublicKeyJwk().get("crv"));
+        assertEquals(DID_KEY_VECTOR_X, method.getPublicKeyJwk().get("x"));
+    }
+
+    @Test
+    public void resolvesExternalMethodsFromStubDocuments() throws Exception {
+        UniversalDidResolverService resolver = getOsgiService(UniversalDidResolverService.class, 60000);
+        com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        DidDocumentData iamSmartStub = stubDocument("did:iamsmart:stub.example.hkt:profile:abc123");
+        DidDocumentRecord iamSmartRecord = new DidDocumentRecord(iamSmartStub.getId());
+        iamSmartRecord.setJson(objectMapper.writeValueAsString(iamSmartStub));
+        iamSmartRecord.setTenantId(RESOLVER_TENANT);
+        iamSmartRecord.setScope("didvc");
+        persistenceService.save(iamSmartRecord);
+
+        DidDocumentData realDidStub = stubDocument("did:realdid:stub.example.hkt:sub:def456");
+        DidDocumentRecord realDidRecord = new DidDocumentRecord(realDidStub.getId());
+        realDidRecord.setJson(objectMapper.writeValueAsString(realDidStub));
+        realDidRecord.setTenantId(RESOLVER_TENANT);
+        realDidRecord.setScope("didvc");
+        persistenceService.save(realDidRecord);
+
+        DidDocumentData resolvedIamSmart = resolver.resolve(iamSmartStub.getId());
+        assertNotNull(resolvedIamSmart);
+        assertEquals(iamSmartStub.getId(), resolvedIamSmart.getId());
+
+        DidDocumentData resolvedRealDid = resolver.resolve(realDidStub.getId());
+        assertNotNull(resolvedRealDid);
+        assertEquals(realDidStub.getId(), resolvedRealDid.getId());
+    }
+
+    private DidDocumentData stubDocument(String did) {
+        DidDocumentData document = new DidDocumentData();
+        document.setContext(java.util.Collections.singletonList("https://www.w3.org/ns/did/v1"));
+        document.setId(did);
+        DidDocumentData.VerificationMethod method = new DidDocumentData.VerificationMethod();
+        method.setId(did + "#stub-key");
+        method.setType("JsonWebKey2020");
+        method.setController(did);
+        method.setPublicKeyJwk(java.util.Map.of("kty", "OKP", "crv", "Ed25519", "x", "stub-material"));
+        document.addVerificationMethod(method);
+        return document;
     }
 }
