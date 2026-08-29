@@ -1,0 +1,845 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260829T082821064Z-971443-75d0710fc785",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "candidate-select",
+      "target": "itests/target/exam/6b718769-9d00-4234-ac56-83b5697e061e/bin/contrib/karaf-service.sh",
+      "reason": "candidate_limit_exceeded: 3 changed reviewable file(s) were not scanned because the limit is 20"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "itests/target/jacoco/doc/examples/java/CoreTutorial.java",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "itests/target/jacoco/doc/examples/java/ExecutionDataClient.java",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "itests/target/jacoco/doc/examples/java/ExecutionDataServer.java",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "itests/target/jacoco/doc/examples/java/MBeanClient.java",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "itests/target/exam/cfa63bbc-fa49-476b-b6f4-1a02e239a26e/bin/contrib/karaf-service.sh",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 1331,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 12
+    },
+    "change_tracking": {
+      "touched_observed": 12,
+      "touched_retained": 12,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 23,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 23,
+      "selected_files": 20,
+      "limit": 20,
+      "truncated": true
+    },
+    "scanning": {
+      "required_files": 20,
+      "scanned_files": 20,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 6,
+      "detailed_findings": 3,
+      "detail_limit": 3,
+      "truncated": true
+    },
+    "reason_counts": {
+      "candidate_limit_exceeded": 1,
+      "baseline_snapshot_unreadable": 8,
+      "project_check_failed": 9
+    },
+    "reasons": [
+      {
+        "code": "candidate_limit_exceeded",
+        "stage": "candidate-select",
+        "target": "itests/target/exam/6b718769-9d00-4234-ac56-83b5697e061e/bin/contrib/karaf-service.sh",
+        "detail": "3 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/CoreTutorial.java",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecutionDataClient.java",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecutionDataServer.java",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/MBeanClient.java",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/exam/cfa63bbc-fa49-476b-b6f4-1a02e239a26e/bin/contrib/karaf-service.sh",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "itests/target/exam/6b718769-9d00-4234-ac56-83b5697e061e/bin/contrib/karaf-service.sh",
+        "detail": "candidate_limit_exceeded: 3 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/CoreTutorial.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecutionDataClient.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ExecutionDataServer.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/MBeanClient.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/exam/cfa63bbc-fa49-476b-b6f4-1a02e239a26e/bin/contrib/karaf-service.sh",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-08-29T08:28:21.064Z",
+  "session_id": "sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd",
+  "target": ".",
+  "revision": "cbfd5926d85d045d417b4dcedf09b52a961a1ca3",
+  "rules_version": "unavailable",
+  "diff_hash": "ec89843624f3987e46b7ccb44c3d25668c2fa1f7b16269b564221c879dab93d6",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 20,
+    "changed_files": [
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/config/DidvcEdgeConfiguration.java",
+        "ranges": [
+          {
+            "start": 27,
+            "end": 27
+          },
+          {
+            "start": 70,
+            "end": 74
+          }
+        ],
+        "before_hash": "b3bf12b20aeaf45695399eef3ac73df94a250e759d6a91fa316bcbd23c75ef2b",
+        "after_hash": "4ec0de678b8550717c332fdd23e55fc066c5fa05b16cdd0e8a409f145bfc31dd"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/scc/SccFilingController.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 59
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "55f839000b83d681de51bda54414cfa26c6881c661c0b938387554afc219e736"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+        "ranges": [
+          {
+            "start": 284,
+            "end": 289
+          }
+        ],
+        "before_hash": "bc5e842ab717cf91f7745340ea76aabf186373d5fe1ed4944210b49694db08c3",
+        "after_hash": "14985cbf5e4f6dbd1f7e7e1bafca475a5e0b185830dbc09802fd2701cf832f09"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+        "ranges": [
+          {
+            "start": 65,
+            "end": 65
+          },
+          {
+            "start": 67,
+            "end": 68
+          },
+          {
+            "start": 232,
+            "end": 254
+          }
+        ],
+        "before_hash": "f85872c5de01f71b32d6dd77990d9fdd4b1855fff8e2254ae020943438c2c450",
+        "after_hash": "2f245dc45ffeefec4838dd5bccb66da9b1d3bb3e482a97310341ccc95400f4d6"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vp/VerificationController.java",
+        "ranges": [
+          {
+            "start": 119,
+            "end": 119
+          },
+          {
+            "start": 164,
+            "end": 179
+          },
+          {
+            "start": 239,
+            "end": 239
+          },
+          {
+            "start": 449,
+            "end": 449
+          },
+          {
+            "start": 451,
+            "end": 462
+          },
+          {
+            "start": 471,
+            "end": 478
+          },
+          {
+            "start": 482,
+            "end": 487
+          },
+          {
+            "start": 569,
+            "end": 576
+          },
+          {
+            "start": 578,
+            "end": 582
+          },
+          {
+            "start": 589,
+            "end": 598
+          },
+          {
+            "start": 604,
+            "end": 634
+          },
+          {
+            "start": 702,
+            "end": 705
+          },
+          {
+            "start": 784,
+            "end": 788
+          },
+          {
+            "start": 799,
+            "end": 813
+          },
+          {
+            "start": 823,
+            "end": 823
+          }
+        ],
+        "before_hash": "ff65f55fb8d8909d52174f102c23050e80a8f43ccc7408f35cc8deffcc1b4a0e",
+        "after_hash": "055760d2768ab1cce17245c18c0bdfa7b9b2a34dbab956b1211fe43650f5b070"
+      },
+      {
+        "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VpVerificationIntegrationTest.java",
+        "ranges": [
+          {
+            "start": 353,
+            "end": 484
+          }
+        ],
+        "before_hash": "e606f11ce2e15f7d48928e318eba25c189f33c94c2533febf1bdcab17d28344c",
+        "after_hash": "461ef9245796de0ecb1a9e3566ff767b6831ea55c159ee667e5fadd5f437f890"
+      },
+      {
+        "file": "didvc/didvc-metering/src/main/java/org/apache/unomi/didvc/scc/SccFilingExport.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 137
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "7fd367ee03cbb8f60af65c313f844801180fa0af939f67aaeafac4f84779e20a"
+      },
+      {
+        "file": "didvc/didvc-metering/src/main/java/org/apache/unomi/didvc/scc/SccFilingExporter.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 126
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "bcdbe7e4d9d3e8f6ef44ef5c0d103c663ac658988f434d44562c3265ffefa90f"
+      },
+      {
+        "file": "didvc/didvc-metering/src/test/java/org/apache/unomi/didvc/scc/SccFilingExporterTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 136
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "8ceaf56efc8a23c38c5d33fe05225dee87a30e32b0474728d36801d9678b30f8"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/Phase5SchemaBootstrap.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 107
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "5c1e974224fe943abc82a07f203980f9fb450caa7e5bb963d55927e815e9619d"
+      },
+      {
+        "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase5SchemaBootstrapTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 133
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "41cfca4da155fb8ad4a0f09faa793a5f202d0ca031b331837fbf51ce56b83fcc"
+      },
+      {
+        "file": "itests/src/test/java/org/apache/unomi/itests/DidvcSmokeIT.java",
+        "ranges": [
+          {
+            "start": 183,
+            "end": 252
+          }
+        ],
+        "before_hash": "302875f155c0cd0bf52c3c238e7b89d272d9a64b689716c076cabf4edbafe2c3",
+        "after_hash": "6c8b6b761d0aac3ca6532e4f48285abce1ca5991c0dbb78c9b1defd69f731090"
+      },
+      {
+        "file": "itests/target/exam/cfa63bbc-fa49-476b-b6f4-1a02e239a26e/bin/contrib/karaf-service.sh",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 208
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "205119e505023d89561f89a07582ebb5dda0d9d7f1276cb4f171a69f63f207d3"
+      },
+      {
+        "file": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 85
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "2612a16ae632e4b9bceb10f680657d81476314d5572b4ee6924d78f063033eca"
+      },
+      {
+        "file": "itests/target/jacoco/doc/examples/java/CoreTutorial.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 203
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "b787a53fca53766f0a6331d6acc50c785a5e1100f437c938c8ea8babec03f49d"
+      },
+      {
+        "file": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 106
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "aba50bc6f86536570c5055621922ccf172a88577af4ef5d62723d943aff4c868"
+      },
+      {
+        "file": "itests/target/jacoco/doc/examples/java/ExecutionDataClient.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 69
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "3fcf436e5cebd9036727666b6ffbc7d7ded8f6c19a2406b5384d99ba8ecf80ef"
+      },
+      {
+        "file": "itests/target/jacoco/doc/examples/java/ExecutionDataServer.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 111
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "92aa111be6cbdf5b04c5a3740433586f301fcef8802a6dc6f175883b06469db4"
+      },
+      {
+        "file": "itests/target/jacoco/doc/examples/java/MBeanClient.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 83
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "dea0f7dcafea7e2de516bf69df0ccd933750a85958d6990d9e477036ca3c2bab"
+      },
+      {
+        "file": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 139
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "13c2cc965c7b1d09c0a98204ed3a13308b97ed3c80088e3be205a0d05bb9e36c"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-08-29T08:28:18.456Z",
+    "completed_at": "2026-08-29T08:28:21.064Z",
+    "duration_ms": 2608,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 2608,
+    "peakMemoryBytes": 193740800,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 20,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 6,
+  "rewake_finding_count": 2,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [
+    {
+      "finding_id": "mimosa-d5e5537495d763cf2795df1e",
+      "file": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+      "line": 82,
+      "severity": "high",
+      "category": "安全风险",
+      "status": "blocked",
+      "decision": "stop_rewake",
+      "at": "2026-08-29T08:28:21.064Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "0a05dba40f732bfbd6f93a880c6b008ee0e44c68116ec1975c4e03652e60050d",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-d5e5537495d763cf2795df1e",
+      "file": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+      "line": 82,
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "blocked",
+      "decision": "stop_rewake",
+      "at": "2026-08-29T08:28:21.064Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "0a05dba40f732bfbd6f93a880c6b008ee0e44c68116ec1975c4e03652e60050d",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-8bf00ad5de05b740e7c7dc68",
+      "file": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+      "line": 104,
+      "severity": "high",
+      "category": "安全风险",
+      "status": "blocked",
+      "decision": "stop_rewake",
+      "at": "2026-08-29T08:28:21.064Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "0caa95ef0c2e2a480141e307a7585b2378ba3649a5424a00e6598854cc2389c7",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-8bf00ad5de05b740e7c7dc68",
+      "file": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+      "line": 104,
+      "severity": "high",
+      "category": "SQL 注入",
+      "status": "blocked",
+      "decision": "stop_rewake",
+      "at": "2026-08-29T08:28:21.064Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "0caa95ef0c2e2a480141e307a7585b2378ba3649a5424a00e6598854cc2389c7",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-b591db5a3ba1ba72aed639bc",
+      "file": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+      "line": 133,
+      "severity": "high",
+      "category": "路径穿越",
+      "status": "candidate",
+      "decision": "observe",
+      "at": "2026-08-29T08:28:21.064Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "e04466598b1e9082aa99497212d4151396e7112ac6c988cd440a99078434dbec",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-75f31a6762ad0e28586bde37",
+      "file": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+      "line": 134,
+      "severity": "high",
+      "category": "路径穿越",
+      "status": "candidate",
+      "decision": "observe",
+      "at": "2026-08-29T08:28:21.064Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "c11c967ad9d075571ec47f9d21f00f65a903e0938c7fb18f50315a8df4e87dd9",
+        "runtime_oracle": false
+      }
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "mimosa-d5e5537495d763cf2795df1e",
+      "file": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+      "line": 82,
+      "end_line": 82,
+      "severity": "high",
+      "category": "安全风险",
+      "kind": "semgrep",
+      "advisory": false,
+      "status": "blocked",
+      "evidence_boundary": "candidate",
+      "evidence": [
+        {
+          "kind": "static_scan",
+          "boundary": "candidate",
+          "producer": "deterministic",
+          "source": "semgrep",
+          "file": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+          "line": 82,
+          "evidence_hash": "0a05dba40f732bfbd6f93a880c6b008ee0e44c68116ec1975c4e03652e60050d",
+          "runtime_oracle": false
+        }
+      ],
+      "already_reported_to_agent": false,
+      "selected_for_rewake": true
+    },
+    {
+      "finding_id": "mimosa-d5e5537495d763cf2795df1e",
+      "file": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+      "line": 82,
+      "end_line": 82,
+      "severity": "high",
+      "category": "SQL 注入",
+      "kind": "semgrep",
+      "advisory": false,
+      "status": "blocked",
+      "evidence_boundary": "candidate",
+      "evidence": [
+        {
+          "kind": "static_scan",
+          "boundary": "candidate",
+          "producer": "deterministic",
+          "source": "semgrep",
+          "file": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+          "line": 82,
+          "evidence_hash": "0a05dba40f732bfbd6f93a880c6b008ee0e44c68116ec1975c4e03652e60050d",
+          "runtime_oracle": false
+        }
+      ],
+      "already_reported_to_agent": false,
+      "selected_for_rewake": true
+    },
+    {
+      "finding_id": "mimosa-8bf00ad5de05b740e7c7dc68",
+      "file": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+      "line": 104,
+      "end_line": 104,
+      "severity": "high",
+      "category": "安全风险",
+      "kind": "semgrep",
+      "advisory": false,
+      "status": "blocked",
+      "evidence_boundary": "candidate",
+      "evidence": [
+        {
+          "kind": "static_scan",
+          "boundary": "candidate",
+          "producer": "deterministic",
+          "source": "semgrep",
+          "file": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+          "line": 104,
+          "evidence_hash": "0caa95ef0c2e2a480141e307a7585b2378ba3649a5424a00e6598854cc2389c7",
+          "runtime_oracle": false
+        }
+      ],
+      "already_reported_to_agent": false,
+      "selected_for_rewake": true
+    },
+    {
+      "finding_id": "mimosa-8bf00ad5de05b740e7c7dc68",
+      "file": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+      "line": 104,
+      "end_line": 104,
+      "severity": "high",
+      "category": "SQL 注入",
+      "kind": "semgrep",
+      "advisory": false,
+      "status": "blocked",
+      "evidence_boundary": "candidate",
+      "evidence": [
+        {
+          "kind": "static_scan",
+          "boundary": "candidate",
+          "producer": "deterministic",
+          "source": "semgrep",
+          "file": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+          "line": 104,
+          "evidence_hash": "0caa95ef0c2e2a480141e307a7585b2378ba3649a5424a00e6598854cc2389c7",
+          "runtime_oracle": false
+        }
+      ],
+      "already_reported_to_agent": false,
+      "selected_for_rewake": true
+    },
+    {
+      "finding_id": "mimosa-b591db5a3ba1ba72aed639bc",
+      "file": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+      "line": 133,
+      "end_line": 133,
+      "severity": "high",
+      "category": "路径穿越",
+      "kind": "semgrep",
+      "advisory": false,
+      "status": "candidate",
+      "evidence_boundary": "candidate",
+      "evidence": [
+        {
+          "kind": "static_scan",
+          "boundary": "candidate",
+          "producer": "deterministic",
+          "source": "semgrep",
+          "file": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+          "line": 133,
+          "evidence_hash": "e04466598b1e9082aa99497212d4151396e7112ac6c988cd440a99078434dbec",
+          "runtime_oracle": false
+        }
+      ],
+      "already_reported_to_agent": false,
+      "selected_for_rewake": false
+    },
+    {
+      "finding_id": "mimosa-75f31a6762ad0e28586bde37",
+      "file": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+      "line": 134,
+      "end_line": 134,
+      "severity": "high",
+      "category": "路径穿越",
+      "kind": "semgrep",
+      "advisory": false,
+      "status": "candidate",
+      "evidence_boundary": "candidate",
+      "evidence": [
+        {
+          "kind": "static_scan",
+          "boundary": "candidate",
+          "producer": "deterministic",
+          "source": "semgrep",
+          "file": "itests/target/jacoco/doc/examples/java/ReportGenerator.java",
+          "line": 134,
+          "evidence_hash": "c11c967ad9d075571ec47f9d21f00f65a903e0938c7fb18f50315a8df4e87dd9",
+          "runtime_oracle": false
+        }
+      ],
+      "already_reported_to_agent": false,
+      "selected_for_rewake": false
+    }
+  ],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T082821064Z-971443-75d0710fc785.json",
+    "latest_report": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd.json",
+    "history_summary": ".mimosa/history/run-20260829T082821064Z-971443-75d0710fc785.json"
+  }
+}

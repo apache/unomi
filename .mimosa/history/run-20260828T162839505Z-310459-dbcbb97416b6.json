@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260828T162839505Z-310459-dbcbb97416b6",
+  "runStatus": "inconclusive",
+  "errors": [
+    "scan:didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:didvc/scripts/drive-openid-plan.py: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VciAuthorizationCodeFlowTest.java: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:didvc/scripts/run-openid-conformance.sh: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vp/VerificationController.java: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:didvc/interop/wallet-roundtrip.ts: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT",
+    "scan:didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java: scanner_failed: spawnSync /usr/bin/node ETIMEDOUT"
+  ],
+  "target": ".",
+  "revision": "3be3228e817b530528b595078bef72b41b5064fb",
+  "diffHash": "508348278e62cc93f34ae67d8e83c842619c847e50c948636f998a6795e04be8",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-08-28T16:28:39.505Z",
+  "timing": {
+    "startedAt": "2026-08-28T16:28:36.765Z",
+    "completedAt": "2026-08-28T16:28:39.505Z",
+    "durationMs": 2740
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 0,
+    "bySeverity": {},
+    "byStatus": {}
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "scanner_failed": 7,
+      "project_check_failed": 7
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_030add6b-eeb7-4903-97bd-d3763f70220a-20260828T162839505Z-310459-dbcbb97416b6.json"
+}

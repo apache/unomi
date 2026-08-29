@@ -1,0 +1,90 @@
+---
+description: Generic workflow for backporting changes from a source branch to a target branch without regressions
+alwaysApply: true
+---
+
+# Branch backport rules (generic — mandatory)
+
+Use whenever porting work **from a source branch to a target branch** (release line, long-lived dev branch, stacked PR parent, etc.).
+
+Set branch names once per task (examples: `SOURCE=feature/x` `TARGET=main`, or `SOURCE=unomi-3-dev` `TARGET=master`):
+
+```bash
+cd "$(git rev-parse --show-toplevel)"
+git fetch origin
+SOURCE=<source-branch>   # where the change lives today
+TARGET=<target-branch>   # where it must land (canonical for existing files)
+```
+
+Repo-specific overlays (e.g. UNOMI-875): `.cursor/rules/unomi-3-dev-backport.mdc` — read **after** this file when applicable.
+
+## Never do this
+
+- **Never** `git checkout origin/$SOURCE -- <path>` on files that **already exist on** `origin/$TARGET`.
+- **Never** assume “file differs on source ⇒ target is missing it” — the target often has **review-only fixes** the source never received.
+- **Never** `git cherry-pick` commits from `$SOURCE` history onto `$TARGET` for bulk backport work without per-commit review (source history is often pre-merge noise).
+- **Never** downgrade pinned versions on `$TARGET` (images, BOM, lockfiles) to match `$SOURCE` without explicit review.
+
+## Always do this
+
+1. **Branch from** `origin/$TARGET` (or current stack parent), not from `$SOURCE`.
+2. **Inventory:** `git diff --stat origin/$TARGET origin/$SOURCE -- <paths>` — size only; not a port list.
+3. **Commit history audit** on every path that exists on `$TARGET` — see below.
+4. **Classify each path:** ADD (new on target) · MODIFY (exists on target) · MERGE (build/CI/deps — both sides changed).
+5. **Port:**
+   - **ADD:** `git checkout origin/$SOURCE -- <new-file>` is OK if the file is absent on `$TARGET`.
+   - **MODIFY:** start from `origin/$TARGET`; apply additive hunks from `$SOURCE` by hand.
+   - **MERGE:** never replace whole file; keep `$TARGET`-only lines while adding `$SOURCE` features.
+6. **Pre-commit diff audit** on every modified existing file — see below.
+7. **Build/test** affected modules before opening PR; state in PR body that history + diff audits were run.
+
+## Commit history audit (MODIFY / MERGE)
+
+> Read **`$TARGET` history** to protect review work. Do **not** use `$SOURCE` commit SHAs as a port shortcut.
+
+```bash
+PATH=path/to/file
+
+# Target-only commits (review PRs, bugfixes never merged to source):
+git log origin/$SOURCE..origin/$TARGET --oneline -- "$PATH"
+
+# Recent target context (PR numbers in subjects):
+git log origin/$TARGET -20 --oneline -- "$PATH"
+
+# If your branch deletes lines, trace them on target:
+git diff origin/$TARGET -- "$PATH"
+git blame origin/$TARGET -L <start>,<end> -- "$PATH"
+git log -1 --format='%h %s (%ci)' <commit-from-blame>
+```
+
+| Signal | Interpret |
+|---|---|
+| Non-empty `origin/$SOURCE..origin/$TARGET` log | Target has fixes source lacks — **do not overwrite** file from source |
+| Empty target-only log | Still run diff audit; may be safe ADD or symmetric drift |
+| Non-empty target-only log **and** substantive removals in your branch | **STOP** — read those commits before continuing |
+
+Optional: `git log origin/$TARGET..origin/$SOURCE --oneline -- "$PATH"` lists what source added — candidate material, **not** a license to blind checkout.
+
+## Pre-commit diff regression audit
+
+```bash
+PATH=path/to/file
+
+# What target has that source lacks (fixes we must keep):
+git diff origin/$SOURCE origin/$TARGET -- "$PATH"
+
+# What our branch removes from target (should be empty or whitespace/comments only):
+git diff origin/$TARGET -- "$PATH" | rg '^-' | rg -v '^---|^-import |^-package |^-\s*$|^- \*|^-\s*/\*|^-\s*\*'
+
+# Gate: substantive removal count (threshold ~5 → investigate)
+git diff origin/$TARGET -- "$PATH" | rg '^-' | rg -v '^---|^-import |^-package |^-\s*$|^- \*|^-\s*/\*|^-\s*\*' | wc -l
+```
+
+Cross-check: if target-only log is non-empty **and** removal count > 0, read target-only commits before committing.
+
+## Validation before PR
+
+- [ ] `SOURCE` / `TARGET` named in PR description
+- [ ] Commit history audit for every modified **existing** file
+- [ ] No substantive `-` lines vs `origin/$TARGET` on modified existing files
+- [ ] Module compile / targeted tests for touched areas

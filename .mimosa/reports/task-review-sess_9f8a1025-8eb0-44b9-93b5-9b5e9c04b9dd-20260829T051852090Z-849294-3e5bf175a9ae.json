@@ -1,0 +1,458 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260829T051852090Z-849294-3e5bf175a9ae",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "candidate-select",
+      "target": "itests/src/test/java/org/apache/unomi/itests/DidvcPhase4ResolverIT.java",
+      "reason": "changed_file_unreadable: observed changed file no longer exists or cannot be read"
+    },
+    {
+      "stage": "candidate-select",
+      "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/wallet/StoredCredential.java",
+      "reason": "candidate_limit_exceeded: 17 changed reviewable file(s) were not scanned because the limit is 20"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 1338,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 37
+    },
+    "change_tracking": {
+      "touched_observed": 38,
+      "touched_retained": 38,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 36,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 37,
+      "selected_files": 20,
+      "limit": 20,
+      "truncated": true
+    },
+    "scanning": {
+      "required_files": 20,
+      "scanned_files": 20,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 0,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": false
+    },
+    "reason_counts": {
+      "changed_file_unreadable": 1,
+      "candidate_limit_exceeded": 1,
+      "project_check_failed": 2
+    },
+    "reasons": [
+      {
+        "code": "changed_file_unreadable",
+        "stage": "candidate-select",
+        "target": "itests/src/test/java/org/apache/unomi/itests/DidvcPhase4ResolverIT.java",
+        "detail": "observed changed file no longer exists or cannot be read",
+        "affects_completion": true
+      },
+      {
+        "code": "candidate_limit_exceeded",
+        "stage": "candidate-select",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/wallet/StoredCredential.java",
+        "detail": "17 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "itests/src/test/java/org/apache/unomi/itests/DidvcPhase4ResolverIT.java",
+        "detail": "changed_file_unreadable: observed changed file no longer exists or cannot be read",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "candidate-select",
+        "target": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/wallet/StoredCredential.java",
+        "detail": "candidate_limit_exceeded: 17 changed reviewable file(s) were not scanned because the limit is 20",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-08-29T05:18:52.090Z",
+  "session_id": "sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd",
+  "target": ".",
+  "revision": "8f76b41584487dbdc4c58aff81d253c4b653c90c",
+  "rules_version": "unavailable",
+  "diff_hash": "cc690022c50bccafb5b1561a446947884cd870916d9c892419f09bbf8a8dde89",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 20,
+    "changed_files": [
+      {
+        "file": "didvc/didvc-api/src/main/java/org/apache/unomi/didvc/api/CredentialIssueRequest.java",
+        "ranges": [
+          {
+            "start": 38,
+            "end": 38
+          },
+          {
+            "start": 116,
+            "end": 127
+          }
+        ],
+        "before_hash": "a40ed732650991372fe541449ecb848320512abe9cd9069b0c50fc7c975f8c21",
+        "after_hash": "62c14526f9f1eeb1790e9e226135669ff88dd0f94e827415124ee3898daa0643"
+      },
+      {
+        "file": "didvc/didvc-api/src/main/java/org/apache/unomi/didvc/api/services/DidMethodResolver.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 46
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "efc83acea04a7a3df130d2fb118a9c6c7cc1491d7bf7b370566a505d86812081"
+      },
+      {
+        "file": "didvc/didvc-api/src/main/java/org/apache/unomi/didvc/api/services/UniversalDidResolverService.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 39
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "6d82f3ee0558e635ac42439ac4f0759b27415678b757696adbb6e6383ac65c07"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/platform/PlatformApi.java",
+        "ranges": [
+          {
+            "start": 220,
+            "end": 220
+          },
+          {
+            "start": 281,
+            "end": 292
+          }
+        ],
+        "before_hash": "9e49fe3f035941ca17f8e372c58e8da74c680aa759e9b5711ac4335d047cd1ea",
+        "after_hash": "c2b157d6fb209111326c92b1d897b1b0aa89021166e1f287381b4fbe573a7bf4"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+        "ranges": [
+          {
+            "start": 278,
+            "end": 283
+          }
+        ],
+        "before_hash": "4b76fcceb7a3c347b1cd0045ef0f42db2dd5a3ad3a5a75a38fc667e409f1f8e9",
+        "after_hash": "bc5e842ab717cf91f7745340ea76aabf186373d5fe1ed4944210b49694db08c3"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+        "ranges": [
+          {
+            "start": 65,
+            "end": 67
+          },
+          {
+            "start": 99,
+            "end": 99
+          },
+          {
+            "start": 164,
+            "end": 175
+          },
+          {
+            "start": 232,
+            "end": 246
+          },
+          {
+            "start": 416,
+            "end": 416
+          },
+          {
+            "start": 832,
+            "end": 832
+          },
+          {
+            "start": 835,
+            "end": 835
+          },
+          {
+            "start": 908,
+            "end": 908
+          },
+          {
+            "start": 911,
+            "end": 911
+          },
+          {
+            "start": 916,
+            "end": 916
+          }
+        ],
+        "before_hash": "af18efb5350a754d16e9fa9a4e0faf5b865d1f31b7f9d96c2933aae8d162b341",
+        "after_hash": "f85872c5de01f71b32d6dd77990d9fdd4b1855fff8e2254ae020943438c2c450"
+      },
+      {
+        "file": "didvc/didvc-rest/src/main/java/org/apache/unomi/didvc/rest/DidResolverEndPoint.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 63
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "a7e357e7dca2e394e2ebb33c1e38691b5c987ffd24df74f985a63148b74cb0c0"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/DidKeyMethodResolver.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 221
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "87d56f5d9ad923e298da99f525b45b24c06586182d94c7fdb52f0e19121cdd97"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/HttpDidMethodResolver.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 138
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "da1e56d0bb3f3e5407d83320c895b97a636399a79409173fa2185caabd7eea72"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/IssuanceServiceImpl.java",
+        "ranges": [
+          {
+            "start": 38,
+            "end": 38
+          },
+          {
+            "start": 44,
+            "end": 44
+          },
+          {
+            "start": 75,
+            "end": 79
+          },
+          {
+            "start": 105,
+            "end": 117
+          },
+          {
+            "start": 124,
+            "end": 124
+          },
+          {
+            "start": 151,
+            "end": 151
+          },
+          {
+            "start": 161,
+            "end": 161
+          },
+          {
+            "start": 217,
+            "end": 217
+          },
+          {
+            "start": 229,
+            "end": 229
+          },
+          {
+            "start": 270,
+            "end": 290
+          }
+        ],
+        "before_hash": "695009ec9836313b670333f4a8b487426ec631781f64e794fae0bcae7a956dde",
+        "after_hash": "c0daa7fbbdd9f226ae7a2104068d55493736349a84bff66f721086a5cadd80dc"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/JsonLdVcFormatter.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 153
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "5ff6f00bc67f33eb36fbbd1695f895bfc122c117be81252b70a993b860f444dd"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/JsonLdVcParser.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 127
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "04892544885f99e2fd08c0b7b99bce17cce7c6adc6ea15e0f24e66f72baa4018"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/Phase4SchemaBootstrap.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 108
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "bd76d4040bbae5cfc6ac50069e2346dbef0408bbe4d636bda99cac4331d289ee"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/UniversalDidResolverServiceImpl.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 125
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "97eea7cc751071c29cd1c1aee5d5bc0898718bd6e89faddd385a9f34d24ca440"
+      },
+      {
+        "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/DidKeyMethodResolverTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 82
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "aa9615f2da21415dd656be61e3a5af9eec2f776a8228a821eca03cf864516815"
+      },
+      {
+        "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/HttpDidMethodResolverTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 115
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "f4a9f70f7c88223f86bebca20c3c95981062b4ca258c86547a14061a6ab82ef0"
+      },
+      {
+        "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/IssuanceServiceImplTest.java",
+        "ranges": [
+          {
+            "start": 186,
+            "end": 209
+          }
+        ],
+        "before_hash": "9cf3514facfd3d939d72f5fb601a1e66b92737aa58471a8933132a5abb526ec9",
+        "after_hash": "b9a42ba5ec543af621c8c3feb4f9a0900faeb7fca50b8ed518a56af13371db2f"
+      },
+      {
+        "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/JsonLdVcFormatterTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 147
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "2d79cb15ec7e26f2587f5991b9fd23bfcd13b0a93907f2ee553345e6a3a6dca8"
+      },
+      {
+        "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase4SchemaBootstrapTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 90
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "98f54b483e5b019458639fa306d97956da8a47328fe53f877437f3fab8a3be45"
+      },
+      {
+        "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/UniversalDidResolverServiceImplTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 122
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "6850f88eaa413807035f48fce9bba6dcccfe01e42635abbd221361e3673e66c6"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-08-29T05:18:49.808Z",
+    "completed_at": "2026-08-29T05:18:52.090Z",
+    "duration_ms": 2282,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 2282,
+    "peakMemoryBytes": 185016320,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 20,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 0,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [],
+  "findings": [],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T051852090Z-849294-3e5bf175a9ae.json",
+    "latest_report": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd.json",
+    "history_summary": ".mimosa/history/run-20260829T051852090Z-849294-3e5bf175a9ae.json"
+  }
+}

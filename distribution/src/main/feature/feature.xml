@@ -47,6 +47,7 @@
         <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
         <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
         <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
+        <feature dependency="true" version="${project.version}">unomi-did-vc</feature>
         <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
     </feature>
 
@@ -75,6 +76,7 @@
         <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
         <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
         <feature dependency="true" version="${project.version}">cdp-graphql-feature</feature>
+        <feature dependency="true" version="${project.version}">unomi-did-vc</feature>
         <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
     </feature>
 
@@ -102,6 +104,7 @@
         <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
         <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
         <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
+        <feature dependency="true" version="${project.version}">unomi-did-vc</feature>
         <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
     </feature>
 
@@ -130,6 +133,7 @@
         <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
         <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
         <feature dependency="true" version="${project.version}">cdp-graphql-feature</feature>
+        <feature dependency="true" version="${project.version}">unomi-did-vc</feature>
         <feature dependency="true" version="${project.version}">unomi-startup-complete</feature>
     </feature>
 

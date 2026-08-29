@@ -1,0 +1,41 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["node_modules_monaco-editor_esm_vs_editor_common_services_treeViewsDnd_js"],{
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDnd.js"
+/*!********************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDnd.js ***!
+  \********************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   DraggedTreeItemsIdentifier: () => (/* binding */ DraggedTreeItemsIdentifier),
+/* harmony export */   TreeViewsDnDService: () => (/* binding */ TreeViewsDnDService)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+class TreeViewsDnDService {
+  constructor() {
+    this._dragOperations = new Map();
+  }
+  removeDragOperationTransfer(uuid) {
+    if (uuid && this._dragOperations.has(uuid)) {
+      const operation = this._dragOperations.get(uuid);
+      this._dragOperations.delete(uuid);
+      return operation;
+    }
+    return undefined;
+  }
+}
+class DraggedTreeItemsIdentifier {
+  constructor(identifier) {
+    this.identifier = identifier;
+  }
+}
+
+/***/ }
+
+}]);
+//# sourceMappingURL=node_modules_monaco-editor_esm_vs_editor_common_services_treeViewsDnd_js.js.map

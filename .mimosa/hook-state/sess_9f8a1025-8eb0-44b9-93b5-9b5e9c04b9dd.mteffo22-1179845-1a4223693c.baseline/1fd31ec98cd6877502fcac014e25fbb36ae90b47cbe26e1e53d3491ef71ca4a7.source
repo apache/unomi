@@ -1,0 +1,386 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["vendors-node_modules_monaco-editor_esm_vs_editor_common_services_languageFeaturesService_js"],{
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/languageFeatureRegistry.js"
+/*!**********************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/languageFeatureRegistry.js ***!
+  \**********************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   LanguageFeatureRegistry: () => (/* binding */ LanguageFeatureRegistry)
+/* harmony export */ });
+/* harmony import */ var _base_common_event_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../base/common/event.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/event.js");
+/* harmony import */ var _base_common_lifecycle_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../base/common/lifecycle.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/lifecycle.js");
+/* harmony import */ var _model_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./model.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/model.js");
+/* harmony import */ var _languageSelector_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./languageSelector.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/languageSelector.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+
+
+function isExclusive(selector) {
+  if (typeof selector === 'string') {
+    return false;
+  } else if (Array.isArray(selector)) {
+    return selector.every(isExclusive);
+  } else {
+    return !!selector.exclusive; // TODO: microsoft/TypeScript#42768
+  }
+}
+class MatchCandidate {
+  constructor(uri, languageId, notebookUri, notebookType, recursive) {
+    this.uri = uri;
+    this.languageId = languageId;
+    this.notebookUri = notebookUri;
+    this.notebookType = notebookType;
+    this.recursive = recursive;
+  }
+  equals(other) {
+    return this.notebookType === other.notebookType && this.languageId === other.languageId && this.uri.toString() === other.uri.toString() && this.notebookUri?.toString() === other.notebookUri?.toString() && this.recursive === other.recursive;
+  }
+}
+class LanguageFeatureRegistry {
+  constructor(_notebookInfoResolver) {
+    this._notebookInfoResolver = _notebookInfoResolver;
+    this._clock = 0;
+    this._entries = [];
+    this._onDidChange = new _base_common_event_js__WEBPACK_IMPORTED_MODULE_0__.Emitter();
+    this.onDidChange = this._onDidChange.event;
+  }
+  register(selector, provider) {
+    let entry = {
+      selector,
+      provider,
+      _score: -1,
+      _time: this._clock++
+    };
+    this._entries.push(entry);
+    this._lastCandidate = undefined;
+    this._onDidChange.fire(this._entries.length);
+    return (0,_base_common_lifecycle_js__WEBPACK_IMPORTED_MODULE_1__.toDisposable)(() => {
+      if (entry) {
+        const idx = this._entries.indexOf(entry);
+        if (idx >= 0) {
+          this._entries.splice(idx, 1);
+          this._lastCandidate = undefined;
+          this._onDidChange.fire(this._entries.length);
+          entry = undefined;
+        }
+      }
+    });
+  }
+  has(model) {
+    return this.all(model).length > 0;
+  }
+  all(model) {
+    if (!model) {
+      return [];
+    }
+    this._updateScores(model, false);
+    const result = [];
+    // from registry
+    for (const entry of this._entries) {
+      if (entry._score > 0) {
+        result.push(entry.provider);
+      }
+    }
+    return result;
+  }
+  ordered(model, recursive = false) {
+    const result = [];
+    this._orderedForEach(model, recursive, entry => result.push(entry.provider));
+    return result;
+  }
+  orderedGroups(model) {
+    const result = [];
+    let lastBucket;
+    let lastBucketScore;
+    this._orderedForEach(model, false, entry => {
+      if (lastBucket && lastBucketScore === entry._score) {
+        lastBucket.push(entry.provider);
+      } else {
+        lastBucketScore = entry._score;
+        lastBucket = [entry.provider];
+        result.push(lastBucket);
+      }
+    });
+    return result;
+  }
+  _orderedForEach(model, recursive, callback) {
+    this._updateScores(model, recursive);
+    for (const entry of this._entries) {
+      if (entry._score > 0) {
+        callback(entry);
+      }
+    }
+  }
+  _updateScores(model, recursive) {
+    const notebookInfo = this._notebookInfoResolver?.(model.uri);
+    // use the uri (scheme, pattern) of the notebook info iff we have one
+    // otherwise it's the model's/document's uri
+    const candidate = notebookInfo ? new MatchCandidate(model.uri, model.getLanguageId(), notebookInfo.uri, notebookInfo.type, recursive) : new MatchCandidate(model.uri, model.getLanguageId(), undefined, undefined, recursive);
+    if (this._lastCandidate?.equals(candidate)) {
+      // nothing has changed
+      return;
+    }
+    this._lastCandidate = candidate;
+    for (const entry of this._entries) {
+      entry._score = (0,_languageSelector_js__WEBPACK_IMPORTED_MODULE_3__.score)(entry.selector, candidate.uri, candidate.languageId, (0,_model_js__WEBPACK_IMPORTED_MODULE_2__.shouldSynchronizeModel)(model), candidate.notebookUri, candidate.notebookType);
+      if (isExclusive(entry.selector) && entry._score > 0) {
+        if (recursive) {
+          entry._score = 0;
+        } else {
+          // support for one exclusive selector that overwrites
+          // any other selector
+          for (const entry of this._entries) {
+            entry._score = 0;
+          }
+          entry._score = 1000;
+          break;
+        }
+      }
+    }
+    // needs sorting
+    this._entries.sort(LanguageFeatureRegistry._compareByScoreAndTime);
+  }
+  static _compareByScoreAndTime(a, b) {
+    if (a._score < b._score) {
+      return 1;
+    } else if (a._score > b._score) {
+      return -1;
+    }
+    // De-prioritize built-in providers
+    if (isBuiltinSelector(a.selector) && !isBuiltinSelector(b.selector)) {
+      return 1;
+    } else if (!isBuiltinSelector(a.selector) && isBuiltinSelector(b.selector)) {
+      return -1;
+    }
+    if (a._time < b._time) {
+      return 1;
+    } else if (a._time > b._time) {
+      return -1;
+    } else {
+      return 0;
+    }
+  }
+}
+function isBuiltinSelector(selector) {
+  if (typeof selector === 'string') {
+    return false;
+  }
+  if (Array.isArray(selector)) {
+    return selector.some(isBuiltinSelector);
+  }
+  return Boolean(selector.isBuiltin);
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/languageSelector.js"
+/*!***************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/languageSelector.js ***!
+  \***************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   score: () => (/* binding */ score)
+/* harmony export */ });
+/* harmony import */ var _base_common_glob_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../base/common/glob.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/glob.js");
+/* harmony import */ var _base_common_path_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../base/common/path.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/path.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+function score(selector, candidateUri, candidateLanguage, candidateIsSynchronized, candidateNotebookUri, candidateNotebookType) {
+  if (Array.isArray(selector)) {
+    // array -> take max individual value
+    let ret = 0;
+    for (const filter of selector) {
+      const value = score(filter, candidateUri, candidateLanguage, candidateIsSynchronized, candidateNotebookUri, candidateNotebookType);
+      if (value === 10) {
+        return value; // already at the highest
+      }
+      if (value > ret) {
+        ret = value;
+      }
+    }
+    return ret;
+  } else if (typeof selector === 'string') {
+    if (!candidateIsSynchronized) {
+      return 0;
+    }
+    // short-hand notion, desugars to
+    // 'fooLang' -> { language: 'fooLang'}
+    // '*' -> { language: '*' }
+    if (selector === '*') {
+      return 5;
+    } else if (selector === candidateLanguage) {
+      return 10;
+    } else {
+      return 0;
+    }
+  } else if (selector) {
+    // filter -> select accordingly, use defaults for scheme
+    const {
+      language,
+      pattern,
+      scheme,
+      hasAccessToAllModels,
+      notebookType
+    } = selector; // TODO: microsoft/TypeScript#42768
+    if (!candidateIsSynchronized && !hasAccessToAllModels) {
+      return 0;
+    }
+    // selector targets a notebook -> use the notebook uri instead
+    // of the "normal" document uri.
+    if (notebookType && candidateNotebookUri) {
+      candidateUri = candidateNotebookUri;
+    }
+    let ret = 0;
+    if (scheme) {
+      if (scheme === candidateUri.scheme) {
+        ret = 10;
+      } else if (scheme === '*') {
+        ret = 5;
+      } else {
+        return 0;
+      }
+    }
+    if (language) {
+      if (language === candidateLanguage) {
+        ret = 10;
+      } else if (language === '*') {
+        ret = Math.max(ret, 5);
+      } else {
+        return 0;
+      }
+    }
+    if (notebookType) {
+      if (notebookType === candidateNotebookType) {
+        ret = 10;
+      } else if (notebookType === '*' && candidateNotebookType !== undefined) {
+        ret = Math.max(ret, 5);
+      } else {
+        return 0;
+      }
+    }
+    if (pattern) {
+      let normalizedPattern;
+      if (typeof pattern === 'string') {
+        normalizedPattern = pattern;
+      } else {
+        // Since this pattern has a `base` property, we need
+        // to normalize this path first before passing it on
+        // because we will compare it against `Uri.fsPath`
+        // which uses platform specific separators.
+        // Refs: https://github.com/microsoft/vscode/issues/99938
+        normalizedPattern = {
+          ...pattern,
+          base: (0,_base_common_path_js__WEBPACK_IMPORTED_MODULE_1__.normalize)(pattern.base)
+        };
+      }
+      if (normalizedPattern === candidateUri.fsPath || (0,_base_common_glob_js__WEBPACK_IMPORTED_MODULE_0__.match)(normalizedPattern, candidateUri.fsPath)) {
+        ret = 10;
+      } else {
+        return 0;
+      }
+    }
+    return ret;
+  } else {
+    return 0;
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeatures.js"
+/*!************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeatures.js ***!
+  \************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ILanguageFeaturesService: () => (/* binding */ ILanguageFeaturesService)
+/* harmony export */ });
+/* harmony import */ var _platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../platform/instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+const ILanguageFeaturesService = (0,_platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__.createDecorator)('ILanguageFeaturesService');
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeaturesService.js"
+/*!*******************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeaturesService.js ***!
+  \*******************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   LanguageFeaturesService: () => (/* binding */ LanguageFeaturesService)
+/* harmony export */ });
+/* harmony import */ var _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../languageFeatureRegistry.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/languageFeatureRegistry.js");
+/* harmony import */ var _languageFeatures_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./languageFeatures.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeatures.js");
+/* harmony import */ var _platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../platform/instantiation/common/extensions.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/extensions.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+
+class LanguageFeaturesService {
+  constructor() {
+    this.referenceProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.renameProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.newSymbolNamesProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.codeActionProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.definitionProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.typeDefinitionProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.declarationProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.implementationProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.documentSymbolProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.inlayHintsProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.colorProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.codeLensProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.documentFormattingEditProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.documentRangeFormattingEditProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.onTypeFormattingEditProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.signatureHelpProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.hoverProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.documentHighlightProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.multiDocumentHighlightProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.selectionRangeProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.foldingRangeProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.linkProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.inlineCompletionsProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.inlineEditProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.completionProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.linkedEditingRangeProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.documentRangeSemanticTokensProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.documentSemanticTokensProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.documentDropEditProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+    this.documentPasteEditProvider = new _languageFeatureRegistry_js__WEBPACK_IMPORTED_MODULE_0__.LanguageFeatureRegistry(this._score.bind(this));
+  }
+  _score(uri) {
+    return this._notebookTypeResolver?.(uri);
+  }
+}
+(0,_platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_2__.registerSingleton)(_languageFeatures_js__WEBPACK_IMPORTED_MODULE_1__.ILanguageFeaturesService, LanguageFeaturesService, 1 /* InstantiationType.Delayed */);
+
+/***/ }
+
+}]);
+//# sourceMappingURL=vendors-node_modules_monaco-editor_esm_vs_editor_common_services_languageFeaturesService_js.js.map

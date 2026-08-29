@@ -1,0 +1,182 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["node_modules_monaco-editor_esm_vs_editor_common_services_treeViewsDndService_js"],{
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDnd.js"
+/*!********************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDnd.js ***!
+  \********************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   DraggedTreeItemsIdentifier: () => (/* binding */ DraggedTreeItemsIdentifier),
+/* harmony export */   TreeViewsDnDService: () => (/* binding */ TreeViewsDnDService)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+class TreeViewsDnDService {
+  constructor() {
+    this._dragOperations = new Map();
+  }
+  removeDragOperationTransfer(uuid) {
+    if (uuid && this._dragOperations.has(uuid)) {
+      const operation = this._dragOperations.get(uuid);
+      this._dragOperations.delete(uuid);
+      return operation;
+    }
+    return undefined;
+  }
+}
+class DraggedTreeItemsIdentifier {
+  constructor(identifier) {
+    this.identifier = identifier;
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDndService.js"
+/*!***************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDndService.js ***!
+  \***************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ITreeViewsDnDService: () => (/* binding */ ITreeViewsDnDService)
+/* harmony export */ });
+/* harmony import */ var _platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../platform/instantiation/common/extensions.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/extensions.js");
+/* harmony import */ var _platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../platform/instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/* harmony import */ var _treeViewsDnd_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./treeViewsDnd.js */ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDnd.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+
+const ITreeViewsDnDService = (0,_platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_1__.createDecorator)('treeViewsDndService');
+(0,_platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_0__.registerSingleton)(ITreeViewsDnDService, _treeViewsDnd_js__WEBPACK_IMPORTED_MODULE_2__.TreeViewsDnDService, 1 /* InstantiationType.Delayed */);
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/descriptors.js"
+/*!**************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/descriptors.js ***!
+  \**************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   SyncDescriptor: () => (/* binding */ SyncDescriptor)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+class SyncDescriptor {
+  constructor(ctor, staticArguments = [], supportsDelayedInstantiation = false) {
+    this.ctor = ctor;
+    this.staticArguments = staticArguments;
+    this.supportsDelayedInstantiation = supportsDelayedInstantiation;
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/extensions.js"
+/*!*************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/extensions.js ***!
+  \*************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   getSingletonServiceDescriptors: () => (/* binding */ getSingletonServiceDescriptors),
+/* harmony export */   registerSingleton: () => (/* binding */ registerSingleton)
+/* harmony export */ });
+/* harmony import */ var _descriptors_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./descriptors.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/descriptors.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+const _registry = [];
+function registerSingleton(id, ctorOrDescriptor, supportsDelayedInstantiation) {
+  if (!(ctorOrDescriptor instanceof _descriptors_js__WEBPACK_IMPORTED_MODULE_0__.SyncDescriptor)) {
+    ctorOrDescriptor = new _descriptors_js__WEBPACK_IMPORTED_MODULE_0__.SyncDescriptor(ctorOrDescriptor, [], Boolean(supportsDelayedInstantiation));
+  }
+  _registry.push([id, ctorOrDescriptor]);
+}
+function getSingletonServiceDescriptors() {
+  return _registry;
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js"
+/*!****************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js ***!
+  \****************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   IInstantiationService: () => (/* binding */ IInstantiationService),
+/* harmony export */   _util: () => (/* binding */ _util),
+/* harmony export */   createDecorator: () => (/* binding */ createDecorator)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+// ------ internal util
+var _util;
+(function (_util) {
+  _util.serviceIds = new Map();
+  _util.DI_TARGET = '$di$target';
+  _util.DI_DEPENDENCIES = '$di$dependencies';
+  function getServiceDependencies(ctor) {
+    return ctor[_util.DI_DEPENDENCIES] || [];
+  }
+  _util.getServiceDependencies = getServiceDependencies;
+})(_util || (_util = {}));
+const IInstantiationService = createDecorator('instantiationService');
+function storeServiceDependency(id, target, index) {
+  if (target[_util.DI_TARGET] === target) {
+    target[_util.DI_DEPENDENCIES].push({
+      id,
+      index
+    });
+  } else {
+    target[_util.DI_DEPENDENCIES] = [{
+      id,
+      index
+    }];
+    target[_util.DI_TARGET] = target;
+  }
+}
+/**
+ * The *only* valid way to create a {{ServiceIdentifier}}.
+ */
+function createDecorator(serviceId) {
+  if (_util.serviceIds.has(serviceId)) {
+    return _util.serviceIds.get(serviceId);
+  }
+  const id = function (target, key, index) {
+    if (arguments.length !== 3) {
+      throw new Error('@IServiceName-decorator can only be used to decorate a parameter');
+    }
+    storeServiceDependency(id, target, index);
+  };
+  id.toString = () => serviceId;
+  _util.serviceIds.set(serviceId, id);
+  return id;
+}
+
+/***/ }
+
+}]);
+//# sourceMappingURL=node_modules_monaco-editor_esm_vs_editor_common_services_treeViewsDndService_js.js.map

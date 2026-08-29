@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-08-28T14:06:25.512Z",
+  "sessionId": "sess_3a0c281f-b823-4371-b8e4-55347fdff1db",
+  "event": "PostToolUse",
+  "toolName": "Edit",
+  "file": "/home/ivenkwan/repo/unomi/didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/demo/DemoPlatformConfiguration.java",
+  "outcome": "inconclusive",
+  "coverage": "partial",
+  "findingCount": 0,
+  "durationMs": 5,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

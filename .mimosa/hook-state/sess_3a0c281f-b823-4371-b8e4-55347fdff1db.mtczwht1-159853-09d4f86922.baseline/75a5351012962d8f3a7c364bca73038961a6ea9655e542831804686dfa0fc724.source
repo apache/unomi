@@ -1,0 +1,375 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["vendors-node_modules_monaco-editor_esm_vs_editor_common_core_cursorColumns_js-node_modules_mo-0787bc"],{
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/base/common/buffer.js"
+/*!***************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/base/common/buffer.js ***!
+  \***************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   VSBuffer: () => (/* binding */ VSBuffer),
+/* harmony export */   readUInt16LE: () => (/* binding */ readUInt16LE),
+/* harmony export */   readUInt32BE: () => (/* binding */ readUInt32BE),
+/* harmony export */   readUInt8: () => (/* binding */ readUInt8),
+/* harmony export */   writeUInt16LE: () => (/* binding */ writeUInt16LE),
+/* harmony export */   writeUInt32BE: () => (/* binding */ writeUInt32BE),
+/* harmony export */   writeUInt8: () => (/* binding */ writeUInt8)
+/* harmony export */ });
+/* harmony import */ var _lazy_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./lazy.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/lazy.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+const hasBuffer = typeof Buffer !== 'undefined';
+const indexOfTable = new _lazy_js__WEBPACK_IMPORTED_MODULE_0__.Lazy(() => new Uint8Array(256));
+let textDecoder;
+class VSBuffer {
+  /**
+   * When running in a nodejs context, if `actual` is not a nodejs Buffer, the backing store for
+   * the returned `VSBuffer` instance might use a nodejs Buffer allocated from node's Buffer pool,
+   * which is not transferrable.
+   */
+  static wrap(actual) {
+    if (hasBuffer && !Buffer.isBuffer(actual)) {
+      // https://nodejs.org/dist/latest-v10.x/docs/api/buffer.html#buffer_class_method_buffer_from_arraybuffer_byteoffset_length
+      // Create a zero-copy Buffer wrapper around the ArrayBuffer pointed to by the Uint8Array
+      actual = Buffer.from(actual.buffer, actual.byteOffset, actual.byteLength);
+    }
+    return new VSBuffer(actual);
+  }
+  constructor(buffer) {
+    this.buffer = buffer;
+    this.byteLength = this.buffer.byteLength;
+  }
+  toString() {
+    if (hasBuffer) {
+      return this.buffer.toString();
+    } else {
+      if (!textDecoder) {
+        textDecoder = new TextDecoder();
+      }
+      return textDecoder.decode(this.buffer);
+    }
+  }
+}
+function readUInt16LE(source, offset) {
+  return source[offset + 0] << 0 >>> 0 | source[offset + 1] << 8 >>> 0;
+}
+function writeUInt16LE(destination, value, offset) {
+  destination[offset + 0] = value & 0b11111111;
+  value = value >>> 8;
+  destination[offset + 1] = value & 0b11111111;
+}
+function readUInt32BE(source, offset) {
+  return source[offset] * 2 ** 24 + source[offset + 1] * 2 ** 16 + source[offset + 2] * 2 ** 8 + source[offset + 3];
+}
+function writeUInt32BE(destination, value, offset) {
+  destination[offset + 3] = value;
+  value = value >>> 8;
+  destination[offset + 2] = value;
+  value = value >>> 8;
+  destination[offset + 1] = value;
+  value = value >>> 8;
+  destination[offset] = value;
+}
+function readUInt8(source, offset) {
+  return source[offset];
+}
+function writeUInt8(destination, value, offset) {
+  destination[offset] = value;
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/core/cursorColumns.js"
+/*!*****************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/core/cursorColumns.js ***!
+  \*****************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   CursorColumns: () => (/* binding */ CursorColumns)
+/* harmony export */ });
+/* harmony import */ var _base_common_strings_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/strings.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/strings.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+/**
+ * A column in a position is the gap between two adjacent characters. The methods here
+ * work with a concept called "visible column". A visible column is a very rough approximation
+ * of the horizontal screen position of a column. For example, using a tab size of 4:
+ * ```txt
+ * |<TAB>|<TAB>|T|ext
+ * |     |     | \---- column = 4, visible column = 9
+ * |     |     \------ column = 3, visible column = 8
+ * |     \------------ column = 2, visible column = 4
+ * \------------------ column = 1, visible column = 0
+ * ```
+ *
+ * **NOTE**: Visual columns do not work well for RTL text or variable-width fonts or characters.
+ *
+ * **NOTE**: These methods work and make sense both on the model and on the view model.
+ */
+class CursorColumns {
+  static _nextVisibleColumn(codePoint, visibleColumn, tabSize) {
+    if (codePoint === 9 /* CharCode.Tab */) {
+      return CursorColumns.nextRenderTabStop(visibleColumn, tabSize);
+    }
+    if (_base_common_strings_js__WEBPACK_IMPORTED_MODULE_0__.isFullWidthCharacter(codePoint) || _base_common_strings_js__WEBPACK_IMPORTED_MODULE_0__.isEmojiImprecise(codePoint)) {
+      return visibleColumn + 2;
+    }
+    return visibleColumn + 1;
+  }
+  /**
+   * Returns a visible column from a column.
+   * @see {@link CursorColumns}
+   */
+  static visibleColumnFromColumn(lineContent, column, tabSize) {
+    const textLen = Math.min(column - 1, lineContent.length);
+    const text = lineContent.substring(0, textLen);
+    const iterator = new _base_common_strings_js__WEBPACK_IMPORTED_MODULE_0__.GraphemeIterator(text);
+    let result = 0;
+    while (!iterator.eol()) {
+      const codePoint = _base_common_strings_js__WEBPACK_IMPORTED_MODULE_0__.getNextCodePoint(text, textLen, iterator.offset);
+      iterator.nextGraphemeLength();
+      result = this._nextVisibleColumn(codePoint, result, tabSize);
+    }
+    return result;
+  }
+  /**
+   * Returns a column from a visible column.
+   * @see {@link CursorColumns}
+   */
+  static columnFromVisibleColumn(lineContent, visibleColumn, tabSize) {
+    if (visibleColumn <= 0) {
+      return 1;
+    }
+    const lineContentLength = lineContent.length;
+    const iterator = new _base_common_strings_js__WEBPACK_IMPORTED_MODULE_0__.GraphemeIterator(lineContent);
+    let beforeVisibleColumn = 0;
+    let beforeColumn = 1;
+    while (!iterator.eol()) {
+      const codePoint = _base_common_strings_js__WEBPACK_IMPORTED_MODULE_0__.getNextCodePoint(lineContent, lineContentLength, iterator.offset);
+      iterator.nextGraphemeLength();
+      const afterVisibleColumn = this._nextVisibleColumn(codePoint, beforeVisibleColumn, tabSize);
+      const afterColumn = iterator.offset + 1;
+      if (afterVisibleColumn >= visibleColumn) {
+        const beforeDelta = visibleColumn - beforeVisibleColumn;
+        const afterDelta = afterVisibleColumn - visibleColumn;
+        if (afterDelta < beforeDelta) {
+          return afterColumn;
+        } else {
+          return beforeColumn;
+        }
+      }
+      beforeVisibleColumn = afterVisibleColumn;
+      beforeColumn = afterColumn;
+    }
+    // walked the entire string
+    return lineContentLength + 1;
+  }
+  /**
+   * ATTENTION: This works with 0-based columns (as opposed to the regular 1-based columns)
+   * @see {@link CursorColumns}
+   */
+  static nextRenderTabStop(visibleColumn, tabSize) {
+    return visibleColumn + tabSize - visibleColumn % tabSize;
+  }
+  /**
+   * ATTENTION: This works with 0-based columns (as opposed to the regular 1-based columns)
+   * @see {@link CursorColumns}
+   */
+  static nextIndentTabStop(visibleColumn, indentSize) {
+    return visibleColumn + indentSize - visibleColumn % indentSize;
+  }
+  /**
+   * ATTENTION: This works with 0-based columns (as opposed to the regular 1-based columns)
+   * @see {@link CursorColumns}
+   */
+  static prevRenderTabStop(column, tabSize) {
+    return Math.max(0, column - 1 - (column - 1) % tabSize);
+  }
+  /**
+   * ATTENTION: This works with 0-based columns (as opposed to the regular 1-based columns)
+   * @see {@link CursorColumns}
+   */
+  static prevIndentTabStop(column, indentSize) {
+    return Math.max(0, column - 1 - (column - 1) % indentSize);
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/core/stringBuilder.js"
+/*!*****************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/core/stringBuilder.js ***!
+  \*****************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   StringBuilder: () => (/* binding */ StringBuilder),
+/* harmony export */   decodeUTF16LE: () => (/* binding */ decodeUTF16LE),
+/* harmony export */   getPlatformTextDecoder: () => (/* binding */ getPlatformTextDecoder)
+/* harmony export */ });
+/* harmony import */ var _base_common_strings_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/strings.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/strings.js");
+/* harmony import */ var _base_common_platform_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../base/common/platform.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/platform.js");
+/* harmony import */ var _base_common_buffer_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../base/common/buffer.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/buffer.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+
+let _utf16LE_TextDecoder;
+function getUTF16LE_TextDecoder() {
+  if (!_utf16LE_TextDecoder) {
+    _utf16LE_TextDecoder = new TextDecoder('UTF-16LE');
+  }
+  return _utf16LE_TextDecoder;
+}
+let _utf16BE_TextDecoder;
+function getUTF16BE_TextDecoder() {
+  if (!_utf16BE_TextDecoder) {
+    _utf16BE_TextDecoder = new TextDecoder('UTF-16BE');
+  }
+  return _utf16BE_TextDecoder;
+}
+let _platformTextDecoder;
+function getPlatformTextDecoder() {
+  if (!_platformTextDecoder) {
+    _platformTextDecoder = _base_common_platform_js__WEBPACK_IMPORTED_MODULE_1__.isLittleEndian() ? getUTF16LE_TextDecoder() : getUTF16BE_TextDecoder();
+  }
+  return _platformTextDecoder;
+}
+function decodeUTF16LE(source, offset, len) {
+  const view = new Uint16Array(source.buffer, offset, len);
+  if (len > 0 && (view[0] === 0xFEFF || view[0] === 0xFFFE)) {
+    // UTF16 sometimes starts with a BOM https://de.wikipedia.org/wiki/Byte_Order_Mark
+    // It looks like TextDecoder.decode will eat up a leading BOM (0xFEFF or 0xFFFE)
+    // We don't want that behavior because we know the string is UTF16LE and the BOM should be maintained
+    // So we use the manual decoder
+    return compatDecodeUTF16LE(source, offset, len);
+  }
+  return getUTF16LE_TextDecoder().decode(view);
+}
+function compatDecodeUTF16LE(source, offset, len) {
+  const result = [];
+  let resultLen = 0;
+  for (let i = 0; i < len; i++) {
+    const charCode = _base_common_buffer_js__WEBPACK_IMPORTED_MODULE_2__.readUInt16LE(source, offset);
+    offset += 2;
+    result[resultLen++] = String.fromCharCode(charCode);
+  }
+  return result.join('');
+}
+class StringBuilder {
+  constructor(capacity) {
+    this._capacity = capacity | 0;
+    this._buffer = new Uint16Array(this._capacity);
+    this._completedStrings = null;
+    this._bufferLength = 0;
+  }
+  reset() {
+    this._completedStrings = null;
+    this._bufferLength = 0;
+  }
+  build() {
+    if (this._completedStrings !== null) {
+      this._flushBuffer();
+      return this._completedStrings.join('');
+    }
+    return this._buildBuffer();
+  }
+  _buildBuffer() {
+    if (this._bufferLength === 0) {
+      return '';
+    }
+    const view = new Uint16Array(this._buffer.buffer, 0, this._bufferLength);
+    return getPlatformTextDecoder().decode(view);
+  }
+  _flushBuffer() {
+    const bufferString = this._buildBuffer();
+    this._bufferLength = 0;
+    if (this._completedStrings === null) {
+      this._completedStrings = [bufferString];
+    } else {
+      this._completedStrings[this._completedStrings.length] = bufferString;
+    }
+  }
+  /**
+   * Append a char code (<2^16)
+   */
+  appendCharCode(charCode) {
+    const remainingSpace = this._capacity - this._bufferLength;
+    if (remainingSpace <= 1) {
+      if (remainingSpace === 0 || _base_common_strings_js__WEBPACK_IMPORTED_MODULE_0__.isHighSurrogate(charCode)) {
+        this._flushBuffer();
+      }
+    }
+    this._buffer[this._bufferLength++] = charCode;
+  }
+  /**
+   * Append an ASCII char code (<2^8)
+   */
+  appendASCIICharCode(charCode) {
+    if (this._bufferLength === this._capacity) {
+      // buffer is full
+      this._flushBuffer();
+    }
+    this._buffer[this._bufferLength++] = charCode;
+  }
+  appendString(str) {
+    const strLen = str.length;
+    if (this._bufferLength + strLen >= this._capacity) {
+      // This string does not fit in the remaining buffer space
+      this._flushBuffer();
+      this._completedStrings[this._completedStrings.length] = str;
+      return;
+    }
+    for (let i = 0; i < strLen; i++) {
+      this._buffer[this._bufferLength++] = str.charCodeAt(i);
+    }
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/core/textModelDefaults.js"
+/*!*********************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/core/textModelDefaults.js ***!
+  \*********************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   EDITOR_MODEL_DEFAULTS: () => (/* binding */ EDITOR_MODEL_DEFAULTS)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+const EDITOR_MODEL_DEFAULTS = {
+  tabSize: 4,
+  indentSize: 4,
+  insertSpaces: true,
+  detectIndentation: true,
+  trimAutoWhitespace: true,
+  largeFileOptimizations: true,
+  bracketPairColorizationOptions: {
+    enabled: true,
+    independentColorPoolPerBracketType: false
+  }
+};
+
+/***/ }
+
+}]);
+//# sourceMappingURL=vendors-node_modules_monaco-editor_esm_vs_editor_common_core_cursorColumns_js-node_modules_mo-0787bc.js.map

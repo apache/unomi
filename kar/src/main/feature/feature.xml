@@ -241,6 +241,14 @@
         <bundle start="false">mvn:org.webjars/swagger-ui/${swagger-ui.version}</bundle>
     </feature>
 
+    <feature name="unomi-did-vc" description="Apache Unomi :: DID-VC :: Identity and Verifiable Credentials Module" version="${project.version}">
+        <feature>unomi-services</feature>
+        <feature>unomi-cxs-privacy-extension-services</feature>
+        <bundle start="false">mvn:org.apache.unomi/unomi-did-vc-api/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-did-vc-services/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-did-vc-rest/${project.version}</bundle>
+    </feature>
+
     <feature name="unomi-startup-complete" description="Apache Unomi :: Startup Complete" version="${project.version}">
         <!-- This is just a marker to indicate the startup is complete, it should be at the end of the start configuration file -->
          <feature>unomi-web-tracker</feature>

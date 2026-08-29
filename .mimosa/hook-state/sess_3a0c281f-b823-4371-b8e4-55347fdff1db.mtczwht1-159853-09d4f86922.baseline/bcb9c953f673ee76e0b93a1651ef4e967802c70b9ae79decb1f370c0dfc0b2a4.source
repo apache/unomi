@@ -1,0 +1,645 @@
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["node_modules_monaco-graphql_esm_lite_js-node_modules_monaco-editor_esm_vs_base_common_worker_-a50a28"],{
+
+/***/ "../../../../node_modules/monaco-graphql/esm/api.js"
+/*!**********************************************************!*\
+  !*** ../../../../node_modules/monaco-graphql/esm/api.js ***!
+  \**********************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   MonacoGraphQLAPI: () => (/* binding */ MonacoGraphQLAPI),
+/* harmony export */   completionSettingDefault: () => (/* binding */ completionSettingDefault),
+/* harmony export */   create: () => (/* binding */ create),
+/* harmony export */   diagnosticSettingDefault: () => (/* binding */ diagnosticSettingDefault),
+/* harmony export */   formattingDefaults: () => (/* binding */ formattingDefaults),
+/* harmony export */   modeConfigurationDefault: () => (/* binding */ modeConfigurationDefault)
+/* harmony export */ });
+/* harmony import */ var _monaco_editor__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./monaco-editor */ "../../../../node_modules/monaco-graphql/esm/monaco-editor.js");
+
+class MonacoGraphQLAPI {
+  _onDidChange = new _monaco_editor__WEBPACK_IMPORTED_MODULE_0__.Emitter();
+  _formattingOptions;
+  _modeConfiguration;
+  _diagnosticSettings;
+  _completionSettings;
+  _schemas = null;
+  _schemasById = Object.create(null);
+  _languageId;
+  _externalFragmentDefinitions;
+  constructor({
+    languageId,
+    schemas,
+    modeConfiguration,
+    formattingOptions,
+    diagnosticSettings,
+    completionSettings
+  }) {
+    this._languageId = languageId;
+    if (schemas) {
+      this.setSchemaConfig(schemas);
+    }
+    this._modeConfiguration = modeConfiguration;
+    this._completionSettings = completionSettings;
+    this._diagnosticSettings = diagnosticSettings;
+    this._formattingOptions = formattingOptions;
+  }
+  get onDidChange() {
+    return this._onDidChange.event;
+  }
+  get languageId() {
+    return this._languageId;
+  }
+  get modeConfiguration() {
+    return this._modeConfiguration;
+  }
+  get schemas() {
+    return this._schemas;
+  }
+  schemasById() {
+    return this._schemasById;
+  }
+  get formattingOptions() {
+    return this._formattingOptions;
+  }
+  get diagnosticSettings() {
+    return this._diagnosticSettings;
+  }
+  get completionSettings() {
+    return {
+      ...this._completionSettings,
+      fillLeafsOnComplete: this._completionSettings.__experimental__fillLeafsOnComplete ?? this._completionSettings.fillLeafsOnComplete
+    };
+  }
+  get externalFragmentDefinitions() {
+    return this._externalFragmentDefinitions;
+  }
+  setSchemaConfig(schemas) {
+    this._schemas = schemas;
+    this._schemasById = schemas.reduce((result, schema) => {
+      result[schema.uri] = schema;
+      return result;
+    }, Object.create(null));
+    this._onDidChange.fire(this);
+  }
+  setExternalFragmentDefinitions(externalFragmentDefinitions) {
+    this._externalFragmentDefinitions = externalFragmentDefinitions;
+  }
+  setModeConfiguration(modeConfiguration) {
+    this._modeConfiguration = modeConfiguration;
+    this._onDidChange.fire(this);
+  }
+  setFormattingOptions(formattingOptions) {
+    this._formattingOptions = formattingOptions;
+    this._onDidChange.fire(this);
+  }
+  setDiagnosticSettings(diagnosticSettings) {
+    this._diagnosticSettings = diagnosticSettings;
+    this._onDidChange.fire(this);
+  }
+  setCompletionSettings(completionSettings) {
+    this._completionSettings = completionSettings;
+    this._onDidChange.fire(this);
+  }
+}
+function create(languageId, config) {
+  if (!config) {
+    return new MonacoGraphQLAPI({
+      languageId,
+      schemas: [],
+      formattingOptions: formattingDefaults,
+      modeConfiguration: modeConfigurationDefault,
+      diagnosticSettings: diagnosticSettingDefault,
+      completionSettings: completionSettingDefault
+    });
+  }
+  const {
+    schemas,
+    formattingOptions,
+    modeConfiguration,
+    diagnosticSettings,
+    completionSettings
+  } = config;
+  return new MonacoGraphQLAPI({
+    languageId,
+    schemas,
+    formattingOptions: {
+      ...formattingDefaults,
+      ...formattingOptions,
+      prettierConfig: {
+        ...formattingDefaults.prettierConfig,
+        ...formattingOptions?.prettierConfig
+      }
+    },
+    modeConfiguration: {
+      ...modeConfigurationDefault,
+      ...modeConfiguration
+    },
+    diagnosticSettings: {
+      ...diagnosticSettingDefault,
+      ...diagnosticSettings
+    },
+    completionSettings: {
+      ...completionSettingDefault,
+      ...completionSettings
+    }
+  });
+}
+const modeConfigurationDefault = {
+  documentFormattingEdits: true,
+  documentRangeFormattingEdits: false,
+  completionItems: true,
+  hovers: true,
+  documentSymbols: false,
+  tokens: false,
+  colors: false,
+  foldingRanges: false,
+  diagnostics: true,
+  selectionRanges: false
+};
+const formattingDefaults = {
+  prettierConfig: {
+    tabWidth: 2
+  }
+};
+const diagnosticSettingDefault = {
+  jsonDiagnosticSettings: {
+    schemaValidation: 'error'
+  }
+};
+const completionSettingDefault = {
+  __experimental__fillLeafsOnComplete: false
+};
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-graphql/esm/initialize.js"
+/*!*****************************************************************!*\
+  !*** ../../../../node_modules/monaco-graphql/esm/initialize.js ***!
+  \*****************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   LANGUAGE_ID: () => (/* binding */ LANGUAGE_ID),
+/* harmony export */   initializeMode: () => (/* binding */ initializeMode)
+/* harmony export */ });
+/* harmony import */ var _api__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./api */ "../../../../node_modules/monaco-graphql/esm/api.js");
+/* harmony import */ var _monaco_editor__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./monaco-editor */ "../../../../node_modules/monaco-graphql/esm/monaco-editor.js");
+
+
+const LANGUAGE_ID = 'graphql';
+let api;
+function initializeMode(config) {
+  if (!api) {
+    api = (0,_api__WEBPACK_IMPORTED_MODULE_0__.create)(LANGUAGE_ID, config);
+    _monaco_editor__WEBPACK_IMPORTED_MODULE_1__.languages.graphql = {
+      api
+    };
+    void getMode().then(mode => mode.setupMode(api));
+  }
+  return api;
+}
+function getMode() {
+  return __webpack_require__.e(/*! import() */ "vendors-node_modules_monaco-graphql_esm_graphqlMode_js").then(__webpack_require__.bind(__webpack_require__, /*! ./graphqlMode.js */ "../../../../node_modules/monaco-graphql/esm/graphqlMode.js"));
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-graphql/esm/lite.js"
+/*!***********************************************************!*\
+  !*** ../../../../node_modules/monaco-graphql/esm/lite.js ***!
+  \***********************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   LANGUAGE_ID: () => (/* reexport safe */ _initialize__WEBPACK_IMPORTED_MODULE_0__.LANGUAGE_ID),
+/* harmony export */   initializeMode: () => (/* reexport safe */ _initialize__WEBPACK_IMPORTED_MODULE_0__.initializeMode)
+/* harmony export */ });
+/* harmony import */ var _initialize__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./initialize */ "../../../../node_modules/monaco-graphql/esm/initialize.js");
+
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/base/common/worker lazy recursive ^.*$ referencedExports: create"
+/*!******************************************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/base/common/worker/ lazy ^.*$ referencedExports: create namespace object ***!
+  \******************************************************************************************************************************/
+(module, __unused_webpack_exports, __webpack_require__) {
+
+const map = {
+	"./simpleWorker": "../../../../node_modules/monaco-editor/esm/vs/base/common/worker/simpleWorker.js",
+	"./simpleWorker.js": "../../../../node_modules/monaco-editor/esm/vs/base/common/worker/simpleWorker.js"
+};
+
+function webpackAsyncContext(req) {
+	return Promise.resolve().then(() => {
+	if(!__webpack_require__.o(map, req)) {
+		const e = new Error("Cannot find module '" + req + "'");
+		e.code = 'MODULE_NOT_FOUND';
+		throw e;
+	}
+	const id = map[req];
+	return __webpack_require__(id);
+});
+}
+webpackAsyncContext.keys = () => (Object.keys(map));
+webpackAsyncContext.id = "../../../../node_modules/monaco-editor/esm/vs/base/common/worker lazy recursive ^.*$ referencedExports: create";
+module.exports = webpackAsyncContext;
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services lazy recursive ^.*$"
+/*!********************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/ lazy ^.*$ namespace object ***!
+  \********************************************************************************************************/
+(module, __unused_webpack_exports, __webpack_require__) {
+
+const map = {
+	"./editorBaseApi": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/editorBaseApi.js",
+		[]
+	],
+	"./editorBaseApi.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/editorBaseApi.js",
+		[]
+	],
+	"./editorSimpleWorker": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/editorSimpleWorker.js",
+		[]
+	],
+	"./editorSimpleWorker.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/editorSimpleWorker.js",
+		[]
+	],
+	"./editorWorker": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/editorWorker.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_editorWorker_js"
+		]
+	],
+	"./editorWorker.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/editorWorker.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_editorWorker_js"
+		]
+	],
+	"./editorWorkerHost": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/editorWorkerHost.js",
+		[]
+	],
+	"./editorWorkerHost.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/editorWorkerHost.js",
+		[]
+	],
+	"./findSectionHeaders": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/findSectionHeaders.js",
+		[]
+	],
+	"./findSectionHeaders.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/findSectionHeaders.js",
+		[]
+	],
+	"./getIconClasses": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/getIconClasses.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_resources_js-node_modules_monaco-editor-609760",
+			"node_modules_monaco-editor_esm_vs_editor_common_services_getIconClasses_js"
+		]
+	],
+	"./getIconClasses.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/getIconClasses.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_resources_js-node_modules_monaco-editor-609760",
+			"node_modules_monaco-editor_esm_vs_editor_common_services_getIconClasses_js"
+		]
+	],
+	"./languageFeatureDebounce": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeatureDebounce.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_platform_log_common_log_js",
+			"node_modules_monaco-editor_esm_vs_editor_common_services_languageFeatureDebounce_js"
+		]
+	],
+	"./languageFeatureDebounce.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeatureDebounce.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_platform_log_common_log_js",
+			"node_modules_monaco-editor_esm_vs_editor_common_services_languageFeatureDebounce_js"
+		]
+	],
+	"./languageFeatures": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeatures.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_languageFeatures_js"
+		]
+	],
+	"./languageFeatures.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeatures.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_languageFeatures_js"
+		]
+	],
+	"./languageFeaturesService": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeaturesService.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_glob_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_languageFeaturesService_js",
+			"node_modules_monaco-editor_esm_vs_base_common_extpath_js-node_modules_monaco-editor_esm_vs_pl-d17c0b"
+		]
+	],
+	"./languageFeaturesService.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeaturesService.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_glob_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_languageFeaturesService_js",
+			"node_modules_monaco-editor_esm_vs_base_common_extpath_js-node_modules_monaco-editor_esm_vs_pl-d17c0b"
+		]
+	],
+	"./languageService": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageService.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_resources_js-node_modules_monaco-editor-609760",
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_glob_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_languagesRegistry_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_languageService_js"
+		]
+	],
+	"./languageService.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageService.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_resources_js-node_modules_monaco-editor-609760",
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_glob_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_languagesRegistry_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_languageService_js"
+		]
+	],
+	"./languagesAssociations": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languagesAssociations.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_resources_js-node_modules_monaco-editor-609760",
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_glob_js",
+			"node_modules_monaco-editor_esm_vs_editor_common_services_languagesAssociations_js"
+		]
+	],
+	"./languagesAssociations.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languagesAssociations.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_resources_js-node_modules_monaco-editor-609760",
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_glob_js",
+			"node_modules_monaco-editor_esm_vs_editor_common_services_languagesAssociations_js"
+		]
+	],
+	"./languagesRegistry": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languagesRegistry.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_resources_js-node_modules_monaco-editor-609760",
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_glob_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_languagesRegistry_js"
+		]
+	],
+	"./languagesRegistry.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languagesRegistry.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_resources_js-node_modules_monaco-editor-609760",
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_glob_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_languagesRegistry_js"
+		]
+	],
+	"./markerDecorations": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/markerDecorations.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_markerDecorations_js"
+		]
+	],
+	"./markerDecorations.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/markerDecorations.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_markerDecorations_js"
+		]
+	],
+	"./markerDecorationsService": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/markerDecorationsService.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_platform_theme_common_colorRegistry_js-node_modules-72c7a0",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_core_editorColorRegistry_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_markerDecorationsService_js",
+			"node_modules_monaco-editor_esm_vs_platform_jsonschemas_common_jsonContributionRegistry_js-nod-1ec943"
+		]
+	],
+	"./markerDecorationsService.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/markerDecorationsService.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_platform_theme_common_colorRegistry_js-node_modules-72c7a0",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_core_editorColorRegistry_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_markerDecorationsService_js",
+			"node_modules_monaco-editor_esm_vs_platform_jsonschemas_common_jsonContributionRegistry_js-nod-1ec943"
+		]
+	],
+	"./model": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/model.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_model_js"
+		]
+	],
+	"./model.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/model.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_model_js"
+		]
+	],
+	"./modelService": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/modelService.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_resources_js-node_modules_monaco-editor-609760",
+			"vendors-node_modules_monaco-editor_esm_vs_platform_theme_common_colorRegistry_js-node_modules-72c7a0",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_core_editorColorRegistry_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_core_cursorColumns_js-node_modules_mo-0787bc",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_modelService_js",
+			"node_modules_monaco-editor_esm_vs_editor_common_core_eolCounter_js-node_modules_monaco-editor-eb110a"
+		]
+	],
+	"./modelService.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/modelService.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_base_common_resources_js-node_modules_monaco-editor-609760",
+			"vendors-node_modules_monaco-editor_esm_vs_platform_theme_common_colorRegistry_js-node_modules-72c7a0",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_core_editorColorRegistry_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_core_cursorColumns_js-node_modules_mo-0787bc",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_modelService_js",
+			"node_modules_monaco-editor_esm_vs_editor_common_core_eolCounter_js-node_modules_monaco-editor-eb110a"
+		]
+	],
+	"./resolverService": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/resolverService.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_resolverService_js"
+		]
+	],
+	"./resolverService.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/resolverService.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_resolverService_js"
+		]
+	],
+	"./semanticTokensDto": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensDto.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensDto_js"
+		]
+	],
+	"./semanticTokensDto.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensDto.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensDto_js"
+		]
+	],
+	"./semanticTokensProviderStyling": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensProviderStyling.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_platform_log_common_log_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensProviderStyling_js",
+			"node_modules_monaco-editor_esm_vs_platform_instantiation_common_instantiation_js-node_modules-0a273d"
+		]
+	],
+	"./semanticTokensProviderStyling.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensProviderStyling.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_platform_log_common_log_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensProviderStyling_js",
+			"node_modules_monaco-editor_esm_vs_platform_instantiation_common_instantiation_js-node_modules-0a273d"
+		]
+	],
+	"./semanticTokensStyling": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensStyling.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensStyling_js"
+		]
+	],
+	"./semanticTokensStyling.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensStyling.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensStyling_js"
+		]
+	],
+	"./semanticTokensStylingService": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensStylingService.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_platform_log_common_log_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensProviderStyling_js",
+			"node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensStylingService_js-node-82420c"
+		]
+	],
+	"./semanticTokensStylingService.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/semanticTokensStylingService.js",
+		[
+			"vendors-node_modules_monaco-editor_esm_vs_platform_log_common_log_js",
+			"vendors-node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensProviderStyling_js",
+			"node_modules_monaco-editor_esm_vs_editor_common_services_semanticTokensStylingService_js-node-82420c"
+		]
+	],
+	"./textModelSync/textModelSync.impl": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/textModelSync/textModelSync.impl.js",
+		[]
+	],
+	"./textModelSync/textModelSync.impl.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/textModelSync/textModelSync.impl.js",
+		[]
+	],
+	"./textModelSync/textModelSync.protocol": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/textModelSync/textModelSync.protocol.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_textModelSync_textModelSync_protocol_js"
+		]
+	],
+	"./textModelSync/textModelSync.protocol.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/textModelSync/textModelSync.protocol.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_textModelSync_textModelSync_protocol_js"
+		]
+	],
+	"./textResourceConfiguration": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/textResourceConfiguration.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_textResourceConfiguration_js"
+		]
+	],
+	"./textResourceConfiguration.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/textResourceConfiguration.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_textResourceConfiguration_js"
+		]
+	],
+	"./treeSitterParserService": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeSitterParserService.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_treeSitterParserService_js"
+		]
+	],
+	"./treeSitterParserService.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeSitterParserService.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_treeSitterParserService_js"
+		]
+	],
+	"./treeViewsDnd": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDnd.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_treeViewsDnd_js"
+		]
+	],
+	"./treeViewsDnd.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDnd.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_treeViewsDnd_js"
+		]
+	],
+	"./treeViewsDndService": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDndService.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_treeViewsDndService_js"
+		]
+	],
+	"./treeViewsDndService.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/treeViewsDndService.js",
+		[
+			"node_modules_monaco-editor_esm_vs_editor_common_services_treeViewsDndService_js"
+		]
+	],
+	"./unicodeTextModelHighlighter": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/unicodeTextModelHighlighter.js",
+		[]
+	],
+	"./unicodeTextModelHighlighter.js": [
+		"../../../../node_modules/monaco-editor/esm/vs/editor/common/services/unicodeTextModelHighlighter.js",
+		[]
+	]
+};
+function webpackAsyncContext(req) {
+	try {
+		if(!__webpack_require__.o(map, req)) {
+			return Promise.resolve().then(() => {
+	const e = new Error("Cannot find module '" + req + "'");
+	e.code = 'MODULE_NOT_FOUND';
+	throw e;
+});
+		}
+	} catch(err) {
+		return Promise.reject(err);
+	}
+
+	const ids = map[req], id = ids[0];
+	return Promise.all(ids[1].map(__webpack_require__.e)).then(() => (__webpack_require__(id)));
+}
+webpackAsyncContext.keys = () => (Object.keys(map));
+webpackAsyncContext.id = "../../../../node_modules/monaco-editor/esm/vs/editor/common/services lazy recursive ^.*$";
+module.exports = webpackAsyncContext;
+
+/***/ }
+
+}]);
+//# sourceMappingURL=node_modules_monaco-graphql_esm_lite_js-node_modules_monaco-editor_esm_vs_base_common_worker_-a50a28.js.map

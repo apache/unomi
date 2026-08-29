@@ -1,0 +1,46 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260829T113025022Z-1106504-f7aa4acb38e9",
+  "runStatus": "inconclusive",
+  "errors": [
+    "candidate-select:didvc/didvc-openid-gateway/src/main/java/org/apache/unomi/didvc/gateway/DidAnchor.java: candidate_limit_exceeded: 18 changed reviewable file(s) were not scanned because the limit is 20",
+    "supply-chain-check:.: spawnSync /usr/bin/node ETIMEDOUT"
+  ],
+  "target": ".",
+  "revision": "51f6bbec62fe7eec5a3b722088273f9bb437b449",
+  "diffHash": "715bd84142834c3cb5dc0328e81b84c18acf0703cf2f9ed532d4e8dd1d61ef34",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-08-29T11:30:25.022Z",
+  "timing": {
+    "startedAt": "2026-08-29T11:30:22.226Z",
+    "completedAt": "2026-08-29T11:30:25.022Z",
+    "durationMs": 2796
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 3,
+    "bySeverity": {
+      "high": 2,
+      "medium": 1
+    },
+    "byStatus": {
+      "static_verified": 2,
+      "candidate": 1
+    }
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "candidate_limit_exceeded": 1,
+      "project_check_failed": 2
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T113025022Z-1106504-f7aa4acb38e9.json"
+}

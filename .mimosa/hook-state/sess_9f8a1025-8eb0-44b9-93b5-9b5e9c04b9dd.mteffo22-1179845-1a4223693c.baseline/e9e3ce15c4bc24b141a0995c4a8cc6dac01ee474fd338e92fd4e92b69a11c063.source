@@ -1,0 +1,124 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.unomi.api.segments;
+
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.utils.YamlUtils;
+import org.apache.unomi.api.utils.YamlUtils.YamlConvertible;
+import org.apache.unomi.api.utils.YamlUtils.YamlMapBuilder;
+
+import java.io.Serializable;
+import java.util.Map;
+import java.util.Set;
+
+import static org.apache.unomi.api.utils.YamlUtils.circularRef;
+import static org.apache.unomi.api.utils.YamlUtils.toYamlValue;
+
+/**
+ * One dimension of a {@link org.apache.unomi.api.segments.Scoring} model.
+ * Assigns a numeric value along an axis (for example engagement) when a
+ * profile matches the element's condition.
+ */
+public class ScoringElement implements Serializable, YamlConvertible {
+    /**
+     * Condition evaluated to decide whether this scoring element applies (JSON wire field {@code type} + {@code parameterValues}).
+     * @api.example {"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}}
+     */
+    private Condition condition;
+    private int value;
+
+    /**
+     * Default constructor.
+     */
+    public ScoringElement() {
+    }
+
+    /**
+     * Condition evaluated to decide whether this scoring element applies.
+     * In JSON the condition type id is usually the field {@code type} (not {@code conditionTypeId}).
+     *
+     * @return the condition
+     * @api.example {"type":"eventTypeCondition","parameterValues":{"eventTypeId":"view"}}
+     */
+    public Condition getCondition() {
+        return condition;
+    }
+
+    /**
+     * Sets the matching condition.
+     *
+     * @param condition the condition
+     */
+    public void setCondition(Condition condition) {
+        this.condition = condition;
+    }
+
+    /**
+     * Score contributed when the condition matches.
+     *
+     * @return the score value
+     */
+    public int getValue() {
+        return value;
+    }
+
+    /**
+     * Sets the score value contributed when the condition matches.
+     *
+     * @param value the score value
+     */
+    public void setValue(int value) {
+        this.value = value;
+    }
+
+    /**
+     * Converts this scoring element to a Map structure for YAML output.
+     * Implements YamlConvertible interface with circular reference detection.
+     *
+     * @param visited set of already visited objects to prevent infinite recursion (may be null)
+     * @return a Map representation of this scoring element
+     */
+    @Override
+    public Map<String, Object> toYaml(Set<Object> visited, int maxDepth) {
+        if (maxDepth <= 0) {
+            return YamlMapBuilder.create()
+                .put("condition", "<max depth exceeded>")
+                .put("value", value)
+                .build();
+        }
+        if (visited != null && visited.contains(this)) {
+            return circularRef();
+        }
+        final Set<Object> visitedSet = visited != null ? visited : YamlUtils.newIdentityVisitedSet();
+        visitedSet.add(this);
+        try {
+            return YamlMapBuilder.create()
+                .putIfNotNull("condition", condition != null ? toYamlValue(condition, visitedSet, maxDepth - 1) : null)
+                .put("value", value)
+                .build();
+        } finally {
+            visitedSet.remove(this);
+        }
+    }
+
+    @Override
+    public String toString() {
+        Map<String, Object> map = toYaml();
+        return YamlUtils.format(map);
+    }
+}

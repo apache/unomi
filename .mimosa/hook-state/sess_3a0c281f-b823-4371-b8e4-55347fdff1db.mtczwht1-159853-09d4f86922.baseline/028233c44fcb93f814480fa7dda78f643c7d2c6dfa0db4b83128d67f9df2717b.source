@@ -1,0 +1,385 @@
+#!/usr/bin/env python3
+################################################################################
+# Licensed to the Apache Software Foundation (ASF) under one or more
+# contributor license agreements.  See the NOTICE file distributed with
+# this work for additional information regarding copyright ownership.
+# The ASF licenses this file to You under the Apache License, Version 2.0
+# (the "License"); you may not use this file except in compliance with
+# the License.  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+################################################################################
+"""
+Drives an OpenID Foundation conformance-suite test plan end to end,
+performing the out-of-band steps a human browser/wallet would do:
+
+  * credential-offer delivery: POST the issuer's credential offer to the
+    module's exposed ``credential_offer_endpoint``
+  * front-channel browser visits: fetch each pending URL (following the
+    redirect into the suite's callback) and mark it visited via
+    ``POST /api/runner/browser/{id}/visit``
+  * implicit submit: POST the (empty) fragment to the
+    ``implicit_submit.fullUrl`` the module published in its log
+
+API shape (suite 5.2.4, mirrors scripts/conformance.py of the suite):
+  POST api/plan?planName=..&variant=<json>      body = config JSON
+  POST api/runner?test=<name>&plan=<id>
+  POST api/runner/<id>                          start
+  GET  api/runner/<id>                          status (browser + exposed)
+  GET  api/runner/<id>/wait-state?states=..
+  GET  api/log/<id>                             event log
+  POST api/runner/browser/{id}/visit?url=<enc>
+
+All suite calls carry ``X-Forwarded-Proto: https`` (the suite derives the
+request scheme from it) and an optional Bearer token.
+
+Out-of-band fetch security (SSRF containment): the driver only contacts
+origins the operator declared (``--suite-api``, ``--offer-url``,
+``--allow-host``). Every fetched URL, including each redirect hop, must
+
+  * use http/https,
+  * match a declared netloc, and
+  * resolve to IPs that are neither link-local, unspecified, reserved nor
+    multicast; loopback/private ranges are only accepted for netlocs the
+    operator declared (the local dev stack deliberately runs on
+    localhost). DNS is re-resolved and re-checked on every fetch to
+    narrow rebinding windows.
+
+Usage:
+  drive-openid-plan.py --plan-name oid4vci-1_0-issuer-test-plan \
+      --variant '<json>' --config-file config.json \
+      [--suite-api http://localhost:8080] \
+      [--offer-url http://localhost:8081/hkt/credential-offer] \
+      [--allow-host <host[:port]> ...] \
+      [--modules a,b,c] [--module-timeout 300] [--verbose]
+"""
+import argparse
+import ipaddress
+import json
+import socket
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
+FINISHED = "FINISHED"
+INTERRUPTED = "INTERRUPTED"
+
+
+def log(msg):
+    print("[driver] %s" % msg, flush=True)
+
+
+class OriginAllowlist:
+    """Operator-declared origins; validates scheme, netloc and resolved IPs.
+
+    Loopback/private addresses are permitted only for netlocs that were
+    explicitly declared (the local dev stack runs on localhost); any
+    undeclared host, and any link-local/unspecified/reserved/multicast
+    address, is rejected outright.
+    """
+
+    def __init__(self):
+        self._declared = {}  # netloc(lower) -> True (operator declared)
+
+    def declare(self, url_or_host):
+        if "://" in url_or_host:
+            parsed = urllib.parse.urlparse(url_or_host)
+            if parsed.scheme not in ("http", "https") or not parsed.netloc:
+                raise ValueError("not an http(s) URL: %s" % url_or_host)
+            netloc = parsed.netloc
+        else:
+            netloc = url_or_host
+        self._declared[netloc.lower()] = True
+
+    def check(self, url):
+        parsed = urllib.parse.urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        netloc = (parsed.netloc or "").lower()
+        declared = netloc in self._declared
+        if not declared:
+            return False
+        host = parsed.hostname
+        if not host:
+            return False
+        try:
+            infos = socket.getaddrinfo(host, None)
+        except OSError:
+            return False
+        for info in infos:
+            try:
+                addr = ipaddress.ip_address(info[4][0])
+            except ValueError:
+                return False
+            if addr.is_link_local or addr.is_unspecified or addr.is_reserved or addr.is_multicast:
+                return False
+            if (addr.is_private or addr.is_loopback) and not declared:
+                return False
+        return True
+
+
+class SuiteClient:
+    def __init__(self, base_url, token=None, verbose=False):
+        self.base = base_url.rstrip("/")
+        self.token = token
+        self.verbose = verbose
+
+    def _request(self, method, path, body=None, headers=None, timeout=30):
+        url = self.base + path
+        hdrs = {"X-Forwarded-Proto": "https"}
+        if self.token:
+            hdrs["Authorization"] = "Bearer " + self.token
+        if headers:
+            hdrs.update(headers)
+        data = body.encode() if isinstance(body, str) else body
+        req = urllib.request.Request(url, data=data, headers=hdrs, method=method)
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                raw = resp.read()
+                if self.verbose:
+                    log("%s %s -> %s (%d bytes)" % (method, url, resp.status, len(raw)))
+                return resp.status, raw
+        except urllib.error.HTTPError as e:
+            return e.code, e.read()
+
+    def json(self, method, path, body=None):
+        headers = {}
+        payload = None
+        if body is not None:
+            headers["Content-Type"] = "application/json"
+            payload = json.dumps(body) if not isinstance(body, str) else body
+        status, raw = self._request(method, path, payload, headers)
+        if status >= 400:
+            raise RuntimeError("%s %s failed: HTTP %s: %s" % (method, path, status, raw[:400]))
+        if not raw:
+            return {}
+        return json.loads(raw)
+
+    def create_plan(self, plan_name, variant, config):
+        path = "/api/plan?planName=%s" % urllib.parse.quote(plan_name)
+        if variant:
+            path += "&variant=%s" % urllib.parse.quote(json.dumps(variant))
+        result = self.json("POST", path, config)
+        log("plan %s created: %s" % (plan_name, result.get("id")))
+        return result
+
+    def wait_state(self, module_id, states, timeout_ms=10000):
+        path = "/api/runner/%s/wait-state?states=%s&timeoutMs=%d" % (module_id, states, timeout_ms)
+        try:
+            return self.json("GET", path).get("state")
+        except RuntimeError as e:
+            log("wait-state error (continuing): %s" % e)
+            return None
+
+    def status(self, module_id):
+        return self.json("GET", "/api/runner/%s" % module_id)
+
+    def module_log(self, module_id):
+        return self.json("GET", "/api/log/%s" % module_id)
+
+
+class _BaseNoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+class _ValidatingRedirect(urllib.request.HTTPRedirectHandler):
+    """Follows redirects only when each hop passes the allowlist again."""
+
+    def __init__(self, allowlist):
+        self.allowlist = allowlist
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not self.allowlist.check(newurl):
+            log("blocked redirect to non-allowlisted origin: %s" % newurl)
+            return None
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def fetch(url, allowlist, follow=True, timeout=30):
+    """Out-of-band GET with allowlist validation (and validated redirects)."""
+    if not allowlist.check(url):
+        log("blocked fetch of non-allowlisted URL: %s" % url)
+        return 0, b""
+    req = urllib.request.Request(url, headers={"User-Agent": "didvc-conformance-driver"})
+    handler = _ValidatingRedirect(allowlist) if follow else _BaseNoRedirect()
+    try:
+        with urllib.request.build_opener(handler).open(req, timeout=timeout) as resp:
+            return resp.status, resp.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+
+
+def fetch_post(url, allowlist, body="", timeout=30):
+    if not allowlist.check(url):
+        log("blocked POST to non-allowlisted URL: %s" % url)
+        return 0, b""
+    req = urllib.request.Request(url, data=body.encode(), method="POST")
+    try:
+        with urllib.request.build_opener(_BaseNoRedirect()).open(req, timeout=timeout) as resp:
+            return resp.status, resp.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+
+
+class ModuleDriver:
+    def __init__(self, client, offer_url, module_timeout, allowlist, verbose=False):
+        self.client = client
+        self.offer_url = offer_url
+        self.module_timeout = module_timeout
+        self.allowlist = allowlist
+        self.verbose = verbose
+        self.delivered_offers = set()
+        self.submitted_urls = set()
+        self.visited_urls = set()
+
+    def run(self, module_name, plan_id):
+        client = self.client
+        created = client.json("POST", "/api/runner?test=%s&plan=%s"
+                              % (urllib.parse.quote(module_name), urllib.parse.quote(plan_id)))
+        module_id = created["id"]
+        log("module %s -> id %s" % (module_name, module_id))
+        client._request("POST", "/api/runner/%s" % module_id)
+
+        deadline = time.time() + self.module_timeout
+        state = None
+        while time.time() < deadline:
+            self.drive_out_of_band(module_id)
+            state = client.wait_state(module_id, "%s,%s" % (FINISHED, INTERRUPTED), timeout_ms=5000)
+            if state in (FINISHED, INTERRUPTED):
+                break
+        final = state or client.wait_state(module_id, "%s,%s" % (FINISHED, INTERRUPTED), timeout_ms=2000)
+        log("module %s final state: %s" % (module_name, final))
+        self.report_errors(module_id)
+        return final
+
+    def drive_out_of_band(self, module_id):
+        """One pass over the out-of-band duties."""
+        client = self.client
+        try:
+            status = client.status(module_id)
+        except RuntimeError as e:
+            log("status error (continuing): %s" % e)
+            return
+
+        exposed = status.get("exposed") or {}
+        browser = status.get("browser") or {}
+
+        # 1. credential-offer delivery (each newly exposed endpoint once)
+        offer_endpoint = exposed.get("credential_offer_endpoint")
+        if offer_endpoint and offer_endpoint not in self.delivered_offers:
+            self.delivered_offers.add(offer_endpoint)
+            code, offer = fetch(self.offer_url, self.allowlist)
+            if code != 200:
+                log("credential offer fetch failed: HTTP %s" % code)
+            else:
+                target = offer_endpoint + "?credential_offer=" + urllib.parse.quote(
+                    offer.decode(), safe="")
+                code, _ = fetch_post(target, self.allowlist)
+                log("delivered credential offer to %s (HTTP %s)" % (offer_endpoint, code))
+
+        # 2. front-channel browser visits
+        for entry in browser.get("urlsWithMethod") or []:
+            url, method = entry.get("url"), entry.get("method", "GET")
+            if url in self.visited_urls:
+                continue
+            if method.upper() != "GET":
+                log("pending non-GET front-channel call (needs body): %s %s" % (method, url))
+                continue
+            self.visited_urls.add(url)
+            code, _body = fetch(url, self.allowlist, follow=True)
+            log("visited %s -> HTTP %s" % (url, code))
+            client._request("POST", "/api/runner/browser/%s/visit?url=%s"
+                            % (module_id, urllib.parse.quote(url, safe="")))
+
+        # 3. implicit submit (fragment landing) — parsed from the module log
+        try:
+            events = client.module_log(module_id)
+        except RuntimeError as e:
+            log("log fetch error (continuing): %s" % e)
+            events = []
+        for event in events if isinstance(events, list) else []:
+            implicit = event.get("implicit_submit") or {}
+            full_url = implicit.get("fullUrl")
+            if full_url and full_url not in self.submitted_urls:
+                self.submitted_urls.add(full_url)
+                code, _ = fetch_post(full_url, self.allowlist)
+                log("implicit submit to %s (HTTP %s)" % (full_url, code))
+
+    def report_errors(self, module_id):
+        try:
+            events = self.client.module_log(module_id)
+        except RuntimeError:
+            return
+        failures = []
+        for event in events if isinstance(events, list) else []:
+            if event.get("result") in ("FAILURE", "ERROR"):
+                failures.append("%s: %s" % (event.get("src", "?"),
+                                            str(event.get("_message", ""))[:200]))
+        for f in failures[:10]:
+            log("  ERROR %s" % f)
+        if len(failures) > 10:
+            log("  ... and %d more errors" % (len(failures) - 10))
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        description="Drive an OpenID conformance suite plan with out-of-band steps")
+    ap.add_argument("--suite-api", default="http://localhost:8080")
+    ap.add_argument("--token", default=None, help="Bearer token for the suite API")
+    ap.add_argument("--plan-name", required=True)
+    ap.add_argument("--variant", default=None, help="variant JSON string")
+    ap.add_argument("--config-file", required=True)
+    ap.add_argument("--offer-url",
+                    default="http://localhost:8081/hkt/credential-offer",
+                    help="issuer credential-offer URL for offer delivery")
+    ap.add_argument("--allow-host", action="append", default=[],
+                    help="extra host[:port] origins the driver may fetch "
+                         "(e.g. the cloudflared tunnel host); repeatable")
+    ap.add_argument("--modules", default=None, help="comma-separated filter")
+    ap.add_argument("--module-timeout", type=int, default=300)
+    ap.add_argument("--verbose", action="store_true")
+    args = ap.parse_args()
+
+    allowlist = OriginAllowlist()
+    allowlist.declare(args.suite_api)
+    allowlist.declare(args.offer_url)
+    for host in args.allow_host:
+        allowlist.declare(host)
+
+    with open(args.config_file) as fh:
+        config = json.load(fh)
+
+    client = SuiteClient(args.suite_api, args.token, args.verbose)
+    plan = client.create_plan(args.plan_name,
+                              json.loads(args.variant) if args.variant else None,
+                              config)
+    plan_id = plan["id"]
+    modules = [m["testModule"] for m in plan.get("modules", [])]
+    if args.modules:
+        wanted = set(args.modules.split(","))
+        modules = [m for m in modules if m in wanted]
+
+    driver = ModuleDriver(client, args.offer_url, args.module_timeout, allowlist, args.verbose)
+    results = {}
+    for name in modules:
+        results[name] = driver.run(name, plan_id)
+
+    finished = sum(1 for s in results.values() if s == FINISHED)
+    print("\n[driver] ==== %s: %d/%d FINISHED ====" % (args.plan_name, finished, len(results)))
+    for name, state in results.items():
+        print("[driver]   %-60s %s" % (name, state))
+    if finished != len(results):
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

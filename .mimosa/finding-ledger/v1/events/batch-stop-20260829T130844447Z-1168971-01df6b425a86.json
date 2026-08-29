@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-20260829T130844447Z-1168971-01df6b425a86",
+  "runId": "20260829T130844447Z-1168971-01df6b425a86",
+  "runStatus": "inconclusive",
+  "coverage": {
+    "status": "partial",
+    "reasons": [
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/exam/37afd24e-769c-498d-8b3b-7e82569b20ca/bin/contrib/karaf-service.sh",
+        "detail": "file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "stop_budget_exhausted",
+        "stage": "agent-check",
+        "target": ".",
+        "detail": "focused agent configuration check was not run before the gate budget",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/exam/37afd24e-769c-498d-8b3b-7e82569b20ca/bin/contrib/karaf-service.sh",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "supply-chain-check",
+        "target": ".",
+        "detail": "spawnSync /usr/bin/node ETIMEDOUT",
+        "affectsCompletion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "agent-check",
+        "target": ".",
+        "detail": "stop_budget_exhausted: focused agent configuration check was not run before the gate budget",
+        "affectsCompletion": true
+      }
+    ]
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "Stop"
+  },
+  "revision": "494e81709734471b29d35bbdbba152c28478120a",
+  "diffHash": "19f4511c1cced0f7efe8fccd887e62b4008096e92fe49e68a51be2ba79e4e735",
+  "rulesVersion": "unavailable",
+  "sessionHash": "07679adc850d3b0cb3ae54a843f7a8018bc5a95b49818d1d62fa602a9efdb9f8",
+  "reportRef": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T130844447Z-1168971-01df6b425a86.json",
+  "events": [],
+  "observedFindingIds": [],
+  "verifiedFiles": [
+    {
+      "file": "didvc/interop/wallet-roundtrip.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/interop/load-test.ts",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "samples/login-integration/src/main/webapp/javascript/login-example.js",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/DidKeyCoreVectorTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/VcDataModel20VectorTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VpVerificationLoadTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "itests/target/exam/37afd24e-769c-498d-8b3b-7e82569b20ca/bin/contrib/karaf-service.sh",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VciAuthorizationCodeFlowTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VciFlowIntegrationTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/VpVerificationIntegrationTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    },
+    {
+      "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/wallet/WalletFlowIntegrationTest.java",
+      "direct": "complete",
+      "projectContext": "partial"
+    }
+  ],
+  "recordedAt": "2026-08-29T13:08:45.106Z"
+}

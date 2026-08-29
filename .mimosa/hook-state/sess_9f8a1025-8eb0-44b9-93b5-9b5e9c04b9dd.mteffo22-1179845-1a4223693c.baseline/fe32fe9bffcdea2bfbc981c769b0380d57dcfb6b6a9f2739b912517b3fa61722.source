@@ -1,0 +1,86 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["node_modules_monaco-editor_esm_vs_platform_jsonschemas_common_jsonContributionRegistry_js"],{
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/jsonschemas/common/jsonContributionRegistry.js"
+/*!*************************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/jsonschemas/common/jsonContributionRegistry.js ***!
+  \*************************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Extensions: () => (/* binding */ Extensions)
+/* harmony export */ });
+/* harmony import */ var _base_common_event_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/event.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/event.js");
+/* harmony import */ var _registry_common_platform_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../registry/common/platform.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/registry/common/platform.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+const Extensions = {
+  JSONContribution: 'base.contributions.json'
+};
+function normalizeId(id) {
+  if (id.length > 0 && id.charAt(id.length - 1) === '#') {
+    return id.substring(0, id.length - 1);
+  }
+  return id;
+}
+class JSONContributionRegistry {
+  constructor() {
+    this._onDidChangeSchema = new _base_common_event_js__WEBPACK_IMPORTED_MODULE_0__.Emitter();
+    this.schemasById = {};
+  }
+  registerSchema(uri, unresolvedSchemaContent) {
+    this.schemasById[normalizeId(uri)] = unresolvedSchemaContent;
+    this._onDidChangeSchema.fire(uri);
+  }
+  notifySchemaChanged(uri) {
+    this._onDidChangeSchema.fire(uri);
+  }
+}
+const jsonContributionRegistry = new JSONContributionRegistry();
+_registry_common_platform_js__WEBPACK_IMPORTED_MODULE_1__.Registry.add(Extensions.JSONContribution, jsonContributionRegistry);
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/registry/common/platform.js"
+/*!******************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/registry/common/platform.js ***!
+  \******************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   Registry: () => (/* binding */ Registry)
+/* harmony export */ });
+/* harmony import */ var _base_common_assert_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/assert.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/assert.js");
+/* harmony import */ var _base_common_types_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../base/common/types.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/types.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+
+class RegistryImpl {
+  constructor() {
+    this.data = new Map();
+  }
+  add(id, data) {
+    _base_common_assert_js__WEBPACK_IMPORTED_MODULE_0__.ok(_base_common_types_js__WEBPACK_IMPORTED_MODULE_1__.isString(id));
+    _base_common_assert_js__WEBPACK_IMPORTED_MODULE_0__.ok(_base_common_types_js__WEBPACK_IMPORTED_MODULE_1__.isObject(data));
+    _base_common_assert_js__WEBPACK_IMPORTED_MODULE_0__.ok(!this.data.has(id), 'There is already an extension with this id');
+    this.data.set(id, data);
+  }
+  as(id) {
+    return this.data.get(id) || null;
+  }
+}
+const Registry = new RegistryImpl();
+
+/***/ }
+
+}]);
+//# sourceMappingURL=node_modules_monaco-editor_esm_vs_platform_jsonschemas_common_jsonContributionRegistry_js.js.map

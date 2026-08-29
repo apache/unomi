@@ -1,0 +1,42 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260829T130844447Z-1168971-01df6b425a86",
+  "runStatus": "inconclusive",
+  "errors": [
+    "baseline-read:itests/target/exam/37afd24e-769c-498d-8b3b-7e82569b20ca/bin/contrib/karaf-service.sh: baseline_snapshot_unreadable: file is missing from task baseline",
+    "supply-chain-check:.: spawnSync /usr/bin/node ETIMEDOUT",
+    "agent-check:.: stop_budget_exhausted: focused agent configuration check was not run before the gate budget"
+  ],
+  "target": ".",
+  "revision": "494e81709734471b29d35bbdbba152c28478120a",
+  "diffHash": "19f4511c1cced0f7efe8fccd887e62b4008096e92fe49e68a51be2ba79e4e735",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-08-29T13:08:44.447Z",
+  "timing": {
+    "startedAt": "2026-08-29T13:08:41.706Z",
+    "completedAt": "2026-08-29T13:08:44.447Z",
+    "durationMs": 2741
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 0,
+    "bySeverity": {},
+    "byStatus": {}
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "baseline_snapshot_unreadable": 1,
+      "stop_budget_exhausted": 1,
+      "project_check_failed": 3
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T130844447Z-1168971-01df6b425a86.json"
+}

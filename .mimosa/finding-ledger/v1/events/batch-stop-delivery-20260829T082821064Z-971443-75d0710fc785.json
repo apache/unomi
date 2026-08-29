@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "stop-delivery-20260829T082821064Z-971443-75d0710fc785",
+  "runId": "20260829T082821064Z-971443-75d0710fc785",
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "StopDelivery"
+  },
+  "revision": "cbfd5926d85d045d417b4dcedf09b52a961a1ca3",
+  "diffHash": "ec89843624f3987e46b7ccb44c3d25668c2fa1f7b16269b564221c879dab93d6",
+  "rulesVersion": "unavailable",
+  "sessionHash": "07679adc850d3b0cb3ae54a843f7a8018bc5a95b49818d1d62fa602a9efdb9f8",
+  "reportRef": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T082821064Z-971443-75d0710fc785.json",
+  "events": [
+    {
+      "eventId": "hook-7fa1cfa10e833ee692909d88a67d9441",
+      "findingId": "mimosa-d5e5537495d763cf2795df1e",
+      "type": "finding_blocked",
+      "at": "2026-08-29T08:28:21.732Z",
+      "identity": {
+        "projectRelativeFile": "itests/target/jacoco/doc/examples/java/ClassInfo.java",
+        "ruleId": "security",
+        "codeEvidenceHash": "0a05dba40f732bfbd6f93a880c6b008ee0e44c68116ec1975c4e03652e60050d",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 82,
+      "endLine": 82,
+      "reasonCode": "stop_rewake",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "0a05dba40f732bfbd6f93a880c6b008ee0e44c68116ec1975c4e03652e60050d"
+      },
+      "sequence": 0
+    },
+    {
+      "eventId": "hook-9f084562f4811a4df3607d88c669384a",
+      "findingId": "mimosa-8bf00ad5de05b740e7c7dc68",
+      "type": "finding_blocked",
+      "at": "2026-08-29T08:28:21.732Z",
+      "identity": {
+        "projectRelativeFile": "itests/target/jacoco/doc/examples/java/ExecDump.java",
+        "ruleId": "security",
+        "codeEvidenceHash": "0caa95ef0c2e2a480141e307a7585b2378ba3649a5424a00e6598854cc2389c7",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 104,
+      "endLine": 104,
+      "reasonCode": "stop_rewake",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "0caa95ef0c2e2a480141e307a7585b2378ba3649a5424a00e6598854cc2389c7"
+      },
+      "sequence": 1
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-08-29T08:28:22.360Z"
+}

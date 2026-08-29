@@ -1,0 +1,17 @@
+{
+  "messageType": "DECLARATION",
+  "sender": "SW-HK-PORT-COMMUNITY",
+  "declarationNumber": "SWD-2026-004218",
+  "lineItems": [
+    {
+      "itemId": "LI-001",
+      "hsCode": "8542",
+      "credentials": ["${cargoCredential}"]
+    },
+    {
+      "itemId": "LI-002",
+      "hsCode": "8471",
+      "credentials": ["${revokedCargoCredential}"]
+    }
+  ]
+}

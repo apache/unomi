@@ -1,0 +1,476 @@
+{
+  "schema_version": "mimosa-task-review/v2",
+  "run_id": "20260829T095046194Z-1017578-c00659b8590d",
+  "run_status": "inconclusive",
+  "errors": [
+    {
+      "stage": "baseline-read",
+      "target": "itests/target/exam/09224145-581f-4ded-9014-402c52551005/bin/contrib/karaf-service.sh",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase6SchemaBootstrapTest.java",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    },
+    {
+      "stage": "baseline-read",
+      "target": "didvc/didvc-metering/src/test/java/org/apache/unomi/didvc/batch/ManifestBatchProcessorTest.java",
+      "reason": "baseline_snapshot_unreadable: file is missing from task baseline"
+    }
+  ],
+  "coverage": {
+    "schema_version": "mimosa-hook-coverage/v1",
+    "status": "partial",
+    "scope": "hook_observed_diff",
+    "baseline": {
+      "complete": true,
+      "captured_files": 1350,
+      "candidate_limit": 5000,
+      "truncated": false,
+      "enumeration_error_count": 0,
+      "snapshot_error_count": 0,
+      "compensated_target_count": 13
+    },
+    "change_tracking": {
+      "touched_observed": 12,
+      "touched_retained": 12,
+      "truncated": false,
+      "bash_mutation": true,
+      "bash_discovered": 16,
+      "bash_discovery_limit": 80,
+      "bash_discovery_truncated": false
+    },
+    "candidates": {
+      "eligible_files": 16,
+      "selected_files": 16,
+      "limit": 20,
+      "truncated": false
+    },
+    "scanning": {
+      "required_files": 16,
+      "scanned_files": 16,
+      "skipped_files": 0,
+      "failed_files": 0,
+      "project_checks_required": 0,
+      "project_checks_completed": 0
+    },
+    "notification": {
+      "eligible_findings": 1,
+      "detailed_findings": 0,
+      "detail_limit": 3,
+      "truncated": true
+    },
+    "reason_counts": {
+      "baseline_snapshot_unreadable": 3,
+      "project_check_failed": 3
+    },
+    "reasons": [
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "itests/target/exam/09224145-581f-4ded-9014-402c52551005/bin/contrib/karaf-service.sh",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase6SchemaBootstrapTest.java",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "baseline_snapshot_unreadable",
+        "stage": "baseline-read",
+        "target": "didvc/didvc-metering/src/test/java/org/apache/unomi/didvc/batch/ManifestBatchProcessorTest.java",
+        "detail": "file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "itests/target/exam/09224145-581f-4ded-9014-402c52551005/bin/contrib/karaf-service.sh",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase6SchemaBootstrapTest.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      },
+      {
+        "code": "project_check_failed",
+        "stage": "baseline-read",
+        "target": "didvc/didvc-metering/src/test/java/org/apache/unomi/didvc/batch/ManifestBatchProcessorTest.java",
+        "detail": "baseline_snapshot_unreadable: file is missing from task baseline",
+        "affects_completion": true
+      }
+    ],
+    "reasons_truncated": false
+  },
+  "generated_at": "2026-08-29T09:50:46.194Z",
+  "session_id": "sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd",
+  "target": ".",
+  "revision": "5f06d210bd3a8e80f1f871fc9747fd684225603f",
+  "rules_version": "unavailable",
+  "diff_hash": "18224d27c51cceee2399118f79b9e782302a77a257a06bf96470996773e7fbc3",
+  "diff": {
+    "algorithm": "sha256",
+    "changed_file_count": 16,
+    "changed_files": [
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/customs/CustomsEdiAdapter.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 153
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "02b1228b6a641add58100396a2ff011b7b58bce6662ce6b476683894e55d56e7"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/customs/CustomsEdiController.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 120
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "612e4c16e5db3252fdb7228b7e9baac904bbf8ee92037b05713d935c45e63ff2"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/EdgeProperties.java",
+        "ranges": [
+          {
+            "start": 20,
+            "end": 20
+          },
+          {
+            "start": 62,
+            "end": 69
+          },
+          {
+            "start": 170,
+            "end": 204
+          }
+        ],
+        "before_hash": "72bf5130d6980d3cf5100bbf06e1f11d2acd6cdcd17b522e07c1340381e99431",
+        "after_hash": "f088032310c863f2ff8e4bc5cf072f6e20ba382a64c1b2ed74f8bbe2cb4e5dcf"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/m2m/BearerCredentialVerifier.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 217
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "425cc1d0baf5f8933fc241d982cb1dd377017228eed80663de9ece93c4afb1ba"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/m2m/M2mVerificationController.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 210
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "492eb8a0d183bbd3c77dc043606b4e060a4e799346c65a5718f59a37ecfde2af"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/support/InMemoryPlatformApi.java",
+        "ranges": [
+          {
+            "start": 290,
+            "end": 295
+          }
+        ],
+        "before_hash": "14985cbf5e4f6dbd1f7e7e1bafca475a5e0b185830dbc09802fd2701cf832f09",
+        "after_hash": "240b386ad584acbba8ad9b8c7c91cee12d301ffd487f7f052a6ca81bc2eb05cc"
+      },
+      {
+        "file": "didvc/didvc-edge/src/main/java/org/apache/unomi/didvc/edge/vci/CredentialIssuerController.java",
+        "ranges": [
+          {
+            "start": 65,
+            "end": 65
+          },
+          {
+            "start": 68,
+            "end": 69
+          },
+          {
+            "start": 255,
+            "end": 264
+          }
+        ],
+        "before_hash": "2f245dc45ffeefec4838dd5bccb66da9b1d3bb3e482a97310341ccc95400f4d6",
+        "after_hash": "c1e8e22d3e791836ed359775498c6d895eb530989a21c82b8179cd0d3469e019"
+      },
+      {
+        "file": "didvc/didvc-edge/src/test/java/org/apache/unomi/didvc/edge/m2m/M2mVerificationIntegrationTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 339
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "8a8d25e4b0f5eaf4175346ca8d69344539251977a1b9eea7df06a86d0551b755"
+      },
+      {
+        "file": "didvc/didvc-metering/src/main/java/org/apache/unomi/didvc/batch/KafkaManifestResultSink.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 81
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "339046a32362cd1c03ae26ac29fc0836684bae1c15da73a66f2603f2e3644bf6"
+      },
+      {
+        "file": "didvc/didvc-metering/src/main/java/org/apache/unomi/didvc/batch/ManifestRecord.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 172
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "a13912677dd847b12567e9abcd6900a043870770f591c49fc87971d8a6053700"
+      },
+      {
+        "file": "didvc/didvc-metering/src/test/java/org/apache/unomi/didvc/batch/ManifestBatchProcessorTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 104
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "fe5aac1f7f9802a17a594a35aab768e2b53cca41fc41bd0bb220ff82323cafeb"
+      },
+      {
+        "file": "didvc/didvc-services/src/main/java/org/apache/unomi/didvc/services/impl/Phase6SchemaBootstrap.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 108
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "dd805a821662e2834a03061a824618a4024bbf6771504d6569838fb9052de34f"
+      },
+      {
+        "file": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase6SchemaBootstrapTest.java",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 91
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "281aac2195cf0edd7a572ada8bbcd5fcbf529fac79dad0b459ec715050b51dbf"
+      },
+      {
+        "file": "didvc/scripts/run-didvc-its.sh",
+        "ranges": [
+          {
+            "start": 20,
+            "end": 20
+          },
+          {
+            "start": 22,
+            "end": 35
+          },
+          {
+            "start": 44,
+            "end": 44
+          },
+          {
+            "start": 56,
+            "end": 64
+          },
+          {
+            "start": 67,
+            "end": 68
+          },
+          {
+            "start": 71,
+            "end": 71
+          },
+          {
+            "start": 75,
+            "end": 77
+          }
+        ],
+        "before_hash": "82af94e6f3eb88a8890ff3819625af9cf6c8303c090b97d49fc4c6c706842467",
+        "after_hash": "5fe0a4d8f0a276f433ef2a5bf0b7fd3087ec933d9e86fd39db057d144333291f"
+      },
+      {
+        "file": "itests/src/test/java/org/apache/unomi/itests/DidvcSmokeIT.java",
+        "ranges": [
+          {
+            "start": 253,
+            "end": 309
+          }
+        ],
+        "before_hash": "6c8b6b761d0aac3ca6532e4f48285abce1ca5991c0dbb78c9b1defd69f731090",
+        "after_hash": "ae83a795e8f7c4202f36d71393a45fada9fd0b34c1054ac2e49b0a9cc9d31793"
+      },
+      {
+        "file": "itests/target/exam/09224145-581f-4ded-9014-402c52551005/bin/contrib/karaf-service.sh",
+        "ranges": [
+          {
+            "start": 1,
+            "end": 208
+          }
+        ],
+        "before_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "after_hash": "205119e505023d89561f89a07582ebb5dda0d9d7f1276cb4f171a69f63f207d3"
+      }
+    ]
+  },
+  "timing": {
+    "started_at": "2026-08-29T09:50:43.780Z",
+    "completed_at": "2026-08-29T09:50:46.194Z",
+    "duration_ms": 2414,
+    "measurement": "hook_wall_clock"
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "model_calls": 0,
+    "measurement": "known-zero"
+  },
+  "telemetry": {
+    "schemaVersion": "mimosa-gate-telemetry/v1",
+    "profile": "gate",
+    "operation": "Stop",
+    "outcome": "partial/INCONCLUSIVE",
+    "latencyMs": 2414,
+    "peakMemoryBytes": 182374400,
+    "memoryMeasurement": "max-observed-process-rss",
+    "scannedFiles": 16,
+    "cache": {
+      "hits": 0,
+      "misses": 0,
+      "measurement": "not-applicable"
+    },
+    "denyCount": 0,
+    "tokens": {
+      "input": 0,
+      "output": 0,
+      "total": 0,
+      "modelCalls": 0,
+      "measurement": "known-zero"
+    }
+  },
+  "finding_count": 1,
+  "rewake_finding_count": 0,
+  "evidence_boundary": {
+    "scan": "candidate",
+    "static_fix_verification": "observed_static_only",
+    "runtime_verification": "not_performed"
+  },
+  "finding_events": [
+    {
+      "finding_id": "mimosa-df21bce647dbd1c26eaab216",
+      "file": "didvc/scripts/run-didvc-its.sh",
+      "line": 26,
+      "rule_id": "security",
+      "severity": "medium",
+      "category": "命令注入",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-08-29T09:32:21.333Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-df21bce647dbd1c26eaab216",
+      "file": "didvc/scripts/run-didvc-its.sh",
+      "line": 21,
+      "rule_id": "security",
+      "severity": "medium",
+      "category": "命令注入",
+      "status": "candidate",
+      "decision": "advisory",
+      "at": "2026-08-29T09:33:48.391Z",
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22",
+        "runtime_oracle": false
+      }
+    },
+    {
+      "finding_id": "mimosa-df21bce647dbd1c26eaab216",
+      "file": "didvc/scripts/run-didvc-its.sh",
+      "line": 76,
+      "severity": "medium",
+      "category": "命令注入",
+      "status": "candidate",
+      "decision": "observe",
+      "at": "2026-08-29T09:50:46.194Z",
+      "evidence": {
+        "kind": "static_scan",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "source": "semgrep",
+        "evidence_hash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22",
+        "runtime_oracle": false
+      }
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "mimosa-df21bce647dbd1c26eaab216",
+      "file": "didvc/scripts/run-didvc-its.sh",
+      "line": 76,
+      "end_line": 76,
+      "severity": "medium",
+      "category": "命令注入",
+      "kind": "semgrep",
+      "advisory": true,
+      "status": "candidate",
+      "evidence_boundary": "candidate",
+      "evidence": [
+        {
+          "kind": "static_scan",
+          "boundary": "candidate",
+          "producer": "deterministic",
+          "source": "semgrep",
+          "file": "didvc/scripts/run-didvc-its.sh",
+          "line": 76,
+          "evidence_hash": "f8bec30f9e64c4be0c88b474daae5c95a432e8502767151e501a5f24c3194f22",
+          "runtime_oracle": false
+        }
+      ],
+      "already_reported_to_agent": false,
+      "selected_for_rewake": false
+    }
+  ],
+  "artifacts": {
+    "immutable_report": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T095046194Z-1017578-c00659b8590d.json",
+    "latest_report": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd.json",
+    "history_summary": ".mimosa/history/run-20260829T095046194Z-1017578-c00659b8590d.json"
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "mimosa-finding-ledger-batch/v1",
+  "batchId": "pretooluse-896cc431119992e1aaed3ccc0cc2521e",
+  "runId": null,
+  "runStatus": "completed",
+  "coverage": {
+    "status": "complete",
+    "reasons": []
+  },
+  "source": {
+    "component": "zcode-hook",
+    "operationId": "PreToolUse"
+  },
+  "revision": null,
+  "diffHash": null,
+  "rulesVersion": null,
+  "sessionHash": "07679adc850d3b0cb3ae54a843f7a8018bc5a95b49818d1d62fa602a9efdb9f8",
+  "reportRef": null,
+  "events": [
+    {
+      "eventId": "hook-8afd6cb5ceb965b79adcab4a1824f8b5",
+      "findingId": "mimosa-34541f18fe794e05ff5d0bde",
+      "type": "finding_blocked",
+      "at": "2026-08-29T10:04:03.614Z",
+      "identity": {
+        "projectRelativeFile": "didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Pkcs11KeyMaterialProviderTest.java",
+        "ruleId": "security",
+        "codeEvidenceHash": "fd406a10dcbdadd200034dabf56d4581f46ec280e71294ceac64d7d114ed4a69",
+        "confidence": "stable"
+      },
+      "scope": "direct",
+      "line": 121,
+      "endLine": 121,
+      "reasonCode": "deny",
+      "reportedToAgent": true,
+      "evidence": {
+        "kind": "source",
+        "boundary": "candidate",
+        "producer": "deterministic",
+        "evidenceHash": "fd406a10dcbdadd200034dabf56d4581f46ec280e71294ceac64d7d114ed4a69"
+      },
+      "sequence": 0
+    }
+  ],
+  "observedFindingIds": [],
+  "verifiedFiles": [],
+  "recordedAt": "2026-08-29T10:04:04.397Z"
+}

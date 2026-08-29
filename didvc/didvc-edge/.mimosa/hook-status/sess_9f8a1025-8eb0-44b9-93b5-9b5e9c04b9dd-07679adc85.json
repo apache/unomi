@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "mimosa-hook-status/v1",
+  "recordedAt": "2026-08-29T08:45:36.681Z",
+  "sessionId": "sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd",
+  "event": "PostToolUse",
+  "toolName": "Edit",
+  "file": "/home/ivenkwan/repo/unomi/itests/src/test/java/org/apache/unomi/itests/DidvcSmokeIT.java",
+  "outcome": "inconclusive",
+  "coverage": "partial",
+  "findingCount": 0,
+  "durationMs": 7,
+  "hostState": "hook_complete",
+  "reportHint": ".mimosa/reports/"
+}

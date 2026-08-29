@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "mimosa-finding-history/v1",
+  "runId": "20260829T095046194Z-1017578-c00659b8590d",
+  "runStatus": "inconclusive",
+  "errors": [
+    "baseline-read:itests/target/exam/09224145-581f-4ded-9014-402c52551005/bin/contrib/karaf-service.sh: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:didvc/didvc-services/src/test/java/org/apache/unomi/didvc/services/impl/Phase6SchemaBootstrapTest.java: baseline_snapshot_unreadable: file is missing from task baseline",
+    "baseline-read:didvc/didvc-metering/src/test/java/org/apache/unomi/didvc/batch/ManifestBatchProcessorTest.java: baseline_snapshot_unreadable: file is missing from task baseline"
+  ],
+  "target": ".",
+  "revision": "5f06d210bd3a8e80f1f871fc9747fd684225603f",
+  "diffHash": "18224d27c51cceee2399118f79b9e782302a77a257a06bf96470996773e7fbc3",
+  "rulesVersion": "unavailable",
+  "recordedAt": "2026-08-29T09:50:46.194Z",
+  "timing": {
+    "startedAt": "2026-08-29T09:50:43.780Z",
+    "completedAt": "2026-08-29T09:50:46.194Z",
+    "durationMs": 2414
+  },
+  "tokens": {
+    "input": 0,
+    "output": 0,
+    "total": 0,
+    "modelCalls": 0,
+    "measurement": "known-zero"
+  },
+  "findings": {
+    "total": 1,
+    "bySeverity": {
+      "medium": 1
+    },
+    "byStatus": {
+      "candidate": 1
+    }
+  },
+  "coverage": {
+    "status": "partial",
+    "reasonCounts": {
+      "baseline_snapshot_unreadable": 3,
+      "project_check_failed": 3
+    }
+  },
+  "evidenceBoundary": "static_only",
+  "immutableReport": ".mimosa/reports/task-review-sess_9f8a1025-8eb0-44b9-93b5-9b5e9c04b9dd-20260829T095046194Z-1017578-c00659b8590d.json"
+}

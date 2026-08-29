@@ -1,0 +1,354 @@
+"use strict";
+(self["webpackChunk"] = self["webpackChunk"] || []).push([["node_modules_monaco-editor_esm_vs_editor_common_services_languageFeatureDebounce_js"],{
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/base/common/numbers.js"
+/*!****************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/base/common/numbers.js ***!
+  \****************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   MovingAverage: () => (/* binding */ MovingAverage),
+/* harmony export */   SlidingWindowAverage: () => (/* binding */ SlidingWindowAverage),
+/* harmony export */   clamp: () => (/* binding */ clamp)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+class MovingAverage {
+  constructor() {
+    this._n = 1;
+    this._val = 0;
+  }
+  update(value) {
+    this._val = this._val + (value - this._val) / this._n;
+    this._n += 1;
+    return this._val;
+  }
+  get value() {
+    return this._val;
+  }
+}
+class SlidingWindowAverage {
+  constructor(size) {
+    this._n = 0;
+    this._val = 0;
+    this._values = [];
+    this._index = 0;
+    this._sum = 0;
+    this._values = new Array(size);
+    this._values.fill(0, 0, size);
+  }
+  update(value) {
+    const oldValue = this._values[this._index];
+    this._values[this._index] = value;
+    this._index = (this._index + 1) % this._values.length;
+    this._sum -= oldValue;
+    this._sum += value;
+    if (this._n < this._values.length) {
+      this._n += 1;
+    }
+    this._val = this._sum / this._n;
+    return this._val;
+  }
+  get value() {
+    return this._val;
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeatureDebounce.js"
+/*!*******************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/editor/common/services/languageFeatureDebounce.js ***!
+  \*******************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   ILanguageFeatureDebounceService: () => (/* binding */ ILanguageFeatureDebounceService),
+/* harmony export */   LanguageFeatureDebounceService: () => (/* binding */ LanguageFeatureDebounceService)
+/* harmony export */ });
+/* harmony import */ var _base_common_hash_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../../base/common/hash.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/hash.js");
+/* harmony import */ var _base_common_map_js__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../../base/common/map.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/map.js");
+/* harmony import */ var _base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../../../base/common/numbers.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/numbers.js");
+/* harmony import */ var _platform_environment_common_environment_js__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../../../platform/environment/common/environment.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/environment/common/environment.js");
+/* harmony import */ var _platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../../../platform/instantiation/common/extensions.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/extensions.js");
+/* harmony import */ var _platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../../../platform/instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+/* harmony import */ var _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ../../../platform/log/common/log.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/log/common/log.js");
+/* harmony import */ var _base_common_network_js__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ../../../base/common/network.js */ "../../../../node_modules/monaco-editor/esm/vs/base/common/network.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+var __decorate = undefined && undefined.__decorate || function (decorators, target, key, desc) {
+  var c = arguments.length,
+    r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+    d;
+  if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+  return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+var __param = undefined && undefined.__param || function (paramIndex, decorator) {
+  return function (target, key) {
+    decorator(target, key, paramIndex);
+  };
+};
+
+
+
+
+
+
+
+
+const ILanguageFeatureDebounceService = (0,_platform_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_5__.createDecorator)('ILanguageFeatureDebounceService');
+var IdentityHash;
+(function (IdentityHash) {
+  const _hashes = new WeakMap();
+  let pool = 0;
+  function of(obj) {
+    let value = _hashes.get(obj);
+    if (value === undefined) {
+      value = ++pool;
+      _hashes.set(obj, value);
+    }
+    return value;
+  }
+  IdentityHash.of = of;
+})(IdentityHash || (IdentityHash = {}));
+class NullDebounceInformation {
+  constructor(_default) {
+    this._default = _default;
+  }
+  get(_model) {
+    return this._default;
+  }
+  update(_model, _value) {
+    return this._default;
+  }
+  default() {
+    return this._default;
+  }
+}
+class FeatureDebounceInformation {
+  constructor(_logService, _name, _registry, _default, _min, _max) {
+    this._logService = _logService;
+    this._name = _name;
+    this._registry = _registry;
+    this._default = _default;
+    this._min = _min;
+    this._max = _max;
+    this._cache = new _base_common_map_js__WEBPACK_IMPORTED_MODULE_1__.LRUCache(50, 0.7);
+  }
+  _key(model) {
+    return model.id + this._registry.all(model).reduce((hashVal, obj) => (0,_base_common_hash_js__WEBPACK_IMPORTED_MODULE_0__.doHash)(IdentityHash.of(obj), hashVal), 0);
+  }
+  get(model) {
+    const key = this._key(model);
+    const avg = this._cache.get(key);
+    return avg ? (0,_base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.clamp)(avg.value, this._min, this._max) : this.default();
+  }
+  update(model, value) {
+    const key = this._key(model);
+    let avg = this._cache.get(key);
+    if (!avg) {
+      avg = new _base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.SlidingWindowAverage(6);
+      this._cache.set(key, avg);
+    }
+    const newValue = (0,_base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.clamp)(avg.update(value), this._min, this._max);
+    if (!(0,_base_common_network_js__WEBPACK_IMPORTED_MODULE_7__.matchesScheme)(model.uri, 'output')) {
+      this._logService.trace(`[DEBOUNCE: ${this._name}] for ${model.uri.toString()} is ${newValue}ms`);
+    }
+    return newValue;
+  }
+  _overall() {
+    const result = new _base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.MovingAverage();
+    for (const [, avg] of this._cache) {
+      result.update(avg.value);
+    }
+    return result.value;
+  }
+  default() {
+    const value = this._overall() | 0 || this._default;
+    return (0,_base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.clamp)(value, this._min, this._max);
+  }
+}
+let LanguageFeatureDebounceService = class LanguageFeatureDebounceService {
+  constructor(_logService, envService) {
+    this._logService = _logService;
+    this._data = new Map();
+    this._isDev = envService.isExtensionDevelopment || !envService.isBuilt;
+  }
+  for(feature, name, config) {
+    const min = config?.min ?? 50;
+    const max = config?.max ?? min ** 2;
+    const extra = config?.key ?? undefined;
+    const key = `${IdentityHash.of(feature)},${min}${extra ? ',' + extra : ''}`;
+    let info = this._data.get(key);
+    if (!info) {
+      if (this._isDev) {
+        this._logService.debug(`[DEBOUNCE: ${name}] is disabled in developed mode`);
+        info = new NullDebounceInformation(min * 1.5);
+      } else {
+        info = new FeatureDebounceInformation(this._logService, name, feature, this._overallAverage() | 0 || min * 1.5,
+        // default is overall default or derived from min-value
+        min, max);
+      }
+      this._data.set(key, info);
+    }
+    return info;
+  }
+  _overallAverage() {
+    // Average of all language features. Not a great value but an approximation
+    const result = new _base_common_numbers_js__WEBPACK_IMPORTED_MODULE_2__.MovingAverage();
+    for (const info of this._data.values()) {
+      result.update(info.default());
+    }
+    return result.value;
+  }
+};
+LanguageFeatureDebounceService = __decorate([__param(0, _platform_log_common_log_js__WEBPACK_IMPORTED_MODULE_6__.ILogService), __param(1, _platform_environment_common_environment_js__WEBPACK_IMPORTED_MODULE_3__.IEnvironmentService)], LanguageFeatureDebounceService);
+
+(0,_platform_instantiation_common_extensions_js__WEBPACK_IMPORTED_MODULE_4__.registerSingleton)(ILanguageFeatureDebounceService, LanguageFeatureDebounceService, 1 /* InstantiationType.Delayed */);
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/environment/common/environment.js"
+/*!************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/environment/common/environment.js ***!
+  \************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   IEnvironmentService: () => (/* binding */ IEnvironmentService)
+/* harmony export */ });
+/* harmony import */ var _instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../instantiation/common/instantiation.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js");
+
+const IEnvironmentService = (0,_instantiation_common_instantiation_js__WEBPACK_IMPORTED_MODULE_0__.createDecorator)('environmentService');
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/descriptors.js"
+/*!**************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/descriptors.js ***!
+  \**************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   SyncDescriptor: () => (/* binding */ SyncDescriptor)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+class SyncDescriptor {
+  constructor(ctor, staticArguments = [], supportsDelayedInstantiation = false) {
+    this.ctor = ctor;
+    this.staticArguments = staticArguments;
+    this.supportsDelayedInstantiation = supportsDelayedInstantiation;
+  }
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/extensions.js"
+/*!*************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/extensions.js ***!
+  \*************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   getSingletonServiceDescriptors: () => (/* binding */ getSingletonServiceDescriptors),
+/* harmony export */   registerSingleton: () => (/* binding */ registerSingleton)
+/* harmony export */ });
+/* harmony import */ var _descriptors_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./descriptors.js */ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/descriptors.js");
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+const _registry = [];
+function registerSingleton(id, ctorOrDescriptor, supportsDelayedInstantiation) {
+  if (!(ctorOrDescriptor instanceof _descriptors_js__WEBPACK_IMPORTED_MODULE_0__.SyncDescriptor)) {
+    ctorOrDescriptor = new _descriptors_js__WEBPACK_IMPORTED_MODULE_0__.SyncDescriptor(ctorOrDescriptor, [], Boolean(supportsDelayedInstantiation));
+  }
+  _registry.push([id, ctorOrDescriptor]);
+}
+function getSingletonServiceDescriptors() {
+  return _registry;
+}
+
+/***/ },
+
+/***/ "../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js"
+/*!****************************************************************************************************!*\
+  !*** ../../../../node_modules/monaco-editor/esm/vs/platform/instantiation/common/instantiation.js ***!
+  \****************************************************************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   IInstantiationService: () => (/* binding */ IInstantiationService),
+/* harmony export */   _util: () => (/* binding */ _util),
+/* harmony export */   createDecorator: () => (/* binding */ createDecorator)
+/* harmony export */ });
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+// ------ internal util
+var _util;
+(function (_util) {
+  _util.serviceIds = new Map();
+  _util.DI_TARGET = '$di$target';
+  _util.DI_DEPENDENCIES = '$di$dependencies';
+  function getServiceDependencies(ctor) {
+    return ctor[_util.DI_DEPENDENCIES] || [];
+  }
+  _util.getServiceDependencies = getServiceDependencies;
+})(_util || (_util = {}));
+const IInstantiationService = createDecorator('instantiationService');
+function storeServiceDependency(id, target, index) {
+  if (target[_util.DI_TARGET] === target) {
+    target[_util.DI_DEPENDENCIES].push({
+      id,
+      index
+    });
+  } else {
+    target[_util.DI_DEPENDENCIES] = [{
+      id,
+      index
+    }];
+    target[_util.DI_TARGET] = target;
+  }
+}
+/**
+ * The *only* valid way to create a {{ServiceIdentifier}}.
+ */
+function createDecorator(serviceId) {
+  if (_util.serviceIds.has(serviceId)) {
+    return _util.serviceIds.get(serviceId);
+  }
+  const id = function (target, key, index) {
+    if (arguments.length !== 3) {
+      throw new Error('@IServiceName-decorator can only be used to decorate a parameter');
+    }
+    storeServiceDependency(id, target, index);
+  };
+  id.toString = () => serviceId;
+  _util.serviceIds.set(serviceId, id);
+  return id;
+}
+
+/***/ }
+
+}]);
+//# sourceMappingURL=node_modules_monaco-editor_esm_vs_editor_common_services_languageFeatureDebounce_js.js.map

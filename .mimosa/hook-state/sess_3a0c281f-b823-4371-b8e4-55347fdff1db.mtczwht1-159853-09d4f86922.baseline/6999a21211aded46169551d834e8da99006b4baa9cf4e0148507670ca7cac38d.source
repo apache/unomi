@@ -1,0 +1,51 @@
+---
+description: UNOMI-875 overlay — unomi-3-dev backport lessons (extends branch-backport.mdc)
+alwaysApply: true
+---
+
+# unomi-3-dev → master (UNOMI-875)
+
+**Status:** Backport phase **complete** (Phase 2 + [#791](https://github.com/apache/unomi/pull/791) + [#819](https://github.com/apache/unomi/pull/819) 3-dev closure, July 2026). **Active tracker:** `.local-notes/unomi-3.1-remaining-work-plan.md`.
+
+**Branch archive (2026-07-11):** Remote `unomi-3-dev` **deleted**. Tip preserved as tag `unomi-3-dev-archive-2026-07` (`eca005fd8`). Do **not** expect `origin/unomi-3-dev` to exist.
+
+**Historical plans:** `.local-notes/archive/unomi-3-dev-backport-plan-phase2.md` (§1 exclusion register, §2 playbook).
+
+**Generic workflow first:** `.cursor/rules/branch-backport.mdc` (history audit, diff audit, ADD/MODIFY/MERGE).
+
+For any future cherry-pick from the archived 3-dev line, use the tag — not a branch:
+
+```bash
+SOURCE=unomi-3-dev-archive-2026-07   # tag, not branch
+TARGET=master
+git fetch origin tag unomi-3-dev-archive-2026-07
+```
+
+In generic backport commands, substitute the tag ref wherever `origin/$SOURCE` appeared (e.g. `git diff origin/master unomi-3-dev-archive-2026-07 -- <path>`).
+
+## Unomi-specific never
+
+- **Never** replace `master` review refactors with 3-dev monoliths (REST mappers, tracing lifecycle, test harness, shell CRUD fixes).
+- **Never** port items in archived plan §1 exclusion register: REST exception mappers (implement on master patterns), migration scripts (UNOMI-943), security WIP, wholesale 3-dev test harness.
+- **Never** wholesale-checkout `.github/workflows` (master ahead: #780, #957), `AGENTS.md` (#769), migration groovy, `.asf.yaml` rulesets.
+- **Never** blind-checkout `extensions/router/**` — master ahead (#756, #779, #780).
+- **Never** recreate or push a `unomi-3-dev` branch — use the archive tag for historical diffs only.
+
+## Unomi-specific always
+
+- Check merged master PRs (#755–#819, etc.) before assuming master lacks a 3-dev feature.
+- **MERGE surgically:** `build.sh`, root `pom.xml`, CI — keep master non-interactive CI, Javadoc, IT memory sampler (#780, #957).
+- **Docker compose:** additive only; align image pins with Track E in the remaining-work plan.
+
+## Shell CRUD — learned 2026-06-10
+
+Shell polish from 3-dev is **on master** (#755, #763). Before any shell port from the archive tag:
+
+`git log unomi-3-dev-archive-2026-07..origin/master -- tools/shell-dev-commands/`
+
+## Validation before PR (Unomi)
+
+Run generic checklist from `branch-backport.mdc`, plus:
+
+- `./build.sh --help`
+- `mvn -pl <affected-modules> -am compile -DskipTests`
