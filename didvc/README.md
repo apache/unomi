@@ -31,10 +31,10 @@ See the design and build plan in `.local-notes/hkt-did-vc/`
 |---|---|---|---|
 | `didvc-api` | OSGi bundle | **Phase 1–4** | Domain model (8 item types, event types, DID document) + service interfaces (incl. the `DidMethodResolver` SPI and `UniversalDidResolverService`) |
 | `didvc-sd-jwt` | jar | **Phase 2** | SD-JWT (RFC 9901 / SD-JWT VC) builder, parser, key-binding JWT and selective-disclosure verification — shared by services and edge |
-| `didvc-services` | OSGi bundle | **Phase 1–5** | DS components: `DidService` (did:web), `IssuerKeyService` (EdDSA/ES256 JWS), `StatusService` (Bitstring Status List + StatusList2021), `CredentialSchemaService` (claim whitelist), `SdJwtVcFormatter` (vc+sd-jwt), `JsonLdVcFormatter` (ldp_vc, VC DM 2.0), `IssuanceService` (orchestration + consent gating + revocation, format selection), `TrustRegistryService`, `PairwiseBindingService`, `ConsentBridgeService`, `CredentialRefreshService`, `UniversalDidResolverServiceImpl` + did:key/HTTP method resolvers, `Phase4SchemaBootstrap` (hkt_profcred_v1/hkt_residency_v1), `Phase5SchemaBootstrap` (hkt_licensed_institution_v1/hkt_realname_v1, strict minimization), plus the `issueCredential` rule action (`didvcIssueCredentialAction`) |
+| `didvc-services` | OSGi bundle | **Phase 1–6** | DS components: `DidService` (did:web), `IssuerKeyService` (EdDSA/ES256 JWS), `StatusService` (Bitstring Status List + StatusList2021), `CredentialSchemaService` (claim whitelist), `SdJwtVcFormatter` (vc+sd-jwt), `JsonLdVcFormatter` (ldp_vc, VC DM 2.0), `IssuanceService` (orchestration + consent gating + revocation, format selection), `TrustRegistryService`, `PairwiseBindingService`, `ConsentBridgeService`, `CredentialRefreshService`, `UniversalDidResolverServiceImpl` + did:key/HTTP method resolvers, `Phase4SchemaBootstrap` (hkt_profcred_v1/hkt_residency_v1), `Phase5SchemaBootstrap` (hkt_licensed_institution_v1/hkt_realname_v1, strict minimization), `Phase6SchemaBootstrap` (hkt_cargo_v1/hkt_corporate_v1), plus the `issueCredential` rule action (`didvcIssueCredentialAction`) |
 | `didvc-rest` | OSGi bundle | **Phase 2–4** | CXF endpoints: `/didvc/dids`, `/.well-known/did.json`, `/didvc/credentials`, `/didvc/schemas`, `/didvc/statuslists`, `/didvc/trust-entries`, `/didvc/trust-check`, `/didvc/pairwise-bindings`, `/didvc/consent-grants`, `/didvc/resolver/{did}` (universal DID resolution) |
-| `didvc-metering` | jar | **Phase 3, 5** | Verification metering (billable records, idempotent billing, Kafka sink), the immutable hash-chained audit log (in-memory and JDBC stores) and the GBA SCC filing exporter (audit → filing-template field set, zero PII) |
-| `didvc-edge` | Spring Boot jar | **Phase 2–5** | Credential Edge: OID4VCI issuer (metadata, offers, **pre-authorized-code and authorization-code grants with PKCE**, credential/batch/deferred, nonce), OID4VP verifier (signed authorization requests with **DCQL queries**, `direct_post`, SD-JWT + key-binding validation, **nonce-store-backed replay protection (in-memory or Redis)**, revocation and trust checks, **claim-level zero-PII responses**, audit + metering), the **wallet backend API** (`/wallet/...`: offer redemption, credential storage listing, presentation builder) and the **GBA SCC filing-export API** (`/{tenant}/scc/filing-export`) |
+| `didvc-metering` | jar | **Phase 3, 5, 6** | Verification metering (billable records, idempotent billing, Kafka sink), the immutable hash-chained audit log (in-memory and JDBC stores), the GBA SCC filing exporter (audit → filing-template field set, zero PII) and the manifest batch processor (per-record audit + Kafka result publishing) |
+| `didvc-edge` | Spring Boot jar | **Phase 2–6** | Credential Edge: OID4VCI issuer (metadata, offers, **pre-authorized-code and authorization-code grants with PKCE**, credential/batch/deferred, nonce), OID4VP verifier (signed authorization requests with **DCQL queries**, `direct_post`, SD-JWT + key-binding validation, **nonce-store-backed replay protection (in-memory or Redis)**, revocation and trust checks, **claim-level zero-PII responses**, audit + metering), the **wallet backend API** (`/wallet/...`: offer redemption, credential storage listing, presentation builder), the **GBA SCC filing-export API** (`/{tenant}/scc/filing-export`), the **M2M verification API** (`/{tenant}/m2m/verify[-batch]`, stateless, API-key auth, sub-second p95) and the **Single Window customs endpoint** (`/{tenant}/customs/declarations`, EDI declaration → manifest batch → verification response) |
 | `didvc-openid-gateway` | jar | Phase 7 | OpenDID Web2/Web3 gateway placeholder (oracle-contract bridge) |
 
 ## Build
@@ -109,6 +109,25 @@ configuration beans.
   claim-type categories only, verificationRecords). Zero PII by
   construction — claim values never leave the audit log.
 
+## M2M verification + Single Window customs (Phase 6, on the edge)
+
+- `POST /{tenant}/m2m/verify` — stateless bearer-credential verification
+  for logistics counterparties (API-key auth via `X-Api-Key`; keys read
+  from `didvc.edge.m2m-api-keys` / environment, never committed; mTLS
+  terminates at the ingress in production). Claim-level response
+  (`valid`, `vct`, `expiresAt`); `includeClaims: true` adds disclosed
+  values. Every check appends `didvcM2mVerified` to the audit log.
+- `POST /{tenant}/m2m/verify-batch` — N records in one call, per-record
+  outcomes keyed by the caller's correlation id.
+- `POST /{tenant}/customs/declarations` — Single Window EDI adapter: a
+  `DECLARATION` message (declarationNumber + lineItems, each with itemId
+  and credential references) is verified through the manifest batch
+  pipeline (per-record audit; Kafka result publishing when
+  `didvc.edge.manifest-kafka-bootstrap-servers` is set, topic
+  `didvc-manifest-verification` keyed by manifest id) and answered with
+  a `VERIFICATION` response (status 1 accepted / 2 rejected per line
+  item, correlation ids preserved).
+
 ## Wallet backend API (Phase 4, on the edge)
 
 - `POST /wallet/{walletId}/offers` — redeem a credential offer
@@ -169,10 +188,13 @@ plans for the issuer and verifier modules.
 ## Verification
 
 - Unit/integration tests: `mvn -pl bom,didvc/didvc-sd-jwt,didvc/didvc-metering,didvc/didvc-api,didvc/didvc-services,didvc/didvc-rest,didvc/didvc-edge -am test`
-  (172 tests: api 8, sd-jwt 22, metering 10, services 102, edge 30).
-- Live ITs against a real Karaf + Elasticsearch container (verified 7/7 —
-  the phase 1-3 smoke suite plus phase 4's cross-method resolution tests,
-  all in `DidvcSmokeIT`):
+  (186 tests: api 8, sd-jwt 22, metering 13, services 105, edge 38 —
+  including the M2M sub-second-p95 load check and the Single Window EDI
+  fixture round-trips).
+- Live ITs against a real Karaf + Elasticsearch container (verified 9/9 —
+  the phase 1-3 smoke suite, phase 4's cross-method resolution tests,
+  phase 5's schema tests and phase 6's logistics schema test, all in
+  `DidvcSmokeIT`):
 
 ```bash
 mvn -P integration-tests -pl itests install \

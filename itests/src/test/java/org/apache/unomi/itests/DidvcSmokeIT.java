@@ -250,4 +250,61 @@ public class DidvcSmokeIT extends BaseIT {
         schema.setScope("didvc");
         return schema;
     }
+
+    // ---- Phase 6: logistics schemas (T-6.3) ----
+
+    @Test
+    public void phase6SchemasAreBootstrappedAndMinimized() {
+        CredentialSchemaService schemaService = getOsgiService(CredentialSchemaService.class, 60000);
+
+        // Order-independent like the phase-5 test: earlier cleanUps may
+        // have removed the bootstrapped items
+        if (schemaService.getSchema("hkt-cargo-v1") == null) {
+            schemaService.saveSchema(cargoSchema());
+        }
+        if (schemaService.getSchema("hkt-corporate-v1") == null) {
+            schemaService.saveSchema(corporateSchema());
+        }
+
+        DidSchema cargo = schemaService.getSchema("hkt-cargo-v1");
+        assertNotNull(cargo);
+        assertEquals("hkt_cargo_v1", cargo.getVct());
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("hsCodeClass", "8542");
+        claims.put("customsStatus", "cleared");
+        claims.put("invoiceLines", java.util.List.of("commercial-document"));
+        try {
+            schemaService.validateClaims(cargo, claims);
+            fail("consignment data must be rejected");
+        } catch (IllegalArgumentException expected) {
+            // expected: consignment data is not in the allowed claim set
+        }
+
+        DidSchema corporate = schemaService.getSchema("hkt-corporate-v1");
+        assertNotNull(corporate);
+        assertEquals("hkt_corporate_v1", corporate.getVct());
+    }
+
+    private DidSchema cargoSchema() {
+        DidSchema schema = new DidSchema("hkt-cargo-v1");
+        schema.setVct("hkt_cargo_v1");
+        schema.setAllowedClaims(new java.util.HashSet<>(java.util.Arrays.asList(
+                "hsCodeClass", "customsStatus", "aeoStatus", "originAttestation")));
+        schema.setRequiredClaims(new java.util.HashSet<>(java.util.Arrays.asList(
+                "hsCodeClass", "customsStatus")));
+        schema.setScope("didvc");
+        return schema;
+    }
+
+    private DidSchema corporateSchema() {
+        DidSchema schema = new DidSchema("hkt-corporate-v1");
+        schema.setVct("hkt_corporate_v1");
+        schema.setAllowedClaims(new java.util.HashSet<>(java.util.Arrays.asList(
+                "registrationNoHash", "jurisdiction", "licensedActivities", "lei")));
+        schema.setRequiredClaims(new java.util.HashSet<>(java.util.Arrays.asList(
+                "registrationNoHash", "jurisdiction", "licensedActivities")));
+        schema.setScope("didvc");
+        return schema;
+    }
 }

@@ -17,10 +17,10 @@
 
 package org.apache.unomi.didvc.edge;
 
+import org.apache.unomi.didvc.batch.KafkaManifestResultSink;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.UUID;
-
 /**
  * Edge configuration. The request-signing secret defaults to a random
  * per-boot value (valid for a single instance); set it explicitly when the
@@ -58,6 +58,14 @@ public class EdgeProperties {
     private String verificationFeeCurrency = "HKD";
 
     private String requestSigningSecret = UUID.randomUUID().toString();
+
+    /**
+     * API keys accepted by the M2M verification endpoint (FR-L2). Keys
+     * are provisioned out of band and read from configuration /
+     * environment (e.g. {@code DIDVC_EDGE_M2MAPIKEYS_0}); an empty list
+     * keeps the endpoint closed. Never set usable values in source.
+     */
+    private java.util.List<String> m2mApiKeys = new java.util.ArrayList<>();
 
     /**
      * Demo-only: issuer identifier of an external credential issuer whose
@@ -158,5 +166,40 @@ public class EdgeProperties {
 
     public void setRequestSigningSecret(String requestSigningSecret) {
         this.requestSigningSecret = requestSigningSecret;
+    }
+
+    public java.util.List<String> getM2mApiKeys() {
+        return m2mApiKeys;
+    }
+
+    public void setM2mApiKeys(java.util.List<String> m2mApiKeys) {
+        this.m2mApiKeys = m2mApiKeys;
+    }
+
+    /**
+     * Kafka bootstrap servers for the manifest-result topic; empty
+     * disables Kafka publishing (audit-only batch processing).
+     */
+    private String manifestKafkaBootstrapServers = "";
+
+    /**
+     * Kafka topic for manifest-verification results.
+     */
+    private String manifestKafkaTopic = KafkaManifestResultSink.DEFAULT_TOPIC;
+
+    public String getManifestKafkaBootstrapServers() {
+        return manifestKafkaBootstrapServers;
+    }
+
+    public void setManifestKafkaBootstrapServers(String manifestKafkaBootstrapServers) {
+        this.manifestKafkaBootstrapServers = manifestKafkaBootstrapServers;
+    }
+
+    public String getManifestKafkaTopic() {
+        return manifestKafkaTopic;
+    }
+
+    public void setManifestKafkaTopic(String manifestKafkaTopic) {
+        this.manifestKafkaTopic = manifestKafkaTopic;
     }
 }

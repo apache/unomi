@@ -179,6 +179,42 @@ The real-name credential is a single boolean claim — the strongest
 minimization available. KYB counterparts verify license class and
 validity, not registry extracts.
 
+## 6b. Worked example 5 — cargo / corporate logistics (T-6.3 done)
+
+Logistics-flow counterparties (port/customs community partners, FR-L1/L4).
+Same whitelist discipline: HS-code classes and customs/AEO statuses
+instead of consignment data; hashed registration numbers instead of
+registry extracts.
+
+```json
+{
+  "itemId": "hkt-cargo-v1",
+  "vct": "hkt_cargo_v1",
+  "allowedClaims": ["hsCodeClass", "customsStatus", "aeoStatus",
+                    "originAttestation"],
+  "requiredClaims": ["hsCodeClass", "customsStatus"],
+  "claimTypes": {"hsCodeClass": "string", "customsStatus": "string",
+                 "aeoStatus": "string", "originAttestation": "string"}
+}
+```
+
+```json
+{
+  "itemId": "hkt-corporate-v1",
+  "vct": "hkt_corporate_v1",
+  "allowedClaims": ["registrationNoHash", "jurisdiction",
+                    "licensedActivities", "lei"],
+  "requiredClaims": ["registrationNoHash", "jurisdiction",
+                     "licensedActivities"],
+  "claimTypes": {"registrationNoHash": "string", "jurisdiction": "string",
+                 "licensedActivities": "array", "lei": "string"}
+}
+```
+
+Both schemas are bootstrapped automatically by the platform
+(`Phase6SchemaBootstrap`) and are the credential types the Single Window
+EDI adapter verifies per declaration line item.
+
 ## 7. Status purpose choices
 
 Each credential's status points at a bitstring status list with a

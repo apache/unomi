@@ -62,10 +62,11 @@ public class CredentialIssuerController {
     private static final String PRE_AUTHORIZED_GRANT = "urn:ietf:params:oauth:grant-type:pre-authorized_code";
     private static final String AUTHORIZATION_CODE_GRANT = "authorization_code";
     private static final long CODE_TTL_MILLIS = 10 * 60 * 1000L;
-    /** Credential configurations the issuer serves (phase 2 KYC, phase 4 People flow, phase 5 Data flow). */
+    /** Credential configurations the issuer serves (phases 2, 4, 5, 6). */
     private static final java.util.Set<String> SUPPORTED_VCTS = java.util.Set.of(
             "hkt_kyc_v1", "hkt_profcred_v1", "hkt_residency_v1",
-            "hkt_licensed_institution_v1", "hkt_realname_v1");
+            "hkt_licensed_institution_v1", "hkt_realname_v1",
+            "hkt_cargo_v1", "hkt_corporate_v1");
 
     private final EdgeProperties properties;
     private final PlatformApi platformApi;
@@ -251,6 +252,16 @@ public class CredentialIssuerController {
                         "licenseValidUntil", Map.of("mandatory", true))));
         configurations.put("hkt_realname_v1", credentialConfiguration("hkt_realname_v1",
                 Map.of("realNameVerified", Map.of("mandatory", true))));
+        configurations.put("hkt_cargo_v1", credentialConfiguration("hkt_cargo_v1",
+                Map.of("hsCodeClass", Map.of("mandatory", true),
+                        "customsStatus", Map.of("mandatory", true),
+                        "aeoStatus", Map.of(),
+                        "originAttestation", Map.of())));
+        configurations.put("hkt_corporate_v1", credentialConfiguration("hkt_corporate_v1",
+                Map.of("registrationNoHash", Map.of("mandatory", true),
+                        "jurisdiction", Map.of("mandatory", true),
+                        "licensedActivities", Map.of("mandatory", true),
+                        "lei", Map.of())));
         metadata.put("credential_configurations_supported", configurations);
         return metadata;
     }
