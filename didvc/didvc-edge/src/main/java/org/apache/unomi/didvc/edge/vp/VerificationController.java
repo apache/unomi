@@ -116,6 +116,7 @@ public class VerificationController {
         private String nonce;
         private Map<String, List<String>> claims;
         private Object dcqlQuery;
+        private Boolean claimLevelResponse;
 
         public String getClientId() {
             return clientId;
@@ -159,6 +160,22 @@ public class VerificationController {
 
         public void setDcqlQuery(Object dcqlQuery) {
             this.dcqlQuery = dcqlQuery;
+        }
+
+        /**
+         * Claim-level response mode (FR-D3): the verification result
+         * carries booleans only — {@code valid}, the credential type, the
+         * credential expiry and per-requested-claim {@code satisfied}
+         * flags — never claim values or any other subject data, for GBA
+         * data-flow counterparties that must learn the outcome without
+         * receiving personal data.
+         */
+        public Boolean getClaimLevelResponse() {
+            return claimLevelResponse;
+        }
+
+        public void setClaimLevelResponse(Boolean claimLevelResponse) {
+            this.claimLevelResponse = claimLevelResponse;
         }
     }
 
@@ -219,7 +236,7 @@ public class VerificationController {
         String requestId = UUID.randomUUID().toString();
         requests.put(requestId, new VpRequestContext(tenantId, request.getClientId(), request.getResponseUri(),
                 request.getNonce(), request.getClaims(), dcql, request.getDcqlQuery(),
-                System.currentTimeMillis() + REQUEST_TTL_MILLIS));
+                System.currentTimeMillis() + REQUEST_TTL_MILLIS, Boolean.TRUE.equals(request.getClaimLevelResponse())));
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("request_uri", properties.getIssuerBaseUrl() + "/" + tenantId + "/vp/request/" + requestId);
         return response;
@@ -429,19 +446,20 @@ public class VerificationController {
         if (context == null || !tenantId.equals(context.tenantId) || context.expiresAt < System.currentTimeMillis()) {
             throw invalid("invalid or expired authorization request state");
         }
-        if (requireBodyNonce && !context.nonce.equals(submission.getNonce())) {
-            throw invalid("nonce does not match the authorization request");
-        }
-        // Fleet-wide single-use enforcement: the nonce is consumed here and
-        // never accepted again, even if the request context were replayed
-        // (for form posts the nonce itself is verified inside the KB-JWT)
-        if (!nonceStore.consume(tenantId + ":" + context.nonce)) {
-            throw invalid("nonce was not issued or has already been consumed");
-        }
-        if (submission.getVpToken() == null) {
-            throw invalid("vp_token is missing");
-        }
+        boolean claimLevel = context.claimLevelResponse;
         try {
+            if (requireBodyNonce && !context.nonce.equals(submission.getNonce())) {
+                throw invalid("nonce does not match the authorization request");
+            }
+            // Fleet-wide single-use enforcement: the nonce is consumed here and
+            // never accepted again, even if the request context were replayed
+            // (for form posts the nonce itself is verified inside the KB-JWT)
+            if (!nonceStore.consume(tenantId + ":" + context.nonce)) {
+                throw invalid("nonce was not issued or has already been consumed");
+            }
+            if (submission.getVpToken() == null) {
+                throw invalid("vp_token is missing");
+            }
             SdJwtPresentation presentation = new SdJwtParser().parse(extractVpToken(context, submission.getVpToken()));
             Map<String, Object> result = verifyPresentation(tenantId, context, presentation);
             // kept for the redirect_uri result page the wallet's browser
@@ -450,9 +468,23 @@ public class VerificationController {
                     new VerificationResult(tenantId, result, System.currentTimeMillis() + REQUEST_TTL_MILLIS));
             return result;
         } catch (ResponseStatusException e) {
+            if (claimLevel) {
+                // FR-D3: claim-level counterparties receive a deterministic
+                // boolean outcome instead of an error response
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("valid", false);
+                result.put("reason", e.getReason() == null ? e.getMessage() : e.getReason());
+                return result;
+            }
             throw e;
         } catch (Exception e) {
             LOGGER.warn("Presentation rejected: {}", e.getMessage());
+            if (claimLevel) {
+                Map<String, Object> result = new LinkedHashMap<>();
+                result.put("valid", false);
+                result.put("reason", e.getMessage());
+                return result;
+            }
             throw invalid(e.getMessage());
         }
     }
@@ -534,24 +566,70 @@ public class VerificationController {
         // identifier)
         presentation.verifyKeyBinding(context.nonce, context.clientId, now);
 
-        // DCQL claim matching: path resolution and expected values
+        // DCQL claim matching: path resolution and expected values. In
+        // claim-level mode the outcome per claim is a boolean; otherwise
+        // mismatches reject the presentation.
+        boolean claimLevel = context.claimLevelResponse;
+        Map<String, Object> combinedClaims = new LinkedHashMap<>();
+        combinedClaims.putAll(extractAlwaysDisclosed(claims));
+        combinedClaims.putAll(presentation.getDisclosedClaims());
+        Map<String, Object> claimResults = null;
         if (context.dcql != null) {
-            Map<String, Object> combinedClaims = new LinkedHashMap<>();
-            combinedClaims.putAll(extractAlwaysDisclosed(claims));
-            combinedClaims.putAll(presentation.getDisclosedClaims());
-            verifyDcqlClaims(context.dcql, vct, combinedClaims);
+            if (claimLevel) {
+                claimResults = evaluateDcqlClaims(context.dcql, vct, combinedClaims);
+            } else {
+                verifyDcqlClaims(context.dcql, vct, combinedClaims);
+            }
         }
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("valid", true);
         result.put("issuer", iss);
         result.put("vct", vct);
-        result.put("subject", claims.get("sub"));
-        result.put("claims", presentation.getDisclosedClaims());
-        result.put("alwaysDisclosed", extractAlwaysDisclosed(claims));
+        if (claimLevel) {
+            // FR-D3: the claim-level contract discloses booleans and the
+            // credential expiry only — never claim values or subject data
+            result.put("expiresAt", claims.get("exp"));
+            result.put("claimResults", claimResults == null ? Map.of() : claimResults);
+        } else {
+            result.put("subject", claims.get("sub"));
+            result.put("claims", presentation.getDisclosedClaims());
+            result.put("alwaysDisclosed", extractAlwaysDisclosed(claims));
+        }
 
         audit(tenantId, iss, vct, (String) claims.get("sub"), result);
         return result;
+    }
+
+    /**
+     * Claim-level evaluation (FR-D3): each requested claim resolves to a
+     * {@code satisfied} boolean; the verifier learns the outcome without
+     * ever receiving the claim value.
+     */
+    private Map<String, Object> evaluateDcqlClaims(DcqlQueryParser.Query dcql, String vct,
+                                                   Map<String, Object> combinedClaims) {
+        Map<String, Object> results = new LinkedHashMap<>();
+        for (DcqlQueryParser.CredentialQuery credential : dcql.getCredentials()) {
+            if (!vct.equals(credential.getVct())) {
+                continue;
+            }
+            for (DcqlQueryParser.ClaimQuery claim : credential.getClaims()) {
+                String claimPath = String.join(".", claim.getPath());
+                Object actual = resolvePath(combinedClaims, claim.getPath());
+                boolean satisfied = actual != null;
+                if (satisfied && claim.getValues() != null && !claim.getValues().isEmpty()) {
+                    satisfied = false;
+                    for (Object expected : claim.getValues()) {
+                        if (valuesEqual(expected, actual)) {
+                            satisfied = true;
+                            break;
+                        }
+                    }
+                }
+                results.put(claimPath, Map.of("satisfied", satisfied));
+            }
+        }
+        return results;
     }
 
     private void verifyDcqlClaims(DcqlQueryParser.Query dcql, String vct, Map<String, Object> combinedClaims) {
@@ -621,7 +699,10 @@ public class VerificationController {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("issuer", issuerDid);
         payload.put("vct", vct);
-        payload.put("claims", result.get("claims"));
+        // claim-level responses carry claimResults (booleans) instead of
+        // disclosed claim values
+        Object claims = result.get("claims") != null ? result.get("claims") : result.get("claimResults");
+        payload.put("claims", claims);
         try {
             auditLogService.append("didvpVerified", tenantId, subjectRef, objectMapper.writeValueAsString(payload));
             meteringService.recordVerification(tenantId, issuerDid, vct, subjectRef,
@@ -700,6 +781,11 @@ public class VerificationController {
          * used — becomes the signed request object's {@code aud}.
          */
         private final String walletEndpoint;
+        /**
+         * Claim-level response mode: the result must carry booleans and
+         * expiry only, never claim values or subject data.
+         */
+        private final boolean claimLevelResponse;
 
         private VpRequestContext(String tenantId, String clientId, String responseUri, String nonce,
                                  Map<String, List<String>> claims, DcqlQueryParser.Query dcql,
@@ -710,6 +796,21 @@ public class VerificationController {
         private VpRequestContext(String tenantId, String clientId, String responseUri, String nonce,
                                  Map<String, List<String>> claims, DcqlQueryParser.Query dcql,
                                  Object dcqlQueryJson, long expiresAt, String walletEndpoint) {
+            this(tenantId, clientId, responseUri, nonce, claims, dcql, dcqlQueryJson, expiresAt,
+                    walletEndpoint, false);
+        }
+
+        private VpRequestContext(String tenantId, String clientId, String responseUri, String nonce,
+                                 Map<String, List<String>> claims, DcqlQueryParser.Query dcql,
+                                 Object dcqlQueryJson, long expiresAt, boolean claimLevelResponse) {
+            this(tenantId, clientId, responseUri, nonce, claims, dcql, dcqlQueryJson, expiresAt,
+                    null, claimLevelResponse);
+        }
+
+        private VpRequestContext(String tenantId, String clientId, String responseUri, String nonce,
+                                 Map<String, List<String>> claims, DcqlQueryParser.Query dcql,
+                                 Object dcqlQueryJson, long expiresAt, String walletEndpoint,
+                                 boolean claimLevelResponse) {
             this.tenantId = tenantId;
             this.clientId = clientId;
             this.responseUri = responseUri;
@@ -719,6 +820,7 @@ public class VerificationController {
             this.dcqlQueryJson = dcqlQueryJson;
             this.expiresAt = expiresAt;
             this.walletEndpoint = walletEndpoint;
+            this.claimLevelResponse = claimLevelResponse;
         }
     }
 }

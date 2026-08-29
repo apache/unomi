@@ -281,6 +281,12 @@ public class InMemoryPlatformApi implements PlatformApi {
         if ("hkt-residency-v1".equals(schemaId)) {
             return "hkt_residency_v1";
         }
+        if ("hkt-licensed-institution-v1".equals(schemaId)) {
+            return "hkt_licensed_institution_v1";
+        }
+        if ("hkt-realname-v1".equals(schemaId)) {
+            return "hkt_realname_v1";
+        }
         return "hkt_kyc_v1";
     }
 

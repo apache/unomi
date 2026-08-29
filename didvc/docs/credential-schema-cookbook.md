@@ -147,7 +147,7 @@ qualification transcripts; no holder PII beyond what the pairwise
 Statuses as controlled vocabulary (e.g. `permanent-resident`,
 `valid-work-visa`) — never visa numbers or identity-document copies.
 
-## 6. Worked example 4 — KYB / real-name (planned T-5.1, strict minimization)
+## 6. Worked example 4 — KYB / real-name (T-5.1 done, strict minimization)
 
 GBA data-flow attestations (FR-D1/D2). Acceptance criterion for the
 phase: **schema validation rejects embedded registry data** — the

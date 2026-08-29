@@ -31,10 +31,10 @@ See the design and build plan in `.local-notes/hkt-did-vc/`
 |---|---|---|---|
 | `didvc-api` | OSGi bundle | **Phase 1–4** | Domain model (8 item types, event types, DID document) + service interfaces (incl. the `DidMethodResolver` SPI and `UniversalDidResolverService`) |
 | `didvc-sd-jwt` | jar | **Phase 2** | SD-JWT (RFC 9901 / SD-JWT VC) builder, parser, key-binding JWT and selective-disclosure verification — shared by services and edge |
-| `didvc-services` | OSGi bundle | **Phase 1–4** | DS components: `DidService` (did:web), `IssuerKeyService` (EdDSA/ES256 JWS), `StatusService` (Bitstring Status List + StatusList2021), `CredentialSchemaService` (claim whitelist), `SdJwtVcFormatter` (vc+sd-jwt), `JsonLdVcFormatter` (ldp_vc, VC DM 2.0), `IssuanceService` (orchestration + consent gating + revocation, format selection), `TrustRegistryService`, `PairwiseBindingService`, `ConsentBridgeService`, `CredentialRefreshService`, `UniversalDidResolverServiceImpl` + did:key/HTTP method resolvers, `Phase4SchemaBootstrap` (hkt_profcred_v1/hkt_residency_v1), plus the `issueCredential` rule action (`didvcIssueCredentialAction`) |
+| `didvc-services` | OSGi bundle | **Phase 1–5** | DS components: `DidService` (did:web), `IssuerKeyService` (EdDSA/ES256 JWS), `StatusService` (Bitstring Status List + StatusList2021), `CredentialSchemaService` (claim whitelist), `SdJwtVcFormatter` (vc+sd-jwt), `JsonLdVcFormatter` (ldp_vc, VC DM 2.0), `IssuanceService` (orchestration + consent gating + revocation, format selection), `TrustRegistryService`, `PairwiseBindingService`, `ConsentBridgeService`, `CredentialRefreshService`, `UniversalDidResolverServiceImpl` + did:key/HTTP method resolvers, `Phase4SchemaBootstrap` (hkt_profcred_v1/hkt_residency_v1), `Phase5SchemaBootstrap` (hkt_licensed_institution_v1/hkt_realname_v1, strict minimization), plus the `issueCredential` rule action (`didvcIssueCredentialAction`) |
 | `didvc-rest` | OSGi bundle | **Phase 2–4** | CXF endpoints: `/didvc/dids`, `/.well-known/did.json`, `/didvc/credentials`, `/didvc/schemas`, `/didvc/statuslists`, `/didvc/trust-entries`, `/didvc/trust-check`, `/didvc/pairwise-bindings`, `/didvc/consent-grants`, `/didvc/resolver/{did}` (universal DID resolution) |
-| `didvc-metering` | jar | **Phase 3** | Verification metering (billable records, idempotent billing, Kafka sink) and the immutable hash-chained audit log (in-memory and JDBC stores) |
-| `didvc-edge` | Spring Boot jar | **Phase 2–4** | Credential Edge: OID4VCI issuer (metadata, offers, **pre-authorized-code and authorization-code grants with PKCE**, credential/batch/deferred, nonce), OID4VP verifier (signed authorization requests with **DCQL queries**, `direct_post`, SD-JWT + key-binding validation, **nonce-store-backed replay protection (in-memory or Redis)**, revocation and trust checks, audit + metering) and the **wallet backend API** (`/wallet/...`: offer redemption, credential storage listing, presentation builder) |
+| `didvc-metering` | jar | **Phase 3, 5** | Verification metering (billable records, idempotent billing, Kafka sink), the immutable hash-chained audit log (in-memory and JDBC stores) and the GBA SCC filing exporter (audit → filing-template field set, zero PII) |
+| `didvc-edge` | Spring Boot jar | **Phase 2–5** | Credential Edge: OID4VCI issuer (metadata, offers, **pre-authorized-code and authorization-code grants with PKCE**, credential/batch/deferred, nonce), OID4VP verifier (signed authorization requests with **DCQL queries**, `direct_post`, SD-JWT + key-binding validation, **nonce-store-backed replay protection (in-memory or Redis)**, revocation and trust checks, **claim-level zero-PII responses**, audit + metering), the **wallet backend API** (`/wallet/...`: offer redemption, credential storage listing, presentation builder) and the **GBA SCC filing-export API** (`/{tenant}/scc/filing-export`) |
 | `didvc-openid-gateway` | jar | Phase 7 | OpenDID Web2/Web3 gateway placeholder (oracle-contract bridge) |
 
 ## Build
@@ -94,8 +94,20 @@ configuration beans.
   `POST /{tenant}/internal/offers`, `POST /{tenant}/token` (both grant
   types), `POST /{tenant}/credential`, `/batch-credential`,
   `/deferred-credential`
-- OID4VP: `POST /{tenant}/vp/authorize` (claims map or `dcql_query`),
-  `GET /{tenant}/vp/request/{id}`, `POST /{tenant}/vp/direct_post`
+- OID4VP: `POST /{tenant}/vp/authorize` (claims map or `dcql_query`;
+  `claim_level_response: true` switches the result to the phase-5
+  zero-PII boolean contract — `valid`, `vct`, `expiresAt`, per-claim
+  `satisfied` flags), `GET /{tenant}/vp/request/{id}`,
+  `POST /{tenant}/vp/direct_post`
+
+## GBA SCC filing export (Phase 5, on the edge)
+
+- `GET /{tenant}/scc/filing-export?contract_reference=&purpose=&from=&to=`
+  — renders the immutable audit log's verification records for the
+  counterparty tenant into the filing-template field set (filingDate,
+  exporter, importer, contractReference, purpose, dataElements as
+  claim-type categories only, verificationRecords). Zero PII by
+  construction — claim values never leave the audit log.
 
 ## Wallet backend API (Phase 4, on the edge)
 
@@ -157,7 +169,7 @@ plans for the issuer and verifier modules.
 ## Verification
 
 - Unit/integration tests: `mvn -pl bom,didvc/didvc-sd-jwt,didvc/didvc-metering,didvc/didvc-api,didvc/didvc-services,didvc/didvc-rest,didvc/didvc-edge -am test`
-  (137 tests: api 8, sd-jwt 9, metering 6, services 89, edge 25).
+  (172 tests: api 8, sd-jwt 22, metering 10, services 102, edge 30).
 - Live ITs against a real Karaf + Elasticsearch container (verified 7/7 —
   the phase 1-3 smoke suite plus phase 4's cross-method resolution tests,
   all in `DidvcSmokeIT`):

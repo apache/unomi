@@ -350,4 +350,136 @@ class VpVerificationIntegrationTest {
                                 "state", requestId, "nonce", NONCE, "vp_token", vp))))
                 .andExpect(status().isBadRequest());
     }
+
+    // ---- Phase 5: claim-level responses (FR-D3) ----
+
+    private String authorizeClaimLevel(Map<String, Object> dcqlQuery) throws Exception {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("client_id", "https://bank-a.example.hkt");
+        body.put("nonce", NONCE);
+        body.put("dcql_query", dcqlQuery);
+        body.put("claim_level_response", true);
+        MvcResult result = mockMvc.perform(post("/" + TENANT + "/vp/authorize")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String requestUri = objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("request_uri").asText();
+        return requestUri.substring(requestUri.lastIndexOf('/') + 1);
+    }
+
+    @Test
+    void claimLevelResponseContainsBooleansAndNoPii() throws Exception {
+        String requestId = authorizeClaimLevel(kycDcqlQuery(List.of("Yat")));
+        String[] parts = issuedCredential.split("~");
+        String vp = buildVp(NONCE, Arrays.asList(parts[1], parts[2]));
+        MvcResult result = mockMvc.perform(post("/" + TENANT + "/vp/direct_post")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "state", requestId, "nonce", NONCE, "vp_token", vp))))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
+        assertTrue(response.get("valid").asBoolean());
+        assertEquals("hkt_kyc_v1", response.get("vct").asText());
+        assertTrue(response.has("expiresAt"));
+        assertTrue(response.get("claimResults").get("givenName").get("satisfied").asBoolean());
+
+        // Zero PII: no claim values, no disclosed-claims map, no subject
+        String body = result.getResponse().getContentAsString();
+        assertFalse(body.contains("Yat"));
+        assertFalse(body.contains("REMOTE_FULL"));
+        assertFalse(body.contains("nationality"));
+        assertFalse(response.has("claims"));
+        assertFalse(response.has("alwaysDisclosed"));
+        assertFalse(response.has("subject"));
+    }
+
+    @Test
+    void claimLevelUnsatisfiedClaimReturnsBooleanOutcome() throws Exception {
+        // The counterparty asks for a value the credential does not carry
+        String requestId = authorizeClaimLevel(kycDcqlQuery(List.of("Someone Else")));
+        String[] parts = issuedCredential.split("~");
+        String vp = buildVp(NONCE, Arrays.asList(parts[1], parts[2]));
+        MvcResult result = mockMvc.perform(post("/" + TENANT + "/vp/direct_post")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "state", requestId, "nonce", NONCE, "vp_token", vp))))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
+        assertTrue(response.get("valid").asBoolean());
+        assertFalse(response.get("claimResults").get("givenName").get("satisfied").asBoolean());
+    }
+
+    @Test
+    void claimLevelRevokedCredentialReturnsValidFalse() throws Exception {
+        String requestId = authorizeClaimLevel(kycDcqlQuery(null));
+        platformApi.markRevoked(issuedRecord.getItemId());
+        String[] parts = issuedCredential.split("~");
+        String vp = buildVp(NONCE, Arrays.asList(parts[1], parts[2]));
+        MvcResult result = mockMvc.perform(post("/" + TENANT + "/vp/direct_post")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "state", requestId, "nonce", NONCE, "vp_token", vp))))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
+        assertFalse(response.get("valid").asBoolean());
+        assertTrue(response.has("reason"));
+    }
+
+    @Test
+    void claimLevelUntrustedIssuerReturnsValidFalse() throws Exception {
+        platformApi.untrustAll();
+        String requestId = authorizeClaimLevel(kycDcqlQuery(null));
+        String[] parts = issuedCredential.split("~");
+        String vp = buildVp(NONCE, Arrays.asList(parts[1], parts[2]));
+        MvcResult result = mockMvc.perform(post("/" + TENANT + "/vp/direct_post")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "state", requestId, "nonce", NONCE, "vp_token", vp))))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode response = objectMapper.readTree(result.getResponse().getContentAsString());
+        assertFalse(response.get("valid").asBoolean());
+        assertTrue(response.has("reason"));
+    }
+
+    // ---- Phase 5: GBA SCC filing export (FR-D4) ----
+
+    @Test
+    void sccFilingExportMatchesTemplateAndCarriesNoPii() throws Exception {
+        String requestId = authorize();
+        String[] parts = issuedCredential.split("~");
+        String vp = buildVp(NONCE, Arrays.asList(parts[1], parts[2]));
+        mockMvc.perform(post("/" + TENANT + "/vp/direct_post")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "state", requestId, "nonce", NONCE, "vp_token", vp))))
+                .andExpect(status().isOk());
+
+        MvcResult result = mockMvc.perform(get("/" + TENANT + "/scc/filing-export")
+                        .param("contract_reference", "SCC-2026-001")
+                        .param("purpose", "GBA data-flow compliance attestation"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode export = objectMapper.readTree(result.getResponse().getContentAsString());
+        assertEquals(TENANT, export.get("importer").asText());
+        assertEquals(InMemoryPlatformApi.ISSUER_DID, export.get("exporter").asText());
+        assertEquals("SCC-2026-001", export.get("contractReference").asText());
+        assertEquals("GBA data-flow compliance attestation", export.get("purpose").asText());
+        // The audit log is shared across the test suite — assert the
+        // record set is non-empty and carries this test's verification
+        assertFalse(export.get("verificationRecords").isEmpty());
+        assertTrue(export.get("verificationRecords").toString().contains("hkt_kyc_v1"));
+        assertFalse(export.get("dataElements").isEmpty());
+
+        // Zero PII: claim type names appear, the values must not
+        String body = result.getResponse().getContentAsString();
+        assertTrue(body.contains("givenName"));
+        assertFalse(body.contains("Yat"));
+        assertFalse(body.contains("REMOTE_FULL"));
+    }
 }

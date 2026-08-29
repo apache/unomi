@@ -62,9 +62,10 @@ public class CredentialIssuerController {
     private static final String PRE_AUTHORIZED_GRANT = "urn:ietf:params:oauth:grant-type:pre-authorized_code";
     private static final String AUTHORIZATION_CODE_GRANT = "authorization_code";
     private static final long CODE_TTL_MILLIS = 10 * 60 * 1000L;
-    /** Credential configurations the issuer serves (phase 2 KYC + phase 4 People flow). */
+    /** Credential configurations the issuer serves (phase 2 KYC, phase 4 People flow, phase 5 Data flow). */
     private static final java.util.Set<String> SUPPORTED_VCTS = java.util.Set.of(
-            "hkt_kyc_v1", "hkt_profcred_v1", "hkt_residency_v1");
+            "hkt_kyc_v1", "hkt_profcred_v1", "hkt_residency_v1",
+            "hkt_licensed_institution_v1", "hkt_realname_v1");
 
     private final EdgeProperties properties;
     private final PlatformApi platformApi;
@@ -228,22 +229,29 @@ public class CredentialIssuerController {
         metadata.put("response_types_supported", List.of("code"));
         metadata.put("grant_types_supported", List.of(AUTHORIZATION_CODE_GRANT, PRE_AUTHORIZED_GRANT));
         metadata.put("code_challenge_methods_supported", List.of("S256"));
-        metadata.put("credential_configurations_supported", Map.of(
-                "hkt_kyc_v1", credentialConfiguration("hkt_kyc_v1",
-                        Map.of("kycLevel", Map.of("mandatory", true),
-                                "sanctionsClear", Map.of("mandatory", true),
-                                "givenName", Map.of(),
-                                "nationality", Map.of())),
-                "hkt_profcred_v1", credentialConfiguration("hkt_profcred_v1",
-                        Map.of("qualificationCode", Map.of("mandatory", true),
-                                "issuingBody", Map.of("mandatory", true),
-                                "gradeLevel", Map.of(),
-                                "validUntilYear", Map.of(),
-                                "registrationRegion", Map.of())),
-                "hkt_residency_v1", credentialConfiguration("hkt_residency_v1",
-                        Map.of("residencyStatus", Map.of("mandatory", true),
-                                "jurisdiction", Map.of("mandatory", true),
-                                "validUntil", Map.of()))));
+        Map<String, Object> configurations = new LinkedHashMap<>();
+        configurations.put("hkt_kyc_v1", credentialConfiguration("hkt_kyc_v1",
+                Map.of("kycLevel", Map.of("mandatory", true),
+                        "sanctionsClear", Map.of("mandatory", true),
+                        "givenName", Map.of(),
+                        "nationality", Map.of())));
+        configurations.put("hkt_profcred_v1", credentialConfiguration("hkt_profcred_v1",
+                Map.of("qualificationCode", Map.of("mandatory", true),
+                        "issuingBody", Map.of("mandatory", true),
+                        "gradeLevel", Map.of(),
+                        "validUntilYear", Map.of(),
+                        "registrationRegion", Map.of())));
+        configurations.put("hkt_residency_v1", credentialConfiguration("hkt_residency_v1",
+                Map.of("residencyStatus", Map.of("mandatory", true),
+                        "jurisdiction", Map.of("mandatory", true),
+                        "validUntil", Map.of())));
+        configurations.put("hkt_licensed_institution_v1", credentialConfiguration("hkt_licensed_institution_v1",
+                Map.of("licenseClass", Map.of("mandatory", true),
+                        "regulated", Map.of("mandatory", true),
+                        "licenseValidUntil", Map.of("mandatory", true))));
+        configurations.put("hkt_realname_v1", credentialConfiguration("hkt_realname_v1",
+                Map.of("realNameVerified", Map.of("mandatory", true))));
+        metadata.put("credential_configurations_supported", configurations);
         return metadata;
     }
 

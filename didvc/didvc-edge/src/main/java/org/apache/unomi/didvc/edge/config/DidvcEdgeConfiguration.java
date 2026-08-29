@@ -24,6 +24,7 @@ import org.apache.unomi.didvc.edge.store.NonceStore;
 import org.apache.unomi.didvc.edge.store.RedisNonceStore;
 import org.apache.unomi.didvc.metering.InMemoryMeteringSink;
 import org.apache.unomi.didvc.metering.MeteringService;
+import org.apache.unomi.didvc.scc.SccFilingExporter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -64,6 +65,11 @@ public class DidvcEdgeConfiguration {
     @Bean
     public AuditLogService auditLogService() {
         return new AuditLogService(new InMemoryAuditLogStore());
+    }
+
+    @Bean
+    public SccFilingExporter sccFilingExporter(AuditLogService auditLogService) {
+        return new SccFilingExporter(auditLogService);
     }
 
     @Bean
