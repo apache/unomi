@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -166,12 +167,87 @@ public class FileEndpointContainmentTest {
     }
 
     @Test
+    public void moveFailedIsAppendedAsTheFirstOptionOfASourceThatCarriesNone() throws Exception {
+        addImportRoutes(recurrentImport("first-option", fileUri(permittedImportDir, "")));
+
+        assertEquals("the option must open the query, or it becomes part of the directory name",
+                fileUri(permittedImportDir, "?moveFailed=.error"), builtEndpointUri("first-option"));
+    }
+
+    @Test
+    public void moveFailedIsAppendedToASourceThatAlreadyCarriesAQuery() throws Exception {
+        addImportRoutes(recurrentImport("next-option", fileUri(permittedImportDir, "?fileName=profiles.csv")));
+
+        assertEquals("an existing query takes the option as another parameter",
+                fileUri(permittedImportDir, "?fileName=profiles.csv&moveFailed=.error"),
+                builtEndpointUri("next-option"));
+    }
+
+    @Test
     public void importRouteIsBuiltWhenSourceCarriesNoOption() throws Exception {
         // the router appends moveFailed itself; a source with no query has no separator to append to,
         // and the option would otherwise become part of the directory the endpoint names
         addImportRoutes(recurrentImport("no-option", fileUri(permittedImportDir, "")));
 
         assertRouteBuilt("no-option", "a source may name a directory and nothing else");
+    }
+
+    @Test
+    public void importRouteIsBuiltWhenSourceIsASymlinkPointingInsidePermittedBaseDir() throws Exception {
+        File target = new File(permittedImportDir, "incoming");
+        assertTrue("could not prepare the test fixture", target.mkdir());
+        File link = new File(permittedImportDir, "shortcut");
+        try {
+            Files.createSymbolicLink(link.toPath(), target.toPath());
+        } catch (IOException | UnsupportedOperationException e) {
+            Assume.assumeNoException("this file system does not support symbolic links", e);
+        }
+
+        addImportRoutes(recurrentImport("symlink-inside", fileUri(link, "?fileName=profiles.csv")));
+
+        assertRouteBuilt("symlink-inside", "resolving a link must not refuse one that stays inside the base directory");
+    }
+
+    @Test
+    public void importRouteIsBuiltWhenThePermittedBaseDirIsItselfASymlink() throws Exception {
+        File link = new File(tmp.getRoot(), "permitted-import-link");
+        try {
+            Files.createSymbolicLink(link.toPath(), permittedImportDir.toPath());
+        } catch (IOException | UnsupportedOperationException e) {
+            Assume.assumeNoException("this file system does not support symbolic links", e);
+        }
+
+        // the deployment names the link, the configuration names the directory it points at
+        addImportRoutesInto(link, recurrentImport("base-dir-link", fileUri(permittedImportDir, "?fileName=profiles.csv")));
+
+        assertRouteBuilt("base-dir-link",
+                "both sides are resolved, so naming the same directory by two paths is the same directory");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenAnOptionLeavesThroughASymlinkAndAParentSegment() throws Exception {
+        File outsideChild = new File(arbitraryDir, "child");
+        assertTrue("could not prepare the test fixture", outsideChild.mkdir());
+        File link = new File(permittedImportDir, "option-link");
+        try {
+            Files.createSymbolicLink(link.toPath(), outsideChild.toPath());
+        } catch (IOException | UnsupportedOperationException e) {
+            Assume.assumeNoException("this file system does not support symbolic links", e);
+        }
+
+        addImportRoutes(recurrentImport("option-symlink-parent",
+                fileUri(permittedImportDir, "?fileName=profiles.csv&move=option-link/..")));
+
+        assertRouteRefused("option-symlink-parent",
+                "a path-bearing option is resolved the same way the endpoint directory is");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenSourceClimbsAboveTheRoot() throws Exception {
+        addImportRoutes(recurrentImport("above-root", "file:///../../../../../../../../etc?fileName=profiles.csv"));
+
+        assertRouteRefused("above-root",
+                "more parent segments than the path has components is a refusal, not an exception");
     }
 
     @Test
@@ -495,6 +571,22 @@ public class FileEndpointContainmentTest {
     }
 
     @Test
+    public void exportRouteIsRefusedWhenDestinationStagesItsDownloadsOutsidePermittedBaseDir() throws Exception {
+        addExportRoutes(recurrentExport("remote-staging", "ftp://ftp.example.com/profiles"
+                + "?fileName=profiles.csv&localWorkDirectory=" + arbitraryDir.getAbsolutePath()));
+
+        assertRouteRefused("remote-staging", "the option names a local directory in either direction");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenTheStagingOptionIsSpeltInAnotherCase() throws Exception {
+        addImportRoutes(recurrentImport("staging-case", "ftp://ftp.example.com/profiles"
+                + "?fileName=profiles.csv&LOCALWORKDIRECTORY=" + arbitraryDir.getAbsolutePath()));
+
+        assertRouteRefused("staging-case", "the option is matched on its name, not on how it is spelt");
+    }
+
+    @Test
     public void malformedDestinationIsSkippedWithoutPreventingTheOtherRoutesFromBeingBuilt() throws Exception {
         addExportRoutes(
                 recurrentExport("blank", ""),
@@ -511,6 +603,12 @@ public class FileEndpointContainmentTest {
     private void assertRouteBuilt(String routeId, String why) {
         assertNotNull("no route was built for configuration '" + routeId + "', although " + why,
                 camelContext.getRouteDefinition(routeId));
+    }
+
+    /** The endpoint URI the route was actually built on, which is not the one that was configured. */
+    private String builtEndpointUri(String routeId) {
+        assertRouteBuilt(routeId, "there is no endpoint to look at otherwise");
+        return camelContext.getRouteDefinition(routeId).getInputs().get(0).getUri();
     }
 
     private void assertRouteRefused(String routeId, String why) {
