@@ -63,8 +63,11 @@ import static org.junit.Assert.assertTrue;
  * <p>Selection options ({@code include}, {@code antInclude}) are patterns matched against the files
  * the directory already offers, not paths Camel resolves, and are not held to containment.
  *
- * <p>Remote schemes ({@code ftp}, {@code sftp}, {@code ftps}) carry no local path and are not
- * subject to directory containment; the scheme allow-list keeps governing them.
+ * <p>Remote schemes ({@code ftp}, {@code sftp}, {@code ftps}) address a remote server, so their
+ * directory and their path-bearing options are remote and are not subject to directory containment;
+ * the scheme allow-list keeps governing them. {@code localWorkDirectory} is the exception: it names a
+ * local directory, which the remote components stage their downloads in, and it is confined whatever
+ * the scheme.
  *
  * <p>These tests exercise route <em>construction</em>, which is where a configuration is turned into
  * a live route: a configuration whose endpoint is refused must leave no route behind, whether it
@@ -349,6 +352,37 @@ public class FileEndpointContainmentTest {
         addImportRoutes(recurrentImport("remote", "ftp://ftp.example.com/profiles?fileName=profiles.csv"));
 
         assertRouteBuilt("remote", "ftp is an allowed scheme and carries no local path");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenARemoteSourceStagesItsDownloadsOutsidePermittedBaseDir() throws Exception {
+        addImportRoutes(recurrentImport("remote-staging", "ftp://ftp.example.com/profiles"
+                + "?fileName=profiles.csv&localWorkDirectory=" + arbitraryDir.getAbsolutePath()));
+
+        assertRouteRefused("remote-staging",
+                "localWorkDirectory is a local directory: the remote server's content is written there, "
+                        + "under the name the remote server chooses");
+    }
+
+    @Test
+    public void importRouteIsBuiltWhenARemoteSourceStagesItsDownloadsInsidePermittedBaseDir() throws Exception {
+        addImportRoutes(recurrentImport("remote-staging-in-bounds", "ftp://ftp.example.com/profiles"
+                + "?fileName=profiles.csv&localWorkDirectory="
+                + new File(permittedImportDir, "staging").getAbsolutePath()));
+
+        assertRouteBuilt("remote-staging-in-bounds",
+                "staging downloads inside the permitted base directory is legitimate, and the directory "
+                        + "need not exist yet");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenSourceStagesItsDownloadsOutsidePermittedBaseDir() throws Exception {
+        addImportRoutes(recurrentImport("local-staging", fileUri(permittedImportDir,
+                "?fileName=profiles.csv&localWorkDirectory=" + arbitraryDir.getAbsolutePath())));
+
+        assertRouteRefused("local-staging",
+                "the option is resolved on its own, not against the endpoint directory, so a permitted "
+                        + "directory does not cover it");
     }
 
     @Test

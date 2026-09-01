@@ -55,7 +55,10 @@ import java.util.Set;
  * are both refusals: nothing is thrown out of this class, because one malformed endpoint must not
  * cost a deployment the routes of every other configuration.
  *
- * <p>Schemes other than {@code file} carry no local path and are left to the scheme allow-list.
+ * <p>A scheme other than {@code file} addresses a remote server, so its directory and its
+ * path-bearing options are remote and none of this applies to them — with one exception.
+ * {@code localWorkDirectory} names a <em>local</em> directory, which the remote components stage
+ * their downloads in, so it is confined whatever the scheme.
  */
 public final class EndpointValidator {
 
@@ -89,6 +92,17 @@ public final class EndpointValidator {
 
     /** Expands to the directory the file sits in, which is the endpoint directory or one below it. */
     private static final String PARENT_TOKEN = "file:parent";
+
+    /**
+     * The one option that names a local directory whatever the scheme: the remote components write the
+     * content they download into files there, under the name the remote server announces.
+     *
+     * <p>It is kept out of {@link #PATH_BEARING_OPTIONS} because it is not resolved the same way. Those
+     * options are resolved against the directory the endpoint names; this one Camel resolves on its
+     * own — {@code new File(FileUtil.normalizePath(value))} — so it is held to the permitted
+     * directories directly, and it carries no File Language expression to account for.
+     */
+    private static final String LOCAL_WORK_DIRECTORY_OPTION = "localworkdirectory";
 
     /** Stands in for a token that expands to a name: one path component, never a parent segment. */
     private static final String NAME_PLACEHOLDER = "_";
@@ -124,11 +138,11 @@ public final class EndpointValidator {
             return "endpoint scheme '" + scheme + "' is not allowed";
         }
 
-        if (!FILE_SCHEME.equalsIgnoreCase(scheme)) {
-            return null;
-        }
-
         try {
+            String refusal = validateLocalWorkDirectory(endpointUri, permittedBaseDirs);
+            if (refusal != null || !FILE_SCHEME.equalsIgnoreCase(scheme)) {
+                return refusal;
+            }
             return validateContainment(endpointUri, permittedBaseDirs);
         } catch (Refusal refusal) {
             return refusal.getMessage();
@@ -138,14 +152,45 @@ public final class EndpointValidator {
         }
     }
 
-    private static String validateContainment(String endpointUri, String permittedBaseDirs) throws Refusal {
+    /**
+     * Confines {@code localWorkDirectory}, the local directory a remote endpoint may be told to stage
+     * its downloads in. Left alone, it is a write outside the permitted directories that the scheme
+     * allow-list never sees: {@code ftp://host/x?localWorkDirectory=/opt/unomi/deploy} stages what the
+     * remote server sends, under the name the remote server chooses.
+     */
+    private static String validateLocalWorkDirectory(String endpointUri, String permittedBaseDirs) throws Refusal {
+        int querySeparator = endpointUri.indexOf('?');
+        if (querySeparator < 0) {
+            return null;
+        }
+        for (String[] parameter : parseQuery(endpointUri.substring(querySeparator + 1))) {
+            if (!LOCAL_WORK_DIRECTORY_OPTION.equals(decode(parameter[0]).toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+            String value = stripRaw(decode(parameter[1]));
+            if (value.isEmpty()) {
+                continue;
+            }
+            if (!isContained(Paths.get(value), baseDirectories(permittedBaseDirs))) {
+                return "option '" + parameter[0] + "' points outside the permitted directories";
+            }
+        }
+        return null;
+    }
+
+    private static List<Path> baseDirectories(String permittedBaseDirs) throws Refusal {
         List<Path> baseDirs = new ArrayList<>();
         for (String baseDir : split(permittedBaseDirs)) {
             baseDirs.add(canonicalize(Paths.get(baseDir)));
         }
         if (baseDirs.isEmpty()) {
-            return "no permitted base directory is configured for file endpoints";
+            throw new Refusal("no permitted base directory is configured for file endpoints");
         }
+        return baseDirs;
+    }
+
+    private static String validateContainment(String endpointUri, String permittedBaseDirs) throws Refusal {
+        List<Path> baseDirs = baseDirectories(permittedBaseDirs);
 
         int querySeparator = endpointUri.indexOf('?');
         String head = querySeparator < 0 ? endpointUri : endpointUri.substring(0, querySeparator);
