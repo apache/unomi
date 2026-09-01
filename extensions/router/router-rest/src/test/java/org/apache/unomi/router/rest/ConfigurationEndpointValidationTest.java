@@ -101,6 +101,19 @@ public class ConfigurationEndpointValidationTest {
     }
 
     @Test
+    public void savingARecurrentImportBeforeTheRouterPublishedItsSettingsIsNotRefused() throws Exception {
+        // the router's Camel context has not started yet, so it has published nothing
+        ImportConfigurationServiceEndPoint starting = new ImportConfigurationServiceEndPoint();
+        starting.setImportConfigurationService(importConfigurations);
+        starting.setConfigSharingService(new InMemoryConfigSharingService());
+
+        ImportConfiguration configuration = recurrentImport(fileUri(permittedImportDir, "?fileName=profiles.csv"));
+
+        assertUnavailable(() -> starting.saveConfiguration(configuration));
+        assertFalse("nothing is stored while the endpoint cannot be judged", importConfigurations.contains("in-bounds"));
+    }
+
+    @Test
     public void savingARecurrentImportWhoseSourceIsOutsideThePermittedBaseDirsIsRefused() {
         ImportConfiguration configuration = recurrentImport(fileUri(arbitraryDir, "?fileName=profiles.csv"));
 
@@ -162,6 +175,16 @@ public class ConfigurationEndpointValidationTest {
      * A refused configuration answers {@code 400 Bad Request}, and says why: the caller has to be able
      * to correct the endpoint from the answer alone.
      */
+    private void assertUnavailable(Runnable save) {
+        try {
+            save.run();
+            fail("saving the configuration should not have been answered yet");
+        } catch (WebApplicationException e) {
+            assertEquals("settings that are not published yet make the service unavailable, not the "
+                    + "configuration wrong", 503, e.getResponse().getStatus());
+        }
+    }
+
     private void assertRefused(Runnable save) {
         try {
             save.run();
