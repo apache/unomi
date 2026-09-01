@@ -94,7 +94,9 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
 
                 String endpoint = (String) importConfiguration.getProperties().get("source");
                 if (StringUtils.isNotBlank(endpoint)) {
-                    endpoint += "&moveFailed=.error";
+                    // the separator depends on whether the source already carries a query: appending
+                    // '&' to a source that has none makes the option part of the directory name
+                    endpoint += (endpoint.indexOf('?') < 0 ? "?" : "&") + "moveFailed=.error";
                 }
 
                 String refusal = EndpointValidator.validate(endpoint, allowedEndpoints, permittedBaseDirs);

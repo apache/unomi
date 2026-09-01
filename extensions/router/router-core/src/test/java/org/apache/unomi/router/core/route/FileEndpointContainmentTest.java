@@ -166,6 +166,15 @@ public class FileEndpointContainmentTest {
     }
 
     @Test
+    public void importRouteIsBuiltWhenSourceCarriesNoOption() throws Exception {
+        // the router appends moveFailed itself; a source with no query has no separator to append to,
+        // and the option would otherwise become part of the directory the endpoint names
+        addImportRoutes(recurrentImport("no-option", fileUri(permittedImportDir, "")));
+
+        assertRouteBuilt("no-option", "a source may name a directory and nothing else");
+    }
+
+    @Test
     public void importRouteIsRefusedWhenSourceIsOutsidePermittedBaseDir() throws Exception {
         addImportRoutes(recurrentImport("arbitrary-dir", fileUri(arbitraryDir, "?fileName=profiles.csv")));
 
