@@ -41,6 +41,7 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
@@ -115,6 +116,18 @@ public class RefusedConfigurationStatusTest {
                 RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT, configuration.getStatus());
         assertTrue("the configuration should have been saved so the failure is visible",
                 exportConfigurations.contains("out-of-bounds"));
+    }
+
+    @Test
+    public void aStoreThatCannotRecordTheRefusalDoesNotCostTheBatchItsOtherRoutes() throws Exception {
+        importConfigurations.unwritable = true;
+
+        addImportRoutes(recurrentImport(fileUri(arbitraryDir, "?fileName=profiles.csv")),
+                inBoundsImport("in-bounds"));
+
+        assertNull("the refused configuration still gets no route", camelContext.getRouteDefinition("out-of-bounds"));
+        assertNotNull("failing to record the refusal must not cost the other configurations their routes",
+                camelContext.getRouteDefinition("in-bounds"));
     }
 
     @Test
@@ -200,6 +213,12 @@ public class RefusedConfigurationStatusTest {
         return "file://" + directory.getAbsolutePath() + suffix;
     }
 
+    private ImportConfiguration inBoundsImport(String itemId) {
+        ImportConfiguration configuration = recurrentImport(fileUri(permittedImportDir, "?fileName=profiles.csv"));
+        configuration.setItemId(itemId);
+        return configuration;
+    }
+
     private ImportConfiguration recurrentImport(String source) {
         ImportConfiguration configuration = new ImportConfiguration();
         configuration.setItemId("out-of-bounds");
@@ -265,6 +284,9 @@ public class RefusedConfigurationStatusTest {
 
         private boolean lastSaveAskedForARouteRefresh;
 
+        /** Stands in for a store that cannot be written to -- Elasticsearch unreachable at start-up. */
+        private boolean unwritable;
+
         boolean contains(String configId) {
             return stored.containsKey(configId);
         }
@@ -281,6 +303,9 @@ public class RefusedConfigurationStatusTest {
 
         @Override
         public T save(T configuration, boolean updateRunningRoute) {
+            if (unwritable) {
+                throw new IllegalStateException("the store is unreachable");
+            }
             lastSaveAskedForARouteRefresh = updateRunningRoute;
             stored.put(itemIdOf(configuration), configuration);
             return configuration;
