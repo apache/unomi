@@ -93,6 +93,10 @@ public final class EndpointValidator {
     /** Stands in for a token that expands to a name: one path component, never a parent segment. */
     private static final String NAME_PLACEHOLDER = "_";
 
+    /** The path segments the walk interprets rather than resolves against the file system. */
+    private static final String CURRENT_DIRECTORY = ".";
+    private static final String PARENT_DIRECTORY = "..";
+
     private EndpointValidator() {
     }
 
@@ -189,29 +193,59 @@ public final class EndpointValidator {
     }
 
     /**
-     * Resolves a path to the one the file system would actually use: made absolute, stripped of its
-     * parent segments, and with the symbolic links of its existing part followed. A path that does not
-     * exist yet is canonicalized through its deepest existing ancestor — an export destination is
-     * created on first write, and must be decided on before it exists.
+     * Resolves a path to the one the file system would actually use, walking it one component at a
+     * time from the root the way the file system does: a symbolic link is expanded where it stands,
+     * and a parent segment is applied to what the walk has resolved so far.
+     *
+     * <p>The order is what makes this correct. Collapsing parent segments first — {@code normalize()}
+     * on the whole path — erases the component they cancel, symbolic link included, so
+     * {@code /base/link/..} reads as {@code /base} while the file system resolves it to the parent of
+     * the link's target. Only a walk sees the link before the segment that cancels it.
+     *
+     * <p>A path that does not exist yet is resolved as far as it exists and kept as it stands from
+     * there — an export destination is created on first write, and must be decided on before it
+     * exists.
      *
      * <p>A path whose existing part cannot be resolved is refused rather than accepted as it stands: a
      * dangling symbolic link inside a permitted directory would otherwise be taken for a child of it,
      * and would leave it as soon as its target is created.
      */
     private static Path canonicalize(Path path) throws Refusal {
-        Path normalized = path.toAbsolutePath().normalize();
-        Path existing = normalized;
-        while (existing != null && !Files.exists(existing, LinkOption.NOFOLLOW_LINKS)) {
-            existing = existing.getParent();
+        Path absolute = path.toAbsolutePath();
+        Path resolved = absolute.getRoot();
+        if (resolved == null) {
+            // an absolute path always has a root; without one there is nothing to decide on
+            throw new Refusal("path '" + path + "' cannot be made absolute");
         }
-        if (existing == null) {
-            return normalized;
+        // once a component is missing, nothing below it can exist: the rest is kept as written
+        boolean belowWhatExists = false;
+        for (Path component : absolute) {
+            String name = component.toString();
+            if (CURRENT_DIRECTORY.equals(name)) {
+                continue;
+            }
+            if (PARENT_DIRECTORY.equals(name)) {
+                Path parent = resolved.getParent();
+                if (parent != null) {
+                    resolved = parent;
+                }
+                continue;
+            }
+            Path candidate = resolved.resolve(component);
+            if (belowWhatExists || !Files.exists(candidate, LinkOption.NOFOLLOW_LINKS)) {
+                belowWhatExists = true;
+                resolved = candidate;
+            } else if (Files.isSymbolicLink(candidate)) {
+                try {
+                    resolved = candidate.toRealPath();
+                } catch (IOException e) {
+                    throw new Refusal("path '" + candidate + "' cannot be resolved on the file system: " + e);
+                }
+            } else {
+                resolved = candidate;
+            }
         }
-        try {
-            return existing.toRealPath().resolve(existing.relativize(normalized));
-        } catch (IOException e) {
-            throw new Refusal("path '" + normalized + "' cannot be resolved on the file system: " + e);
-        }
+        return resolved;
     }
 
     /**

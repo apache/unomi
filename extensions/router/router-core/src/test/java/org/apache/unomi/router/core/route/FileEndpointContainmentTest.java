@@ -144,6 +144,25 @@ public class FileEndpointContainmentTest {
     }
 
     @Test
+    public void importRouteIsRefusedWhenSourceLeavesPermittedBaseDirThroughASymlinkAndAParentSegment() throws Exception {
+        File outsideChild = new File(arbitraryDir, "child");
+        assertTrue("could not prepare the test fixture", outsideChild.mkdir());
+        File link = new File(permittedImportDir, "link");
+        try {
+            Files.createSymbolicLink(link.toPath(), outsideChild.toPath());
+        } catch (IOException | UnsupportedOperationException e) {
+            Assume.assumeNoException("this file system does not support symbolic links", e);
+        }
+
+        // the file system expands the link, then applies the parent segment to its target: the source
+        // is the arbitrary directory. Collapsing the segment first would read it as the base directory.
+        addImportRoutes(recurrentImport("symlink-parent", fileUri(new File(link, ".."), "?fileName=profiles.csv")));
+
+        assertRouteRefused("symlink-parent",
+                "a parent segment applies to the target of the link that precedes it, not to the link's own parent");
+    }
+
+    @Test
     public void importRouteIsRefusedWhenSourceIsOutsidePermittedBaseDir() throws Exception {
         addImportRoutes(recurrentImport("arbitrary-dir", fileUri(arbitraryDir, "?fileName=profiles.csv")));
 
