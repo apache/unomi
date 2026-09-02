@@ -101,6 +101,55 @@ public class ConfigurationEndpointValidationTest {
     }
 
     @Test
+    public void savingARecurrentImportBeforeTheRouterPublishedItsSettingsIsNotRefused() throws Exception {
+        // the router's Camel context has not started yet, so it has published nothing
+        ImportConfigurationServiceEndPoint starting = new ImportConfigurationServiceEndPoint();
+        starting.setImportConfigurationService(importConfigurations);
+        starting.setConfigSharingService(new InMemoryConfigSharingService());
+
+        ImportConfiguration configuration = recurrentImport(fileUri(permittedImportDir, "?fileName=profiles.csv"));
+
+        assertUnavailable(() -> starting.saveConfiguration(configuration));
+        assertFalse("nothing is stored while the endpoint cannot be judged", importConfigurations.contains("in-bounds"));
+    }
+
+    @Test
+    public void savingARecurrentImportWhoseRemoteSourceStagesDownloadsOutsideThePermittedBaseDirsIsRefused() {
+        // ftp is an allowed scheme, but localWorkDirectory names a local directory all the same
+        ImportConfiguration configuration = recurrentImport("ftp://ftp.example.com/profiles"
+                + "?fileName=profiles.csv&localWorkDirectory=" + arbitraryDir.getAbsolutePath());
+
+        assertRefused(() -> importEndpoint.saveConfiguration(configuration));
+        assertFalse("a refused configuration must not be stored", importConfigurations.contains("in-bounds"));
+    }
+
+    @Test
+    public void savingARecurrentImportBeforeThePermittedDirectoriesArePublishedIsNotRefused() throws Exception {
+        // the scheme allow-list is there, the directories are not: still nothing to judge against
+        InMemoryConfigSharingService partial = new InMemoryConfigSharingService();
+        partial.setProperty(RouterConstants.CONFIG_ALLOWED_ENDPOINTS, "file,ftp,sftp,ftps");
+        ImportConfigurationServiceEndPoint starting = new ImportConfigurationServiceEndPoint();
+        starting.setImportConfigurationService(importConfigurations);
+        starting.setConfigSharingService(partial);
+
+        ImportConfiguration configuration = recurrentImport(fileUri(permittedImportDir, "?fileName=profiles.csv"));
+
+        assertUnavailable(() -> starting.saveConfiguration(configuration));
+    }
+
+    @Test
+    public void savingARecurrentExportBeforeTheRouterPublishedItsSettingsIsNotRefused() throws Exception {
+        ExportConfigurationServiceEndPoint starting = new ExportConfigurationServiceEndPoint();
+        starting.setExportConfigurationService(exportConfigurations);
+        starting.setConfigSharingService(new InMemoryConfigSharingService());
+
+        ExportConfiguration configuration = recurrentExport(fileUri(permittedExportDir, "?fileName=profiles.csv"));
+
+        assertUnavailable(() -> starting.saveConfiguration(configuration));
+        assertFalse("nothing is stored while the endpoint cannot be judged", exportConfigurations.contains("in-bounds"));
+    }
+
+    @Test
     public void savingARecurrentImportWhoseSourceIsOutsideThePermittedBaseDirsIsRefused() {
         ImportConfiguration configuration = recurrentImport(fileUri(arbitraryDir, "?fileName=profiles.csv"));
 
@@ -162,6 +211,16 @@ public class ConfigurationEndpointValidationTest {
      * A refused configuration answers {@code 400 Bad Request}, and says why: the caller has to be able
      * to correct the endpoint from the answer alone.
      */
+    private void assertUnavailable(Runnable save) {
+        try {
+            save.run();
+            fail("saving the configuration should not have been answered yet");
+        } catch (WebApplicationException e) {
+            assertEquals("settings that are not published yet make the service unavailable, not the "
+                    + "configuration wrong", 503, e.getResponse().getStatus());
+        }
+    }
+
     private void assertRefused(Runnable save) {
         try {
             save.run();

@@ -26,6 +26,8 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ImportExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -33,6 +35,8 @@ import java.util.Map;
  * Created by amidani on 13/06/2017.
  */
 public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RouterAbstractRouteBuilder.class);
 
     protected JacksonDataFormat jacksonDataFormat;
 
@@ -87,10 +91,28 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
             T configuration, ImportExportConfigurationService<T> service, String refusal) {
         if (refusal != null) {
             configuration.setStatus(RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT);
-            service.save(configuration, false);
+            saveQuietly(configuration, service);
         } else if (RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT.equals(configuration.getStatus())) {
             configuration.setStatus(null);
+            saveQuietly(configuration, service);
+        }
+    }
+
+    /**
+     * Saves the mark, and keeps a failure to itself.
+     *
+     * <p>This runs inside {@code configure()}, which builds the routes of every configuration of the
+     * batch. An exception thrown here would leave {@code addRoutes} and cost all of them their routes
+     * — the very failure this validation exists to prevent, over the report of a refusal rather than
+     * the refusal itself. The store may be unreachable at start-up; the mark is worth what it costs,
+     * and no more.
+     */
+    private <T extends ImportExportConfiguration> void saveQuietly(T configuration, ImportExportConfigurationService<T> service) {
+        try {
             service.save(configuration, false);
+        } catch (RuntimeException e) {
+            LOGGER.error("Could not record the endpoint outcome on configuration {}; its route is built "
+                    + "or skipped as decided, only the record of it is missing", configuration.getItemId(), e);
         }
     }
 

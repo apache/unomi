@@ -55,7 +55,10 @@ import java.util.Set;
  * are both refusals: nothing is thrown out of this class, because one malformed endpoint must not
  * cost a deployment the routes of every other configuration.
  *
- * <p>Schemes other than {@code file} carry no local path and are left to the scheme allow-list.
+ * <p>A scheme other than {@code file} addresses a remote server, so its directory and its
+ * path-bearing options are remote and none of this applies to them — with one exception.
+ * {@code localWorkDirectory} names a <em>local</em> directory, which the remote components stage
+ * their downloads in, so it is confined whatever the scheme.
  */
 public final class EndpointValidator {
 
@@ -90,8 +93,23 @@ public final class EndpointValidator {
     /** Expands to the directory the file sits in, which is the endpoint directory or one below it. */
     private static final String PARENT_TOKEN = "file:parent";
 
+    /**
+     * The one option that names a local directory whatever the scheme: the remote components write the
+     * content they download into files there, under the name the remote server announces.
+     *
+     * <p>It is kept out of {@link #PATH_BEARING_OPTIONS} because it is not resolved the same way. Those
+     * options are resolved against the directory the endpoint names; this one Camel resolves on its
+     * own — {@code new File(FileUtil.normalizePath(value))} — so it is held to the permitted
+     * directories directly, and it carries no File Language expression to account for.
+     */
+    private static final String LOCAL_WORK_DIRECTORY_OPTION = "localworkdirectory";
+
     /** Stands in for a token that expands to a name: one path component, never a parent segment. */
     private static final String NAME_PLACEHOLDER = "_";
+
+    /** The path segments the walk interprets rather than resolves against the file system. */
+    private static final String CURRENT_DIRECTORY = ".";
+    private static final String PARENT_DIRECTORY = "..";
 
     private EndpointValidator() {
     }
@@ -120,11 +138,11 @@ public final class EndpointValidator {
             return "endpoint scheme '" + scheme + "' is not allowed";
         }
 
-        if (!FILE_SCHEME.equalsIgnoreCase(scheme)) {
-            return null;
-        }
-
         try {
+            String refusal = validateLocalWorkDirectory(endpointUri, permittedBaseDirs);
+            if (refusal != null || !FILE_SCHEME.equalsIgnoreCase(scheme)) {
+                return refusal;
+            }
             return validateContainment(endpointUri, permittedBaseDirs);
         } catch (Refusal refusal) {
             return refusal.getMessage();
@@ -134,14 +152,45 @@ public final class EndpointValidator {
         }
     }
 
-    private static String validateContainment(String endpointUri, String permittedBaseDirs) throws Refusal {
+    /**
+     * Confines {@code localWorkDirectory}, the local directory a remote endpoint may be told to stage
+     * its downloads in. Left alone, it is a write outside the permitted directories that the scheme
+     * allow-list never sees: {@code ftp://host/x?localWorkDirectory=/opt/unomi/deploy} stages what the
+     * remote server sends, under the name the remote server chooses.
+     */
+    private static String validateLocalWorkDirectory(String endpointUri, String permittedBaseDirs) throws Refusal {
+        int querySeparator = endpointUri.indexOf('?');
+        if (querySeparator < 0) {
+            return null;
+        }
+        for (String[] parameter : parseQuery(endpointUri.substring(querySeparator + 1))) {
+            if (!LOCAL_WORK_DIRECTORY_OPTION.equals(decode(parameter[0]).toLowerCase(Locale.ROOT))) {
+                continue;
+            }
+            String value = stripRaw(decode(parameter[1]));
+            if (value.isEmpty()) {
+                continue;
+            }
+            if (!isContained(Paths.get(value), baseDirectories(permittedBaseDirs))) {
+                return "option '" + parameter[0] + "' points outside the permitted directories";
+            }
+        }
+        return null;
+    }
+
+    private static List<Path> baseDirectories(String permittedBaseDirs) throws Refusal {
         List<Path> baseDirs = new ArrayList<>();
         for (String baseDir : split(permittedBaseDirs)) {
             baseDirs.add(canonicalize(Paths.get(baseDir)));
         }
         if (baseDirs.isEmpty()) {
-            return "no permitted base directory is configured for file endpoints";
+            throw new Refusal("no permitted base directory is configured for file endpoints");
         }
+        return baseDirs;
+    }
+
+    private static String validateContainment(String endpointUri, String permittedBaseDirs) throws Refusal {
+        List<Path> baseDirs = baseDirectories(permittedBaseDirs);
 
         int querySeparator = endpointUri.indexOf('?');
         String head = querySeparator < 0 ? endpointUri : endpointUri.substring(0, querySeparator);
@@ -189,29 +238,59 @@ public final class EndpointValidator {
     }
 
     /**
-     * Resolves a path to the one the file system would actually use: made absolute, stripped of its
-     * parent segments, and with the symbolic links of its existing part followed. A path that does not
-     * exist yet is canonicalized through its deepest existing ancestor — an export destination is
-     * created on first write, and must be decided on before it exists.
+     * Resolves a path to the one the file system would actually use, walking it one component at a
+     * time from the root the way the file system does: a symbolic link is expanded where it stands,
+     * and a parent segment is applied to what the walk has resolved so far.
+     *
+     * <p>The order is what makes this correct. Collapsing parent segments first — {@code normalize()}
+     * on the whole path — erases the component they cancel, symbolic link included, so
+     * {@code /base/link/..} reads as {@code /base} while the file system resolves it to the parent of
+     * the link's target. Only a walk sees the link before the segment that cancels it.
+     *
+     * <p>A path that does not exist yet is resolved as far as it exists and kept as it stands from
+     * there — an export destination is created on first write, and must be decided on before it
+     * exists.
      *
      * <p>A path whose existing part cannot be resolved is refused rather than accepted as it stands: a
      * dangling symbolic link inside a permitted directory would otherwise be taken for a child of it,
      * and would leave it as soon as its target is created.
      */
     private static Path canonicalize(Path path) throws Refusal {
-        Path normalized = path.toAbsolutePath().normalize();
-        Path existing = normalized;
-        while (existing != null && !Files.exists(existing, LinkOption.NOFOLLOW_LINKS)) {
-            existing = existing.getParent();
+        Path absolute = path.toAbsolutePath();
+        Path resolved = absolute.getRoot();
+        if (resolved == null) {
+            // an absolute path always has a root; without one there is nothing to decide on
+            throw new Refusal("path '" + path + "' cannot be made absolute");
         }
-        if (existing == null) {
-            return normalized;
+        // once a component is missing, nothing below it can exist: the rest is kept as written
+        boolean belowWhatExists = false;
+        for (Path component : absolute) {
+            String name = component.toString();
+            if (CURRENT_DIRECTORY.equals(name)) {
+                continue;
+            }
+            if (PARENT_DIRECTORY.equals(name)) {
+                Path parent = resolved.getParent();
+                if (parent != null) {
+                    resolved = parent;
+                }
+                continue;
+            }
+            Path candidate = resolved.resolve(component);
+            if (belowWhatExists || !Files.exists(candidate, LinkOption.NOFOLLOW_LINKS)) {
+                belowWhatExists = true;
+                resolved = candidate;
+            } else if (Files.isSymbolicLink(candidate)) {
+                try {
+                    resolved = candidate.toRealPath();
+                } catch (IOException e) {
+                    throw new Refusal("path '" + candidate + "' cannot be resolved on the file system: " + e);
+                }
+            } else {
+                resolved = candidate;
+            }
         }
-        try {
-            return existing.toRealPath().resolve(existing.relativize(normalized));
-        } catch (IOException e) {
-            throw new Refusal("path '" + normalized + "' cannot be resolved on the file system: " + e);
-        }
+        return resolved;
     }
 
     /**

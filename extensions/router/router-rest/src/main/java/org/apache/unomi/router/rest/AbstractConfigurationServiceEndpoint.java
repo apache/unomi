@@ -44,13 +44,28 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
      * but a log line to show for it. Refusing here gives the caller the reason while it can still act
      * on it, and keeps the configuration out of the store.
      *
+     * <p>Answers {@code 503} instead while the router has yet to publish its settings, since a
+     * configuration cannot be judged against settings that are not there yet.
+     *
      * @param endpointUri              the endpoint URI the configuration names
      * @param permittedBaseDirsProperty the shared property holding the base directories for this direction
      */
     protected void refuseIfEndpointCannotBeHonoured(String endpointUri, String permittedBaseDirsProperty) {
-        String refusal = EndpointValidator.validate(endpointUri,
-                (String) configSharingService.getProperty(RouterConstants.CONFIG_ALLOWED_ENDPOINTS),
-                (String) configSharingService.getProperty(permittedBaseDirsProperty));
+        String allowedSchemes = (String) configSharingService.getProperty(RouterConstants.CONFIG_ALLOWED_ENDPOINTS);
+        String permittedBaseDirs = (String) configSharingService.getProperty(permittedBaseDirsProperty);
+        if (allowedSchemes == null || permittedBaseDirs == null) {
+            // The router's Camel context publishes both on start-up, and this endpoint answers before
+            // it has. An absent setting is not an empty allow-list: reading it as one would refuse a
+            // legitimate configuration, and blame its scheme for it. Say the truth instead -- there is
+            // nothing to validate against yet -- so the caller can retry rather than correct a
+            // configuration that is already right.
+            String unavailable = "the router is still starting up: no endpoint can be validated yet";
+            throw new ServiceUnavailableException(unavailable,
+                    Response.status(Response.Status.SERVICE_UNAVAILABLE)
+                            .type(MediaType.TEXT_PLAIN).entity(unavailable).build());
+        }
+
+        String refusal = EndpointValidator.validate(endpointUri, allowedSchemes, permittedBaseDirs);
         if (refusal != null) {
             throw new BadRequestException(refusal, Response.status(Response.Status.BAD_REQUEST)
                     .type(MediaType.TEXT_PLAIN).entity(refusal).build());

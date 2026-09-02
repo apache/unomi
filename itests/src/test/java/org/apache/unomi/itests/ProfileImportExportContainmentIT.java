@@ -41,7 +41,7 @@ import java.util.Map;
 /**
  * A recurrent import or export configuration using the {@code file} scheme must resolve inside the base
  * directory the deployment permits — {@code config.import.baseDir} and {@code config.export.baseDir},
- * set for these tests in {@code org.apache.unomi.router.cfg}.
+ * set for these tests in {@code etc/custom.system.properties} by {@link BaseIT}.
  *
  * <p>The unit tests decide the containment rules. What only a running Unomi can show is that the
  * settings actually reach the two places that need them: the REST layer, which refuses a configuration
@@ -55,7 +55,7 @@ public class ProfileImportExportContainmentIT extends BaseIT {
     private static final String IMPORT_CONFIGURATION_URL = "/cxs/importConfiguration";
     private static final String EXPORT_CONFIGURATION_URL = "/cxs/exportConfiguration";
 
-    /** Permitted by org.apache.unomi.router.cfg. */
+    /** Permitted by the base directories BaseIT declares. */
     private static final String PERMITTED_IMPORT_DIR = "data/tmp/recurrent_import";
     private static final String PERMITTED_EXPORT_DIR = "data/tmp/recurrent_export";
 
