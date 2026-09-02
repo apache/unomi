@@ -150,9 +150,13 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
             Future<Session> onConnected = client.connect(socket, graphqlWebSocketUri(), new ClientUpgradeRequest());
             RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
 
+            // Subscribe for the server's connection_error before triggering it: the client harness
+            // blocks in onWebSocketText until a listener exists, which would otherwise stall the close.
+            Future<String> refusal = socket.waitMessage();
             remote.sendString(resourceAsString("graphql/socket/out/init-bad-credentials.json"));
 
-            // Refused: the socket is closed rather than acknowledged.
+            // Refused: the client is told, then the socket is closed rather than acknowledged.
+            refusal.get(10, TimeUnit.SECONDS);
             socket.waitClose().get(10, TimeUnit.SECONDS);
         } finally {
             client.stop();
@@ -171,8 +175,12 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
             Future<Session> onConnected = client.connect(socket, graphqlWebSocketUri(), request);
             RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
 
+            // Subscribe for the server's refusal message before triggering it: the client harness
+            // blocks in onWebSocketText until a listener exists, which would otherwise stall the close.
+            Future<String> refusal = socket.waitMessage();
             remote.sendString(resourceAsString("graphql/socket/out/start.json"));
 
+            refusal.get(10, TimeUnit.SECONDS);
             socket.waitClose().get(10, TimeUnit.SECONDS);
         } finally {
             client.stop();
