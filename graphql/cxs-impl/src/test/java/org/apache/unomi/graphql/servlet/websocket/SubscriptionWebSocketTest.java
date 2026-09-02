@@ -47,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.never;
@@ -104,7 +105,8 @@ class SubscriptionWebSocketTest {
         unauth.onWebSocketText(startMessage("\"variables\":null"));
 
         verifyNoInteractions(graphQL);
-        verify(session).close(anyInt(), anyString());
+        // A valid WebSocket close code, not 0: code 0 produces no client-visible close frame.
+        verify(session).close(eq(1008), anyString());
     }
 
     @Test
@@ -116,7 +118,7 @@ class SubscriptionWebSocketTest {
         unauth.onWebSocketText("{\"type\":\"connection_init\",\"id\":\"1\"}");
 
         verify(validator, never()).authenticateBasicCredential(anyString());
-        verify(session).close(anyInt(), anyString());
+        verify(session).close(eq(1008), anyString());
     }
 
     @Test
@@ -129,7 +131,7 @@ class SubscriptionWebSocketTest {
         unauth.onWebSocketText("{\"type\":\"connection_init\",\"id\":\"1\","
                 + "\"payload\":{\"Authorization\":\"Basic Ym9ndXM6Ym9ndXM=\"}}");
 
-        verify(session).close(anyInt(), anyString());
+        verify(session).close(eq(1008), anyString());
     }
 
     /** A valid connection_init credential authenticates the socket and lifts the unauthenticated deadline. */

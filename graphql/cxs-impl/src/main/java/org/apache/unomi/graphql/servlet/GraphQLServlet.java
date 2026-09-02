@@ -99,8 +99,11 @@ public class GraphQLServlet extends WebSocketServlet {
     @Override
     public void init(ServletConfig config) throws ServletException {
         LOGGER.debug("GraphQLServlet initialized");
-        super.init(config);
+        // Must precede super.init(): WebSocketServlet.init() calls configure(), which captures this
+        // validator into the SubscriptionWebSocketFactory. Constructing it afterwards left the factory -
+        // and therefore every socket - with a null validator, so connection_init could never authenticate.
         this.validator = new GraphQLServletSecurityValidator(tenantService, securityService, executionContextManager);
+        super.init(config);
     }
 
     private WebSocketServletFactory factory;

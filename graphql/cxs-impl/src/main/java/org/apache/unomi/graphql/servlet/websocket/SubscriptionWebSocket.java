@@ -114,7 +114,7 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
                     .type(GraphQLMessage.TYPE_CONNECTION_ERROR)
                     .errors(Collections.singletonList("Not authenticated"))
                     .build());
-            closeConnection(message, "Not authenticated");
+            closeConnection(message, CLOSE_POLICY_VIOLATION, "Not authenticated");
             return;
         }
 
@@ -137,9 +137,17 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
         }
     }
 
+    /** WebSocket close codes (RFC 6455). Code 0 is not valid and produces no client-visible close. */
+    private static final int CLOSE_NORMAL = 1000;
+    private static final int CLOSE_POLICY_VIOLATION = 1008;
+
     private void closeConnection(GraphQLMessage message, String reason) {
+        closeConnection(message, CLOSE_NORMAL, reason);
+    }
+
+    private void closeConnection(GraphQLMessage message, int statusCode, String reason) {
         unsubscribe(message);
-        getSession().close(0, reason);
+        getSession().close(statusCode, reason);
     }
 
     private void sendMessage(GraphQLMessage message) {
@@ -177,7 +185,7 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
                     .type(GraphQLMessage.TYPE_CONNECTION_ERROR)
                     .errors(Collections.singletonList("Not authenticated"))
                     .build());
-            closeConnection(message, "Not authenticated");
+            closeConnection(message, CLOSE_POLICY_VIOLATION, "Not authenticated");
             return false;
         }
 
@@ -193,7 +201,7 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
 
         if (this.subject == null) {
             LOGGER.warn("Refusing GraphQL WebSocket connection_init that produced no subject");
-            closeConnection(message, "Not authenticated");
+            closeConnection(message, CLOSE_POLICY_VIOLATION, "Not authenticated");
             return false;
         }
 
