@@ -257,6 +257,14 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.rollover.maxDocs", "300"),
 
+                // The router's base directories have to be set here rather than in
+                // etc/org.apache.unomi.router.cfg: Karaf's configuration plugin overrides every
+                // configuration property whose <pid>.<key> exists as a system property, and
+                // custom.system.properties declares both of these, so a value written to the cfg
+                // never reaches the router.
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.router.config.import.baseDir", "${karaf.data}/tmp/recurrent_import"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.router.config.export.baseDir", "${karaf.data}/tmp/recurrent_export"),
+
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
 
