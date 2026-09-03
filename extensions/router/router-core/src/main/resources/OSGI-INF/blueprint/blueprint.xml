@@ -26,6 +26,8 @@
         <cm:default-properties>
             <cm:property name="router.config.type" value="nobroker"/>
             <cm:property name="config.allowedEndpoints" value="file,ftp"/>
+            <cm:property name="config.import.baseDir" value="${karaf.data}/router/import/"/>
+            <cm:property name="config.export.baseDir" value="${karaf.data}/router/export/"/>
             <cm:property name="kafka.host" value="localhost"/>
             <cm:property name="kafka.port" value="9092"/>
             <cm:property name="kafka.import.topic" value="import-deposit"/>
@@ -84,6 +86,8 @@
           init-method="init" destroy-method="destroy">
         <property name="configType" value="${router.config.type}"/>
         <property name="allowedEndpoints" value="${config.allowedEndpoints}"/>
+        <property name="permittedImportBaseDirs" value="${config.import.baseDir}"/>
+        <property name="permittedExportBaseDirs" value="${config.export.baseDir}"/>
         <property name="uploadDir" value="${import.oneshot.uploadDir}"/>
         <property name="execHistorySize" value="${executionsHistory.size}"/>
         <property name="execErrReportSize" value="${executions.error.report.size}"/>

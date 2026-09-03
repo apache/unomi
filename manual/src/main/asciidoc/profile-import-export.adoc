@@ -230,10 +230,25 @@ To change this you have to change the default values of these properties.
     #errors report size
     org.apache.unomi.router.executions.error.report.size=200
 
-Final one is about the allowed endpoints you can use when building the source or destionation path, as mentioned above
+Next one is about the allowed endpoints you can use when building the source or destionation path, as mentioned above
 we can have a path of type `file`, `ftp`, `ftps`, `sftp`. You can make it less if you want to omit some endpoints (eg.
 you don't want to permit the use of non secure FTP).
 
     #Allowed source endpoints
     org.apache.unomi.router.config.allowedEndpoints=file,ftp,sftp,ftps
+
+Final ones say where a `file` endpoint may resolve. A recurrent import source or export destination using the `file`
+scheme is refused unless it resolves inside one of these base directories, at any depth, and so is any of its options
+that names a path (`fileName`, `move`, `moveFailed`, ...). The same applies to `localWorkDirectory`, whatever the
+scheme, since that one names a local directory even on a remote endpoint. Each property accepts a comma-separated
+list.
+
+    #Base directories a file endpoint may resolve into
+    org.apache.unomi.router.config.import.baseDir=${karaf.data}/router/import/
+    org.apache.unomi.router.config.export.baseDir=${karaf.data}/router/export/
+
+Import and export are kept apart on purpose: with a single shared directory, an export writing a `.csv` could be picked
+up by an import route polling the same place. Point both properties at the same directory only if that is what you
+mean. A configuration that resolves outside them builds no route and is marked `INVALID_ENDPOINT`; restoring the
+directories clears that mark on its own at the next rebuild.
 

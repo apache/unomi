@@ -19,10 +19,11 @@ package org.apache.unomi.router.core.route;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.ProcessorDefinition;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.router.api.EndpointValidator;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.core.bean.CollectProfileBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +39,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileExportCollectRouteBuilder.class);
 
     private List<ExportConfiguration> exportConfigurationList;
+    private ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
     private PersistenceService persistenceService;
 
     public ProfileExportCollectRouteBuilder(Map<String, String> kafkaProps, String configType) {
@@ -62,7 +64,9 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                     exportConfiguration.getProperties() != null && exportConfiguration.getProperties().size() > 0) {
                 if ((Map<String, String>) exportConfiguration.getProperties().get("mapping") != null) {
                     String destinationEndpoint = (String) exportConfiguration.getProperties().get("destination");
-                    if (StringUtils.isNotBlank(destinationEndpoint) && allowedEndpoints.contains(destinationEndpoint.substring(0, destinationEndpoint.indexOf(':')))) {
+                    String refusal = EndpointValidator.validate(destinationEndpoint, allowedEndpoints, permittedBaseDirs);
+                    recordEndpointOutcome(exportConfiguration, exportConfigurationService, refusal);
+                    if (refusal == null) {
                         String timerString = "timer://collectProfile?fixedRate=true&period=" + (String) exportConfiguration.getProperties().get("period");
                         if ((String) exportConfiguration.getProperties().get("delay") != null) {
                             timerString += "&delay=" + (String) exportConfiguration.getProperties().get("delay");
@@ -82,7 +86,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                             prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_EXPORT_DEPOSIT_BUFFER));
                         }
                     } else {
-                        LOGGER.error("Endpoint scheme {} is not allowed, route {} will be skipped.", destinationEndpoint.substring(0, destinationEndpoint.indexOf(':')), exportConfiguration.getItemId());
+                        LOGGER.error("Destination endpoint is refused ({}), route {} will be skipped.", refusal, exportConfiguration.getItemId());
                     }
                 } else {
                     LOGGER.warn("Mapping is null in export configuration, route {} will be skipped!", exportConfiguration.getItemId());
@@ -91,6 +95,19 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                 LOGGER.warn("Export configuration incomplete, route {} will be skipped!", exportConfiguration.getItemId());
             }
         }
+    }
+
+    /**
+     * Sets the comma-separated list of base directories an export {@code file} endpoint may resolve into.
+     *
+     * @param permittedExportBaseDirs the permitted base directories
+     */
+    public void setPermittedExportBaseDirs(String permittedExportBaseDirs) {
+        this.permittedBaseDirs = permittedExportBaseDirs;
+    }
+
+    public void setExportConfigurationService(ImportExportConfigurationService<ExportConfiguration> exportConfigurationService) {
+        this.exportConfigurationService = exportConfigurationService;
     }
 
     public void setExportConfigurationList(List<ExportConfiguration> exportConfigurationList) {

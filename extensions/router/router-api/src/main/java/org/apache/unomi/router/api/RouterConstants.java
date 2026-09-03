@@ -32,6 +32,13 @@ public interface RouterConstants {
     String CONFIG_STATUS_COMPLETE_ERRORS = "ERRORS";
     String CONFIG_STATUS_COMPLETE_SUCCESS = "SUCCESS";
     String CONFIG_STATUS_COMPLETE_WITH_ERRORS = "WITH_ERRORS";
+    /**
+     * The configuration names an endpoint that cannot be honoured, so no route carries it. Kept apart
+     * from the execution statuses above: those report on a run that happened, this one says no run can.
+     * It is set and cleared by the route builders alone, so that restoring the deployment's permitted
+     * directories brings the configuration back on its own.
+     */
+    String CONFIG_STATUS_INVALID_ENDPOINT = "INVALID_ENDPOINT";
 
     String IMPORT_EXPORT_CONFIG_TYPE_RECURRENT = "recurrent";
     String IMPORT_EXPORT_CONFIG_TYPE_ONESHOT = "oneshot";
@@ -50,6 +57,10 @@ public interface RouterConstants {
 
     String IMPORT_ONESHOT_ROUTE_ID = "ONE_SHOT_ROUTE";
     String IMPORT_ONESHOT_UPLOAD_DIR = "oneshotImportUploadDir";
+
+    String CONFIG_ALLOWED_ENDPOINTS = "routerAllowedEndpoints";
+    String CONFIG_IMPORT_BASE_DIRS = "routerImportBaseDirs";
+    String CONFIG_EXPORT_BASE_DIRS = "routerExportBaseDirs";
 
     String DEFAULT_FILE_COLUMN_SEPARATOR = ",";
     String DEFAULT_FILE_LINE_SEPARATOR = "\n";
