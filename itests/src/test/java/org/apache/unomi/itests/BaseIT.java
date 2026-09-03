@@ -651,11 +651,11 @@ public abstract class BaseIT extends KarafTestSupport {
         Option[] options = new Option[]{
                 replaceConfigurationFile("etc/org.apache.unomi.router.cfg", resolveTestResource("src/test/resources/org.apache.unomi.router.cfg")),
                 replaceConfigurationFile("data/tmp/1-basic-test.csv", resolveTestResource("src/test/resources/1-basic-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", resolveTestResource("src/test/resources/2-surfers-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv", resolveTestResource("src/test/resources/3-surfers-overwrite-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/4-surfers-delete-test.csv", resolveTestResource("src/test/resources/4-surfers-delete-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/5-ranking-test.csv", resolveTestResource("src/test/resources/5-ranking-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/6-actors-test.csv", resolveTestResource("src/test/resources/6-actors-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/" + TEST_TENANT_ID + "/2-surfers-test.csv", resolveTestResource("src/test/resources/2-surfers-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/" + TEST_TENANT_ID + "/3-surfers-overwrite-test.csv", resolveTestResource("src/test/resources/3-surfers-overwrite-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/" + TEST_TENANT_ID + "/4-surfers-delete-test.csv", resolveTestResource("src/test/resources/4-surfers-delete-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/" + TEST_TENANT_ID + "/5-ranking-test.csv", resolveTestResource("src/test/resources/5-ranking-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/" + TEST_TENANT_ID + "/6-actors-test.csv", resolveTestResource("src/test/resources/6-actors-test.csv")),
                 replaceConfigurationFile("data/tmp/testLogin.json", resolveTestResource("src/test/resources/testLogin.json")),
                 replaceConfigurationFile("data/tmp/testCopyProperties.json", resolveTestResource("src/test/resources/testCopyProperties.json")),
                 replaceConfigurationFile("data/tmp/testCopyPropertiesWithoutSystemTags.json", resolveTestResource("src/test/resources/testCopyPropertiesWithoutSystemTags.json")),
@@ -684,6 +684,14 @@ public abstract class BaseIT extends KarafTestSupport {
                 // crash recovery repeatedly (mis)reclaims them, logging "Lock verification failed... after
                 // CAS" every checker tick. Widen it for ITs so heartbeats/checker never starve.
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.scheduler.thread.poolSize", "10"),
+
+                // The router's base directories have to be set here rather than in
+                // etc/org.apache.unomi.router.cfg: Karaf's configuration plugin overrides every
+                // configuration property whose <pid>.<key> exists as a system property, and
+                // custom.system.properties declares both of these, so a value written to the cfg
+                // never reaches the router.
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.router.config.import.baseDir", "${karaf.data}/tmp/recurrent_import"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.router.config.export.baseDir", "${karaf.data}/tmp/recurrent_export"),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),

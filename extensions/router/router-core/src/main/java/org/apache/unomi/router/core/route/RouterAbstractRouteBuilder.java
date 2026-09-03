@@ -22,8 +22,13 @@ import org.apache.camel.component.kafka.KafkaComponent;
 import org.apache.camel.component.kafka.KafkaConfiguration;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.router.api.ImportExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
@@ -45,6 +50,8 @@ import java.util.Map;
  * @since 1.0
  */
 public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RouterAbstractRouteBuilder.class);
 
     /** JSON data format configuration */
     protected JacksonDataFormat jacksonDataFormat;
@@ -78,6 +85,7 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
 
     /** List of allowed endpoint schemes */
     protected String allowedEndpoints;
+    protected String permittedBaseDirs;
 
     /** Service for profile operations */
     protected ProfileService profileService;
@@ -101,18 +109,79 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
     }
 
     /**
-     * Gets the appropriate endpoint URI based on configuration type and operation.
+     * Records, on the configuration itself, whether the endpoint it names can be honoured.
      *
-     * <p>This method:
-     * <ul>
-     *   <li>Creates Kafka endpoints with appropriate configuration when using Kafka</li>
-     *   <li>Returns direct endpoint URIs when not using Kafka</li>
-     *   <li>Configures consumer properties for incoming endpoints</li>
-     * </ul>
+     * <p>The permitted directories are an operational setting and the configurations are user data, so
+     * the two drift apart: a configuration that was legitimate when it was created can be refused after
+     * the deployment is reconfigured. Refusing it silently leaves the owner with a configuration that
+     * looks fine and does nothing, so the refusal is written where they will see it. It is theirs to
+     * correct or remove — nothing is deleted here.
+     *
+     * <p>The other way round matters just as much: restoring the permitted directories must bring the
+     * configuration back on its own, without anyone having to touch it. Only the status this method
+     * sets is cleared, so the record of a run that genuinely failed survives.
+     *
+     * <p>The configuration is saved without asking for its running route to be refreshed: the refresh
+     * would rebuild the route, refuse it again and save it again, without end.
+     *
+     * @param configuration the configuration whose endpoint was examined
+     * @param service       the service holding that kind of configuration
+     * @param refusal       the reason the endpoint was refused, or {@code null} if it can be honoured
+     */
+    protected <T extends ImportExportConfiguration> void recordEndpointOutcome(
+            T configuration, ImportExportConfigurationService<T> service, String refusal) {
+        if (refusal != null) {
+            configuration.setStatus(RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT);
+            saveQuietly(configuration, service);
+        } else if (RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT.equals(configuration.getStatus())) {
+            configuration.setStatus(null);
+            saveQuietly(configuration, service);
+        }
+    }
+
+    /**
+     * Saves the mark, and keeps a failure to itself.
+     *
+     * <p>This runs inside {@code configure()}, which builds the routes of every configuration of the
+     * batch. An exception thrown here would leave {@code addRoutes} and cost all of them their routes
+     * — the very failure this validation exists to prevent, over the report of a refusal rather than
+     * the refusal itself. The store may be unreachable at start-up; the mark is worth what it costs,
+     * and no more.
+     */
+    private <T extends ImportExportConfiguration> void saveQuietly(T configuration, ImportExportConfigurationService<T> service) {
+        try {
+            service.save(configuration, false);
+        } catch (RuntimeException e) {
+            LOGGER.error("Could not record the endpoint outcome on configuration {}; its route is built "
+                    + "or skipped as decided, only the record of it is missing", configuration.getItemId(), e);
+        }
+    }
+
+    /**
+     * Records the outcome under the configuration's own tenant.
+     *
+     * <p>Startup builds every tenant's routes in one pass, and the configuration service refuses a save
+     * whose current tenant is not the configuration's. Writing the mark from the wrong tenant would
+     * either fail or store it in another tenant's index. When no context manager is available the mark
+     * is written as it stands, which is what the unit tests do.
+     */
+    protected <T extends ImportExportConfiguration> void recordEndpointOutcome(
+            T configuration, ImportExportConfigurationService<T> service, String refusal,
+            ExecutionContextManager executionContextManager) {
+        String tenantId = configuration.getTenantId();
+        if (executionContextManager != null && tenantId != null && !tenantId.isEmpty()) {
+            executionContextManager.executeAsTenant(tenantId, () -> recordEndpointOutcome(configuration, service, refusal));
+        } else {
+            recordEndpointOutcome(configuration, service, refusal);
+        }
+    }
+
+    /**
+     * Gets the appropriate endpoint URI based on configuration type and operation.
      *
      * @param direction the direction of the endpoint (to/from)
      * @param operationDepositBuffer the operation buffer identifier
-     * @return Object either a KafkaEndpoint or String depending on configuration
+     * @return either a KafkaEndpoint or a direct-endpoint URI, depending on configuration
      */
     public Object getEndpointURI(String direction, String operationDepositBuffer) {
         Object endpoint;
