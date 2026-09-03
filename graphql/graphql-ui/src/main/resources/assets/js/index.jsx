@@ -33,11 +33,37 @@ function graphqlWsUrl() {
     return protocol + '//' + window.location.host + '/graphql';
 }
 
+// The browser WebSocket API cannot set request headers on the handshake, so the server authenticates a
+// subscription from the connection_init payload instead. GraphiQL hands the live "Headers" tab content
+// to the fetcher on every request, so capture it here and reuse its Authorization as the WebSocket
+// connection parameters: HTTP and WebSocket then use the same credential, and nothing is persisted.
+let latestHeaders = null;
+
+function authorizationHeader() {
+    if (!latestHeaders) {
+        return null;
+    }
+    const key = Object.keys(latestHeaders).find((name) => name.toLowerCase() === 'authorization');
+    return key && latestHeaders[key] ? latestHeaders[key] : null;
+}
+
 function createFetcher() {
-    return createGraphiQLFetcher({
+    const fetcher = createGraphiQLFetcher({
         url: graphqlHttpUrl(),
-        wsClient: createClient({ url: graphqlWsUrl() }),
+        wsClient: createClient({
+            url: graphqlWsUrl(),
+            // Evaluated on each (re)connect, and sent as the connection_init payload.
+            connectionParams: () => {
+                const authorization = authorizationHeader();
+                return authorization ? { Authorization: authorization } : {};
+            },
+        }),
     });
+
+    return (graphQLParams, opts) => {
+        latestHeaders = (opts && opts.headers) || null;
+        return fetcher(graphQLParams, opts);
+    };
 }
 
 function QueryPlayground() {
