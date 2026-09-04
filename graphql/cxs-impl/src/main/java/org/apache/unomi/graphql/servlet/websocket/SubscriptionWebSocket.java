@@ -36,6 +36,10 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class SubscriptionWebSocket extends WebSocketAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionWebSocket.class);
@@ -57,6 +61,16 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
     /** No operation is executed on this socket until this is true. */
     private volatile boolean authenticated;
 
+    /** Runs the unauthenticated-socket deadline; owned and stopped by the factory. */
+    private final ScheduledExecutorService deadlineScheduler;
+
+    /** Makes "authenticate" and "deadline expired" mutually exclusive outcomes. */
+    private final Object authenticationLock = new Object();
+
+    private volatile ScheduledFuture<?> deadlineTask;
+
+    private boolean deadlineExpired;
+
     private final SecurityService securityService;
 
     private final ExecutionContextManager executionContextManager;
@@ -67,8 +81,10 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
                                  Subject subject, ExecutionContext executionContext,
                                  SecurityService securityService,
                                  ExecutionContextManager executionContextManager,
-                                 GraphQLServletSecurityValidator validator) {
+                                 GraphQLServletSecurityValidator validator,
+                                 ScheduledExecutorService deadlineScheduler) {
         this.graphQL = graphQL;
+        this.deadlineScheduler = Objects.requireNonNull(deadlineScheduler, "deadlineScheduler");
         this.serviceManager = serviceManager;
         this.subject = subject;
         this.executionContext = executionContext;
@@ -85,16 +101,47 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
         LOGGER.info("Opening web socket");
         super.onWebSocketConnect(sess);
         if (!authenticated) {
-            // Bound how long an unauthenticated socket may sit open, so sockets that never authenticate
-            // cannot accumulate. Jetty closes the session when this idle window elapses.
+            // Bound how long an unauthenticated socket may sit open. The idle timeout alone is not a
+            // deadline: Jetty resets it on any frame, including ping/pong control frames that never reach
+            // onWebSocketText, so a client could hold an unauthenticated socket open just by pinging.
+            // The scheduled task closes the socket at the deadline whatever the client sends.
             sess.setIdleTimeout(AUTHENTICATION_DEADLINE_MS);
+            deadlineTask = deadlineScheduler.schedule(this::expireAuthenticationDeadline,
+                    AUTHENTICATION_DEADLINE_MS, TimeUnit.MILLISECONDS);
         }
     }
 
     @Override
     public void onWebSocketClose(int statusCode, String reason) {
         LOGGER.info("Closing web socket");
+        cancelAuthenticationDeadline();
         super.onWebSocketClose(statusCode, reason);
+    }
+
+    /**
+     * Runs on the deadline thread when an unauthenticated socket reaches its deadline. Closes it unless
+     * connection_init already won; the lock makes the two outcomes mutually exclusive, so a socket is
+     * never authenticated and closed for expiry at the same time.
+     */
+    private void expireAuthenticationDeadline() {
+        synchronized (authenticationLock) {
+            if (authenticated) {
+                return;
+            }
+            deadlineExpired = true;
+        }
+        LOGGER.warn("Closing GraphQL WebSocket that did not authenticate within {} ms", AUTHENTICATION_DEADLINE_MS);
+        final Session session = getSession();
+        if (session != null && session.isOpen()) {
+            session.close(CLOSE_POLICY_VIOLATION, "Authentication deadline expired");
+        }
+    }
+
+    private void cancelAuthenticationDeadline() {
+        final ScheduledFuture<?> task = deadlineTask;
+        if (task != null) {
+            task.cancel(false);
+        }
     }
 
     @Override
@@ -177,6 +224,9 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
         if (authenticated) {
             return true;
         }
+        if (isDeadlineExpired()) {
+            return refuseAfterDeadline(message);
+        }
 
         final String credential = basicCredentialFrom(message.getPayload());
         if (credential == null || validator == null || !validator.authenticateBasicCredential(credential)) {
@@ -205,13 +255,33 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
             return false;
         }
 
-        this.authenticated = true;
+        synchronized (authenticationLock) {
+            // The deadline may have fired while the credential was being checked.
+            if (deadlineExpired) {
+                return refuseAfterDeadline(message);
+            }
+            this.authenticated = true;
+        }
+        cancelAuthenticationDeadline();
         final Session session = getSession();
         if (session != null) {
             // Authenticated: drop the short unauthenticated deadline.
             session.setIdleTimeout(0);
         }
         return true;
+    }
+
+    private boolean isDeadlineExpired() {
+        synchronized (authenticationLock) {
+            return deadlineExpired;
+        }
+    }
+
+    /** The deadline task is already closing this socket; a late connection_init must not resurrect it. */
+    private boolean refuseAfterDeadline(GraphQLMessage message) {
+        LOGGER.warn("Refusing GraphQL WebSocket connection_init that arrived after the authentication deadline");
+        closeConnection(message, CLOSE_POLICY_VIOLATION, "Not authenticated");
+        return false;
     }
 
     /**

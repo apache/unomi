@@ -146,9 +146,12 @@ public class GraphQLServlet extends WebSocketServlet {
     }
 
     /**
-     * Authenticated WebSocket upgrade path. Order matters for security:
+     * WebSocket upgrade path. Order matters for security:
      * <ol>
-     *   <li>Authenticate BEFORE {@code acceptWebSocket} (creator reads the thread-local subject).</li>
+     *   <li>Refuse foreign-origin handshakes, then authenticate any credential the handshake carries
+     *       BEFORE {@code acceptWebSocket} (creator reads the thread-local subject). A handshake that
+     *       carries no credential is upgraded unauthenticated - a browser cannot set headers on it - and
+     *       must authenticate through {@code connection_init} before the socket will do anything.</li>
      *   <li>Call {@code acceptWebSocket} directly — do not call {@code WebSocketServlet.service()},
      *       which can fall through to {@code doGet}/{@code doPost} when accept fails and the response
      *       is not committed.</li>
