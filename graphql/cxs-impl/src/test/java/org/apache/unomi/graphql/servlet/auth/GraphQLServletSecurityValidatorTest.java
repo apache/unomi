@@ -240,6 +240,19 @@ class GraphQLServletSecurityValidatorTest {
         verify(response, never()).sendError(any(Integer.class));
     }
 
+    /** HTTP authentication scheme names are case-insensitive. */
+    @Test
+    void validateWebSocketUpgrade_withLowercaseScheme_isAccepted() throws IOException {
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH.replaceFirst("Basic", "basic"));
+        when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
+
+        boolean authenticated = validator.validateWebSocketUpgrade(request, response);
+
+        assertTrue(authenticated);
+        verify(securityService).setCurrentSubject(any(Subject.class));
+        verify(response, never()).sendError(any(Integer.class));
+    }
+
     @Test
     void validateWebSocketUpgrade_rejectsPublicApiKeyOnly() throws IOException {
         // No Authorization header — public API key alone must not open subscriptions.
@@ -261,6 +274,8 @@ class GraphQLServletSecurityValidatorTest {
 
         assertFalse(authenticated);
         verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        // A 401 must carry a challenge whichever branch produced it.
+        verify(response).addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
         verify(securityService, never()).setCurrentSubject(any());
     }
 

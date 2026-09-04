@@ -87,6 +87,8 @@ public class GraphQLServletSecurityValidator {
         if (isAuthenticatedUser(req)) {
             return true;
         }
+        // A 401 carries a challenge whether the header was missing or its credential was refused.
+        res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
         res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
         return false;
     }
@@ -290,7 +292,8 @@ public class GraphQLServletSecurityValidator {
      *            (WebSocket {@code connection_init}); when null, no tenant header is consulted.
      */
     private boolean authenticateBasic(String authHeader, HttpServletRequest req) {
-        if (authHeader == null || !authHeader.startsWith("Basic ")) {
+        // The scheme token is case-insensitive (RFC 7235).
+        if (authHeader == null || !authHeader.regionMatches(true, 0, "Basic ", 0, 6)) {
             return false;
         }
 
