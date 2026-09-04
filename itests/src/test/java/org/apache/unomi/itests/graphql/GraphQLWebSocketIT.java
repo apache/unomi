@@ -183,6 +183,26 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
         }
     }
 
+    /** The HTTP authentication scheme token is case-insensitive. */
+    @Test
+    public void testWebSocketUpgrade_withLowercaseBasicScheme_succeeds() throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            ClientUpgradeRequest request = new ClientUpgradeRequest();
+            request.setHeader("Authorization", "basic " + Base64.getEncoder().encodeToString(
+                    (BASIC_AUTH_USER_NAME + ":" + BASIC_AUTH_PASSWORD).getBytes(StandardCharsets.UTF_8)));
+            RemoteEndpoint remote = client.connect(socket, graphqlWebSocketUri(), request).get(10, TimeUnit.SECONDS).getRemote();
+            remote.sendString(resourceAsString("graphql/socket/out/init.json"));
+            Assert.assertEquals(resourceAsString("graphql/socket/in/ack.json"), socket.waitMessage().get(10, TimeUnit.SECONDS));
+            remote.sendString(resourceAsString("graphql/socket/out/term.json"));
+            Assert.assertEquals(1000, (int) socket.waitClose().get(10, TimeUnit.SECONDS).getStatus());
+        } finally {
+            client.stop();
+        }
+    }
+
     @Test
     public void testWebSocketUpgrade_withWrongJaasPassword_returns401() throws Exception {
         assertWebSocketUpgradeRejected(basicAuthHeader(BASIC_AUTH_USER_NAME, "definitely-not-the-password"), null, 401);

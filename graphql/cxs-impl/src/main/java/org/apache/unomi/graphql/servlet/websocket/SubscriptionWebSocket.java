@@ -65,6 +65,9 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
 
     private volatile ScheduledFuture<?> deadlineTask;
 
+    /** The session's configured idle timeout, shortened while unauthenticated and restored on authentication. */
+    private volatile long configuredIdleTimeout;
+
     private boolean deadlineExpired;
 
     private Map<String, ExecutionResultSubscriber> subscriptions = new HashMap<String, ExecutionResultSubscriber>();
@@ -88,6 +91,7 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
         LOGGER.info("Opening web socket");
         super.onWebSocketConnect(sess);
         if (!authenticated) {
+            configuredIdleTimeout = sess.getIdleTimeout();
             // Bound how long an unauthenticated socket may sit open. The idle timeout alone is not a
             // deadline, since Jetty resets it on any received frame, so a scheduled task closes the
             // socket at the deadline whatever the client sends.
@@ -205,8 +209,8 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
         cancelAuthenticationDeadline();
         final Session session = getSession();
         if (session != null) {
-            // Authenticated: drop the short unauthenticated deadline.
-            session.setIdleTimeout(0);
+            // Authenticated: back to the idle timeout the session was configured with, not "none".
+            session.setIdleTimeout(configuredIdleTimeout);
         }
         return true;
     }
