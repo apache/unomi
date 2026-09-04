@@ -108,16 +108,29 @@ public class GraphQLServlet extends WebSocketServlet {
 
     private WebSocketServletFactory factory;
 
+    private SubscriptionWebSocketFactory socketCreator;
+
+    @Override
+    public void destroy() {
+        try {
+            if (socketCreator != null) {
+                socketCreator.shutdown();
+            }
+        } finally {
+            super.destroy();
+        }
+    }
+
     @Override
     public void configure(WebSocketServletFactory factory) {
         LOGGER.debug("GraphQLServlet configured");
         this.factory = factory;
         // Wrap the WebSocket creator to bind the authenticated subject established during upgrade
-        SubscriptionWebSocketFactory originalCreator = new SubscriptionWebSocketFactory(
+        this.socketCreator = new SubscriptionWebSocketFactory(
                 graphQLSchemaUpdater.getGraphQL(), serviceManager, securityService, executionContextManager, validator);
         factory.setCreator((req, resp) -> {
             try {
-                return originalCreator.createWebSocket(req, resp);
+                return socketCreator.createWebSocket(req, resp);
             } finally {
                 cleanupSecurityContext();
             }
