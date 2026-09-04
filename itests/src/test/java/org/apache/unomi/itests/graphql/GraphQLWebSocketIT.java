@@ -185,36 +185,41 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
     @Test
     public void testWebSocketUpgrade_withWrongJaasPassword_returns401() throws Exception {
-        ClientUpgradeRequest request = new ClientUpgradeRequest();
-        request.setHeader("Authorization", basicAuthHeader(BASIC_AUTH_USER_NAME, "definitely-not-the-password"));
-        assertWebSocketUpgradeRejected(request, 401);
+        assertWebSocketUpgradeRejected(basicAuthHeader(BASIC_AUTH_USER_NAME, "definitely-not-the-password"), null, 401);
     }
 
     @Test
     public void testWebSocketUpgrade_withMalformedBasic_returns401() throws Exception {
-        ClientUpgradeRequest request = new ClientUpgradeRequest();
-        request.setHeader("Authorization", "Basic !!!");
-        assertWebSocketUpgradeRejected(request, 401);
+        assertWebSocketUpgradeRejected("Basic !!!", null, 401);
     }
 
     /** A WebSocket handshake bypasses CORS, so a foreign origin is refused before anything else. */
     @Test
     public void testWebSocketUpgrade_fromForeignOrigin_returns403() throws Exception {
-        ClientUpgradeRequest request = new ClientUpgradeRequest();
-        request.setHeader("Origin", "http://attacker.example");
-        request.setHeader("Authorization", basicAuthHeader(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
-        assertWebSocketUpgradeRejected(request, 403);
+        assertWebSocketUpgradeRejected(basicAuthHeader(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD), "http://attacker.example", 403);
     }
 
     private URI graphqlWebSocketUri() throws Exception {
         return new URI("ws://localhost:" + getHttpPort() + "/graphql");
     }
 
-    private void assertWebSocketUpgradeRejected(ClientUpgradeRequest request, int expectedStatus) throws Exception {
+    /**
+     * Jetty's websocket-client types are kept out of method signatures on purpose: JUnit resolves
+     * signature types when it scans the class, before {@code @Before} has waited for the container,
+     * and that bundle is not necessarily wired yet at that point.
+     */
+    private void assertWebSocketUpgradeRejected(String authorization, String origin, int expectedStatus) throws Exception {
         WebSocketClient client = new WebSocketClient();
         Socket socket = new Socket();
         try {
             client.start();
+            ClientUpgradeRequest request = new ClientUpgradeRequest();
+            if (authorization != null) {
+                request.setHeader("Authorization", authorization);
+            }
+            if (origin != null) {
+                request.setHeader("Origin", origin);
+            }
             Future<Session> onConnected = client.connect(socket, graphqlWebSocketUri(), request);
             try {
                 onConnected.get(10, TimeUnit.SECONDS);
