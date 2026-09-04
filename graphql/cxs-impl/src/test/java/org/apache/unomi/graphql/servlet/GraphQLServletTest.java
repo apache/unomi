@@ -21,6 +21,8 @@ import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
+import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
+import org.eclipse.jetty.websocket.api.WebSocketPolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +40,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -260,5 +264,22 @@ class GraphQLServletTest {
                 throws ServletException, IOException {
             nonUpgradeCalled.set(true);
         }
+    }
+
+    /**
+     * The creator is only ever Jetty's WebSocketCreator, never a started lifecycle, so its scheduler is
+     * stopped from destroy(). This pins the wiring itself, not just that shutdown() works in isolation.
+     */
+    @Test
+    void destroy_shutsDownTheSocketCreatorScheduler() {
+        servlet.setGraphQLSchemaUpdater(mock(GraphQLSchemaUpdater.class));
+        when(factory.getPolicy()).thenReturn(mock(WebSocketPolicy.class));
+        servlet.configure(factory);
+        assertNotNull(servlet.socketCreator());
+        assertFalse(servlet.socketCreator().isShutdown());
+
+        servlet.destroy();
+
+        assertTrue(servlet.socketCreator().isShutdown());
     }
 }
