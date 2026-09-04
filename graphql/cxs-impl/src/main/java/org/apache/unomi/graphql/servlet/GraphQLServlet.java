@@ -110,6 +110,11 @@ public class GraphQLServlet extends WebSocketServlet {
 
     private SubscriptionWebSocketFactory socketCreator;
 
+    /** For tests: the creator whose scheduler {@link #destroy()} must stop. */
+    SubscriptionWebSocketFactory socketCreator() {
+        return socketCreator;
+    }
+
     @Override
     public void destroy() {
         try {

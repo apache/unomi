@@ -82,7 +82,8 @@ public class SubscriptionWebSocketFactory extends WebSocketServerFactory {
         authenticationDeadlineScheduler.shutdownNow();
     }
 
-    boolean isShutdown() {
+    /** Whether {@link #shutdown()} has run; lets the servlet test verify the destroy() wiring. */
+    public boolean isShutdown() {
         return authenticationDeadlineScheduler.isShutdown();
     }
 }
