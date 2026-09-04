@@ -18,10 +18,18 @@
 package org.apache.unomi.graphql.servlet.websocket;
 
 import graphql.GraphQL;
+import org.apache.unomi.api.ExecutionContext;
+import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
 import org.eclipse.jetty.websocket.server.WebSocketServerFactory;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeResponse;
+
+import javax.security.auth.Subject;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 public class SubscriptionWebSocketFactory extends WebSocketServerFactory {
 
@@ -29,13 +37,51 @@ public class SubscriptionWebSocketFactory extends WebSocketServerFactory {
 
     private final ServiceManager serviceManager;
 
-    public SubscriptionWebSocketFactory(GraphQL graphQL, ServiceManager serviceManager) {
+    private final SecurityService securityService;
+
+    private final ExecutionContextManager executionContextManager;
+
+    private final GraphQLServletSecurityValidator validator;
+
+    /**
+     * Closes sockets that do not authenticate within their deadline. One daemon thread for all sockets;
+     * stopped with the factory, which {@code WebSocketServlet.destroy()} stops on undeploy.
+     */
+    private final ScheduledExecutorService authenticationDeadlineScheduler;
+
+    public SubscriptionWebSocketFactory(GraphQL graphQL, ServiceManager serviceManager,
+                                        SecurityService securityService,
+                                        ExecutionContextManager executionContextManager,
+                                        GraphQLServletSecurityValidator validator) {
         this.graphQL = graphQL;
         this.serviceManager = serviceManager;
+        this.securityService = securityService;
+        this.executionContextManager = executionContextManager;
+        this.validator = validator;
+        this.authenticationDeadlineScheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "graphql-ws-authentication-deadline");
+            thread.setDaemon(true);
+            return thread;
+        });
     }
 
     @Override
     public Object createWebSocket(ServletUpgradeRequest req, ServletUpgradeResponse resp) {
-        return new SubscriptionWebSocket(graphQL, serviceManager);
+        // A subject here means the upgrade authenticated (header route). Its absence is not an error:
+        // a browser cannot send credentials on the handshake, so the socket is created unauthenticated
+        // and must authenticate through connection_init before it can do anything.
+        Subject subject = securityService.getCurrentSubject();
+        ExecutionContext executionContext = subject != null ? executionContextManager.getCurrentContext() : null;
+        return new SubscriptionWebSocket(graphQL, serviceManager, subject, executionContext,
+                securityService, executionContextManager, validator, authenticationDeadlineScheduler);
+    }
+
+    @Override
+    protected void doStop() throws Exception {
+        try {
+            super.doStop();
+        } finally {
+            authenticationDeadlineScheduler.shutdownNow();
+        }
     }
 }

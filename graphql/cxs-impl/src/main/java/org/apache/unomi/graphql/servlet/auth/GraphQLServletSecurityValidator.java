@@ -38,6 +38,7 @@ import javax.security.auth.login.LoginException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -63,6 +64,25 @@ public class GraphQLServletSecurityValidator {
         this.tenantService = tenantService;
         this.securityService = securityService;
         this.executionContextManager = executionContextManager;
+    }
+
+    /**
+     * Authenticates a WebSocket upgrade. Subscriptions are never public, so only Basic
+     * (JAAS or tenant private key) is accepted.
+     *
+     * @return true when the caller is authenticated and a security context was established
+     */
+    public boolean validateWebSocketUpgrade(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        if (req.getHeader("Authorization") == null) {
+            res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
+            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            return false;
+        }
+        if (isAuthenticatedUser(req)) {
+            return true;
+        }
+        res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        return false;
     }
 
     public boolean validate(String query, String operationName, HttpServletRequest req, HttpServletResponse res) throws IOException {
@@ -138,15 +158,46 @@ public class GraphQLServletSecurityValidator {
         return true;
     }
 
+    /**
+     * Authenticates a Basic credential that did not arrive as a request header — used by the WebSocket
+     * {@code connection_init} handshake, which is the only way a browser client can present credentials
+     * (the browser WebSocket API cannot set request headers).
+     * <p>
+     * Deliberately the same credential format and the same verification path as the header route, so
+     * there is one way to authenticate, not two. No request is involved, so no tenant header is honoured
+     * here: the caller gets its own tenant's context, never a caller-selected one.
+     *
+     * @param authorizationValue a {@code Basic <base64>} credential
+     * @return true when the credential authenticated and a security context was established
+     */
+    public boolean authenticateBasicCredential(String authorizationValue) {
+        return authenticateBasic(authorizationValue, null);
+    }
+
     private boolean isAuthenticatedUser(HttpServletRequest req) {
         req.setAttribute(AUTHENTICATION_TYPE, HttpServletRequest.BASIC_AUTH);
+        return authenticateBasic(req.getHeader("Authorization"), req);
+    }
 
-        String authHeader = req.getHeader("Authorization");
+    /**
+     * @param req the originating request, or {@code null} when the credential did not arrive on one
+     *            (WebSocket {@code connection_init}); when null, no tenant header is consulted.
+     */
+    private boolean authenticateBasic(String authHeader, HttpServletRequest req) {
         if (authHeader == null || !authHeader.startsWith("Basic ")) {
             return false;
         }
 
-        String usernameAndPassword = new String(Base64.getDecoder().decode(authHeader.substring(6).getBytes()));
+        final String usernameAndPassword;
+        try {
+            usernameAndPassword = new String(
+                    Base64.getDecoder().decode(authHeader.substring(6).getBytes(StandardCharsets.UTF_8)),
+                    StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            // Malformed Base64 must be treated as an authentication failure (401), not a 500.
+            LOG.debug("Malformed Basic Authorization header", e);
+            return false;
+        }
         int userNameIndex = usernameAndPassword.indexOf(":");
         if (userNameIndex == -1) {
             return false;
@@ -170,7 +221,9 @@ public class GraphQLServletSecurityValidator {
         if (username.length() > 0) {
             Tenant tenant = tenantService.getTenantByApiKey(password, ApiKey.ApiKeyType.PRIVATE);
             if (tenant != null && tenant.getItemId().equals(username)) {
-                req.setAttribute(REMOTE_USER, username);
+                if (req != null) {
+                    req.setAttribute(REMOTE_USER, username);
+                }
                 // Set the security context for private API key
                 Subject subject = securityService.createSubject(tenant.getItemId(), true);
                 securityService.setCurrentSubject(subject);
@@ -197,12 +250,14 @@ public class GraphQLServletSecurityValidator {
             Subject loginSubject = loginContext.getSubject();
             boolean success = loginSubject != null;
             if (success) {
-                req.setAttribute(REMOTE_USER, username);
+                if (req != null) {
+                    req.setAttribute(REMOTE_USER, username);
+                }
                 // Set the security context for JAAS authentication
                 securityService.setCurrentSubject(loginSubject);
 
-                // Check for tenant ID header
-                String tenantId = req.getHeader(UNOMI_TENANT_ID_HEADER);
+                // Check for tenant ID header (only meaningful when the credential arrived on a request)
+                String tenantId = req != null ? req.getHeader(UNOMI_TENANT_ID_HEADER) : null;
                 if (tenantId != null && !tenantId.trim().isEmpty()) {
                     // Validate tenant exists
                     Tenant tenant = tenantService.getTenant(tenantId);

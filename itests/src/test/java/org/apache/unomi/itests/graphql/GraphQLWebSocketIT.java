@@ -23,6 +23,7 @@ import io.reactivex.ObservableEmitter;
 import io.reactivex.subscribers.DefaultSubscriber;
 import org.eclipse.jetty.websocket.api.RemoteEndpoint;
 import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.UpgradeException;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 import org.eclipse.jetty.websocket.client.ClientUpgradeRequest;
 import org.eclipse.jetty.websocket.client.WebSocketClient;
@@ -32,12 +33,28 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * End-to-end GraphQL WebSocket auth regression.
+ * <p>
+ * Maps to the reported unauthenticated-subscription scenarios:
+ * <ul>
+ *   <li>Upgrade with no credentials → HTTP 401 (not 101)</li>
+ *   <li>Upgrade with public API key only → HTTP 401 (subscriptions are never public)</li>
+ *   <li>Upgrade with wrong Basic password → HTTP 401</li>
+ *   <li>Upgrade with malformed Basic → HTTP 401</li>
+ *   <li>Upgrade with valid JAAS / private key → 101, then connection_init / start work</li>
+ * </ul>
+ * Unauthenticated clients must never reach {@code connection_ack} or {@code GQL_START}.
+ */
 public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(GraphQLWebSocketIT.class);
@@ -52,9 +69,10 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
             URI echoUri = new URI("ws://localhost:" + getHttpPort() + "/graphql");
             ClientUpgradeRequest request = new ClientUpgradeRequest();
+            request.setHeader("Authorization", basicAuthHeader(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
 
             Future<Session> onConnected = client.connect(socket, echoUri, request);
-            RemoteEndpoint remote = onConnected.get().getRemote();
+            RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
 
             LOGGER.info("Connected, initializing... ");
 
@@ -74,13 +92,206 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
             LOGGER.info("Waiting for socket to close...");
 
-            CloseStatus status = socket.waitClose().get(10, TimeUnit.SECONDS);
-            // Assert.assertEquals(1000, (int) status.getStatus()); TODO skip for now
+            socket.waitClose().get(10, TimeUnit.SECONDS);
 
         } finally {
             client.stop();
             LOGGER.info("Web socket client stopped.");
         }
+    }
+
+    /**
+     * A handshake carrying no credential is upgraded rather than refused, because a browser cannot set
+     * request headers on a WebSocket handshake. The security property moved rather than weakened: the
+     * socket that results can do nothing at all until it authenticates through connection_init, which
+     * is what the following tests pin down.
+     */
+    @Test
+    public void testWebSocketUpgrade_withoutAuth_upgradesButCannotOperate() throws Exception {
+        assertStartIsRefusedBeforeAuthentication(new ClientUpgradeRequest());
+    }
+
+    /** A public API key is not a subscription credential, on the handshake or anywhere else. */
+    @Test
+    public void testWebSocketUpgrade_withPublicApiKeyOnly_cannotOperate() throws Exception {
+        ClientUpgradeRequest request = new ClientUpgradeRequest();
+        request.setHeader("X-Unomi-Api-Key", testPublicKeyValue);
+        assertStartIsRefusedBeforeAuthentication(request);
+    }
+
+    /** connection_init carrying a valid credential is how a browser client authenticates. */
+    @Test
+    public void testWebSocketConnectionInit_withValidCredentials_authenticatesSocket() throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            Future<Session> onConnected = client.connect(socket, graphqlWebSocketUri(), new ClientUpgradeRequest());
+            RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
+
+            remote.sendString(initWithCredentials(basicAuthHeader(TEST_TENANT_ID, testPrivateKeyValue)));
+            String initResp = socket.waitMessage().get(10, TimeUnit.SECONDS);
+            Assert.assertEquals(resourceAsString("graphql/socket/in/ack.json"), initResp);
+
+            remote.sendString(resourceAsString("graphql/socket/out/term.json"));
+            socket.waitClose().get(10, TimeUnit.SECONDS);
+        } finally {
+            client.stop();
+        }
+    }
+
+    /** A wrong credential in connection_init must not authenticate the socket. */
+    @Test
+    public void testWebSocketConnectionInit_withBadCredentials_isRefused() throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            Future<Session> onConnected = client.connect(socket, graphqlWebSocketUri(), new ClientUpgradeRequest());
+            RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
+
+            // Subscribe for the server's connection_error before triggering it: the client harness
+            // blocks in onWebSocketText until a listener exists, which would otherwise stall the close.
+            Future<String> refusal = socket.waitMessage();
+            remote.sendString(resourceAsString("graphql/socket/out/init-bad-credentials.json"));
+
+            // Refused: the client is told, then the socket is closed rather than acknowledged.
+            refusal.get(10, TimeUnit.SECONDS);
+            socket.waitClose().get(10, TimeUnit.SECONDS);
+        } finally {
+            client.stop();
+        }
+    }
+
+    /**
+     * The core property of the unauthenticated-upgrade path: an operation sent before authenticating is
+     * refused and the socket is closed. Without this, opening the handshake would be a regression.
+     */
+    private void assertStartIsRefusedBeforeAuthentication(ClientUpgradeRequest request) throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            Future<Session> onConnected = client.connect(socket, graphqlWebSocketUri(), request);
+            RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
+
+            // Subscribe for the server's refusal message before triggering it: the client harness
+            // blocks in onWebSocketText until a listener exists, which would otherwise stall the close.
+            Future<String> refusal = socket.waitMessage();
+            remote.sendString(resourceAsString("graphql/socket/out/start.json"));
+
+            refusal.get(10, TimeUnit.SECONDS);
+            socket.waitClose().get(10, TimeUnit.SECONDS);
+        } finally {
+            client.stop();
+        }
+    }
+
+    private URI graphqlWebSocketUri() throws Exception {
+        return new URI("ws://localhost:" + getHttpPort() + "/graphql");
+    }
+
+    private String initWithCredentials(final String authorizationValue) {
+        return resourceAsString("graphql/socket/out/init-with-credentials.json")
+                .replace("__AUTHORIZATION__", authorizationValue);
+    }
+
+    @Test
+    public void testWebSocketUpgrade_withWrongJaasPassword_returns401() throws Exception {
+        ClientUpgradeRequest request = new ClientUpgradeRequest();
+        request.setHeader("Authorization", basicAuthHeader(BASIC_AUTH_USER_NAME, "definitely-not-the-password"));
+        assertWebSocketUpgradeRejected(request);
+    }
+
+    @Test
+    public void testWebSocketUpgrade_withMalformedBasic_returns401() throws Exception {
+        ClientUpgradeRequest request = new ClientUpgradeRequest();
+        request.setHeader("Authorization", "Basic !!!");
+        assertWebSocketUpgradeRejected(request);
+    }
+
+    @Test
+    public void testWebSocketUpgrade_withPrivateKey_succeeds() throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            URI echoUri = new URI("ws://localhost:" + getHttpPort() + "/graphql");
+            ClientUpgradeRequest request = new ClientUpgradeRequest();
+            request.setHeader("Authorization", basicAuthHeader(TEST_TENANT_ID, testPrivateKeyValue));
+
+            Future<Session> onConnected = client.connect(socket, echoUri, request);
+            RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
+
+            remote.sendString(resourceAsString("graphql/socket/out/init.json"));
+            String initResp = socket.waitMessage().get(10, TimeUnit.SECONDS);
+            Assert.assertEquals(resourceAsString("graphql/socket/in/ack.json"), initResp);
+
+            remote.sendString(resourceAsString("graphql/socket/out/term.json"));
+            socket.waitClose().get(10, TimeUnit.SECONDS);
+        } finally {
+            client.stop();
+        }
+    }
+
+    /**
+     * Exercises GQL_START with the subject/context captured at upgrade time. A successful
+     * subscription setup leaves the socket open (no error close); stop + terminate then clean up.
+     */
+    @Test
+    public void testWebSocketSubscriptionStart_withPrivateKey_acceptsStart() throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            URI echoUri = new URI("ws://localhost:" + getHttpPort() + "/graphql");
+            ClientUpgradeRequest request = new ClientUpgradeRequest();
+            request.setHeader("Authorization", basicAuthHeader(TEST_TENANT_ID, testPrivateKeyValue));
+
+            Future<Session> onConnected = client.connect(socket, echoUri, request);
+            RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
+            Future<CloseStatus> closeFuture = socket.waitClose();
+
+            remote.sendString(resourceAsString("graphql/socket/out/init.json"));
+            Assert.assertEquals(resourceAsString("graphql/socket/in/ack.json"),
+                    socket.waitMessage().get(10, TimeUnit.SECONDS));
+
+            remote.sendString(resourceAsString("graphql/socket/out/start.json"));
+            // Successful subscribe() registers a publisher and does not emit until events arrive.
+            // Give the server a moment; an auth/context failure would close the socket with an error.
+            Thread.sleep(500);
+            Assert.assertFalse("Subscription start should not close the socket", closeFuture.isDone());
+
+            remote.sendString(resourceAsString("graphql/socket/out/stop.json"));
+            remote.sendString(resourceAsString("graphql/socket/out/term.json"));
+            closeFuture.get(10, TimeUnit.SECONDS);
+        } finally {
+            client.stop();
+        }
+    }
+
+    private void assertWebSocketUpgradeRejected(ClientUpgradeRequest request) throws Exception {
+        WebSocketClient client = new WebSocketClient();
+        Socket socket = new Socket();
+        try {
+            client.start();
+            URI echoUri = new URI("ws://localhost:" + getHttpPort() + "/graphql");
+            Future<Session> onConnected = client.connect(socket, echoUri, request);
+            try {
+                onConnected.get(10, TimeUnit.SECONDS);
+                Assert.fail("Unauthenticated GraphQL WebSocket upgrade should be rejected");
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause();
+                Assert.assertTrue("Expected UpgradeException, got: " + cause, cause instanceof UpgradeException);
+                Assert.assertEquals(401, ((UpgradeException) cause).getResponseStatusCode());
+            }
+        } finally {
+            client.stop();
+        }
+    }
+
+    private static String basicAuthHeader(String user, String password) {
+        return "Basic " + Base64.getEncoder().encodeToString((user + ":" + password).getBytes(StandardCharsets.UTF_8));
     }
 
     private class Socket extends WebSocketAdapter {

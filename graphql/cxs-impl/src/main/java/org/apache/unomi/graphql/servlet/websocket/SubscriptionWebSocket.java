@@ -20,54 +20,156 @@ package org.apache.unomi.graphql.servlet.websocket;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
+import org.apache.unomi.api.ExecutionContext;
+import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
 import org.eclipse.jetty.websocket.api.Session;
 import org.eclipse.jetty.websocket.api.WebSocketAdapter;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.security.auth.Subject;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class SubscriptionWebSocket extends WebSocketAdapter {
     private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionWebSocket.class);
 
-    private GraphQL graphQL;
+    private final GraphQL graphQL;
 
-    private ServiceManager serviceManager;
+    private final ServiceManager serviceManager;
+
+    /** Closes a socket that has not authenticated within this window (milliseconds). */
+    private static final long AUTHENTICATION_DEADLINE_MS = 10_000L;
+
+    private final GraphQLServletSecurityValidator validator;
+
+    /** Set at upgrade for header-authenticated clients, or at connection_init for browser clients. */
+    private volatile Subject subject;
+
+    private volatile ExecutionContext executionContext;
+
+    /** No operation is executed on this socket until this is true. */
+    private volatile boolean authenticated;
+
+    /** Runs the unauthenticated-socket deadline; owned and stopped by the factory. */
+    private final ScheduledExecutorService deadlineScheduler;
+
+    /** Makes "authenticate" and "deadline expired" mutually exclusive outcomes. */
+    private final Object authenticationLock = new Object();
+
+    private volatile ScheduledFuture<?> deadlineTask;
+
+    private boolean deadlineExpired;
+
+    private final SecurityService securityService;
+
+    private final ExecutionContextManager executionContextManager;
 
     private Map<String, ExecutionResultSubscriber> subscriptions = new HashMap<String, ExecutionResultSubscriber>();
 
-    public SubscriptionWebSocket(GraphQL graphQL, ServiceManager serviceManager) {
+    public SubscriptionWebSocket(GraphQL graphQL, ServiceManager serviceManager,
+                                 Subject subject, ExecutionContext executionContext,
+                                 SecurityService securityService,
+                                 ExecutionContextManager executionContextManager,
+                                 GraphQLServletSecurityValidator validator,
+                                 ScheduledExecutorService deadlineScheduler) {
         this.graphQL = graphQL;
+        this.deadlineScheduler = Objects.requireNonNull(deadlineScheduler, "deadlineScheduler");
         this.serviceManager = serviceManager;
+        this.subject = subject;
+        this.executionContext = executionContext;
+        this.securityService = securityService;
+        this.executionContextManager = executionContextManager;
+        this.validator = validator;
+        // A subject supplied here came from an authenticated upgrade; otherwise the socket starts
+        // unauthenticated and must present credentials through connection_init.
+        this.authenticated = subject != null;
     }
 
     @Override
     public void onWebSocketConnect(Session sess) {
         LOGGER.info("Opening web socket");
         super.onWebSocketConnect(sess);
+        if (!authenticated) {
+            // Bound how long an unauthenticated socket may sit open. The idle timeout alone is not a
+            // deadline: Jetty resets it on any frame, including ping/pong control frames that never reach
+            // onWebSocketText, so a client could hold an unauthenticated socket open just by pinging.
+            // The scheduled task closes the socket at the deadline whatever the client sends.
+            sess.setIdleTimeout(AUTHENTICATION_DEADLINE_MS);
+            deadlineTask = deadlineScheduler.schedule(this::expireAuthenticationDeadline,
+                    AUTHENTICATION_DEADLINE_MS, TimeUnit.MILLISECONDS);
+        }
     }
 
     @Override
     public void onWebSocketClose(int statusCode, String reason) {
         LOGGER.info("Closing web socket");
+        cancelAuthenticationDeadline();
         super.onWebSocketClose(statusCode, reason);
+    }
+
+    /**
+     * Runs on the deadline thread when an unauthenticated socket reaches its deadline. Closes it unless
+     * connection_init already won; the lock makes the two outcomes mutually exclusive, so a socket is
+     * never authenticated and closed for expiry at the same time.
+     */
+    private void expireAuthenticationDeadline() {
+        synchronized (authenticationLock) {
+            if (authenticated) {
+                return;
+            }
+            deadlineExpired = true;
+        }
+        LOGGER.warn("Closing GraphQL WebSocket that did not authenticate within {} ms", AUTHENTICATION_DEADLINE_MS);
+        final Session session = getSession();
+        if (session != null && session.isOpen()) {
+            session.close(CLOSE_POLICY_VIOLATION, "Authentication deadline expired");
+        }
+    }
+
+    private void cancelAuthenticationDeadline() {
+        final ScheduledFuture<?> task = deadlineTask;
+        if (task != null) {
+            task.cancel(false);
+        }
     }
 
     @Override
     public void onWebSocketText(String textMessage) {
-        LOGGER.info("Got web socket messages {}", textMessage);
+        // Deliberately not logging the message: connection_init carries the client's credentials.
+        LOGGER.debug("Got web socket message of {} characters", textMessage == null ? 0 : textMessage.length());
         final GraphQLMessage message = GraphQLMessage.fromJson(textMessage);
         if (message == null) {
             return;
         }
 
+        // Until the socket has authenticated, connection_init is the only message that is acted on.
+        // Everything else - including any attempt to start an operation - closes the socket.
+        if (!authenticated && !GraphQLMessage.TYPE_CONNECTION_INIT.equals(message.getType())) {
+            LOGGER.warn("Refusing '{}' on an unauthenticated GraphQL WebSocket", message.getType());
+            sendMessage(GraphQLMessage.create(message.getId())
+                    .type(GraphQLMessage.TYPE_CONNECTION_ERROR)
+                    .errors(Collections.singletonList("Not authenticated"))
+                    .build());
+            closeConnection(message, CLOSE_POLICY_VIOLATION, "Not authenticated");
+            return;
+        }
+
         switch (message.getType()) {
             case GraphQLMessage.TYPE_CONNECTION_INIT:
+                if (!handleConnectionInit(message)) {
+                    return;
+                }
                 sendMessage(GraphQLMessage.connectionAck(message.getId()));
                 break;
             case GraphQLMessage.GQL_START:
@@ -82,9 +184,17 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
         }
     }
 
+    /** WebSocket close codes (RFC 6455). Code 0 is not valid and produces no client-visible close. */
+    private static final int CLOSE_NORMAL = 1000;
+    private static final int CLOSE_POLICY_VIOLATION = 1008;
+
     private void closeConnection(GraphQLMessage message, String reason) {
+        closeConnection(message, CLOSE_NORMAL, reason);
+    }
+
+    private void closeConnection(GraphQLMessage message, int statusCode, String reason) {
         unsubscribe(message);
-        getSession().close(0, reason);
+        getSession().close(statusCode, reason);
     }
 
     private void sendMessage(GraphQLMessage message) {
@@ -103,36 +213,159 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
         }
     }
 
+    /**
+     * Authenticates the socket from the {@code connection_init} payload, which is how a browser client
+     * presents credentials (it cannot set request headers on the handshake). A socket that already
+     * authenticated on the upgrade is left as it is - the payload cannot replace an established identity.
+     *
+     * @return true when the socket may proceed, false when it has been closed
+     */
+    private boolean handleConnectionInit(GraphQLMessage message) {
+        if (authenticated) {
+            return true;
+        }
+        if (isDeadlineExpired()) {
+            return refuseAfterDeadline(message);
+        }
+
+        final String credential = basicCredentialFrom(message.getPayload());
+        if (credential == null || validator == null || !validator.authenticateBasicCredential(credential)) {
+            LOGGER.warn("Refusing GraphQL WebSocket connection_init without a valid credential");
+            sendMessage(GraphQLMessage.create(message.getId())
+                    .type(GraphQLMessage.TYPE_CONNECTION_ERROR)
+                    .errors(Collections.singletonList("Not authenticated"))
+                    .build());
+            closeConnection(message, CLOSE_POLICY_VIOLATION, "Not authenticated");
+            return false;
+        }
+
+        // The validator establishes the identity on this thread; capture it onto the socket and unbind,
+        // since this is a shared Jetty IO thread that must not keep carrying it.
+        try {
+            this.subject = securityService != null ? securityService.getCurrentSubject() : null;
+            this.executionContext = executionContextManager != null
+                    ? executionContextManager.getCurrentContext() : null;
+        } finally {
+            clearThreadSecurityContext();
+        }
+
+        if (this.subject == null) {
+            LOGGER.warn("Refusing GraphQL WebSocket connection_init that produced no subject");
+            closeConnection(message, CLOSE_POLICY_VIOLATION, "Not authenticated");
+            return false;
+        }
+
+        synchronized (authenticationLock) {
+            // The deadline may have fired while the credential was being checked.
+            if (deadlineExpired) {
+                return refuseAfterDeadline(message);
+            }
+            this.authenticated = true;
+        }
+        cancelAuthenticationDeadline();
+        final Session session = getSession();
+        if (session != null) {
+            // Authenticated: drop the short unauthenticated deadline.
+            session.setIdleTimeout(0);
+        }
+        return true;
+    }
+
+    private boolean isDeadlineExpired() {
+        synchronized (authenticationLock) {
+            return deadlineExpired;
+        }
+    }
+
+    /** The deadline task is already closing this socket; a late connection_init must not resurrect it. */
+    private boolean refuseAfterDeadline(GraphQLMessage message) {
+        LOGGER.warn("Refusing GraphQL WebSocket connection_init that arrived after the authentication deadline");
+        closeConnection(message, CLOSE_POLICY_VIOLATION, "Not authenticated");
+        return false;
+    }
+
+    /**
+     * Reads a {@code Basic} credential from a connection_init payload. The same credential format as the
+     * HTTP path, so both routes are verified identically.
+     */
+    private static String basicCredentialFrom(Map<String, Object> payload) {
+        if (payload == null) {
+            return null;
+        }
+        for (Map.Entry<String, Object> entry : payload.entrySet()) {
+            if (entry.getKey() != null && "authorization".equalsIgnoreCase(entry.getKey().trim())
+                    && entry.getValue() instanceof String) {
+                return (String) entry.getValue();
+            }
+        }
+        return null;
+    }
+
+    private void clearThreadSecurityContext() {
+        try {
+            if (securityService != null) {
+                securityService.clearCurrentSubject();
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error clearing GraphQL WebSocket security context", e);
+        }
+        try {
+            if (executionContextManager != null) {
+                executionContextManager.setCurrentContext(null);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error clearing GraphQL WebSocket execution context", e);
+        }
+    }
+
     private void subscribe(GraphQLMessage message) {
         final Map<String, Object> payload = message.getPayload();
 
-        ExecutionInput executionInput = ExecutionInput.newExecutionInput()
-                .query((String) payload.get("query"))
-                .variables((Map<String, Object>) payload.get("variables"))
-                .operationName((String) payload.get("operationName"))
-                .context(serviceManager)
-                .build();
+        try {
+            securityService.setCurrentSubject(subject);
+            executionContextManager.setCurrentContext(executionContext);
 
-        ExecutionResult executionResult = this.graphQL.execute(executionInput);
-        if (executionResult.getErrors() != null && !executionResult.getErrors().isEmpty()) {
-            sendMessage(GraphQLMessage.create(message.getId())
-                    .errors(executionResult.getErrors())
-                    .build());
-            closeConnection(message, "Error executing graphQL query");
-            return;
-        } else if (!(executionResult.getData() instanceof Publisher)) {
-            final String error = "Fetched value should be instance of Publisher, was: " + executionResult.getClass().getName();
-            sendMessage(GraphQLMessage.create(message.getId())
-                    .errors(Collections.singletonList(error))
-                    .build());
-            closeConnection(message, error);
-            return;
+            Map<String, Object> variables = (Map<String, Object>) payload.get("variables");
+            if (variables == null) {
+                variables = new HashMap<>();
+            }
+
+            ExecutionInput executionInput = ExecutionInput.newExecutionInput()
+                    .query((String) payload.get("query"))
+                    .variables(variables)
+                    .operationName((String) payload.get("operationName"))
+                    .context(serviceManager)
+                    .build();
+
+            ExecutionResult executionResult = this.graphQL.execute(executionInput);
+            if (executionResult.getErrors() != null && !executionResult.getErrors().isEmpty()) {
+                sendMessage(GraphQLMessage.create(message.getId())
+                        .errors(executionResult.getErrors())
+                        .build());
+                closeConnection(message, "Error executing graphQL query");
+                return;
+            } else if (!(executionResult.getData() instanceof Publisher)) {
+                Object data = executionResult.getData();
+                final String error = "Fetched value should be instance of Publisher, was: " + (data == null ? "null" : data.getClass().getName());
+                sendMessage(GraphQLMessage.create(message.getId())
+                        .errors(Collections.singletonList(error))
+                        .build());
+                closeConnection(message, error);
+                return;
+            }
+
+            Publisher<ExecutionResult> publisher = executionResult.getData();
+            ExecutionResultSubscriber subscriber = new ExecutionResultSubscriber(message.getId(), getRemote());
+            publisher.subscribe(subscriber);
+
+            subscriptions.put(message.getId(), subscriber);
+        } finally {
+            try {
+                securityService.clearCurrentSubject();
+                executionContextManager.setCurrentContext(null);
+            } catch (Exception e) {
+                LOGGER.error("Error clearing GraphQL WebSocket security context", e);
+            }
         }
-
-        Publisher<ExecutionResult> publisher = executionResult.getData();
-        ExecutionResultSubscriber subscriber = new ExecutionResultSubscriber(message.getId(), getRemote());
-        publisher.subscribe(subscriber);
-
-        subscriptions.put(message.getId(), subscriber);
     }
 }

@@ -52,14 +52,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.refEq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
  * Covers the JAAS-authenticated tenant resolution branch of {@link GraphQLServletSecurityValidator},
- * in particular the fallback to {@link ExecutionContext#systemContext()} when the
- * {@code X-Unomi-Tenant-Id} header does not resolve to a known tenant (UNOMI-884).
+ * WebSocket upgrade auth (subscriptions are never public), and malformed Basic handling.
  */
 @ExtendWith(MockitoExtension.class)
 class GraphQLServletSecurityValidatorTest {
@@ -136,6 +136,91 @@ class GraphQLServletSecurityValidatorTest {
 
         assertFalse(authenticated);
         verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
+    @Test
+    void validateWebSocketUpgrade_withoutAuthorization_isRejected() throws IOException {
+        when(request.getHeader("Authorization")).thenReturn(null);
+
+        boolean authenticated = validator.validateWebSocketUpgrade(request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        verify(securityService, never()).setCurrentSubject(any());
+    }
+
+    @Test
+    void validateWebSocketUpgrade_withBasicAuth_isAccepted() throws IOException {
+        when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
+        when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
+
+        boolean authenticated = validator.validateWebSocketUpgrade(request, response);
+
+        assertTrue(authenticated);
+        verify(securityService).setCurrentSubject(any(Subject.class));
+        verify(response, never()).sendError(any(Integer.class));
+    }
+
+    @Test
+    void validateWebSocketUpgrade_rejectsPublicApiKeyOnly() throws IOException {
+        // No Authorization header — public API key alone must not open subscriptions.
+        // validateWebSocketUpgrade never reads X-Unomi-Api-Key; stub documents the scenario.
+        when(request.getHeader("Authorization")).thenReturn(null);
+        lenient().when(request.getHeader("X-Unomi-Api-Key")).thenReturn("public-api-key");
+
+        boolean authenticated = validator.validateWebSocketUpgrade(request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+    }
+
+    @Test
+    void validateWebSocketUpgrade_withMalformedBasic_isRejected() throws IOException {
+        when(request.getHeader("Authorization")).thenReturn("Basic !!!");
+
+        boolean authenticated = validator.validateWebSocketUpgrade(request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        verify(securityService, never()).setCurrentSubject(any());
+    }
+
+    @Test
+    void validate_subscriptionQuery_withoutAuthorization_isRejected() throws IOException {
+        // HTTP contrast: subscriptions are never public — same invariant the WS upgrade must enforce.
+        when(request.getHeader("Authorization")).thenReturn(null);
+
+        boolean authenticated = validator.validate(
+                "subscription { eventListener { id } }", null, request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        verify(securityService, never()).setCurrentSubject(any());
+    }
+
+    @Test
+    void validate_subscriptionQuery_rejectsPublicApiKeyOnly() throws IOException {
+        // Subscriptions are never public: public API key must not authenticate a subscription query.
+        when(request.getHeader("Authorization")).thenReturn(null);
+        lenient().when(request.getHeader("X-Unomi-Api-Key")).thenReturn("public-api-key");
+
+        boolean authenticated = validator.validate(
+                "subscription { eventListener { id } }", null, request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        verify(securityService, never()).setCurrentSubject(any());
+    }
+
+    @Test
+    void validate_withMalformedBasic_isRejected() throws IOException {
+        when(request.getHeader("Authorization")).thenReturn("Basic not-valid-base64");
+
+        boolean authenticated = validator.validate(null, null, request, response);
+
+        assertFalse(authenticated);
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        verify(securityService, never()).setCurrentSubject(any());
     }
 
     /**

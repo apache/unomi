@@ -67,6 +67,7 @@ import org.junit.runners.Suite.SuiteClasses;
         GraphQLProfileIT.class,
         GraphQLProfilePropertiesIT.class,
         GraphQLSegmentIT.class,
+        GraphQLServletSecurityIT.class,
         GraphQLWebSocketIT.class,
         JSONSchemaIT.class,
         GraphQLProfileAliasesIT.class,

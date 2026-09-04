@@ -30,7 +30,6 @@ import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
 import org.apache.unomi.graphql.servlet.websocket.SubscriptionWebSocketFactory;
 import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
-import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
 import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 import org.osgi.service.component.annotations.Component;
@@ -44,7 +43,9 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -98,8 +99,11 @@ public class GraphQLServlet extends WebSocketServlet {
     @Override
     public void init(ServletConfig config) throws ServletException {
         LOGGER.debug("GraphQLServlet initialized");
-        super.init(config);
+        // Must precede super.init(): WebSocketServlet.init() calls configure(), which captures this
+        // validator into the SubscriptionWebSocketFactory. Constructing it afterwards left the factory -
+        // and therefore every socket - with a null validator, so connection_init could never authenticate.
         this.validator = new GraphQLServletSecurityValidator(tenantService, securityService, executionContextManager);
+        super.init(config);
     }
 
     private WebSocketServletFactory factory;
@@ -108,8 +112,9 @@ public class GraphQLServlet extends WebSocketServlet {
     public void configure(WebSocketServletFactory factory) {
         LOGGER.debug("GraphQLServlet configured");
         this.factory = factory;
-        // Wrap the WebSocket creator to handle security context for WebSocket connections
-        SubscriptionWebSocketFactory originalCreator = new SubscriptionWebSocketFactory(graphQLSchemaUpdater.getGraphQL(), serviceManager);
+        // Wrap the WebSocket creator to bind the authenticated subject established during upgrade
+        SubscriptionWebSocketFactory originalCreator = new SubscriptionWebSocketFactory(
+                graphQLSchemaUpdater.getGraphQL(), serviceManager, securityService, executionContextManager, validator);
         factory.setCreator((req, resp) -> {
             try {
                 return originalCreator.createWebSocket(req, resp);
@@ -123,20 +128,132 @@ public class GraphQLServlet extends WebSocketServlet {
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         LOGGER.debug("GraphQLServlet service called with request: {}", request.getRequestURI());
-        if (factory.isUpgradeRequest(request, response)) {
-            try {
-                final ServletUpgradeRequest upReq = new ServletUpgradeRequest(request);
-                for (String subProtocol : upReq.getSubProtocols()) {
-                    if (subProtocol.startsWith("graphql")) {
-                        response.addHeader("Sec-WebSocket-Protocol", subProtocol);
-                        break;
-                    }
+
+        // HTTP GraphQL (GET/POST/OPTIONS): auth is enforced in doGet/doPost via validator.validate(...).
+        if (!factory.isUpgradeRequest(request, response)) {
+            serviceNonUpgrade(request, response);
+            return;
+        }
+
+        serviceWebSocketUpgrade(request, response);
+    }
+
+    /**
+     * HTTP GraphQL path. Separated so unit tests can assert upgrade handling never falls through here.
+     */
+    void serviceNonUpgrade(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        super.service(request, response);
+    }
+
+    /**
+     * WebSocket upgrade path. Order matters for security:
+     * <ol>
+     *   <li>Refuse foreign-origin handshakes, then authenticate any credential the handshake carries
+     *       BEFORE {@code acceptWebSocket} (creator reads the thread-local subject). A handshake that
+     *       carries no credential is upgraded unauthenticated - a browser cannot set headers on it - and
+     *       must authenticate through {@code connection_init} before the socket will do anything.</li>
+     *   <li>Call {@code acceptWebSocket} directly — do not call {@code WebSocketServlet.service()},
+     *       which can fall through to {@code doGet}/{@code doPost} when accept fails and the response
+     *       is not committed.</li>
+     *   <li>Always clear thread-locals in {@code finally} (covers accept failures before the creator runs).</li>
+     * </ol>
+     */
+    void serviceWebSocketUpgrade(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        try {
+            // A WebSocket handshake is not subject to the same-origin policy and triggers no CORS
+            // preflight, so any page on any origin can open one against this endpoint. Refuse handshakes
+            // that declare a foreign origin before doing anything else.
+            if (!isOriginAllowed(request)) {
+                LOGGER.warn("Refusing cross-origin WebSocket upgrade from origin {}", request.getHeader("Origin"));
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Cross-origin WebSocket upgrade refused");
+                return;
+            }
+
+            // Credentials on the upgrade request are the strongest path: the socket is never created
+            // unauthenticated. They stay mandatory for any client that can set request headers.
+            //
+            // A browser cannot set headers on a WebSocket handshake, so a request that carries none is
+            // upgraded in an unauthenticated state instead of being refused. That socket can do nothing
+            // until it authenticates through connection_init: SubscriptionWebSocket rejects every other
+            // message until then, and closes the socket if credentials do not arrive promptly.
+            if (request.getHeader("Authorization") != null && !validator.validateWebSocketUpgrade(request, response)) {
+                return;
+            }
+            negotiateGraphqlSubProtocol(request, response);
+            if (!factory.acceptWebSocket(request, response) && !response.isCommitted()) {
+                // Upgrade was intended but rejected after auth; never fall through to HTTP GraphQL.
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid WebSocket upgrade");
+            }
+        } finally {
+            cleanupSecurityContext();
+        }
+    }
+
+    /**
+     * Accepts a handshake that declares no origin (a non-browser client, which cannot be driven into
+     * making the request by a hostile page) or one whose origin is this same host. Anything else is a
+     * page on another origin trying to open a socket here, which is refused.
+     */
+    static boolean isOriginAllowed(HttpServletRequest request) {
+        final String origin = request.getHeader("Origin");
+        if (origin == null || origin.trim().isEmpty()) {
+            return true;
+        }
+        try {
+            final URI originUri = new URI(origin);
+            final String originHost = originUri.getHost();
+            if (originHost == null) {
+                return false;
+            }
+            if (!originHost.equalsIgnoreCase(request.getServerName())) {
+                return false;
+            }
+            int originPort = originUri.getPort();
+            if (originPort == -1) {
+                originPort = "https".equalsIgnoreCase(originUri.getScheme()) ? 443 : 80;
+            }
+            return originPort == request.getServerPort();
+        } catch (URISyntaxException e) {
+            LOGGER.debug("Refusing WebSocket upgrade with unparseable Origin", e);
+            return false;
+        }
+    }
+
+    /**
+     * Selects the first {@code graphql*} WebSocket subprotocol offered by the client.
+     * Reads {@code Sec-WebSocket-Protocol} directly so upgrade auth tests do not need a full Jetty upgrade request.
+     */
+    static void negotiateGraphqlSubProtocol(HttpServletRequest request, HttpServletResponse response) {
+        Enumeration<String> offered = request.getHeaders("Sec-WebSocket-Protocol");
+        if (offered == null) {
+            return;
+        }
+        while (offered.hasMoreElements()) {
+            String headerValue = offered.nextElement();
+            if (headerValue == null) {
+                continue;
+            }
+            for (String part : headerValue.split(",")) {
+                String subProtocol = part.trim();
+                if (subProtocol.startsWith("graphql")) {
+                    response.addHeader("Sec-WebSocket-Protocol", subProtocol);
+                    return;
                 }
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
             }
         }
-        super.service(request, response);
+    }
+
+    /**
+     * Package-private wiring for unit tests (avoids full Jetty/OSGi servlet init).
+     */
+    void bindForTests(WebSocketServletFactory factory,
+                      GraphQLServletSecurityValidator validator,
+                      SecurityService securityService,
+                      ExecutionContextManager executionContextManager) {
+        this.factory = factory;
+        this.validator = validator;
+        this.securityService = securityService;
+        this.executionContextManager = executionContextManager;
     }
 
     @Override
