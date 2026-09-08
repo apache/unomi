@@ -24,7 +24,9 @@ import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.models.EventCollectorResponse;
+import org.apache.unomi.rest.service.RequestIdentifierValidator;
 import org.apache.unomi.rest.service.RestServiceUtils;
+import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.utils.EventsRequestContext;
 import org.osgi.service.component.annotations.Component;
@@ -62,6 +64,9 @@ public class EventsCollectorEndpoint {
 
     @Reference
     private TracerService tracerService;
+
+    @Reference
+    private SchemaService schemaService;
 
     @Context
     HttpServletRequest request;
@@ -153,6 +158,7 @@ public class EventsCollectorEndpoint {
             String sessionId = eventsCollectorRequest.getSessionId();
             if (sessionId == null) {
                 sessionId = request.getParameter("sessionId");
+                RequestIdentifierValidator.requireValidSessionId(schemaService, sessionId);
             }
 
             String profileId = eventsCollectorRequest.getProfileId();
