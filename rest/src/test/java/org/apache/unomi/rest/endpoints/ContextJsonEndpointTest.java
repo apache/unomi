@@ -175,6 +175,34 @@ class ContextJsonEndpointTest {
     }
 
     @Test
+    void sanitizePersonalizations_writesFilteredContentsBackWhenSomeAreUnsafe() throws Exception {
+        PersonalizationService.Filter unsafeFilter = filterWithCondition(conditionWithParameters(Map.of(
+                "propertyName", "firstName",
+                "propertyValue", "script::evil")));
+        PersonalizationService.Filter safeFilter = filterWithCondition(conditionWithParameters(Map.of(
+                "propertyName", "firstName",
+                "propertyValue", "Jane")));
+
+        PersonalizationService.PersonalizedContent unsafeContent = personalizedContent("injected", unsafeFilter);
+        PersonalizationService.PersonalizedContent safeContent = personalizedContent("fallback", safeFilter);
+
+        PersonalizationService.PersonalizationRequest request = new PersonalizationService.PersonalizationRequest();
+        request.setId("perso-mixed");
+        request.setContents(List.of(unsafeContent, safeContent));
+
+        @SuppressWarnings("unchecked")
+        List<PersonalizationService.PersonalizationRequest> sanitized = (List<PersonalizationService.PersonalizationRequest>)
+                invokeSanitizePersonalizations(List.of(request));
+
+        assertEquals(1, sanitized.size());
+        assertEquals("perso-mixed", sanitized.get(0).getId());
+        assertEquals(1, sanitized.get(0).getContents().size());
+        assertEquals("fallback", sanitized.get(0).getContents().get(0).getId());
+        assertEquals(1, request.getContents().size());
+        assertEquals("fallback", request.getContents().get(0).getId());
+    }
+
+    @Test
     void processOverrides_appliesOverridesOnlyForPersonaProfiles() throws Exception {
         Persona persona = new Persona();
         persona.setItemId("persona-1");
