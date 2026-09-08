@@ -48,6 +48,7 @@ public class EventServiceImpl implements EventService {
 
     /** Event-type chains already logged at recursion limit (see {@link #recursionChainKey}). */
     private static final Set<String> LOGGED_RECURSION_CHAINS = ConcurrentHashMap.newKeySet();
+    private static final int MAX_LOGGED_RECURSION_CHAINS = 1000;
 
     /**
      * Simple data class to hold event information for recursion tracking.
@@ -221,7 +222,9 @@ public class EventServiceImpl implements EventService {
         // Original allowed depths 0-10 (11 calls), blocking at depth 11
         if (eventStack.size() > MAX_RECURSION_DEPTH) {
             String chainKey = recursionChainKey(eventStack);
-            if (LOGGED_RECURSION_CHAINS.add(chainKey)) {
+            if (!LOGGED_RECURSION_CHAINS.contains(chainKey)
+                    && LOGGED_RECURSION_CHAINS.size() < MAX_LOGGED_RECURSION_CHAINS
+                    && LOGGED_RECURSION_CHAINS.add(chainKey)) {
                 EventInfo currentEventInfo = new EventInfo(event);
                 if (tracer != null) {
                     tracer.trace("Max recursion depth reached for event: " + event.getEventType(), event.getItemId());

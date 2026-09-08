@@ -21,15 +21,35 @@ import org.mvel2.ParserConfiguration;
 import org.mvel2.ParserContext;
 
 import java.io.Serializable;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * MVEL script executor implementation
  */
 public class MvelScriptExecutor implements ScriptExecutor {
 
-    private Map<String, Serializable> mvelExpressions = new ConcurrentHashMap<>();
+    private static final int DEFAULT_EXPRESSIONS_CACHE_MAX_SIZE = 1000;
+
+    private final int expressionsCacheMaxSize = Integer.getInteger(
+            "org.apache.unomi.scripting.mvel.expressions.cache.max.size", DEFAULT_EXPRESSIONS_CACHE_MAX_SIZE);
+
+    /**
+     * Size-bounded LRU cache keyed by a fixed-size hash of the script text. Only accepted expressions
+     * are stored. An unbounded map keyed by the raw script would grow without limit.
+     */
+    private final Map<String, Serializable> mvelExpressions = Collections.synchronizedMap(
+            new LinkedHashMap<String, Serializable>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, Serializable> eldest) {
+                    return size() > expressionsCacheMaxSize;
+                }
+            });
     private SecureFilteringClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(getClass().getClassLoader());
     private ExpressionFilterFactory expressionFilterFactory;
 
@@ -57,7 +77,8 @@ public class MvelScriptExecutor implements ScriptExecutor {
                 return null;
             }
 
-            Serializable compiledExpression = mvelExpressions.get(script);
+            String scriptCacheKey = getScriptCacheKey(script);
+            Serializable compiledExpression = mvelExpressions.get(scriptCacheKey);
             if (compiledExpression == null) {
                 ParserConfiguration parserConfiguration = new ParserConfiguration();
                 parserConfiguration.setClassLoader(secureFilteringClassLoader);
@@ -75,11 +96,20 @@ public class MvelScriptExecutor implements ScriptExecutor {
                 parserContext.addImport("SecurityManager", String.class);
 
                 compiledExpression = MVEL.compileExpression(script, parserContext);
-                mvelExpressions.put(script, compiledExpression);
+                mvelExpressions.put(scriptCacheKey, compiledExpression);
             }
             return MVEL.executeExpression(compiledExpression, context);
         } finally {
             Thread.currentThread().setContextClassLoader(tccl);
+        }
+    }
+
+    private static String getScriptCacheKey(String script) {
+        try {
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(script.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            return script;
         }
     }
 }
