@@ -452,7 +452,7 @@ curl -X GET "http://localhost:8181/cxs/tenants" \
 
 Authentication rules (Unomi 3.1):
 
-1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled).
+1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled). Browser clients may call them from any origin; those responses do not include credentialed CORS headers.
 2. Private paths accept `tenantId:privateApiKey` Basic auth, or JAAS admin credentials (often with `X-Unomi-Tenant-Id` when a tenant context is required).
 3. Tenant administration (`/cxs/tenants`) requires system administrator JAAS credentials.
 4. JAAS admin does **not** replace the public API key on public endpoints.
