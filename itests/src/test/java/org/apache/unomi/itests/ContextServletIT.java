@@ -1142,6 +1142,30 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
+    public void testPersonalizationDropsScriptContentAndKeepsFallback() throws Exception {
+        File vulnFile = new File("target/vuln-file-personalization-mixed.txt");
+        if (vulnFile.exists()) {
+            vulnFile.delete();
+        }
+        String vulnFileCanonicalPath = vulnFile.getCanonicalPath().replace("\\", "\\\\");
+
+        Map<String, String> parameters = new HashMap<>();
+        parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(
+                getValidatedBundleJSON("security/mvel-payload-personalization-mixed.json", parameters),
+                ContentType.APPLICATION_JSON));
+        RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
+
+        assertEquals("Invalid response code", 200, response.getStatusCode());
+        List<String> variants = response.getContextResponse().getPersonalizations().get("mixed-sanitize");
+        assertNotNull(variants);
+        assertEquals(Collections.singletonList("safe-fallback"), variants);
+        shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
+                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
+    }
+
+    @Test
     public void testPersonalization() throws Exception {
 
         Map<String, String> parameters = new HashMap<>();
