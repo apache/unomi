@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -32,6 +33,7 @@ import java.util.regex.Pattern;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 public class MvelScriptExecutorTest {
 
@@ -124,6 +126,38 @@ public class MvelScriptExecutorTest {
         }
         System.out.println("result=" + result);
         assertFalse("Vulnerability successfully executed ! File created at " + vulnFile.getCanonicalPath(), vulnFile.exists());
+    }
+
+    @Test
+    public void testRejectedScriptCacheIsBounded() throws Exception {
+        System.setProperty("org.apache.unomi.scripting.mvel.expressions.cache.max.size", "10");
+        try {
+            MvelScriptExecutor boundedExecutor = new MvelScriptExecutor();
+            boundedExecutor.setExpressionFilterFactory(new ExpressionFilterFactory() {
+                @Override
+                public ExpressionFilter getExpressionFilter(String filterCollection) {
+                    Set<Pattern> allowedExpressions = new HashSet<>();
+                    Set<Pattern> forbiddenExpressions = new HashSet<>();
+                    return new ExpressionFilter(allowedExpressions, forbiddenExpressions);
+                }
+            });
+            String padding = "x".repeat(4096);
+            Map<String, Object> ctx = new HashMap<>();
+            for (int i = 0; i < 1000; i++) {
+                boundedExecutor.execute("rejected-script-" + i + "-" + padding, ctx);
+            }
+            Field mvelExpressionsField = MvelScriptExecutor.class.getDeclaredField("mvelExpressions");
+            mvelExpressionsField.setAccessible(true);
+            Map<?, ?> cache = (Map<?, ?>) mvelExpressionsField.get(boundedExecutor);
+            assertTrue("Rejected-script cache must be size-bounded but grew to " + cache.size(),
+                    cache.size() <= 10);
+            for (Object cacheKey : cache.keySet()) {
+                assertTrue("Cache keys must be fixed-size hashes, not the raw script text",
+                        ((String) cacheKey).length() <= 64);
+            }
+        } finally {
+            System.clearProperty("org.apache.unomi.scripting.mvel.expressions.cache.max.size");
+        }
     }
 
     private void assertPublicEvalDoesNotReturnTwo(String expression) {
