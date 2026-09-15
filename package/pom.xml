@@ -414,6 +414,10 @@
                     <goal>jar</goal>
                 </goals>
                 <configuration>
+                    <!-- A classifier keeps this jar a side artifact. Without one, the jar plugin makes it
+                         the artifact of this pom-packaged module, which is what the blanket deploy skip
+                         below was added to hide, and that skip took the distribution with it. -->
+                    <classifier>buildcache</classifier>
                     <archive>
                     <manifest>
                         <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
@@ -422,15 +426,6 @@
                 </configuration>
                 </execution>
             </executions>
-            </plugin>
-
-            <!-- Ensure the dummy jar is NOT deployed -->
-            <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-deploy-plugin</artifactId>
-            <configuration>
-                <skip>true</skip>
-            </configuration>
             </plugin>
 
         </plugins>
