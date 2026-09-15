@@ -114,6 +114,25 @@ public class TenantServiceImpl implements TenantService {
     }
 
     @Override
+    public synchronized Tenant getOrCreateTenant(String tenantId, Map<String, Object> properties) {
+        Tenant tenant = getTenant(tenantId);
+        if (tenant != null) {
+            return tenant;
+        }
+        try {
+            return createTenant(tenantId, properties);
+        } catch (IllegalArgumentException e) {
+            // Another node created the tenant between the read and the write, which is the outcome
+            // this method is asked for. Re-read rather than fail.
+            Tenant concurrent = getTenant(tenantId);
+            if (concurrent == null) {
+                throw e;
+            }
+            return concurrent;
+        }
+    }
+
+    @Override
     public Tenant createTenant(String requestedId, Map<String, Object> properties) {
         validateTenantId(requestedId);
 

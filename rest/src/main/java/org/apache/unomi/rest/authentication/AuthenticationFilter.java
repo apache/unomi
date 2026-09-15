@@ -41,7 +41,6 @@ import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.PreMatching;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.util.Base64;
@@ -59,6 +58,13 @@ import java.util.Set;
 @PreMatching
 @Priority(Priorities.AUTHENTICATION)
 public class AuthenticationFilter implements ContainerRequestFilter {
+
+    /**
+     * The tenant that single-tenant compatibility mode runs on. A client from before Unomi 3.1 knows
+     * no tenant, so it never names one, and nothing outside this class reads this value. It is a
+     * constant rather than a setting for that reason.
+     */
+    private static final String COMPATIBILITY_TENANT_ID = "default";
 
     private static final String UNOMI_API_KEY_HEADER = "X-Unomi-Api-Key";
     private static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
@@ -135,9 +141,9 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         try {
             String path = requestContext.getUriInfo().getPath();
 
-            // Check if V2 compatibility mode is enabled
-            if (restAuthenticationConfig.isV2CompatibilityModeEnabled()) {
-                handleV2CompatibilityMode(requestContext, path);
+            // Check if single-tenant compatibility mode is enabled
+            if (restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()) {
+                handleSingleTenantCompatibilityMode(requestContext, path);
                 return;
             }
 
@@ -280,42 +286,39 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     }
 
     /**
-     * Handle authentication in V2 compatibility mode.
+     * Handle authentication in single-tenant compatibility mode.
      * In this mode:
      * - Public endpoints (like /context.json) require no authentication (like V2)
      * - Protected events require IP + X-Unomi-Peer (like V2)
      * - Private endpoints require system administrator authentication (like V2)
      * - A default tenant is automatically used for all operations
      */
-    private void handleV2CompatibilityMode(ContainerRequestContext requestContext, String path) throws IOException {
+    private void handleSingleTenantCompatibilityMode(ContainerRequestContext requestContext, String path) throws IOException {
         // For public paths, allow access without authentication (like V2)
         if (isPublicPath(requestContext)) {
-            String defaultTenantId = restAuthenticationConfig.getV2CompatibilityDefaultTenantId();
-            if (StringUtils.isNotBlank(defaultTenantId)) {
-                Tenant defaultTenant = tenantService.getTenant(defaultTenantId);
-                if (defaultTenant == null) {
-                    logger.error("V2 compatibility mode: configured default tenant '{}' does not exist", defaultTenantId);
-                    unauthorized(requestContext);
-                    return;
-                }
-                // Create a guest subject for public endpoints
-                Subject subject = securityService.createSubject(defaultTenantId, false);
-
-                // Set CXF security context
-                JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
-                    new RolePrefixSecurityContextImpl(subject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
-
-                // Set the security service subject
-                securityService.setCurrentSubject(subject);
-
-                // Set the execution context for the default tenant
-                executionContextManager.setCurrentContext(executionContextManager.createContext(defaultTenantId));
-                return;
-            } else {
-                logger.warn("V2 compatibility mode: public path request denied because v2CompatibilityDefaultTenantId is not configured");
+            String tenantId = COMPATIBILITY_TENANT_ID;
+            // V2 knew no tenant, so a V2 client cannot name one and cannot create one. Create the
+            // tenant this mode runs on, rather than refuse every request until an operator creates
+            // it by hand.
+            try {
+                tenantService.getOrCreateTenant(tenantId, Collections.singletonMap("name", tenantId));
+            } catch (RuntimeException e) {
+                logger.error("single-tenant compatibility mode: could not obtain tenant '{}'", tenantId, e);
                 unauthorized(requestContext);
                 return;
             }
+            // Create a guest subject for public endpoints
+            Subject subject = securityService.createSubject(tenantId, false);
+
+            // Set CXF security context
+            JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
+                new RolePrefixSecurityContextImpl(subject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
+
+            // Set the security service subject
+            securityService.setCurrentSubject(subject);
+
+            executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
+            return;
         }
 
         // For private endpoints, require system administrator authentication (like V2)
@@ -330,47 +333,43 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 // A null security context here means auth was rejected or an unexpected state occurred — deny either way.
                 SecurityContext securityContext = JAXRSUtils.getCurrentMessage().get(SecurityContext.class);
                 if (securityContext == null) {
-                    logger.debug("V2 compatibility mode: no security context after JAAS filter, denying access");
+                    logger.debug("single-tenant compatibility mode: no security context after JAAS filter, denying access");
                     unauthorized(requestContext);
                     return;
                 }
                 Subject jaasSubject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
 
-                // Private endpoints in V2 compatibility mode require system administrator
+                // Private endpoints in single-tenant compatibility mode require system administrator
                 // authentication (like V2) — a JAAS login alone isn't enough, since any Karaf
                 // user (not just admins) can authenticate against the realm.
                 if (!securityService.extractRolesFromSubject(jaasSubject).contains(UnomiRoles.ADMINISTRATOR)) {
-                    logger.debug("V2 compatibility mode: authenticated user lacks administrator role, denying access to private endpoint");
+                    logger.debug("single-tenant compatibility mode: authenticated user lacks administrator role, denying access to private endpoint");
                     unauthorized(requestContext);
                     return;
                 }
 
-                // Build a merged subject that combines the JAAS principals with tenant admin
-                // principals for the default tenant, so that resolveTenantId() can find it downstream.
-                String defaultTenantId = restAuthenticationConfig.getV2CompatibilityDefaultTenantId();
+                // Build a merged subject that combines the JAAS principals with the tenant admin
+                // principals, so that resolveTenantId() can find the tenant downstream.
+                String tenantId = COMPATIBILITY_TENANT_ID;
                 Subject mergedSubject = new Subject();
                 mergedSubject.getPrincipals().addAll(jaasSubject.getPrincipals());
-                if (StringUtils.isNotBlank(defaultTenantId)) {
-                    mergedSubject.getPrincipals().addAll(securityService.createSubject(defaultTenantId, true).getPrincipals());
-                    Set<String> roles = securityService.extractRolesFromSubject(mergedSubject);
-                    Set<String> permissions = new HashSet<>();
-                    for (String role : roles) {
-                        permissions.addAll(securityService.getPermissionsForRole(role));
-                    }
-                    executionContextManager.setCurrentContext(new ExecutionContext(defaultTenantId, roles, permissions));
-                } else {
-                    executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                mergedSubject.getPrincipals().addAll(securityService.createSubject(tenantId, true).getPrincipals());
+                Set<String> roles = securityService.extractRolesFromSubject(mergedSubject);
+                Set<String> permissions = new HashSet<>();
+                for (String role : roles) {
+                    permissions.addAll(securityService.getPermissionsForRole(role));
                 }
+                executionContextManager.setCurrentContext(new ExecutionContext(tenantId, roles, permissions));
                 JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
                     new RolePrefixSecurityContextImpl(mergedSubject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
                 securityService.setCurrentSubject(mergedSubject);
                 return;
             } catch (Exception e) {
                 // Only fires for unexpected exceptions — credential failures are handled inside JAASAuthenticationFilter.
-                logger.debug("V2 compatibility mode: unexpected exception during JAAS processing", e);
+                logger.debug("single-tenant compatibility mode: unexpected exception during JAAS processing", e);
             }
         } else {
-            logger.debug("V2 compatibility mode: Missing Basic Auth header for private endpoint");
+            logger.debug("single-tenant compatibility mode: Missing Basic Auth header for private endpoint");
         }
 
         // If we get here, no valid authentication was provided

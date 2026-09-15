@@ -388,10 +388,10 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     Event eventToSend = new Event(event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
                             event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                     eventToSend.setFlattenedProperties(event.getFlattenedProperties());
-                    // Check if V2 compatibility mode is enabled and handle V2-style event authorization
-                    if (restAuthenticationConfig.isV2CompatibilityModeEnabled()) {
+                    // Check if single-tenant compatibility mode is enabled and handle V2-style event authorization
+                    if (restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()) {
                         if (!isEventAllowedInV2CompatibilityMode(event, eventsRequestContext.getRequest())) {
-                            LOGGER.debug("Event {} not authorized in V2 compatibility mode from IP {}", event.getEventType(), eventsRequestContext.getRequest().getRemoteAddr());
+                            LOGGER.debug("Event {} not authorized in single-tenant compatibility mode from IP {}", event.getEventType(), eventsRequestContext.getRequest().getRemoteAddr());
                             //Don't count the event that failed
                             eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() - 1);
                             continue;
@@ -540,7 +540,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     }
 
     /**
-     * Check if an event is allowed in V2 compatibility mode.
+     * Check if an event is allowed in single-tenant compatibility mode.
      * In V2, protected events required IP + X-Unomi-Peer (third-party key) authentication.
      *
      * @param event the event to check
@@ -550,7 +550,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     private boolean isEventAllowedInV2CompatibilityMode(Event event, HttpServletRequest request) {
         // Check if this is a protected event type using the V2 third-party configuration
         if (!v2ThirdPartyConfigService.isProtectedEventType(event.getEventType())) {
-            // Non-protected events are always allowed in V2 compatibility mode
+            // Non-protected events are always allowed in single-tenant compatibility mode
             return true;
         }
 
@@ -559,18 +559,18 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         String thirdPartyKey = request.getHeader("X-Unomi-Peer");
 
         if (StringUtils.isBlank(thirdPartyKey)) {
-            LOGGER.debug("V2 compatibility mode: Protected event {} rejected - missing X-Unomi-Peer header", event.getEventType());
+            LOGGER.debug("single-tenant compatibility mode: Protected event {} rejected - missing X-Unomi-Peer header", event.getEventType());
             return false;
         }
 
         // Validate the third-party provider using the V2 configuration
         if (!v2ThirdPartyConfigService.validateProviderByKey(thirdPartyKey, event.getEventType(), sourceIP)) {
-            LOGGER.debug("V2 compatibility mode: Protected event {} rejected - invalid third-party provider key: {} from IP: {}",
+            LOGGER.debug("single-tenant compatibility mode: Protected event {} rejected - invalid third-party provider key: {} from IP: {}",
                         event.getEventType(), SecurityUtils.maskSecret(thirdPartyKey), sourceIP);
             return false;
         }
 
-        LOGGER.debug("V2 compatibility mode: Protected event {} allowed for provider key: {} from IP: {}",
+        LOGGER.debug("single-tenant compatibility mode: Protected event {} allowed for provider key: {} from IP: {}",
                     event.getEventType(), SecurityUtils.maskSecret(thirdPartyKey), sourceIP);
         return true;
     }
