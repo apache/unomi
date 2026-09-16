@@ -224,6 +224,48 @@ Anonymous browsing, personas and profile overrides are otherwise unchanged, and 
 * A backend that named a profile through body `profileId` while authenticating with a *public* key must switch to a tenant private key, or to system administrator credentials. Until it does, the server logs a `WARN` naming the ignored `profileId` on every such request.
 * A client that supplied a session id it did not own now finds `sessionId` absent from the response. Treat that as "start a new session" and generate a fresh id rather than replaying the old one.
 
+[#_search_conditions_state_a_type]
+==== A search condition states its type (3.1)
+
+A search body carries a `condition`, and 3.1 resolves that condition by its `type` before it runs the query. A condition with no resolvable type answers an empty list, and the server logs the reason:
+
+[source]
+----
+WARN ParserHelper       | Condition has no type ID for profile search
+WARN ProfileServiceImpl | Cannot execute query: condition type 'null' could not be resolved
+----
+
+3.0 answered the same body by running the query with no condition at all, which returned every item. The two answers are opposite, and neither the request nor the response says which one you got.
+
+.What changed
+[cols="1,2,2", options="header"]
+|===
+| Body | 3.0 | 3.1
+
+| `"condition": {}`
+| The condition was dropped, and the search returned every item.
+| The search returns an empty list.
+
+| `"condition"` naming a type the server does not know
+| The condition was dropped, and the search returned every item.
+| The search returns an empty list.
+|===
+
+This affects every endpoint that takes a `Query`, among them `/cxs/profiles/search`, `/cxs/profiles/search/sessions` and `/cxs/profiles/personas/search`.
+
+===== Migrating a client
+
+* A client that searched over everything by sending an empty condition states `matchAllCondition` instead:
+
+[source,json]
+----
+{ "text": "", "offset": 0, "limit": 1000,
+  "condition": { "type": "matchAllCondition", "parameterValues": {} } }
+----
+
+* A client that omits the `condition` field entirely still searches over everything, and it needs no change.
+* A client whose condition names a type that the server does not know now reads an empty list where it used to read every item. Check the server log for the condition type it names, and deploy the plugin that defines it.
+
 === Migrating your existing data
 
 ==== Multi-Tenancy Impact
