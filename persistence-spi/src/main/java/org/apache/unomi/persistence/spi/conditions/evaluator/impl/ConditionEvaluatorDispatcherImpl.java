@@ -228,11 +228,22 @@ public class ConditionEvaluatorDispatcherImpl
                     // Use effective condition for evaluation
                     Condition contextualCondition = ConditionContextHelper.getContextualCondition(
                         effectiveCondition, context, scriptExecutor, true, tracerService);
-                    if (contextualCondition == null) {
+                    if (ConditionContextHelper.UNRESOLVABLE == contextualCondition) {
+                        // A cycle, a depth overrun or a script that did not run. Nothing is known
+                        // about what this condition would have constrained, so it does not match.
                         if (tracer != null) {
-                            tracer.endOperation(false, "Contextual condition is null");
+                            tracer.endOperation(false, "Contextual condition could not be resolved");
                         }
                         return false;
+                    }
+                    if (contextualCondition == null) {
+                        // The condition carries a parameter reference the context does not supply,
+                        // which states no constraint. Drop it rather than fail it: an AND that holds
+                        // an optional sub-condition must still match when the parameter is unset.
+                        if (tracer != null) {
+                            tracer.endOperation(true, "Contextual condition carries an unset parameter, ignoring it");
+                        }
+                        return true;
                     }
                     final Condition finalContextualCondition = contextualCondition;
                     boolean result = new MetricAdapter<Boolean>(metricsService, this.getClass().getName() + ".conditions." + conditionEvaluatorKey) {

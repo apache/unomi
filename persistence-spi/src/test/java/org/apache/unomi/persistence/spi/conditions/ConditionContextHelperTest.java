@@ -83,8 +83,8 @@ public class ConditionContextHelperTest {
         Condition resolved = ConditionContextHelper.getContextualCondition(
             condition, context, scriptExecutor);
         
-        assertNotNull("Resolved condition should not be null", resolved);
-        assertNull("Missing parameter reference should resolve to null", resolved.getParameterValues().get("testParam"));
+        assertNull("A parameter reference the context does not supply states no constraint, "
+            + "so the whole condition is voided and the caller drops it", resolved);
     }
 
     @Test
@@ -190,7 +190,7 @@ public class ConditionContextHelperTest {
         Condition resolved = ConditionContextHelper.getContextualCondition(
             condition, context, scriptExecutor);
         
-        assertNull("Condition with cyclic reference should return null", resolved);
+        assertSame("Condition with cyclic reference cannot be resolved, so it answers UNRESOLVABLE", ConditionContextHelper.UNRESOLVABLE, resolved);
     }
 
     @Test
@@ -203,7 +203,7 @@ public class ConditionContextHelperTest {
         Condition resolved = ConditionContextHelper.getContextualCondition(
             condition, context, scriptExecutor);
         
-        assertNull("Condition with two-level cyclic reference should return null", resolved);
+        assertSame("Condition with two-level cyclic reference cannot be resolved, so it answers UNRESOLVABLE", ConditionContextHelper.UNRESOLVABLE, resolved);
     }
 
     @Test
@@ -217,7 +217,7 @@ public class ConditionContextHelperTest {
         Condition resolved = ConditionContextHelper.getContextualCondition(
             condition, context, scriptExecutor);
         
-        assertNull("Condition with three-level cyclic reference should return null", resolved);
+        assertSame("Condition with three-level cyclic reference cannot be resolved, so it answers UNRESOLVABLE", ConditionContextHelper.UNRESOLVABLE, resolved);
     }
 
     @Test
@@ -231,7 +231,7 @@ public class ConditionContextHelperTest {
         Condition resolved = ConditionContextHelper.getContextualCondition(
             condition, context, scriptExecutor);
         
-        assertNull("Condition with script-based cyclic reference should return null", resolved);
+        assertSame("Condition with script-based cyclic reference cannot be resolved, so it answers UNRESOLVABLE", ConditionContextHelper.UNRESOLVABLE, resolved);
     }
 
     // ========== Maximum Depth Tests ==========
@@ -252,7 +252,7 @@ public class ConditionContextHelperTest {
         Condition resolved = ConditionContextHelper.getContextualCondition(
             condition, context, scriptExecutor);
         
-        assertNull("Condition exceeding maximum depth should return null", resolved);
+        assertSame("Condition exceeding maximum depth cannot be resolved, so it answers UNRESOLVABLE", ConditionContextHelper.UNRESOLVABLE, resolved);
     }
 
     // ========== Nested Structure Tests ==========
@@ -438,8 +438,7 @@ public class ConditionContextHelperTest {
         Condition resolved = ConditionContextHelper.getContextualCondition(
             condition, new HashMap<>(), scriptExecutor);
         
-        assertNotNull("Resolved condition should not be null", resolved);
-        assertNull("Parameter reference in empty context should resolve to null", resolved.getParameterValues().get("testParam"));
+        assertNull("A parameter reference an empty context cannot supply voids the whole condition", resolved);
     }
 
     @Test
@@ -470,8 +469,8 @@ public class ConditionContextHelperTest {
         Condition resolved = ConditionContextHelper.getContextualCondition(
             condition, context, scriptExecutor);
         
-        assertNotNull("Resolved condition should not be null", resolved);
-        assertNull("Script returning null should resolve to null", resolved.getParameterValues().get("testParam"));
+        assertNull("A script:: value that returns null supplies no value, so it voids the whole condition",
+            resolved);
     }
 
     @Test
@@ -529,7 +528,8 @@ public class ConditionContextHelperTest {
         // Pass null as scriptExecutor — simulates OSGi service not yet wired
         Condition resolved = ConditionContextHelper.getContextualCondition(condition, context, null);
 
-        assertNull("getContextualCondition must return null when scriptExecutor is null and a script:: value is present", resolved);
+        assertSame("A script:: value with no script executor cannot be resolved, so it answers UNRESOLVABLE",
+            ConditionContextHelper.UNRESOLVABLE, resolved);
     }
 
     @Test
@@ -863,9 +863,8 @@ public class ConditionContextHelperTest {
         Condition resolved = ConditionContextHelper.getContextualCondition(
             condition, context, scriptExecutor, false);
 
-        assertNotNull(resolved);
-        assertEquals("equals", resolved.getParameter("comparisonOperator"));
-        assertNull(resolved.getParameter("other"));
+        assertNull("One unset parameter reference voids the condition, whatever the other parameters hold",
+            resolved);
     }
 
     // ========== Multivalued parameter validation ==========
@@ -1152,8 +1151,8 @@ public class ConditionContextHelperTest {
         Condition resolved = ConditionContextHelper.getContextualCondition(
             condition, context, scriptExecutor, true);
 
-        assertNotNull(resolved);
-        assertNull(resolved.getParameter("testParam"));
+        assertNull("An unset parameter reference voids the condition, so there is nothing left to validate",
+            resolved);
     }
 
     // ========== Helper Methods ==========
