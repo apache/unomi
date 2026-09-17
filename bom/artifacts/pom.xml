@@ -267,6 +267,11 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-plugins-advanced-conditions</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-plugins-request</artifactId>
                 <version>${project.version}</version>
             </dependency>
