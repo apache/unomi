@@ -25,6 +25,9 @@ import org.apache.unomi.api.services.TypeResolutionService;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.scripting.ScriptExecutor;
+
+import java.util.HashMap;
+import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -207,5 +210,50 @@ public class ConditionEvaluatorDispatcherImplTest {
         boolean result = dispatcher.eval(root, dummyProfile);
 
         assertFalse("Cycle in ConditionType parent chain must return false, not cause infinite recursion or NPE", result);
+    }
+
+    // A condition parameter that reads "parameter::x" where the context holds no x states no
+    // constraint, so the dispatcher drops the condition instead of failing it. This is what makes a
+    // condition type parameter optional: pageViewEventCondition compares the page path to
+    // "parameter::pagePath", and a rule that sets no pagePath must still match every page view.
+    @Test
+    public void eval_unsetParameterReference_dropsConditionAndReturnsTrue() {
+        dispatcher.addEvaluator("neverMatches", (condition, item, ctx, d) -> false);
+
+        ConditionType type = new ConditionType(new Metadata());
+        type.setItemId("optionalParameterType");
+        type.setConditionEvaluator("neverMatches");
+
+        Condition condition = new Condition(type);
+        condition.setParameter("propertyValue", "parameter::pagePath");
+
+        boolean result = dispatcher.eval(condition, dummyProfile, new HashMap<>());
+
+        assertTrue("An unset parameter reference must drop the condition, not fail it", result);
+
+        dispatcher.removeEvaluator("neverMatches");
+    }
+
+    // A parameter reference that cannot be resolved at all is a different answer from an unset one.
+    // Nothing is known about what the condition would have constrained, so it must not match.
+    @Test
+    public void eval_cyclicParameterReference_returnsFalse() {
+        dispatcher.addEvaluator("alwaysMatches", (condition, item, ctx, d) -> true);
+
+        ConditionType type = new ConditionType(new Metadata());
+        type.setItemId("cyclicParameterType");
+        type.setConditionEvaluator("alwaysMatches");
+
+        Condition condition = new Condition(type);
+        condition.setParameter("propertyValue", "parameter::loop");
+
+        Map<String, Object> context = new HashMap<>();
+        context.put("loop", "parameter::loop");
+
+        boolean result = dispatcher.eval(condition, dummyProfile, context);
+
+        assertFalse("A cyclic parameter reference must not match", result);
+
+        dispatcher.removeEvaluator("alwaysMatches");
     }
 }
