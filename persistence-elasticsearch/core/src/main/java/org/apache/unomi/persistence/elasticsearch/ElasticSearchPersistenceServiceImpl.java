@@ -931,6 +931,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
+        // An item states its own identity. Without an itemId the document id below would read
+        // "<tenant>_null", so every id-less item of the same type would land on one shared document
+        // and overwrite the item the previous save wrote. Refuse the save and say so.
+        if (item.getItemId() == null) {
+            LOGGER.warn("Refusing to save an item of type {} that carries no itemId", item.getItemType());
+            return false;
+        }
+
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SAVE);
         item.setTenantId(finalTenantId);
 
