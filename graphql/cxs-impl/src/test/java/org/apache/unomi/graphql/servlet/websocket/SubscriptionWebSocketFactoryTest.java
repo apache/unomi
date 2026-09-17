@@ -33,6 +33,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import javax.security.auth.Subject;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -90,5 +91,15 @@ class SubscriptionWebSocketFactoryTest {
         assertNotNull(socket);
         assertTrue(socket instanceof SubscriptionWebSocket);
         verify(upgradeResponse, never()).setStatusCode(401);
+    }
+
+    /** The creator is never a started Jetty lifecycle, so its scheduler must be stopped explicitly. */
+    @Test
+    void shutdown_stopsTheDeadlineScheduler() {
+        assertFalse(factory.isShutdown());
+
+        factory.shutdown();
+
+        assertTrue(factory.isShutdown());
     }
 }

@@ -44,8 +44,9 @@ public class SubscriptionWebSocketFactory extends WebSocketServerFactory {
     private final GraphQLServletSecurityValidator validator;
 
     /**
-     * Closes sockets that do not authenticate within their deadline. One daemon thread for all sockets;
-     * stopped with the factory, which {@code WebSocketServlet.destroy()} stops on undeploy.
+     * Closes sockets that do not authenticate within their deadline. One daemon thread for all sockets.
+     * This object is only ever Jetty's creator, never a started lifecycle, so the servlet shuts the
+     * scheduler down explicitly from {@code destroy()}.
      */
     private final ScheduledExecutorService authenticationDeadlineScheduler;
 
@@ -76,12 +77,13 @@ public class SubscriptionWebSocketFactory extends WebSocketServerFactory {
                 securityService, executionContextManager, validator, authenticationDeadlineScheduler);
     }
 
-    @Override
-    protected void doStop() throws Exception {
-        try {
-            super.doStop();
-        } finally {
-            authenticationDeadlineScheduler.shutdownNow();
-        }
+    /** Stops the deadline scheduler; called when the owning servlet is destroyed. */
+    public void shutdown() {
+        authenticationDeadlineScheduler.shutdownNow();
+    }
+
+    /** Whether {@link #shutdown()} has run; lets the servlet test verify the destroy() wiring. */
+    public boolean isShutdown() {
+        return authenticationDeadlineScheduler.isShutdown();
     }
 }
