@@ -165,7 +165,8 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
     private void processEvent(final Event event) {
         final EventService eventService = serviceManager.getService(EventService.class);
 
-        if (!isEventAllowedForCurrentTenant(event, eventService)) {
+        if (!isEventAllowedForCurrentTenant(event, eventService,
+                serviceManager.getService(ExecutionContextManager.class))) {
             LOGGER.debug("Event type {} is not authorized for this tenant, skipping it", event.getEventType());
             return;
         }
@@ -179,15 +180,14 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
     }
 
     /**
-     * Applies the same restricted-event-type gate the REST event paths apply before handing an event to
-     * {@link EventService#send(Event)}, which performs no such check of its own. Without this, an event
-     * submitted through this mutation skipped a control the REST path enforces.
-     * <p>
-     * This transport carries no source IP to match against a tenant's authorized IP list, so a restricted
-     * event type is refused whenever such a list is configured.
+     * Same restricted-event-type check as REST {@code EventService#send} callers. GraphQL does not
+     * currently thread a client IP through this command, so the source IP is {@code null}: a
+     * restricted type is refused when the tenant has an authorized-IP list, and unrestricted types
+     * still pass.
      */
-    private boolean isEventAllowedForCurrentTenant(final Event event, final EventService eventService) {
-        final ExecutionContextManager executionContextManager = serviceManager.getService(ExecutionContextManager.class);
+    static boolean isEventAllowedForCurrentTenant(final Event event,
+                                                  final EventService eventService,
+                                                  final ExecutionContextManager executionContextManager) {
         final ExecutionContext executionContext = executionContextManager != null
                 ? executionContextManager.getCurrentContext() : null;
         final String tenantId = executionContext != null ? executionContext.getTenantId() : null;
