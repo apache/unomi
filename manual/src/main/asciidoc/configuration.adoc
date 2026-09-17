@@ -550,7 +550,9 @@ The second layer is the expression filtering system, that uses an allow-listing 
 expressions (through configuration and deployment on the server side). Any unrecognized expression will not be accepted.
 
 Finally, once the script starts executing in the scripting engine, a filtering class loader will only let the script
-access classes that have been allowed.
+access classes that have been allowed. Public MVEL eval APIs are always denied, including when they are referenced
+through inner classes, array types, or names with invisible characters. That class-loader check is the control that
+must hold even if an expression reaches the engine.
 
 This multi-layered approach makes it possible to retain a high level of security even if one layer is poorly
 configured or abused.
@@ -687,8 +689,9 @@ Alongside with the allow-listing technology, there are new configuration paramet
 [source]
 ----
 # These parameters control the list of classes that are allowed or forbidden when executing expressions.
+# Forbid is applied first. Public MVEL eval APIs are always denied, even if this list is emptied.
 org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*}
-org.apache.unomi.scripting.forbid=${env:UNOMI_FORBID_SCRIPTING_CLASSES:-}
+org.apache.unomi.scripting.forbid=${env:UNOMI_FORBID_SCRIPTING_CLASSES:-org.mvel2.MVEL}
 
 # This parameter controls the whole expression filtering system. It is not recommended to turn it off. The main reason to turn it off would be to check if it is interfering with something, but it should always be active in production.
 org.apache.unomi.scripting.filter.activated=${env:UNOMI_SCRIPTING_FILTER_ACTIVATED:-true}
