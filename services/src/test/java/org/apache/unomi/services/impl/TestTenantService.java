@@ -106,6 +106,12 @@ public class TestTenantService implements TenantService {
     }
 
     @Override
+    public Tenant getOrCreateTenant(String tenantId, Map<String, Object> properties) {
+        Tenant tenant = getTenant(tenantId);
+        return tenant != null ? tenant : createTenant(tenantId, properties);
+    }
+
+    @Override
     public Tenant createTenant(String tenantId, Map<String, Object> properties) {
         Tenant tenant = new Tenant();
         tenant.setItemId(tenantId);

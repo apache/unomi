@@ -61,6 +61,18 @@ public interface TenantService {
      * @param tenantId the ID of the tenant to retrieve
      * @return the Tenant object if found, null otherwise
      */
+    /**
+     * Returns the tenant with the given identifier, and creates it when it does not exist yet.
+     * <p>
+     * Two callers that race on the same identifier both get the tenant, and only one creation
+     * happens.
+     *
+     * @param tenantId   the identifier of the tenant
+     * @param properties the properties to set when the tenant has to be created, may be {@code null}
+     * @return the tenant, never {@code null}
+     */
+    Tenant getOrCreateTenant(String tenantId, Map<String, Object> properties);
+
     Tenant getTenant(String tenantId);
 
     /**

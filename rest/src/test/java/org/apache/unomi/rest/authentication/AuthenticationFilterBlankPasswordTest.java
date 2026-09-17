@@ -171,15 +171,15 @@ class AuthenticationFilterBlankPasswordTest {
     }
 
     /**
-     * V2 compatibility mode routes every request through {@link AuthenticationFilter}'s own
+     * single-tenant compatibility mode routes every request through {@link AuthenticationFilter}'s own
      * private-endpoint branch, which consumes the Basic credential at a third, separate call site.
      * Without this test that call site is unreachable from the suite: the other tests leave
-     * {@code isV2CompatibilityModeEnabled()} at the unstubbed Mockito {@code false}, so deleting
+     * {@code isSingleTenantCompatibilityModeEnabled()} at the unstubbed Mockito {@code false}, so deleting
      * the guard there would leave every test green.
      */
     @Test
     void filterRejectsBlankPasswordOnAPrivatePathInV2CompatibilityMode() throws IOException {
-        when(restAuthenticationConfig.isV2CompatibilityModeEnabled()).thenReturn(true);
+        when(restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()).thenReturn(true);
         when(restAuthenticationConfig.getPublicPathPatterns()).thenReturn(Collections.emptyList());
         ContainerRequestContext requestContext = request("profiles", basic("karaf:"));
 
@@ -191,7 +191,7 @@ class AuthenticationFilterBlankPasswordTest {
     /** Control for the V2 branch: a non-blank credential must still reach JAAS there too. */
     @Test
     void filterPassesNonBlankPasswordToJaasOnAPrivatePathInV2CompatibilityMode() throws IOException {
-        when(restAuthenticationConfig.isV2CompatibilityModeEnabled()).thenReturn(true);
+        when(restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()).thenReturn(true);
         when(restAuthenticationConfig.getPublicPathPatterns()).thenReturn(Collections.emptyList());
         ContainerRequestContext requestContext = request("profiles", basic("karaf:a-strong-password"));
 
@@ -201,20 +201,19 @@ class AuthenticationFilterBlankPasswordTest {
     }
 
     /**
-     * A public path in V2 compatibility mode authenticates by default tenant, ignoring
+     * A public path in single-tenant compatibility mode authenticates by default tenant, ignoring
      * {@code Authorization} entirely — so a stray blank Basic header must not turn it into a 401.
      */
     @Test
-    void filterDoesNotRejectAStrayBlankBasicHeaderOnAPublicPathInV2CompatibilityMode() throws IOException {
-        when(restAuthenticationConfig.isV2CompatibilityModeEnabled()).thenReturn(true);
+    void filterDoesNotRejectAStrayBlankBasicHeaderOnAPublicPathInSingleTenantCompatibilityMode() throws IOException {
+        when(restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()).thenReturn(true);
         when(restAuthenticationConfig.getPublicPathPatterns())
                 .thenReturn(Collections.singletonList(Pattern.compile("POST context\\.json")));
-        when(restAuthenticationConfig.getV2CompatibilityDefaultTenantId()).thenReturn("default");
         ContainerRequestContext requestContext = request("context.json", basic("someone:"));
 
         filter.filter(requestContext);
 
-        verify(tenantService).getTenant("default");
+        verify(tenantService).getOrCreateTenant(eq("default"), any());
     }
 
     private void assertUnauthorizedWithoutReachingJaas(ContainerRequestContext requestContext) throws IOException {

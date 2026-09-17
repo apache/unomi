@@ -350,7 +350,7 @@ Before starting the migration, please ensure that:
 - You did practice the migration in a staging environment, NEVER migrate a production environment without prior validation
 - You are currently running Apache Unomi 3.0 (or a later 3.0.x version)
 - You understand the multi-tenancy impact on your data model
-- You have a plan to update client applications to tenant API keys (or temporary <<_v2_compatibility_mode,V2 compatibility mode>> only if coming from 2.x)
+- You have a plan to update client applications to tenant API keys (or temporary <<_v2_compatibility_mode,single-tenant compatibility mode>> only if coming from 2.x)
 - You have reviewed the <<_client_facing_hardening_3_1,client-facing hardening>> notes (cookie-only public profile binding, HttpOnly default, required passwords, privileged REST roles)
 - You know how to obtain plaintext API keys after upgrade (regenerate via `/cxs/tenants/{id}/apikeys`; create responses expose masked keys only)
 
@@ -376,7 +376,7 @@ Scripts applied for the 3.1 line include (under `tools/shell-commands/.../META-I
 * `migrate-3.1.0-05-fixSystemItemIds`
 * `migrate-3.1.0-10-tenantInitialization` (creates the default tenant used for isolation)
 * `migrate-3.1.0-15-updateLegacyQueryBuilder`
-4. **Update client applications** to the 3.1 authentication model (public key header / tenant private key), or enable <<_v2_compatibility_mode,V2 compatibility mode>> only when migrating **from Unomi 2.x**.
+4. **Update client applications** to the 3.1 authentication model (public key header / tenant private key), or enable <<_v2_compatibility_mode,single-tenant compatibility mode>> only when migrating **from Unomi 2.x**.
 5. **Start your Apache Unomi 3.1 cluster**.
 6. **Regenerate and store tenant API keys** (plaintext is returned only from the key-creation endpoint), then **test** applications end to end.
 
@@ -388,20 +388,20 @@ Unomi 3.1 does **not** provide a separate "3.0 compatibility mode" system proper
 
 Adopt tenant public API keys for public endpoints and tenant private keys or JAAS for administrative work. See <<_multitenancy,Multi-tenancy>> and the authentication examples in this guide.
 
-==== Option 2: V2 compatibility mode (2.x clients only)
+==== Option 2: single-tenant compatibility mode (2.x clients only)
 
-If you are migrating from **Unomi 2.x** (not 3.0), you can enable <<_v2_compatibility_mode,V2 compatibility mode>> so legacy clients work without API keys during a phased rollout:
+If you are migrating from **Unomi 2.x** (not 3.0), you can enable <<_v2_compatibility_mode,single-tenant compatibility mode>> so legacy clients work without API keys during a phased rollout:
 
 [source,properties]
 ----
 # etc/org.apache.unomi.rest.authentication.cfg
-v2.compatibilitymode.enabled = true
-v2.compatibilitymode.defaultTenantId = default
+singletenantcompatibility.enabled = true
+v2.compatibilitymode.tenantId = default
 ----
 
-Environment variable equivalent: `UNOMI_REST_AUTHENTICATION_V2COMPATIBILITYMODEENABLED=true`
+Environment variable equivalent: `UNOMI_REST_AUTHENTICATION_SINGLETENANTCOMPATIBILITYMODEENABLED=true`
 
-WARNING: V2 compatibility mode is intended for migration from 2.x only. It bypasses tenant API key requirements on public endpoints. Disable it once all clients use 3.1 authentication.
+WARNING: single-tenant compatibility mode is intended for migration from 2.x only. It bypasses tenant API key requirements on public endpoints. Disable it once all clients use 3.1 authentication.
 
 === Post Migration
 
