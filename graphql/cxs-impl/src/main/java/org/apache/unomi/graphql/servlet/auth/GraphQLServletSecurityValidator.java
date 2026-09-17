@@ -41,7 +41,12 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static graphql.language.OperationDefinition.Operation.*;
 import static org.osgi.service.http.HttpContext.AUTHENTICATION_TYPE;
@@ -86,7 +91,7 @@ public class GraphQLServletSecurityValidator {
     }
 
     public boolean validate(String query, String operationName, HttpServletRequest req, HttpServletResponse res) throws IOException {
-        if (isPublicOperation(query)) {
+        if (isPublicOperation(query, operationName)) {
             // For public operations, check API key
             String apiKey = req.getHeader("X-Unomi-Api-Key");
             if (apiKey != null) {
@@ -115,47 +120,147 @@ public class GraphQLServletSecurityValidator {
         }
     }
 
-    private boolean isPublicOperation(String query) {
-        if (query == null) {
+    /**
+     * Decides whether a GraphQL document may run against a public API key. The check authorizes the
+     * exact operation graphql-java will execute for the request (selected by {@code operationName}),
+     * evaluates every selected root field against the public allow-list, detects introspection
+     * structurally, and fails closed on anything it cannot prove public.
+     */
+    private boolean isPublicOperation(String query, String operationName) {
+        if (query == null || query.trim().isEmpty()) {
             return false;
         }
 
-        final Document queryDoc = parser.parseDocument(query);
-        if (queryDoc.getDefinitions().isEmpty()) {
+        final Document queryDoc;
+        try {
+            queryDoc = parser.parseDocument(query);
+        } catch (RuntimeException e) {
+            // Unparseable input is never treated as public; execution will surface the syntax error.
+            LOG.debug("Failed to parse GraphQL document; refusing public classification", e);
             return false;
         }
-        final Definition<?> def = queryDoc.getDefinitions().get(0);
-        if (def instanceof OperationDefinition) {
-            OperationDefinition opDef = (OperationDefinition) def;
-            if (SUBSCRIPTION.equals(opDef.getOperation())) {
-                // subscriptions are not public
+
+        // Separate the document into its operations and a fragment lookup table.
+        final Map<String, FragmentDefinition> fragments = new HashMap<>();
+        final List<OperationDefinition> operations = new ArrayList<>();
+        for (Definition<?> def : queryDoc.getDefinitions()) {
+            if (def instanceof OperationDefinition) {
+                operations.add((OperationDefinition) def);
+            } else if (def instanceof FragmentDefinition) {
+                final FragmentDefinition fragment = (FragmentDefinition) def;
+                fragments.put(fragment.getName(), fragment);
+            }
+        }
+        if (operations.isEmpty()) {
+            // No executable operation (e.g. a fragment-only document): fail closed.
+            return false;
+        }
+
+        // Authorize exactly the operation graphql-java will execute, not simply the first definition.
+        final OperationDefinition operation = resolveExecutedOperation(operations, operationName);
+        if (operation == null) {
+            // Ambiguous, duplicated or unknown operation name: fail closed.
+            return false;
+        }
+        return isOperationPublic(operation, fragments);
+    }
+
+    /**
+     * Resolves the operation graphql-java will execute: with an explicit {@code operationName} exactly
+     * one operation must match; without a name the document must contain exactly one operation (per the
+     * GraphQL spec). Anything else is invalid input and is refused.
+     */
+    private OperationDefinition resolveExecutedOperation(List<OperationDefinition> operations, String operationName) {
+        if (operationName != null && !operationName.trim().isEmpty()) {
+            OperationDefinition match = null;
+            for (OperationDefinition operation : operations) {
+                if (operationName.equals(operation.getName())) {
+                    if (match != null) {
+                        return null; // duplicate operation name: invalid document
+                    }
+                    match = operation;
+                }
+            }
+            return match;
+        }
+        return operations.size() == 1 ? operations.get(0) : null;
+    }
+
+    private boolean isOperationPublic(OperationDefinition operation, Map<String, FragmentDefinition> fragments) {
+        // Subscriptions are never public.
+        if (SUBSCRIPTION.equals(operation.getOperation())) {
+            return false;
+        }
+
+        final List<Field> topLevelFields = collectFields(operation.getSelectionSet(), fragments, new HashSet<>());
+        if (topLevelFields.isEmpty()) {
+            return false;
+        }
+
+        // Introspection is detected structurally, never by the operation's name: a query whose top-level
+        // selections are all meta fields (__schema / __type / __typename) is public.
+        if (QUERY.equals(operation.getOperation())
+                && topLevelFields.stream().allMatch(field -> field.getName() != null && field.getName().startsWith("__"))) {
+            return true;
+        }
+
+        // Every public operation lives entirely under a single "cdp" root; touching anything else is refused.
+        final List<Field> cdpFields = topLevelFields.stream()
+                .filter(field -> "cdp".equals(field.getName()))
+                .collect(Collectors.toList());
+        if (cdpFields.isEmpty() || cdpFields.size() != topLevelFields.size()) {
+            return false;
+        }
+
+        final List<String> allowedNodeNames = new ArrayList<>();
+        if (QUERY.equals(operation.getOperation())) {
+            allowedNodeNames.add("getProfile");
+        } else if (MUTATION.equals(operation.getOperation())) {
+            allowedNodeNames.add("processEvents");
+        } else {
+            return false;
+        }
+
+        for (Field cdp : cdpFields) {
+            final List<Field> cdpChildren = collectFields(cdp.getSelectionSet(), fragments, new HashSet<>());
+            if (cdpChildren.isEmpty()) {
+                // An empty cdp selection is not an affirmatively public request.
                 return false;
-            } else if ("IntrospectionQuery".equals(opDef.getName())) {
-                // allow introspection query
-                return true;
             }
-
-            List<Node> children = opDef.getSelectionSet().getChildren();
-            final Field cdp = (Field) children.stream().filter((node) -> {
-                return (node instanceof Field) && "cdp".equals(((Field) node).getName());
-            }).findFirst().orElse(null);
-            if (cdp == null) {
-                // allow not a cdp namespace
-                return true;
+            for (Field child : cdpChildren) {
+                if (!allowedNodeNames.contains(child.getName())) {
+                    return false;
+                }
             }
-
-            final List<String> allowedNodeNames = new ArrayList<>();
-            if (QUERY.equals(opDef.getOperation())) {
-                allowedNodeNames.add("getProfile");
-            } else if (MUTATION.equals(opDef.getOperation())) {
-                allowedNodeNames.add("processEvents");
-            }
-
-            return cdp.getSelectionSet().getChildren().stream().allMatch((node) -> {
-                return (node instanceof Field) && allowedNodeNames.contains(((Field) node).getName());
-            });
         }
         return true;
+    }
+
+    /**
+     * Flattens a selection set into concrete fields, resolving inline fragments and fragment spreads
+     * (guarding against fragment cycles) so nothing can be hidden from the allow-list inside a fragment.
+     */
+    private List<Field> collectFields(SelectionSet selectionSet, Map<String, FragmentDefinition> fragments, Set<String> visitedFragments) {
+        final List<Field> fields = new ArrayList<>();
+        if (selectionSet == null) {
+            return fields;
+        }
+        for (Selection selection : selectionSet.getSelections()) {
+            if (selection instanceof Field) {
+                fields.add((Field) selection);
+            } else if (selection instanceof InlineFragment) {
+                fields.addAll(collectFields(((InlineFragment) selection).getSelectionSet(), fragments, visitedFragments));
+            } else if (selection instanceof FragmentSpread) {
+                final String name = ((FragmentSpread) selection).getName();
+                if (visitedFragments.add(name)) {
+                    final FragmentDefinition fragment = fragments.get(name);
+                    if (fragment != null) {
+                        fields.addAll(collectFields(fragment.getSelectionSet(), fragments, visitedFragments));
+                    }
+                }
+            }
+        }
+        return fields;
     }
 
     /**

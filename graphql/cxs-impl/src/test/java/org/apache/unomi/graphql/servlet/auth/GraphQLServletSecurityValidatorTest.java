@@ -223,6 +223,55 @@ class GraphQLServletSecurityValidatorTest {
         verify(securityService, never()).setCurrentSubject(any());
     }
 
+    @Test
+    void validate_operationAuthorizationBypasses_areRejectedForPublicApiKey() throws IOException {
+        // Even holding a valid public API key, none of these documents may run: each is a way the
+        // public-operation gate could be tricked into classifying a privileged or ambiguous document as
+        // public. They must all fail closed - no public branch, and with no Authorization header, 401.
+        lenient().when(request.getHeader("X-Unomi-Api-Key")).thenReturn("public-api-key");
+
+        // A privileged mutation smuggled as a second operation and selected by operationName.
+        assertNotPublic("query GetProfile { cdp { getProfile(profileID:{id:\"x\"}) { id } } } "
+                + "mutation Pwn { cdp { deleteAllPersonalData(profileID:{id:\"v\"}) } }", "Pwn");
+        // A privileged query whose operation is merely NAMED IntrospectionQuery.
+        assertNotPublic("query IntrospectionQuery { cdp { findProfiles(first:1000) { edges { node { properties } } } } }", null);
+        // A leading fragment definition in front of a privileged operation.
+        assertNotPublic("fragment f on Query { __typename } query Q { cdp { deleteProfile(profileID:{id:\"v\"}) } }", "Q");
+        // A privileged field hidden inside a fragment spread.
+        assertNotPublic("query Q { cdp { ...priv } } fragment priv on CDP_Query { findProfiles(first:10) { edges { node { id } } } }", "Q");
+        // An extra non-cdp root field alongside an allowed one.
+        assertNotPublic("query Q { cdp { getProfile(profileID:{id:\"x\"}) { id } } segments { edges { node { id } } } }", "Q");
+        // Multiple operations with no operationName: the executed operation is ambiguous.
+        assertNotPublic("query A { cdp { getProfile(profileID:{id:\"x\"}) { id } } } "
+                + "query B { cdp { findProfiles(first:1) { edges { node { id } } } } }", null);
+        // A syntactically invalid document.
+        assertNotPublic("query { cdp { getProfile ", null);
+
+        verify(securityService, never()).setCurrentSubject(any());
+    }
+
+    @Test
+    void validate_legitimatePublicOperation_isAuthenticatedWithPublicApiKey() throws IOException {
+        Tenant tenant = new Tenant();
+        tenant.setItemId("pub-tenant");
+        when(request.getHeader("X-Unomi-Api-Key")).thenReturn("public-api-key");
+        when(tenantService.getTenantByApiKey("public-api-key", ApiKey.ApiKeyType.PUBLIC)).thenReturn(tenant);
+        when(securityService.createSubject("pub-tenant", false)).thenReturn(new Subject());
+        ExecutionContext context = new ExecutionContext("pub-tenant", null, null);
+        when(executionContextManager.createContext("pub-tenant")).thenReturn(context);
+
+        boolean authenticated = validator.validate(
+                "query { cdp { getProfile(profileID:{id:\"x\"}) { id } } }", null, request, response);
+
+        assertTrue(authenticated);
+        verify(executionContextManager).setCurrentContext(context);
+    }
+
+    private void assertNotPublic(String query, String operationName) throws IOException {
+        assertFalse(validator.validate(query, operationName, request, response),
+                "Expected document to be denied for a public API key: " + query);
+    }
+
     /**
      * An unset {@code org.apache.unomi.security.root.password} resolves to the empty string, which
      * {@code PropertiesLoginModule} accepts as the shipped administrator's password (UNOMI-974).

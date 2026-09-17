@@ -1,0 +1,5 @@
+{
+  "operationName": "Mixed",
+  "variables": {},
+  "query": "query Mixed {\n  cdp {\n    getProfile(profileID: {id: \"nobody\"}) {\n      cdp_profileIDs {\n        id\n      }\n    }\n  }\n  __schema {\n    types {\n      name\n    }\n  }\n}\n"
+}
