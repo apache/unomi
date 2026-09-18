@@ -477,6 +477,7 @@ public class ContextJsonEndpoint {
             List<PersonalizationService.PersonalizedContent> personalizedContents = sanitizePersonalizedContentObjects(
                     personalizationRequest.getContents());
             if (personalizedContents != null && !personalizedContents.isEmpty()) {
+                personalizationRequest.setContents(personalizedContents);
                 result.add(personalizationRequest);
             }
         }
