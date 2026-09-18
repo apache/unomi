@@ -57,6 +57,7 @@ import org.junit.runners.Suite.SuiteClasses;
         PatchIT.class,
         ContextServletIT.class,
         ConditionRegexSafetyIT.class,
+        SchemaIdPatternSafetyIT.class,
         ContextEndpointBaselineIT.class,
         SecurityIT.class,
         RuleServiceIT.class,
