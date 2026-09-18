@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.groovy.actions.services.impl;
 
+import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.ExecutionContext;
@@ -47,6 +48,7 @@ import org.osgi.framework.wiring.BundleWiring;
 
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -58,6 +60,8 @@ import static org.mockito.Mockito.when;
  * Unit tests for the GroovyActionsServiceImpl class.
  */
 public class GroovyActionsServiceImplTest {
+
+    private static final String FIELD_INITIALIZER_MARKER = "unomi.test.groovyFieldInitializerRan";
 
     private GroovyActionsServiceImpl groovyActionsService;
     private TenantService tenantService;
@@ -170,6 +174,51 @@ public class GroovyActionsServiceImplTest {
 
             assertNotNull(definitionsService.getActionType(actionName));
         });
+    }
+
+    /**
+     * Saving an action must compile it without instantiating it. A Groovy {@code @Field} initializer
+     * runs at instantiation, so an implementation that instantiates while saving would run whatever
+     * the script's author put in that initializer at save time, before any rule dispatches the action.
+     * <p>
+     * The positive control matters as much as the assertion. The same script is first run through a
+     * plain {@link GroovyShell}, which must set the marker; without that step a script that silently
+     * failed to set it would make the real assertion pass while proving nothing.
+     */
+    @Test
+    public void testSaveCompilesWithoutInstantiating() throws Exception {
+        String groovyScript = loadGroovyScript(
+            "/META-INF/cxs/actions/fieldInitializerAction.groovy",
+            "Could not find the field-initializer test Groovy action file");
+        System.clearProperty(FIELD_INITIALIZER_MARKER);
+        try {
+            // Positive control: instantiating the script does run the @Field initializer.
+            new GroovyShell().parse(stripActionAnnotation(groovyScript));
+            assertEquals("positive control failed: the @Field initializer did not run even via "
+                            + "GroovyShell#parse, so the assertion below would prove nothing",
+                    "true", System.getProperty(FIELD_INITIALIZER_MARKER));
+            System.clearProperty(FIELD_INITIALIZER_MARKER);
+
+            // The assertion: saving the very same script must not instantiate it.
+            contextManager.executeAsTenant(TENANT_1, () -> {
+                groovyActionsService.save("fieldInitializerAction", groovyScript);
+            });
+
+            assertNull("Saving a Groovy action must compile it without instantiating it, so a @Field "
+                            + "initializer must not run at save time",
+                    System.getProperty(FIELD_INITIALIZER_MARKER));
+        } finally {
+            System.clearProperty(FIELD_INITIALIZER_MARKER);
+        }
+    }
+
+    /**
+     * Drops the {@code @Action} line so the positive control compiles under a bare {@link GroovyShell},
+     * which has neither the service's ImportCustomizer nor its script base class. The {@code @Field}
+     * initializer - the only part under test - is untouched.
+     */
+    private static String stripActionAnnotation(String script) {
+        return script.replaceAll("(?m)^@Action\\(.*\\)$", "");
     }
 
     @Test
