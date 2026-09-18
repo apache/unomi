@@ -30,6 +30,7 @@ import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.output.CDPEventConnection;
 
+import java.util.Arrays;
 import java.util.Map;
 
 public class ProfileAllEventsConnectionDataFetcher extends EventConnectionDataFetcher {
@@ -49,14 +50,20 @@ public class ProfileAllEventsConnectionDataFetcher extends EventConnectionDataFe
 
         final EventConditionFactory eventConditionFactory = EventConditionFactory.get(environment);
 
+        // The profile scope is a boundary, not a default: it must be combined with any client filter,
+        // never replaced by it. Replacing it let a supplied filter widen the query beyond this profile.
+        final Condition profileCondition = eventConditionFactory.propertyCondition("profileId", profile.getItemId());
+
         Condition condition;
 
         if (filterInput == null) {
-            condition = eventConditionFactory.propertyCondition("profileId", profile.getItemId());
+            condition = profileCondition;
         } else {
             final Map<String, Object> filterInputAsMap = environment.getArgument("filter");
 
-            condition = eventConditionFactory.eventFilterInputCondition(filterInput, filterInputAsMap);
+            condition = eventConditionFactory.booleanCondition("and", Arrays.asList(
+                    profileCondition,
+                    eventConditionFactory.eventFilterInputCondition(filterInput, filterInputAsMap)));
         }
 
         final PartialList<Event> events = serviceManager.getService(EventService.class).searchEvents(condition, params.getOffset(), params.getSize());
