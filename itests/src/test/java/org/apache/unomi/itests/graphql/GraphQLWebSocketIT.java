@@ -108,15 +108,13 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
      */
     @Test
     public void testWebSocketUpgrade_withoutAuth_upgradesButCannotOperate() throws Exception {
-        assertStartIsRefusedBeforeAuthentication(new ClientUpgradeRequest());
+        assertStartIsRefusedBeforeAuthentication(null, null);
     }
 
     /** A public API key is not a subscription credential, on the handshake or anywhere else. */
     @Test
     public void testWebSocketUpgrade_withPublicApiKeyOnly_cannotOperate() throws Exception {
-        ClientUpgradeRequest request = new ClientUpgradeRequest();
-        request.setHeader("X-Unomi-Api-Key", testPublicKeyValue);
-        assertStartIsRefusedBeforeAuthentication(request);
+        assertStartIsRefusedBeforeAuthentication("X-Unomi-Api-Key", testPublicKeyValue);
     }
 
     /** connection_init carrying a valid credential is how a browser client authenticates. */
@@ -167,11 +165,20 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
      * The core property of the unauthenticated-upgrade path: an operation sent before authenticating is
      * refused and the socket is closed. Without this, opening the handshake would be a regression.
      */
-    private void assertStartIsRefusedBeforeAuthentication(ClientUpgradeRequest request) throws Exception {
+    /**
+     * Jetty's websocket-client types are kept out of method signatures on purpose: JUnit resolves
+     * signature types when it scans the class, before {@code @Before} has waited for the container,
+     * and that bundle is not necessarily wired yet at that point.
+     */
+    private void assertStartIsRefusedBeforeAuthentication(String headerName, String headerValue) throws Exception {
         WebSocketClient client = new WebSocketClient();
         Socket socket = new Socket();
         try {
             client.start();
+            ClientUpgradeRequest request = new ClientUpgradeRequest();
+            if (headerName != null) {
+                request.setHeader(headerName, headerValue);
+            }
             Future<Session> onConnected = client.connect(socket, graphqlWebSocketUri(), request);
             RemoteEndpoint remote = onConnected.get(10, TimeUnit.SECONDS).getRemote();
 
@@ -198,16 +205,12 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
     @Test
     public void testWebSocketUpgrade_withWrongJaasPassword_returns401() throws Exception {
-        ClientUpgradeRequest request = new ClientUpgradeRequest();
-        request.setHeader("Authorization", basicAuthHeader(BASIC_AUTH_USER_NAME, "definitely-not-the-password"));
-        assertWebSocketUpgradeRejected(request);
+        assertWebSocketUpgradeRejected(basicAuthHeader(BASIC_AUTH_USER_NAME, "definitely-not-the-password"));
     }
 
     @Test
     public void testWebSocketUpgrade_withMalformedBasic_returns401() throws Exception {
-        ClientUpgradeRequest request = new ClientUpgradeRequest();
-        request.setHeader("Authorization", "Basic !!!");
-        assertWebSocketUpgradeRejected(request);
+        assertWebSocketUpgradeRejected("Basic !!!");
     }
 
     @Test
@@ -270,12 +273,14 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
         }
     }
 
-    private void assertWebSocketUpgradeRejected(ClientUpgradeRequest request) throws Exception {
+    private void assertWebSocketUpgradeRejected(String authorization) throws Exception {
         WebSocketClient client = new WebSocketClient();
         Socket socket = new Socket();
         try {
             client.start();
             URI echoUri = new URI("ws://localhost:" + getHttpPort() + "/graphql");
+            ClientUpgradeRequest request = new ClientUpgradeRequest();
+            request.setHeader("Authorization", authorization);
             Future<Session> onConnected = client.connect(socket, echoUri, request);
             try {
                 onConnected.get(10, TimeUnit.SECONDS);
