@@ -1362,5 +1362,27 @@ public class TypeResolutionServiceImplTest {
         assertTrue(info.getReason().contains("missingLeafType"),
             "Reason text must name the actual failing leaf type");
     }
+
+    @Test
+    public void unresolvedConditionTypeTracking_isBounded() {
+        when(definitionsService.getConditionType(startsWith("unknownType-"))).thenReturn(null);
+
+        for (int i = 0; i < 2500; i++) {
+            Condition condition = new Condition();
+            condition.setConditionTypeId("unknownType-" + i);
+            assertFalse(typeResolutionService.resolveConditionType(condition, "boundedness test"));
+        }
+
+        java.lang.reflect.Field field;
+        try {
+            field = TypeResolutionServiceImpl.class.getDeclaredField("unresolvedConditionTypes");
+            field.setAccessible(true);
+            Set<?> tracked = (Set<?>) field.get(typeResolutionService);
+            assertTrue(tracked.size() <= 1000,
+                    "unresolved condition type tracking must stay bounded, but had " + tracked.size() + " entries");
+        } catch (ReflectiveOperationException e) {
+            throw new AssertionError(e);
+        }
+    }
 }
 
