@@ -120,7 +120,7 @@
         <reactive-stream.version>1.0.2</reactive-stream.version>
         <yauaa.version>7.31.0</yauaa.version>
         <bayeux-api.version>4.0.9</bayeux-api.version>
-        <comet-java-client.version>5.0.13</comet-java-client.version>
+        <comet-java-client.version>8.0.12</comet-java-client.version>
         <commons-net.version>3.10.0</commons-net.version>
         <reactivex.version>2.2.19</reactivex.version>
         <graphql.java.version>14.0</graphql.java.version>
