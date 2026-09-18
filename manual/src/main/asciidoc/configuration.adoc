@@ -230,6 +230,9 @@ http://dev.maxmind.com/geoip/geoip2/geolite2/[http://dev.maxmind.com/geoip/geoip
 
 Simply download the GeoLite2-City.mmdb file into the "etc" directory.
 
+`X-Forwarded-For` and the `remoteAddr` query parameter are used only when the direct peer is in
+`org.apache.unomi.ip.trustedProxies` (loopback and private ranges by default).
+
 [#_installing_geonames_database]
 === Installing Geonames database
 
@@ -1330,6 +1333,7 @@ Here are the default values for the location settings :
 ----
 # The following settings represent the default position that is used for localhost requests
 org.apache.unomi.ip.database.location=${env:UNOMI_IP_DB:-${karaf.etc}/GeoLite2-City.mmdb}
+org.apache.unomi.ip.trustedProxies=${env:UNOMI_IP_TRUSTED_PROXIES:-127.0.0.0/8,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10}
 org.apache.unomi.ip.default.countryCode=${env:UNOMI_IP_DEFAULT_COUNTRYCODE:-CH}
 org.apache.unomi.ip.default.countryName=${env:UNOMI_IP_DEFAULT_COUNTRYNAME:-Switzerland}
 org.apache.unomi.ip.default.city=${env:UNOMI_IP_DEFAULT_CITY:-Geneva}
