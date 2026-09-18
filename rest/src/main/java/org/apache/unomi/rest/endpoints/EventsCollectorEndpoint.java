@@ -49,7 +49,7 @@ import java.util.List;
  */
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @Consumes(MediaType.APPLICATION_JSON)
-@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
+@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = false)
 @Path("/")
 @Component(service = EventsCollectorEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class EventsCollectorEndpoint {
