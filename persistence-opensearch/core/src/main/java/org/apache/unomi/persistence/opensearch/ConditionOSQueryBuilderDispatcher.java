@@ -187,11 +187,19 @@ public class ConditionOSQueryBuilderDispatcher extends ConditionQueryBuilderDisp
         if (finalQueryBuilderKey != null) {
             ConditionOSQueryBuilder queryBuilder = queryBuilders.get(finalQueryBuilderKey);
             Condition contextualCondition = ConditionContextHelper.getContextualCondition(effectiveCondition, context, scriptExecutor);
-            if (contextualCondition != null) {
-                return queryBuilder.buildQuery(contextualCondition, context, this);
+            if (ConditionContextHelper.UNRESOLVABLE == contextualCondition) {
+                // A cycle, a depth overrun or a script that did not run. Nothing is known about what
+                // this condition would have constrained, so it selects nothing.
+                LOGGER.warn("Could not resolve the condition of type {}, returning a match-none query",
+                    effectiveCondition.getConditionTypeId());
+                return Query.of(q -> q.matchNone(m -> m));
             }
-            LOGGER.warn("getContextualCondition returned null for conditionTypeId={}, returning match-none query",
-                effectiveCondition.getConditionTypeId());
+            if (contextualCondition == null) {
+                // The condition carries a parameter reference the context does not supply, which
+                // states no constraint, so it selects everything and the enclosing query decides.
+                return Query.of(q -> q.matchAll(m -> m));
+            }
+            return queryBuilder.buildQuery(contextualCondition, context, this);
         } else {
             LOGGER.warn("No matching query builder for conditionTypeId={} (queryBuilderKey={})",
                 effectiveCondition.getConditionTypeId(), queryBuilderKey);
@@ -267,7 +275,7 @@ public class ConditionOSQueryBuilderDispatcher extends ConditionQueryBuilderDisp
         if (finalQueryBuilderKey != null) {
             ConditionOSQueryBuilder queryBuilder = queryBuilders.get(finalQueryBuilderKey);
             Condition contextualCondition = ConditionContextHelper.getContextualCondition(effectiveCondition, context, scriptExecutor);
-            if (contextualCondition != null) {
+            if (contextualCondition != null && ConditionContextHelper.UNRESOLVABLE != contextualCondition) {
                 return queryBuilder.count(contextualCondition, context, this);
             }
         }

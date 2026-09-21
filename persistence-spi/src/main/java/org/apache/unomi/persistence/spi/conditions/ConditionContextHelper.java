@@ -71,6 +71,18 @@ public class ConditionContextHelper {
     private static final Object RESOLUTION_ERROR = new Object();
 
     /**
+     * Returned by {@link #getContextualCondition} when the condition cannot be resolved at all,
+     * because a parameter reference forms a cycle, exceeds {@link #MAX_RESOLUTION_DEPTH}, or a
+     * script expression could not run.
+     * <p>
+     * This is a different answer from {@code null}, which says the condition carries a parameter
+     * reference the context does not supply. A caller drops a {@code null} condition, because an
+     * unset parameter states no constraint. A caller must not drop this one: nothing is known
+     * about what it would have constrained, so the caller refuses the match instead.
+     */
+    public static final Condition UNRESOLVABLE = new Condition();
+
+    /**
      * Expected-type names that {@link #isTypeCompatible(String, String)} can actually reason
      * about. A mismatch against one of these is a genuine, actionable signal. Anything else is
      * a custom/registry-only type (e.g. "comparisonOperator") whose real check lives in a
@@ -242,7 +254,10 @@ public class ConditionContextHelper {
             context, condition.getParameterValues(), scriptExecutor,
             parameterDefs, tracerService, condition.getConditionTypeId(), effectiveValidators);
 
-        if (rawValues == null || rawValues == RESOLUTION_ERROR) {
+        if (rawValues == RESOLUTION_ERROR) {
+            return UNRESOLVABLE;
+        }
+        if (rawValues == null) {
             return null;
         }
         @SuppressWarnings("unchecked")
@@ -396,8 +411,17 @@ public class ConditionContextHelper {
                     context, paramValue, scriptExecutor, parameterDefs,
                     tracerService, conditionTypeId, valueTypeValidators, resolutionChain, depth);
 
-                // If resolution returned an error marker, return null for entire map
+                // Propagate the error marker so the caller can tell a broken reference from an
+                // unset one.
                 if (parameter == RESOLUTION_ERROR) {
+                    return RESOLUTION_ERROR;
+                }
+
+                // A parameter reference the context does not supply voids the whole condition, so
+                // that the caller drops it. This is how an optional condition parameter works: a
+                // pageViewEventCondition with no pagePath must not become "pagePath equals null",
+                // which matches no page at all.
+                if (parameter == null && isParameterReference(paramValue)) {
                     return null;
                 }
 
