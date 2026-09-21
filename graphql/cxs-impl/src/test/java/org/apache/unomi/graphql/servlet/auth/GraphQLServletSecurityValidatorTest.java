@@ -377,6 +377,9 @@ class GraphQLServletSecurityValidatorTest {
     /** Control: a non-blank credential still reaches the realm and is accepted by it. */
     @Test
     void validate_withNonBlankPassword_reachesJaas() throws IOException {
+        // Role + system access are required after JAAS succeeds when no tenant header is present.
+        givenAdministratorRole();
+        when(securityService.hasSystemAccess()).thenReturn(true);
         when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH);
         when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
 
