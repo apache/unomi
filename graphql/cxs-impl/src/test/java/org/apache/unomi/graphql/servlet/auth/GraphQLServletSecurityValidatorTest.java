@@ -243,6 +243,8 @@ class GraphQLServletSecurityValidatorTest {
     /** HTTP authentication scheme names are case-insensitive. */
     @Test
     void validateWebSocketUpgrade_withLowercaseScheme_isAccepted() throws IOException {
+        givenAdministratorRole();
+        when(securityService.hasSystemAccess()).thenReturn(true);
         when(request.getHeader("Authorization")).thenReturn(BASIC_AUTH.replaceFirst("Basic", "basic"));
         when(tenantService.getTenantByApiKey(any(), eq(ApiKey.ApiKeyType.PRIVATE))).thenReturn(null);
 
