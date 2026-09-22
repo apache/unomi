@@ -25,7 +25,7 @@
 #
 # Usage:
 #   export UNOMI_ROOT_PASSWORD='your-admin-password'
-#   ./setup.sh [--version <sample-version>]
+#   ./setup.sh
 #
 # Optional environment overrides:
 #   UNOMI_URL        base URL of the running Unomi   (default http://localhost:8181)
@@ -41,14 +41,13 @@ TENANT_ID="${UNOMI_TENANT_ID:-default}"
 SCOPE="${UNOMI_SCOPE:-default}"
 PID="org.apache.unomi.samples.login"
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-SAMPLE_VERSION=""
 
 usage() {
     cat <<'USAGE'
 Provisions and configures the Apache Unomi login sample on a local instance.
 
   export UNOMI_ROOT_PASSWORD='your-admin-password'
-  ./setup.sh [--version <sample-version>]
+  ./setup.sh
 
 Environment overrides: UNOMI_URL, UNOMI_TENANT_ID, UNOMI_SCOPE, KARAF_HOME, DEMO_PASSWORD.
 USAGE
@@ -67,7 +66,6 @@ properties_escape() {
 
 while [ $# -gt 0 ]; do
     case "$1" in
-        --version) SAMPLE_VERSION="${2:?--version needs a value}"; shift 2 ;;
         -h|--help) usage; exit 0 ;;
         *) echo "Unknown argument: $1 (try --help)" >&2; exit 2 ;;
     esac

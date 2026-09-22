@@ -19,10 +19,22 @@ package org.apache.unomi.samples.login;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.net.httpserver.HttpServer;
+
+import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -349,5 +361,142 @@ class LoginServletTest {
      */
     private static int intThatIsAShortTimeout() {
         return org.mockito.ArgumentMatchers.intThat(seconds -> seconds > 0 && seconds <= 600);
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // doPost — the trusted call itself: right credentials, right event, nothing from the caller
+    // beyond the form fields, and Unomi's cookies handed back to the browser.
+    // ------------------------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("doPost calls Unomi with the configured tenant private key and forwards the response and cookies")
+    void doPostCallsUnomiWithTrustedCredentialsAndForwardsCookies() throws Exception {
+        AtomicReference<String> authorization = new AtomicReference<>();
+        AtomicReference<String> query = new AtomicReference<>();
+        AtomicReference<byte[]> body = new AtomicReference<>();
+        HttpServer unomi = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        unomi.createContext("/cxs/context.json", exchange -> {
+            authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+            query.set(exchange.getRequestURI().getRawQuery());
+            try (InputStream in = exchange.getRequestBody()) {
+                body.set(in.readAllBytes());
+            }
+            byte[] out = "{\"profileId\":\"master\"}".getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Set-Cookie", "context-profile-id=master; Path=/");
+            exchange.getResponseHeaders().add("Set-Cookie", "context-session-id=s; Path=/");
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, out.length);
+            exchange.getResponseBody().write(out);
+            exchange.close();
+        });
+        unomi.start();
+        try {
+            LoginServlet servlet = new LoginServlet();
+            servlet.activate(config("http://127.0.0.1:" + unomi.getAddress().getPort(), "acme", "web", "private-key", "demo-pass"));
+
+            HttpSession session = statefulSession();
+            HttpServletRequest req = requestWithSession(session);
+            when(req.getParameter("email")).thenReturn("alice@example.com");
+            when(req.getParameter("firstName")).thenReturn("Alice");
+            when(req.getParameter("lastName")).thenReturn("Doe");
+            when(req.getParameter("password")).thenReturn("demo-pass");
+            when(req.getParameter("sessionId")).thenReturn("attacker-chosen-session");
+            HttpServletResponse resp = mock(HttpServletResponse.class);
+            ByteArrayOutputStream written = new ByteArrayOutputStream();
+            when(resp.getOutputStream()).thenReturn(capturing(written));
+
+            servlet.doPost(req, resp);
+
+            String expectedToken = Base64.getEncoder().encodeToString("acme:private-key".getBytes(StandardCharsets.UTF_8));
+            assertEquals("Basic " + expectedToken, authorization.get(), "the tenant private key must authenticate the call");
+            String unomiSessionId = (String) session.getAttribute("org.apache.unomi.samples.login.unomiSessionId");
+            assertEquals("sessionId=" + unomiSessionId, query.get(), "the session id must be the servlet's own, never the caller's");
+            JsonNode sent = new ObjectMapper().readTree(body.get());
+            assertEquals("login", sent.get("events").get(0).get("eventType").asText());
+            assertEquals("web", sent.get("events").get(0).get("scope").asText());
+            assertEquals("alice@example.com", sent.get("events").get(0).get("target").get("properties").get("email").asText());
+            verify(resp).setStatus(200);
+            verify(resp).addHeader("Set-Cookie", "context-profile-id=master; Path=/");
+            verify(resp).addHeader("Set-Cookie", "context-session-id=s; Path=/");
+            assertEquals("master", new ObjectMapper().readTree(written.toByteArray()).get("profileId").asText());
+        } finally {
+            unomi.stop(0);
+        }
+    }
+
+    @Test
+    @DisplayName("doPost rejects a wrong demo password before touching Unomi")
+    void doPostRejectsWrongPasswordWithoutCallingUnomi() throws Exception {
+        AtomicReference<Boolean> called = new AtomicReference<>(false);
+        HttpServer unomi = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        unomi.createContext("/", exchange -> { called.set(true); exchange.sendResponseHeaders(500, -1); exchange.close(); });
+        unomi.start();
+        try {
+            LoginServlet servlet = new LoginServlet();
+            servlet.activate(config("http://127.0.0.1:" + unomi.getAddress().getPort(), "acme", "web", "private-key", "demo-pass"));
+            HttpServletRequest req = requestWithSession(statefulSession());
+            when(req.getParameter("email")).thenReturn("alice@example.com");
+            when(req.getParameter("password")).thenReturn("wrong");
+            HttpServletResponse resp = mock(HttpServletResponse.class);
+            when(resp.getOutputStream()).thenReturn(capturing(new ByteArrayOutputStream()));
+
+            servlet.doPost(req, resp);
+
+            verify(resp).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            assertFalse(called.get(), "Unomi must not be called for a failed login");
+        } finally {
+            unomi.stop(0);
+        }
+    }
+
+    @Test
+    @DisplayName("doPost answers 502 with a generic message when Unomi is unreachable")
+    void doPostAnswersBadGatewayWhenUnomiIsUnreachable() throws Exception {
+        HttpServer probe = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        int closedPort = probe.getAddress().getPort();
+        probe.stop(0);
+        LoginServlet servlet = new LoginServlet();
+        servlet.activate(config("http://127.0.0.1:" + closedPort, "acme", "web", "private-key", "demo-pass"));
+        HttpServletRequest req = requestWithSession(statefulSession());
+        when(req.getParameter("email")).thenReturn("alice@example.com");
+        when(req.getParameter("password")).thenReturn("demo-pass");
+        HttpServletResponse resp = mock(HttpServletResponse.class);
+        ByteArrayOutputStream written = new ByteArrayOutputStream();
+        when(resp.getOutputStream()).thenReturn(capturing(written));
+
+        servlet.doPost(req, resp);
+
+        verify(resp).setStatus(HttpServletResponse.SC_BAD_GATEWAY);
+        String message = written.toString(StandardCharsets.UTF_8);
+        assertTrue(message.contains("Profile service unavailable"), message);
+        assertFalse(message.contains("127.0.0.1"), "the upstream address must not leak: " + message);
+    }
+
+    private static LoginServlet.Config config(String baseUrl, String tenantId, String scope, String privateKey, String demoPassword) {
+        LoginServlet.Config config = mock(LoginServlet.Config.class);
+        when(config.unomiBaseUrl()).thenReturn(baseUrl);
+        when(config.tenantId()).thenReturn(tenantId);
+        when(config.scope()).thenReturn(scope);
+        when(config.privateKey()).thenReturn(privateKey);
+        when(config.demoPassword()).thenReturn(demoPassword);
+        return config;
+    }
+
+    private static ServletOutputStream capturing(ByteArrayOutputStream sink) {
+        return new ServletOutputStream() {
+            @Override
+            public void write(int b) {
+                sink.write(b);
+            }
+
+            @Override
+            public boolean isReady() {
+                return true;
+            }
+
+            @Override
+            public void setWriteListener(javax.servlet.WriteListener writeListener) {
+            }
+        };
     }
 }

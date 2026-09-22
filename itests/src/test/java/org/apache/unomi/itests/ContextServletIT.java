@@ -580,6 +580,10 @@ public class ContextServletIT extends BaseIT {
         assertEquals("Public login must not take over the other profile",
                 publicCallerId, afterLogin.getContextResponse().getProfileId());
         assertNotNull(profileService.load(otherId));
+        shouldBeTrueUntilEnd("Public login must not record the claimed identifier on the caller profile",
+                () -> profileService.load(publicCallerId),
+                p -> p == null || p.getSystemProperties().get("mergeIdentifier") == null,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
         rulesService.removeRule("testLogin");
     }
 

@@ -190,4 +190,92 @@ public class UpdatePropertiesActionTest {
         verify(profileService).load("other");
         verify(profileService).save(other);
     }
+
+    /**
+     * commons-beanutils also accepts the mapped syntax {@code systemProperties(key)}. It has no
+     * dot, so PropertyHelper hands it to {@code BeanUtils.setProperty} unchanged, and beanutils
+     * resolves it as {@code getSystemProperties().put(key, value)}: the same write as the dotted
+     * form, which a prefix check on {@code systemProperties.} never saw.
+     */
+    @Test
+    public void untrustedCaller_cannotWriteSystemPropertiesViaMappedSyntax() {
+        Profile caller = new Profile("caller");
+        Map<String, Object> updateMap = new HashMap<>();
+        updateMap.put("systemProperties(mergeIdentifier)", "victim@example.com");
+        Map<String, Object> eventProps = new HashMap<>();
+        eventProps.put(UpdatePropertiesAction.PROPS_TO_UPDATE, updateMap);
+
+        Event event = new Event("updateProperties", null, caller, "systemscope", null, null, eventProps, new Date(), true);
+
+        int changes = actionExecutor.execute(new Action(), event);
+
+        assertEquals(EventService.NO_CHANGE, changes);
+        assertEquals(null, caller.getSystemProperties().get("mergeIdentifier"));
+    }
+
+    @Test
+    public void untrustedCaller_cannotAddToSystemPropertiesSet() {
+        Profile caller = new Profile("caller");
+        Map<String, Object> addToSetMap = new HashMap<>();
+        addToSetMap.put("systemProperties.mergeIdentifier", "victim@example.com");
+        Map<String, Object> eventProps = new HashMap<>();
+        eventProps.put(UpdatePropertiesAction.PROPS_TO_ADD_TO_SET, addToSetMap);
+
+        Event event = new Event("updateProperties", null, caller, "systemscope", null, null, eventProps, new Date(), true);
+
+        int changes = actionExecutor.execute(new Action(), event);
+
+        assertEquals(EventService.NO_CHANGE, changes);
+        assertEquals(null, caller.getSystemProperties().get("mergeIdentifier"));
+    }
+
+    @Test
+    public void untrustedCaller_cannotDeleteASystemPropertiesEntry() {
+        Profile caller = new Profile("caller");
+        caller.getSystemProperties().put("mergeIdentifier", "legitimate@example.com");
+        Map<String, Object> eventProps = new HashMap<>();
+        eventProps.put(UpdatePropertiesAction.PROPS_TO_DELETE,
+                java.util.Collections.singletonList("systemProperties.mergeIdentifier"));
+
+        Event event = new Event("updateProperties", null, caller, "systemscope", null, null, eventProps, new Date(), true);
+
+        int changes = actionExecutor.execute(new Action(), event);
+
+        assertEquals(EventService.NO_CHANGE, changes);
+        assertEquals("legitimate@example.com", caller.getSystemProperties().get("mergeIdentifier"));
+    }
+
+    @Test
+    public void writableCheck_isAnAllowlistOnAreaAndPathShape() {
+        // public callers: only plain dotted paths under properties
+        assertEquals(true, UpdatePropertiesAction.isWritable("properties.firstName", false));
+        assertEquals(true, UpdatePropertiesAction.isWritable("properties.address.city", false));
+        assertEquals(true, UpdatePropertiesAction.isWritable("properties.j:nodename", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable("systemProperties.mergeIdentifier", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable("systemProperties(mergeIdentifier)", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable("systemProperties", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable("segments", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable("scores.vip", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable("consents.newsletter", false));
+        // identity and bookkeeping fields: nobody
+        assertEquals(false, UpdatePropertiesAction.isWritable("itemId", true));
+        assertEquals(false, UpdatePropertiesAction.isWritable("mergedWith", true));
+        assertEquals(false, UpdatePropertiesAction.isWritable("tenantId", true));
+        assertEquals(false, UpdatePropertiesAction.isWritable("version", true));
+        assertEquals(false, UpdatePropertiesAction.isWritable("class.classLoader", true));
+        // trusted callers: the reserved areas, still as plain paths only
+        assertEquals(true, UpdatePropertiesAction.isWritable("systemProperties.mergeIdentifier", true));
+        assertEquals(true, UpdatePropertiesAction.isWritable("systemProperties", true));
+        assertEquals(true, UpdatePropertiesAction.isWritable("segments", true));
+        assertEquals(false, UpdatePropertiesAction.isWritable("systemProperties(mergeIdentifier)", true));
+        assertEquals(false, UpdatePropertiesAction.isWritable("properties[0]", true));
+        // path shape
+        assertEquals(false, UpdatePropertiesAction.isWritable("properties..x", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable("properties.", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable(".properties.x", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable("properties.a\tb", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable("properties.a\nb", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable("", false));
+        assertEquals(false, UpdatePropertiesAction.isWritable(null, false));
+    }
 }

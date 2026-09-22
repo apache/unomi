@@ -197,17 +197,15 @@ public class ProfileMergeIT extends BaseIT {
         Session session = new Session("untrustedMergeSession", publicCaller, new Date(), null);
         Event event = new Event(TEST_EVENT_TYPE, session, publicCaller, null, null, publicCaller, new Date());
 
-        javax.security.auth.Subject previous = securityService.getCurrentSubject();
-        try {
-            securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, false));
-            eventService.send(event);
-        } finally {
-            securityService.setCurrentSubject(previous);
-        }
+        runAsTenantSubject(false, () -> eventService.send(event));
 
         Assert.assertEquals("publicCallerProfileID", event.getProfile().getItemId());
         Assert.assertEquals("publicCallerProfileID", event.getSession().getProfile().getItemId());
         Assert.assertNotNull(profileService.load("otherProfileID"));
+        // The identity claim must not be recorded either: a planted mergeIdentifier is what a later
+        // trusted login for other@example.com would merge on, pulling this profile into that merge.
+        Assert.assertNull("untrusted caller must not record a merge identifier",
+                publicCaller.getSystemProperties().get("mergeIdentifier"));
     }
 
     @Test
@@ -229,13 +227,7 @@ public class ProfileMergeIT extends BaseIT {
         Session session = new Session("trustedMergeSession", caller, new Date(), null);
         Event event = new Event(TEST_EVENT_TYPE, session, caller, null, null, caller, new Date());
 
-        javax.security.auth.Subject previous = securityService.getCurrentSubject();
-        try {
-            securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, true));
-            eventService.send(event);
-        } finally {
-            securityService.setCurrentSubject(previous);
-        }
+        runAsTenantSubject(true, () -> eventService.send(event));
 
         Assert.assertEquals("trustedOtherProfileID", event.getProfile().getItemId());
         Assert.assertEquals("trustedOtherProfileID", event.getSession().getProfile().getItemId());

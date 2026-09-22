@@ -137,8 +137,10 @@ defining the corresponding JSON schema and you're ready to update profiles using
 only. Being a protected event type, it is only accepted from an authorized source address — a configured third-party
 server, or in V2 compatibility mode an `X-Unomi-Peer` key valid for that source address. Note that this is an
 address-based gate: it is independent of the public-versus-trusted caller distinction that governs profile and session
-binding (see <<_client_facing_hardening_3_1,client-facing hardening>>), and once the event is accepted its `targetId`
-and `systemProperties.*` writes are not further restricted. Prefer custom events for public visitors. Again, prefer the
+binding (see <<_client_facing_hardening_3_1,client-facing hardening>>), and once the event is accepted a public-key
+caller may only write plain `properties.*` paths on the current profile; `targetId`, `systemProperties`, `segments`,
+`scores` and `consents` require a trusted caller (system administrator or tenant private key), and identity fields such
+as `itemId` are never writable. Refused names are skipped with a `WARN` log entry. Prefer custom events for public visitors. Again, prefer the
 custom events solution because as this is a
 protected event it will require sending trusted credentials, and as Unomi only supports a single key for the moment it
 could be problematic if the key is intercepted. But at least by using an event you will get the benefits of auditing and

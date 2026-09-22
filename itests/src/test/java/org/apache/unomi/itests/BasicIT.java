@@ -199,12 +199,15 @@ public class BasicIT extends BaseIT {
         // Create login event with VISITOR_1
         ContextRequest contextRequestLoginVisitor1 = getContextRequestWithLoginEvent(sourceSite, loginEventPropertiesVisitor1,
                 EMAIL_VISITOR_1, SESSION_ID_3);
+        // Login events come from the trusted server side: only a trusted caller may record the
+        // merge identifier that the later identity switch below relies on.
         HttpPost requestLoginVisitor1 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestLoginVisitor1.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
-        requestLoginVisitor1.addHeader("X-Unomi-Api-Key", testPublicKeyValue);
+        requestLoginVisitor1.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
+                (TEST_TENANT_ID + ":" + testPrivateKeyValue).getBytes()));
         requestLoginVisitor1.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestLoginVisitor1),
                 ContentType.create("application/json")));
-        TestUtils.RequestResponse requestResponseLoginVisitor1 = executeContextJSONRequest(requestLoginVisitor1, SESSION_ID_3);
+        TestUtils.RequestResponse requestResponseLoginVisitor1 = executeContextJSONRequest(requestLoginVisitor1, SESSION_ID_3, -1, false);
         Assert.assertEquals("Context profile id should be the same", profileIdVisitor1,
                 requestResponseLoginVisitor1.getContextResponse().getProfileId());
         checkVisitor1ResponseProperties(requestResponseLoginVisitor1.getContextResponse().getProfileProperties());

@@ -95,7 +95,11 @@ trusted credentials hands that power straight back to the browser: anyone who gu
 visitor's session id could rebind or merge that visitor's profile.
 
 `LoginServlet` therefore derives the session id from state it controls — a UUID stored on the
-browser's container `HttpSession` — and never reads it from a request parameter. Apply the same rule
+browser's container `HttpSession` — and never reads it from a request parameter. The consequence is
+that the anonymous profile the browser built up through the public tracker before logging in is
+*not* linked by this sample: doing so requires forwarding a browser-chosen identifier (the profile
+cookie or the tracker's session id) under trusted credentials, which your server must only do once
+it has established that the identifier belongs to the caller. Apply the same rule
 in your own integration:
 
 * Derive the `sessionId` from your authenticated server-side session, not from the request body.

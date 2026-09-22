@@ -90,7 +90,7 @@ public class LoginServlet extends HttpServlet {
 
     @ObjectClassDefinition(
             name = "Unomi login sample",
-            description = "Trusted credentials used by /login/authenticate to call Unomi (UNOMI-972)"
+            description = "Trusted credentials used by /login/authenticate to call Unomi (UNOMI-978)"
     )
     public @interface Config {
 
@@ -206,8 +206,12 @@ public class LoginServlet extends HttpServlet {
         // would launder untrusted client input across the trust boundary and let anyone who guesses
         // another visitor's session id rebind or merge that visitor's profile. Storing a generated
         // id on the container's own HttpSession keeps it unreachable from the page while staying stable
-        // across requests from the same browser, which is what lets Unomi recover the visitor's
-        // pre-login anonymous profile.
+        // across requests from the same browser, so repeated logins from one browser hit the same
+        // Unomi session. The trade-off is deliberate: nothing from the visitor's own tracking
+        // (the context-profile-id cookie, the tracker's session id) is forwarded, so the anonymous
+        // profile the browser built up before logging in is NOT linked here. Linking it means
+        // forwarding a browser-chosen identifier under trusted credentials, and an integration
+        // that wants that must first prove the identifier belongs to the caller.
         String sessionId = resolveSessionId(req);
 
         // Only a tenant private key. A system administrator credential would also satisfy the merge

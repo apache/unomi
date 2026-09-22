@@ -26,7 +26,6 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.security.SecurityService;
-import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
@@ -112,6 +111,20 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 return EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED;
             }
 
+            // Recording the merge identifier is itself an identity claim, not just the merge that
+            // may follow it: a value persisted here is what a later, trusted login for the same
+            // identifier queries on, so an untrusted caller that could plant it would have its
+            // profile pulled into that merge (and aliased onto the master) once the real owner logs
+            // in. Refuse the whole step, not only the merge, for callers without system access.
+            if (!isTrustedIdentityCaller()) {
+                LOGGER.warn("Refusing merge identity claim for untrusted caller (mergeProp={}, candidates={})",
+                        mergePropName, profilesToBeMerge.size());
+                if (tracer != null) {
+                    tracer.endOperation(false, "Untrusted caller cannot claim a merge identity");
+                }
+                return EventService.NO_CHANGE;
+            }
+
             // Store merge prop on current profile
             boolean profileUpdated = false;
             if (StringUtils.isEmpty(currentProfileMergeValue)) {
@@ -124,18 +137,6 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 if (tracer != null) {
                     tracer.endOperation(profileUpdated, profileUpdated ? "Profile updated but no merges needed" : "No changes needed");
                 }
-                return profileUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
-            }
-
-            // Merging into another existing profile rebinds the session — require a caller holding
-            // system access (see isTrustedIdentityCaller), not a public/unauthenticated event.
-            if (!isTrustedIdentityCaller()) {
-                LOGGER.warn("Refusing profile merge for untrusted caller (mergeProp={}, candidates={})",
-                        mergePropName, profilesToBeMerge.size());
-                if (tracer != null) {
-                    tracer.endOperation(false, "Untrusted caller cannot merge into another profile");
-                }
-                // Keep only the merge identifier write on the current profile when it was empty
                 return profileUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
             }
 
@@ -348,15 +349,12 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     }
 
     /**
-     * Whether the caller holds system access, i.e. the administrator or tenant administrator role.
-     * <p>
-     * This is a role check, not a check of the credential that produced it: a tenant private key
-     * authenticates as {@link UnomiRoles#TENANT_ADMINISTRATOR} and therefore passes, while a tenant
-     * public API key or an unauthenticated context event does not. Identity merges rebind sessions,
-     * so they are restricted to callers that hold that role.
+     * Identity claims (switching, recording or merging on a merge identifier) are restricted to
+     * callers holding system access; see {@link IdentityTrust}. This applies to a switch even when
+     * no candidate profile exists yet: the switch still rebinds the session to a new profile.
      */
     private boolean isTrustedIdentityCaller() {
-        return securityService != null && securityService.hasSystemAccess();
+        return IdentityTrust.isTrustedIdentityCaller(securityService);
     }
 
     public void setProfileService(ProfileService profileService) {

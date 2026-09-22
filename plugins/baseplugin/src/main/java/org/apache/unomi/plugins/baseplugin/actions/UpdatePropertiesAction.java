@@ -26,7 +26,6 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.utils.LogSanitizer;
-import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
@@ -36,6 +35,7 @@ import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 public class UpdatePropertiesAction implements ActionExecutor {
 
@@ -49,10 +49,21 @@ public class UpdatePropertiesAction implements ActionExecutor {
 
     public static final String TARGET_TYPE_PROFILE = "profile";
 
-    /** The reserved profile field that only a caller with system access may write. */
-    private static final String SYSTEM_PROPERTIES_KEY = "systemProperties";
-    /** Prefix of the profile properties that only a caller with system access may write. */
-    private static final String SYSTEM_PROPERTIES_PREFIX = SYSTEM_PROPERTIES_KEY + ".";
+    /**
+     * The only profile areas an event may write, by caller trust. Everything else on the bean
+     * ({@code itemId}, {@code itemType}, {@code tenantId}, {@code version}, {@code mergedWith},
+     * {@code scope}, {@code systemMetadata}, ...) is identity or bookkeeping and is never writable
+     * through an event: an allowlist needs no knowledge of what a future field might be called.
+     */
+    private static final Set<String> PUBLIC_WRITABLE_AREAS = Set.of("properties");
+    private static final Set<String> TRUSTED_WRITABLE_AREAS = Set.of("properties", "systemProperties", "segments", "scores", "consents");
+    /**
+     * A plain dotted path: non-empty segments, no control characters, and none of the
+     * commons-beanutils mapped/indexed syntax ({@code a(b)}, {@code a[0]}) that
+     * {@link PropertyHelper#setProperty} would otherwise interpret. Everything this action
+     * legitimately writes is expressible as {@code area.key.subkey}.
+     */
+    private static final Pattern PROPERTY_PATH = Pattern.compile("[^.()\\[\\]\\p{Cntrl}]+(?:\\.[^.()\\[\\]\\p{Cntrl}]+)*");
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UpdatePropertiesAction.class.getName());
 
@@ -124,8 +135,9 @@ public class UpdatePropertiesAction implements ActionExecutor {
             List<String> propsToDelete = (List<String>) event.getProperties().get(PROPS_TO_DELETE);
             if (propsToDelete != null) {
                 for (String prop : propsToDelete) {
-                    if (!trustedCaller && isSystemPropertiesWrite(prop)) {
-                        LOGGER.warn("Refusing systemProperties delete for untrusted caller: {}", LogSanitizer.forLogging(prop));
+                    if (!isWritable(prop, trustedCaller)) {
+                        LOGGER.warn("Refusing property delete for {} caller: {}", trustedCaller ? "trusted" : "untrusted",
+                                LogSanitizer.forLogging(prop));
                         continue;
                     }
                     isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, null, "remove");
@@ -166,12 +178,13 @@ public class UpdatePropertiesAction implements ActionExecutor {
     private boolean processProperties(Profile target, Map<String, Object> propsMap, String strategy, boolean trustedCaller) {
         boolean isProfileOrPersonaUpdated = false;
         for (String prop : propsMap.keySet()) {
-            if (!trustedCaller && isSystemPropertiesWrite(prop)) {
-                LOGGER.warn("Refusing systemProperties update for untrusted caller: {}", LogSanitizer.forLogging(prop));
+            if (!isWritable(prop, trustedCaller)) {
+                LOGGER.warn("Refusing property write for {} caller: {}", trustedCaller ? "trusted" : "untrusted",
+                        LogSanitizer.forLogging(prop));
                 continue;
             }
             PropertyType propType = null;
-            if (prop.startsWith("properties.") || prop.startsWith(SYSTEM_PROPERTIES_PREFIX)) {
+            if (prop.startsWith("properties.") || prop.startsWith("systemProperties.")) {
                 propType = profileService.getPropertyType(prop.substring(prop.indexOf('.') + 1));
             } else {
                 propType = profileService.getPropertyType(prop);
@@ -191,30 +204,29 @@ public class UpdatePropertiesAction implements ActionExecutor {
 
 
     /**
-     * Whether a property name writes the reserved {@code systemProperties} area.
+     * Whether an event-supplied property name may be written by this caller.
      * <p>
-     * Matching the {@code systemProperties.} prefix alone was not enough: the bare key
-     * {@code systemProperties} has no dot, so it slipped through, and for a flat name
-     * {@link org.apache.unomi.persistence.spi.PropertyHelper#setProperty} falls through to
-     * {@code BeanUtils.setProperty}, which invokes {@code Profile#setSystemProperties(Map)} and
-     * replaces the entire map. That is strictly more than the per-key write this gate blocks — it
-     * is enough to plant {@code mergeIdentifier} and drive the profile-merge action.
+     * One rule covers every injection shape seen against this action: the name must be a plain
+     * dotted path (so beanutils mapped/indexed syntax, empty segments and control characters are
+     * out), and its first segment must be one of the areas allowed for the caller's trust level
+     * (so identity fields such as {@code itemId} or {@code mergedWith}, and for public callers
+     * {@code systemProperties}, {@code segments}, {@code scores} and {@code consents}, are out).
      *
      * @param propertyName the event-supplied property name
-     * @return true when the name targets systemProperties, whether wholesale or a single entry
+     * @param trustedCaller whether the caller holds system access
+     * @return true when the write is allowed
      */
-    private static boolean isSystemPropertiesWrite(String propertyName) {
-        return SYSTEM_PROPERTIES_KEY.equals(propertyName) || propertyName.startsWith(SYSTEM_PROPERTIES_PREFIX);
+    static boolean isWritable(String propertyName, boolean trustedCaller) {
+        if (propertyName == null || !PROPERTY_PATH.matcher(propertyName).matches()) {
+            return false;
+        }
+        int dot = propertyName.indexOf('.');
+        String area = dot < 0 ? propertyName : propertyName.substring(0, dot);
+        return (trustedCaller ? TRUSTED_WRITABLE_AREAS : PUBLIC_WRITABLE_AREAS).contains(area);
     }
-    /**
-     * Whether the caller holds system access, i.e. the administrator or tenant administrator role.
-     * <p>
-     * Cross-profile updates and {@code systemProperties.*} writes are restricted to such callers.
-     * A tenant private key authenticates as {@link UnomiRoles#TENANT_ADMINISTRATOR} and passes; a
-     * tenant public API key or an unauthenticated context event does not.
-     */
+
     private boolean isTrustedIdentityCaller() {
-        return securityService != null && securityService.hasSystemAccess();
+        return IdentityTrust.isTrustedIdentityCaller(securityService);
     }
 
     public void setProfileService(ProfileService profileService) {

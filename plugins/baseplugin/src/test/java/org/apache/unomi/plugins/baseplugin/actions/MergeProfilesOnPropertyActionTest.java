@@ -41,7 +41,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -94,10 +94,48 @@ public class MergeProfilesOnPropertyActionTest {
 
         int changes = actionExecutor.execute(action, event);
 
-        // May write mergeIdentifier onto the untrusted caller profile, but must not rebind to other
-        assertNotEquals(EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED, changes);
+        assertEquals(EventService.NO_CHANGE, changes);
         assertEquals("public-caller", event.getProfile().getItemId());
+        assertNull("the untrusted caller must not record the identity claim either",
+                publicCaller.getSystemProperties().get("mergeIdentifier"));
         verify(profileService, never()).mergeProfiles(any(), any());
+    }
+
+    /**
+     * The identifier write is the poisoning primitive, independently of whether a candidate exists
+     * today: a value planted here is what a later trusted login for the same identifier merges on,
+     * which would pull the planter's profile into the real owner's merge and alias it onto the
+     * master. So the empty-candidates path must refuse too, not only the merge path.
+     */
+    @Test
+    public void untrustedCaller_cannotRecordMergeIdentifierEvenWithoutCandidates() {
+        Profile publicCaller = new Profile("public-caller");
+
+        when(persistenceService.query(any(), anyString(), eq(Profile.class), anyInt(), anyInt()))
+                .thenReturn(new PartialList<>(new ArrayList<>(), 0, 0, 0, PartialList.Relation.EQUAL));
+
+        Event event = new Event("login", null, publicCaller, "systemscope", null, null, null, new Date(), true);
+
+        int changes = actionExecutor.execute(mergeAction("victim@example.com"), event);
+
+        assertEquals(EventService.NO_CHANGE, changes);
+        assertNull(publicCaller.getSystemProperties().get("mergeIdentifier"));
+    }
+
+    @Test
+    public void trustedTenantAdmin_recordsMergeIdentifierWhenNoCandidateExists() {
+        when(securityService.hasSystemAccess()).thenReturn(true);
+        Profile caller = new Profile("caller");
+
+        when(persistenceService.query(any(), anyString(), eq(Profile.class), anyInt(), anyInt()))
+                .thenReturn(new PartialList<>(new ArrayList<>(), 0, 0, 0, PartialList.Relation.EQUAL));
+
+        Event event = new Event("login", null, caller, "systemscope", null, null, null, new Date(), true);
+
+        int changes = actionExecutor.execute(mergeAction("me@example.com"), event);
+
+        assertEquals(EventService.PROFILE_UPDATED, changes);
+        assertEquals("me@example.com", caller.getSystemProperties().get("mergeIdentifier"));
     }
 
     @Test

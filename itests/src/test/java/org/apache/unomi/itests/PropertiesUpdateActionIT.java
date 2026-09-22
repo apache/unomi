@@ -133,14 +133,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
 
-        javax.security.auth.Subject previous = securityService.getCurrentSubject();
-        try {
-            securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, false));
-            int changes = eventService.send(updateProperties);
-            Assert.assertEquals(EventService.NO_CHANGE, changes);
-        } finally {
-            securityService.setCurrentSubject(previous);
-        }
+        runAsTenantSubject(false, () -> Assert.assertEquals(EventService.NO_CHANGE, eventService.send(updateProperties)));
 
         shouldBeTrueUntilEnd("Other profile must remain unchanged",
                 () -> profileService.load(PROFILE_TEST_ID),
@@ -159,15 +152,53 @@ public class PropertiesUpdateActionIT extends BaseIT {
         propertyToUpdate.put("systemProperties.mergeIdentifier", "reused");
         updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
 
-        javax.security.auth.Subject previous = securityService.getCurrentSubject();
-        try {
-            securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, false));
-            eventService.send(updateProperties);
-        } finally {
-            securityService.setCurrentSubject(previous);
-        }
+        runAsTenantSubject(false, () -> eventService.send(updateProperties));
 
         Assert.assertNull(profileService.load(PROFILE_TEST_ID).getSystemProperties().get("mergeIdentifier"));
+    }
+
+    /**
+     * Same write through the commons-beanutils mapped syntax, which has no dot and therefore
+     * escaped a prefix match on {@code systemProperties.}.
+     */
+    @Test
+    public void testUntrustedCaller_cannotWriteSystemPropertiesViaMappedSyntax() throws InterruptedException {
+        Profile caller = profileService.load(PROFILE_TEST_ID);
+        Assert.assertNull(caller.getSystemProperties().get("mergeIdentifier"));
+
+        Event updateProperties = new Event("updateProperties", null, caller, null, null, null, new Date());
+        updateProperties.setPersistent(false);
+        Map<String, Object> propertyToUpdate = new HashMap<>();
+        propertyToUpdate.put("systemProperties(mergeIdentifier)", "victim@example.com");
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+
+        runAsTenantSubject(false, () -> Assert.assertEquals(EventService.NO_CHANGE, eventService.send(updateProperties)));
+
+        Assert.assertNull(profileService.load(PROFILE_TEST_ID).getSystemProperties().get("mergeIdentifier"));
+    }
+
+    /**
+     * Reserved bean fields are reachable through the same property path as ordinary properties;
+     * rewriting {@code itemId} would make the next save overwrite another profile's document.
+     */
+    @Test
+    public void testUntrustedCaller_cannotRewriteProfileIdentityFields() throws InterruptedException {
+        Profile caller = profileService.load(PROFILE_TEST_ID);
+
+        Event updateProperties = new Event("updateProperties", null, caller, null, null, null, new Date());
+        updateProperties.setPersistent(false);
+        Map<String, Object> propertyToUpdate = new HashMap<>();
+        propertyToUpdate.put("itemId", PROFILE_TARGET_TEST_ID);
+        propertyToUpdate.put("mergedWith", PROFILE_TARGET_TEST_ID);
+        propertyToUpdate.put("segments", new java.util.ArrayList<>(java.util.Collections.singletonList("vip")));
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+
+        runAsTenantSubject(false, () -> Assert.assertEquals(EventService.NO_CHANGE, eventService.send(updateProperties)));
+
+        Assert.assertEquals(PROFILE_TEST_ID, caller.getItemId());
+        Assert.assertNull(caller.getMergedWith());
+        Assert.assertTrue(caller.getSegments().isEmpty());
+        Assert.assertNull(profileService.load(PROFILE_TARGET_TEST_ID).getProperty("firstName"));
     }
 
     @Test
@@ -183,13 +214,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
 
-        javax.security.auth.Subject previous = securityService.getCurrentSubject();
-        try {
-            securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, true));
-            eventService.send(updateProperties);
-        } finally {
-            securityService.setCurrentSubject(previous);
-        }
+        runAsTenantSubject(true, () -> eventService.send(updateProperties));
 
         waitForProfileProperty(PROFILE_TEST_ID, "firstName", "TRUSTED UPDATE");
     }
