@@ -151,6 +151,7 @@ class SubscriptionWebSocketTest {
         when(validator.authenticateBasicCredential(anyString())).thenReturn(true);
         when(securityService.getCurrentSubject()).thenReturn(subject);
         when(executionContextManager.getCurrentContext()).thenReturn(executionContext);
+        when(session.getIdleTimeout()).thenReturn(30_000L);
         SubscriptionWebSocket unauth = new SubscriptionWebSocket(graphQL, serviceManager, null, null,
                 securityService, executionContextManager, validator, deadlineScheduler);
         unauth.onWebSocketConnect(session);
@@ -161,7 +162,8 @@ class SubscriptionWebSocketTest {
         // Identity captured onto the socket, and not left bound to this shared IO thread.
         verify(securityService).clearCurrentSubject();
         verify(session, never()).close(anyInt(), anyString());
-        verify(session).setIdleTimeout(0);
+        // Back to the session's configured idle timeout, not disabled.
+        verify(session).setIdleTimeout(30_000L);
     }
 
     @Test
