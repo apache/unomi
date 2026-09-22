@@ -26,6 +26,8 @@
                              update-strategy="reload">
         <cm:default-properties>
             <cm:property name="request.ipDatabase.location" value="file:${karaf.etc}/GeoIP2-City.mmdb"/>
+            <cm:property name="request.trustedProxies"
+                         value="127.0.0.0/8,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10"/>
 
             <cm:property name="defaultSessionCountryCode" value="CH"/>
             <cm:property name="defaultSessionCountryName" value="Switzerland"/>
@@ -70,6 +72,7 @@
             <property name="userAgentDetectorService" ref="userAgentDetectorServiceImpl"/>
 
             <property name="pathToGeoLocationDatabase" value="${request.ipDatabase.location}"/>
+            <property name="trustedProxies" value="${request.trustedProxies}"/>
 
             <property name="defaultSessionCountryCode" value="${defaultSessionCountryCode}"/>
             <property name="defaultSessionCountryName" value="${defaultSessionCountryName}"/>
