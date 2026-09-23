@@ -256,7 +256,6 @@ When migrating to 3.1, you need to understand that:
    - Public `/context.json` and `/eventcollector` no longer treat body/query `profileId` as identity — see below
    - Endpoint paths and most payload shapes remain the same; authentication and public profile-binding rules change
 
-[#_client_facing_hardening_3_1]
 ==== Client-facing hardening (profile cookie, passwords, privileged APIs)
 
 In addition to tenant API keys, Unomi 3.1 hardens several contracts that can break older clients and scripts. See also <<_how_profile_tracking_works,How profile tracking works>> and https://issues.apache.org/jira/browse/UNOMI-972[UNOMI-972].
@@ -293,7 +292,7 @@ In addition to tenant API keys, Unomi 3.1 hardens several contracts that can bre
 
 |`mergeProfilesOnProperty` / cross-profile `updateProperties` / `systemProperties.*`
 |Sometimes driven from public context events
-|Cross-profile merge/update and `systemProperties` writes require a trusted caller (system or tenant admin). Public callers may still update the **current** cookie-bound profile's normal properties when the event type allows it.
+|Cross-profile merge/update and `systemProperties` writes require a trusted caller (system or tenant admin); this includes recording the merge identifier on the current profile, so a public `login` event no longer claims an identity at all. `updateProperties` now applies an allowlist to property names: public callers may only write plain dotted `properties.*` paths on the **current** cookie-bound profile; `systemProperties`, `segments`, `scores` and `consents` need a trusted caller; identity fields (`itemId`, `mergedWith`, ...) and beanutils mapped/indexed syntax are rejected for everyone.
 |===
 
 [WARNING]

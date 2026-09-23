@@ -877,6 +877,23 @@ public abstract class BaseIT extends KarafTestSupport {
         return value;
     }
 
+    /**
+     * Runs {@code action} with the request subject temporarily replaced by a tenant subject for
+     * {@link #TEST_TENANT_ID}: a tenant-admin (private key) subject when {@code systemAccess} is
+     * true, a public-key subject otherwise. The suite {@code @Before} installs a tenant-admin
+     * subject, so tests that need to behave as a public caller must downgrade it, and must restore
+     * it afterwards or every later test in the shared container runs unprivileged.
+     */
+    protected void runAsTenantSubject(boolean systemAccess, Runnable action) {
+        javax.security.auth.Subject previous = securityService.getCurrentSubject();
+        try {
+            securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, systemAccess));
+            action.run();
+        } finally {
+            securityService.setCurrentSubject(previous);
+        }
+    }
+
     protected void waitForProfileProperty(String profileId, String propertyName, Object expected)
             throws InterruptedException {
         keepTrying("Profile " + profileId + " property " + propertyName + " not updated",

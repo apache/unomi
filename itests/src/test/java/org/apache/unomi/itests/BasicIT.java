@@ -38,6 +38,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
+
+import java.util.Base64;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.slf4j.Logger;
@@ -197,12 +199,15 @@ public class BasicIT extends BaseIT {
         // Create login event with VISITOR_1
         ContextRequest contextRequestLoginVisitor1 = getContextRequestWithLoginEvent(sourceSite, loginEventPropertiesVisitor1,
                 EMAIL_VISITOR_1, SESSION_ID_3);
+        // Login events come from the trusted server side: only a trusted caller may record the
+        // merge identifier that the later identity switch below relies on.
         HttpPost requestLoginVisitor1 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestLoginVisitor1.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
-        requestLoginVisitor1.addHeader("X-Unomi-Api-Key", testPublicKeyValue);
+        requestLoginVisitor1.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
+                (TEST_TENANT_ID + ":" + testPrivateKeyValue).getBytes()));
         requestLoginVisitor1.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestLoginVisitor1),
                 ContentType.create("application/json")));
-        TestUtils.RequestResponse requestResponseLoginVisitor1 = executeContextJSONRequest(requestLoginVisitor1, SESSION_ID_3);
+        TestUtils.RequestResponse requestResponseLoginVisitor1 = executeContextJSONRequest(requestLoginVisitor1, SESSION_ID_3, -1, false);
         Assert.assertEquals("Context profile id should be the same", profileIdVisitor1,
                 requestResponseLoginVisitor1.getContextResponse().getProfileId());
         checkVisitor1ResponseProperties(requestResponseLoginVisitor1.getContextResponse().getProfileProperties());
@@ -248,15 +253,36 @@ public class BasicIT extends BaseIT {
         loginEventPropertiesVisitor2.put(LAST_NAME, LAST_NAME_VISITOR_2);
         loginEventPropertiesVisitor2.put(EMAIL, EMAIL_VISITOR_2);
 
-        // Create login event with VISITOR_2
         ContextRequest contextRequestLoginVisitor2 = getContextRequestWithLoginEvent(sourceSite, loginEventPropertiesVisitor2,
                 EMAIL_VISITOR_2, SESSION_ID_4);
+
+        // Public API key must not switch identity / merge into another profile on a shared cookie.
+        HttpPost publicSwitchAttempt = new HttpPost(getFullUrl("/cxs/context.json"));
+        publicSwitchAttempt.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
+        publicSwitchAttempt.addHeader("X-Unomi-Api-Key", testPublicKeyValue);
+        publicSwitchAttempt.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestLoginVisitor2),
+                ContentType.create("application/json")));
+        TestUtils.RequestResponse publicSwitchResponse = executeContextJSONRequest(publicSwitchAttempt, SESSION_ID_4);
+        Assert.assertEquals("Public login must not switch away from the cookie profile",
+                profileIdVisitor1, publicSwitchResponse.getContextResponse().getProfileId());
+
+        // Public login still runs copyProperties on the cookie profile; restore visitor1 before the trusted switch.
+        Profile restoredVisitor1 = profileService.load(profileIdVisitor1);
+        restoredVisitor1.setProperty(FIRST_NAME, FIRST_NAME_VISITOR_1);
+        restoredVisitor1.setProperty(LAST_NAME, LAST_NAME_VISITOR_1);
+        restoredVisitor1.setProperty(EMAIL, EMAIL_VISITOR_1);
+        profileService.save(restoredVisitor1);
+        keepTrying("Visitor1 properties not restored", () -> profileService.load(profileIdVisitor1),
+                p -> FIRST_NAME_VISITOR_1.equals(p.getProperty(FIRST_NAME)), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // Trusted private key may switch the browsing profile to VISITOR_2.
         HttpPost requestLoginVisitor2 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestLoginVisitor2.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
-        requestLoginVisitor2.addHeader("X-Unomi-Api-Key", testPublicKeyValue);
+        requestLoginVisitor2.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
+                (TEST_TENANT_ID + ":" + testPrivateKeyValue).getBytes()));
         requestLoginVisitor2.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequestLoginVisitor2),
                 ContentType.create("application/json")));
-        TestUtils.RequestResponse requestResponseLoginVisitor2 = executeContextJSONRequest(requestLoginVisitor2, SESSION_ID_4);
+        TestUtils.RequestResponse requestResponseLoginVisitor2 = executeContextJSONRequest(requestLoginVisitor2, SESSION_ID_4, -1, false);
         // We should have a new profile id so the session should have been moved from VISITOR_1 to VISITOR_2
         String profileIdVisitor2 = requestResponseLoginVisitor2.getContextResponse().getProfileId();
         Assert.assertNotEquals("Context profile id should not be the same", profileIdVisitor1,

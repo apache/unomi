@@ -245,9 +245,14 @@ This event is usually used by user interfaces that make it possible to modify pr
 Note that this event type is a protected event type that is only accepted from configured third-party servers, which are
 authorized by source IP address (and in V2 compatibility mode by an `X-Unomi-Peer` key valid for that address). That
 gate is separate from the public-versus-trusted caller distinction that governs which profile and session a request may
-bind to — see <<_client_facing_hardening_3_1,client-facing hardening>>. Once the event is accepted, its `targetId`
-cross-profile update and its `systemProperties.*` writes are not subject to a further caller check, so the address
-allowlist is what protects them.
+bind to — see <<_client_facing_hardening_3_1,client-facing hardening>>. Once the event is accepted, the property
+names in `add`, `update`, `addToSet` and `delete` are checked against an allowlist. A public-key caller may only write
+plain dotted paths under `properties` (for example `properties.address.city`). A trusted caller (system administrator
+or tenant private key) may also write `systemProperties`, `segments`, `scores` and `consents`, and may target another
+profile through `targetId`. Identity and bookkeeping fields of the profile (`itemId`, `itemType`, `tenantId`,
+`version`, `mergedWith`, ...) are never writable, and names using beanutils mapped or indexed syntax (`a(b)`, `a[0]`),
+empty path segments or control characters are rejected for everyone. Refused names are skipped with a `WARN` log entry;
+the rest of the event still applies.
 
 ===== Structure definition
 

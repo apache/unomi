@@ -91,6 +91,13 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
             // Check if the user switched to another profile
             if (StringUtils.isNotEmpty(currentProfileMergeValue) && !currentProfileMergeValue.equals(mergePropValue)) {
+                if (!isTrustedIdentityCaller()) {
+                    LOGGER.warn("Refusing profile merge switch for untrusted caller (mergeProp={})", mergePropName);
+                    if (tracer != null) {
+                        tracer.endOperation(false, "Untrusted caller cannot switch merge identity");
+                    }
+                    return EventService.NO_CHANGE;
+                }
                 if (tracer != null) {
                     tracer.trace("Profile switch detected", Map.of(
                         "fromValue", currentProfileMergeValue,
@@ -102,6 +109,20 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                     tracer.endOperation(true, "Profile switch completed");
                 }
                 return EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED;
+            }
+
+            // Recording the merge identifier is itself an identity claim, not just the merge that
+            // may follow it: a value persisted here is what a later, trusted login for the same
+            // identifier queries on, so an untrusted caller that could plant it would have its
+            // profile pulled into that merge (and aliased onto the master) once the real owner logs
+            // in. Refuse the whole step, not only the merge, for callers without system access.
+            if (!isTrustedIdentityCaller()) {
+                LOGGER.warn("Refusing merge identity claim for untrusted caller (mergeProp={}, candidates={})",
+                        mergePropName, profilesToBeMerge.size());
+                if (tracer != null) {
+                    tracer.endOperation(false, "Untrusted caller cannot claim a merge identity");
+                }
+                return EventService.NO_CHANGE;
             }
 
             // Store merge prop on current profile
@@ -325,6 +346,15 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             eventService.send(new Event("sessionReassigned", eventSession, eventProfile, event.getScope(), event, eventSession,
                     null, event.getTimeStamp(), false));
         }
+    }
+
+    /**
+     * Identity claims (switching, recording or merging on a merge identifier) are restricted to
+     * callers holding system access; see {@link IdentityTrust}. This applies to a switch even when
+     * no candidate profile exists yet: the switch still rebinds the session to a new profile.
+     */
+    private boolean isTrustedIdentityCaller() {
+        return IdentityTrust.isTrustedIdentityCaller(securityService);
     }
 
     public void setProfileService(ProfileService profileService) {

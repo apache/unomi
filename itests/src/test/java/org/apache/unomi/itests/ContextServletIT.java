@@ -441,6 +441,218 @@ public class ContextServletIT extends BaseIT {
                 DEFAULT_SHOULDBETRUE_TRIES);
     }
 
+
+
+
+
+
+
+    @Test
+    public void testPublicHttp_updateProperties_cannotUpdateAnotherProfile() throws Exception {
+        String otherId = "update-other-" + System.currentTimeMillis();
+        Profile other = new Profile(otherId);
+        profileService.save(other);
+        keepTrying("Other profile not found", () -> profileService.load(otherId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String sessionId = "update-public-session-" + System.currentTimeMillis();
+        ContextRequest establishReq = new ContextRequest();
+        establishReq.setSessionId(sessionId);
+        HttpPost establish = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(establish);
+        establish.setEntity(new StringEntity(getObjectMapper().writeValueAsString(establishReq), ContentType.APPLICATION_JSON));
+        RequestResponse established = executeContextJSONRequest(establish, sessionId);
+
+        Event updateEvent = new Event();
+        updateEvent.setEventType("updateProperties");
+        updateEvent.setScope(TEST_SCOPE);
+        Map<String, Object> props = new HashMap<>();
+        props.put("targetId", otherId);
+        props.put("targetType", "profile");
+        Map<String, Object> toUpdate = new HashMap<>();
+        toUpdate.put("properties.firstName", "CHANGED");
+        props.put("update", toUpdate);
+        updateEvent.setProperties(props);
+
+        ContextRequest probe = new ContextRequest();
+        probe.setSessionId(sessionId);
+        probe.setEvents(Collections.singletonList(updateEvent));
+        HttpPost probeRequest = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(probeRequest);
+        probeRequest.addHeader("Cookie", established.getCookieHeaderValue());
+        probeRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(probe), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(probeRequest, sessionId);
+
+        shouldBeTrueUntilEnd("Other profile must not be updated by public updateProperties",
+                () -> profileService.load(otherId),
+                p -> p.getProperty("firstName") == null,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
+    }
+
+    @Test
+    public void testPrivateKeyHttp_updateProperties_canUpdateAnotherProfile() throws Exception {
+        String otherId = "trusted-update-other-" + System.currentTimeMillis();
+        Profile other = new Profile(otherId);
+        profileService.save(other);
+        keepTrying("Other profile not found", () -> profileService.load(otherId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String sessionId = "trusted-update-session-" + System.currentTimeMillis();
+        ContextRequest establishReq = new ContextRequest();
+        establishReq.setSessionId(sessionId);
+        HttpPost establish = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(establish);
+        establish.setEntity(new StringEntity(getObjectMapper().writeValueAsString(establishReq), ContentType.APPLICATION_JSON));
+        RequestResponse established = executeContextJSONRequest(establish, sessionId);
+
+        Event updateEvent = new Event();
+        updateEvent.setEventType("updateProperties");
+        updateEvent.setScope(TEST_SCOPE);
+        Map<String, Object> props = new HashMap<>();
+        props.put("targetId", otherId);
+        props.put("targetType", "profile");
+        Map<String, Object> toUpdate = new HashMap<>();
+        toUpdate.put("properties.firstName", "TRUSTED_HTTP");
+        props.put("update", toUpdate);
+        updateEvent.setProperties(props);
+
+        ContextRequest update = new ContextRequest();
+        update.setSessionId(sessionId);
+        update.setEvents(Collections.singletonList(updateEvent));
+        HttpPost trusted = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(trusted, testTenant, testPrivateKeyValue);
+        trusted.addHeader("Cookie", established.getCookieHeaderValue());
+        trusted.setEntity(new StringEntity(getObjectMapper().writeValueAsString(update), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(trusted, sessionId, -1, false);
+
+        waitForProfileProperty(otherId, "firstName", "TRUSTED_HTTP");
+    }
+
+    @Test
+    public void testPublicHttpLogin_cannotMergeIntoExistingOtherProfile() throws Exception {
+        ConditionType conditionType = getObjectMapper().readValue(
+                new File("data/tmp/testLoginEventCondition.json").toURI().toURL(), ConditionType.class);
+        definitionsService.setConditionType(conditionType);
+        keepTrying("loginEventCondition not registered",
+                () -> definitionsService.getConditionType("loginEventCondition"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        Rule rule = getObjectMapper().readValue(new File("data/tmp/testLogin.json").toURI().toURL(), Rule.class);
+        createAndWaitForRule(rule);
+
+        String otherEmail = "other-takeover-" + System.currentTimeMillis() + "@example.com";
+        String otherId = "other-merge-" + System.currentTimeMillis();
+        Profile other = new Profile(otherId);
+        other.setProperty("email", otherEmail);
+        other.setSystemProperty("mergeIdentifier", otherEmail);
+        profileService.save(other);
+        keepTrying("Other not found", () -> profileService.load(otherId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String sessionId = "public-merge-session-" + System.currentTimeMillis();
+        ContextRequest pageView = new ContextRequest();
+        pageView.setSessionId(sessionId);
+        HttpPost establish = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(establish);
+        establish.setEntity(new StringEntity(getObjectMapper().writeValueAsString(pageView), ContentType.APPLICATION_JSON));
+        RequestResponse established = executeContextJSONRequest(establish, sessionId);
+        String publicCallerId = established.getContextResponse().getProfileId();
+        assertNotEquals(otherId, publicCallerId);
+
+        CustomItem loginTarget = new CustomItem(otherEmail, "visitor");
+        Map<String, Object> loginProps = new HashMap<>();
+        loginProps.put("email", otherEmail);
+        loginTarget.setProperties(loginProps);
+        Event login = new Event();
+        login.setEventType("login");
+        login.setScope(TEST_SCOPE);
+        login.setTarget(loginTarget);
+        login.setTimeStamp(new Date());
+
+        ContextRequest loginRequest = new ContextRequest();
+        loginRequest.setSessionId(sessionId);
+        loginRequest.setEvents(Collections.singletonList(login));
+        HttpPost probe = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(probe);
+        probe.addHeader("Cookie", established.getCookieHeaderValue());
+        probe.setEntity(new StringEntity(getObjectMapper().writeValueAsString(loginRequest), ContentType.APPLICATION_JSON));
+        RequestResponse afterLogin = executeContextJSONRequest(probe, sessionId);
+
+        assertEquals("Public login must not take over the other profile",
+                publicCallerId, afterLogin.getContextResponse().getProfileId());
+        assertNotNull(profileService.load(otherId));
+        shouldBeTrueUntilEnd("Public login must not record the claimed identifier on the caller profile",
+                () -> profileService.load(publicCallerId),
+                p -> p == null || p.getSystemProperties().get("mergeIdentifier") == null,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
+        rulesService.removeRule("testLogin");
+    }
+
+    /**
+     * Counterpart to {@link #testPublicHttpLogin_cannotMergeIntoExistingOtherProfile()}: the merge
+     * must still work end to end for a trusted caller, over real HTTP through the auth filter and
+     * the rules engine, not just when the subject is set programmatically.
+     */
+    @Test
+    public void testPrivateKeyHttpLogin_canMergeIntoExistingProfile() throws Exception {
+        ConditionType conditionType = getObjectMapper().readValue(
+                new File("data/tmp/testLoginEventCondition.json").toURI().toURL(), ConditionType.class);
+        definitionsService.setConditionType(conditionType);
+        keepTrying("loginEventCondition not registered",
+                () -> definitionsService.getConditionType("loginEventCondition"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        Rule rule = getObjectMapper().readValue(new File("data/tmp/testLogin.json").toURI().toURL(), Rule.class);
+        createAndWaitForRule(rule);
+
+        String knownEmail = "trusted-merge-" + System.currentTimeMillis() + "@example.com";
+        String knownProfileId = "trusted-merge-known-" + System.currentTimeMillis();
+        Profile known = new Profile(knownProfileId);
+        known.setProperty("email", knownEmail);
+        known.setSystemProperty("mergeIdentifier", knownEmail);
+        profileService.save(known);
+        keepTrying("Known profile not found", () -> profileService.load(knownProfileId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // Anonymous browsing first, exactly as a visitor would before logging in.
+        String sessionId = "trusted-merge-session-" + System.currentTimeMillis();
+        ContextRequest pageView = new ContextRequest();
+        pageView.setSessionId(sessionId);
+        HttpPost establish = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPublicTenantAuth(establish);
+        establish.setEntity(new StringEntity(getObjectMapper().writeValueAsString(pageView), ContentType.APPLICATION_JSON));
+        RequestResponse established = executeContextJSONRequest(establish, sessionId);
+        String anonymousId = established.getContextResponse().getProfileId();
+        assertNotEquals(knownProfileId, anonymousId);
+
+        // The login event is then emitted by a trusted server-side caller after authentication.
+        CustomItem loginTarget = new CustomItem(knownEmail, "visitor");
+        Map<String, Object> loginProps = new HashMap<>();
+        loginProps.put("email", knownEmail);
+        loginTarget.setProperties(loginProps);
+        Event login = new Event();
+        login.setEventType("login");
+        login.setScope(TEST_SCOPE);
+        login.setTarget(loginTarget);
+        login.setTimeStamp(new Date());
+
+        ContextRequest loginRequest = new ContextRequest();
+        loginRequest.setSessionId(sessionId);
+        loginRequest.setEvents(Collections.singletonList(login));
+        HttpPost trusted = new HttpPost(getFullUrl(CONTEXT_URL));
+        addPrivateTenantAuth(trusted, testTenant, testPrivateKeyValue);
+        trusted.addHeader("Cookie", established.getCookieHeaderValue());
+        trusted.setEntity(new StringEntity(getObjectMapper().writeValueAsString(loginRequest), ContentType.APPLICATION_JSON));
+        executeContextJSONRequest(trusted, sessionId, -1, false);
+
+        keepTrying("Trusted login should merge the anonymous profile into the known one",
+                () -> profileService.load(anonymousId),
+                p -> p != null && knownEmail.equals(p.getProperty("email")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        rulesService.removeRule("testLogin");
+    }
+
+
+
     @Test
     public void testPublicCaller_mismatchedBodyProfileId_ignored() throws Exception {
         String sessionId = "mismatch-session-" + System.currentTimeMillis();
@@ -781,6 +993,7 @@ public class ContextServletIT extends BaseIT {
         keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
+
 
     @Test
     public void testPublicCaller_bodyProfileIdWithoutCookie_rejected() throws Exception {
