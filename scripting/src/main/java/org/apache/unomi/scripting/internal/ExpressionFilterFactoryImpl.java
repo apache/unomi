@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /**
  * OSGi-backed factory that loads allowed and forbidden expression patterns for script execution.
@@ -74,8 +75,8 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
         String[] initialFilterCollectionParts = initialFilterCollections.split(",");
         if (initialFilterCollectionParts != null) {
             for (String initialFilterCollection : initialFilterCollectionParts) {
-                allowedExpressionPatternsByCollection.put(initialFilterCollection, loadPatternsFromConfig("org.apache.unomi.scripting.filter."+initialFilterCollection+".allow"));
-                forbiddenExpressionPatternsByCollection.put(initialFilterCollection, loadPatternsFromConfig("org.apache.unomi.scripting.filter."+initialFilterCollection+".forbid"));
+                allowedExpressionPatternsByCollection.put(initialFilterCollection, loadPatternsFromConfig("org.apache.unomi.scripting.filter."+initialFilterCollection+".allow", false));
+                forbiddenExpressionPatternsByCollection.put(initialFilterCollection, loadPatternsFromConfig("org.apache.unomi.scripting.filter."+initialFilterCollection+".forbid", true));
             }
         }
 
@@ -91,7 +92,7 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
         }
     }
 
-    private Set<Pattern> loadPatternsFromConfig(String propertyKey) {
+    private Set<Pattern> loadPatternsFromConfig(String propertyKey, boolean forbidList) {
         String patternsFile = System.getProperty(propertyKey, null);
         if (StringUtils.isNotEmpty(patternsFile)) {
             Set<Pattern> patterns = new HashSet<>();
@@ -100,8 +101,16 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
                 for (JsonNode jsonPattern : jsonPatterns) {
                     patterns.add(Pattern.compile(jsonPattern.asText()));
                 }
-            } catch (IOException e) {
-                LOGGER.error("Error while loading expressions definition from {}", propertyKey, e);
+            } catch (IOException | PatternSyntaxException e) {
+                // Fail closed: a configured patterns file that cannot be read or parsed must not
+                // silently disable filtering. For a forbid list, "reject everything" is a catch-all
+                // deny pattern; for an allow list, an empty set already rejects everything.
+                LOGGER.error("Error while loading expressions definition from {}; failing closed (rejecting all expressions for this filter)", propertyKey, e);
+                Set<Pattern> failClosed = new HashSet<>();
+                if (forbidList) {
+                    failClosed.add(Pattern.compile("(?s).*"));
+                }
+                return failClosed;
             }
             return patterns;
         }
