@@ -45,6 +45,12 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
     private static final Logger LOGGER = LoggerFactory.getLogger(TypeResolutionServiceImpl.class.getName());
     
     private static final int MAX_RECURSION_DEPTH = 1000;
+
+    /**
+     * Upper bound for diagnostic de-duplication collections. Some identifiers come from public
+     * input (for example condition type ids on context filters), so these sets must not grow without limit.
+     */
+    private static final int MAX_TRACKED_DIAGNOSTIC_ENTRIES = 1000;
     
     private volatile DefinitionsService definitionsService;
 
@@ -127,7 +133,7 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
                 }
                 ConditionType conditionType = definitionsService.getConditionType(conditionTypeId);
                 if (conditionType == null) {
-                    if (unresolvedConditionTypes.add(conditionTypeId)) {
+                    if (addBoundedDiagnostic(unresolvedConditionTypes, conditionTypeId)) {
                         LOGGER.warn("Couldn't resolve condition type: {} for {}", conditionTypeId, contextObjectName);
                     }
                     return false;
@@ -217,6 +223,20 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         }
     }
 
+    /**
+     * Adds a value to a bounded diagnostic de-duplication set. Returns {@code true} if the value
+     * was newly stored (the caller should log). Once the cap is reached, further values are ignored.
+     */
+    private static boolean addBoundedDiagnostic(Set<String> set, String value) {
+        if (set.contains(value)) {
+            return false;
+        }
+        if (set.size() >= MAX_TRACKED_DIAGNOSTIC_ENTRIES) {
+            return false;
+        }
+        return set.add(value);
+    }
+
     @Override
     public boolean resolveActionTypes(Rule rule, boolean ignoreErrors) {
         if (definitionsService == null) {
@@ -228,7 +248,7 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         if (rule.getActions() == null) {
             if (!ignoreErrors) {
                 // Only warn once per rule to avoid log spam
-                if (warnedRulesWithNullActions.add(ruleId)) {
+                if (addBoundedDiagnostic(warnedRulesWithNullActions, ruleId)) {
                     LOGGER.warn("Rule {}:{} has null actions", ruleId, rule.getMetadata() != null ? rule.getMetadata().getName() : "unknown");
                 }
             }
@@ -237,7 +257,7 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         if (rule.getActions().isEmpty()) {
             if (!ignoreErrors) {
                 // Only warn once per rule to avoid log spam
-                if (warnedRulesWithNullActions.add(ruleId)) {
+                if (addBoundedDiagnostic(warnedRulesWithNullActions, ruleId)) {
                     LOGGER.warn("Rule {}:{} has empty actions", ruleId, rule.getMetadata() != null ? rule.getMetadata().getName() : "unknown");
                 }
             }
@@ -262,7 +282,7 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
                 unresolvedActionTypes.remove(action.getActionTypeId());
                 action.setActionType(actionType);
             } else {
-                if (unresolvedActionTypes.add(action.getActionTypeId())) {
+                if (addBoundedDiagnostic(unresolvedActionTypes, action.getActionTypeId())) {
                     LOGGER.warn("Couldn't resolve action type : {}", action.getActionTypeId());
                 }
                 return false;
@@ -454,6 +474,12 @@ public class TypeResolutionServiceImpl implements TypeResolutionService {
         }
         
         Map<String, InvalidObjectInfo> typeMap = invalidObjects.computeIfAbsent(objectType, k -> new ConcurrentHashMap<>());
+
+        if (!typeMap.containsKey(objectId) && typeMap.size() >= MAX_TRACKED_DIAGNOSTIC_ENTRIES) {
+            LOGGER.debug("Invalid object tracking for type {} is full ({} entries), not tracking {}",
+                    objectType, MAX_TRACKED_DIAGNOSTIC_ENTRIES, objectId);
+            return;
+        }
         
         InvalidObjectInfo newInfo = new InvalidObjectInfo(
             objectType,
