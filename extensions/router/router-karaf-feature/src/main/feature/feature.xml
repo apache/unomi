@@ -20,6 +20,8 @@
         <details>Apache Karaf feature for the Apache Unomi Context Server extension</details>
         <feature>wrap</feature>
         <feature>unomi-services</feature>
+        <!-- REST endpoints use @RequiresRole from org.apache.unomi.rest.security -->
+        <feature>unomi-rest-api</feature>
         <bundle start="false">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jsch/0.1.55_1</bundle>
         <bundle start="false">mvn:commons-net/commons-net/${commons-net.version}</bundle>
         <bundle start="false">wrap:mvn:org.apache.kafka/kafka-clients/${kafka.client.version}</bundle>

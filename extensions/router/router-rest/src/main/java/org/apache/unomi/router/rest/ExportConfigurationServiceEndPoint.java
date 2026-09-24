@@ -17,7 +17,9 @@
 package org.apache.unomi.router.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.rest.security.RequiresRole;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.services.ProfileExportService;
@@ -47,6 +49,7 @@ import java.util.List;
         allowCredentials = true
 )
 @Path("/exportConfiguration")
+@RequiresRole(UnomiRoles.ADMINISTRATOR)
 @Component(service=ExportConfigurationServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class ExportConfigurationServiceEndPoint extends AbstractConfigurationServiceEndpoint<ExportConfiguration> {
 
