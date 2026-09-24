@@ -75,15 +75,17 @@ public class GraphQLListIT extends BaseGraphQLIT {
                 Assert.assertEquals("testListId", context.getValue("data.cdp.addProfileToList.id"));
             }
 
-            refreshPersistence(UserList.class, Profile.class);
-
-            // The list membership is written to the profile synchronously by addProfileToList,
-            // then made searchable via the index refresh above; keepTrying only absorbs normal
-            // Elasticsearch refresh latency.
+            // addProfileToList saves the profile, then findLists searches it. A single refresh
+            // issued before the document is visible stays stale for every later poll, which is
+            // why this wait fails intermittently on both Elasticsearch and OpenSearch. Refresh
+            // on each attempt so a write that lands after the first refresh becomes searchable.
             final ResponseContext findListsContext = keepTrying("Failed waiting for profile in list query",
                     () -> {
-                        try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
-                            return ResponseContext.parse(response.getEntity());
+                        try {
+                            refreshPersistence(UserList.class, Profile.class);
+                            try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
+                                return ResponseContext.parse(response.getEntity());
+                            }
                         } catch (Exception e) {
                             return null;
                         }
