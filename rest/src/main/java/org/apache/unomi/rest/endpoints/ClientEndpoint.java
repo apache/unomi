@@ -43,7 +43,7 @@ import java.util.Set;
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
-@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
+@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = false)
 @Path("/")
 @Component(service = ClientEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class ClientEndpoint {

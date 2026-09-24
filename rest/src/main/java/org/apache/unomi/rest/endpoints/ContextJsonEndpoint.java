@@ -57,7 +57,7 @@ import java.util.stream.Collectors;
  * events, evaluate personalization filters, and return consented profile data.
  */
 @Consumes(MediaType.APPLICATION_JSON)
-@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
+@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = false)
 @Path("/")
 @Component(service = ContextJsonEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class ContextJsonEndpoint {

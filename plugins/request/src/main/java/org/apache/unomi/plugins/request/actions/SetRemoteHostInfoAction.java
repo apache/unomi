@@ -39,13 +39,25 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class SetRemoteHostInfoAction implements ActionExecutor {
     private static final Logger LOGGER = LoggerFactory.getLogger(SetRemoteHostInfoAction.class.getName());
 
+    /**
+     * Default trusted proxies: loopback, RFC 1918 private ranges, link-local and IPv6 unique-local/link-local.
+     * Client-supplied address hints (remoteAddr parameter, X-Forwarded-For) are only honored when the direct
+     * peer of the connection is in this list.
+     */
+    static final String DEFAULT_TRUSTED_PROXIES =
+            "127.0.0.0/8,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,169.254.0.0/16,fc00::/7,fe80::/10";
+
     private UserAgentDetectorServiceImpl userAgentDetectorService;
+
+    private List<String> trustedProxies = parseTrustedProxies(DEFAULT_TRUSTED_PROXIES);
 
     private DatabaseReader databaseReader;
     private String pathToGeoLocationDatabase;
@@ -69,6 +81,10 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
 
     public void setPathToGeoLocationDatabase(String pathToGeoLocationDatabase) {
         this.pathToGeoLocationDatabase = pathToGeoLocationDatabase;
+    }
+
+    public void setTrustedProxies(String trustedProxies) {
+        this.trustedProxies = parseTrustedProxies(trustedProxies);
     }
 
     public void setDefaultSessionCountryCode(String defaultSessionCountryCode) {
@@ -116,17 +132,26 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
 
         String remoteAddr = httpServletRequest.getRemoteAddr();
         LOGGER.debug("Remote address is {}", remoteAddr);
-        String remoteAddrParameter = httpServletRequest.getParameter("remoteAddr");
-        LOGGER.debug("Remote address param is {}", remoteAddrParameter);
-        String xff = httpServletRequest.getHeader("X-Forwarded-For");
-        LOGGER.debug("X-Forwarded-For is {}", xff);
-        if (remoteAddrParameter != null && !remoteAddrParameter.isEmpty()) {
-            remoteAddr = remoteAddrParameter;
-        } else if (xff != null && !xff.isEmpty()) {
-            if (xff.indexOf(',') > -1) {
-                xff = xff.substring(0, xff.indexOf(','));
+        // Honor X-Forwarded-For and remoteAddr only when the direct peer is a configured proxy.
+        if (isTrustedProxy(remoteAddr)) {
+            String remoteAddrParameter = httpServletRequest.getParameter("remoteAddr");
+            LOGGER.debug("Remote address param is {}", remoteAddrParameter);
+            String xff = httpServletRequest.getHeader("X-Forwarded-For");
+            LOGGER.debug("X-Forwarded-For is {}", xff);
+            if (remoteAddrParameter != null && !remoteAddrParameter.isEmpty()) {
+                remoteAddr = remoteAddrParameter;
+            } else if (xff != null && !xff.isEmpty()) {
+                // Walk from the last (proxy-appended, closest) entry backwards and use the first address
+                // that is not itself a trusted proxy.
+                String[] xffEntries = xff.split(",");
+                for (int i = xffEntries.length - 1; i >= 0; i--) {
+                    String candidate = xffEntries[i].trim();
+                    if (!isTrustedProxy(candidate)) {
+                        remoteAddr = candidate;
+                        break;
+                    }
+                }
             }
-            remoteAddr = xff;
         }
         LOGGER.debug("Remote address used to localized is {}", remoteAddr);
 
@@ -228,6 +253,71 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             LOGGER.debug("Cannot resolve IP: {}", remoteAddr, e);
         }
         return false;
+    }
+
+    private static List<String> parseTrustedProxies(String value) {
+        List<String> result = new ArrayList<>();
+        if (value != null) {
+            for (String entry : value.split(",")) {
+                if (!entry.trim().isEmpty()) {
+                    result.add(entry.trim());
+                }
+            }
+        }
+        return result;
+    }
+
+    boolean isTrustedProxy(String address) {
+        if (address == null || address.isEmpty()) {
+            return false;
+        }
+        if (!InetAddressUtils.isIPv4Address(address) && !InetAddressUtils.isIPv6Address(address)) {
+            return false;
+        }
+        InetAddress addr;
+        try {
+            addr = InetAddress.getByName(address);
+        } catch (UnknownHostException e) {
+            return false;
+        }
+        for (String trusted : trustedProxies) {
+            if (matchesAddressOrCidr(addr, trusted)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean matchesAddressOrCidr(InetAddress addr, String entry) {
+        try {
+            int slash = entry.indexOf('/');
+            if (slash < 0) {
+                return InetAddress.getByName(entry).equals(addr);
+            }
+            InetAddress network = InetAddress.getByName(entry.substring(0, slash));
+            int prefixLength = Integer.parseInt(entry.substring(slash + 1).trim());
+            byte[] addressBytes = addr.getAddress();
+            byte[] networkBytes = network.getAddress();
+            if (addressBytes.length != networkBytes.length || prefixLength < 0 || prefixLength > addressBytes.length * 8) {
+                return false;
+            }
+            int fullBytes = prefixLength / 8;
+            for (int i = 0; i < fullBytes; i++) {
+                if (addressBytes[i] != networkBytes[i]) {
+                    return false;
+                }
+            }
+            int remainingBits = prefixLength % 8;
+            if (remainingBits > 0) {
+                int mask = (0xFF << (8 - remainingBits)) & 0xFF;
+                if ((addressBytes[fullBytes] & mask) != (networkBytes[fullBytes] & mask)) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (UnknownHostException | NumberFormatException e) {
+            return false;
+        }
     }
 
     private static boolean isAValidIPAddress(String remoteAddr) {

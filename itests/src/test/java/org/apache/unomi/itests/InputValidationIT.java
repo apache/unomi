@@ -67,6 +67,7 @@ public class InputValidationIT extends BaseIT {
             // InvalidRequestExceptionMapper errors (expected when testing invalid requests)
             .addIgnoredSubstring("InvalidRequestExceptionMapper")
             .addIgnoredSubstring("Invalid parameter")
+            .addIgnoredSubstring("Invalid sessionId query parameter")
             .addIgnoredSubstring("Invalid Context request object")
             .addIgnoredSubstring("Invalid events collector object")
             .addIgnoredSubstring("Invalid profile ID format in cookie")
@@ -109,6 +110,33 @@ public class InputValidationIT extends BaseIT {
     public void test_param_SessionIDPattern() throws Exception {
         doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doGETRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+    }
+
+    @Test
+    public void test_eventCollector_querySessionIDPattern() throws Exception {
+        schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
+        schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
+        keepTrying("Event should be valid",
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json")),
+                isValid -> isValid,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String invalidQuery = "?sessionId=" + URLEncoder.encode("<script>alert();</script>", StandardCharsets.UTF_8);
+        doPOSTRequestTest(EVENT_COLLECTOR_URL + invalidQuery, null, "/validation/eventcollector_noSessionId.json", 400,
+                ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doGETRequestTest(EVENT_COLLECTOR_URL + invalidQuery, null, "/validation/eventcollector_noSessionId.json", 400,
+                ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+
+        String validQuery = "?sessionId=" + URLEncoder.encode("dummy-session-id", StandardCharsets.UTF_8);
+        doPOSTRequestTest(EVENT_COLLECTOR_URL + validQuery, null, "/validation/eventcollector_noSessionId.json", 200, null);
+        doGETRequestTest(EVENT_COLLECTOR_URL + validQuery, null, "/validation/eventcollector_noSessionId.json", 200, null);
+
+        schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/1-0-0");
+        schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/properties/1-0-0");
+        keepTrying("Event should be invalid",
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json")),
+                isValid -> !isValid,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
