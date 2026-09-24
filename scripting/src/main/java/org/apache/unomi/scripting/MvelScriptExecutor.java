@@ -29,8 +29,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class MvelScriptExecutor implements ScriptExecutor {
 
-    private final static String INVALID_SCRIPT_MARKER = "--- Invalid Script Marker ---";
-
     private Map<String, Serializable> mvelExpressions = new ConcurrentHashMap<>();
     private SecureFilteringClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(getClass().getClassLoader());
     private ExpressionFilterFactory expressionFilterFactory;
@@ -51,34 +49,35 @@ public class MvelScriptExecutor implements ScriptExecutor {
         try {
             Thread.currentThread().setContextClassLoader(secureFilteringClassLoader);
 
-            if (!mvelExpressions.containsKey(script)) {
-
-                if (expressionFilterFactory.getExpressionFilter("mvel").filter(script) == null) {
-                    mvelExpressions.put(script, INVALID_SCRIPT_MARKER);
-                } else {
-                    ParserConfiguration parserConfiguration = new ParserConfiguration();
-                    parserConfiguration.setClassLoader(secureFilteringClassLoader);
-                    ParserContext parserContext = new ParserContext(parserConfiguration);
-
-                    // override hardcoded Class Literals that are inserted by default in MVEL and that may be a security risk
-                    parserContext.addImport("Runtime", String.class);
-                    parserContext.addImport("System", String.class);
-                    parserContext.addImport("ProcessBuilder", String.class);
-                    parserContext.addImport("Class", String.class);
-                    parserContext.addImport("ClassLoader", String.class);
-                    parserContext.addImport("Thread", String.class);
-                    parserContext.addImport("Compiler", String.class);
-                    parserContext.addImport("ThreadLocal", String.class);
-                    parserContext.addImport("SecurityManager", String.class);
-
-                    mvelExpressions.put(script, MVEL.compileExpression(script, parserContext));
-                }
-            }
-            if (mvelExpressions.containsKey(script) && mvelExpressions.get(script) != INVALID_SCRIPT_MARKER) {
-                return MVEL.executeExpression(mvelExpressions.get(script), context);
-            } else {
+            // Filter on every execution, not only on first compile: a script that was accepted and
+            // cached while the policy was looser must be rejected once the policy is tightened at
+            // runtime. Only compiled (accepted) expressions are cached, so a rejected script is
+            // never stored and cannot accumulate in the cache either.
+            if (expressionFilterFactory.getExpressionFilter("mvel").filter(script) == null) {
                 return null;
             }
+
+            Serializable compiledExpression = mvelExpressions.get(script);
+            if (compiledExpression == null) {
+                ParserConfiguration parserConfiguration = new ParserConfiguration();
+                parserConfiguration.setClassLoader(secureFilteringClassLoader);
+                ParserContext parserContext = new ParserContext(parserConfiguration);
+
+                // override hardcoded Class Literals that are inserted by default in MVEL and that may be a security risk
+                parserContext.addImport("Runtime", String.class);
+                parserContext.addImport("System", String.class);
+                parserContext.addImport("ProcessBuilder", String.class);
+                parserContext.addImport("Class", String.class);
+                parserContext.addImport("ClassLoader", String.class);
+                parserContext.addImport("Thread", String.class);
+                parserContext.addImport("Compiler", String.class);
+                parserContext.addImport("ThreadLocal", String.class);
+                parserContext.addImport("SecurityManager", String.class);
+
+                compiledExpression = MVEL.compileExpression(script, parserContext);
+                mvelExpressions.put(script, compiledExpression);
+            }
+            return MVEL.executeExpression(compiledExpression, context);
         } finally {
             Thread.currentThread().setContextClassLoader(tccl);
         }

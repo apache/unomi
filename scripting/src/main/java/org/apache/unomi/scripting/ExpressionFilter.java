@@ -49,7 +49,12 @@ public class ExpressionFilter {
      * @return the expression when accepted, or {@code null} when filtered out
      */
     public String filter(String expression) {
-        if (forbiddenExpressionPatterns != null && expressionMatches(expression, forbiddenExpressionPatterns)) {
+        if (expression == null) {
+            return null;
+        }
+        if (forbiddenExpressionPatterns != null &&
+                (expressionMatches(expression, forbiddenExpressionPatterns) ||
+                        expressionMatches(canonicalizeForForbid(expression), forbiddenExpressionPatterns))) {
             LOGGER.warn("Expression filtered because forbidden. See debug log level for more information");
             LOGGER.debug("Expression {} is forbidden by expression filter", expression);
             return null;
@@ -69,5 +74,13 @@ public class ExpressionFilter {
             }
         }
         return false;
+    }
+
+    /**
+     * Strips format/control characters so forbid patterns still match when those characters are
+     * inserted into a gadget. Allow-list matching stays on the raw string (fail-closed).
+     */
+    static String canonicalizeForForbid(String expression) {
+        return SecureFilteringClassLoader.stripInvisibleCharacters(expression);
     }
 }

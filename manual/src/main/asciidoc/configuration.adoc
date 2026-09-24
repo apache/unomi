@@ -549,8 +549,22 @@ injected layer of scripts are removed.
 The second layer is the expression filtering system, that uses an allow-listing mechanism to only accept pre-vetted
 expressions (through configuration and deployment on the server side). Any unrecognized expression will not be accepted.
 
-Finally, once the script starts executing in the scripting engine, a filtering class loader will only let the script
-access classes that have been allowed.
+Finally, once the script starts executing in the scripting engine, a filtering class loader restricts which classes a
+script may load *by name*. No `org.mvel2` class is on the allow list, so an expression can never name an MVEL class
+(its eval engines, its JSR-223 script engine, its shell or its compiler) through `new`, a static reference or an
+import; MVEL's own internals are loaded from the MVEL bundle and are unaffected. As a safety net for a loosened
+configuration, the public MVEL eval APIs are also always denied in code, including when they are referenced through
+inner classes, array types, or names with invisible characters, even if the forbid list is emptied or the allow list
+is set to `all`.
+
+This class-loader restriction is defense in depth, not a complete sandbox. It only gates class names that the engine
+resolves through it; it cannot stop reflection that a running expression performs on objects it already holds, such as
+`getClass()`, `getClassLoader().loadClass(...)` or `Class.forName(...)`, because those calls resolve through the JDK
+and MVEL bundle class loaders, not this one. The expression filtering layer above is therefore the primary,
+non-optional control: its allow-list of pre-vetted expressions and its forbid patterns (which reject reflection tokens
+such as `getClass`, `forName`, `invoke` and `Class`) are what actually stop arbitrary expressions from reaching the
+engine. Do not disable expression filtering or trim its forbid list on the assumption that the class loader alone will
+contain a hostile expression.
 
 This multi-layered approach makes it possible to retain a high level of security even if one layer is poorly
 configured or abused.
@@ -687,7 +701,10 @@ Alongside with the allow-listing technology, there are new configuration paramet
 [source]
 ----
 # These parameters control the list of classes that are allowed or forbidden when executing expressions.
-org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*}
+# Forbid is applied first. No org.mvel2 class is allowed, so expressions cannot name an MVEL class; MVEL's
+# own internals load from the MVEL bundle, not this filter. Public MVEL eval APIs are also always denied in
+# code, even if this forbid list is emptied or the allow list is set to "all".
+org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,java.lang.String}
 org.apache.unomi.scripting.forbid=${env:UNOMI_FORBID_SCRIPTING_CLASSES:-}
 
 # This parameter controls the whole expression filtering system. It is not recommended to turn it off. The main reason to turn it off would be to check if it is interfering with something, but it should always be active in production.
