@@ -21,6 +21,7 @@ import graphql.language.*;
 import graphql.parser.Parser;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
@@ -86,6 +87,8 @@ public class GraphQLServletSecurityValidator {
         if (isAuthenticatedUser(req)) {
             return true;
         }
+        // A 401 carries a challenge whether the header was missing or its credential was refused.
+        res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
         res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
         return false;
     }
@@ -289,7 +292,8 @@ public class GraphQLServletSecurityValidator {
      *            (WebSocket {@code connection_init}); when null, no tenant header is consulted.
      */
     private boolean authenticateBasic(String authHeader, HttpServletRequest req) {
-        if (authHeader == null || !authHeader.startsWith("Basic ")) {
+        // The scheme token is case-insensitive (RFC 7235).
+        if (authHeader == null || !authHeader.regionMatches(true, 0, "Basic ", 0, 6)) {
             return false;
         }
 
@@ -353,33 +357,58 @@ public class GraphQLServletSecurityValidator {
             });
             loginContext.login();
             Subject loginSubject = loginContext.getSubject();
-            boolean success = loginSubject != null;
-            if (success) {
-                if (req != null) {
-                    req.setAttribute(REMOTE_USER, username);
-                }
-                // Set the security context for JAAS authentication
-                securityService.setCurrentSubject(loginSubject);
-
-                // Check for tenant ID header (only meaningful when the credential arrived on a request)
-                String tenantId = req != null ? req.getHeader(UNOMI_TENANT_ID_HEADER) : null;
-                if (tenantId != null && !tenantId.trim().isEmpty()) {
-                    // Validate tenant exists
-                    Tenant tenant = tenantService.getTenant(tenantId);
-                    if (tenant != null) {
-                        executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
-                    } else {
-                        LOG.warn("Invalid tenant ID provided in header: {}", tenantId);
-                        // Same fallback as the "no tenant header" branch below: the thread-local
-                        // execution context must always be set explicitly here, otherwise a stale
-                        // context from a previous request on this pooled thread could leak in.
-                        executionContextManager.setCurrentContext(ExecutionContext.systemContext());
-                    }
-                } else {
-                    executionContextManager.setCurrentContext(ExecutionContext.systemContext());
-                }
+            if (loginSubject == null) {
+                return false;
             }
-            return success;
+
+            // Set the security context for JAAS authentication
+            securityService.setCurrentSubject(loginSubject);
+
+            // A successful realm login is not by itself an authorization to use this API: the realm
+            // can carry accounts that hold no Unomi role at all. Require the same administrator roles
+            // the REST admin surface requires.
+            if (!securityService.hasRole(UnomiRoles.ADMINISTRATOR)
+                    && !securityService.hasRole(UnomiRoles.TENANT_ADMINISTRATOR)) {
+                LOG.warn("Refusing GraphQL access to '{}': the account holds no Unomi administrator role", username);
+                securityService.clearCurrentSubject();
+                return false;
+            }
+
+            // Check for tenant ID header (only present when the credential arrived on a request;
+            // the connection_init route carries none, so it can never select a tenant this way)
+            String tenantId = req != null ? req.getHeader(UNOMI_TENANT_ID_HEADER) : null;
+            if (tenantId != null && !tenantId.trim().isEmpty()) {
+                // Validate tenant exists
+                Tenant tenant = tenantService.getTenant(tenantId);
+                if (tenant == null) {
+                    LOG.warn("Invalid tenant ID provided in header: {}", tenantId);
+                    securityService.clearCurrentSubject();
+                    return false;
+                }
+                // Naming a tenant is not the same as having authority over it.
+                if (!securityService.hasSystemAccess() && !securityService.hasTenantAccess(tenantId)) {
+                    LOG.warn("Refusing GraphQL access to '{}': no authority over tenant {}", username, tenantId);
+                    securityService.clearCurrentSubject();
+                    return false;
+                }
+                executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
+            } else {
+                // No tenant header. The system context is inherited by every tenant, so it is reserved
+                // for subjects that actually hold system access rather than being the default.
+                if (!securityService.hasSystemAccess()) {
+                    LOG.warn("Refusing GraphQL access to '{}': no tenant specified and no system access", username);
+                    securityService.clearCurrentSubject();
+                    return false;
+                }
+                // The thread-local execution context must always be set explicitly here, otherwise a
+                // stale context from a previous request on this pooled thread could leak in.
+                executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+            }
+
+            if (req != null) {
+                req.setAttribute(REMOTE_USER, username);
+            }
+            return true;
         } catch (LoginException e) {
             LOG.debug("Login failed", e);
             return false;
