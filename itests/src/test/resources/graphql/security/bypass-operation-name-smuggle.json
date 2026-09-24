@@ -1,0 +1,5 @@
+{
+  "operationName": "Privileged",
+  "variables": {},
+  "query": "query Public {\n  cdp {\n    getProfile(profileID: {id: \"nobody\"}) {\n      cdp_profileIDs {\n        id\n      }\n    }\n  }\n}\n\nquery Privileged {\n  cdp {\n    findProfiles(first: 100) {\n      edges {\n        node {\n          cdp_profileIDs {\n            id\n          }\n        }\n      }\n    }\n  }\n}\n"
+}

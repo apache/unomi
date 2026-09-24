@@ -84,4 +84,68 @@ public class GraphQLServletSecurityIT extends BaseGraphQLIT {
             Assert.assertEquals(401, response.getStatusLine().getStatusCode());
         }
     }
+
+    // ---------------------------------------------------------------------------------------------
+    // Operation-authorization bypasses.
+    //
+    // Each payload below is a way a caller holding only the page-embedded public API key could try to
+    // get a privileged operation executed. The public allow-list is getProfile and processEvents only,
+    // so every one of these must be refused. They are written as end-to-end requests deliberately: the
+    // decision has to hold against the real parser and the real servlet, not just in a unit test.
+    // ---------------------------------------------------------------------------------------------
+
+    /** An operation merely NAMED IntrospectionQuery must not be treated as introspection. */
+    @Test
+    public void testPublicKeyCannotRunPrivilegedOperationNamedIntrospectionQuery() throws Exception {
+        assertRefusedForPublicKey("graphql/security/bypass-introspection-named.json");
+    }
+
+    /** A privileged operation selected by operationName, hidden behind a benign first operation. */
+    @Test
+    public void testPublicKeyCannotSmugglePrivilegedOperationViaOperationName() throws Exception {
+        assertRefusedForPublicKey("graphql/security/bypass-operation-name-smuggle.json");
+    }
+
+    /** A leading fragment definition must not make the document look non-executable. */
+    @Test
+    public void testPublicKeyCannotBypassWithLeadingFragment() throws Exception {
+        assertRefusedForPublicKey("graphql/security/bypass-leading-fragment.json");
+    }
+
+    /** A privileged field hidden inside a fragment spread must still be seen. */
+    @Test
+    public void testPublicKeyCannotHidePrivilegedFieldInFragmentSpread() throws Exception {
+        assertRefusedForPublicKey("graphql/security/bypass-fragment-spread.json");
+    }
+
+    /** Several operations and no operationName: which one executes is ambiguous, so it must be refused. */
+    @Test
+    public void testPublicKeyCannotUseAmbiguousMultiOperationDocument() throws Exception {
+        assertRefusedForPublicKey("graphql/security/bypass-ambiguous-multi-operation.json");
+    }
+
+    /** An allowed field does not license a second root field alongside it. */
+    @Test
+    public void testPublicKeyCannotAddExtraRootFieldBesideAllowedOne() throws Exception {
+        assertRefusedForPublicKey("graphql/security/bypass-extra-root-field.json");
+    }
+
+    /**
+     * A public-key caller must not get privileged data out of this document. Refusal is either a 401 or
+     * a 200 carrying no data — both are acceptable outcomes, what matters is that nothing privileged is
+     * returned. Asserting only on the status code would let a 200-with-data regression pass unnoticed.
+     */
+    private void assertRefusedForPublicKey(final String resource) throws Exception {
+        try (CloseableHttpResponse response = postWithAuthType(resource, AuthType.PUBLIC_KEY)) {
+            final int status = response.getStatusLine().getStatusCode();
+            if (status == 401) {
+                return;
+            }
+            Assert.assertEquals("Expected the request to be refused (401) or to return no privileged data",
+                    200, status);
+            final ResponseContext context = ResponseContext.parse(response.getEntity());
+            Assert.assertNull("A public API key must not be able to read profiles through " + resource,
+                    context.getValue("data.cdp.findProfiles"));
+        }
+    }
 }
