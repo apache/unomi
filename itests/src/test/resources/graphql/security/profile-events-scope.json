@@ -1,0 +1,8 @@
+{
+  "operationName": "profileEventsScope",
+  "variables": {
+    "profileID": { "id": "f006-profile-a" },
+    "filter": { "cdp_profileID_equals": "f006-profile-b" }
+  },
+  "query": "query profileEventsScope($profileID: CDP_ProfileIDInput!, $filter: CDP_EventFilterInput) {\n  cdp {\n    getProfile(profileID: $profileID) {\n      cdp_events(filter: $filter) {\n        edges {\n          node {\n            id\n            cdp_profileID { id }\n          }\n        }\n      }\n    }\n  }\n}\n"
+}

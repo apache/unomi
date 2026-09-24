@@ -64,6 +64,7 @@ import org.junit.runners.Suite.SuiteClasses;
         GroovyActionsServiceIT.class,
         GroovyActionsEndpointRoleSecurityIT.class,
         GraphQLEventIT.class,
+        GraphQLProfileEventsScopeIT.class,
         GraphQLListIT.class,
         GraphQLProfileIT.class,
         GraphQLProfilePropertiesIT.class,
