@@ -13,24 +13,24 @@
   "properties" : {
     "eventType" : {
       "type" : "string",
-      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+      "pattern" : "^[\\w@.-]{0,60}$"
     },
     "profileId" : {
       "type" : [ "string"],
-      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+      "pattern" : "^[\\w@.-]{0,60}$"
     },
     "sessionId" : {
       "type" : [ "string"],
-      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+      "pattern" : "^[\\w@.-]{0,60}$"
     },
     "scope" : {
       "type" : [ "string"],
       "validateScope": true,
-      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+      "pattern" : "^[\\w@.-]{0,60}$"
     },
     "sourceId" : {
       "type" : [ "string"],
-      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+      "pattern" : "^[\\w@.-]{0,60}$"
     },
     "persistent" : {
       "type" : "boolean"
