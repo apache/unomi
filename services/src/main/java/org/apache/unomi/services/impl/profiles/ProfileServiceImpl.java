@@ -677,6 +677,11 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
     }
 
     public Profile saveOrMerge(Profile profile) {
+        // Same rule as save(Profile, boolean): a profile states its own identity, and there is
+        // nothing to look up or to merge into without it.
+        if (profile == null || profile.getItemId() == null) {
+            return null;
+        }
         Profile previousProfile = persistenceService.load(profile.getItemId(), Profile.class);
         profile.setSystemProperty("lastUpdated", new Date());
         if (previousProfile == null) {
