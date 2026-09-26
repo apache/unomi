@@ -147,7 +147,7 @@
         <maven-failsafe.plugin.version>3.5.2</maven-failsafe.plugin.version>
         <maven-assembly.plugin.version>3.7.1</maven-assembly.plugin.version>
         <maven-dependency.plugin.version>3.8.1</maven-dependency.plugin.version>
-        <maven-scm-publish.plugin.version>3.2.1</maven-scm-publish.plugin.version>
+        <maven-scm-publish.plugin.version>3.3.0</maven-scm-publish.plugin.version>
         <dependency-check.plugin.version>9.0.9</dependency-check.plugin.version>
         <maven-site.plugin.version>3.21.0</maven-site.plugin.version>
         <apache-rat.plugin.version>0.16.1</apache-rat.plugin.version>
