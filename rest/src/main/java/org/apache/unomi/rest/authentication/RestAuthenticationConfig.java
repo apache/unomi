@@ -61,21 +61,14 @@ public interface RestAuthenticationConfig {
     String getGlobalRoles();
 
     /**
-     * Check if V2 compatibility mode is enabled.
+     * Check if single-tenant compatibility mode is enabled.
      * When enabled, V2 clients can use Unomi V3 without requiring API keys:
      * - Public endpoints (like /context.json) require no authentication (like V2)
      * - Private endpoints require system administrator authentication (like V2)
      * - A default tenant is automatically used for all operations
      *
-     * @return true if V2 compatibility mode is enabled, false otherwise
+     * @return true if single-tenant compatibility mode is enabled, false otherwise
      */
-    boolean isV2CompatibilityModeEnabled();
+    boolean isSingleTenantCompatibilityModeEnabled();
 
-    /**
-     * Get the default tenant ID to use in V2 compatibility mode.
-     * This tenant will be used for all operations when V2 compatibility mode is enabled.
-     *
-     * @return the default tenant ID
-     */
-    String getV2CompatibilityDefaultTenantId();
 }

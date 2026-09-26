@@ -54,25 +54,27 @@ import java.util.Objects;
 import static org.junit.Assert.*;
 
 /**
- * Integration tests for V2 compatibility mode authentication.
+ * Integration tests for single-tenant compatibility mode authentication.
  * Tests the behavior when switching between V2 and V3 authentication modes
  * using OSGi configuration admin without restarting bundles.
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class V2CompatibilityModeIT extends BaseIT {
+public class SingleTenantCompatibilityModeIT extends BaseIT {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(V2CompatibilityModeIT.class);
+    private final static Logger LOGGER = LoggerFactory.getLogger(SingleTenantCompatibilityModeIT.class);
     private final static String CONTEXT_URL = "/cxs/context.json";
     private static final String TEST_SCOPE = "testScope";
     private String TEST_SESSION_ID;
+    /** The tenant the single-tenant compatibility mode runs on, as AuthenticationFilter names it. */
+    private static final String COMPATIBILITY_TENANT_ID = "default";
+
     private String TEST_PROFILE_ID;
     private final static String UNOMI_API_KEY_HEADER = "X-Unomi-Api-Key";
     private final static String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
     private final static String UNOMI_PEER_HEADER = "X-Unomi-Peer";
 
     private boolean originalV2Mode;
-    private String originalDefaultTenantId;
     private V2ThirdPartyConfigService v2ThirdPartyConfigService;
 
     @Before
@@ -82,26 +84,30 @@ public class V2CompatibilityModeIT extends BaseIT {
         v2ThirdPartyConfigService = getService(V2ThirdPartyConfigService.class);
 
         TestUtils.createScope(TEST_SCOPE, "Test scope", scopeService);
+
+        // The compatibility mode runs on its own tenant, not the one BaseIT works in, so an event it
+        // carries is validated against the scopes of that tenant. Create the scope there too, then
+        // put the context back where BaseIT left it.
+        executionContextManager.setCurrentContext(executionContextManager.createContext(COMPATIBILITY_TENANT_ID));
+        try {
+            TestUtils.createScope(TEST_SCOPE, "Test scope", scopeService);
+        } finally {
+            executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
+        }
         keepTrying("Scope "+ TEST_SCOPE +" not found in the required time", () -> scopeService.getScope(TEST_SCOPE),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // Store original V2 mode setting and default tenant ID
-        originalV2Mode = restAuthenticationConfig.isV2CompatibilityModeEnabled();
-        originalDefaultTenantId = restAuthenticationConfig.getV2CompatibilityDefaultTenantId();
+        originalV2Mode = restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled();
 
-        // Configure V2 compatibility mode to use the BaseIT test tenant as default
+        // Configure single-tenant compatibility mode to use the BaseIT test tenant as default
         Map<String, Object> v2Config = new HashMap<>();
-        v2Config.put("v2.compatibilitymode.enabled", false); // Start in V3 mode
-        v2Config.put("v2.compatibilitymode.defaultTenantId", TEST_TENANT_ID); // Use BaseIT tenant
+        v2Config.put("singletenantcompatibility.enabled", false); // Start in V3 mode
 
         updateConfiguration(null,
                 "org.apache.unomi.rest.authentication",
                 v2Config);
 
-        // Wait for configuration to be applied
-        keepTrying("V2 compatibility configuration not applied in the required time",
-                () -> restAuthenticationConfig.getV2CompatibilityDefaultTenantId(),
-                tenantId -> TEST_TENANT_ID.equals(tenantId), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // Create test profile
         Profile profile = new Profile(TEST_PROFILE_ID);
@@ -118,10 +124,7 @@ public class V2CompatibilityModeIT extends BaseIT {
         try {
             // Restore original V2 mode setting and default tenant ID
             Map<String, Object> originalConfig = new HashMap<>();
-            originalConfig.put("v2.compatibilitymode.enabled", originalV2Mode);
-            if (originalDefaultTenantId != null) {
-                originalConfig.put("v2.compatibilitymode.defaultTenantId", originalDefaultTenantId);
-            }
+            originalConfig.put("singletenantcompatibility.enabled", originalV2Mode);
 
             updateConfiguration(null,
                     "org.apache.unomi.rest.authentication",
@@ -149,45 +152,45 @@ public class V2CompatibilityModeIT extends BaseIT {
 
     @Test
     public void testV2CompatibilityModeSwitch() throws Exception {
-        LOGGER.info("Starting V2 compatibility mode switch test");
+        LOGGER.info("Starting single-tenant compatibility mode switch test");
 
         // STEP 1: Test V3 mode (default) - V2 requests should be rejected, V3 requests should work
         LOGGER.info("STEP 1: Testing V3 mode (default)");
         testV3ModeBehavior();
 
-        // STEP 2: Switch to V2 compatibility mode
-        LOGGER.info("STEP 2: Switching to V2 compatibility mode");
+        // STEP 2: Switch to single-tenant compatibility mode
+        LOGGER.info("STEP 2: Switching to single-tenant compatibility mode");
         updateConfiguration(null,
                 "org.apache.unomi.rest.authentication",
-                "v2.compatibilitymode.enabled",
+                "singletenantcompatibility.enabled",
                 true);
 
         // Wait for configuration to take effect
-        keepTrying("V2 compatibility mode not enabled in the required time",
-                () -> restAuthenticationConfig.isV2CompatibilityModeEnabled(),
+        keepTrying("single-tenant compatibility mode not enabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
                 enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // STEP 3: Test V2 mode - V2 requests should work, V3 requests should be rejected
-        LOGGER.info("STEP 3: Testing V2 compatibility mode");
+        LOGGER.info("STEP 3: Testing single-tenant compatibility mode");
         testV2ModeBehavior();
 
         // STEP 4: Switch back to V3 mode
         LOGGER.info("STEP 4: Switching back to V3 mode");
         updateConfiguration(null,
                 "org.apache.unomi.rest.authentication",
-                "v2.compatibilitymode.enabled",
+                "singletenantcompatibility.enabled",
                 false);
 
         // Wait for configuration to take effect
-        keepTrying("V2 compatibility mode not disabled in the required time",
-                () -> restAuthenticationConfig.isV2CompatibilityModeEnabled(),
+        keepTrying("single-tenant compatibility mode not disabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
                 enabled -> !enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // STEP 5: Test V3 mode again - V2 requests should be rejected, V3 requests should work
         LOGGER.info("STEP 5: Testing V3 mode again");
         testV3ModeBehavior();
 
-        LOGGER.info("V2 compatibility mode switch test completed successfully");
+        LOGGER.info("single-tenant compatibility mode switch test completed successfully");
     }
 
     /**
@@ -242,7 +245,7 @@ public class V2CompatibilityModeIT extends BaseIT {
     }
 
     /**
-     * Test behavior in V2 compatibility mode:
+     * Test behavior in single-tenant compatibility mode:
      * - V2 requests (no auth for public endpoints) should work
      * - V3 requests should be rejected
      */
@@ -254,21 +257,26 @@ public class V2CompatibilityModeIT extends BaseIT {
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
-        assertEquals("V2-style request should work in V2 compatibility mode", 200, response.getStatusCode());
+        assertEquals("V2-style request should work in single-tenant compatibility mode", 200, response.getStatusCode());
+        // The profile this request created belongs to the tenant the compatibility mode runs on, which
+        // is not the tenant BaseIT works in. Read that profile back below, so the write and the read
+        // both go through the compatibility path.
+        String compatibilityProfileId = response.getContextResponse().getProfileId();
+        assertNotNull("V2-style request should have created a profile", compatibilityProfileId);
 
         // Test V2-style request with X-Unomi-Peer header (V2 third-party auth) - should work
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(UNOMI_PEER_HEADER, "670c26d1cc413346c3b2fd9ce65dab41");
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         response = executeContextJSONRequest(request, TEST_SESSION_ID);
-        assertEquals("V2-style request with X-Unomi-Peer should work in V2 compatibility mode", 200, response.getStatusCode());
+        assertEquals("V2-style request with X-Unomi-Peer should work in single-tenant compatibility mode", 200, response.getStatusCode());
 
         // Test V3-style request with public API key - in V2 mode, V3 API keys are ignored (request succeeds but no events processed)
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(UNOMI_API_KEY_HEADER, testPublicKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         response = executeContextJSONRequest(request, TEST_SESSION_ID);
-        assertEquals("V3-style request with public API key should return 200 in V2 compatibility mode", 200, response.getStatusCode());
+        assertEquals("V3-style request with public API key should return 200 in single-tenant compatibility mode", 200, response.getStatusCode());
         assertEquals("V3-style request with public API key should have 0 processed events in V2 mode", 0, response.getContextResponse().getProcessedEvents());
 
         // Test V3-style request with private API key - in V2 mode, V3 API keys are ignored (request succeeds but no events processed)
@@ -276,11 +284,11 @@ public class V2CompatibilityModeIT extends BaseIT {
         addPrivateTenantAuth(request, testTenant, testPrivateKeyValue);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         response = executeContextJSONRequest(request, TEST_SESSION_ID);
-        assertEquals("V3-style request with private API key should return 200 in V2 compatibility mode", 200, response.getStatusCode());
+        assertEquals("V3-style request with private API key should return 200 in single-tenant compatibility mode", 200, response.getStatusCode());
         assertEquals("V3-style request with private API key should have 0 processed events in V2 mode", 0, response.getContextResponse().getProcessedEvents());
 
         // Test private endpoint with JAAS authentication - should work (like V2)
-        HttpGet getRequest = new HttpGet(getFullUrl("/cxs/profiles/" + TEST_PROFILE_ID));
+        HttpGet getRequest = new HttpGet(getFullUrl("/cxs/profiles/" + compatibilityProfileId));
 
         BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
         credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
@@ -295,26 +303,26 @@ public class V2CompatibilityModeIT extends BaseIT {
                 .setDefaultRequestConfig(requestConfig)
                 .build()) {
             try (CloseableHttpResponse jaasResponse = adminClient.execute(getRequest)) {
-                assertEquals("Private endpoint with JAAS auth should work in V2 compatibility mode", 200, jaasResponse.getStatusLine().getStatusCode());
+                assertEquals("Private endpoint with JAAS auth should work in single-tenant compatibility mode", 200, jaasResponse.getStatusLine().getStatusCode());
             }
             try (CloseableHttpResponse privacyResponse = adminClient.execute(new HttpGet(getFullUrl("/cxs/privacy/info")))) {
-                assertEquals("GET /cxs/privacy/info with Karaf auth should work in V2 compatibility mode", 200, privacyResponse.getStatusLine().getStatusCode());
+                assertEquals("GET /cxs/privacy/info with Karaf auth should work in single-tenant compatibility mode", 200, privacyResponse.getStatusLine().getStatusCode());
             }
         }
     }
 
     @Test
     public void testV2CompatibilityModeWithProtectedEvents() throws Exception {
-        LOGGER.info("Testing V2 compatibility mode with protected events");
+        LOGGER.info("Testing single-tenant compatibility mode with protected events");
 
-        // Switch to V2 compatibility mode
+        // Switch to single-tenant compatibility mode
         updateConfiguration(null,
                 "org.apache.unomi.rest.authentication",
-                "v2.compatibilitymode.enabled",
+                "singletenantcompatibility.enabled",
                 true);
 
-        keepTrying("V2 compatibility mode not enabled in the required time",
-                () -> restAuthenticationConfig.isV2CompatibilityModeEnabled(),
+        keepTrying("single-tenant compatibility mode not enabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
                 enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // Test protected event (login) without V2 third-party authentication - should be rejected
@@ -364,78 +372,12 @@ public class V2CompatibilityModeIT extends BaseIT {
     }
 
     @Test
-    public void testV2CompatibilityModeDefaultTenant() throws Exception {
-        LOGGER.info("Testing V2 compatibility mode default tenant behavior");
-
-        // Verify the configuration was applied correctly in setUp()
-        assertEquals("Default tenant should be set to BaseIT tenant", TEST_TENANT_ID, restAuthenticationConfig.getV2CompatibilityDefaultTenantId());
-
-        // Switch to V2 compatibility mode
-        updateConfiguration(null,
-                "org.apache.unomi.rest.authentication",
-                "v2.compatibilitymode.enabled",
-                true);
-
-        keepTrying("V2 compatibility mode not enabled in the required time",
-                () -> restAuthenticationConfig.isV2CompatibilityModeEnabled(),
-                enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-
-        // Verify the configuration was applied
-        assertTrue("V2 compatibility mode should be enabled", restAuthenticationConfig.isV2CompatibilityModeEnabled());
-        assertEquals("Default tenant should be set to BaseIT tenant", TEST_TENANT_ID, restAuthenticationConfig.getV2CompatibilityDefaultTenantId());
-
-        // Test that requests work with the BaseIT tenant as default
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setSessionId(TEST_SESSION_ID);
-
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
-        assertEquals("V2-style request should work with BaseIT tenant as default", 200, response.getStatusCode());
-    }
-
-    @Test
-    public void testV2CompatibilityModeConfigurationPersistence() throws Exception {
-        LOGGER.info("Testing V2 compatibility mode configuration persistence");
-
-        // Test that configuration changes persist across service updates
-        updateConfiguration(null,
-                "org.apache.unomi.rest.authentication",
-                "v2.compatibilitymode.enabled",
-                true);
-
-        keepTrying("V2 compatibility mode not enabled in the required time",
-                () -> restAuthenticationConfig.isV2CompatibilityModeEnabled(),
-                enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-
-        // Verify configuration is applied
-        assertTrue("V2 compatibility mode should be enabled", restAuthenticationConfig.isV2CompatibilityModeEnabled());
-        assertEquals("Default tenant should persist", TEST_TENANT_ID, restAuthenticationConfig.getV2CompatibilityDefaultTenantId());
-
-        // Update services to simulate service restart
-        updateServices();
-
-        // Verify configuration persists
-        assertTrue("V2 compatibility mode should persist after service update", restAuthenticationConfig.isV2CompatibilityModeEnabled());
-        assertEquals("Default tenant should persist after service update", TEST_TENANT_ID, restAuthenticationConfig.getV2CompatibilityDefaultTenantId());
-
-        // Test that behavior is still correct
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setSessionId(TEST_SESSION_ID);
-
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
-        assertEquals("V2-style request should still work after service update", 200, response.getStatusCode());
-    }
-
-    @Test
     public void testV2CompatibilityProtectedEventNegativeCases() throws Exception {
-        LOGGER.info("Testing V2 compatibility mode - protected event negative cases");
+        LOGGER.info("Testing single-tenant compatibility mode - protected event negative cases");
 
-        updateConfiguration(null, "org.apache.unomi.rest.authentication", "v2.compatibilitymode.enabled", true);
-        keepTrying("V2 compatibility mode not enabled in the required time",
-                () -> restAuthenticationConfig.isV2CompatibilityModeEnabled(),
+        updateConfiguration(null, "org.apache.unomi.rest.authentication", "singletenantcompatibility.enabled", true);
+        keepTrying("single-tenant compatibility mode not enabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
                 enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         Event loginEvent = new Event();

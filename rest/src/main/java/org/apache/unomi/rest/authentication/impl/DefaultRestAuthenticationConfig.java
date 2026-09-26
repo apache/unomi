@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 
 /**
  * Default OSGi-backed implementation of {@link RestAuthenticationConfig} for REST endpoint
- * authentication, role mappings, and V2 compatibility mode settings.
+ * authentication, role mappings, and single-tenant compatibility mode settings.
  */
 @Component(service = { RestAuthenticationConfig.class}, configurationPid = "org.apache.unomi.rest.authentication", immediate = true)
 @Designate(ocd = DefaultRestAuthenticationConfig.Config.class)
@@ -76,8 +76,7 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
         ROLES_MAPPING = Collections.unmodifiableMap(roles);
     }
 
-    private volatile boolean v2CompatibilityModeEnabled = false;
-    private volatile String v2CompatibilityDefaultTenantId = "default";
+    private volatile boolean singleTenantCompatibilityModeEnabled = false;
 
     /**
      * Updates authentication settings from OSGi configuration.
@@ -91,19 +90,9 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
             LOGGER.warn("Config is null in modified method");
             return;
         }
-        boolean v2Mode = config.v2_compatibilitymode_enabled();
-        String defaultTenant = config.v2_compatibilitymode_defaultTenantId();
-        if (defaultTenant != null) {
-            defaultTenant = defaultTenant.trim();
-        }
-        if (StringUtils.isBlank(defaultTenant)) {
-            LOGGER.warn("v2CompatibilityDefaultTenantId is blank, falling back to 'default'");
-            defaultTenant = "default";
-        }
-        LOGGER.info("Configuration updated - v2CompatibilityModeEnabled: {}, v2CompatibilityDefaultTenantId: {}",
-                    v2Mode, defaultTenant);
-        this.v2CompatibilityModeEnabled = v2Mode;
-        this.v2CompatibilityDefaultTenantId = defaultTenant;
+        boolean singleTenantMode = config.singletenantcompatibility_enabled();
+        LOGGER.info("Configuration updated - singleTenantCompatibilityModeEnabled: {}", singleTenantMode);
+        this.singleTenantCompatibilityModeEnabled = singleTenantMode;
     }
 
 
@@ -123,44 +112,29 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
     }
 
     @Override
-    public boolean isV2CompatibilityModeEnabled() {
-        return v2CompatibilityModeEnabled;
+    public boolean isSingleTenantCompatibilityModeEnabled() {
+        return singleTenantCompatibilityModeEnabled;
     }
 
-    @Override
-    public String getV2CompatibilityDefaultTenantId() {
-        return v2CompatibilityDefaultTenantId;
-    }
 
     /**
      * OSGi configuration for REST authentication.
      */
     @ObjectClassDefinition(
         name = "Unomi REST Authentication Configuration",
-        description = "Configuration for Unomi REST authentication including V2 compatibility mode"
+        description = "Configuration for Unomi REST authentication including single-tenant compatibility mode"
     )
     public @interface Config {
 
         /**
-         * Whether V2 compatibility mode is enabled.
+         * Whether single-tenant compatibility mode is enabled.
          *
-         * @return {@code true} when V2 compatibility mode is enabled
+         * @return {@code true} when single-tenant compatibility mode is enabled
          */
         @AttributeDefinition(
-            name = "V2 Compatibility Mode Enabled",
-            description = "Enable V2 compatibility mode to allow V2 clients to use Unomi V3 without API keys"
+            name = "Single-tenant compatibility mode enabled",
+            description = "Serve clients from before Unomi 3.1, which send no tenant API key, and run them all on one tenant"
         )
-        boolean v2_compatibilitymode_enabled() default false;
-
-        /**
-         * Default tenant identifier used in V2 compatibility mode.
-         *
-         * @return the default tenant identifier
-         */
-        @AttributeDefinition(
-            name = "V2 Compatibility Default Tenant ID",
-            description = "Default tenant ID to use in V2 compatibility mode"
-        )
-        String v2_compatibilitymode_defaultTenantId() default "default";
+        boolean singletenantcompatibility_enabled() default false;
     }
 }

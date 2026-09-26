@@ -22,7 +22,7 @@ Complete tenant isolation for profiles, events, segments, rules, and schemas. Pu
 
 * Operator guide: <<_multitenancy,Multi-tenancy>>
 * Migration: <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> (includes <<_client_facing_hardening_3_1,client-facing hardening>>)
-* Migrating from Unomi 2.x: <<_v2_compatibility_mode,V2 compatibility mode>> (`v2.compatibilitymode.enabled` in `org.apache.unomi.rest.authentication.cfg`)
+* Migrating from Unomi 2.x: <<_v2_compatibility_mode,single-tenant compatibility mode>> (`singletenantcompatibility.enabled` in `org.apache.unomi.rest.authentication.cfg`)
 
 ==== Security hardening (credentials, profile binding, privileged APIs)
 

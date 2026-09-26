@@ -77,7 +77,7 @@ import org.junit.runners.Suite.SuiteClasses;
         GraphQLProfileAliasesIT.class,
         SendEventActionIT.class,
         ScopeIT.class,
-        V2CompatibilityModeIT.class,
+        SingleTenantCompatibilityModeIT.class,
         CrudCommandsIT.class,
         CacheCommandsIT.class,
         TailCommandsIT.class,
