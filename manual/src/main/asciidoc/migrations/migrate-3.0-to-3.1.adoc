@@ -396,8 +396,9 @@ If you are migrating from **Unomi 2.x** (not 3.0), you can enable <<_v2_compatib
 ----
 # etc/org.apache.unomi.rest.authentication.cfg
 singletenantcompatibility.enabled = true
-v2.compatibilitymode.tenantId = default
 ----
+
+This mode always uses tenant `default`. There is no property to point it at another tenant. If tenant `default` does not exist yet, the first public request creates it. Migrated 2.x data has to live in that tenant to be visible while the mode is on.
 
 Environment variable equivalent: `UNOMI_REST_AUTHENTICATION_SINGLETENANTCOMPATIBILITYMODEENABLED=true`
 

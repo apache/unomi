@@ -28,7 +28,7 @@ When single-tenant compatibility mode is enabled:
 - **Public endpoints** (like `/context.json`) require no authentication (like V2)
 - **Protected events** (like `login`, `updateProperties`) require IP + X-Unomi-Peer (like V2)
 - **Private endpoints** require system administrator authentication (like V2)
-- **A default tenant** is automatically used for all operations
+- **Tenant `default`** is used for every operation. The mode cannot be pointed at another tenant.
 - **No authentication** is required for non-protected events (like V2)
 
 This allows V2 clients to work with Unomi V3 immediately after migration, giving you time to gradually update client applications to use the new V3 authentication model.
@@ -37,9 +37,8 @@ This allows V2 clients to work with Unomi V3 immediately after migration, giving
 
 Before enabling single-tenant compatibility mode, ensure that:
 
-1. **Data Migration Completed**: Your V2 data has been migrated to a tenant using the migration scripts
-2. **Default Tenant Exists**: A default tenant exists that will be used for all operations
-3. **V3 Installation**: Unomi V3 is properly installed and configured
+1. **Data Migration Completed**: Your V2 data has been migrated into tenant `default` using the migration scripts. The mode does not read data that lives in any other tenant.
+2. **V3 Installation**: Unomi V3 is properly installed and configured. If tenant `default` is missing, the first public request creates it.
 
 ==== Configuration
 
@@ -55,11 +54,9 @@ You can also set the environment variable `UNOMI_REST_AUTHENTICATION_SINGLETENAN
 
 2. **Enable single-tenant compatibility mode**:
    ```properties
-   # Enable single-tenant compatibility mode
+   # Enable single-tenant compatibility mode.
+   # The mode always uses tenant "default". There is no setting for another tenant id.
    singletenantcompatibility.enabled = true
-   
-   # Set the default tenant ID (should match the tenant ID used during migration)
-   v2.compatibilitymode.tenantId = your-migration-tenant-id
    ```
 
 3. **Restart the server** to apply the configuration changes:
@@ -86,7 +83,7 @@ First, migrate your data with Apache Unomi stopped using the single shell comman
 unomi:migrate 2.0.0
 ```
 
-The `migrate-3.1.0-10-tenantInitialization` script (run as part of that chain when migrating through 3.1) creates a default tenant used for single-tenant compatibility mode. See <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> and <<_shell_commands,Shell commands>>.
+The `migrate-3.1.0-10-tenantInitialization` script (run as part of that chain when migrating through 3.1) creates tenant `default`, which is the only tenant this mode uses. If that tenant is missing when the mode is on, the first public request creates it. See <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> and <<_shell_commands,Shell commands>>.
 
 ===== Step 2: Enable V2 Compatibility Mode
 
@@ -97,7 +94,7 @@ Enable single-tenant compatibility mode by updating the configuration file:
 vi etc/org.apache.unomi.rest.authentication.cfg
 
 # Set singletenantcompatibility.enabled = true
-# Set v2.compatibilitymode.tenantId = your-tenant-id
+# The mode always uses tenant "default".
 
 # Restart the server to apply changes
 ./bin/stop
@@ -172,7 +169,7 @@ When single-tenant compatibility mode is enabled:
 - **Public endpoints** are accessible without authentication (same as V2)
 - **Protected events** require IP + X-Unomi-Peer authentication (same as V2)
 - **Private endpoints** require system administrator authentication (same as V2)
-- **All operations** use the default tenant context
+- **All operations** use tenant `default`
 - **Non-protected events** require no authentication (same as V2)
 
 ===== Protected Events in V2 Compatibility Mode
@@ -256,8 +253,7 @@ The V2 third-party configuration supports dynamic updates:
 **V2 clients still not working**:
 - Check configuration file: `etc/org.apache.unomi.rest.authentication.cfg`
 - Verify `singletenantcompatibility.enabled = true`
-- Ensure `v2.compatibilitymode.tenantId` matches the tenant ID used during migration
-- Ensure the tenant exists and is accessible
+- Confirm migrated data is in tenant `default`. The mode cannot be pointed at another tenant.
 
 **Authentication errors**:
 - Verify system administrator credentials (the `karaf` user and your configured `UNOMI_ROOT_PASSWORD`)
@@ -265,8 +261,8 @@ The V2 third-party configuration supports dynamic updates:
 - Review logs for authentication errors
 
 **Tenant context issues**:
-- Ensure the default tenant ID matches your migrated tenant
-- Verify tenant exists in the tenant index
+- Migrated data must be in tenant `default`. Other tenants are not used while the mode is on.
+- If tenant `default` is missing, the first public request creates it. A private request does not.
 - Check tenant configuration in the migration scripts
 
 ===== Debugging
