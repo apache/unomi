@@ -98,7 +98,7 @@
         <jakarta-annotation-api.version>3.0.0</jakarta-annotation-api.version>
         <jakarta-json-api.version>2.1.2</jakarta-json-api.version>
         <swagger-ui.version>5.27.1</swagger-ui.version>
-        <cxf.version>3.6.8</cxf.version>
+        <cxf.version>4.2.2</cxf.version>
         <openapi.enrich.version>0.2.0</openapi.enrich.version>
         <rs-api.version>2.1</rs-api.version>
         <groovy.version>4.0.28</groovy.version>
