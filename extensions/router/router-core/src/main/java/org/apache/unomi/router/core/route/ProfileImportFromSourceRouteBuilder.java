@@ -119,6 +119,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
         }
 
         //Loop on multiple import configuration
+        int refused = 0;
         for (final ImportConfiguration importConfiguration : importConfigurationList) {
             if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType()) &&
                     importConfiguration.getProperties() != null && importConfiguration.getProperties().size() > 0) {
@@ -183,9 +184,15 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                         prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
                     }
                 } else {
+                    refused++;
                     LOGGER.error("Source endpoint is refused ({}), route {} will be skipped.", refusal, importConfiguration.getItemId());
                 }
             }
+        }
+        if (refused > 0) {
+            LOGGER.warn("{} of {} import configuration(s) name a source that is refused and run no route; each is "
+                    + "marked {} and logged above. After an upgrade, check that their files sit under "
+                    + "{baseDir}/{tenantId}.", refused, importConfigurationList.size(), RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT);
         }
     }
 

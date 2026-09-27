@@ -18,6 +18,7 @@ package org.apache.unomi.router.core.route;
 
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
@@ -38,6 +39,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -80,6 +82,9 @@ public class RefusedConfigurationStatusTest {
 
     private RecordingConfigurationService<ImportConfiguration> importConfigurations;
     private RecordingConfigurationService<ExportConfiguration> exportConfigurations;
+
+    /** The tenant the fake context manager is currently running as, or {@code null} outside any. */
+    private String currentTenant;
 
     @Before
     public void setUp() throws Exception {
@@ -124,6 +129,22 @@ public class RefusedConfigurationStatusTest {
                 RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT, configuration.getStatus());
         assertTrue("the configuration should have been saved so the failure is visible",
                 exportConfigurations.contains("out-of-bounds"));
+    }
+
+    @Test
+    public void aRefusedConfigurationIsRecordedAsItsOwnTenant() throws Exception {
+        // Start-up builds every tenant's routes in one pass; the store refuses a save whose current
+        // tenant is not the configuration's, so the mark has to be written as that tenant.
+        ImportConfiguration configuration = recurrentImport(fileUri(arbitraryDir, "?fileName=profiles.csv"));
+        configuration.setTenantId("beta");
+        importConfigurations.currentTenant = () -> currentTenant;
+
+        addImportRoutes(recordingContextManager(), configuration);
+
+        assertTrue("the refusal should have been recorded", importConfigurations.contains("out-of-bounds"));
+        assertEquals("the mark must be written as the configuration's tenant, whatever the batch runs as",
+                "beta", importConfigurations.tenantAtLastSave);
+        assertNull("the batch's own context must be restored afterwards", currentTenant);
     }
 
     @Test
@@ -252,6 +273,10 @@ public class RefusedConfigurationStatusTest {
     }
 
     private void addImportRoutes(ImportConfiguration... configurations) throws Exception {
+        addImportRoutes(null, configurations);
+    }
+
+    private void addImportRoutes(ExecutionContextManager contextManager, ImportConfiguration... configurations) throws Exception {
         ProfileImportFromSourceRouteBuilder builder =
                 new ProfileImportFromSourceRouteBuilder(NO_KAFKA, RouterConstants.CONFIG_TYPE_NOBROKER);
         builder.setImportConfigurationList(java.util.Arrays.asList(configurations));
@@ -260,8 +285,35 @@ public class RefusedConfigurationStatusTest {
         builder.setJacksonDataFormat(new JacksonDataFormat(ProfileToImport.class));
         builder.setAllowedEndpoints(DEFAULT_ALLOWED_ENDPOINTS);
         builder.setPermittedImportBaseDirs(importRoot.getAbsolutePath());
+        builder.setExecutionContextManager(contextManager);
         builder.setContext(camelContext);
         camelContext.addRoutes(builder);
+    }
+
+    /**
+     * Runs an operation as the tenant it is asked to, and remembers which one that is for as long as
+     * the operation lasts, the way the real manager swaps the thread's context.
+     */
+    private ExecutionContextManager recordingContextManager() {
+        return (ExecutionContextManager) Proxy.newProxyInstance(
+                ExecutionContextManager.class.getClassLoader(),
+                new Class<?>[]{ExecutionContextManager.class},
+                (proxy, method, args) -> {
+                    if (!"executeAsTenant".equals(method.getName())) {
+                        return null;
+                    }
+                    String previous = currentTenant;
+                    currentTenant = (String) args[0];
+                    try {
+                        if (args[1] instanceof Runnable) {
+                            ((Runnable) args[1]).run();
+                            return null;
+                        }
+                        return ((Supplier<?>) args[1]).get();
+                    } finally {
+                        currentTenant = previous;
+                    }
+                });
     }
 
     private void addExportRoutes(ExportConfiguration... configurations) throws Exception {
@@ -294,6 +346,11 @@ public class RefusedConfigurationStatusTest {
 
         private boolean lastSaveAskedForARouteRefresh;
 
+        /** Where the store reads the current tenant from; the real one refuses a save from another. */
+        private Supplier<String> currentTenant = () -> null;
+
+        private String tenantAtLastSave;
+
         /** Stands in for a store that cannot be written to -- Elasticsearch unreachable at start-up. */
         private boolean unwritable;
 
@@ -317,6 +374,7 @@ public class RefusedConfigurationStatusTest {
                 throw new IllegalStateException("the store is unreachable");
             }
             lastSaveAskedForARouteRefresh = updateRunningRoute;
+            tenantAtLastSave = currentTenant.get();
             stored.put(itemIdOf(configuration), configuration);
             return configuration;
         }

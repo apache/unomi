@@ -52,6 +52,13 @@ import java.util.regex.Pattern;
  * instead of being cut in two, and the File Language expressions a path-bearing option may carry are
  * accounted for rather than taken literally.
  *
+ * <p>One thing Camel does to a URI cannot be accounted for. A property placeholder ({@code {{...}}})
+ * is expanded over the whole URI before the endpoint is parsed, and the built-in {@code env:} and
+ * {@code sys:} functions take an inline default that is used verbatim when the variable is not set:
+ * {@code {{env:UNSET:../elsewhere}}} is a parent segment that no path walk sees, since the
+ * {@code ..} is fused to the token it sits in. An endpoint that carries the placeholder token is
+ * therefore refused, whatever its scheme.
+ *
  * <p>A path the file system cannot make sense of, and a path whose existing part cannot be resolved,
  * are both refusals: nothing is thrown out of this class, because one malformed endpoint must not
  * cost a deployment the routes of every other configuration.
@@ -114,6 +121,12 @@ public final class EndpointValidator {
     private static final String NAME_PLACEHOLDER = "_";
 
     /**
+     * Opens a Camel property placeholder. Camel expands these over the whole URI before it parses the
+     * endpoint, so a placeholder can rewrite any part of a URI after this class has looked at it.
+     */
+    private static final String PROPERTY_PLACEHOLDER_TOKEN = "{{";
+
+    /**
      * A tenant id used as a directory name. The same shape the one-shot import accepts, so a tenant
      * cannot be {@code ..} or a path of its own and leave the directory this class confines it to.
      */
@@ -148,6 +161,10 @@ public final class EndpointValidator {
         String scheme = endpointUri.substring(0, schemeSeparator);
         if (!containsIgnoreCase(split(allowedSchemes), scheme)) {
             return "endpoint scheme '" + scheme + "' is not allowed";
+        }
+        if (endpointUri.contains(PROPERTY_PLACEHOLDER_TOKEN)) {
+            return "endpoint '" + endpointUri + "' carries a property placeholder, which Camel expands "
+                    + "before the endpoint is resolved, so it cannot be validated";
         }
 
         try {
@@ -391,8 +408,9 @@ public final class EndpointValidator {
     }
 
     /**
-     * {@code RAW(...)} and {@code RAW{...}} tell Camel not to decode a value; the path it wraps is used
-     * as it stands.
+     * {@code RAW(...)} tells Camel not to decode a value; the path it wraps is used as it stands.
+     * {@code RAW{...}} is the same marker in later Camel versions; the version in use does not know
+     * it, so honouring it here is stricter than Camel, never looser, and stays right across an upgrade.
      */
     private static String stripRaw(String value) {
         if (value.startsWith("RAW(") && value.endsWith(")")) {
@@ -458,7 +476,9 @@ public final class EndpointValidator {
      * Decodes the percent-encoding of a URI, so that containment is decided on the path the file system
      * will see. Unlike form decoding, {@code +} is left alone: it is a valid character in a file name.
      * Characters that are not escaped keep their own encoding, so a path that mixes an escape with a
-     * non-ASCII name is not corrupted into a different path.
+     * non-ASCII name is not corrupted into a different path. Camel additionally folds {@code +} to a
+     * space in a value that is not {@code RAW()}; that turns one name into another within the same
+     * directory, never into a parent segment, so it is not reproduced here.
      */
     private static String decode(String value) {
         if (value.indexOf('%') < 0) {

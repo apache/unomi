@@ -73,11 +73,21 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
         configurationService = exportConfigurationService;
     }
 
+    /**
+     * Sets the service the router publishes its allowed schemes and base directories through.
+     *
+     * @param configSharingService the configuration sharing service
+     */
     @Reference
     public void setConfigSharingService(ConfigSharingService configSharingService) {
         this.configSharingService = configSharingService;
     }
 
+    /**
+     * Sets the manager that tells which tenant, or the system, is calling.
+     *
+     * @param executionContextManager the execution context manager
+     */
     @Reference
     public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
         this.executionContextManager = executionContextManager;

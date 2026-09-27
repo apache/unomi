@@ -101,6 +101,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
         collectProfileBean.setExecutionContextManager(executionContextManager);
 
         //Loop on multiple export configuration
+        int refused = 0;
         for (final ExportConfiguration exportConfiguration : exportConfigurationList) {
             if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfiguration.getConfigType()) &&
                     exportConfiguration.getProperties() != null && exportConfiguration.getProperties().size() > 0) {
@@ -130,6 +131,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                             prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_EXPORT_DEPOSIT_BUFFER));
                         }
                     } else {
+                        refused++;
                         LOGGER.error("Destination endpoint is refused ({}), route {} will be skipped.", refusal, exportConfiguration.getItemId());
                     }
                 } else {
@@ -138,6 +140,11 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
             } else {
                 LOGGER.warn("Export configuration incomplete, route {} will be skipped!", exportConfiguration.getItemId());
             }
+        }
+        if (refused > 0) {
+            LOGGER.warn("{} of {} export configuration(s) name a destination that is refused and run no route; each is "
+                    + "marked {} and logged above. After an upgrade, check that their files sit under "
+                    + "{baseDir}/{tenantId}.", refused, exportConfigurationList.size(), RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT);
         }
     }
 
@@ -151,6 +158,11 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
         this.permittedBaseDirs = permittedExportBaseDirs;
     }
 
+    /**
+     * Sets the service a refused configuration is recorded with.
+     *
+     * @param exportConfigurationService the export configuration service
+     */
     public void setExportConfigurationService(ImportExportConfigurationService<ExportConfiguration> exportConfigurationService) {
         this.exportConfigurationService = exportConfigurationService;
     }

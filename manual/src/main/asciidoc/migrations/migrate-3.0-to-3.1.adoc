@@ -276,6 +276,22 @@ When migrating to 3.1, you need to understand that:
 - Each tenant operates in complete isolation with their own data space
 - Tenant context must be established for every API operation
 
+==== Recurrent import and export files move under a tenant directory
+
+A recurrent import source or export destination that uses the `file` scheme must now resolve inside the
+deployment's base directory for that direction (`org.apache.unomi.router.config.import.baseDir` and
+`org.apache.unomi.router.config.export.baseDir`, defaulting to `${karaf.data}/router/import/` and
+`${karaf.data}/router/export/`), under the subdirectory named after the configuration's tenant
+(`{baseDir}/{tenantId}`). This applies to the endpoint directory, to its path-bearing options (`fileName`,
+`move`, `moveFailed`, ...) and to `localWorkDirectory` on `ftp`, `sftp` and `ftps` endpoints.
+
+Existing configurations are not migrated. After the upgrade, a configuration whose endpoint resolves anywhere
+else builds no route and is marked `INVALID_ENDPOINT`; one error line is logged per configuration, followed
+by a summary count at the end of each route build. To keep such a configuration running, either move its
+files under `{baseDir}/{tenantId}` and update its `source` or `destination` accordingly, or point the two
+base-directory properties at the directories already in use. The mark clears on its own once the endpoint is
+accepted again. The "Profile import and export" chapter describes the rule in full.
+
 ==== Migration Steps
 
 1. **Understand Multi-Tenancy Impact**
@@ -394,6 +410,7 @@ Before starting the migration, please ensure that:
 - You have a plan to update client applications to tenant API keys (or temporary <<_v2_compatibility_mode,single-tenant compatibility mode>> only if coming from 2.x)
 - You have reviewed the <<_client_facing_hardening_3_1,client-facing hardening>> notes (cookie-only public profile binding, HttpOnly default, required passwords, privileged REST roles)
 - You know how to obtain plaintext API keys after upgrade (regenerate via `/cxs/tenants/{id}/apikeys`; create responses expose masked keys only)
+- Your recurrent import and export `file` endpoints resolve under `{baseDir}/{tenantId}`, or the router's base-directory properties point at the directories already in use (see above)
 
 === Migration Process
 

@@ -242,7 +242,8 @@ scheme is refused unless it resolves inside one of these base directories, under
 tenant (`{baseDir}/{tenantId}`), at any depth, and so is any of its options that names a path (`fileName`, `move`,
 `moveFailed`, ...). The same applies to `localWorkDirectory`, whatever the scheme, since that one names a local
 directory even on a remote endpoint. Each property accepts a comma-separated list. A tenant cannot point a file
-endpoint at another tenant's directory.
+endpoint at another tenant's directory. An endpoint that carries a Camel property placeholder (`{{...}}`) is refused
+whatever its scheme, since Camel expands it after the endpoint has been validated.
 
     #Base directories a file endpoint may resolve into
     org.apache.unomi.router.config.import.baseDir=${karaf.data}/router/import/

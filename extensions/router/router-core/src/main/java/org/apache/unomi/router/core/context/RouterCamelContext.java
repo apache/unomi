@@ -490,10 +490,20 @@ public class RouterCamelContext implements IRouterCamelContext {
         this.securityService = securityService;
     }
 
+    /**
+     * Sets the comma-separated base directories an import {@code file} endpoint may resolve into.
+     *
+     * @param permittedImportBaseDirs the permitted import base directories
+     */
     public void setPermittedImportBaseDirs(String permittedImportBaseDirs) {
         this.permittedImportBaseDirs = permittedImportBaseDirs;
     }
 
+    /**
+     * Sets the comma-separated base directories an export {@code file} endpoint may resolve into.
+     *
+     * @param permittedExportBaseDirs the permitted export base directories
+     */
     public void setPermittedExportBaseDirs(String permittedExportBaseDirs) {
         this.permittedExportBaseDirs = permittedExportBaseDirs;
     }

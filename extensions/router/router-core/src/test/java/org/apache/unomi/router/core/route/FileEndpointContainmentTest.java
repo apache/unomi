@@ -639,6 +639,79 @@ public class FileEndpointContainmentTest {
     }
 
     // ---------------------------------------------------------------------------------------------
+    // Property placeholders — expanded by Camel after validation, over the whole URI
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    public void importRouteIsRefusedWhenSourceDirectoryCarriesAPropertyPlaceholder() throws Exception {
+        // Camel expands {{env:NAME:default}} before it parses the endpoint, and uses the default
+        // verbatim when NAME is not set: what reaches the file system is acme/../beta. To a path walk
+        // the first parent segment is fused to the token and is not a parent segment at all.
+        addImportRoutes(recurrentImport("placeholder-directory",
+                fileUri(permittedImportDir, "/{{env:UNOMI_UNSET_FOR_TEST:../beta}}?fileName=profiles.csv")));
+
+        assertRouteRefused("placeholder-directory",
+                "a placeholder is expanded after validation, so nothing about the path can be trusted");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenAPathBearingOptionCarriesAPropertyPlaceholder() throws Exception {
+        addImportRoutes(recurrentImport("placeholder-option",
+                fileUri(permittedImportDir, "?fileName=profiles.csv&move={{sys:unomi.unset.for.test:../../beta}}")));
+
+        assertRouteRefused("placeholder-option", "the placeholder's default is a parent segment the path walk never sees");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenARemoteSourceCarriesAPropertyPlaceholder() throws Exception {
+        // starts inside the tenant's directory, so that only the placeholder takes it out of there
+        addImportRoutes(recurrentImport("placeholder-remote", "sftp://sftp.example.com/profiles?fileName=profiles.csv"
+                + "&localWorkDirectory=" + permittedImportDir.getAbsolutePath() + "/{{env:UNOMI_UNSET_FOR_TEST:../../elsewhere}}"));
+
+        assertRouteRefused("placeholder-remote", "a placeholder can put the staging directory anywhere, whatever the scheme");
+    }
+
+    @Test
+    public void exportRouteIsRefusedWhenDestinationCarriesAPropertyPlaceholder() throws Exception {
+        addExportRoutes(recurrentExport("placeholder-destination",
+                fileUri(permittedExportDir, "?fileName={{env:UNOMI_UNSET_FOR_TEST:../../beta/profiles.csv}}")));
+
+        assertRouteRefused("placeholder-destination", "an export destination is expanded by Camel the same way");
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // The other expression syntax, and a tenant id that is a path
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    public void importRouteIsRefusedWhenMoveOptionUsesTheAlternateExpressionSyntaxToLeavePermittedBaseDir() throws Exception {
+        addImportRoutes(recurrentImport("simple-syntax",
+                fileUri(permittedImportDir, "?fileName=profiles.csv&move=$simple{file:parent}/../../elsewhere")));
+
+        assertRouteRefused("simple-syntax", "$simple{...} is the same File Language expression as ${...}");
+    }
+
+    @Test
+    public void importRouteIsBuiltWhenMoveOptionUsesTheAlternateExpressionSyntaxAndStaysInside() throws Exception {
+        addImportRoutes(recurrentImport("simple-syntax-inside",
+                fileUri(permittedImportDir, "?fileName=profiles.csv&move=.done/$simple{file:name.noext}-$simple{date:now:yyyyMMdd}.csv")));
+
+        assertRouteBuilt("simple-syntax-inside", "name and date tokens contribute one component each, whatever the syntax");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenTheTenantIdIsNotASingleDirectoryName() throws Exception {
+        File otherTenant = new File(importRoot, "beta");
+        assertTrue(otherTenant.mkdirs());
+        ImportConfiguration configuration = recurrentImport("traversing-tenant", fileUri(otherTenant, "?fileName=profiles.csv"));
+        configuration.setTenantId("acme/../beta");
+
+        addImportRoutes(configuration);
+
+        assertRouteRefused("traversing-tenant", "a tenant id that is a path of its own is not confined to a directory");
+    }
+
+    // ---------------------------------------------------------------------------------------------
     // Fixtures
     // ---------------------------------------------------------------------------------------------
 

@@ -119,7 +119,8 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
      *
      * <p>The other way round matters just as much: restoring the permitted directories must bring the
      * configuration back on its own, without anyone having to touch it. Only the status this method
-     * sets is cleared, so the record of a run that genuinely failed survives.
+     * sets is cleared, so the record of a run that genuinely failed survives. The status the mark
+     * replaces is not restored afterwards, so it is logged when it is overwritten.
      *
      * <p>The configuration is saved without asking for its running route to be refreshed: the refresh
      * would rebuild the route, refuse it again and save it again, without end.
@@ -128,9 +129,13 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
      * @param service       the service holding that kind of configuration
      * @param refusal       the reason the endpoint was refused, or {@code null} if it can be honoured
      */
-    protected <T extends ImportExportConfiguration> void recordEndpointOutcome(
+    private <T extends ImportExportConfiguration> void recordEndpointOutcome(
             T configuration, ImportExportConfigurationService<T> service, String refusal) {
         if (refusal != null) {
+            if (!RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT.equals(configuration.getStatus())) {
+                LOGGER.warn("Configuration {} is marked {} (its status was {}): {}", configuration.getItemId(),
+                        RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT, configuration.getStatus(), refusal);
+            }
             configuration.setStatus(RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT);
             saveQuietly(configuration, service);
         } else if (RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT.equals(configuration.getStatus())) {
@@ -163,7 +168,8 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
      * <p>Startup builds every tenant's routes in one pass, and the configuration service refuses a save
      * whose current tenant is not the configuration's. Writing the mark from the wrong tenant would
      * either fail or store it in another tenant's index. When no context manager is available the mark
-     * is written as it stands, which is what the unit tests do.
+     * is written as it stands, which is what the unit tests do. This is the only entry point: writing
+     * the mark outside the configuration's tenant is not something a route builder may do.
      */
     protected <T extends ImportExportConfiguration> void recordEndpointOutcome(
             T configuration, ImportExportConfigurationService<T> service, String refusal,

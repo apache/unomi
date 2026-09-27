@@ -221,6 +221,59 @@ public class ConfigurationEndpointValidationTest {
     }
 
     @Test
+    public void savingARecurrentImportIsJudgedAgainstTheCallerTenantWhateverTenantTheBodyNames() {
+        ExecutionContextManager contexts = mock(ExecutionContextManager.class);
+        when(contexts.getCurrentContext()).thenReturn(new ExecutionContext(TENANT, null, null));
+        importEndpoint.setExecutionContextManager(contexts);
+        File otherTenant = new File(importRoot, "beta");
+        assertTrue(otherTenant.mkdirs());
+
+        ImportConfiguration configuration = recurrentImport(fileUri(otherTenant, "?fileName=profiles.csv"));
+        configuration.setTenantId("beta");
+
+        assertRefused(() -> importEndpoint.saveConfiguration(configuration));
+        assertFalse("acme may not have a configuration judged against beta's directory by naming beta",
+                importConfigurations.contains("in-bounds"));
+    }
+
+    @Test
+    public void savingARecurrentImportAsTheSystemHonoursTheTenantTheBodyNames() {
+        ExecutionContextManager contexts = mock(ExecutionContextManager.class);
+        when(contexts.getCurrentContext()).thenReturn(new ExecutionContext(ExecutionContext.SYSTEM_TENANT, null, null));
+        importEndpoint.setExecutionContextManager(contexts);
+        File otherTenant = new File(importRoot, "beta");
+        assertTrue(otherTenant.mkdirs());
+
+        ImportConfiguration configuration = recurrentImport(fileUri(otherTenant, "?fileName=profiles.csv"));
+        configuration.setTenantId("beta");
+
+        importEndpoint.saveConfiguration(configuration);
+
+        assertTrue("the system may configure any tenant, judged against that tenant's directory",
+                importConfigurations.contains("in-bounds"));
+    }
+
+    @Test
+    public void savingARecurrentImportWhoseTenantIdIsAPathIsRefused() {
+        File otherTenant = new File(importRoot, "beta");
+        assertTrue(otherTenant.mkdirs());
+        ImportConfiguration configuration = recurrentImport(fileUri(otherTenant, "?fileName=profiles.csv"));
+        configuration.setTenantId("acme/../beta");
+
+        assertRefused(() -> importEndpoint.saveConfiguration(configuration));
+        assertFalse("a tenant id that is a path must not be resolved against the shared base directory",
+                importConfigurations.contains("in-bounds"));
+    }
+
+    @Test
+    public void savingARecurrentImportWhoseSourceCarriesAPropertyPlaceholderIsRefused() {
+        assertRefused(() -> importEndpoint.saveConfiguration(
+                recurrentImport(fileUri(permittedImportDir, "/{{env:UNOMI_UNSET_FOR_TEST:../beta}}?fileName=profiles.csv"))));
+        assertFalse("Camel expands a placeholder after validation, so the configuration cannot be stored",
+                importConfigurations.contains("in-bounds"));
+    }
+
+    @Test
     public void savingAOneshotImportThatCarriesNoSourceStoresIt() {
         ImportConfiguration configuration = new ImportConfiguration();
         configuration.setItemId("oneshot");
