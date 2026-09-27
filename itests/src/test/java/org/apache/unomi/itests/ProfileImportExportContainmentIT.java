@@ -207,7 +207,7 @@ public class ProfileImportExportContainmentIT extends BaseIT {
      */
     private Response postJson(String url, Object body) throws Exception {
         HttpPost request = new HttpPost(getFullUrl(url));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(body), ContentType.APPLICATION_JSON));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(body), ContentType.APPLICATION_JSON));
         try (CloseableHttpResponse response = httpClient.execute(request)) {
             return new Response(response.getStatusLine().getStatusCode(),
                     response.getEntity() == null ? "" : EntityUtils.toString(response.getEntity()));
