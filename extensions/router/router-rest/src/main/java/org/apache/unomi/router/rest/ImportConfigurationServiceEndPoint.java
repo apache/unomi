@@ -19,6 +19,7 @@ package org.apache.unomi.router.rest;
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ExecutionContextManager;
@@ -150,6 +151,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
      * @param file the CSV file upload (multipart field)
      * @return an empty success response
      * @api.status 200 empty CSV uploaded and ready for processing.
+     * @api.status 400 empty No current tenant context.
      * @api.status 500 empty Error writing the uploaded file.
      * @api.example {}
      */
@@ -159,11 +161,16 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
     @Produces(MediaType.APPLICATION_JSON)
     public Response processOneshotImportConfigurationCSV(@Multipart(value = "importConfigId") @NotNull @Pattern(regexp = "^[a-zA-Z0-9_.\\-]{1,255}$") String importConfigId,
                                                          @Multipart(value = "file") Attachment file) {
+        ExecutionContext context = executionContextManager.getCurrentContext();
+        if (context == null || context.getTenantId() == null || context.getTenantId().trim().isEmpty()) {
+            LOGGER.warn("One-shot import refused: no current tenant");
+            return Response.status(Response.Status.BAD_REQUEST).build();
+        }
+        String tenantId = context.getTenantId();
         try {
             // The Camel route reads the tenant from the directory holding the file, so the upload
             // writes it there. Without that directory ImportConfigByFileNameProcessor answers
             // "Invalid or missing tenant ID in path" and drops the file, and the import never runs.
-            String tenantId = executionContextManager.getCurrentContext().getTenantId();
             java.nio.file.Path tenantDir = Paths.get(String.valueOf(configSharingService.getProperty(RouterConstants.IMPORT_ONESHOT_UPLOAD_DIR)), tenantId);
             Files.createDirectories(tenantDir);
             java.nio.file.Path path = tenantDir.resolve(importConfigId + ".csv");
