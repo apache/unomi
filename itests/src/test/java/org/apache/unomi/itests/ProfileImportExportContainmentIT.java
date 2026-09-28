@@ -35,6 +35,7 @@ import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -88,7 +89,7 @@ public class ProfileImportExportContainmentIT extends BaseIT {
 
         Response response = postJson(IMPORT_CONFIGURATION_URL, configuration);
 
-        Assert.assertEquals("a configuration whose source cannot be honoured is a bad request",
+        Assert.assertEquals("a configuration whose source cannot be honoured is a bad request: " + response.body,
                 400, response.status);
         Assert.assertFalse("the refusal must say why, so the caller can correct it",
                 response.body.trim().isEmpty());
@@ -103,7 +104,7 @@ public class ProfileImportExportContainmentIT extends BaseIT {
 
         Response response = postJson(EXPORT_CONFIGURATION_URL, configuration);
 
-        Assert.assertEquals("a configuration whose destination cannot be honoured is a bad request",
+        Assert.assertEquals("a configuration whose destination cannot be honoured is a bad request: " + response.body,
                 400, response.status);
         Assert.assertFalse("the refusal must say why, so the caller can correct it",
                 response.body.trim().isEmpty());
@@ -119,7 +120,7 @@ public class ProfileImportExportContainmentIT extends BaseIT {
 
         Response response = postJson(IMPORT_CONFIGURATION_URL, configuration);
 
-        Assert.assertEquals("a configuration inside the permitted directory is legitimate",
+        Assert.assertEquals("a configuration inside the permitted directory is legitimate: " + response.body,
                 200, response.status);
         keepTrying("the accepted configuration should have been stored",
                 () -> importConfigurationService.load(createdImportConfigId), c -> c != null, 1000, 20);
@@ -203,10 +204,16 @@ public class ProfileImportExportContainmentIT extends BaseIT {
     /**
      * Executes the request against the shared client rather than through {@code executeHttpRequest},
      * which consumes the response body to log it whenever the status is not {@code 200} — these tests
-     * need to read that body themselves.
+     * need to read that body themselves. The credentials are the ones that helper sets for
+     * {@code JAAS_ADMIN}: both configuration endpoints require the administrator role. The tenant
+     * header is what makes that login run as {@link #TEST_TENANT_ID}; without it the request is the
+     * system tenant, and a path under the test tenant is refused.
      */
     private Response postJson(String url, Object body) throws Exception {
         HttpPost request = new HttpPost(getFullUrl(url));
+        String credentials = BASIC_AUTH_USER_NAME + ":" + BASIC_AUTH_PASSWORD;
+        request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8)));
+        request.setHeader("X-Unomi-Tenant-Id", TEST_TENANT_ID);
         request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(body), ContentType.APPLICATION_JSON));
         try (CloseableHttpResponse response = httpClient.execute(request)) {
             return new Response(response.getStatusLine().getStatusCode(),
@@ -227,6 +234,7 @@ public class ProfileImportExportContainmentIT extends BaseIT {
     private ImportConfiguration recurrentImport(String itemId, String source) {
         ImportConfiguration configuration = new ImportConfiguration();
         configuration.setItemId(itemId);
+        configuration.setTenantId(TEST_TENANT_ID);
         configuration.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
         configuration.setColumnSeparator(",");
         configuration.setActive(true);
@@ -243,6 +251,7 @@ public class ProfileImportExportContainmentIT extends BaseIT {
     private ExportConfiguration recurrentExport(String itemId, String destination) {
         ExportConfiguration configuration = new ExportConfiguration();
         configuration.setItemId(itemId);
+        configuration.setTenantId(TEST_TENANT_ID);
         configuration.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
         configuration.setColumnSeparator(";");
         configuration.setMultiValueDelimiter("()");

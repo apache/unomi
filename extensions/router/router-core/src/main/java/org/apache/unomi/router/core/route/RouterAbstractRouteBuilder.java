@@ -167,7 +167,13 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
      *
      * <p>Startup builds every tenant's routes in one pass, and the configuration service refuses a save
      * whose current tenant is not the configuration's. Writing the mark from the wrong tenant would
-     * either fail or store it in another tenant's index. When no context manager is available the mark
+     * either fail or store it in another tenant's index. Persistence indexes by the context's tenant,
+     * so the save has to run as this tenant and not as the system tenant.
+     *
+     * <p>The refresh runs on the scheduler thread, which has no subject. {@code executeAsTenant} copies
+     * the current subject's roles, so on that thread it would carry no permission to save.
+     * {@code executeAsSystem} installs the system subject first; {@code executeAsTenant} then keeps that
+     * subject's permissions and switches to this tenant. When no context manager is available the mark
      * is written as it stands, which is what the unit tests do. This is the only entry point: writing
      * the mark outside the configuration's tenant is not something a route builder may do.
      */
@@ -176,7 +182,8 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
             ExecutionContextManager executionContextManager) {
         String tenantId = configuration.getTenantId();
         if (executionContextManager != null && tenantId != null && !tenantId.isEmpty()) {
-            executionContextManager.executeAsTenant(tenantId, () -> recordEndpointOutcome(configuration, service, refusal));
+            executionContextManager.executeAsSystem(() -> executionContextManager.executeAsTenant(tenantId,
+                    () -> recordEndpointOutcome(configuration, service, refusal)));
         } else {
             recordEndpointOutcome(configuration, service, refusal);
         }

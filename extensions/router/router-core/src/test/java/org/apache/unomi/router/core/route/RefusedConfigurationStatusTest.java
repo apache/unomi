@@ -292,28 +292,37 @@ public class RefusedConfigurationStatusTest {
 
     /**
      * Runs an operation as the tenant it is asked to, and remembers which one that is for as long as
-     * the operation lasts, the way the real manager swaps the thread's context.
+     * the operation lasts, the way the real manager swaps the thread's context. {@code executeAsSystem}
+     * only runs its operation: the real one installs the system subject, which this stand-in has no
+     * need of, and the tenant switch is what the test records.
      */
     private ExecutionContextManager recordingContextManager() {
         return (ExecutionContextManager) Proxy.newProxyInstance(
                 ExecutionContextManager.class.getClassLoader(),
                 new Class<?>[]{ExecutionContextManager.class},
                 (proxy, method, args) -> {
+                    if ("executeAsSystem".equals(method.getName())) {
+                        return invokeContextOperation(args[0]);
+                    }
                     if (!"executeAsTenant".equals(method.getName())) {
                         return null;
                     }
                     String previous = currentTenant;
                     currentTenant = (String) args[0];
                     try {
-                        if (args[1] instanceof Runnable) {
-                            ((Runnable) args[1]).run();
-                            return null;
-                        }
-                        return ((Supplier<?>) args[1]).get();
+                        return invokeContextOperation(args[1]);
                     } finally {
                         currentTenant = previous;
                     }
                 });
+    }
+
+    private static Object invokeContextOperation(Object operation) {
+        if (operation instanceof Runnable) {
+            ((Runnable) operation).run();
+            return null;
+        }
+        return ((Supplier<?>) operation).get();
     }
 
     private void addExportRoutes(ExportConfiguration... configurations) throws Exception {
