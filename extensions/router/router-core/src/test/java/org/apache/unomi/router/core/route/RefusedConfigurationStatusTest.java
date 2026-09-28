@@ -19,7 +19,6 @@ package org.apache.unomi.router.core.route;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.unomi.api.services.ExecutionContextManager;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.ProfileToImport;
@@ -41,6 +40,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
+import static org.apache.unomi.router.core.route.RouterTestFixtures.TENANT;
+import static org.apache.unomi.router.core.route.RouterTestFixtures.fileUri;
+import static org.apache.unomi.router.core.route.RouterTestFixtures.noOpProfileService;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -72,8 +74,6 @@ public class RefusedConfigurationStatusTest {
 
     private DefaultCamelContext camelContext;
 
-    private static final String TENANT = "acme";
-
     private File importRoot;
     private File exportRoot;
     private File permittedImportDir;
@@ -85,6 +85,12 @@ public class RefusedConfigurationStatusTest {
 
     /** The tenant the fake context manager is currently running as, or {@code null} outside any. */
     private String currentTenant;
+
+    /** Whether the fake context manager is running as the system subject. */
+    private boolean systemSubject;
+
+    /** Whether the subject the tenant context was built from may save, or {@code null} outside any. */
+    private Boolean tenantContextMaySave;
 
     @Before
     public void setUp() throws Exception {
@@ -145,6 +151,36 @@ public class RefusedConfigurationStatusTest {
         assertEquals("the mark must be written as the configuration's tenant, whatever the batch runs as",
                 "beta", importConfigurations.tenantAtLastSave);
         assertNull("the batch's own context must be restored afterwards", currentTenant);
+    }
+
+    @Test
+    public void aRefusedConfigurationIsRecordedWithThePermissionToSaveIt() throws Exception {
+        // The route refresh runs on a thread that has no subject. The tenant context takes the
+        // permissions of the subject it is built from, so the system subject has to be there first.
+        ImportConfiguration configuration = recurrentImport(fileUri(arbitraryDir, "?fileName=profiles.csv"));
+        importConfigurations.maySave = () -> tenantContextMaySave;
+
+        addImportRoutes(recordingContextManager(), configuration);
+
+        assertEquals("the tenant context must be entered from the system subject, not the other way round",
+                Boolean.TRUE, importConfigurations.maySaveAtLastSave);
+    }
+
+    @Test
+    public void aContextThatCannotBeSwitchedDoesNotCostTheBatchItsOtherRoutes() throws Exception {
+        ExecutionContextManager noSystemSubject = (ExecutionContextManager) Proxy.newProxyInstance(
+                ExecutionContextManager.class.getClassLoader(),
+                new Class<?>[]{ExecutionContextManager.class},
+                (proxy, method, args) -> {
+                    throw new SecurityException("Failed to obtain system subject");
+                });
+
+        addImportRoutes(noSystemSubject, recurrentImport(fileUri(arbitraryDir, "?fileName=profiles.csv")),
+                inBoundsImport("in-bounds"));
+
+        assertNull("the refused configuration still gets no route", camelContext.getRouteDefinition("out-of-bounds"));
+        assertNotNull("failing to switch context must not cost the other configurations their routes",
+                camelContext.getRouteDefinition("in-bounds"));
     }
 
     @Test
@@ -238,10 +274,6 @@ public class RefusedConfigurationStatusTest {
     // Fixtures
     // ---------------------------------------------------------------------------------------------
 
-    private String fileUri(File directory, String suffix) {
-        return "file://" + directory.getAbsolutePath() + suffix;
-    }
-
     private ImportConfiguration inBoundsImport(String itemId) {
         ImportConfiguration configuration = recurrentImport(fileUri(permittedImportDir, "?fileName=profiles.csv"));
         configuration.setItemId(itemId);
@@ -249,27 +281,11 @@ public class RefusedConfigurationStatusTest {
     }
 
     private ImportConfiguration recurrentImport(String source) {
-        ImportConfiguration configuration = new ImportConfiguration();
-        configuration.setItemId("out-of-bounds");
-        configuration.setTenantId(TENANT);
-        configuration.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
-        configuration.setActive(true);
-        configuration.getProperties().put("source", source);
-        configuration.getProperties().put("mapping", Collections.singletonMap("0", 0));
-        return configuration;
+        return RouterTestFixtures.recurrentImport("out-of-bounds", source);
     }
 
     private ExportConfiguration recurrentExport(String destination) {
-        ExportConfiguration configuration = new ExportConfiguration();
-        configuration.setItemId("out-of-bounds");
-        configuration.setTenantId(TENANT);
-        configuration.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
-        configuration.setActive(true);
-        configuration.getProperties().put("destination", destination);
-        configuration.getProperties().put("mapping", Collections.singletonMap("0", "firstName"));
-        configuration.getProperties().put("segment", "exportSegment");
-        configuration.getProperties().put("period", "1m");
-        return configuration;
+        return RouterTestFixtures.recurrentExport("out-of-bounds", destination);
     }
 
     private void addImportRoutes(ImportConfiguration... configurations) throws Exception {
@@ -293,8 +309,9 @@ public class RefusedConfigurationStatusTest {
     /**
      * Runs an operation as the tenant it is asked to, and remembers which one that is for as long as
      * the operation lasts, the way the real manager swaps the thread's context. {@code executeAsSystem}
-     * only runs its operation: the real one installs the system subject, which this stand-in has no
-     * need of, and the tenant switch is what the test records.
+     * installs the system subject for as long as its operation lasts, and {@code executeAsTenant}
+     * builds its context from the subject that is there when it is called, as the real ones do: a
+     * tenant context entered without the system subject carries no permission to save.
      */
     private ExecutionContextManager recordingContextManager() {
         return (ExecutionContextManager) Proxy.newProxyInstance(
@@ -302,17 +319,26 @@ public class RefusedConfigurationStatusTest {
                 new Class<?>[]{ExecutionContextManager.class},
                 (proxy, method, args) -> {
                     if ("executeAsSystem".equals(method.getName())) {
-                        return invokeContextOperation(args[0]);
+                        boolean previous = systemSubject;
+                        systemSubject = true;
+                        try {
+                            return invokeContextOperation(args[0]);
+                        } finally {
+                            systemSubject = previous;
+                        }
                     }
                     if (!"executeAsTenant".equals(method.getName())) {
                         return null;
                     }
                     String previous = currentTenant;
+                    Boolean previousMaySave = tenantContextMaySave;
                     currentTenant = (String) args[0];
+                    tenantContextMaySave = systemSubject;
                     try {
                         return invokeContextOperation(args[1]);
                     } finally {
                         currentTenant = previous;
+                        tenantContextMaySave = previousMaySave;
                     }
                 });
     }
@@ -337,14 +363,6 @@ public class RefusedConfigurationStatusTest {
         camelContext.addRoutes(builder);
     }
 
-    private static ProfileService noOpProfileService() {
-        return (ProfileService) Proxy.newProxyInstance(
-                ProfileService.class.getClassLoader(),
-                new Class<?>[]{ProfileService.class},
-                (proxy, method, args) -> java.util.Collection.class.isAssignableFrom(method.getReturnType())
-                        ? Collections.emptyList() : null);
-    }
-
     /**
      * Stores what it is given, and remembers whether the last save asked for the running route to be
      * refreshed — a refused configuration must not, or the refresh loops.
@@ -359,6 +377,11 @@ public class RefusedConfigurationStatusTest {
         private Supplier<String> currentTenant = () -> null;
 
         private String tenantAtLastSave;
+
+        /** Whether the current context may save; the real store refuses a save from one that may not. */
+        private Supplier<Boolean> maySave = () -> null;
+
+        private Boolean maySaveAtLastSave;
 
         /** Stands in for a store that cannot be written to -- Elasticsearch unreachable at start-up. */
         private boolean unwritable;
@@ -384,6 +407,7 @@ public class RefusedConfigurationStatusTest {
             }
             lastSaveAskedForARouteRefresh = updateRunningRoute;
             tenantAtLastSave = currentTenant.get();
+            maySaveAtLastSave = maySave.get();
             stored.put(itemIdOf(configuration), configuration);
             return configuration;
         }

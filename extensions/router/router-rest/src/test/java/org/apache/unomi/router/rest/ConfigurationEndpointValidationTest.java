@@ -23,10 +23,9 @@ import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import javax.ws.rs.WebApplicationException;
 import java.io.File;
@@ -38,12 +37,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * A configuration whose endpoint cannot be honoured must be refused when it is saved, not silently
@@ -60,8 +59,8 @@ import static org.junit.Assert.fail;
  */
 public class ConfigurationEndpointValidationTest {
 
-    @Rule
-    public TemporaryFolder tmp = new TemporaryFolder();
+    @TempDir
+    File tmp;
 
     private static final String TENANT = "acme";
 
@@ -77,15 +76,15 @@ public class ConfigurationEndpointValidationTest {
     private ImportConfigurationServiceEndPoint importEndpoint;
     private ExportConfigurationServiceEndPoint exportEndpoint;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
-        importRoot = tmp.newFolder("permitted-import");
+        importRoot = newFolder("permitted-import");
         permittedImportDir = new File(importRoot, TENANT);
         assertTrue(permittedImportDir.mkdirs());
-        exportRoot = tmp.newFolder("permitted-export");
+        exportRoot = newFolder("permitted-export");
         permittedExportDir = new File(exportRoot, TENANT);
         assertTrue(permittedExportDir.mkdirs());
-        arbitraryDir = tmp.newFolder("arbitrary");
+        arbitraryDir = newFolder("arbitrary");
 
         InMemoryConfigSharingService configSharingService = new InMemoryConfigSharingService();
         configSharingService.setProperty(RouterConstants.CONFIG_ALLOWED_ENDPOINTS, "file,ftp,sftp,ftps");
@@ -109,7 +108,8 @@ public class ConfigurationEndpointValidationTest {
                 recurrentImport(fileUri(permittedImportDir, "?fileName=profiles.csv")));
 
         assertEquals("in-bounds", saved.getItemId());
-        assertTrue("the configuration should have been stored", importConfigurations.contains("in-bounds"));
+        assertTrue(importConfigurations.contains("in-bounds"),
+                "the configuration should have been stored");
     }
 
     @Test
@@ -122,7 +122,8 @@ public class ConfigurationEndpointValidationTest {
         ImportConfiguration configuration = recurrentImport(fileUri(permittedImportDir, "?fileName=profiles.csv"));
 
         assertUnavailable(() -> starting.saveConfiguration(configuration));
-        assertFalse("nothing is stored while the endpoint cannot be judged", importConfigurations.contains("in-bounds"));
+        assertFalse(importConfigurations.contains("in-bounds"),
+                "nothing is stored while the endpoint cannot be judged");
     }
 
     @Test
@@ -132,7 +133,8 @@ public class ConfigurationEndpointValidationTest {
                 + "?fileName=profiles.csv&localWorkDirectory=" + arbitraryDir.getAbsolutePath());
 
         assertRefused(() -> importEndpoint.saveConfiguration(configuration));
-        assertFalse("a refused configuration must not be stored", importConfigurations.contains("in-bounds"));
+        assertFalse(importConfigurations.contains("in-bounds"),
+                "a refused configuration must not be stored");
     }
 
     @Test
@@ -158,7 +160,8 @@ public class ConfigurationEndpointValidationTest {
         ExportConfiguration configuration = recurrentExport(fileUri(permittedExportDir, "?fileName=profiles.csv"));
 
         assertUnavailable(() -> starting.saveConfiguration(configuration));
-        assertFalse("nothing is stored while the endpoint cannot be judged", exportConfigurations.contains("in-bounds"));
+        assertFalse(exportConfigurations.contains("in-bounds"),
+                "nothing is stored while the endpoint cannot be judged");
     }
 
     @Test
@@ -166,7 +169,8 @@ public class ConfigurationEndpointValidationTest {
         ImportConfiguration configuration = recurrentImport(fileUri(arbitraryDir, "?fileName=profiles.csv"));
 
         assertRefused(() -> importEndpoint.saveConfiguration(configuration));
-        assertFalse("a refused configuration must not be stored", importConfigurations.contains("in-bounds"));
+        assertFalse(importConfigurations.contains("in-bounds"),
+                "a refused configuration must not be stored");
     }
 
     @Test
@@ -182,7 +186,8 @@ public class ConfigurationEndpointValidationTest {
         ImportConfiguration configuration = recurrentImport(fileUri(permittedImportDir, "?fileName=profiles%00.csv"));
 
         assertRefused(() -> importEndpoint.saveConfiguration(configuration));
-        assertFalse("a refused configuration must not be stored", importConfigurations.contains("in-bounds"));
+        assertFalse(importConfigurations.contains("in-bounds"),
+                "a refused configuration must not be stored");
     }
 
     @Test
@@ -192,7 +197,8 @@ public class ConfigurationEndpointValidationTest {
 
         assertRefused(() -> importEndpoint.saveConfiguration(
                 recurrentImport(fileUri(otherTenant, "?fileName=profiles.csv"))));
-        assertFalse("a refused configuration must not be stored", importConfigurations.contains("in-bounds"));
+        assertFalse(importConfigurations.contains("in-bounds"),
+                "a refused configuration must not be stored");
     }
 
     @Test
@@ -201,8 +207,8 @@ public class ConfigurationEndpointValidationTest {
         configuration.setTenantId(null);
 
         assertRefused(() -> importEndpoint.saveConfiguration(configuration));
-        assertFalse("a configuration with no tenant must not fall back to the shared directory",
-                importConfigurations.contains("in-bounds"));
+        assertFalse(importConfigurations.contains("in-bounds"),
+                "a configuration with no tenant must not fall back to the shared directory");
     }
 
     @Test
@@ -232,8 +238,8 @@ public class ConfigurationEndpointValidationTest {
         configuration.setTenantId("beta");
 
         assertRefused(() -> importEndpoint.saveConfiguration(configuration));
-        assertFalse("acme may not have a configuration judged against beta's directory by naming beta",
-                importConfigurations.contains("in-bounds"));
+        assertFalse(importConfigurations.contains("in-bounds"),
+                "acme may not have a configuration judged against beta's directory by naming beta");
     }
 
     @Test
@@ -249,8 +255,8 @@ public class ConfigurationEndpointValidationTest {
 
         importEndpoint.saveConfiguration(configuration);
 
-        assertTrue("the system may configure any tenant, judged against that tenant's directory",
-                importConfigurations.contains("in-bounds"));
+        assertTrue(importConfigurations.contains("in-bounds"),
+                "the system may configure any tenant, judged against that tenant's directory");
     }
 
     @Test
@@ -261,16 +267,16 @@ public class ConfigurationEndpointValidationTest {
         configuration.setTenantId("acme/../beta");
 
         assertRefused(() -> importEndpoint.saveConfiguration(configuration));
-        assertFalse("a tenant id that is a path must not be resolved against the shared base directory",
-                importConfigurations.contains("in-bounds"));
+        assertFalse(importConfigurations.contains("in-bounds"),
+                "a tenant id that is a path must not be resolved against the shared base directory");
     }
 
     @Test
     public void savingARecurrentImportWhoseSourceCarriesAPropertyPlaceholderIsRefused() {
         assertRefused(() -> importEndpoint.saveConfiguration(
                 recurrentImport(fileUri(permittedImportDir, "/{{env:UNOMI_UNSET_FOR_TEST:../beta}}?fileName=profiles.csv"))));
-        assertFalse("Camel expands a placeholder after validation, so the configuration cannot be stored",
-                importConfigurations.contains("in-bounds"));
+        assertFalse(importConfigurations.contains("in-bounds"),
+                "Camel expands a placeholder after validation, so the configuration cannot be stored");
     }
 
     @Test
@@ -282,8 +288,8 @@ public class ConfigurationEndpointValidationTest {
 
         importEndpoint.saveConfiguration(configuration);
 
-        assertTrue("a oneshot import names no endpoint and must keep being stored",
-                importConfigurations.contains("oneshot"));
+        assertTrue(importConfigurations.contains("oneshot"),
+                "a oneshot import names no endpoint and must keep being stored");
     }
 
     @Test
@@ -292,7 +298,8 @@ public class ConfigurationEndpointValidationTest {
                 recurrentExport(fileUri(permittedExportDir, "?fileName=profiles.csv")));
 
         assertEquals("in-bounds", saved.getItemId());
-        assertTrue("the configuration should have been stored", exportConfigurations.contains("in-bounds"));
+        assertTrue(exportConfigurations.contains("in-bounds"),
+                "the configuration should have been stored");
     }
 
     @Test
@@ -300,35 +307,123 @@ public class ConfigurationEndpointValidationTest {
         ExportConfiguration configuration = recurrentExport(fileUri(arbitraryDir, "?fileName=profiles.csv"));
 
         assertRefused(() -> exportEndpoint.saveConfiguration(configuration));
-        assertFalse("a refused configuration must not be stored", exportConfigurations.contains("in-bounds"));
+        assertFalse(exportConfigurations.contains("in-bounds"),
+                "a refused configuration must not be stored");
+    }
+
+    @Test
+    public void savingARecurrentExportInAnotherTenantsDirectoryIsRefused() {
+        File otherTenant = new File(exportRoot, "beta");
+        assertTrue(otherTenant.mkdirs());
+
+        assertRefused(() -> exportEndpoint.saveConfiguration(
+                recurrentExport(fileUri(otherTenant, "?fileName=profiles.csv"))));
+        assertFalse(exportConfigurations.contains("in-bounds"), "a refused configuration must not be stored");
+    }
+
+    @Test
+    public void savingARecurrentExportIsJudgedAgainstTheExportDirectoriesNotTheImportOnes() {
+        assertRefused(() -> exportEndpoint.saveConfiguration(
+                recurrentExport(fileUri(permittedImportDir, "?fileName=profiles.csv"))));
+        assertFalse(exportConfigurations.contains("in-bounds"), "a refused configuration must not be stored");
+    }
+
+    @Test
+    public void savingARecurrentExportWithNoTenantIsRefused() {
+        ExportConfiguration configuration = recurrentExport(fileUri(permittedExportDir, "?fileName=profiles.csv"));
+        configuration.setTenantId(null);
+
+        assertRefused(() -> exportEndpoint.saveConfiguration(configuration));
+        assertFalse(exportConfigurations.contains("in-bounds"),
+                "a configuration with no tenant must not fall back to the shared directory");
+    }
+
+    @Test
+    public void savingARecurrentExportUsesTheCallerTenantWhenTheBodyNamesNone() {
+        callerIs(TENANT);
+        ExportConfiguration configuration = recurrentExport(fileUri(permittedExportDir, "?fileName=profiles.csv"));
+        configuration.setTenantId(null);
+
+        exportEndpoint.saveConfiguration(configuration);
+
+        assertTrue(exportConfigurations.contains("in-bounds"));
+    }
+
+    @Test
+    public void savingARecurrentExportIsJudgedAgainstTheCallerTenantWhateverTenantTheBodyNames() {
+        callerIs(TENANT);
+        File otherTenant = new File(exportRoot, "beta");
+        assertTrue(otherTenant.mkdirs());
+        ExportConfiguration configuration = recurrentExport(fileUri(otherTenant, "?fileName=profiles.csv"));
+        configuration.setTenantId("beta");
+
+        assertRefused(() -> exportEndpoint.saveConfiguration(configuration));
+        assertFalse(exportConfigurations.contains("in-bounds"),
+                "acme may not have a configuration judged against beta's directory by naming beta");
+    }
+
+    @Test
+    public void savingARecurrentExportAsTheSystemHonoursTheTenantTheBodyNames() {
+        callerIs(ExecutionContext.SYSTEM_TENANT);
+        File otherTenant = new File(exportRoot, "beta");
+        assertTrue(otherTenant.mkdirs());
+        ExportConfiguration configuration = recurrentExport(fileUri(otherTenant, "?fileName=profiles.csv"));
+        configuration.setTenantId("beta");
+
+        exportEndpoint.saveConfiguration(configuration);
+
+        assertTrue(exportConfigurations.contains("in-bounds"),
+                "the system may configure any tenant, judged against that tenant's directory");
+    }
+
+    @Test
+    public void savingARecurrentExportWhoseDestinationCarriesAPropertyPlaceholderIsRefused() {
+        assertRefused(() -> exportEndpoint.saveConfiguration(
+                recurrentExport(fileUri(permittedExportDir, "/{{env:UNOMI_UNSET_FOR_TEST:../beta}}?fileName=profiles.csv"))));
+        assertFalse(exportConfigurations.contains("in-bounds"),
+                "Camel expands a placeholder after validation, so the configuration cannot be stored");
+    }
+
+    @Test
+    public void savingARecurrentImportWhoseSchemeIsNotInTheCaseItIsAllowedInIsRefused() {
+        assertRefused(() -> importEndpoint.saveConfiguration(
+                recurrentImport("FILE://" + permittedImportDir.getAbsolutePath() + "?fileName=profiles.csv")));
+        assertFalse(importConfigurations.contains("in-bounds"),
+                "Camel has no component of that name, so the route of this configuration could never be built");
     }
 
     // ---------------------------------------------------------------------------------------------
     // Fixtures
     // ---------------------------------------------------------------------------------------------
 
+    private void assertUnavailable(Runnable save) {
+        WebApplicationException e = assertThrows(WebApplicationException.class, save::run,
+                "saving the configuration should not have been answered yet");
+        assertEquals(503, e.getResponse().getStatus(),
+                "settings that are not published yet make the service unavailable, not the configuration wrong");
+    }
+
     /**
      * A refused configuration answers {@code 400 Bad Request}, and says why: the caller has to be able
      * to correct the endpoint from the answer alone.
      */
-    private void assertUnavailable(Runnable save) {
-        try {
-            save.run();
-            fail("saving the configuration should not have been answered yet");
-        } catch (WebApplicationException e) {
-            assertEquals("settings that are not published yet make the service unavailable, not the "
-                    + "configuration wrong", 503, e.getResponse().getStatus());
-        }
+    private void assertRefused(Runnable save) {
+        WebApplicationException e = assertThrows(WebApplicationException.class, save::run,
+                "saving the configuration should have been refused");
+        assertEquals(400, e.getResponse().getStatus(), "a refused configuration is a bad request");
+        assertTrue(e.getMessage() != null && !e.getMessage().trim().isEmpty(), "the refusal must say why");
     }
 
-    private void assertRefused(Runnable save) {
-        try {
-            save.run();
-            fail("saving the configuration should have been refused");
-        } catch (WebApplicationException e) {
-            assertEquals("a refused configuration is a bad request", 400, e.getResponse().getStatus());
-            assertTrue("the refusal must say why", e.getMessage() != null && !e.getMessage().trim().isEmpty());
-        }
+    private File newFolder(String name) {
+        File folder = new File(tmp, name);
+        assertTrue(folder.mkdirs());
+        return folder;
+    }
+
+    private void callerIs(String tenantId) {
+        ExecutionContextManager contexts = mock(ExecutionContextManager.class);
+        when(contexts.getCurrentContext()).thenReturn(new ExecutionContext(tenantId, null, null));
+        exportEndpoint.setExecutionContextManager(contexts);
     }
 
     private String fileUri(File directory, String suffix) {

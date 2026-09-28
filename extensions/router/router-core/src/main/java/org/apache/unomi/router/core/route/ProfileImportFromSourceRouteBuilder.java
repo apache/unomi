@@ -189,11 +189,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                 }
             }
         }
-        if (refused > 0) {
-            LOGGER.warn("{} of {} import configuration(s) name a source that is refused and run no route; each is "
-                    + "marked {} and logged above. After an upgrade, check that their files sit under "
-                    + "{baseDir}/{tenantId}.", refused, importConfigurationList.size(), RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT);
-        }
+        logRefused(LOGGER, refused, importConfigurationList.size(), "import", "source");
     }
 
     /**

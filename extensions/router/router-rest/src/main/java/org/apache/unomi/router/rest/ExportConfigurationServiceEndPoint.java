@@ -136,12 +136,17 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
      */
     @Override
     public ExportConfiguration saveConfiguration(ExportConfiguration exportConfiguration) {
-        if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfiguration.getConfigType())) {
-            refuseIfEndpointCannotBeHonoured((String) exportConfiguration.getProperties().get("destination"),
-                    RouterConstants.CONFIG_EXPORT_BASE_DIRS, tenantToConfine(exportConfiguration.getTenantId()));
-        }
+        return super.saveConfiguration(exportConfiguration);
+    }
 
-        return configurationService.save(exportConfiguration, true);
+    @Override
+    protected String endpointProperty() {
+        return "destination";
+    }
+
+    @Override
+    protected String permittedBaseDirsProperty() {
+        return RouterConstants.CONFIG_EXPORT_BASE_DIRS;
     }
 
     /**

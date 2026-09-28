@@ -36,7 +36,9 @@ import java.util.regex.Pattern;
 /**
  * Decides whether the endpoint URI carried by an import or export configuration may be used.
  *
- * <p>Two rules apply. The scheme must belong to the configured allow-list. And a {@code file}
+ * <p>Two rules apply. The scheme must belong to the configured allow-list, in the case it is listed
+ * in: Camel looks a component up by the exact name the URI carries, so {@code FILE:} names no
+ * component, and an endpoint accepted under that name would fail when its route is built. And a {@code file}
  * endpoint must resolve inside one of the base directories the deployment permits — the directory
  * the URI names, and every path-bearing option it carries, since validating only the directory would
  * leave {@code file:///permitted/?fileName=../../elsewhere} open.
@@ -127,8 +129,10 @@ public final class EndpointValidator {
     private static final String PROPERTY_PLACEHOLDER_TOKEN = "{{";
 
     /**
-     * A tenant id used as a directory name. The same shape the one-shot import accepts, so a tenant
-     * cannot be {@code ..} or a path of its own and leave the directory this class confines it to.
+     * A tenant id used as a directory name: it cannot be {@code ..} or a path of its own and leave the
+     * directory this class confines it to. The tenant service is stricter about the ids it creates (no
+     * single character, no leading or trailing separator), so every id it accepts is accepted here;
+     * this pattern only has to make the id safe as one path segment.
      */
     private static final Pattern TENANT_ID = Pattern.compile("[A-Za-z0-9_-]+");
 
@@ -140,7 +144,19 @@ public final class EndpointValidator {
     }
 
     /**
-     * Validates the endpoint URI of an import or export configuration.
+     * Whether a tenant id can be used as the name of that tenant's directory: a single path segment
+     * made of letters, digits, hyphens and underscores.
+     *
+     * @param tenantId the tenant id, which may be {@code null}
+     * @return {@code true} when the id is safe to use as one directory name
+     */
+    public static boolean isTenantDirectoryName(String tenantId) {
+        return tenantId != null && TENANT_ID.matcher(tenantId).matches();
+    }
+
+    /**
+     * Validates the endpoint URI against the directories it is given, as they stand. Private: the only
+     * way in is {@link #validateForTenant}, so that no caller can skip the tenant's confinement.
      *
      * @param endpointUri       the endpoint URI, as configured
      * @param allowedSchemes    the comma-separated list of allowed schemes
@@ -148,7 +164,7 @@ public final class EndpointValidator {
      *                          resolve into
      * @return {@code null} when the endpoint may be used, otherwise the reason it is refused
      */
-    public static String validate(String endpointUri, String allowedSchemes, String permittedBaseDirs) {
+    private static String validate(String endpointUri, String allowedSchemes, String permittedBaseDirs) {
         if (isBlank(endpointUri)) {
             return "no endpoint is configured";
         }
@@ -159,7 +175,7 @@ public final class EndpointValidator {
         }
 
         String scheme = endpointUri.substring(0, schemeSeparator);
-        if (!containsIgnoreCase(split(allowedSchemes), scheme)) {
+        if (!split(allowedSchemes).contains(scheme)) {
             return "endpoint scheme '" + scheme + "' is not allowed";
         }
         if (endpointUri.contains(PROPERTY_PLACEHOLDER_TOKEN)) {
@@ -169,7 +185,7 @@ public final class EndpointValidator {
 
         try {
             String refusal = validateLocalWorkDirectory(endpointUri, permittedBaseDirs);
-            if (refusal != null || !FILE_SCHEME.equalsIgnoreCase(scheme)) {
+            if (refusal != null || !FILE_SCHEME.equals(scheme)) {
                 return refusal;
             }
             return validateContainment(endpointUri, permittedBaseDirs);
@@ -182,8 +198,8 @@ public final class EndpointValidator {
     }
 
     /**
-     * Validates an endpoint the way {@link #validate(String, String, String)} does, after confining a
-     * {@code file} path to {@code {baseDir}/{tenantId}} for every configured base directory.
+     * Validates the endpoint URI of an import or export configuration, with a {@code file} path
+     * confined to {@code {baseDir}/{tenantId}} for every configured base directory.
      *
      * @param endpointUri       the endpoint URI, as configured
      * @param allowedSchemes    the comma-separated list of allowed schemes
@@ -192,7 +208,7 @@ public final class EndpointValidator {
      * @return {@code null} when the endpoint may be used, otherwise the reason it is refused
      */
     public static String validateForTenant(String endpointUri, String allowedSchemes, String permittedBaseDirs, String tenantId) {
-        if (tenantId == null || !TENANT_ID.matcher(tenantId).matches()) {
+        if (!isTenantDirectoryName(tenantId)) {
             return "no tenant is set for this configuration";
         }
         return validate(endpointUri, allowedSchemes, scopeToTenant(permittedBaseDirs, tenantId));
@@ -525,15 +541,6 @@ public final class EndpointValidator {
             }
         }
         return values;
-    }
-
-    private static boolean containsIgnoreCase(List<String> values, String searched) {
-        for (String value : values) {
-            if (value.equalsIgnoreCase(searched)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static boolean isBlank(String value) {

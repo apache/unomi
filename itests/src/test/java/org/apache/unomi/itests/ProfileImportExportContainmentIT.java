@@ -76,6 +76,15 @@ public class ProfileImportExportContainmentIT extends BaseIT {
             exportConfigurationService.delete(createdExportConfigId);
             createdExportConfigId = null;
         }
+        // the suite shares one container: what a test put on its disk is there for the next one
+        File arbitraryDir = new File(ARBITRARY_DIR);
+        File[] leftOver = arbitraryDir.listFiles();
+        if (leftOver != null) {
+            for (File file : leftOver) {
+                file.delete();
+            }
+        }
+        arbitraryDir.delete();
     }
 
     // ---------------------------------------------------------------------------------------------

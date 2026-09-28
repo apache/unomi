@@ -118,12 +118,17 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
      */
     @Override
     public ImportConfiguration saveConfiguration(ImportConfiguration importConfiguration) {
-        if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType())) {
-            refuseIfEndpointCannotBeHonoured((String) importConfiguration.getProperties().get("source"),
-                    RouterConstants.CONFIG_IMPORT_BASE_DIRS, tenantToConfine(importConfiguration.getTenantId()));
-        }
+        return super.saveConfiguration(importConfiguration);
+    }
 
-        return configurationService.save(importConfiguration, true);
+    @Override
+    protected String endpointProperty() {
+        return "source";
+    }
+
+    @Override
+    protected String permittedBaseDirsProperty() {
+        return RouterConstants.CONFIG_IMPORT_BASE_DIRS;
     }
 
     /**

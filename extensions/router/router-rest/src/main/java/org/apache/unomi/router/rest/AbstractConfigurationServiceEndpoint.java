@@ -20,6 +20,7 @@ import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.router.api.EndpointValidator;
+import org.apache.unomi.router.api.ImportExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 
@@ -33,7 +34,7 @@ import java.util.List;
  *
  * @param <T> configuration item type
  */
-public abstract class AbstractConfigurationServiceEndpoint<T> {
+public abstract class AbstractConfigurationServiceEndpoint<T extends ImportExportConfiguration> {
 
     protected ImportExportConfigurationService<T> configurationService;
 
@@ -57,7 +58,7 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
      * @param permittedBaseDirsProperty the shared property holding the base directories for this direction
      * @param tenantId                  the tenant the configuration will be stored for
      */
-    protected void refuseIfEndpointCannotBeHonoured(String endpointUri, String permittedBaseDirsProperty, String tenantId) {
+    private void refuseIfEndpointCannotBeHonoured(String endpointUri, String permittedBaseDirsProperty, String tenantId) {
         String allowedSchemes = (String) configSharingService.getProperty(RouterConstants.CONFIG_ALLOWED_ENDPOINTS);
         String permittedBaseDirs = (String) configSharingService.getProperty(permittedBaseDirsProperty);
         if (allowedSchemes == null || permittedBaseDirs == null) {
@@ -87,7 +88,7 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
      * tenant would let the check pass for a directory the caller does not own. A system caller may name
      * the tenant. When the body names none, the current context supplies it.
      */
-    protected String tenantToConfine(String configuredTenantId) {
+    private String tenantToConfine(String configuredTenantId) {
         ExecutionContext context = executionContextManager == null ? null : executionContextManager.getCurrentContext();
         if (context != null && !context.isSystem()) {
             return context.getTenantId();
@@ -112,8 +113,15 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
         return this.configurationService.getAll();
     }
 
+    /** The property of the configuration that holds its endpoint URI. */
+    protected abstract String endpointProperty();
+
+    /** The shared property that holds the base directories permitted for this direction. */
+    protected abstract String permittedBaseDirsProperty();
+
     /**
-     * Creates or updates a router configuration.
+     * Creates or updates a router configuration. The endpoint of a recurrent configuration is validated
+     * here, before the store is reached, so that no configuration type can be saved without it.
      *
      * @param configuration the configuration to save
      * @return the persisted configuration
@@ -123,7 +131,13 @@ public abstract class AbstractConfigurationServiceEndpoint<T> {
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
     @Consumes(MediaType.APPLICATION_JSON)
-    public abstract T saveConfiguration(T configuration);
+    public T saveConfiguration(T configuration) {
+        if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(configuration.getConfigType())) {
+            refuseIfEndpointCannotBeHonoured((String) configuration.getProperties().get(endpointProperty()),
+                    permittedBaseDirsProperty(), tenantToConfine(configuration.getTenantId()));
+        }
+        return configurationService.save(configuration, true);
+    }
 
     /**
      * Returns the configuration with the given id.

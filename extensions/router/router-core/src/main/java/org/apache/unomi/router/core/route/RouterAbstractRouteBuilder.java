@@ -176,16 +176,44 @@ public abstract class RouterAbstractRouteBuilder extends RouteBuilder {
      * subject's permissions and switches to this tenant. When no context manager is available the mark
      * is written as it stands, which is what the unit tests do. This is the only entry point: writing
      * the mark outside the configuration's tenant is not something a route builder may do.
+     *
+     * <p>Switching context can fail by itself, before anything is saved: there is no system subject
+     * while the security service is still starting. That failure is kept here for the reason
+     * {@link #saveQuietly} keeps a failed save: the route is built or skipped as decided, and the
+     * other configurations of the batch keep theirs.
      */
     protected <T extends ImportExportConfiguration> void recordEndpointOutcome(
             T configuration, ImportExportConfigurationService<T> service, String refusal,
             ExecutionContextManager executionContextManager) {
         String tenantId = configuration.getTenantId();
         if (executionContextManager != null && tenantId != null && !tenantId.isEmpty()) {
-            executionContextManager.executeAsSystem(() -> executionContextManager.executeAsTenant(tenantId,
-                    () -> recordEndpointOutcome(configuration, service, refusal)));
+            try {
+                executionContextManager.executeAsSystem(() -> executionContextManager.executeAsTenant(tenantId,
+                        () -> recordEndpointOutcome(configuration, service, refusal)));
+            } catch (RuntimeException e) {
+                LOGGER.error("Could not record the endpoint outcome on configuration {} as tenant {}; its route is "
+                        + "built or skipped as decided, only the record of it is missing", configuration.getItemId(), tenantId, e);
+            }
         } else {
             recordEndpointOutcome(configuration, service, refusal);
+        }
+    }
+
+    /**
+     * Says, once per batch, how many configurations were refused, so that an upgrade that leaves files
+     * outside the tenant directories shows as one line rather than as a route that quietly never runs.
+     *
+     * @param logger   the logger of the route builder that built the batch
+     * @param refused  how many configurations of the batch were refused
+     * @param total    how many configurations the batch holds
+     * @param kind     {@code import} or {@code export}
+     * @param endpoint what the configuration names: a {@code source} or a {@code destination}
+     */
+    protected void logRefused(Logger logger, int refused, int total, String kind, String endpoint) {
+        if (refused > 0) {
+            logger.warn("{} of {} {} configuration(s) name a {} that is refused and run no route; each is "
+                    + "marked {} and logged above. After an upgrade, check that their files sit under "
+                    + "{baseDir}/{tenantId}.", refused, total, kind, endpoint, RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT);
         }
     }
 

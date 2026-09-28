@@ -18,7 +18,6 @@ package org.apache.unomi.router.core.route;
 
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.impl.DefaultCamelContext;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.ProfileToImport;
@@ -36,12 +35,14 @@ import java.io.IOException;
 import java.lang.reflect.Proxy;
 import java.nio.file.Files;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
+import static org.apache.unomi.router.core.route.RouterTestFixtures.TENANT;
+import static org.apache.unomi.router.core.route.RouterTestFixtures.fileUri;
+import static org.apache.unomi.router.core.route.RouterTestFixtures.noOpProfileService;
+import static org.apache.unomi.router.core.route.RouterTestFixtures.recurrentExport;
+import static org.apache.unomi.router.core.route.RouterTestFixtures.recurrentImport;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -78,8 +79,6 @@ public class FileEndpointContainmentTest {
 
     /** The shipped default. The containment rules must hold while {@code file} is an allowed scheme. */
     private static final String DEFAULT_ALLOWED_ENDPOINTS = "file,ftp,sftp,ftps";
-
-    private static final String TENANT = "acme";
 
     private static final Map<String, String> NO_KAFKA = new HashMap<>();
 
@@ -336,6 +335,22 @@ public class FileEndpointContainmentTest {
     }
 
     @Test
+    public void exportRouteIsRefusedWhenMoveExistingOptionEscapesPermittedBaseDir() throws Exception {
+        addExportRoutes(recurrentExport("moveexisting-escape", fileUri(permittedExportDir,
+                "?fileName=profiles.csv&fileExist=Move&moveExisting=../" + arbitraryDir.getName())));
+
+        assertRouteRefused("moveexisting-escape", "moveExisting says where the file already there is moved to");
+    }
+
+    @Test
+    public void exportRouteIsRefusedWhenTempPrefixOptionEscapesPermittedBaseDir() throws Exception {
+        addExportRoutes(recurrentExport("tempprefix-escape", fileUri(permittedExportDir,
+                "?fileName=profiles.csv&tempPrefix=../" + arbitraryDir.getName() + "/")));
+
+        assertRouteRefused("tempprefix-escape", "tempPrefix is put in front of the name, directories included");
+    }
+
+    @Test
     public void importRouteIsRefusedWhenPathBearingOptionIsWrappedInRaw() throws Exception {
         addImportRoutes(recurrentImport("raw-escape",
                 fileUri(permittedImportDir, "?fileName=RAW(../" + arbitraryDir.getName() + "/profiles.csv)")));
@@ -517,6 +532,26 @@ public class FileEndpointContainmentTest {
         addImportRoutes("ftp,sftp,ftps", recurrentImport("scheme-denied", fileUri(permittedImportDir, "?fileName=profiles.csv")));
 
         assertRouteRefused("scheme-denied", "file is not in the configured scheme allow-list");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenSchemeIsNotInTheCaseItIsAllowedIn() throws Exception {
+        addImportRoutes(
+                recurrentImport("upper-case-scheme", "FILE://" + permittedImportDir.getAbsolutePath() + "?fileName=profiles.csv"),
+                recurrentImport("mixed-case-remote", "Ftp://ftp.example.com/profiles?fileName=profiles.csv"));
+
+        assertRouteRefused("upper-case-scheme",
+                "Camel looks a component up by the exact name, so FILE names none and the route could not be built");
+        assertRouteRefused("mixed-case-remote", "the same holds for a remote scheme");
+    }
+
+    @Test
+    public void importRouteIsRefusedWhenSourceNamesAHost() throws Exception {
+        addImportRoutes(recurrentImport("host-authority",
+                "file://localhost" + permittedImportDir.getAbsolutePath() + "?fileName=profiles.csv"));
+
+        assertRouteRefused("host-authority",
+                "Camel knows no authority: the host is the first segment of a path relative to the working directory");
     }
 
     @Test
@@ -711,6 +746,23 @@ public class FileEndpointContainmentTest {
         assertRouteRefused("traversing-tenant", "a tenant id that is a path of its own is not confined to a directory");
     }
 
+    @Test
+    public void importRouteIsRefusedWhenTheTenantIdNamesNoDirectoryOfItsOwn() throws Exception {
+        // each of these would resolve to the shared base directory, or to its parent
+        String[] tenantIds = {".", "..", "", " "};
+        ImportConfiguration[] configurations = new ImportConfiguration[tenantIds.length];
+        for (int i = 0; i < tenantIds.length; i++) {
+            configurations[i] = recurrentImport("tenant-" + i, fileUri(importRoot, "?fileName=profiles.csv"));
+            configurations[i].setTenantId(tenantIds[i]);
+        }
+
+        addImportRoutes(configurations);
+
+        for (int i = 0; i < tenantIds.length; i++) {
+            assertRouteRefused("tenant-" + i, "the tenant id '" + tenantIds[i] + "' is not the name of a directory");
+        }
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Fixtures
     // ---------------------------------------------------------------------------------------------
@@ -729,34 +781,6 @@ public class FileEndpointContainmentTest {
     private void assertRouteRefused(String routeId, String why) {
         assertNull("a route was built for configuration '" + routeId + "', although " + why,
                 camelContext.getRouteDefinition(routeId));
-    }
-
-    private String fileUri(File directory, String suffix) {
-        return "file://" + directory.getAbsolutePath() + suffix;
-    }
-
-    private ImportConfiguration recurrentImport(String itemId, String source) {
-        ImportConfiguration configuration = new ImportConfiguration();
-        configuration.setItemId(itemId);
-        configuration.setTenantId(TENANT);
-        configuration.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
-        configuration.setActive(true);
-        configuration.getProperties().put("source", source);
-        configuration.getProperties().put("mapping", Collections.singletonMap("0", 0));
-        return configuration;
-    }
-
-    private ExportConfiguration recurrentExport(String itemId, String destination) {
-        ExportConfiguration configuration = new ExportConfiguration();
-        configuration.setItemId(itemId);
-        configuration.setTenantId(TENANT);
-        configuration.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
-        configuration.setActive(true);
-        configuration.getProperties().put("destination", destination);
-        configuration.getProperties().put("mapping", Collections.singletonMap("0", "firstName"));
-        configuration.getProperties().put("segment", "exportSegment");
-        configuration.getProperties().put("period", "1m");
-        return configuration;
     }
 
     private void addImportRoutes(ImportConfiguration... configurations) throws Exception {
@@ -810,24 +834,5 @@ public class FileEndpointContainmentTest {
                 ImportExportConfigurationService.class.getClassLoader(),
                 new Class<?>[]{ImportExportConfigurationService.class},
                 (proxy, method, args) -> "save".equals(method.getName()) ? args[0] : null);
-    }
-
-    /**
-     * The route builders ask the profile service for the profile property types while they build.
-     * Nothing in these tests depends on what it answers.
-     */
-    private static ProfileService noOpProfileService() {
-        return (ProfileService) Proxy.newProxyInstance(
-                ProfileService.class.getClassLoader(),
-                new Class<?>[]{ProfileService.class},
-                (proxy, method, args) -> {
-                    if (Collection.class.isAssignableFrom(method.getReturnType())) {
-                        return Collections.emptyList();
-                    }
-                    if (List.class.isAssignableFrom(method.getReturnType())) {
-                        return Collections.emptyList();
-                    }
-                    return null;
-                });
     }
 }

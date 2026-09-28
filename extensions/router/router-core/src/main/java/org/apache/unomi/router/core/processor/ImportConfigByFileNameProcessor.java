@@ -21,6 +21,7 @@ import org.apache.camel.Processor;
 import org.apache.camel.component.file.GenericFile;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.router.api.EndpointValidator;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
@@ -170,12 +171,8 @@ public class ImportConfigByFileNameProcessor implements Processor {
      * @return true if the tenant ID is valid, false otherwise
      */
     private boolean isValidTenantId(String tenantId) {
-        if (tenantId == null || tenantId.isEmpty()) {
-            return false;
-        }
-
         // Only allow alphanumeric characters, hyphens, and underscores in tenant IDs
-        return tenantId.matches("^[a-zA-Z0-9_-]+$");
+        return EndpointValidator.isTenantDirectoryName(tenantId);
     }
 
     /**

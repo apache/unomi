@@ -141,11 +141,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                 LOGGER.warn("Export configuration incomplete, route {} will be skipped!", exportConfiguration.getItemId());
             }
         }
-        if (refused > 0) {
-            LOGGER.warn("{} of {} export configuration(s) name a destination that is refused and run no route; each is "
-                    + "marked {} and logged above. After an upgrade, check that their files sit under "
-                    + "{baseDir}/{tenantId}.", refused, exportConfigurationList.size(), RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT);
-        }
+        logRefused(LOGGER, refused, exportConfigurationList.size(), "export", "destination");
     }
 
     /**
