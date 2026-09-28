@@ -249,6 +249,9 @@ public class ProfileServiceEndPoint {
     @POST
     @Path("/")
     public Profile save(Profile profile) {
+        if (profile == null || profile.getItemId() == null) {
+            throw new BadRequestException("A profile states its own identity, so the body must carry an itemId");
+        }
         Profile savedProfile = profileService.saveOrMerge(profile);
         if (savedProfile != null) {
             Event profileUpdated = new Event("profileUpdated", null, savedProfile, null, null, savedProfile, new Date());

@@ -21,7 +21,6 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -89,20 +88,14 @@ public class ProfileServiceIT extends BaseIT {
     public void testProfileWithoutItemId() throws Exception {
         Profile profile = new Profile();
         profile.setProperty("name", "testProfileWithoutItemId");
-        profileService.saveOrMerge(profile);
 
-        Profile testProfile = keepTrying("Profile not found in the required time", () -> profileService.findProfilesByPropertyValue("properties.name", "testProfileWithoutItemId", 0, 10, null), Objects::nonNull,
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES).get(0);
-        LOGGER.info("Ensure an itemId as been set...");
-        Assert.assertNotNull(testProfile.getItemId());
+        assertNull("saveOrMerge must refuse a profile that carries no itemId", profileService.saveOrMerge(profile));
 
-        LOGGER.info("Delete profile...");
-        profileService.delete(testProfile.getItemId(), false);
-
-        waitForNullValue("Profile still present after deletion", () -> profileService.load(testProfile.getItemId()), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-
-        LOGGER.info("Profile deleted successfully.");
+        // Stay empty for the same window a successful save would have become visible in.
+        shouldBeTrueUntilEnd("A profile with no itemId must not be stored",
+                () -> profileService.findProfilesByPropertyValue("properties.name", "testProfileWithoutItemId", 0, 10, null),
+                found -> found != null && found.getTotalSize() == 0 && found.getList() != null && found.getList().isEmpty(),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test

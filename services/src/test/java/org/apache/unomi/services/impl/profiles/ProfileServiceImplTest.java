@@ -698,4 +698,37 @@ public class ProfileServiceImplTest {
         });
     }
 
+    // A profile states its own identity. Without an itemId there is nothing to look up and nothing
+    // to merge into, and the persistence layer would write every such profile to one shared
+    // document, so the second call would destroy what the first one wrote.
+    @Test
+    public void testSaveOrMergeRefusesAProfileWithNoItemId() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Profile profile = new Profile();
+            profile.setProperty("firstName", "Ada");
+
+            assertNull(profileService.saveOrMerge(profile), "saveOrMerge must refuse a profile that carries no itemId");
+            return null;
+        });
+    }
+
+    // Two profiles with no itemId must not end up on the same document.
+    @Test
+    public void testSaveOrMergeKeepsTwoIdLessProfilesApart() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Profile first = new Profile();
+            first.setProperty("firstName", "First");
+            Profile second = new Profile();
+            second.setProperty("firstName", "Second");
+
+            profileService.saveOrMerge(first);
+            profileService.saveOrMerge(second);
+
+            Query query = new Query();
+            assertEquals(0L, profileService.search(query, Profile.class).getTotalSize(),
+                "Neither profile is stored, so no profile can overwrite the other");
+            return null;
+        });
+    }
+
 }
