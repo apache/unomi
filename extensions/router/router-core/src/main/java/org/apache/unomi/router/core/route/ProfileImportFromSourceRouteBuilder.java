@@ -23,8 +23,9 @@ import org.apache.camel.ShutdownRunningTask;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.ProcessorDefinition;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.router.api.EndpointValidator;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
@@ -118,6 +119,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
         }
 
         //Loop on multiple import configuration
+        int refused = 0;
         for (final ImportConfiguration importConfiguration : importConfigurationList) {
             if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType()) &&
                     importConfiguration.getProperties() != null && importConfiguration.getProperties().size() > 0) {
@@ -135,21 +137,17 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                 lineSplitProcessor.setProfilePropertyTypes(profileService.getTargetPropertyTypes("profiles"));
 
                 String endpoint = (String) importConfiguration.getProperties().get("source");
-                if (StringUtils.isBlank(endpoint)) {
-                    LOGGER.error("No source endpoint configured, route {} will be skipped.", importConfiguration.getItemId());
-                    continue;
+                if (StringUtils.isNotBlank(endpoint)) {
+                    // The separator depends on whether the source already carries a query: appending
+                    // '&' to a source that has none makes the option part of the directory name.
+                    // Poll immediately rather than waiting Camel's default 1-second initialDelay.
+                    endpoint += (endpoint.indexOf('?') < 0 ? "?" : "&") + "initialDelay=0&moveFailed=.error";
                 }
-                // Poll immediately when the route starts rather than waiting the default 1-second initialDelay.
-                endpoint += "&initialDelay=0&moveFailed=.error";
 
-                int schemeSeparatorIndex = endpoint.indexOf(':');
-                if (schemeSeparatorIndex < 0) {
-                    LOGGER.error("Endpoint {} has no scheme, route {} will be skipped.", endpoint, importConfiguration.getItemId());
-                    continue;
-                }
-                String endpointScheme = endpoint.substring(0, schemeSeparatorIndex);
-
-                if (allowedEndpoints.contains(endpointScheme)) {
+                String refusal = EndpointValidator.validateForTenant(endpoint, allowedEndpoints, permittedBaseDirs,
+                        importConfiguration.getTenantId());
+                recordEndpointOutcome(importConfiguration, importConfigurationService, refusal, executionContextManager);
+                if (refusal == null) {
                     ProcessorDefinition prDef = from(endpoint)
                             .routeId(importConfiguration.getItemId())// This allow identification of the route for manual start/stop
                             .autoStartup(importConfiguration.isActive())// Auto-start if the import configuration is set active
@@ -186,10 +184,22 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                         prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
                     }
                 } else {
-                    LOGGER.error("Endpoint scheme {} is not allowed, route {} will be skipped.", endpointScheme, importConfiguration.getItemId());
+                    refused++;
+                    LOGGER.error("Source endpoint is refused ({}), route {} will be skipped.", refusal, importConfiguration.getItemId());
                 }
             }
         }
+        logRefused(LOGGER, refused, importConfigurationList.size(), "import", "source");
+    }
+
+    /**
+     * Sets the comma-separated list of base directories an import {@code file} endpoint may resolve into.
+     * Each tenant is then confined to {@code {baseDir}/{tenantId}}.
+     *
+     * @param permittedImportBaseDirs the permitted base directories
+     */
+    public void setPermittedImportBaseDirs(String permittedImportBaseDirs) {
+        this.permittedBaseDirs = permittedImportBaseDirs;
     }
 
     /**

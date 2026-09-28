@@ -86,7 +86,7 @@ public class ProfileImportRankingIT extends BaseIT {
         mappingRanking.put("city", 5);
 
         importConfigRanking.getProperties().put("mapping", mappingRanking);
-        File importSurfersFile = new File("data/tmp/recurrent_import/");
+        File importSurfersFile = new File("data/tmp/recurrent_import/" + TEST_TENANT_ID);
         importConfigRanking.getProperties().put("source",
                 "file://" + importSurfersFile.getAbsolutePath() + "?fileName=5-ranking-test.csv&move=.done");
         importConfigRanking.setActive(true);

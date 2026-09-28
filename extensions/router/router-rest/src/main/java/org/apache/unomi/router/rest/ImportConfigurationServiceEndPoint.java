@@ -65,15 +65,11 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
     private static final Logger LOGGER = LoggerFactory.getLogger(ImportConfigurationServiceEndPoint.class.getName());
 
     @Reference
-    protected ConfigSharingService configSharingService;
-
-    @Reference
-    protected ExecutionContextManager executionContextManager;
-
     public void setConfigSharingService(ConfigSharingService configSharingService) {
         this.configSharingService = configSharingService;
     }
 
+    @Reference
     public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
         this.executionContextManager = executionContextManager;
     }
@@ -122,10 +118,17 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
      */
     @Override
     public ImportConfiguration saveConfiguration(ImportConfiguration importConfiguration) {
+        return super.saveConfiguration(importConfiguration);
+    }
 
-        ImportConfiguration importConfigSaved = configurationService.save(importConfiguration, true);
+    @Override
+    protected String endpointProperty() {
+        return "source";
+    }
 
-        return importConfigSaved;
+    @Override
+    protected String permittedBaseDirsProperty() {
+        return RouterConstants.CONFIG_IMPORT_BASE_DIRS;
     }
 
     /**

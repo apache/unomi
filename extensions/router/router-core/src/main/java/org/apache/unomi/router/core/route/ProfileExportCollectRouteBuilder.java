@@ -19,11 +19,12 @@ package org.apache.unomi.router.core.route;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.ProcessorDefinition;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.router.api.EndpointValidator;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.core.bean.CollectProfileBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,6 +55,8 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
 
     /** List of export configurations to process */
     private List<ExportConfiguration> exportConfigurationList;
+
+    private ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
 
     /** Service for persisting and retrieving data */
     private PersistenceService persistenceService;
@@ -98,12 +101,16 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
         collectProfileBean.setExecutionContextManager(executionContextManager);
 
         //Loop on multiple export configuration
+        int refused = 0;
         for (final ExportConfiguration exportConfiguration : exportConfigurationList) {
             if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfiguration.getConfigType()) &&
                     exportConfiguration.getProperties() != null && exportConfiguration.getProperties().size() > 0) {
                 if ((Map<String, String>) exportConfiguration.getProperties().get("mapping") != null) {
                     String destinationEndpoint = (String) exportConfiguration.getProperties().get("destination");
-                    if (StringUtils.isNotBlank(destinationEndpoint) && allowedEndpoints.contains(destinationEndpoint.substring(0, destinationEndpoint.indexOf(':')))) {
+                    String refusal = EndpointValidator.validateForTenant(destinationEndpoint, allowedEndpoints, permittedBaseDirs,
+                            exportConfiguration.getTenantId());
+                    recordEndpointOutcome(exportConfiguration, exportConfigurationService, refusal, executionContextManager);
+                    if (refusal == null) {
                         String timerString = "timer://collectProfile?fixedRate=true&period=" + (String) exportConfiguration.getProperties().get("period");
                         if ((String) exportConfiguration.getProperties().get("delay") != null) {
                             timerString += "&delay=" + (String) exportConfiguration.getProperties().get("delay");
@@ -124,7 +131,8 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                             prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_EXPORT_DEPOSIT_BUFFER));
                         }
                     } else {
-                        LOGGER.error("Endpoint scheme {} is not allowed, route {} will be skipped.", destinationEndpoint.substring(0, destinationEndpoint.indexOf(':')), exportConfiguration.getItemId());
+                        refused++;
+                        LOGGER.error("Destination endpoint is refused ({}), route {} will be skipped.", refusal, exportConfiguration.getItemId());
                     }
                 } else {
                     LOGGER.warn("Mapping is null in export configuration, route {} will be skipped!", exportConfiguration.getItemId());
@@ -133,6 +141,26 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                 LOGGER.warn("Export configuration incomplete, route {} will be skipped!", exportConfiguration.getItemId());
             }
         }
+        logRefused(LOGGER, refused, exportConfigurationList.size(), "export", "destination");
+    }
+
+    /**
+     * Sets the comma-separated list of base directories an export {@code file} endpoint may resolve into.
+     * Each tenant is then confined to {@code {baseDir}/{tenantId}}.
+     *
+     * @param permittedExportBaseDirs the permitted base directories
+     */
+    public void setPermittedExportBaseDirs(String permittedExportBaseDirs) {
+        this.permittedBaseDirs = permittedExportBaseDirs;
+    }
+
+    /**
+     * Sets the service a refused configuration is recorded with.
+     *
+     * @param exportConfigurationService the export configuration service
+     */
+    public void setExportConfigurationService(ImportExportConfigurationService<ExportConfiguration> exportConfigurationService) {
+        this.exportConfigurationService = exportConfigurationService;
     }
 
     /**

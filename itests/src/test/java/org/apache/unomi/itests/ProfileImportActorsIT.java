@@ -86,7 +86,7 @@ public class ProfileImportActorsIT extends BaseIT {
         mappingActors.put("city", 4);
 
         importConfigActors.getProperties().put("mapping", mappingActors);
-        File importSurfersFile = new File("data/tmp/recurrent_import/");
+        File importSurfersFile = new File("data/tmp/recurrent_import/" + TEST_TENANT_ID);
         importConfigActors.getProperties().put("source",
                 "file://" + importSurfersFile.getAbsolutePath() + "?fileName=6-actors-test.csv&move=.done");
         importConfigActors.setActive(true);

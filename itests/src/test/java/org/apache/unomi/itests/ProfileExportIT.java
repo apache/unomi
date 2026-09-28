@@ -99,13 +99,13 @@ public class ProfileExportIT extends BaseIT {
         exportConfiguration.getProperties().put("mapping", mapping);
         exportConfiguration.getProperties().put("segment", "exportItSeg");
         exportConfiguration.getProperties().put("period", "1m");
-        File exportDir = new File("data/tmp/");
+        File exportDir = new File("data/tmp/recurrent_export/" + TEST_TENANT_ID);
         exportConfiguration.getProperties().put("destination", "file://" + exportDir.getAbsolutePath() + "?fileName=profiles-export.csv");
         exportConfiguration.setActive(true);
 
         exportConfigurationService.save(exportConfiguration, true);
 
-        final File exportResult = new File("data/tmp/profiles-export.csv");
+        final File exportResult = new File("data/tmp/recurrent_export/" + TEST_TENANT_ID + "/profiles-export.csv");
         keepTrying("Failed waiting for export file to be created", () -> exportResult, File::exists, 1000, 100);
 
         LOGGER.info("PATH : {}", exportResult.getAbsolutePath());

@@ -18,9 +18,12 @@ package org.apache.unomi.router.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.security.UnomiRoles;
+import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.rest.security.RequiresRole;
 import org.apache.unomi.router.api.ExportConfiguration;
+import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.services.ProfileExportService;
 import org.osgi.service.component.annotations.Component;
@@ -70,6 +73,26 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
         configurationService = exportConfigurationService;
     }
 
+    /**
+     * Sets the service the router publishes its allowed schemes and base directories through.
+     *
+     * @param configSharingService the configuration sharing service
+     */
+    @Reference
+    public void setConfigSharingService(ConfigSharingService configSharingService) {
+        this.configSharingService = configSharingService;
+    }
+
+    /**
+     * Sets the manager that tells which tenant, or the system, is calling.
+     *
+     * @param executionContextManager the execution context manager
+     */
+    @Reference
+    public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = executionContextManager;
+    }
+
     public void setProfileExportService(ProfileExportService profileExportService) {
         this.profileExportService = profileExportService;
     }
@@ -113,9 +136,17 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
      */
     @Override
     public ExportConfiguration saveConfiguration(ExportConfiguration exportConfiguration) {
-        ExportConfiguration exportConfigSaved = configurationService.save(exportConfiguration, true);
+        return super.saveConfiguration(exportConfiguration);
+    }
 
-        return exportConfigSaved;
+    @Override
+    protected String endpointProperty() {
+        return "destination";
+    }
+
+    @Override
+    protected String permittedBaseDirsProperty() {
+        return RouterConstants.CONFIG_EXPORT_BASE_DIRS;
     }
 
     /**

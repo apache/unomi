@@ -84,7 +84,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         mappingSurfers.put("city", 6);
 
         importConfigSurfers.getProperties().put("mapping", mappingSurfers);
-        File importSurfersFile = new File("data/tmp/recurrent_import/");
+        File importSurfersFile = new File("data/tmp/recurrent_import/" + TEST_TENANT_ID);
         importConfigSurfers.getProperties().put("source",
                 "file://" + importSurfersFile.getAbsolutePath() + "?fileName=2-surfers-test.csv&move=.done");
         importConfigSurfers.setActive(true);
