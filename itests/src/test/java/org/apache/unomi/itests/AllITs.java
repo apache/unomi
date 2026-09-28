@@ -53,6 +53,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ModifyConsentIT.class,
         PatchIT.class,
         ContextServletIT.class,
+        ConditionRegexSafetyIT.class,
         RuleServiceIT.class,
         PrivacyServiceIT.class,
         GroovyActionsServiceIT.class,
