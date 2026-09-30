@@ -63,7 +63,7 @@
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <maven.compiler.release>${java.version}</maven.compiler.release>
 
-        <karaf.version>4.4.11</karaf.version>
+        <karaf.version>4.4.12</karaf.version>
         <elasticsearch.version>9.4.3</elasticsearch.version>
         <elasticsearch.test.version>9.4.3</elasticsearch.test.version>
         <opensearch.version>3.7.0</opensearch.version>
