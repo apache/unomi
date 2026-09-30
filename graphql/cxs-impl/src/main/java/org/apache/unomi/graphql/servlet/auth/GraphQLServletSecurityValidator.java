@@ -36,6 +36,7 @@ import javax.security.auth.login.LoginException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -109,13 +110,58 @@ public class GraphQLServletSecurityValidator {
         return true;
     }
 
+    /**
+     * Authenticates a WebSocket upgrade that carries an {@code Authorization} header. Subscriptions are
+     * never public, so only Basic JAAS credentials are accepted.
+     *
+     * @return true when the caller is authenticated; false after a 401 has been sent
+     */
+    public boolean validateWebSocketUpgrade(HttpServletRequest req, HttpServletResponse res) throws IOException {
+        if (req.getHeader("Authorization") == null) {
+            res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
+            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+            return false;
+        }
+        if (isAuthenticatedUser(req)) {
+            return true;
+        }
+        // A 401 carries a challenge whether the header was missing or its credential was refused.
+        res.addHeader("WWW-Authenticate", "Basic realm=\"karaf\"");
+        res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+        return false;
+    }
+
+    /**
+     * Authenticates a Basic credential that did not arrive on an HTTP request, such as the one a browser
+     * client sends in the WebSocket {@code connection_init} payload. Same JAAS check as the HTTP path.
+     */
+    public boolean authenticateBasicCredential(String authorizationValue) {
+        return authenticateBasic(authorizationValue, null);
+    }
+
     private boolean isAuthenticatedUser(HttpServletRequest req) {
         req.setAttribute(AUTHENTICATION_TYPE, HttpServletRequest.BASIC_AUTH);
+        return authenticateBasic(req.getHeader("Authorization"), req);
+    }
 
-        String authHeader = req.getHeader("Authorization");
-
-        String usernameAndPassword = new String(Base64.getDecoder().decode(authHeader.substring(6).getBytes()));
+    /**
+     * @param req the originating request, or {@code null} when the credential did not arrive on one
+     */
+    private boolean authenticateBasic(String authHeader, HttpServletRequest req) {
+        // The scheme token is case-insensitive (RFC 7235).
+        if (authHeader == null || !authHeader.regionMatches(true, 0, "Basic ", 0, 6)) {
+            return false;
+        }
+        final String usernameAndPassword;
+        try {
+            usernameAndPassword = new String(Base64.getDecoder().decode(authHeader.substring(6).trim()), StandardCharsets.UTF_8);
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
         int userNameIndex = usernameAndPassword.indexOf(":");
+        if (userNameIndex <= 0) {
+            return false;
+        }
         String username = usernameAndPassword.substring(0, userNameIndex);
         String password = usernameAndPassword.substring(userNameIndex + 1);
 
@@ -135,7 +181,7 @@ public class GraphQLServletSecurityValidator {
             loginContext.login();
             Subject subject = loginContext.getSubject();
             boolean success = subject != null;
-            if (success) {
+            if (success && req != null) {
                 req.setAttribute(REMOTE_USER, username);
             }
             return success;

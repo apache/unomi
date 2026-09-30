@@ -39,6 +39,7 @@ import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
 import java.util.Map;
@@ -71,37 +72,121 @@ public class GraphQLServlet extends WebSocketServlet {
     @Override
     public void init(ServletConfig config) throws ServletException {
         LOGGER.debug("GraphQLServlet initialized");
-        super.init(config);
+        // Must precede super.init(): WebSocketServlet.init() calls configure(), which captures this
+        // validator into the SubscriptionWebSocketFactory.
         this.validator = new GraphQLServletSecurityValidator();
+        super.init(config);
     }
 
     private WebSocketServletFactory factory;
+
+    private SubscriptionWebSocketFactory socketCreator;
+
+    @Override
+    public void destroy() {
+        try {
+            if (socketCreator != null) {
+                socketCreator.shutdown();
+            }
+        } finally {
+            super.destroy();
+        }
+    }
 
     @Override
     public void configure(WebSocketServletFactory factory) {
         LOGGER.debug("GraphQLServlet configured");
         this.factory = factory;
-        factory.setCreator(new SubscriptionWebSocketFactory(graphQLSchemaUpdater.getGraphQL(), serviceManager));
+        this.socketCreator = new SubscriptionWebSocketFactory(graphQLSchemaUpdater.getGraphQL(), serviceManager, validator);
+        factory.setCreator(socketCreator);
         factory.getPolicy().setMaxTextMessageBufferSize(1024 * 1024);
     }
 
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         LOGGER.debug("GraphQLServlet service called with request: {}", request.getRequestURI());
-        if (factory.isUpgradeRequest(request, response)) {
-            try {
-                final ServletUpgradeRequest upReq = new ServletUpgradeRequest(request);
-                for (String subProtocol : upReq.getSubProtocols()) {
-                    if (subProtocol.startsWith("graphql")) {
-                        response.addHeader("Sec-WebSocket-Protocol", subProtocol);
-                        break;
-                    }
-                }
-            } catch (URISyntaxException e) {
-                throw new RuntimeException(e);
-            }
+        // HTTP GraphQL (GET/POST/OPTIONS): auth is enforced in doGet/doPost via validator.validate(...).
+        if (!factory.isUpgradeRequest(request, response)) {
+            super.service(request, response);
+            return;
         }
-        super.service(request, response);
+        serviceWebSocketUpgrade(request, response);
+    }
+
+    /**
+     * WebSocket upgrade path. Order matters for security:
+     * <ol>
+     *   <li>Refuse foreign-origin handshakes, then authenticate any credential the handshake carries
+     *       BEFORE {@code acceptWebSocket}. A handshake that carries no credential is upgraded
+     *       unauthenticated - a browser cannot set headers on it - and must authenticate through
+     *       {@code connection_init} before the socket will do anything.</li>
+     *   <li>Call {@code acceptWebSocket} directly - do not call {@code WebSocketServlet.service()},
+     *       which can fall through to {@code doGet}/{@code doPost} when accept fails and the response
+     *       is not committed.</li>
+     * </ol>
+     */
+    private void serviceWebSocketUpgrade(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        // A WebSocket handshake is not subject to the same-origin policy and triggers no CORS
+        // preflight, so any page on any origin can open one against this endpoint. Refuse handshakes
+        // that declare a foreign origin before doing anything else.
+        if (!isOriginAllowed(request)) {
+            LOGGER.warn("Refusing cross-origin WebSocket upgrade from origin {}", request.getHeader("Origin"));
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Cross-origin WebSocket upgrade refused");
+            return;
+        }
+
+        // Credentials on the upgrade request are the strongest path: the socket is never created
+        // unauthenticated. They stay mandatory for any client that can set request headers.
+        if (request.getHeader("Authorization") != null && !validator.validateWebSocketUpgrade(request, response)) {
+            return;
+        }
+
+        try {
+            final ServletUpgradeRequest upReq = new ServletUpgradeRequest(request);
+            for (String subProtocol : upReq.getSubProtocols()) {
+                if (subProtocol.startsWith("graphql")) {
+                    response.addHeader("Sec-WebSocket-Protocol", subProtocol);
+                    break;
+                }
+            }
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (!factory.acceptWebSocket(request, response) && !response.isCommitted()) {
+            // Upgrade was intended but rejected; never fall through to HTTP GraphQL.
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid WebSocket upgrade");
+        }
+    }
+
+    /**
+     * Accepts a handshake that declares no origin (a non-browser client, which cannot be driven into
+     * making the request by a hostile page) or one whose origin is this same host. Anything else is a
+     * page on another origin trying to open a socket here, which is refused.
+     */
+    static boolean isOriginAllowed(HttpServletRequest request) {
+        final String origin = request.getHeader("Origin");
+        if (origin == null || origin.trim().isEmpty()) {
+            return true;
+        }
+        try {
+            final URI originUri = new URI(origin);
+            final String originHost = originUri.getHost();
+            if (originHost == null) {
+                return false;
+            }
+            if (!originHost.equalsIgnoreCase(request.getServerName())) {
+                return false;
+            }
+            int originPort = originUri.getPort();
+            if (originPort == -1) {
+                originPort = "https".equalsIgnoreCase(originUri.getScheme()) ? 443 : 80;
+            }
+            return originPort == request.getServerPort();
+        } catch (URISyntaxException e) {
+            LOGGER.debug("Refusing WebSocket upgrade with unparseable Origin", e);
+            return false;
+        }
     }
 
     @Override
