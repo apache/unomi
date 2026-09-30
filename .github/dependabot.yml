@@ -8,10 +8,9 @@ updates:
       - dependency-name: "org.apache.commons:commons-email"
         versions:
           - "> 1.3.3"
-      # Stay on CXF 3.6.x for now; CXF 4 is a major Jakarta/platform jump.
+      # CXF feature bundles pin their own Jackson. Keep Unomi on 3.6.8 until a
+      # CXF bump is paired with a matching jackson.version (3.6.12 pulls 2.22).
       - dependency-name: "org.apache.cxf*"
-        update-types:
-          - "version-update:semver-major"
       # Salesforce connector CometD/Jetty stack refresh is tracked in UNOMI-989.
       - dependency-name: "org.cometd.java:*"
         update-types:
