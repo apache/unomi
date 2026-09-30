@@ -8,3 +8,15 @@ updates:
       - dependency-name: "org.apache.commons:commons-email"
         versions:
           - "> 1.3.3"
+      # Stay on CXF 3.6.x for now; CXF 4 is a major Jakarta/platform jump.
+      - dependency-name: "org.apache.cxf*"
+        update-types:
+          - "version-update:semver-major"
+      # Salesforce connector CometD/Jetty stack refresh is tracked in UNOMI-989.
+      - dependency-name: "org.cometd.java:*"
+        update-types:
+          - "version-update:semver-major"
+      # graphql-java-annotations majors need a matching graphql-java (+ scalars) upgrade.
+      - dependency-name: "io.github.graphql-java:graphql-java-annotations"
+        update-types:
+          - "version-update:semver-major"
