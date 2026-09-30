@@ -525,14 +525,14 @@ public class ContextServletIT extends BaseIT {
         request.setEntity(new StringEntity(
                 getValidatedBundleJSON("security/mvel-payload-personalization-mixed.json", parameters),
                 ContentType.APPLICATION_JSON));
-        RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
 
         assertEquals("Invalid response code", 200, response.getStatusCode());
         List<String> variants = response.getContextResponse().getPersonalizations().get("mixed-sanitize");
         assertNotNull(variants);
         assertEquals(Collections.singletonList("safe-fallback"), variants);
         shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
-                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
+                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
