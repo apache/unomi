@@ -525,7 +525,9 @@ public class ContextServletIT extends BaseIT {
         request.setEntity(new StringEntity(
                 getValidatedBundleJSON("security/mvel-payload-personalization-mixed.json", parameters),
                 ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        // The payload declares its own sessionId, so the request is sent without asserting one:
+        // the two-argument helper checks that the context echoes the id it was given.
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
 
         assertEquals("Invalid response code", 200, response.getStatusCode());
         List<String> variants = response.getContextResponse().getPersonalizations().get("mixed-sanitize");
