@@ -52,6 +52,8 @@ public class SecureFilteringClassLoaderTest {
         Set<String> allowed = new HashSet<>(Collections.singletonList("java.lang.String"));
         SecureFilteringClassLoader loader = new SecureFilteringClassLoader(allowed, null, parent);
         assertEquals(org.mvel2.compiler.Accessor.class, loader.loadClass("org.mvel2.compiler.Accessor"));
+        assertEquals(org.mvel2.integration.VariableResolverFactory.class,
+                loader.loadClass("org.mvel2.integration.VariableResolverFactory"));
     }
 
     @Test

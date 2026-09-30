@@ -56,18 +56,22 @@ public class SecureFilteringClassLoader extends ClassLoader {
      * the allow list and NOT from the forbid lists above, so a loosened configuration cannot use
      * this exemption to reach an eval entry point.
      *
-     * <p>{@code Accessor} is the interface a compiled property accessor implements. It carries no
-     * compiler and no parser, so naming it from an expression buys nothing: there is no way to
-     * obtain an instance without a compiler, and every compiler entry point stays behind the allow
-     * list.
+     * <p>{@code Accessor} is the interface a compiled property accessor implements, and
+     * {@code org.mvel2.integration} holds the variable-resolution interfaces an accessor calls
+     * through. Neither carries a compiler or a parser, so naming one from an expression buys
+     * nothing: there is no way to obtain an instance without a compiler, and every compiler entry
+     * point stays behind the allow list.
      *
-     * <p>Measured rather than assumed: without this exemption the integration suite of this branch
-     * reports 36 failures and 5 errors, and one of the errors reads
-     * {@code ClassNotFound org.mvel2.compiler.Accessor}. Every failing case is a rule action that
-     * evaluates an MVEL expression.
+     * <p>Measured rather than assumed, in two rounds of the integration suite of this branch.
+     * With no exemption the suite reports 36 failures and 5 errors, one of them
+     * {@code ClassNotFound org.mvel2.compiler.Accessor}. With {@code Accessor} alone it reports one
+     * error, {@code ClassNotFound org.mvel2.integration.VariableResolverFactory}, raised from
+     * {@code DynamicGetAccessor.getValue}. Every failing case is a rule action that evaluates an
+     * MVEL expression.
      */
     static final Set<String> RUNTIME_INTERNAL_CLASSES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "org.mvel2.compiler.Accessor"
+            "org.mvel2.compiler.Accessor",
+            "org.mvel2.integration.*"
     )));
 
     private Set<String> allowedClasses = null;
