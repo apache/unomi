@@ -31,10 +31,13 @@ public class SecureFilteringClassLoader extends ClassLoader {
      * Public eval / runtime entry points that expressions must never load, even when the configured
      * forbid list is empty or the allow list is {@code all}. This is a safety net for a loosened
      * configuration: the primary control is that {@code org.mvel2} is not on the allow list at all,
-     * so expressions cannot name any MVEL class. MVEL's own compiler internals are loaded by the
-     * MVEL bundle class loader, not through this filtering loader, so denying these does not affect
-     * compilation of allow-listed expressions. Wildcard entries cover whole gadget packages so a
+     * so expressions cannot name any MVEL class. Wildcard entries cover whole gadget packages so a
      * future MVEL release cannot reopen the hole by adding a new eval-capable class.
+     *
+     * <p>On this line MVEL does ask this loader for part of its own machinery, which is why
+     * {@link #RUNTIME_INTERNAL_CLASSES} exists. The master version of this class states that the
+     * MVEL bundle class loader serves those classes; that is not what the integration tests of the
+     * 3.0 line observed.
      */
     static final Set<String> ALWAYS_FORBIDDEN_CLASSES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "org.mvel2.MVEL",
@@ -45,6 +48,26 @@ public class SecureFilteringClassLoader extends ClassLoader {
             "org.mvel2.MacroProcessor",
             "org.mvel2.jsr223.*",
             "org.mvel2.sh.*"
+    )));
+
+    /**
+     * MVEL internals that MVEL itself loads through the thread context class loader, which
+     * {@code MvelScriptExecutor} sets to this loader while an expression runs. They are exempt from
+     * the allow list and NOT from the forbid lists above, so a loosened configuration cannot use
+     * this exemption to reach an eval entry point.
+     *
+     * <p>{@code Accessor} is the interface a compiled property accessor implements. It carries no
+     * compiler and no parser, so naming it from an expression buys nothing: there is no way to
+     * obtain an instance without a compiler, and every compiler entry point stays behind the allow
+     * list.
+     *
+     * <p>Measured rather than assumed: without this exemption the integration suite of this branch
+     * reports 36 failures and 5 errors, and one of the errors reads
+     * {@code ClassNotFound org.mvel2.compiler.Accessor}. Every failing case is a rule action that
+     * evaluates an MVEL expression.
+     */
+    static final Set<String> RUNTIME_INTERNAL_CLASSES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
+            "org.mvel2.compiler.Accessor"
     )));
 
     private Set<String> allowedClasses = null;
@@ -123,6 +146,9 @@ public class SecureFilteringClassLoader extends ClassLoader {
         if (classNameMatches(ALWAYS_FORBIDDEN_CLASSES, name) ||
                 (forbiddenClasses != null && classNameMatches(forbiddenClasses, name))) {
             throw new ClassNotFoundException("Access to class " + name + " not allowed");
+        }
+        if (classNameMatches(RUNTIME_INTERNAL_CLASSES, name)) {
+            return;
         }
         if (allowedClasses != null && !classNameMatches(allowedClasses, name)) {
             throw new ClassNotFoundException("Access to class " + name + " not allowed");

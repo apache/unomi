@@ -48,6 +48,24 @@ public class SecureFilteringClassLoaderTest {
     }
 
     @Test
+    public void loadClass_allowsTheMvelRuntimeInternalOutsideTheAllowList() throws ClassNotFoundException {
+        Set<String> allowed = new HashSet<>(Collections.singletonList("java.lang.String"));
+        SecureFilteringClassLoader loader = new SecureFilteringClassLoader(allowed, null, parent);
+        assertEquals(org.mvel2.compiler.Accessor.class, loader.loadClass("org.mvel2.compiler.Accessor"));
+    }
+
+    @Test
+    public void loadClass_theRuntimeInternalExemptionDoesNotReachAnEvalApi() {
+        Set<String> allowed = new HashSet<>(Collections.singletonList("java.lang.String"));
+        SecureFilteringClassLoader loader = new SecureFilteringClassLoader(allowed, null, parent);
+        assertEquals("Access to class org.mvel2.MVEL not allowed",
+                assertThrows(ClassNotFoundException.class, () -> loader.loadClass("org.mvel2.MVEL")).getMessage());
+        assertEquals("Access to class org.mvel2.compiler.ExpressionCompiler not allowed",
+                assertThrows(ClassNotFoundException.class,
+                        () -> loader.loadClass("org.mvel2.compiler.ExpressionCompiler")).getMessage());
+    }
+
+    @Test
     public void loadClass_alwaysForbidsPublicEvalApiEvenWhenForbidListIsEmpty() {
         Set<String> allowed = new HashSet<>(Collections.singletonList("org.mvel2.*"));
         SecureFilteringClassLoader loader = new SecureFilteringClassLoader(allowed, Collections.emptySet(), parent);
