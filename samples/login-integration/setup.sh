@@ -97,7 +97,7 @@ else
     done
     [ -n "$KARAF_DIR" ] || fail "Could not find a Unomi install. Set KARAF_HOME to the directory of the
        running instance, for example:
-         KARAF_HOME=../../package/target/unomi-3.1.0-SNAPSHOT ./setup.sh"
+         KARAF_HOME=../../package/target/unomi-4.0.0-SNAPSHOT ./setup.sh"
 fi
 
 [ -d "$KARAF_DIR" ] || fail "KARAF_HOME does not exist: ${KARAF_DIR}"

@@ -29,14 +29,14 @@ String indexPrefix = context.getConfigString(INDEX_PREFIX)
 Set<String> systemItems = MigrationUtils.getAllItemTypes(context.getHttpClient(), esAddress, indexPrefix, "systemitems", bundleContext)
 context.printMessage("Found " + systemItems.size() + " system item types")
 
-// Fix itemIds in systemitems index that may have been incorrectly processed by migration 3.1.0-00
-// The 3.1.0-00 migration script had a bug where it split baseId on underscore and took only the first part,
+// Fix itemIds in systemitems index that may have been incorrectly processed by migration 4.0.0-00
+// The 4.0.0-00 migration script had a bug where it split baseId on underscore and took only the first part,
 // causing itemIds like "dummy_scope" to become "dummy" when constructing document IDs.
 // This migration fixes items where itemId in source doesn't match what it should be based on the document ID.
 // Note: Migration 2.2.0 intentionally sets itemId = documentId (with suffix), which is fine because
-// setMetadata() extracts the correct itemId from the document ID. However, if the 3.1.0-00 migration
+// setMetadata() extracts the correct itemId from the document ID. However, if the 4.0.0-00 migration
 // incorrectly processed the baseId, we need to fix the itemId in the source to match the document ID.
-context.performMigrationStep("3.1.0-fix-system-item-ids", () -> {
+context.performMigrationStep("4.0.0-fix-system-item-ids", () -> {
     String systemItemsIndex = "${indexPrefix}-systemitems"
     
     if (MigrationUtils.indexExists(context.getHttpClient(), esAddress, systemItemsIndex)) {
@@ -47,7 +47,7 @@ context.performMigrationStep("3.1.0-fix-system-item-ids", () -> {
             context.printMessage("Fixing items of type: ${itemType}")
             
             // Get the Painless script from file
-            String fixScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/3.1.0/fix_system_item_ids.painless")
+            String fixScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/4.0.0/fix_system_item_ids.painless")
             
             // Build the update request using JSONObject to properly escape the script
             // This is the same approach used in MigrationUtils.getScriptPart() and other migrations

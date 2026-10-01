@@ -43,7 +43,7 @@ If you are using the packaged version of Unomi (as opposed to deploying it to yo
 
 [source]
 ----
-cp target/tweet-button-plugin-3.1.0-SNAPSHOT.jar ../../package/target/unomi-3.1.0-SNAPSHOT/deploy
+cp target/tweet-button-plugin-4.0.0-SNAPSHOT.jar ../../package/target/unomi-4.0.0-SNAPSHOT/deploy
 ----
 
 ===== Testing the samples

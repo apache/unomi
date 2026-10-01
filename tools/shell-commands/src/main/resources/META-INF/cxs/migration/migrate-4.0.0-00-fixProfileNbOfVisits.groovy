@@ -25,7 +25,7 @@ String esAddress = context.getConfigString("esAddress")
 String indexPrefix = context.getConfigString("indexPrefix")
 def jsonSlurper = new JsonSlurper()
 
-context.performMigrationStep("3.1.0-fix-profile-nbOfVisits", () -> {
+context.performMigrationStep("4.0.0-fix-profile-nbOfVisits", () -> {
     String profileIndex = "${indexPrefix}-profile"
     String sessionIndex = "${indexPrefix}-session-*"
 
@@ -33,8 +33,8 @@ context.performMigrationStep("3.1.0-fix-profile-nbOfVisits", () -> {
 
     // First step: Copy nbOfVisits to totalNbOfVisits for all profiles
     context.printMessage("Step 1: Copying nbOfVisits to totalNbOfVisits")
-    String copyScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/3.1.0/copy_nbOfVisits_to_totalNbOfVisits.painless")
-    String copyRequestBody = MigrationUtils.resourceAsString(bundleContext, "requestBody/3.1.0/profile_copy_nbOfVisits_request.json")
+    String copyScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/4.0.0/copy_nbOfVisits_to_totalNbOfVisits.painless")
+    String copyRequestBody = MigrationUtils.resourceAsString(bundleContext, "requestBody/4.0.0/profile_copy_nbOfVisits_request.json")
     MigrationUtils.updateByQuery(context.getHttpClient(), esAddress, profileIndex, copyRequestBody.replace('#painless', copyScript))
 
     context.printMessage("Step 1 completed: nbOfVisits copied to totalNbOfVisits")
@@ -42,7 +42,7 @@ context.performMigrationStep("3.1.0-fix-profile-nbOfVisits", () -> {
     // Second step: Update nbOfVisits with actual session count for each profile
     context.printMessage("Step 2: Updating nbOfVisits with actual session count")
 
-    String scrollQuery = MigrationUtils.resourceAsString(bundleContext, "requestBody/3.1.0/profile_scroll_query.json")
+    String scrollQuery = MigrationUtils.resourceAsString(bundleContext, "requestBody/4.0.0/profile_scroll_query.json")
     int profilesProcessed = 0
     int profilesUpdated = 0
 
@@ -60,7 +60,7 @@ context.performMigrationStep("3.1.0-fix-profile-nbOfVisits", () -> {
             }
 
             // Count sessions for this profile
-            String countQuery = MigrationUtils.resourceAsString(bundleContext, "requestBody/3.1.0/count_sessions_by_profile.json")
+            String countQuery = MigrationUtils.resourceAsString(bundleContext, "requestBody/4.0.0/count_sessions_by_profile.json")
             String countQueryWithProfileId = countQuery.replace('#profileId', profileId)
 
             try {

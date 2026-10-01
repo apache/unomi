@@ -35,7 +35,7 @@ public class ServerInfo implements Serializable {
 
     /** @api.example unomi */
     private String serverIdentifier;
-    /** @api.example 3.1.0-SNAPSHOT */
+    /** @api.example 4.0.0-SNAPSHOT */
     private String serverVersion;
     /** @api.example 1 */
     private String serverBuildNumber;
@@ -77,7 +77,7 @@ public class ServerInfo implements Serializable {
      * Running Unomi version string.
      *
      * @return server version
-     * @api.example 3.1.0-SNAPSHOT
+     * @api.example 4.0.0-SNAPSHOT
      */
     public String getServerVersion() {
         return serverVersion;

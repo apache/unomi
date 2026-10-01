@@ -18,11 +18,11 @@ This document explains the key differences between Apache Unomi 2.x and 3.x vers
 
 ==== Overview
 
-Apache Unomi **3.1** introduces comprehensive multi-tenancy support, enabling complete data isolation between different tenants. This fundamental architectural change requires a new tenant-based authentication model while keeping all API endpoints unchanged.
+Apache Unomi **4.0** introduces comprehensive multi-tenancy support, enabling complete data isolation between different tenants. This fundamental architectural change requires a new tenant-based authentication model while keeping all API endpoints unchanged.
 
-===== Multi-Tenancy in 3.1
+===== Multi-Tenancy in 4.0
 
-The key innovation in Unomi 3.1 is the introduction of **tenant isolation** for all data:
+The key innovation in Unomi 4.0 is the introduction of **tenant isolation** for all data:
 
 - **Profiles, events, segments, rules, and schemas** are now tenant-specific
 - **Complete data separation** between tenants - no cross-tenant data access
@@ -37,7 +37,7 @@ This multi-tenancy support necessitates the authentication changes described bel
 
 [cols="1,1,1", options="header"]
 |===
-|Aspect |Unomi V2 |Unomi 3.1
+|Aspect |Unomi V2 |Unomi 4.0
 
 |Authentication Method
 |System Administrator Authentication (`karaf` user)

@@ -38,7 +38,7 @@ them at your own risks.
 Apache Unomi supports two search engine backends:
 
 * *Elasticsearch*: Version **9.x** (for example 9.4.3) is required for Unomi 3.0 and later. Version 7.17.5 applies only to Unomi 2.x.
-* *OpenSearch*: Version **3.7.0** (matching `opensearch.version` in the Unomi root POM) is supported starting with Unomi 3.1
+* *OpenSearch*: Version **3.7.0** (matching `opensearch.version` in the Unomi root POM) is supported starting with Unomi 4.0
 
 It is highly recommended to use the versions specified in the documentation. When in doubt, consult the Apache Unomi community
 for the latest compatibility information.

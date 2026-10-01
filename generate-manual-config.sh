@@ -25,7 +25,7 @@
 # === VERSION CONFIGURATION ===
 # Latest version (master branch)
 LATEST_BRANCH="master"
-LATEST_VERSION="3.1.0-SNAPSHOT"
+LATEST_VERSION="4.0.0-SNAPSHOT"
 LATEST_DIR="latest"
 
 # Stable version (release branch)

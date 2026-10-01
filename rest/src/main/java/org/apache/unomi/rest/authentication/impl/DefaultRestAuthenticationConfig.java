@@ -133,7 +133,7 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
          */
         @AttributeDefinition(
             name = "Single-tenant compatibility mode enabled",
-            description = "Serve clients from before Unomi 3.1, which send no tenant API key, and run them all on one tenant"
+            description = "Serve clients from before Unomi 4.0, which send no tenant API key, and run them all on one tenant"
         )
         boolean singletenantcompatibility_enabled() default false;
     }

@@ -74,25 +74,25 @@ docker run -d --name opensearch --net unomi -p 9200:9200 -p 9300:9300 \
 For Unomi (with ElasticSearch):
 
 ```bash
-docker pull apache/unomi:3.1.0-SNAPSHOT
+docker pull apache/unomi:4.0.0-SNAPSHOT
 docker run -d --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
     -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
     -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' \
     -e UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200 \
-    apache/unomi:3.1.0-SNAPSHOT
+    apache/unomi:4.0.0-SNAPSHOT
 ```
 
 For Unomi (with OpenSearch):
 
 ```bash
-docker pull apache/unomi:3.1.0-SNAPSHOT
+docker pull apache/unomi:4.0.0-SNAPSHOT
 docker run -d --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
     -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
     -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' \
     -e UNOMI_DISTRIBUTION=unomi-distribution-opensearch \
     -e UNOMI_OPENSEARCH_ADDRESSES=opensearch:9200 \
     -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
-    apache/unomi:3.1.0-SNAPSHOT
+    apache/unomi:4.0.0-SNAPSHOT
 ```
 
 ## Using a host OS Search Engine installation (only supported on macOS & Windows)
@@ -104,7 +104,7 @@ docker run -d --name unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
     -e UNOMI_ROOT_PASSWORD='choose-a-strong-password' \
     -e UNOMI_HEALTHCHECK_PASSWORD='choose-a-strong-health-password' \
     -e UNOMI_ELASTICSEARCH_ADDRESSES=host.docker.internal:9200 \
-    apache/unomi:3.1.0-SNAPSHOT
+    apache/unomi:4.0.0-SNAPSHOT
 ```
 
 For OpenSearch:
@@ -116,7 +116,7 @@ docker run -d --name unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
     -e UNOMI_DISTRIBUTION=unomi-distribution-opensearch \
     -e UNOMI_OPENSEARCH_ADDRESSES=host.docker.internal:9200 \
     -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
-    apache/unomi:3.1.0-SNAPSHOT
+    apache/unomi:4.0.0-SNAPSHOT
 ```
 
 Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it should be available in an upcoming version of Docker. See https://github.com/docker/for-linux/issues/264
@@ -141,7 +141,7 @@ Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it s
 
 
 
-## First steps after startup (Unomi 3.1+)
+## First steps after startup (Unomi 4.0+)
 
 Multi-tenancy requires a tenant before client endpoints such as `/cxs/context.json` accept traffic:
 

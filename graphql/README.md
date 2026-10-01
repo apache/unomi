@@ -19,7 +19,7 @@ Apache Unomi GraphQL API
 ========================
 
 
-## Authentication (Unomi 3.1+)
+## Authentication (Unomi 4.0+)
 
 - **Public `cdp` queries**: `X-Unomi-Api-Key` header with a tenant public API key
 - **Mutations / admin queries**: Basic auth `tenantId:privateApiKey` or JAAS + `X-Unomi-Tenant-Id`

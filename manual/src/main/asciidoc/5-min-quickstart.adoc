@@ -41,7 +41,7 @@ services:
             - 9200:9200
     unomi:
         # Unomi version can be updated based on your needs
-        image: apache/unomi:3.1.0
+        image: apache/unomi:4.0.0
         environment:
             - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
             - UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES=0.0.0.0/0,::1,127.0.0.1
@@ -86,7 +86,7 @@ services:
             - 9600:9600
 
     unomi:
-        image: apache/unomi:3.1.0
+        image: apache/unomi:4.0.0
         environment:
             - UNOMI_DISTRIBUTION=unomi-distribution-opensearch
             - UNOMI_OPENSEARCH_ADDRESSES=opensearch-node1:9200

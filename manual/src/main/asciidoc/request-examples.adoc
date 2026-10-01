@@ -98,9 +98,9 @@ TIP: After creating the scope, continue using the tenant **public** API key (fro
 
 [IMPORTANT]
 ====
-**Tenant Resolution (Version 3.1+)**
+**Tenant Resolution (Version 4.0+)**
 
-Starting with Apache Unomi 3.1, tenant resolution is mandatory for all requests to `/cxs/context.json` and `/cxs/eventcollector` endpoints. The tenant must be identified before Apache Unomi can process the request. This is done automatically when you use:
+Starting with Apache Unomi 4.0, tenant resolution is mandatory for all requests to `/cxs/context.json` and `/cxs/eventcollector` endpoints. The tenant must be identified before Apache Unomi can process the request. This is done automatically when you use:
 
 * **Public API Key** (recommended for public endpoints): The `X-Unomi-Api-Key` header with a public API key automatically resolves the tenant
 * **Private API Key**: Basic authentication with `tenantId:privateApiKey` resolves the tenant from the credentials
@@ -552,9 +552,9 @@ You can also update the personalization example to use the birthday property:
 [NOTE]
 ====
 The profile is selected with the `context-profile-id` cookie, not with a `profileId` in the request
-body. `/cxs/context.json` is a public endpoint, and since Unomi 3.1 a public caller's body `profileId`
+body. `/cxs/context.json` is a public endpoint, and since Unomi 4.0 a public caller's body `profileId`
 is ignored — the cookie is the only profile identity bearer. See
-<<_client_facing_hardening_3_1,Client-facing hardening>> in the 3.0 to 3.1 migration guide.
+<<_client_facing_hardening_4_0,Client-facing hardening>> in the 3.0 to 4.0 migration guide.
 ====
 
 [source]

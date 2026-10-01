@@ -88,13 +88,13 @@ def getIndexConfig = { String itemType ->
 }
 
 // Verify environment is ready for migration
-context.performMigrationStep("3.1.0-environment-check", () -> {
+context.performMigrationStep("4.0.0-environment-check", () -> {
     String elasticMajorVersion = MigrationUtils.getElasticMajorVersion(context.getHttpClient(), esAddress)
     context.printMessage("ElasticSearch major version: " + elasticMajorVersion)
 })
 
 // Get list of all index names and system items
-context.performMigrationStep("3.1.0-get-all-indices", () -> {
+context.performMigrationStep("4.0.0-get-all-indices", () -> {
     Set<String> allIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, indexPrefix)
     context.printMessage("Found " + allIndices.size() + " indices with prefix " + indexPrefix)
 
@@ -115,7 +115,7 @@ context.performMigrationStep("3.1.0-get-all-indices", () -> {
     context.printMessage("Using tenant ID: " + tenantId)
 
     // Get the Painless script
-    String updateScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/3.1.0/initialize_tenant_and_audit_fields.painless")
+    String updateScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/4.0.0/initialize_tenant_and_audit_fields.painless")
 
     // Process each index (reindex them)
     allIndices.each { indexName ->
@@ -144,14 +144,14 @@ context.performMigrationStep("3.1.0-get-all-indices", () -> {
         }
 
         // Execute reindex
-        MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexName, newIndexSettings, updateScript, params, context, "3.1.0-${indexName}-update")
+        MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexName, newIndexSettings, updateScript, params, context, "4.0.0-${indexName}-update")
     }
 })
 
 // Configure aliases for rollover indices after all reindexing is complete.
 // Top-level step so resume after failure can run alias configuration even when
-// "3.1.0-get-all-indices" is already marked COMPLETED (UNOMI-943).
-context.performMigrationStep("3.1.0-configure-rollover-aliases", () -> {
+// "4.0.0-get-all-indices" is already marked COMPLETED (UNOMI-943).
+context.performMigrationStep("4.0.0-configure-rollover-aliases", () -> {
     String configureAliasBody = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.2.0/configure_alias_body.json")
 
     // Process each rollover item type

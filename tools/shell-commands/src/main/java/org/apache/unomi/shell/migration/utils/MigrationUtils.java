@@ -981,7 +981,7 @@ public class MigrationUtils {
      */
     public static Set<String> getAllItemTypes(CloseableHttpClient httpClient, String esAddress, String indexPrefix, String indexName, BundleContext bundleContext) throws IOException {
         String systemItemsIndex = indexPrefix + "-" + indexName;
-        String query = resourceAsString(bundleContext, "requestBody/3.1.0/get_item_types_query.json");
+        String query = resourceAsString(bundleContext, "requestBody/4.0.0/get_item_types_query.json");
 
         String response = HttpUtils.executePostRequest(httpClient, esAddress + "/" + systemItemsIndex + "/_search", query, null);
         JSONObject jsonResponse = new JSONObject(response);

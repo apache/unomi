@@ -14,7 +14,7 @@
 
 === Cluster-aware task scheduler
 
-Apache Unomi 3.1 introduces a built-in **task scheduler** for background work that must run reliably in single-node and clustered deployments.
+Apache Unomi 4.0 introduces a built-in **task scheduler** for background work that must run reliably in single-node and clustered deployments.
 
 Use it when you need to:
 
@@ -1064,7 +1064,7 @@ long failures = schedulerService.getMetric("tasks.failed");
 |Same persistent task runs on two nodes |Was `allowParallelExecution()` called explicitly (default is `false`/exclusive)? Use `disallowParallelExecution()`. Check `tasks.lock.conflicts` metrics.
 |Task `CRASHED` then stuck |Is an executor registered? Is retry budget exhausted (`failureCount` vs `maxRetries`)? Does the executor implement `canResume`/`resume` when checkpoints exist?
 |Lock timeout storms / false CRASHED |Usually a starved heartbeat: check that `scheduler.thread.poolSize` exceeds the number of concurrent long-running tasks. Otherwise increase `scheduler.lockTimeout` (keep ≥ ~5s), or checkpoint + resume for long work. Verify clocks are roughly NTP-aligned across nodes.
-|Cancelled task becomes COMPLETED |Should not happen after Unomi 3.1 terminal CAS guards; if seen, capture `seq_no` history and node logs around `Skipping terminal transition`.
+|Cancelled task becomes COMPLETED |Should not happen after Unomi 4.0 terminal CAS guards; if seen, capture `seq_no` history and node logs around `Skipping terminal transition`.
 |Tenant data wrong in background job |Missing `executeAsTenant` / security subject setup in executor
 |===
 

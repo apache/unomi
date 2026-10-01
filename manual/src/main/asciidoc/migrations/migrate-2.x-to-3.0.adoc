@@ -36,7 +36,7 @@ Apache Unomi 3.0 supports the following search engine versions:
 - **Elasticsearch**: Version 9.x (upgraded from 7.17.5)
 - **OpenSearch**: Version 3.x (new support)
 
-NOTE: OpenSearch support is introduced in Apache Unomi 3.1. If you plan to use OpenSearch, first migrate to 3.0 and then follow the 3.0 → 3.1 migration guide.
+NOTE: OpenSearch support is introduced in Apache Unomi 4.0. If you plan to use OpenSearch, first migrate to 3.0 and then follow the 3.0 → 4.0 migration guide.
 
 ===== Karaf Version Upgrade
 
@@ -235,9 +235,9 @@ While the mapping system provides backward compatibility, it is recommended to u
 
 ==== Configuration Changes
 
-===== OpenSearch Security Configuration (Unomi 3.1+)
+===== OpenSearch Security Configuration (Unomi 4.0+)
 
-OpenSearch as a Unomi backend is supported starting with **Apache Unomi 3.1** (not required for a pure 2.x → 3.0 upgrade on Elasticsearch). When using OpenSearch 3.x with Unomi 3.1, security is commonly enabled and requires:
+OpenSearch as a Unomi backend is supported starting with **Apache Unomi 4.0** (not required for a pure 2.x → 3.0 upgrade on Elasticsearch). When using OpenSearch 3.x with Unomi 4.0, security is commonly enabled and requires:
 
 [source,properties]
 ----
@@ -264,7 +264,7 @@ When using Docker, you can specify the search engine backend using the distribut
 
 ==== Elasticsearch to OpenSearch Migration
 
-Apache Unomi 3.1 introduces official support for OpenSearch as an alternative to Elasticsearch. If you want to migrate from Elasticsearch to OpenSearch, you can use the dedicated migration guide located in the 3.0 → 3.1 migration section.
+Apache Unomi 4.0 introduces official support for OpenSearch as an alternative to Elasticsearch. If you want to migrate from Elasticsearch to OpenSearch, you can use the dedicated migration guide located in the 3.0 → 4.0 migration section.
 
 For detailed instructions on migrating your data from Elasticsearch to OpenSearch, please refer to the <<_migrate_from_elasticsearch_to_opensearch,Elasticsearch to OpenSearch migration guide>>.
 
@@ -282,7 +282,7 @@ Before upgrading to Apache Unomi 3.0, complete the following checklist:
 ===== Custom Configuration Review
 
 - [ ] **QueryBuilder IDs**: Review and update any custom condition definitions that reference old queryBuilder IDs
-- [ ] **OpenSearch Security**: If migrating to OpenSearch in 3.1, configure security settings as required
+- [ ] **OpenSearch Security**: If migrating to OpenSearch in 4.0, configure security settings as required
 - [ ] **Docker Configuration**: Update Docker environment variables if using containerized deployment
 
 ===== Post-Migration Verification

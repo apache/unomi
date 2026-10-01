@@ -223,7 +223,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         checkPastEvents();
         checkScopeEventHaveBeenUpdated();
         countNumberOfSessionIndices();
-        // 3.1.0 migration validations
+        // 4.0.0 migration validations
         checkTenantIdsApplied();
         checkDefaultTenantCreated();
         checkDefinitionsServiceObjectsAccessible();
@@ -429,7 +429,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
 
     /**
      * Data set contains a profile (id: 468ca2bf-7d24-41ea-9ef4-5b96f78207e4) with a property named totalNbOfVisits set to 3
-     * --> Because that profile has only one session, the nbOfVisits should be set to 1 after migration 3.1.0-00
+     * --> Because that profile has only one session, the nbOfVisits should be set to 1 after migration 4.0.0-00
      * All other profiles that had an existing nbOfVisits should now have the totalNbOfVisits property set.
      */
     private void checkProfileTotalNbOfVisits() {
@@ -624,39 +624,39 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         Assert.assertNotNull("Created by should be set", source.get("createdBy"));
         String createdBy = source.get("createdBy").asText();
         // After migration, documents may be refreshed by bundles during startup,
-        // which changes createdBy from system-migration-3.1.0 to system-bundle
+        // which changes createdBy from system-migration-4.0.0 to system-bundle
         // Both are valid - migration sets it, bundles may refresh it
-        boolean isValidCreatedBy = "system-migration-3.1.0".equals(createdBy) || "system-bundle".equals(createdBy);
-        Assert.assertTrue("Created by should be system-migration-3.1.0 or system-bundle, but was: " + createdBy, isValidCreatedBy);
+        boolean isValidCreatedBy = "system-migration-4.0.0".equals(createdBy) || "system-bundle".equals(createdBy);
+        Assert.assertTrue("Created by should be system-migration-4.0.0 or system-bundle, but was: " + createdBy, isValidCreatedBy);
         Assert.assertNotNull("Creation date should be set", source.get("creationDate"));
         Assert.assertNotNull("Last modified by should be set", source.get("lastModifiedBy"));
         String lastModifiedBy = source.get("lastModifiedBy").asText();
         // Similarly, lastModifiedBy may be updated by bundles after migration
-        boolean isValidLastModifiedBy = "system-migration-3.1.0".equals(lastModifiedBy) || "system-bundle".equals(lastModifiedBy);
-        Assert.assertTrue("Last modified by should be system-migration-3.1.0 or system-bundle, but was: " + lastModifiedBy, isValidLastModifiedBy);
+        boolean isValidLastModifiedBy = "system-migration-4.0.0".equals(lastModifiedBy) || "system-bundle".equals(lastModifiedBy);
+        Assert.assertTrue("Last modified by should be system-migration-4.0.0 or system-bundle, but was: " + lastModifiedBy, isValidLastModifiedBy);
         Assert.assertNotNull("Last modification date should be set", source.get("lastModificationDate"));
     }
 
     /**
      * Helper method to check audit metadata fields for definitions service objects.
-     * These can be either migrated (system-migration-3.1.0) or bundle-deployed (system-bundle).
+     * These can be either migrated (system-migration-4.0.0) or bundle-deployed (system-bundle).
      * @param source The document source containing the metadata
      */
     private void checkAuditMetadataForDefinitions(JsonNode source) {
         Assert.assertNotNull("Created by should be set", source.get("createdBy"));
         String createdBy = source.get("createdBy").asText();
-        boolean isValidCreatedBy = "system-migration-3.1.0".equals(createdBy) || "system-bundle".equals(createdBy);
-        Assert.assertTrue("Created by should be system-migration-3.1.0 or system-bundle, but was: " + createdBy, isValidCreatedBy);
+        boolean isValidCreatedBy = "system-migration-4.0.0".equals(createdBy) || "system-bundle".equals(createdBy);
+        Assert.assertTrue("Created by should be system-migration-4.0.0 or system-bundle, but was: " + createdBy, isValidCreatedBy);
         Assert.assertNotNull("Creation date should be set", source.get("creationDate"));
         Assert.assertNotNull("Last modified by should be set", source.get("lastModifiedBy"));
         String lastModifiedBy = source.get("lastModifiedBy").asText();
-        boolean isValidLastModifiedBy = "system-migration-3.1.0".equals(lastModifiedBy) || "system-bundle".equals(lastModifiedBy);
-        Assert.assertTrue("Last modified by should be system-migration-3.1.0 or system-bundle, but was: " + lastModifiedBy, isValidLastModifiedBy);
+        boolean isValidLastModifiedBy = "system-migration-4.0.0".equals(lastModifiedBy) || "system-bundle".equals(lastModifiedBy);
+        Assert.assertTrue("Last modified by should be system-migration-4.0.0 or system-bundle, but was: " + lastModifiedBy, isValidLastModifiedBy);
         Assert.assertNotNull("Last modification date should be set", source.get("lastModificationDate"));
     }
 
     /**
-     * Test that the default tenant was created during migration (migrate-3.1.0-10-tenantInitialization)
+     * Test that the default tenant was created during migration (migrate-4.0.0-10-tenantInitialization)
      */
     private void checkDefaultTenantCreated() throws Exception {
         Assume.assumeTrue(
@@ -681,7 +681,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
                 JsonNode tenantDoc = jsonNode.get("hits").get("hits").get(0).get("_source");
                 Assert.assertEquals("Default tenant should have correct itemId", tenantId, tenantDoc.get("itemId").asText());
                 Assert.assertEquals("Default tenant should have correct tenantId", "system", tenantDoc.get("tenantId").asText());
-                Assert.assertEquals("Default tenant should have correct createdBy", "system-migration-3.1.0", tenantDoc.get("createdBy").asText());
+                Assert.assertEquals("Default tenant should have correct createdBy", "system-migration-4.0.0", tenantDoc.get("createdBy").asText());
             }
         } else {
             Assert.assertEquals("Default tenant should have correct itemId", tenantId, defaultTenant.getItemId());
@@ -812,7 +812,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
 
     /**
      * Test that condition types with legacy queryBuilder IDs have been migrated to use new queryBuilder IDs.
-     * This verifies that the migrate-3.1.0-15-updateLegacyQueryBuilder migration script correctly updates
+     * This verifies that the migrate-4.0.0-15-updateLegacyQueryBuilder migration script correctly updates
      * all condition types that use legacy *ESQueryBuilder syntax to use the new generic QueryBuilder syntax.
      */
     private void checkLegacyQueryBuilderMigration() throws Exception {
