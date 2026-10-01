@@ -34,14 +34,14 @@ String indexPrefix = context.getConfigString(INDEX_PREFIX)
 // it with "QueryBuilder" (e.g., "propertyConditionESQueryBuilder" → "propertyConditionQueryBuilder").
 // This approach is more robust than a hardcoded list and will catch all legacy IDs, including
 // custom ones that might have been created by plugins.
-context.performMigrationStep("3.1.0-update-legacy-querybuilder", () -> {
+context.performMigrationStep("4.0.0-update-legacy-querybuilder", () -> {
     String systemItemsIndex = "${indexPrefix}-systemitems"
 
     if (MigrationUtils.indexExists(context.getHttpClient(), esAddress, systemItemsIndex)) {
         context.printMessage("Updating condition types with legacy queryBuilder IDs in systemitems index")
 
         // Get the Painless script from file
-        String updateScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/3.1.0/update_legacy_querybuilder.painless")
+        String updateScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/4.0.0/update_legacy_querybuilder.painless")
 
         // Build the update request using JSONObject to properly escape the script
         JSONObject scriptObj = new JSONObject()

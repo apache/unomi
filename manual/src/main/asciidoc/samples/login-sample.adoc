@@ -19,8 +19,8 @@ This sample shows how to integrate a **server-side** login with Apache Unomi so 
 
 ==== Why server-side?
 
-Under Unomi 3.1 hardening (https://issues.apache.org/jira/browse/UNOMI-972[UNOMI-972] /
-<<_client_facing_hardening_3_1,client-facing hardening>>), cross-profile merge requires a
+Under Unomi 4.0 hardening (https://issues.apache.org/jira/browse/UNOMI-972[UNOMI-972] /
+<<_client_facing_hardening_4_0,client-facing hardening>>), cross-profile merge requires a
 **trusted** caller (system administrator or tenant private key). A browser call with only a
 public API key is not trusted — merge is refused.
 
@@ -144,7 +144,7 @@ source tree:
 [source,bash]
 ----
 cd samples/login-integration
-KARAF_HOME=../../package/target/unomi-3.1.0-SNAPSHOT ./setup.sh
+KARAF_HOME=../../package/target/unomi-4.0.0-SNAPSHOT ./setup.sh
 ----
 
 The script validates this before changing anything, and refuses to continue if the directory does not
@@ -218,6 +218,6 @@ yet — set `privateKey` as shown above and run `config:update`.
 
 ==== Related
 
-* <<_client_facing_hardening_3_1,Client-facing hardening (3.1)>>
+* <<_client_facing_hardening_4_0,Client-facing hardening (3.1)>>
 * <<_how_profile_tracking_works,How profile tracking works>>
 * Rule JSON: https://github.com/apache/unomi/blob/master/samples/login-integration/src/main/resources/META-INF/cxs/rules/exampleLogin.json

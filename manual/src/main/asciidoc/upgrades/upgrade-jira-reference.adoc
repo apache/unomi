@@ -162,7 +162,7 @@ Serge Huber's Karaf upgrade report on https://issues.apache.org/jira/browse/UNOM
 
 [cols="1,1,1,2", options="header"]
 |===
-| Component | JIRA target (4.4.7 era) | Unomi 3.1 baseline | Notes
+| Component | JIRA target (4.4.7 era) | Unomi 4.0 baseline | Notes
 
 | Java
 | 17

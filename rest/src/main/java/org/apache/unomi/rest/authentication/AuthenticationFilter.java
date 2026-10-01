@@ -60,7 +60,7 @@ import java.util.Set;
 public class AuthenticationFilter implements ContainerRequestFilter {
 
     /**
-     * The tenant that single-tenant compatibility mode runs on. A client from before Unomi 3.1 knows
+     * The tenant that single-tenant compatibility mode runs on. A client from before Unomi 4.0 knows
      * no tenant, so it never names one, and nothing outside this class reads this value. It is a
      * constant rather than a setting for that reason.
      */

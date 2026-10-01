@@ -17,7 +17,7 @@
 
 This section is for Apache Unomi *maintainers* upgrading runtime platform components: Apache Karaf, JDK, CXF/Jackson/Jetty, Elasticsearch and OpenSearch clients, Log4j, integration tests, and application dependency hygiene.
 
-Procedures are derived from git history (UNOMI-216, 491, 876, 899, 901, 828, 921, 875) and Unomi 3.1 platform upgrade work, cross-checked against Apache JIRA (see <<_upgrade_jira_reference,JIRA reference>>).
+Procedures are derived from git history (UNOMI-216, 491, 876, 899, 901, 828, 921, 875) and Unomi 4.0 platform upgrade work, cross-checked against Apache JIRA (see <<_upgrade_jira_reference,JIRA reference>>).
 
 include::upgrade-overview.adoc[]
 

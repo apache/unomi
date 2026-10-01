@@ -141,7 +141,7 @@ A minimal plugin is a Maven bundle project. Prefer importing `unomi-bom` rather 
     <packaging>bundle</packaging>
 
     <properties>
-        <unomi.version>3.1.0-SNAPSHOT</unomi.version>
+        <unomi.version>4.0.0-SNAPSHOT</unomi.version>
     </properties>
 
     <dependencyManagement>
@@ -514,12 +514,12 @@ Define **separate** features per search engine. Use the same `queryBuilderId` in
     <feature name="my-plugin-elasticsearch" version="1.0.0">
         <bundle>mvn:com.example/my-plugin-common/1.0.0</bundle>
         <bundle>mvn:com.example/my-plugin-elasticsearch/1.0.0</bundle>
-        <feature version="3.1.0">unomi-elasticsearch-conditions</feature>
+        <feature version="4.0.0">unomi-elasticsearch-conditions</feature>
     </feature>
     <feature name="my-plugin-opensearch" version="1.0.0">
         <bundle>mvn:com.example/my-plugin-common/1.0.0</bundle>
         <bundle>mvn:com.example/my-plugin-opensearch/1.0.0</bundle>
-        <feature version="3.1.0">unomi-opensearch-conditions</feature>
+        <feature version="4.0.0">unomi-opensearch-conditions</feature>
     </feature>
 </features>
 ----

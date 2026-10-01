@@ -807,9 +807,9 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             } else {
                 // For system items, document ID format is: tenantId_itemId_itemType
                 // Extract the itemId by removing the itemType suffix from the document ID.
-                // After migration 3.1.0-05, all system items should have:
+                // After migration 4.0.0-05, all system items should have:
                 // - Document IDs with the itemType suffix (post-2.2.0 format)
-                // - Correct itemIds in source (fixed by migration 3.1.0-05)
+                // - Correct itemIds in source (fixed by migration 4.0.0-05)
                 // This simplified logic works because the migration normalizes the data.
                 String itemTypeSuffix = "_" + item.getItemType().toLowerCase();
                 if (strippedId != null && strippedId.endsWith(itemTypeSuffix)) {

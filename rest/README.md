@@ -21,7 +21,7 @@
 
 The REST API is served under `/cxs` on the default HTTP port (8181).
 
-Unomi 3.1 authentication:
+Unomi 4.0 authentication:
 
 | Access | Credentials |
 |--------|-------------|

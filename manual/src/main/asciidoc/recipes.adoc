@@ -137,7 +137,7 @@ defining the corresponding JSON schema and you're ready to update profiles using
 only. Being a protected event type, it is only accepted from an authorized source address — a configured third-party
 server, or in V2 compatibility mode an `X-Unomi-Peer` key valid for that source address. Note that this is an
 address-based gate: it is independent of the public-versus-trusted caller distinction that governs profile and session
-binding (see <<_client_facing_hardening_3_1,client-facing hardening>>), and once the event is accepted a public-key
+binding (see <<_client_facing_hardening_4_0,client-facing hardening>>), and once the event is accepted a public-key
 caller may only write plain `properties.*` paths on the current profile; `targetId`, `systemProperties`, `segments`,
 `scores` and `consents` require a trusted caller (system administrator or tenant private key), and identity fields such
 as `itemId` are never writable. Refused names are skipped with a `WARN` log entry. Prefer custom events for public visitors. Again, prefer the
@@ -586,7 +586,7 @@ Upon merge:
 
 ===== API
 
-/context.json and /eventcollector look up profiles by profile ID or aliases from the profile cookie (`context-profile-id` by default). Public callers must present that cookie; body/query `profileId` is ignored for public callers. Trusted callers (tenant private key / system admin) may still pass `profileId` explicitly. See <<_how_profile_tracking_works,How profile tracking works>> and <<_client_facing_hardening_3_1,client-facing hardening>>.
+/context.json and /eventcollector look up profiles by profile ID or aliases from the profile cookie (`context-profile-id` by default). Public callers must present that cookie; body/query `profileId` is ignored for public callers. Trusted callers (tenant private key / system admin) may still pass `profileId` explicitly. See <<_how_profile_tracking_works,How profile tracking works>> and <<_client_facing_hardening_4_0,client-facing hardening>>.
 
 |===
 | *Verb* | *Path* | *Description*

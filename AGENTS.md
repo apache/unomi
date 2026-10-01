@@ -58,7 +58,7 @@ Cursor rule: `.cursor/rules/branch-backport.mdc`
 |---|---|
 | Source (archived) | Tag `unomi-3-dev-archive-2026-07` @ `eca005fd8` — remote branch **deleted** |
 | Target | `master` |
-| **Active local plan** | `.local-notes/unomi-3.1-remaining-work-plan.md` |
+| **Active local plan** | `.local-notes/unomi-4.0-remaining-work-plan.md` |
 | Archived backport plans | `.local-notes/archive/` (Phase 1, Phase 2, #757 stack tracker) |
 
 To inspect the archived tip:
@@ -75,4 +75,4 @@ Unomi-specific reminders:
 - Safe wholesale adds: new scripts, Postman, docs, new Java classes.
 - Do not port: migration scripts (UNOMI-943), 3-dev REST mappers, security
   WIP, wholesale test harness from 3-dev.
-- Remaining 3.1 work: [UNOMI-960](https://issues.apache.org/jira/browse/UNOMI-960) (Javadoc / PR10) — not a 3-dev backport.
+- Remaining 4.0 work: [UNOMI-960](https://issues.apache.org/jira/browse/UNOMI-960) (Javadoc / PR10) — not a 3-dev backport.

@@ -453,7 +453,7 @@ curl -X GET "http://localhost:8181/cxs/tenants" \
   -H "Accept: application/json"
 ----
 
-Authentication rules (Unomi 3.1):
+Authentication rules (Unomi 4.0):
 
 1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled). Browser clients may call them from any origin; those responses do not include credentialed CORS headers.
 2. Private paths accept `tenantId:privateApiKey` Basic auth, or JAAS admin credentials (often with `X-Unomi-Tenant-Id` when a tenant context is required).
@@ -845,7 +845,7 @@ curl -X POST 'http://localhost:8181/cxs/groovyActions' \
 --form 'file=@helloWorldGroovyAction.groovy'
 ----
 
-NOTE: Groovy Actions REST requires the system `ADMINISTRATOR` role (not a tenant private key). See <<_client_facing_hardening_3_1,client-facing hardening>>.
+NOTE: Groovy Actions REST requires the system `ADMINISTRATOR` role (not a tenant private key). See <<_client_facing_hardening_4_0,client-facing hardening>>.
 
 Important: A bug ( https://issues.apache.org/jira/browse/UNOMI-847[UNOMI-847] ) in Apache Unomi 2.5 and lower requires the filename of a Groovy file being submitted to be the same as the id of the Groovy action (as per the example above).
 
@@ -1104,7 +1104,7 @@ The `MergeProfilesOnPropertyAction` supports the following parameters:
 
 ==== Security considerations
 
-IMPORTANT: Never trigger profile merges from unauthenticated or public-key-only operations such as form submissions or public-facing context events. Merging into another profile (or switching identity after a merge) requires a **trusted** caller — system administrator or tenant administrator (private key). Always verify user identity on your application server before emitting a merge-triggering event. See <<_client_facing_hardening_3_1,client-facing hardening>>.
+IMPORTANT: Never trigger profile merges from unauthenticated or public-key-only operations such as form submissions or public-facing context events. Merging into another profile (or switching identity after a merge) requires a **trusted** caller — system administrator or tenant administrator (private key). Always verify user identity on your application server before emitting a merge-triggering event. See <<_client_facing_hardening_4_0,client-facing hardening>>.
 
 The following diagram highlights key security considerations:
 
@@ -1662,7 +1662,7 @@ For Docker deployments, you can declare a custom distribution feature repository
 version: '3.8'
 services:
   unomi:
-    image: apache/unomi:3.1.0
+    image: apache/unomi:4.0.0
     volumes:
       - ./unomi-custom-distribution-features.xml:/opt/apache-unomi/features/unomi-custom-distribution-features.xml
     environment:
@@ -1748,7 +1748,7 @@ services:
 **Dockerfile:**
 [source,dockerfile]
 ----
-FROM apache/unomi:3.1.0
+FROM apache/unomi:4.0.0
 COPY apache-unomi-custom-*.tar.gz /tmp/
 RUN cd /opt/apache-unomi && tar -xzf /tmp/apache-unomi-custom-*.tar.gz
 ----

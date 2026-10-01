@@ -16,7 +16,7 @@
 
 In this section of the documentation, more details are provided about the web tracker provided by Unomi.
 
-==== Authentication (Unomi 3.1)
+==== Authentication (Unomi 4.0)
 
 Public context and event endpoints require a tenant public API key (`X-Unomi-Api-Key`) unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled.
 

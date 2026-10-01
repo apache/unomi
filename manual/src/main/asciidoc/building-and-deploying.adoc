@@ -383,7 +383,7 @@ This is only needed if you didn't use the generated package. Also, this is the p
 environment if you intend to re-deploy the context server KAR iteratively.
 
 Additional requirements:
-* Apache Karaf 4.4.x (Unomi 3.1 ships with 4.4.11), Java 17+ — http://karaf.apache.org[http://karaf.apache.org]
+* Apache Karaf 4.4.x (Unomi 4.0 ships with 4.4.11), Java 17+ — http://karaf.apache.org[http://karaf.apache.org]
 
 Before deploying, make sure that you have Apache Karaf properly installed. Depending of your usage, you may also have to increase the
  memory size by adjusting the following environment values in the bin/setenv(.bat)
@@ -574,6 +574,6 @@ A default test page is provided at the following URL:
 ----
 
 This test page loads `/cxs/context.js`, which retrieves or creates a user context.
-On Unomi 3.1, public context endpoints require a tenant public API key (`X-Unomi-Api-Key`) unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled.
+On Unomi 4.0, public context endpoints require a tenant public API key (`X-Unomi-Api-Key`) unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled.
 Create a tenant and regenerate keys first (see <<_five_minutes_quickstart,5-minute quickstart>> or <<_multitenancy,Multi-tenancy>>).
 The page also contains an experimental Facebook Login integration that does not yet save the context back to the server.

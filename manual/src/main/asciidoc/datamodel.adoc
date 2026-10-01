@@ -262,9 +262,9 @@ By defining new types, users specify which properties (including the type of val
 
 
 [#_tenant_entity]
-=== Tenant (Unomi 3.1+)
+=== Tenant (Unomi 4.0+)
 
-A *tenant* is the top-level isolation boundary in Unomi 3.1. Each tenant owns its own profiles, events, segments, rules, property types, and JSON schemas. Tenant metadata is stored as an `Item` with `itemType` `tenant`.
+A *tenant* is the top-level isolation boundary in Unomi 4.0. Each tenant owns its own profiles, events, segments, rules, property types, and JSON schemas. Tenant metadata is stored as an `Item` with `itemType` `tenant`.
 
 Most persisted items carry a `tenantId` (or inherit tenant scope through the execution context). Client requests must establish tenant context through:
 

@@ -14,7 +14,7 @@
 
 ==== Security Architecture
 
-Unomi 3.1 authenticates every request so the server can resolve a **tenant** (or system-admin context) before profiles, events, and rules are touched.
+Unomi 4.0 authenticates every request so the server can resolve a **tenant** (or system-admin context) before profiles, events, and rules are touched.
 
 ===== Authentication overview
 
@@ -37,7 +37,7 @@ Unomi 3.1 authenticates every request so the server can resolve a **tenant** (or
 
 Temporary exception: <<_v2_compatibility_mode,V2 compatibility mode>> allows public endpoints without API keys while migrating 2.x clients.
 
-Public context callers must present the profile cookie as the profile bearer (body `profileId` is ignored for public callers). See <<_client_facing_hardening_3_1,client-facing hardening>> and <<_how_profile_tracking_works,How profile tracking works>>.
+Public context callers must present the profile cookie as the profile bearer (body `profileId` is ignored for public callers). See <<_client_facing_hardening_4_0,client-facing hardening>> and <<_how_profile_tracking_works,How profile tracking works>>.
 
 ===== Auth resolution sequence
 
@@ -134,7 +134,7 @@ end note
 
 Configuration keys live in `etc/org.apache.unomi.rest.authentication.cfg` and `custom.system.properties`. Tenant API key settings are in `etc/org.apache.unomi.tenant.cfg`.
 
-For tenant API keys, roles (`ROLE_UNOMI_TENANT_USER`, `ROLE_UNOMI_TENANT_ADMIN`, system administrator), operation permissions, and curl examples, see <<_multitenancy,Multi-tenancy>> and <<_configuration,Configuration>> (tenant management). For migration from 2.x, see <<_v2_compatibility_mode,V2 compatibility mode>> and <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>>.
+For tenant API keys, roles (`ROLE_UNOMI_TENANT_USER`, `ROLE_UNOMI_TENANT_ADMIN`, system administrator), operation permissions, and curl examples, see <<_multitenancy,Multi-tenancy>> and <<_configuration,Configuration>> (tenant management). For migration from 2.x, see <<_v2_compatibility_mode,V2 compatibility mode>> and <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>>.
 
 ===== Multi-tenancy isolation
 

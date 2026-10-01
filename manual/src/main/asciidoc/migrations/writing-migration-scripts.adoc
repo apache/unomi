@@ -41,7 +41,7 @@ migrate-<version>-<priority>-<name>.groovy
 * `<priority>` — two-digit order within that version (`00`, `01`, `05`, …)
 * `<name>` — short camelCase label (for example `tenantDocumentIds`)
 
-Example: `migrate-3.1.0-01-tenantDocumentIds.groovy`.
+Example: `migrate-4.0.0-01-tenantDocumentIds.groovy`.
 
 Scripts are sorted by version, then priority, then name.
 Use gaps in priority (`00`, `05`, `10`) when you may need to insert a step later.

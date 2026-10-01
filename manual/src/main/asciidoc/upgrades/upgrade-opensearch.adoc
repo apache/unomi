@@ -39,7 +39,7 @@ IMPORTANT: `${opensearch.version}` must match a published Docker Hub tag. Verify
 docker pull opensearchproject/opensearch:${opensearch.version}
 ----
 
-Latest OpenSearch 3.x line on Docker Hub (as of Unomi 3.1 work): *3.7.0*. Do not assume every Maven Central `opensearch-java` version has a matching Docker image.
+Latest OpenSearch 3.x line on Docker Hub (as of Unomi 4.0 work): *3.7.0*. Do not assume every Maven Central `opensearch-java` version has a matching Docker image.
 
 ===== Dual-engine verification (diagram)
 

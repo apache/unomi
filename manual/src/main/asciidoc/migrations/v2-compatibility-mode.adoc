@@ -83,7 +83,7 @@ First, migrate your data with Apache Unomi stopped using the single shell comman
 unomi:migrate 2.0.0
 ```
 
-The `migrate-3.1.0-10-tenantInitialization` script (run as part of that chain when migrating through 3.1) creates tenant `default`, which is the only tenant this mode uses. If that tenant is missing when the mode is on, the first public request creates it. See <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> and <<_shell_commands,Shell commands>>.
+The `migrate-4.0.0-10-tenantInitialization` script (run as part of that chain when migrating through 3.1) creates tenant `default`, which is the only tenant this mode uses. If that tenant is missing when the mode is on, the first public request creates it. See <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> and <<_shell_commands,Shell commands>>.
 
 ===== Step 2: Enable V2 Compatibility Mode
 

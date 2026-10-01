@@ -451,7 +451,7 @@ Create `persistence-inmemory/pom.xml`:
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>3.1.0-SNAPSHOT</version>
+        <version>4.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-persistence-inmemory</artifactId>
     <packaging>pom</packaging>
@@ -469,7 +469,7 @@ Create `persistence-inmemory/core/pom.xml` with DS annotation dependencies:
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-persistence-inmemory</artifactId>
-        <version>3.1.0-SNAPSHOT</version>
+        <version>4.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-persistence-inmemory-core</artifactId>
     <packaging>bundle</packaging>
@@ -705,7 +705,7 @@ test-utilities/
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>3.1.0-SNAPSHOT</version>
+        <version>4.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-test-utilities</artifactId>
     <packaging>jar</packaging>
