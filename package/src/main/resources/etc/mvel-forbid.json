@@ -15,5 +15,5 @@
   ".*forName.*",
   ".*Socket.*",
   ".*DriverManager.*",
-  "eval"
+  "(?s).*eval\\s*\\(.*"
 ]
