@@ -20,7 +20,7 @@ In this section of the documentation, more details are provided about the web tr
 
 Public context and event endpoints require a tenant public API key (`X-Unomi-Api-Key`) unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled.
 
-The built-in WAB tracker sample does **not** currently attach that header. For production 3.1 deployments:
+The built-in WAB tracker sample does **not** currently attach that header. For production 4.0 deployments:
 
 * Prefer the NPM package / custom integration that can set `X-Unomi-Api-Key` (see <<_javascript_tracker_guide,JavaScript tracker guide>>), or
 * Enable V2 compatibility mode only as a temporary migration aid.

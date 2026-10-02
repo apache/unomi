@@ -241,7 +241,7 @@ Apache Unomi attempts to identify the visitor's profile through the following pr
    * **Public callers** (public API key / unauthenticated context): the profile cookie is the **only** profile bearer. A body or query `profileId` is **ignored** (even when no cookie is present).
    * **Trusted callers** (system administrator or tenant private-key / `TENANT_ADMINISTRATOR`): an explicit body/query `profileId` is honored and may differ from the cookie.
    * Cookie name defaults to `context-profile-id` (configurable via `org.apache.unomi.profile.cookie.name`).
-   * Cookie values are validated against a JSON schema — invalid values (for example containing script tags) cause a `400 Bad Request`. Since 3.1 the cookie is read on every request, so this also applies when the request supplies an explicit `profileId`; before, a malformed cookie went unnoticed on those requests.
+   * Cookie values are validated against a JSON schema — invalid values (for example containing script tags) cause a `400 Bad Request`. Since 4.0 the cookie is read on every request, so this also applies when the request supplies an explicit `profileId`; before, a malformed cookie went unnoticed on those requests.
    * The resolved profile ID is used to attempt loading the profile from the database.
 
 2. **Session Profile Override** (if session exists):
