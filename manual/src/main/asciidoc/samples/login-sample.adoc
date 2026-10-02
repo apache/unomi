@@ -218,6 +218,6 @@ yet — set `privateKey` as shown above and run `config:update`.
 
 ==== Related
 
-* <<_client_facing_hardening_4_0,Client-facing hardening (3.1)>>
+* <<_client_facing_hardening_4_0,Client-facing hardening (4.0)>>
 * <<_how_profile_tracking_works,How profile tracking works>>
 * Rule JSON: https://github.com/apache/unomi/blob/master/samples/login-integration/src/main/resources/META-INF/cxs/rules/exampleLogin.json

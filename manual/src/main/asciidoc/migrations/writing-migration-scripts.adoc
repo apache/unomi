@@ -37,7 +37,7 @@ Each file must match:
 migrate-<version>-<priority>-<name>.groovy
 ----
 
-* `<version>` — three-part version the script belongs to (for example `3.1.0`)
+* `<version>` — three-part version the script belongs to (for example `4.0.0`)
 * `<priority>` — two-digit order within that version (`00`, `01`, `05`, …)
 * `<name>` — short camelCase label (for example `tenantDocumentIds`)
 
@@ -81,9 +81,9 @@ Real impact: rollover **write aliases** for event/session indices were skipped a
 
 [source,groovy]
 ----
-context.performMigrationStep("3.1.0-get-all-indices", () -> {
+context.performMigrationStep("4.0.0-get-all-indices", () -> {
     // ... reindex each index ...
-    context.performMigrationStep("3.1.0-configure-rollover-aliases", () -> {
+    context.performMigrationStep("4.0.0-configure-rollover-aliases", () -> {
         // configure aliases — NEVER REACHED on resume if outer step completed
     })
 })
@@ -93,11 +93,11 @@ context.performMigrationStep("3.1.0-get-all-indices", () -> {
 
 [source,groovy]
 ----
-context.performMigrationStep("3.1.0-get-all-indices", () -> {
+context.performMigrationStep("4.0.0-get-all-indices", () -> {
     // ... reindex each index ...
 })
 
-context.performMigrationStep("3.1.0-configure-rollover-aliases", () -> {
+context.performMigrationStep("4.0.0-configure-rollover-aliases", () -> {
     // configure aliases — runs independently on resume
 })
 ----
