@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-plugins</artifactId>
-        <version>4.0.0</version>
+        <version>4.0.1-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-plugins-optimization-test</artifactId>
     <name>Apache Unomi :: Plugins :: Rules and Actions for optimization tests (A/B testing)</name>

@@ -21,7 +21,7 @@
     <parent>
         <artifactId>cxs-lists-extension</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>4.0.0</version>
+        <version>4.0.1-SNAPSHOT</version>
     </parent>
     <artifactId>cxs-lists-extension-actions</artifactId>
     <name>Apache Unomi :: Extensions :: Lists :: Actions</name>
