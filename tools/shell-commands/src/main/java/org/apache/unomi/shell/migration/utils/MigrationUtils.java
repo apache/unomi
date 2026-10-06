@@ -303,18 +303,66 @@ public class MigrationUtils {
     }
 
     public static String extractMappingFromBundles(BundleContext bundleContext, String fileName) throws IOException {
-        for (Bundle bundle : bundleContext.getBundles()) {
-            Enumeration<URL> predefinedMappings = bundle.findEntries("META-INF/cxs/mappings", fileName, true);
-            if (predefinedMappings == null) {
-                continue;
-            }
-            if (predefinedMappings.hasMoreElements()) {
-                URL predefinedMappingURL = predefinedMappings.nextElement();
-                return IOUtils.toString(predefinedMappingURL);
+        return extractMappingFromBundles(bundleContext, fileName, "elasticsearch");
+    }
+
+    /**
+     * Looks up a mapping file in every OSGi bundle: first in {@code META-INF/cxs/mappings}
+     * (the persistence bundles, when installed), then in the per-engine copy shipped with the
+     * migration command bundle, which is available before Unomi is started. The copy lives in a
+     * separate folder so the persistence services do not load it as a predefined mapping.
+     *
+     * @param searchEngine {@code elasticsearch} or {@code opensearch}, see {@link #getSearchEngine}
+     */
+    public static String extractMappingFromBundles(BundleContext bundleContext, String fileName, String searchEngine) throws IOException {
+        for (String path : List.of("META-INF/cxs/mappings", "META-INF/cxs/migration-mappings/" + searchEngine)) {
+            for (Bundle bundle : bundleContext.getBundles()) {
+                Enumeration<URL> predefinedMappings = bundle.findEntries(path, fileName, true);
+                if (predefinedMappings != null && predefinedMappings.hasMoreElements()) {
+                    return IOUtils.toString(predefinedMappings.nextElement(), StandardCharsets.UTF_8);
+                }
             }
         }
-
         throw new RuntimeException("no mapping found in bundles for: " + fileName);
+    }
+
+    /**
+     * Copies the mapping currently stored on an index (GET {@code /{index}/_mapping}).
+     * Used for indices that have no bundled 4.0 mapping.
+     */
+    public static String extractMappingFromIndex(CloseableHttpClient httpClient, String esAddress, String indexName) throws IOException {
+        return mappingsFromIndexResponse(HttpUtils.executeGetRequest(httpClient, esAddress + "/" + indexName + "/_mapping", null));
+    }
+
+    static String mappingsFromIndexResponse(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            throw new IllegalArgumentException("Index mapping response is empty");
+        }
+        JSONObject root = new JSONObject(responseBody);
+        if (root.length() != 1) {
+            throw new IllegalArgumentException("Expected the mapping of exactly one index, got: " + root.keySet());
+        }
+        return root.getJSONObject(root.keys().next()).getJSONObject("mappings").toString();
+    }
+
+    /**
+     * Maps an index name such as {@code context-event-000001} or {@code context-clusternode}
+     * to an item type. The name after the prefix (without a rollover number) must equal a known
+     * type, ignoring case; otherwise that name is returned as is. Names that do not start with
+     * the prefix resolve to {@code generic}.
+     */
+    public static String resolveItemType(String indexName, String indexPrefix, Collection<String> knownTypes) {
+        String prefix = indexPrefix + "-";
+        if (!indexName.regionMatches(true, 0, prefix, 0, prefix.length())) {
+            return "generic";
+        }
+        String name = indexName.substring(prefix.length()).replaceFirst("-\\d{6}$", "");
+        for (String type : knownTypes) {
+            if (name.equalsIgnoreCase(type)) {
+                return type;
+            }
+        }
+        return name;
     }
 
     public static String buildIndexCreationRequest(String baseIndexSettings, String mapping, MigrationContext context, boolean isMonthlyIndex) throws IOException {
@@ -918,6 +966,21 @@ public class MigrationUtils {
         JSONObject jsonResponse = new JSONObject(response);
         String version = jsonResponse.getJSONObject("version").getString("number");
         return version.split("\\.")[0]; // Return major version number
+    }
+
+    /**
+     * Detects the engine behind the given address from its root endpoint.
+     *
+     * @return {@code opensearch} or {@code elasticsearch}
+     */
+    public static String getSearchEngine(CloseableHttpClient httpClient, String esAddress) throws IOException {
+        return searchEngineFromRootResponse(HttpUtils.executeGetRequest(httpClient, esAddress, null));
+    }
+
+    static String searchEngineFromRootResponse(String responseBody) {
+        // Only OpenSearch reports a distribution
+        String distribution = new JSONObject(responseBody).getJSONObject("version").optString("distribution");
+        return "opensearch".equals(distribution) ? "opensearch" : "elasticsearch";
     }
 
     public interface ScrollCallback {

@@ -157,6 +157,29 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Mappings needed by the migration before Unomi is started. Kept out of META-INF/cxs/mappings
+                 so the persistence services do not load them as predefined mappings. -->
+            <resource>
+                <directory>../../persistence-elasticsearch/core/src/main/resources/META-INF/cxs/mappings</directory>
+                <targetPath>META-INF/cxs/migration-mappings/elasticsearch</targetPath>
+            </resource>
+            <resource>
+                <directory>../../extensions/geonames/services/src/main/resources/META-INF/cxs/mappings</directory>
+                <targetPath>META-INF/cxs/migration-mappings/elasticsearch</targetPath>
+            </resource>
+            <resource>
+                <directory>../../persistence-opensearch/core/src/main/resources/META-INF/cxs/mappings</directory>
+                <targetPath>META-INF/cxs/migration-mappings/opensearch</targetPath>
+            </resource>
+            <resource>
+                <directory>../../extensions/geonames/services/src/main/resources/META-INF/cxs/mappings</directory>
+                <targetPath>META-INF/cxs/migration-mappings/opensearch</targetPath>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.felix</groupId>

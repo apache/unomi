@@ -67,22 +67,25 @@ def indexConfigs = [
                 mapping: "personaSession.json",
                 useRollover: false
         ],
+        "profileAlias": [
+                baseSettings: "requestBody/2.0.0/base_index_mapping.json",
+                mapping: "profileAlias.json",
+                useRollover: false
+        ],
+        "clusterNode": [
+                baseSettings: "requestBody/2.0.0/base_index_mapping.json",
+                mapping: "clusterNode.json",
+                useRollover: false,
+                forceDefaultTenant: true
+        ],
         "generic": [
                 baseSettings: "requestBody/2.0.0/base_index_mapping.json",
-                mapping: null, // Will be determined dynamically from resolved item type
-                useRollover: false
+                mapping: null, // Copy the mapping currently stored on the index
+                useRollover: false,
+                forceDefaultTenant: true
         ]
 ]
 
-// Helper function to resolve item type from index name
-def resolveItemType = { String indexName ->
-    def type = indexConfigs.find { type, config ->
-        indexName.startsWith("${indexPrefix}-${type}")
-    }
-    return type ? type.key : "generic"
-}
-
-// Helper function to get index configuration
 def getIndexConfig = { String itemType ->
     return indexConfigs[itemType] ?: indexConfigs["generic"]
 }
@@ -117,23 +120,31 @@ context.performMigrationStep("4.0.0-get-all-indices", () -> {
     // Get the Painless script
     String updateScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/4.0.0/initialize_tenant_and_audit_fields.painless")
 
+    String searchEngine = MigrationUtils.getSearchEngine(context.getHttpClient(), esAddress)
+    context.printMessage("Search engine: " + searchEngine)
+
     // Process each index (reindex them)
     allIndices.each { indexName ->
         context.printMessage("Processing index: " + indexName)
 
         // Determine item type and get configuration
-        String itemType = resolveItemType(indexName)
+        String itemType = MigrationUtils.resolveItemType(indexName, indexPrefix, indexConfigs.keySet())
         def indexConfig = getIndexConfig(itemType)
 
         // Add item type to parameters
         Map<String, Object> params = new HashMap<>(baseParams)
         params.put("itemType", itemType)
+        // Cluster nodes and unknown indices keep site data in the configured tenant, never "system"
+        boolean forceDefaultTenant = indexConfig.forceDefaultTenant == true
+        params.put("forceDefaultTenant", forceDefaultTenant)
 
         // Get base settings and mapping
         String baseSettings = MigrationUtils.resourceAsString(bundleContext, indexConfig.baseSettings)
+        // A known type must find its bundled 4.0 mapping; only unknown types copy the mapping stored on the index
         String mapping = indexConfig.mapping ?
-                MigrationUtils.extractMappingFromBundles(bundleContext, indexConfig.mapping) :
-                MigrationUtils.extractMappingFromBundles(bundleContext, "${itemType}.json")
+                MigrationUtils.extractMappingFromBundles(bundleContext, indexConfig.mapping, searchEngine) :
+                MigrationUtils.extractMappingFromIndex(context.getHttpClient(), esAddress, indexName)
+        context.printMessage("Item type: ${itemType}, mapping: ${indexConfig.mapping ?: 'copied from the index'}, default tenant only: ${forceDefaultTenant}")
 
         // Build index settings
         String newIndexSettings

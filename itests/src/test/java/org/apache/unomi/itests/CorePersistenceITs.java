@@ -18,6 +18,7 @@ package org.apache.unomi.itests;
 
 import org.apache.unomi.itests.migration.Migrate16xToCurrentVersionIT;
 import org.apache.unomi.itests.graphql.*;
+import org.apache.unomi.itests.migration.Migrate40IndexMappingIT;
 import org.apache.unomi.itests.migration.MigrationIT;
 import org.apache.unomi.itests.shell.*;
 import org.junit.runner.RunWith;
@@ -35,6 +36,7 @@ import org.junit.runners.Suite.SuiteClasses;
 @SuiteClasses({
         Migrate16xToCurrentVersionIT.class,
         MigrationIT.class,
+        Migrate40IndexMappingIT.class,
         PersistenceServiceIT.class,
         BasicIT.class,
         ConditionEvaluatorIT.class,

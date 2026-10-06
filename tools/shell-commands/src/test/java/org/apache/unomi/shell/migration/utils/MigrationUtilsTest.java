@@ -25,6 +25,11 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -209,4 +214,92 @@ public class MigrationUtilsTest {
                 () -> MigrationUtils.getFileWithoutComments(bundleContext, "missing.painless"));
         assertEquals("Resource not found: missing.painless", ex.getMessage());
     }
-} 
+
+    private static final String MAPPING = "{\"properties\":{\"cpuLoad\":{\"type\":\"double\"}}}";
+
+    private String extractClusterNodeMappingFrom(String path) throws Exception {
+        return extractClusterNodeMappingFrom(path, "elasticsearch");
+    }
+
+    private String extractClusterNodeMappingFrom(String path, String searchEngine) throws Exception {
+        Path mappingFile = Files.createTempFile("clusterNode", ".json");
+        try {
+            Files.writeString(mappingFile, MAPPING);
+            when(bundleContext.getBundles()).thenReturn(new Bundle[]{bundle});
+            when(bundle.findEntries(path, "clusterNode.json", true))
+                    .thenReturn(Collections.enumeration(Collections.singletonList(mappingFile.toUri().toURL())));
+            return MigrationUtils.extractMappingFromBundles(bundleContext, "clusterNode.json", searchEngine);
+        } finally {
+            Files.deleteIfExists(mappingFile);
+        }
+    }
+
+    @Test
+    public void extractMappingFromBundlesFindsPersistenceMapping() throws Exception {
+        assertEquals(MAPPING, extractClusterNodeMappingFrom("META-INF/cxs/mappings"));
+    }
+
+    @Test
+    public void extractMappingFromBundlesFallsBackToMigrationCopy() throws Exception {
+        assertEquals(MAPPING, extractClusterNodeMappingFrom("META-INF/cxs/migration-mappings/elasticsearch"));
+        assertEquals(MAPPING, extractClusterNodeMappingFrom("META-INF/cxs/migration-mappings/opensearch", "opensearch"));
+    }
+
+    @Test
+    public void extractMappingFromBundlesIgnoresTheOtherEngineCopy() {
+        when(bundleContext.getBundles()).thenReturn(new Bundle[]{bundle});
+        when(bundle.findEntries("META-INF/cxs/migration-mappings/elasticsearch", "event.json", true))
+                .thenReturn(Collections.enumeration(Collections.singletonList(getClass().getResource("/"))));
+
+        assertThrows(RuntimeException.class,
+                () -> MigrationUtils.extractMappingFromBundles(bundleContext, "event.json", "opensearch"));
+    }
+
+    @Test
+    public void searchEngineIsDetectedFromTheRootResponse() {
+        assertEquals("opensearch", MigrationUtils.searchEngineFromRootResponse(
+                "{\"version\":{\"distribution\":\"opensearch\",\"number\":\"3.0.0\"}}"));
+        assertEquals("elasticsearch", MigrationUtils.searchEngineFromRootResponse(
+                "{\"version\":{\"number\":\"9.1.0\"}}"));
+    }
+
+    @Test
+    public void extractMappingFromBundlesThrowsWhenMissing() {
+        when(bundleContext.getBundles()).thenReturn(new Bundle[]{bundle});
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> MigrationUtils.extractMappingFromBundles(bundleContext, "generic.json"));
+        assertEquals("no mapping found in bundles for: generic.json", ex.getMessage());
+    }
+
+    @Test
+    public void mappingsFromIndexResponseReadsTheIndexMappings() {
+        String body = "{\"context-sfdcconfiguration\":{\"mappings\":{\"properties\":{\"itemId\":{\"type\":\"keyword\"}}}}}";
+        assertEquals("{\"properties\":{\"itemId\":{\"type\":\"keyword\"}}}", MigrationUtils.mappingsFromIndexResponse(body));
+    }
+
+    @Test
+    public void mappingsFromIndexResponseRejectsAnythingButOneIndex() {
+        assertThrows(IllegalArgumentException.class, () -> MigrationUtils.mappingsFromIndexResponse(""));
+        assertThrows(IllegalArgumentException.class, () -> MigrationUtils.mappingsFromIndexResponse("{}"));
+        assertThrows(IllegalArgumentException.class,
+                () -> MigrationUtils.mappingsFromIndexResponse("{\"a\":{\"mappings\":{}},\"b\":{\"mappings\":{}}}"));
+    }
+
+    @Test
+    public void resolveItemTypeMatchesKnownTypesIgnoringCaseAndRolloverNumber() {
+        Collection<String> types = Arrays.asList("profile", "profileAlias", "event", "clusterNode");
+        assertEquals("clusterNode", MigrationUtils.resolveItemType("context-clusternode", "context", types));
+        assertEquals("profileAlias", MigrationUtils.resolveItemType("context-profilealias", "context", types));
+        assertEquals("event", MigrationUtils.resolveItemType("context-event-000001", "context", types));
+    }
+
+    @Test
+    public void resolveItemTypeDoesNotMatchOnKnownTypePrefix() {
+        Collection<String> types = Arrays.asList("profile", "event");
+        assertEquals("profilealias", MigrationUtils.resolveItemType("context-profilealias", "context", types));
+        assertEquals("eventfoo", MigrationUtils.resolveItemType("context-eventfoo-000001", "context", types));
+        assertEquals("sfdcconfiguration", MigrationUtils.resolveItemType("context-sfdcconfiguration", "context", types));
+        assertEquals("generic", MigrationUtils.resolveItemType("other-profile", "context", types));
+    }
+}
