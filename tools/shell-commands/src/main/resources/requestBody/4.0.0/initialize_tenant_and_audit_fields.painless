@@ -18,8 +18,10 @@
 if (ctx._id != null) {
     // Skip if already has tenant prefix
     if (!ctx._id.startsWith(params.tenantId + '_') && !ctx._id.startsWith(params.systemTenantId + '_')) {
-        // For geonames or items with system scope, use system tenant
-        if (ctx._index.endsWith('-geonames') || (ctx._source.scope != null && ctx._source.scope == 'system')) {
+        // Cluster nodes and unknown indices always stay in the configured (default) tenant
+        if (params.forceDefaultTenant == true) {
+            ctx._id = params.tenantId + '_' + ctx._id;
+        } else if (ctx._index.endsWith('-geonames') || (ctx._source.scope != null && ctx._source.scope == 'system')) {
             // Preserve the entire original document ID (it may contain underscores, e.g., "dummy_scope")
             // Do NOT split on underscores - this was a bug in the original migration that caused itemIds
             // like "dummy_scope" to become "dummy" when the document ID was "dummy_scope_scope"
@@ -92,7 +94,9 @@ if (!ctx._index.endsWith('-systemitems') && !ctx._index.endsWith('-geonames')) {
 
 // Set tenant ID in the source document based on scope for ALL items
 if (ctx._source.tenantId == null) {
-    if (ctx._index.endsWith('-geonames') || (ctx._source.scope != null && ctx._source.scope == 'system')) {
+    if (params.forceDefaultTenant == true) {
+        ctx._source.tenantId = params.tenantId;
+    } else if (ctx._index.endsWith('-geonames') || (ctx._source.scope != null && ctx._source.scope == 'system')) {
         ctx._source.tenantId = params.systemTenantId;
     } else {
         ctx._source.tenantId = params.tenantId;

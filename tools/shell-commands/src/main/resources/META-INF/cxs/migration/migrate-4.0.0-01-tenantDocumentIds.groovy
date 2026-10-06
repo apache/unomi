@@ -67,22 +67,18 @@ def indexConfigs = [
                 mapping: "personaSession.json",
                 useRollover: false
         ],
+        "clusterNode": [
+                baseSettings: "requestBody/2.0.0/base_index_mapping.json",
+                mapping: "clusterNode.json",
+                useRollover: false
+        ],
         "generic": [
                 baseSettings: "requestBody/2.0.0/base_index_mapping.json",
-                mapping: null, // Will be determined dynamically from resolved item type
+                mapping: null, // Copy the mapping currently stored on the index
                 useRollover: false
         ]
 ]
 
-// Helper function to resolve item type from index name
-def resolveItemType = { String indexName ->
-    def type = indexConfigs.find { type, config ->
-        indexName.startsWith("${indexPrefix}-${type}")
-    }
-    return type ? type.key : "generic"
-}
-
-// Helper function to get index configuration
 def getIndexConfig = { String itemType ->
     return indexConfigs[itemType] ?: indexConfigs["generic"]
 }
@@ -122,18 +118,20 @@ context.performMigrationStep("4.0.0-get-all-indices", () -> {
         context.printMessage("Processing index: " + indexName)
 
         // Determine item type and get configuration
-        String itemType = resolveItemType(indexName)
+        String itemType = MigrationUtils.resolveItemType(indexName, indexPrefix, indexConfigs.keySet())
         def indexConfig = getIndexConfig(itemType)
 
         // Add item type to parameters
         Map<String, Object> params = new HashMap<>(baseParams)
         params.put("itemType", itemType)
+        // Cluster nodes and unknown indices keep site data in the configured tenant, never "system"
+        boolean forceDefaultTenant = (itemType == "clusterNode" || indexConfig.mapping == null)
+        params.put("forceDefaultTenant", forceDefaultTenant)
 
         // Get base settings and mapping
         String baseSettings = MigrationUtils.resourceAsString(bundleContext, indexConfig.baseSettings)
-        String mapping = indexConfig.mapping ?
-                MigrationUtils.extractMappingFromBundles(bundleContext, indexConfig.mapping) :
-                MigrationUtils.extractMappingFromBundles(bundleContext, "${itemType}.json")
+        String mappingFile = indexConfig.mapping ?: "${itemType}.json"
+        String mapping = MigrationUtils.resolveIndexMapping(bundleContext, context.getHttpClient(), esAddress, indexName, mappingFile)
 
         // Build index settings
         String newIndexSettings

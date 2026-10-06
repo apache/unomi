@@ -25,6 +25,11 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -208,5 +213,67 @@ public class MigrationUtilsTest {
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> MigrationUtils.getFileWithoutComments(bundleContext, "missing.painless"));
         assertEquals("Resource not found: missing.painless", ex.getMessage());
+    }
+
+    @Test
+    public void extractMappingFromBundlesFindsKnownTypeWithoutPersistenceBundle() throws Exception {
+        Path mappingFile = Files.createTempFile("clusterNode", ".json");
+        Files.writeString(mappingFile, "{\"properties\":{\"cpuLoad\":{\"type\":\"double\"}}}");
+        URL mappingUrl = mappingFile.toUri().toURL();
+        when(bundleContext.getBundles()).thenReturn(new Bundle[]{bundle});
+        when(bundle.findEntries("META-INF/cxs/mappings", "clusterNode.json", true))
+                .thenReturn(Collections.enumeration(Collections.singletonList(mappingUrl)));
+
+        String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "clusterNode.json");
+        assertEquals("{\"properties\":{\"cpuLoad\":{\"type\":\"double\"}}}", mapping);
+        Files.deleteIfExists(mappingFile);
+    }
+
+    @Test
+    public void extractMappingFromBundlesThrowsWhenMissing() {
+        when(bundleContext.getBundles()).thenReturn(new Bundle[]{bundle});
+        when(bundle.findEntries("META-INF/cxs/mappings", "generic.json", true)).thenReturn(null);
+
+        RuntimeException ex = assertThrows(RuntimeException.class,
+                () -> MigrationUtils.extractMappingFromBundles(bundleContext, "generic.json"));
+        assertEquals("no mapping found in bundles for: generic.json", ex.getMessage());
+    }
+
+    @Test
+    public void mappingsFromIndexResponseReadsFirstIndex() {
+        String body = "{\"context-sfdcconfiguration\":{\"mappings\":{\"properties\":{\"itemId\":{\"type\":\"keyword\"}}}}}";
+        String mappings = MigrationUtils.mappingsFromIndexResponse(body);
+        assertEquals("{\"properties\":{\"itemId\":{\"type\":\"keyword\"}}}", mappings);
+    }
+
+    @Test
+    public void mappingsFromIndexResponseRejectsEmptyBody() {
+        assertThrows(IllegalArgumentException.class, () -> MigrationUtils.mappingsFromIndexResponse(""));
+        assertThrows(IllegalArgumentException.class, () -> MigrationUtils.mappingsFromIndexResponse("{}"));
+    }
+
+    @Test
+    public void resolveItemTypeMatchesClusterNodeIgnoringCase() {
+        Collection<String> types = Arrays.asList("profile", "event", "clusterNode", "generic");
+        assertEquals("clusterNode", MigrationUtils.resolveItemType("context-clusternode", "context", types));
+        assertEquals("clusterNode", MigrationUtils.resolveItemType("context-clusterNode", "context", types));
+    }
+
+    @Test
+    public void resolveItemTypeMatchesRolloverEvent() {
+        Collection<String> types = Arrays.asList("event", "session", "generic");
+        assertEquals("event", MigrationUtils.resolveItemType("context-event-000001", "context", types));
+    }
+
+    @Test
+    public void resolveItemTypeKeepsUnknownIndexSuffix() {
+        Collection<String> types = Arrays.asList("profile", "event", "generic");
+        assertEquals("sfdcconfiguration", MigrationUtils.resolveItemType("context-sfdcconfiguration", "context", types));
+    }
+
+    @Test
+    public void resolveItemTypePrefersLongerKnownType() {
+        Collection<String> types = Arrays.asList("profile", "profileAlias");
+        assertEquals("profileAlias", MigrationUtils.resolveItemType("context-profilealias", "context", types));
     }
 } 

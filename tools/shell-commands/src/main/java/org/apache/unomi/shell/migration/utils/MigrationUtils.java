@@ -303,6 +303,24 @@ public class MigrationUtils {
     }
 
     public static String extractMappingFromBundles(BundleContext bundleContext, String fileName) throws IOException {
+        String mapping = findMappingInBundles(bundleContext, fileName);
+        if (mapping == null) {
+            throw new RuntimeException("no mapping found in bundles for: " + fileName);
+        }
+        return mapping;
+    }
+
+    /**
+     * Looks up {@code META-INF/cxs/mappings/{fileName}} in every OSGi bundle.
+     * The migration command bundle ships a copy of the persistence mappings so this
+     * works before Unomi persistence features are started.
+     *
+     * @return the mapping JSON, or {@code null} if no bundle contains the file
+     */
+    public static String findMappingInBundles(BundleContext bundleContext, String fileName) throws IOException {
+        if (bundleContext == null || fileName == null || fileName.isBlank()) {
+            return null;
+        }
         for (Bundle bundle : bundleContext.getBundles()) {
             Enumeration<URL> predefinedMappings = bundle.findEntries("META-INF/cxs/mappings", fileName, true);
             if (predefinedMappings == null) {
@@ -310,11 +328,88 @@ public class MigrationUtils {
             }
             if (predefinedMappings.hasMoreElements()) {
                 URL predefinedMappingURL = predefinedMappings.nextElement();
-                return IOUtils.toString(predefinedMappingURL);
+                return IOUtils.toString(predefinedMappingURL, StandardCharsets.UTF_8);
             }
         }
+        return null;
+    }
 
-        throw new RuntimeException("no mapping found in bundles for: " + fileName);
+    /**
+     * Resolves the mapping used to recreate an index during migration.
+     * Prefers a bundled file when present (the 4.0 definition). Otherwise copies
+     * the mapping currently stored on the index, so unknown types do not stop the run.
+     */
+    public static String resolveIndexMapping(BundleContext bundleContext, CloseableHttpClient httpClient,
+                                             String esAddress, String indexName, String mappingFileName) throws IOException {
+        if (mappingFileName != null && !mappingFileName.isBlank()) {
+            String bundled = findMappingInBundles(bundleContext, mappingFileName);
+            if (bundled != null) {
+                return bundled;
+            }
+        }
+        return extractMappingFromIndex(httpClient, esAddress, indexName);
+    }
+
+    public static String extractMappingFromIndex(CloseableHttpClient httpClient, String esAddress, String indexName) throws IOException {
+        if (indexName == null || indexName.isBlank()) {
+            throw new IllegalArgumentException("An index name is required to copy its mapping");
+        }
+        String response = HttpUtils.executeGetRequest(httpClient, esAddress + "/" + indexName + "/_mapping", null);
+        return mappingsFromIndexResponse(response);
+    }
+
+    /**
+     * Reads the mappings object from a GET {@code /{index}/_mapping} body.
+     */
+    public static String mappingsFromIndexResponse(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            throw new IllegalArgumentException("Index mapping response is empty");
+        }
+        JSONObject root = new JSONObject(responseBody);
+        if (root.keySet().isEmpty()) {
+            throw new IllegalArgumentException("Index mapping response has no indices");
+        }
+        String firstIndex = root.keys().next();
+        JSONObject index = root.getJSONObject(firstIndex);
+        if (!index.has("mappings")) {
+            throw new IllegalArgumentException("Index mapping response has no mappings for " + firstIndex);
+        }
+        return index.getJSONObject("mappings").toString();
+    }
+
+    /**
+     * Maps an index name such as {@code context-event-000001} or {@code context-clusternode}
+     * to an item type. Known types are matched longest-first, ignoring case.
+     * Unknown names keep the suffix after the prefix (without a rollover number).
+     */
+    public static String resolveItemType(String indexName, String indexPrefix, Collection<String> knownTypes) {
+        if (indexName == null || indexName.isBlank()) {
+            throw new IllegalArgumentException("An index name is required");
+        }
+        if (indexPrefix == null || indexPrefix.isBlank()) {
+            throw new IllegalArgumentException("An index prefix is required");
+        }
+        String lowerIndex = indexName.toLowerCase(Locale.ROOT);
+        String prefix = indexPrefix.toLowerCase(Locale.ROOT) + "-";
+        if (knownTypes != null) {
+            List<String> types = new ArrayList<>();
+            for (String type : knownTypes) {
+                if (type != null && !type.isBlank() && !"generic".equals(type)) {
+                    types.add(type);
+                }
+            }
+            types.sort((a, b) -> Integer.compare(b.length(), a.length()));
+            for (String type : types) {
+                if (lowerIndex.startsWith(prefix + type.toLowerCase(Locale.ROOT))) {
+                    return type;
+                }
+            }
+        }
+        if (lowerIndex.startsWith(prefix)) {
+            String rest = indexName.substring(indexPrefix.length() + 1);
+            return rest.replaceFirst("-\\d{6}$", "");
+        }
+        return "generic";
     }
 
     public static String buildIndexCreationRequest(String baseIndexSettings, String mapping, MigrationContext context, boolean isMonthlyIndex) throws IOException {

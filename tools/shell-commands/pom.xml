@@ -159,6 +159,30 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-persistence-mappings</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/META-INF/cxs/mappings</outputDirectory>
+                            <resources>
+                                <resource>
+                                    <directory>${project.basedir}/../../persistence-elasticsearch/core/src/main/resources/META-INF/cxs/mappings</directory>
+                                </resource>
+                                <resource>
+                                    <directory>${project.basedir}/../../extensions/geonames/services/src/main/resources/META-INF/cxs/mappings</directory>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <configuration>
