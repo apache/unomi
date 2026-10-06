@@ -32,7 +32,9 @@ import java.util.Collection;
 import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 public class MigrationUtilsTest {
@@ -301,5 +303,60 @@ public class MigrationUtilsTest {
         assertEquals("eventfoo", MigrationUtils.resolveItemType("context-eventfoo-000001", "context", types));
         assertEquals("sfdcconfiguration", MigrationUtils.resolveItemType("context-sfdcconfiguration", "context", types));
         assertEquals("generic", MigrationUtils.resolveItemType("other-profile", "context", types));
+    }
+
+    @Test
+    public void resolveBaseItemIdStripsItemTypeSuffixIgnoringCase() {
+        assertEquals("booleanCondition",
+                MigrationUtils.resolveBaseItemId("booleanCondition_conditionType", "conditionType"));
+        assertEquals("booleanCondition",
+                MigrationUtils.resolveBaseItemId("booleanCondition_conditiontype", "conditionType"));
+        assertEquals("booleanCondition",
+                MigrationUtils.resolveBaseItemId("booleanCondition", "conditionType"));
+    }
+
+    @Test
+    public void shouldAssignToSystemTenantForShippedConditionWithoutScope() {
+        Collection<String> shipped = Collections.singleton("conditiontype:booleancondition");
+        assertTrue(MigrationUtils.shouldAssignToSystemTenant(
+                "conditionType", "booleanCondition", null, "context-systemitems", false, shipped));
+    }
+
+    @Test
+    public void shouldAssignUserContentWithSystemScopeToDefaultTenant() {
+        Collection<String> shipped = Collections.singleton("conditiontype:booleancondition");
+        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
+                "rule", "my-user-rule", "systemscope", "context-systemitems", false, shipped));
+        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
+                "segment", "my-segment", "systemscope", "context-systemitems", false, shipped));
+        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
+                "scoring", "my-scoring", "systemscope", "context-systemitems", false, shipped));
+        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
+                "goal", "my-goal", "systemscope", "context-systemitems", false, shipped));
+    }
+
+    @Test
+    public void shouldAssignGeonamesToSystemTenant() {
+        assertTrue(MigrationUtils.shouldAssignToSystemTenant(
+                "geonameEntry", "paris", null, "context-geonameentry", false, Collections.emptySet()));
+        assertTrue(MigrationUtils.shouldAssignToSystemTenant(
+                null, "paris", null, "context-geonameentry", false, Collections.emptySet()));
+    }
+
+    @Test
+    public void shouldAssignProfilesEventsAndForcedDefaultToConfiguredTenant() {
+        Collection<String> shipped = Collections.singleton("conditiontype:booleancondition");
+        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
+                "profile", "p1", null, "context-profile", false, shipped));
+        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
+                "event", "e1", null, "context-event-000001", false, shipped));
+        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
+                "clusterNode", "node1", "system", "context-clusternode", true, shipped));
+    }
+
+    @Test
+    public void shouldAssignLiteralSystemScopeToSystemTenant() {
+        assertTrue(MigrationUtils.shouldAssignToSystemTenant(
+                "sfdcConfiguration", "cfg1", "system", "context-sfdcconfiguration", false, Collections.emptySet()));
     }
 }

@@ -365,6 +365,79 @@ public class MigrationUtils {
         return name;
     }
 
+    /**
+     * Loads the set of definitions Unomi ships and reloads at startup.
+     * Keys are {@code itemType:itemId} in lower case (for example {@code conditiontype:booleanCondition}).
+     * The migrate command bundle ships a snapshot of that list so it is available before plugins start.
+     */
+    public static Set<String> loadShippedDefinitionIds(BundleContext bundleContext) throws IOException {
+        Set<String> ids = new LinkedHashSet<>();
+        String resource = resourceAsString(bundleContext, "requestBody/4.0.0/shipped_system_definitions.json");
+        JSONArray array = new JSONArray(resource);
+        for (int i = 0; i < array.length(); i++) {
+            String key = array.optString(i, null);
+            if (key != null && !key.isBlank()) {
+                ids.add(key.toLowerCase(Locale.ROOT));
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Strips a trailing {@code _itemType} suffix (any case) from a document or item id.
+     */
+    public static String resolveBaseItemId(String documentOrItemId, String itemType) {
+        if (documentOrItemId == null || documentOrItemId.isBlank()) {
+            return documentOrItemId;
+        }
+        if (itemType == null || itemType.isBlank()) {
+            return documentOrItemId;
+        }
+        String suffix = "_" + itemType;
+        if (documentOrItemId.regionMatches(true, documentOrItemId.length() - suffix.length(), suffix, 0, suffix.length())) {
+            return documentOrItemId.substring(0, documentOrItemId.length() - suffix.length());
+        }
+        return documentOrItemId;
+    }
+
+    /**
+     * Decides whether a 3.0 item must land in the system tenant after migration.
+     * Shipped definitions and geonames go to system. User-created rules, segments,
+     * scorings and goals stay in the configured tenant even when their 3.0 scope is
+     * {@code systemscope}. Unknown indices forced to the default tenant never use system.
+     */
+    public static boolean shouldAssignToSystemTenant(String itemType, String itemId, String scope,
+                                                     String indexName, boolean forceDefaultTenant,
+                                                     Collection<String> shippedDefinitionIds) {
+        if (forceDefaultTenant) {
+            return false;
+        }
+        String typeLower = itemType == null ? "" : itemType.toLowerCase(Locale.ROOT);
+        if ("geonameentry".equals(typeLower)
+                || (indexName != null && indexName.toLowerCase(Locale.ROOT).endsWith("-geonameentry"))) {
+            return true;
+        }
+        String baseId = resolveBaseItemId(itemId, itemType);
+        if (baseId != null && shippedDefinitionIds != null && !typeLower.isEmpty()) {
+            String key = typeLower + ":" + baseId.toLowerCase(Locale.ROOT);
+            if (shippedDefinitionIds.contains(key)) {
+                return true;
+            }
+        }
+        // Literal scope "system" only — not the 3.0 default "systemscope" used by user content
+        return "system".equals(scope);
+    }
+
+    /**
+     * Same as {@link #updateByQuery(CloseableHttpClient, String, String, String)} but returns how
+     * many documents were updated, so callers can log the count.
+     */
+    public static long updateByQueryAndCount(CloseableHttpClient httpClient, String esAddress, String indexName, String requestBody) throws Exception {
+        JSONObject response = new JSONObject(HttpUtils.executePostRequest(
+                httpClient, esAddress + "/" + indexName + "/_update_by_query?refresh=true&conflicts=proceed", requestBody, null));
+        return response.optLong("updated", 0L);
+    }
+
     public static String buildIndexCreationRequest(String baseIndexSettings, String mapping, MigrationContext context, boolean isMonthlyIndex) throws IOException {
         String settings = baseIndexSettings
                 .replace("#numberOfShards", context.getConfigString(isMonthlyIndex ? MONTHLY_NUMBER_OF_SHARDS : NUMBER_OF_SHARDS))
