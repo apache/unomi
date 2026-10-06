@@ -32,6 +32,8 @@ import java.util.regex.Pattern;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertNull;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class PropertyConditionEvaluatorTest {
 
@@ -200,6 +202,63 @@ public class PropertyConditionEvaluatorTest {
             propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pageURL");
             return null;
         }
+    }
+
+    @Test
+    public void testMatchesRegexStillMatchesNormalPatterns() {
+        assertTrue("Simple regex should still match",
+                propertyConditionEvaluator.isMatch("matchesRegex", "hello123", "[a-z]+\\d+", null, null, null, null, null));
+        assertFalse("Simple regex should still not match",
+                propertyConditionEvaluator.isMatch("matchesRegex", "123hello", "[a-z]+\\d+", null, null, null, null, null));
+        assertFalse("Invalid pattern should evaluate to false instead of throwing",
+                propertyConditionEvaluator.isMatch("matchesRegex", "anything", "([unclosed", null, null, null, null, null));
+    }
+
+    @Test(timeout = 5000)
+    public void testMatchesRegexCatastrophicBacktrackingIsBounded() {
+        // '(a+)+$' against a long run of 'a' followed by a non-matching character is a textbook
+        // exponential-backtracking (ReDoS) input; unbounded evaluation would run effectively forever.
+        StringBuilder subject = new StringBuilder();
+        for (int i = 0; i < 100; i++) {
+            subject.append('a');
+        }
+        subject.append('!');
+        assertFalse("Catastrophic pattern must be aborted and evaluate to false",
+                propertyConditionEvaluator.isMatch("matchesRegex", subject.toString(), "(a+)+$", null, null, null, null, null));
+    }
+
+    /**
+     * The bounded-quantifier shape, which is the one that actually costs on a Java 17 engine.
+     * {@code (a+)+$} above uses an unbounded quantifier, and Java 17 optimizes that shape away, so
+     * that test passes whether or not the guard is present and cannot discriminate on its own.
+     * {@code ^(a|a){0,60}z$} is not optimized: its cost doubles with each added character of the
+     * subject, and an unguarded evaluation of 40 characters runs for hours.
+     */
+    @Test(timeout = 5000)
+    public void testMatchesRegexBoundedQuantifierIsAborted() {
+        StringBuilder subject = new StringBuilder();
+        for (int i = 0; i < 40; i++) {
+            subject.append('a');
+        }
+        assertFalse("Bounded-quantifier pattern must be aborted and evaluate to false",
+                propertyConditionEvaluator.isMatch("matchesRegex", subject.toString(), "^(a|a){0,60}z$", null, null, null, null, null));
+    }
+
+    @Test
+    public void testMatchesRegexOversizedInputsAreRejected() {
+        StringBuilder longPattern = new StringBuilder("^");
+        for (int i = 0; i < 600; i++) {
+            longPattern.append('a');
+        }
+        assertFalse("Over-long pattern must be rejected",
+                propertyConditionEvaluator.isMatch("matchesRegex", "aaa", longPattern.toString(), null, null, null, null, null));
+
+        StringBuilder longValue = new StringBuilder();
+        for (int i = 0; i < 10001; i++) {
+            longValue.append('a');
+        }
+        assertFalse("Over-long value must be rejected",
+                propertyConditionEvaluator.isMatch("matchesRegex", longValue.toString(), "a*", null, null, null, null, null));
     }
 
 }

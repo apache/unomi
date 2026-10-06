@@ -12,15 +12,15 @@
   "properties": {
     "sessionId": {
       "type": ["null", "string"],
-      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+      "pattern" : "^[\\w@.-]{0,60}$"
     },
     "profileId": {
       "type": ["null", "string"],
-      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+      "pattern" : "^[\\w@.-]{0,60}$"
     },
     "personaId" : {
       "type" : ["null", "string"],
-      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+      "pattern" : "^[\\w@.-]{0,60}$"
     }
   }
 }

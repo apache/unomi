@@ -5,7 +5,8 @@ name: Publish Javadoc and snapshots
 
 on:
   push:
-    branches: [master]
+    branches: [unomi-3.0.x]
+  workflow_dispatch:
 
 env:
   DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
