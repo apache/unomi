@@ -69,7 +69,7 @@ if (Files.exists(secretsDir)) {
 }
 
 // Create the default tenant index and items
-context.performMigrationStep("3.1.0-create-tenant-index", () -> {
+context.performMigrationStep("4.0.0-create-tenant-index", () -> {
     String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
     String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "tenant.json")
     String newIndexSettings = MigrationUtils.buildIndexCreationRequest(baseSettings, mapping, context, false)
@@ -101,7 +101,7 @@ context.performMigrationStep("3.1.0-create-tenant-index", () -> {
         String sep = "=" * 70
         String fileContent = """\
 ${sep}
-Unomi 3.1 Migration -- Tenant API Keys
+Unomi 4.0 Migration -- Tenant API Keys
 ${sep}
 Generated : ${isoDate}
 Tenant ID : ${tenantId}
@@ -135,8 +135,8 @@ ${sep}
             "name": "Default Tenant",
             "tenantId": "system",
             "description": "Default tenant created during migration to Unomi V3",
-            "createdBy": "system-migration-3.1.0",
-            "lastModifiedBy": "system-migration-3.1.0",
+            "createdBy": "system-migration-4.0.0",
+            "lastModifiedBy": "system-migration-4.0.0",
             "creationDate": "${isoDate}",
             "lastModificationDate": "${isoDate}",
             "version": 1,
@@ -145,8 +145,8 @@ ${sep}
                 {
                   "itemId" : "${publicKeyId}",
                   "itemType" : "apiKey",
-                  "createdBy": "system-migration-3.1.0",
-                  "lastModifiedBy": "system-migration-3.1.0",
+                  "createdBy": "system-migration-4.0.0",
+                  "lastModifiedBy": "system-migration-4.0.0",
                   "creationDate" : "${isoDate}",
                   "lastModificationDate" : "${isoDate}",
                   "keyHash" : "${publicKeyHash}",
@@ -157,8 +157,8 @@ ${sep}
                 {
                   "itemId" : "${privateKeyId}",
                   "itemType" : "apiKey",
-                  "createdBy": "system-migration-3.1.0",
-                  "lastModifiedBy": "system-migration-3.1.0",
+                  "createdBy": "system-migration-4.0.0",
+                  "lastModifiedBy": "system-migration-4.0.0",
                   "creationDate" : "${isoDate}",
                   "lastModificationDate" : "${isoDate}",
                   "keyHash" : "${privateKeyHash}",

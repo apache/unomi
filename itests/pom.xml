@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>3.1.0-SNAPSHOT</version>
+        <version>4.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-itests</artifactId>
     <name>Apache Unomi :: Integration Tests</name>
@@ -255,9 +255,9 @@
                                      owns target/ as another UID, so bind-mounted FS snapshot repos get access_denied
                                      during repository verification unless the tree is world-writable. Skipped on Windows. -->
                                 <exec executable="chmod" osfamily="unix" failonerror="true">
-                                    <arg value="-R"/>
-                                    <arg value="ugo+rwx"/>
-                                    <arg path="${project.build.directory}/snapshots_repository"/>
+                                    <arg value="-R" />
+                                    <arg value="ugo+rwx" />
+                                    <arg path="${project.build.directory}/snapshots_repository" />
                                 </exec>
                             </tasks>
                         </configuration>

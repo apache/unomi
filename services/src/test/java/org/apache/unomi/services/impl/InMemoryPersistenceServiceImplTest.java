@@ -3944,8 +3944,9 @@ public class InMemoryPersistenceServiceImplTest {
             assertNull(persistenceService.load("purge-null-test", TestMetadataItem.class),
                 "purge(null) should purge all items (used for test isolation reset)");
 
-            // Test purge with null scope — also a no-op
-            assertDoesNotThrow(() -> persistenceService.purge((String) null));
+            // A null or blank scope is refused, as in the Elasticsearch and OpenSearch implementations
+            assertThrows(IllegalArgumentException.class, () -> persistenceService.purge((String) null));
+            assertThrows(IllegalArgumentException.class, () -> persistenceService.purge(" "));
 
             // Test refresh index with null class
             assertDoesNotThrow(() -> persistenceService.refreshIndex(null, null));

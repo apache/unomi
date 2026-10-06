@@ -14,8 +14,8 @@
 
 === Multi-tenancy guide
 
-Apache Unomi 3.1+ isolates profiles, events, segments, rules, and schemas per tenant.
-Each tenant has public and private API keys. See also <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> for authentication changes.
+Apache Unomi 4.0+ isolates profiles, events, segments, rules, and schemas per tenant.
+Each tenant has public and private API keys. See also <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> for authentication changes.
 
 ==== Overview
 
@@ -494,7 +494,7 @@ There is no REST endpoint to copy data between tenants. Version upgrades that in
 unomi:migrate 3.0.0
 ----
 
-See <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> and <<_shell_commands,Shell commands>>.
+See <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> and <<_shell_commands,Shell commands>>.
 
 ==== Best Practices
 
@@ -547,7 +547,7 @@ log4j.logger.org.apache.unomi.tenant=DEBUG
 
 ===== Migrating Existing Data
 
-To attach existing 3.0 data to the multi-tenant model when upgrading to 3.1:
+To attach existing 3.0 data to the multi-tenant model when upgrading to 4.0:
 
 1. Stop Apache Unomi.
 2. Run the bundled migration from the Karaf shell:
@@ -557,8 +557,8 @@ To attach existing 3.0 data to the multi-tenant model when upgrading to 3.1:
 unomi:migrate 3.0.0
 ----
 +
-This runs the `migrate-3.1.0-*` Groovy scripts (tenant document IDs, system item IDs, default tenant initialization, legacy queryBuilder IDs, and related fixes). See <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>>.
-3. Start Unomi 3.1 and regenerate tenant API keys if you need the plaintext secrets (create/migrate responses only expose masked keys). See <<_multitenancy,Creating Your First Tenant>> / API key regeneration below.
+This runs the `migrate-4.0.0-*` Groovy scripts (tenant document IDs, system item IDs, default tenant initialization, legacy queryBuilder IDs, and related fixes). See <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>>.
+3. Start Unomi 4.0 and regenerate tenant API keys if you need the plaintext secrets (create/migrate responses only expose masked keys). See <<_multitenancy,Creating Your First Tenant>> / API key regeneration below.
 
 ===== Verification
 
@@ -686,9 +686,9 @@ Once the event type is defined, you can send events:
 [NOTE]
 ====
 `/cxs/context.json` is a public endpoint, so the profile is carried by the `context-profile-id`
-cookie: since Unomi 3.1 a public caller's body `profileId` is ignored. Only a trusted caller
+cookie: since Unomi 4.0 a public caller's body `profileId` is ignored. Only a trusted caller
 (tenant private key or system administrator) may bind a profile explicitly through the body. See
-<<_client_facing_hardening_3_1,client-facing hardening>>.
+<<_client_facing_hardening_4_0,client-facing hardening>>.
 ====
 
 [source,bash]

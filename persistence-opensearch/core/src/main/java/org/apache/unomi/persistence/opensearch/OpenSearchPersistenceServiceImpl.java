@@ -807,9 +807,9 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             } else {
                 // For system items, document ID format is: tenantId_itemId_itemType
                 // Extract the itemId by removing the itemType suffix from the document ID.
-                // After migration 3.1.0-05, all system items should have:
+                // After migration 4.0.0-05, all system items should have:
                 // - Document IDs with the itemType suffix (post-2.2.0 format)
-                // - Correct itemIds in source (fixed by migration 3.1.0-05)
+                // - Correct itemIds in source (fixed by migration 4.0.0-05)
                 // This simplified logic works because the migration normalizes the data.
                 String itemTypeSuffix = "_" + item.getItemType().toLowerCase();
                 if (strippedId != null && strippedId.endsWith(itemTypeSuffix)) {
@@ -854,6 +854,14 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
+        // An item states its own identity. Without an itemId the document id below would read
+        // "<tenant>_null", so every id-less item of the same type would land on one shared document
+        // and overwrite the item the previous save wrote. Refuse the save and say so.
+        if (item.getItemId() == null) {
+            LOGGER.warn("Refusing to save an item of type {} that carries no itemId", item.getItemType());
+            return false;
+        }
+
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SAVE);
         item.setTenantId(finalTenantId);
 
@@ -2659,6 +2667,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     @Override
     public void purge(final String scope) {
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_PURGE);
+        Query query = buildScopePurgeQuery(scope, finalTenantId);
 
         LOGGER.debug("Purge scope {}", scope);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
@@ -2666,22 +2675,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             protected Void execute(Object... args) throws IOException {
 
                 SearchResponse<Item> response = client.search(s -> s
-                        .query(q -> q
-                                .bool(b -> b
-                                        .must(m -> m
-                                .term(t -> t
-                                        .field("scope")
-                                                        .value(v -> v.stringValue(scope))
-                                                )
-                                        )
-                                        .must(m -> m
-                                                .term(t -> t
-                                                        .field("tenantId")
-                                                        .value(v -> v.stringValue(ConditionContextHelper.foldToASCII(finalTenantId)))
-                                                )
-                                        )
-                                )
-                        )
+                        .query(query)
                         .size(100)
                         .scroll(scr -> scr
                                 .time("1h")
@@ -2720,6 +2714,25 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 return null;
             }
         }.catchingExecuteInClassLoader(true);
+    }
+
+    /**
+     * Builds the search used by {@link #purge(String)}.
+     * Both values are folded, as the fields are indexed with the folding analyzer.
+     * Keep in step with the Elasticsearch implementation.
+     */
+    static Query buildScopePurgeQuery(String scope, String tenantId) {
+        if (scope == null || scope.isBlank()) {
+            throw new IllegalArgumentException("A scope is required to purge by scope");
+        }
+        if (tenantId == null || tenantId.isBlank()) {
+            throw new IllegalArgumentException("A tenant is required to purge by scope");
+        }
+        return Query.of(q -> q.bool(b -> b
+                .must(m -> m.term(t -> t.field("scope")
+                        .value(v -> v.stringValue(ConditionContextHelper.foldToASCII(scope)))))
+                .must(m -> m.term(t -> t.field("tenantId")
+                        .value(v -> v.stringValue(ConditionContextHelper.foldToASCII(tenantId)))))));
     }
 
     @Override

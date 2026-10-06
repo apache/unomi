@@ -18,7 +18,7 @@ In this tutorial we will guide through the basic steps of getting started with a
 
 If you prefer to use existing HTML and Javascript rather than building your own, all the code we feature in this tutorial is extracted from our tracker sample which is available here: https://github.com/apache/unomi/blob/master/extensions/web-tracker/wab/src/main/webapp/index.html . However you will still need to use the REST API calls to create the scope and rule to make it all work.
 
-IMPORTANT: On Unomi **3.1**, `/cxs/context.json` and `/cxs/eventcollector` require a tenant **public** API key.
+IMPORTANT: On Unomi **4.0**, `/cxs/context.json` and `/cxs/eventcollector` require a tenant **public** API key.
 The bundled `unomi-web-tracker` does not yet send `X-Unomi-Api-Key`. For this tutorial, either:
 
 * Enable <<_v2_compatibility_mode,V2 compatibility mode>> for local learning (public endpoints work without API keys), **or**

@@ -106,9 +106,9 @@ When a request is made to `/cxs/context.json` or `/cxs/context.js`, Apache Unomi
 
 [IMPORTANT]
 ====
-**Tenant Resolution (Version 3.1+)**
+**Tenant Resolution (Version 4.0+)**
 
-Starting with Apache Unomi 3.1, tenant resolution is mandatory for all requests to `/cxs/context.json` and `/cxs/eventcollector` endpoints. Apache Unomi must know which tenant's data to use before processing the request. The tenant is resolved through one of the following methods (in priority order):
+Starting with Apache Unomi 4.0, tenant resolution is mandatory for all requests to `/cxs/context.json` and `/cxs/eventcollector` endpoints. Apache Unomi must know which tenant's data to use before processing the request. The tenant is resolved through one of the following methods (in priority order):
 
 1. **Public API Key Authentication** (Recommended for public endpoints):
    * Send the `X-Unomi-Api-Key` header with a public API key
@@ -190,7 +190,7 @@ The tenant is resolved from the `X-Unomi-Tenant-Id` header when using JAAS authe
 [plantuml]
 ----
 @startuml
-title Tenant Resolution Flow (Version 3.1+)
+title Tenant Resolution Flow (Version 4.0+)
 
 Client -> AuthenticationFilter: Request with authentication
 activate AuthenticationFilter
@@ -221,7 +221,7 @@ deactivate AuthenticationFilter
 
 note right of AuthenticationFilter
     Tenant resolution is mandatory
-    in version 3.1+ for context.json
+    in version 4.0+ for context.json
     and eventcollector endpoints
 end note
 
@@ -241,7 +241,7 @@ Apache Unomi attempts to identify the visitor's profile through the following pr
    * **Public callers** (public API key / unauthenticated context): the profile cookie is the **only** profile bearer. A body or query `profileId` is **ignored** (even when no cookie is present).
    * **Trusted callers** (system administrator or tenant private-key / `TENANT_ADMINISTRATOR`): an explicit body/query `profileId` is honored and may differ from the cookie.
    * Cookie name defaults to `context-profile-id` (configurable via `org.apache.unomi.profile.cookie.name`).
-   * Cookie values are validated against a JSON schema — invalid values (for example containing script tags) cause a `400 Bad Request`. Since 3.1 the cookie is read on every request, so this also applies when the request supplies an explicit `profileId`; before, a malformed cookie went unnoticed on those requests.
+   * Cookie values are validated against a JSON schema — invalid values (for example containing script tags) cause a `400 Bad Request`. Since 4.0 the cookie is read on every request, so this also applies when the request supplies an explicit `profileId`; before, a malformed cookie went unnoticed on those requests.
    * The resolved profile ID is used to attempt loading the profile from the database.
 
 2. **Session Profile Override** (if session exists):
@@ -263,7 +263,7 @@ This ensures that profiles are always available for processing, even for first-t
 
 [IMPORTANT]
 ====
-For **public** callers, do not rely on body/query `profileId` as identity — always send the profile cookie (browsers do this automatically when credentials are included). To act as a specific profile from a backend or admin tool, authenticate as a **trusted** caller (tenant private key or system administrator) and then send `profileId`. See <<_migrate_from_3_0_to_3_1,Migrate from 3.0 to 3.1>> for client migration notes.
+For **public** callers, do not rely on body/query `profileId` as identity — always send the profile cookie (browsers do this automatically when credentials are included). To act as a specific profile from a backend or admin tool, authenticate as a **trusted** caller (tenant private key or system administrator) and then send `profileId`. See <<_migrate_from_3_0_to_4_0,Migrate from 3.0 to 4.0>> for client migration notes.
 ====
 
 ====== Why the cookie is safer than a body `profileId` for public callers
@@ -1177,7 +1177,7 @@ This example demonstrates how a single request can:
 
 A single request to `/cxs/context.json` or `/cxs/context.js` performs the following operations in sequence:
 
-1. **Tenant Resolution** (mandatory in 3.1+): Identifies which tenant's data to use
+1. **Tenant Resolution** (mandatory in 4.0+): Identifies which tenant's data to use
 2. **Profile/Session Management**: Creates or loads profiles and sessions automatically
 3. **Event Processing**: Processes events and executes matching rules (synchronously)
 4. **Content Filtering**: Evaluates filter conditions (if `filters` are provided)

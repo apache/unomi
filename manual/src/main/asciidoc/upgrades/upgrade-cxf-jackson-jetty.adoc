@@ -19,7 +19,7 @@ Karaf upgrades change the *runtime* versions of several frameworks even when you
 
 This guide covers libraries that *cascade from Karaf* but are *owned by Unomi* for REST, WAB, GraphQL, and ITs.
 
-===== Version pins (Unomi 3.1 baseline)
+===== Version pins (Unomi 4.0 baseline)
 
 [cols="1,1,2", options="header"]
 |===

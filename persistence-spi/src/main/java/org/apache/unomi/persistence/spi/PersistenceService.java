@@ -790,9 +790,10 @@ public interface PersistenceService {
     boolean removeIndex(final String itemType);
 
     /**
-     * Removes all data associated with the provided scope.
+     * Removes all data associated with the provided scope, for the current tenant only.
      *
-     * @param scope the scope for which we want to remove data
+     * @param scope the scope for which we want to remove data, must not be null or blank
+     * @throws IllegalArgumentException if the scope is null or blank
      */
     void purge(final String scope);
 

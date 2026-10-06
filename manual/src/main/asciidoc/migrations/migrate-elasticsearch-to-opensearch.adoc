@@ -15,7 +15,7 @@
 [#_migrate_from_elasticsearch_to_opensearch]
 ==== Migrating from Elasticsearch to OpenSearch
 
-Apache Unomi 3.1+ can use OpenSearch instead of Elasticsearch as its search/persistence backend.
+Apache Unomi 4.0+ can use OpenSearch instead of Elasticsearch as its search/persistence backend.
 Moving existing data is a **search-engine cutover**: copy Unomi indices from Elasticsearch to OpenSearch, then point Unomi at the OpenSearch distribution.
 It is **not** performed by `unomi:migrate` (that command upgrades Unomi data shape between Unomi versions).
 

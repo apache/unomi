@@ -1193,8 +1193,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public void purge(String scope) {
-        if (scope == null) {
-            return;
+        if (scope == null || scope.isBlank()) {
+            throw new IllegalArgumentException("A scope is required to purge by scope");
         }
 
         String currentTenantId = executionContextManager.getCurrentContext().getTenantId();

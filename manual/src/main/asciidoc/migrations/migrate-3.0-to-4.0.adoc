@@ -12,12 +12,12 @@
 // limitations under the License.
 //
 
-[#_migrate_from_3_0_to_3_1]
+[#_migrate_from_3_0_to_4_0]
 === Migration Overview
 
-Apache Unomi 3.1 introduces comprehensive multi-tenancy support, enabling complete data isolation between different tenants. This fundamental architectural change requires a new tenant-based authentication model while keeping all API endpoints unchanged.
+Apache Unomi 4.0 introduces comprehensive multi-tenancy support, enabling complete data isolation between different tenants. This fundamental architectural change requires a new tenant-based authentication model while keeping all API endpoints unchanged.
 
-The key innovation in 3.1 is the introduction of **tenant isolation** for all data:
+The key innovation in 4.0 is the introduction of **tenant isolation** for all data:
 - **Profiles, events, segments, rules, and schemas** are now tenant-specific
 - **Complete data separation** between tenants - no cross-tenant data access
 - **Tenant-specific API keys** for secure access control
@@ -27,11 +27,11 @@ The key innovation in 3.1 is the introduction of **tenant isolation** for all da
 
 ==== Authentication Model Changes
 
-The main change in 3.1 is the introduction of tenant-based authentication. The system must now identify which tenant context to operate in for every request.
+The main change in 4.0 is the introduction of tenant-based authentication. The system must now identify which tenant context to operate in for every request.
 
 [cols="1,1,1", options="header"]
 |===
-|Aspect |Unomi 3.0 |Unomi 3.1
+|Aspect |Unomi 3.0 |Unomi 4.0
 
 |Authentication Method
 |System Administrator Authentication (configured admin password)
@@ -50,9 +50,9 @@ The main change in 3.1 is the introduction of tenant-based authentication. The s
 |System Administrator Authentication (configured `UNOMI_ROOT_PASSWORD`)
 |===
 
-==== API Key Types (3.1 Only)
+==== API Key Types (4.0 Only)
 
-3.1 introduces two types of API keys per tenant:
+4.0 introduces two types of API keys per tenant:
 
 - **Public Key**: Used for public endpoints (event collection via `/context.json`)
 - **Private Key**: Used with tenantId for tenant-specific administrative operations
@@ -61,7 +61,7 @@ The main change in 3.1 is the introduction of tenant-based authentication. The s
 
 [cols="1,1,1", options="header"]
 |===
-|Endpoint Category |3.0 Authentication |3.1 Authentication
+|Endpoint Category |3.0 Authentication |4.0 Authentication
 
 |Event Collection (`/context.json`)
 |None
@@ -76,9 +76,9 @@ The main change in 3.1 is the introduction of tenant-based authentication. The s
 |System Admin (`karaf:$UNOMI_ROOT_PASSWORD`)
 |===
 
-==== Authentication Flow (3.1)
+==== Authentication Flow (4.0)
 
-The AuthenticationFilter in 3.1 follows this resolution order:
+The AuthenticationFilter in 4.0 follows this resolution order:
 
 1. **Tenant endpoints** (`/cxs/tenants`): Requires system administrator authentication only
 2. **Public endpoints** (e.g., `/context.json`): Requires public API key via `X-Unomi-Api-Key` header
@@ -104,7 +104,7 @@ RestAssured.given()
     .post("/context.json");
 ----
 
-===== 3.1 Authentication
+===== 4.0 Authentication
 
 [source,java]
 ----
@@ -145,10 +145,10 @@ given()
 ----
 public class UnomiConfiguration {
     public UnomiClient createClient(String baseUrl) {
-        String version = System.getProperty("unomi.version", "3.1");
+        String version = System.getProperty("unomi.version", "4.0");
         
-        if ("3.1".equals(version)) {
-            return new UnomiV31Client(baseUrl);
+        if ("4.0".equals(version)) {
+            return new UnomiV40Client(baseUrl);
         } else {
             return new UnomiV30Client(baseUrl);
         }
@@ -167,7 +167,7 @@ public void init() {
         .basic("karaf", System.getenv("UNOMI_ROOT_PASSWORD"));
 }
 
-// 3.1 Client
+// 4.0 Client
 public void init() {
     RestAssured.baseURI = baseUrl;
 }
@@ -180,19 +180,19 @@ public void updateKeys(String publicKey, String privateKey) {
 
 ==== No API Contract Changes
 
-All API endpoints remain the same between 3.0 and 3.1, and request/response payloads are unchanged in shape. The differences are in the authentication mechanism, tenant resolution, and which of the identity fields a public caller sends to `/context.json` and `/eventcollector` the server acts on — see <<_client_facing_hardening_3_1,Client-facing hardening (3.1)>> below.
+All API endpoints remain the same between 3.0 and 4.0, and request/response payloads are unchanged in shape. The differences are in the authentication mechanism, tenant resolution, and which of the identity fields a public caller sends to `/context.json` and `/eventcollector` the server acts on — see <<_client_facing_hardening_4_0,Client-facing hardening (4.0)>> below.
 
-[#_client_facing_hardening_3_1]
-==== Client-facing hardening (3.1)
+[#_client_facing_hardening_4_0]
+==== Client-facing hardening (4.0)
 
-`/cxs/context.json` and `/cxs/eventcollector` are reachable without authentication, or with a tenant *public* API key. In 3.1 the identity fields those endpoints accept are treated as claims to be checked rather than as instructions.
+`/cxs/context.json` and `/cxs/eventcollector` are reachable without authentication, or with a tenant *public* API key. In 4.0 the identity fields those endpoints accept are treated as claims to be checked rather than as instructions.
 
 A caller is **trusted** when it holds a tenant private key or authenticates as a system administrator (`ROLE_UNOMI_ADMIN` or `ROLE_UNOMI_TENANT_ADMIN`). A tenant *public* API key is **not** trusted: it identifies the tenant, not the visitor.
 
 .What changed for public callers
 [cols="1,2,2", options="header"]
 |===
-| Field | 3.0 | 3.1
+| Field | 3.0 | 4.0
 
 | Body/query `profileId`
 | Selected the profile.
@@ -216,7 +216,7 @@ Anonymous browsing, personas and profile overrides are otherwise unchanged, and 
 ===== Two behaviour changes to check before upgrading
 
 * **The profile cookie now defaults to `HttpOnly`.** The model above holds only while page script cannot read the cookie, so the default is part of the design rather than a preference. If your page code reads `document.cookie` for the profile id, read `profileId` from the JSON response instead. Setting `org.apache.unomi.profile.cookie.httpOnly=false` (env `UNOMI_PROFILE_COOKIE_HTTPONLY`) restores the old default, at the cost of that guarantee.
-* **A malformed profile cookie is rejected on more requests than before.** The cookie is validated against a JSON schema and an invalid value answers `400`. In 3.0 the cookie was only read when no `profileId` was supplied, so a request carrying both an explicit `profileId` and a malformed cookie was still served; in 3.1 it fails. This mainly affects server-side callers that forward a browser's raw `Cookie` header.
+* **A malformed profile cookie is rejected on more requests than before.** The cookie is validated against a JSON schema and an invalid value answers `400`. In 3.0 the cookie was only read when no `profileId` was supplied, so a request carrying both an explicit `profileId` and a malformed cookie was still served; in 4.0 it fails. This mainly affects server-side callers that forward a browser's raw `Cookie` header.
 
 ===== Migrating a client
 
@@ -225,9 +225,9 @@ Anonymous browsing, personas and profile overrides are otherwise unchanged, and 
 * A client that supplied a session id it did not own now finds `sessionId` absent from the response. Treat that as "start a new session" and generate a fresh id rather than replaying the old one.
 
 [#_search_conditions_state_a_type]
-==== A search condition states its type (3.1)
+==== A search condition states its type (4.0)
 
-A search body carries a `condition`, and 3.1 resolves that condition by its `type` before it runs the query. A condition with no resolvable type answers an empty list, and the server logs the reason:
+A search body carries a `condition`, and 4.0 resolves that condition by its `type` before it runs the query. A condition with no resolvable type answers an empty list, and the server logs the reason:
 
 [source]
 ----
@@ -240,7 +240,7 @@ WARN ProfileServiceImpl | Cannot execute query: condition type 'null' could not 
 .What changed
 [cols="1,2,2", options="header"]
 |===
-| Body | 3.0 | 3.1
+| Body | 3.0 | 4.0
 
 | `"condition": {}`
 | The condition was dropped, and the search returned every item.
@@ -270,7 +270,7 @@ This affects every endpoint that takes a `Query`, among them `/cxs/profiles/sear
 
 ==== Multi-Tenancy Impact
 
-When migrating to 3.1, you need to understand that:
+When migrating to 4.0, you need to understand that:
 
 - All data (profiles, events, segments, rules, schemas) becomes tenant-specific
 - Each tenant operates in complete isolation with their own data space
@@ -310,19 +310,19 @@ accepted again. The "Profile import and export" chapter describes the rule in fu
    - Keep system administrator authentication as fallback for administrative operations
    - Continue using system administrator authentication for tenant administration
 
-4. **Related client contract changes (3.1 hardening)**
+4. **Related client contract changes (4.0 hardening)**
    - Public `/context.json` and `/eventcollector` no longer treat body/query `profileId` as identity — see below
    - Endpoint paths and most payload shapes remain the same; authentication and public profile-binding rules change
 
 ==== Client-facing hardening (profile cookie, passwords, privileged APIs)
 
-In addition to tenant API keys, Unomi 3.1 hardens several contracts that can break older clients and scripts. See also <<_how_profile_tracking_works,How profile tracking works>> and https://issues.apache.org/jira/browse/UNOMI-972[UNOMI-972].
+In addition to tenant API keys, Unomi 4.0 hardens several contracts that can break older clients and scripts. See also <<_how_profile_tracking_works,How profile tracking works>> and https://issues.apache.org/jira/browse/UNOMI-972[UNOMI-972].
 
 **Why cookie-only for public profile identity?** On public context endpoints the profile id is a bearer token. Accepting a client-chosen body/query `profileId` let any public caller try to continue another visitor's context if they obtained that UUID. The cookie is issued by Unomi, sent automatically by the browser, and (with default `HttpOnly`) is not readable from page script — so public clients prove continuity with a server-issued bearer instead of an application-supplied id. Trusted callers may still override with body `profileId` when a backend intentionally selects a profile. Full rationale: <<_how_profile_tracking_works,How profile tracking works>> (section _Why the cookie is safer…_).
 
 [cols="1,2,2", options="header"]
 |===
-|Area |Old common pattern |Required in 3.1
+|Area |Old common pattern |Required in 4.0
 
 |Public profile identity
 |Body/query `profileId` often selected the profile (sometimes ahead of the cookie)
@@ -391,7 +391,7 @@ console (port 8102) is not covered by that check.
 * Windows deployments: confirm the passwords actually took effect after upgrading — the startup check warns but cannot halt `karaf.bat` (see the warning above).
 * Automation that uploaded Groovy actions or managed Router import/export with a tenant private key: switch to system administrator credentials.
 
-==== Benefits of Multi-Tenancy in 3.1
+==== Benefits of Multi-Tenancy in 4.0
 
 - **Data Isolation**: Complete separation ensures tenant data never crosses boundaries
 - **Scalability**: Support for multiple customers/organizations in a single Unomi instance
@@ -408,16 +408,16 @@ Before starting the migration, please ensure that:
 - You are currently running Apache Unomi 3.0 (or a later 3.0.x version)
 - You understand the multi-tenancy impact on your data model
 - You have a plan to update client applications to tenant API keys (or temporary <<_v2_compatibility_mode,single-tenant compatibility mode>> only if coming from 2.x)
-- You have reviewed the <<_client_facing_hardening_3_1,client-facing hardening>> notes (cookie-only public profile binding, HttpOnly default, required passwords, privileged REST roles)
+- You have reviewed the <<_client_facing_hardening_4_0,client-facing hardening>> notes (cookie-only public profile binding, HttpOnly default, required passwords, privileged REST roles)
 - You know how to obtain plaintext API keys after upgrade (regenerate via `/cxs/tenants/{id}/apikeys`; create responses expose masked keys only)
 - Your recurrent import and export `file` endpoints resolve under `{baseDir}/{tenantId}`, or the router's base-directory properties point at the directories already in use (see above)
 
 === Migration Process
 
-Upgrading from 3.0 to 3.1 requires a **data migration** (bundled Groovy scripts) plus client authentication updates. Contributors maintaining those scripts should follow <<_writing_migration_scripts,Writing migration scripts>> (step tracking, idempotency, and common pitfalls).
+Upgrading from 3.0 to 4.0 requires a **data migration** (bundled Groovy scripts) plus client authentication updates. Contributors maintaining those scripts should follow <<_writing_migration_scripts,Writing migration scripts>> (step tracking, idempotency, and common pitfalls).
 
 1. **Shut down your Apache Unomi 3.0 cluster** (migration runs with Unomi stopped; the search engine must remain reachable).
-2. **Install Apache Unomi 3.1** on the node(s) that will run the migration (Karaf shell available).
+2. **Install Apache Unomi 4.0** on the node(s) that will run the migration (Karaf shell available).
 3. **Run the migration** from the Karaf shell:
 +
 [source,bash]
@@ -427,22 +427,22 @@ unomi:migrate 3.0.0
 +
 Pass your actual origin version without qualifier (for example `3.0.0`). Optional second argument skips the confirmation prompt. You can preconfigure `etc/org.apache.unomi.migration.cfg` instead of answering interactive questions; see <<_shell_commands,Shell commands>>.
 +
-Scripts applied for the 3.1 line include (under `tools/shell-commands/.../META-INF/cxs/migration/`):
+Scripts applied for the 4.0 line include (under `tools/shell-commands/.../META-INF/cxs/migration/`):
 +
-* `migrate-3.1.0-00-fixProfileNbOfVisits`
-* `migrate-3.1.0-01-tenantDocumentIds`
-* `migrate-3.1.0-05-fixSystemItemIds`
-* `migrate-3.1.0-10-tenantInitialization` (creates the default tenant used for isolation)
-* `migrate-3.1.0-15-updateLegacyQueryBuilder`
-4. **Update client applications** to the 3.1 authentication model (public key header / tenant private key), or enable <<_v2_compatibility_mode,single-tenant compatibility mode>> only when migrating **from Unomi 2.x**.
-5. **Start your Apache Unomi 3.1 cluster**.
+* `migrate-4.0.0-00-fixProfileNbOfVisits`
+* `migrate-4.0.0-01-tenantDocumentIds`
+* `migrate-4.0.0-05-fixSystemItemIds`
+* `migrate-4.0.0-10-tenantInitialization` (creates the default tenant used for isolation)
+* `migrate-4.0.0-15-updateLegacyQueryBuilder`
+4. **Update client applications** to the 4.0 authentication model (public key header / tenant private key), or enable <<_v2_compatibility_mode,single-tenant compatibility mode>> only when migrating **from Unomi 2.x**.
+5. **Start your Apache Unomi 4.0 cluster**.
 6. **Regenerate and store tenant API keys** (plaintext is returned only from the key-creation endpoint), then **test** applications end to end.
 
 === Transitional authentication options
 
-Unomi 3.1 does **not** provide a separate "3.0 compatibility mode" system property. Use one of the following approaches while migrating clients:
+Unomi 4.0 does **not** provide a separate "3.0 compatibility mode" system property. Use one of the following approaches while migrating clients:
 
-==== Option 1: Update clients to 3.1 authentication (recommended)
+==== Option 1: Update clients to 4.0 authentication (recommended)
 
 Adopt tenant public API keys for public endpoints and tenant private keys or JAAS for administrative work. See <<_multitenancy,Multi-tenancy>> and the authentication examples in this guide.
 
@@ -460,20 +460,20 @@ This mode always uses tenant `default`. There is no property to point it at anot
 
 Environment variable equivalent: `UNOMI_REST_AUTHENTICATION_SINGLETENANTCOMPATIBILITYMODEENABLED=true`
 
-WARNING: single-tenant compatibility mode is intended for migration from 2.x only. It bypasses tenant API key requirements on public endpoints. Disable it once all clients use 3.1 authentication.
+WARNING: single-tenant compatibility mode is intended for migration from 2.x only. It bypasses tenant API key requirements on public endpoints. Disable it once all clients use 4.0 authentication.
 
 === Post Migration
 
-Once the migration has been completed, you will be able to start Apache Unomi 3.1 with full multi-tenancy support.
+Once the migration has been completed, you will be able to start Apache Unomi 4.0 with full multi-tenancy support.
 
 Remember that all data operations now require proper tenant context, either through tenant authentication or system administrator authentication.
 
-The fundamental difference between Unomi 3.0 and 3.1 is the introduction of **comprehensive multi-tenancy support**:
+The fundamental difference between Unomi 3.0 and 4.0 is the introduction of **comprehensive multi-tenancy support**:
 
 - **3.0**: Single-tenant architecture with system administrator authentication for all operations
-- **3.1**: Multi-tenant architecture with complete data isolation and tenant-specific authentication
+- **4.0**: Multi-tenant architecture with complete data isolation and tenant-specific authentication
 - **API Endpoints**: Paths remain the same; authentication and public profile-binding rules change (see client-facing hardening above)
-- **Data Model**: All entities (profiles, events, segments, rules, schemas) become tenant-specific in 3.1
+- **Data Model**: All entities (profiles, events, segments, rules, schemas) become tenant-specific in 4.0
 - **Authentication**: New tenant-based authentication model with system administrator authentication as fallback
 
-The authentication changes in 3.1 are driven by the need to establish tenant context for every operation, ensuring complete data isolation while maintaining backward compatibility for administrative operations.
+The authentication changes in 4.0 are driven by the need to establish tenant context for every operation, ensuring complete data isolation while maintaining backward compatibility for administrative operations.

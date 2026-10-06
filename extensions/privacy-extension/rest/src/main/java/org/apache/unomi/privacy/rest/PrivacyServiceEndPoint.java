@@ -58,7 +58,7 @@ public class PrivacyServiceEndPoint {
      *
      * @return server identity and capability metadata
      * @api.status 200 org.apache.unomi.api.ServerInfo Unomi server info.
-     * @api.example {"serverIdentifier":"unomi","serverVersion":"3.1.0-SNAPSHOT","serverBuildNumber":"1","serverScmBranch":"main","capabilities":{},"eventTypes":[],"logoLines":[]}
+     * @api.example {"serverIdentifier":"unomi","serverVersion":"4.0.0-SNAPSHOT","serverBuildNumber":"1","serverScmBranch":"main","capabilities":{},"eventTypes":[],"logoLines":[]}
      */
     @GET
     @Path("/info")
@@ -71,7 +71,7 @@ public class PrivacyServiceEndPoint {
      *
      * @return list of server info records (Unomi first)
      * @api.status 200 array org.apache.unomi.api.ServerInfo Server info entries (may be a single Unomi entry).
-     * @api.example [{"serverIdentifier":"unomi","serverVersion":"3.1.0-SNAPSHOT","serverBuildNumber":"1","serverScmBranch":"main"}]
+     * @api.example [{"serverIdentifier":"unomi","serverVersion":"4.0.0-SNAPSHOT","serverBuildNumber":"1","serverScmBranch":"main"}]
      */
     @GET
     @Path("/infos")

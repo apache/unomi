@@ -168,7 +168,7 @@ cloud "External search engines" <<external>> {
 @enduml
 ----
 
-===== Current version pins (Unomi 3.1 baseline)
+===== Current version pins (Unomi 4.0 baseline)
 
 [cols="1,1,2", options="header"]
 |===
