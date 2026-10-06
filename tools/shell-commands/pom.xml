@@ -157,31 +157,30 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Mappings needed by the migration before Unomi is started. Kept out of META-INF/cxs/mappings
+                 so the persistence services do not load them as predefined mappings. -->
+            <resource>
+                <directory>../../persistence-elasticsearch/core/src/main/resources/META-INF/cxs/mappings</directory>
+                <targetPath>META-INF/cxs/migration-mappings/elasticsearch</targetPath>
+            </resource>
+            <resource>
+                <directory>../../extensions/geonames/services/src/main/resources/META-INF/cxs/mappings</directory>
+                <targetPath>META-INF/cxs/migration-mappings/elasticsearch</targetPath>
+            </resource>
+            <resource>
+                <directory>../../persistence-opensearch/core/src/main/resources/META-INF/cxs/mappings</directory>
+                <targetPath>META-INF/cxs/migration-mappings/opensearch</targetPath>
+            </resource>
+            <resource>
+                <directory>../../extensions/geonames/services/src/main/resources/META-INF/cxs/mappings</directory>
+                <targetPath>META-INF/cxs/migration-mappings/opensearch</targetPath>
+            </resource>
+        </resources>
         <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-resources-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>copy-persistence-mappings</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>copy-resources</goal>
-                        </goals>
-                        <configuration>
-                            <outputDirectory>${project.build.outputDirectory}/META-INF/cxs/mappings</outputDirectory>
-                            <resources>
-                                <resource>
-                                    <directory>${project.basedir}/../../persistence-elasticsearch/core/src/main/resources/META-INF/cxs/mappings</directory>
-                                </resource>
-                                <resource>
-                                    <directory>${project.basedir}/../../extensions/geonames/services/src/main/resources/META-INF/cxs/mappings</directory>
-                                </resource>
-                            </resources>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>

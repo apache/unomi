@@ -71,7 +71,8 @@ if (Files.exists(secretsDir)) {
 // Create the default tenant index and items
 context.performMigrationStep("4.0.0-create-tenant-index", () -> {
     String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
-    String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "tenant.json")
+    String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "tenant.json",
+            MigrationUtils.getSearchEngine(context.getHttpClient(), esAddress))
     String newIndexSettings = MigrationUtils.buildIndexCreationRequest(baseSettings, mapping, context, false)
 
     if (!MigrationUtils.indexExists(context.getHttpClient(), esAddress, "${indexPrefix}-tenant")) {

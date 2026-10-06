@@ -215,24 +215,57 @@ public class MigrationUtilsTest {
         assertEquals("Resource not found: missing.painless", ex.getMessage());
     }
 
-    @Test
-    public void extractMappingFromBundlesFindsKnownTypeWithoutPersistenceBundle() throws Exception {
-        Path mappingFile = Files.createTempFile("clusterNode", ".json");
-        Files.writeString(mappingFile, "{\"properties\":{\"cpuLoad\":{\"type\":\"double\"}}}");
-        URL mappingUrl = mappingFile.toUri().toURL();
-        when(bundleContext.getBundles()).thenReturn(new Bundle[]{bundle});
-        when(bundle.findEntries("META-INF/cxs/mappings", "clusterNode.json", true))
-                .thenReturn(Collections.enumeration(Collections.singletonList(mappingUrl)));
+    private static final String MAPPING = "{\"properties\":{\"cpuLoad\":{\"type\":\"double\"}}}";
 
-        String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "clusterNode.json");
-        assertEquals("{\"properties\":{\"cpuLoad\":{\"type\":\"double\"}}}", mapping);
-        Files.deleteIfExists(mappingFile);
+    private String extractClusterNodeMappingFrom(String path) throws Exception {
+        return extractClusterNodeMappingFrom(path, "elasticsearch");
+    }
+
+    private String extractClusterNodeMappingFrom(String path, String searchEngine) throws Exception {
+        Path mappingFile = Files.createTempFile("clusterNode", ".json");
+        try {
+            Files.writeString(mappingFile, MAPPING);
+            when(bundleContext.getBundles()).thenReturn(new Bundle[]{bundle});
+            when(bundle.findEntries(path, "clusterNode.json", true))
+                    .thenReturn(Collections.enumeration(Collections.singletonList(mappingFile.toUri().toURL())));
+            return MigrationUtils.extractMappingFromBundles(bundleContext, "clusterNode.json", searchEngine);
+        } finally {
+            Files.deleteIfExists(mappingFile);
+        }
+    }
+
+    @Test
+    public void extractMappingFromBundlesFindsPersistenceMapping() throws Exception {
+        assertEquals(MAPPING, extractClusterNodeMappingFrom("META-INF/cxs/mappings"));
+    }
+
+    @Test
+    public void extractMappingFromBundlesFallsBackToMigrationCopy() throws Exception {
+        assertEquals(MAPPING, extractClusterNodeMappingFrom("META-INF/cxs/migration-mappings/elasticsearch"));
+        assertEquals(MAPPING, extractClusterNodeMappingFrom("META-INF/cxs/migration-mappings/opensearch", "opensearch"));
+    }
+
+    @Test
+    public void extractMappingFromBundlesIgnoresTheOtherEngineCopy() {
+        when(bundleContext.getBundles()).thenReturn(new Bundle[]{bundle});
+        when(bundle.findEntries("META-INF/cxs/migration-mappings/elasticsearch", "event.json", true))
+                .thenReturn(Collections.enumeration(Collections.singletonList(getClass().getResource("/"))));
+
+        assertThrows(RuntimeException.class,
+                () -> MigrationUtils.extractMappingFromBundles(bundleContext, "event.json", "opensearch"));
+    }
+
+    @Test
+    public void searchEngineIsDetectedFromTheRootResponse() {
+        assertEquals("opensearch", MigrationUtils.searchEngineFromRootResponse(
+                "{\"version\":{\"distribution\":\"opensearch\",\"number\":\"3.0.0\"}}"));
+        assertEquals("elasticsearch", MigrationUtils.searchEngineFromRootResponse(
+                "{\"version\":{\"number\":\"9.1.0\"}}"));
     }
 
     @Test
     public void extractMappingFromBundlesThrowsWhenMissing() {
         when(bundleContext.getBundles()).thenReturn(new Bundle[]{bundle});
-        when(bundle.findEntries("META-INF/cxs/mappings", "generic.json", true)).thenReturn(null);
 
         RuntimeException ex = assertThrows(RuntimeException.class,
                 () -> MigrationUtils.extractMappingFromBundles(bundleContext, "generic.json"));
@@ -240,40 +273,33 @@ public class MigrationUtilsTest {
     }
 
     @Test
-    public void mappingsFromIndexResponseReadsFirstIndex() {
+    public void mappingsFromIndexResponseReadsTheIndexMappings() {
         String body = "{\"context-sfdcconfiguration\":{\"mappings\":{\"properties\":{\"itemId\":{\"type\":\"keyword\"}}}}}";
-        String mappings = MigrationUtils.mappingsFromIndexResponse(body);
-        assertEquals("{\"properties\":{\"itemId\":{\"type\":\"keyword\"}}}", mappings);
+        assertEquals("{\"properties\":{\"itemId\":{\"type\":\"keyword\"}}}", MigrationUtils.mappingsFromIndexResponse(body));
     }
 
     @Test
-    public void mappingsFromIndexResponseRejectsEmptyBody() {
+    public void mappingsFromIndexResponseRejectsAnythingButOneIndex() {
         assertThrows(IllegalArgumentException.class, () -> MigrationUtils.mappingsFromIndexResponse(""));
         assertThrows(IllegalArgumentException.class, () -> MigrationUtils.mappingsFromIndexResponse("{}"));
+        assertThrows(IllegalArgumentException.class,
+                () -> MigrationUtils.mappingsFromIndexResponse("{\"a\":{\"mappings\":{}},\"b\":{\"mappings\":{}}}"));
     }
 
     @Test
-    public void resolveItemTypeMatchesClusterNodeIgnoringCase() {
-        Collection<String> types = Arrays.asList("profile", "event", "clusterNode", "generic");
+    public void resolveItemTypeMatchesKnownTypesIgnoringCaseAndRolloverNumber() {
+        Collection<String> types = Arrays.asList("profile", "profileAlias", "event", "clusterNode");
         assertEquals("clusterNode", MigrationUtils.resolveItemType("context-clusternode", "context", types));
-        assertEquals("clusterNode", MigrationUtils.resolveItemType("context-clusterNode", "context", types));
-    }
-
-    @Test
-    public void resolveItemTypeMatchesRolloverEvent() {
-        Collection<String> types = Arrays.asList("event", "session", "generic");
+        assertEquals("profileAlias", MigrationUtils.resolveItemType("context-profilealias", "context", types));
         assertEquals("event", MigrationUtils.resolveItemType("context-event-000001", "context", types));
     }
 
     @Test
-    public void resolveItemTypeKeepsUnknownIndexSuffix() {
-        Collection<String> types = Arrays.asList("profile", "event", "generic");
+    public void resolveItemTypeDoesNotMatchOnKnownTypePrefix() {
+        Collection<String> types = Arrays.asList("profile", "event");
+        assertEquals("profilealias", MigrationUtils.resolveItemType("context-profilealias", "context", types));
+        assertEquals("eventfoo", MigrationUtils.resolveItemType("context-eventfoo-000001", "context", types));
         assertEquals("sfdcconfiguration", MigrationUtils.resolveItemType("context-sfdcconfiguration", "context", types));
+        assertEquals("generic", MigrationUtils.resolveItemType("other-profile", "context", types));
     }
-
-    @Test
-    public void resolveItemTypePrefersLongerKnownType() {
-        Collection<String> types = Arrays.asList("profile", "profileAlias");
-        assertEquals("profileAlias", MigrationUtils.resolveItemType("context-profilealias", "context", types));
-    }
-} 
+}

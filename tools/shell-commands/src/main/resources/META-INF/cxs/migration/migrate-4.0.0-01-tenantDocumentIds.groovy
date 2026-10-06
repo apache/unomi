@@ -67,15 +67,22 @@ def indexConfigs = [
                 mapping: "personaSession.json",
                 useRollover: false
         ],
+        "profileAlias": [
+                baseSettings: "requestBody/2.0.0/base_index_mapping.json",
+                mapping: "profileAlias.json",
+                useRollover: false
+        ],
         "clusterNode": [
                 baseSettings: "requestBody/2.0.0/base_index_mapping.json",
                 mapping: "clusterNode.json",
-                useRollover: false
+                useRollover: false,
+                forceDefaultTenant: true
         ],
         "generic": [
                 baseSettings: "requestBody/2.0.0/base_index_mapping.json",
                 mapping: null, // Copy the mapping currently stored on the index
-                useRollover: false
+                useRollover: false,
+                forceDefaultTenant: true
         ]
 ]
 
@@ -113,6 +120,9 @@ context.performMigrationStep("4.0.0-get-all-indices", () -> {
     // Get the Painless script
     String updateScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/4.0.0/initialize_tenant_and_audit_fields.painless")
 
+    String searchEngine = MigrationUtils.getSearchEngine(context.getHttpClient(), esAddress)
+    context.printMessage("Search engine: " + searchEngine)
+
     // Process each index (reindex them)
     allIndices.each { indexName ->
         context.printMessage("Processing index: " + indexName)
@@ -125,13 +135,16 @@ context.performMigrationStep("4.0.0-get-all-indices", () -> {
         Map<String, Object> params = new HashMap<>(baseParams)
         params.put("itemType", itemType)
         // Cluster nodes and unknown indices keep site data in the configured tenant, never "system"
-        boolean forceDefaultTenant = (itemType == "clusterNode" || indexConfig.mapping == null)
+        boolean forceDefaultTenant = indexConfig.forceDefaultTenant == true
         params.put("forceDefaultTenant", forceDefaultTenant)
 
         // Get base settings and mapping
         String baseSettings = MigrationUtils.resourceAsString(bundleContext, indexConfig.baseSettings)
-        String mappingFile = indexConfig.mapping ?: "${itemType}.json"
-        String mapping = MigrationUtils.resolveIndexMapping(bundleContext, context.getHttpClient(), esAddress, indexName, mappingFile)
+        // A known type must find its bundled 4.0 mapping; only unknown types copy the mapping stored on the index
+        String mapping = indexConfig.mapping ?
+                MigrationUtils.extractMappingFromBundles(bundleContext, indexConfig.mapping, searchEngine) :
+                MigrationUtils.extractMappingFromIndex(context.getHttpClient(), esAddress, indexName)
+        context.printMessage("Item type: ${itemType}, mapping: ${indexConfig.mapping ?: 'copied from the index'}, default tenant only: ${forceDefaultTenant}")
 
         // Build index settings
         String newIndexSettings
