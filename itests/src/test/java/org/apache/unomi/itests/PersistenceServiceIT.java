@@ -16,8 +16,10 @@
  */
 package org.apache.unomi.itests;
 
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.tenants.Tenant;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -27,13 +29,14 @@ import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
 /**
- * Integration tests for {@link org.apache.unomi.persistence.spi.PersistenceService} query APIs against the live
- * search backend (Elasticsearch or OpenSearch). Initial coverage focuses on {@code rangeQuery}; additional methods
- * should be covered in follow-up work (UNOMI-956).
+ * Integration tests for {@link org.apache.unomi.persistence.spi.PersistenceService} against the live
+ * search backend (Elasticsearch or OpenSearch).
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
@@ -42,14 +45,19 @@ public class PersistenceServiceIT extends BaseIT {
     private static final String AGE_PROPERTY = "properties.age";
 
     private final List<String> profileIds = new ArrayList<>();
+    private final List<String> eventIds = new ArrayList<>();
 
     @After
     public void tearDown() throws InterruptedException {
+        for (String eventId : eventIds) {
+            persistenceService.remove(eventId, Event.class);
+        }
+        eventIds.clear();
         for (String profileId : profileIds) {
             persistenceService.remove(profileId, Profile.class);
         }
         profileIds.clear();
-        refreshPersistence(Profile.class);
+        refreshPersistence(Event.class, Profile.class);
     }
 
     @Test
@@ -103,6 +111,75 @@ public class PersistenceServiceIT extends BaseIT {
         Assert.assertEquals(1, lastPage.getList().size());
         Assert.assertEquals(5, lastPage.getTotalSize());
         Assert.assertEquals(5, lastPage.getList().get(0).getProperty("age"));
+    }
+
+    @Test
+    public void testPurgeByScopeKeepsOtherScopesAndProfiles() throws InterruptedException {
+        String suffix = UUID.randomUUID().toString();
+        String dropScope = "purge-drop-" + suffix;
+        String keepScope = "purge-keep-" + suffix;
+        Profile profile = saveProfile("purge-profile-" + suffix);
+        Event dropEvent = saveViewEvent("purge-drop-event-" + suffix, profile, dropScope);
+        Event keepEvent = saveViewEvent("purge-keep-event-" + suffix, profile, keepScope);
+        refreshPersistence(Event.class, Profile.class);
+
+        persistenceService.purge(dropScope);
+        refreshPersistence(Event.class, Profile.class);
+
+        Assert.assertNull("Events of the purged scope should be gone", persistenceService.load(dropEvent.getItemId(), Event.class));
+        Assert.assertNotNull("Events of another scope should stay", persistenceService.load(keepEvent.getItemId(), Event.class));
+        Assert.assertNotNull("Profiles have no scope and must stay", persistenceService.load(profile.getItemId(), Profile.class));
+    }
+
+    @Test
+    public void testPurgeByScopeDoesNotRemoveAnotherTenantsEvents() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        String scope = "purge-shared-scope-" + suffix;
+        Tenant otherTenant = tenantService.createTenant("purge-other-" + suffix.substring(0, 8), Collections.emptyMap());
+        Event localEvent = saveViewEvent("purge-local-event-" + suffix, saveProfile("purge-local-profile-" + suffix), scope);
+        Event otherEvent = executionContextManager.executeAsTenant(otherTenant.getItemId(), () -> {
+            Profile otherProfile = saveProfile("purge-other-profile-" + suffix);
+            return saveViewEvent("purge-other-event-" + suffix, otherProfile, scope);
+        });
+        refreshPersistence(Event.class, Profile.class);
+
+        try {
+            persistenceService.purge(scope);
+            refreshPersistence(Event.class, Profile.class);
+
+            Assert.assertNull("Current tenant events in the scope should be gone",
+                    persistenceService.load(localEvent.getItemId(), Event.class));
+            executionContextManager.executeAsTenant(otherTenant.getItemId(), () -> {
+                Assert.assertNotNull("Other tenant events in a scope with the same name should stay",
+                        persistenceService.load(otherEvent.getItemId(), Event.class));
+            });
+        } finally {
+            tenantService.deleteTenant(otherTenant.getItemId());
+        }
+    }
+
+    @Test
+    public void testPurgeByScopeRejectsBlankScope() {
+        try {
+            persistenceService.purge(" ");
+            Assert.fail("A blank scope should be refused");
+        } catch (IllegalArgumentException expected) {
+            Assert.assertTrue(expected.getMessage().contains("required"));
+        }
+    }
+
+    private Profile saveProfile(String itemId) {
+        Profile profile = new Profile(itemId);
+        persistenceService.save(profile);
+        profileIds.add(itemId);
+        return profile;
+    }
+
+    private Event saveViewEvent(String itemId, Profile profile, String scope) {
+        Event event = new Event(itemId, "view", null, profile, scope, null, null, new Date());
+        persistenceService.save(event);
+        eventIds.add(itemId);
+        return event;
     }
 
     private void saveProfileWithAge(String idSuffix, int age) {

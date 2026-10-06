@@ -3944,8 +3944,15 @@ public class InMemoryPersistenceServiceImplTest {
             assertNull(persistenceService.load("purge-null-test", TestMetadataItem.class),
                 "purge(null) should purge all items (used for test isolation reset)");
 
-            // Test purge with null scope — also a no-op
             assertDoesNotThrow(() -> persistenceService.purge((String) null));
+
+            TestMetadataItem keepOnBlank = new TestMetadataItem();
+            keepOnBlank.setItemId("purge-blank-scope");
+            keepOnBlank.setScope("scope1");
+            persistenceService.save(keepOnBlank);
+            persistenceService.purge(" ");
+            assertNotNull(persistenceService.load("purge-blank-scope", TestMetadataItem.class),
+                    "A blank scope must not delete items");
 
             // Test refresh index with null class
             assertDoesNotThrow(() -> persistenceService.refreshIndex(null, null));

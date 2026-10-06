@@ -2726,12 +2726,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override public void purge(final String scope) {
+        Query query = buildScopePurgeQuery(scope, validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_PURGE));
         LOGGER.debug("Purge scope {}", scope);
-        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_PURGE);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext,
                 this.fatalIllegalStateErrors, throwExceptions) {
             @Override protected Void execute(Object... args) throws IOException {
-                Query query = TermQuery.of(builder -> builder.field("scope").value(scope).field("tenantId").value(ConditionContextHelper.foldToASCII(finalTenantId)))._toQuery();
 
                 List<BulkOperation> operations = new ArrayList<>();
 
@@ -2775,6 +2774,23 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return null;
             }
         }.catchingExecuteInClassLoader(true);
+    }
+
+    /**
+     * Builds the search used by {@link #purge(String)}.
+     * A {@code TermQuery} has a single field, so both filters must be bool must clauses.
+     */
+    static Query buildScopePurgeQuery(String scope, String tenantId) {
+        if (scope == null || scope.isBlank()) {
+            throw new IllegalArgumentException("A scope is required to purge by scope");
+        }
+        if (tenantId == null || tenantId.isBlank()) {
+            throw new IllegalArgumentException("A tenant is required to purge by scope");
+        }
+        return Query.of(q -> q.bool(b -> b
+                .must(m -> m.term(t -> t.field("scope").value(scope)))
+                .must(m -> m.term(t -> t.field("tenantId")
+                        .value(ConditionContextHelper.foldToASCII(tenantId))))));
     }
 
     @Override public Map<String, Double> getSingleValuesMetrics(final Condition condition, final String[] metrics, final String field,

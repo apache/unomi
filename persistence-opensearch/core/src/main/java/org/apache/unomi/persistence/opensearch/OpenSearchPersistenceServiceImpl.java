@@ -2666,6 +2666,9 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public void purge(final String scope) {
+        if (scope == null || scope.isBlank()) {
+            throw new IllegalArgumentException("A scope is required to purge by scope");
+        }
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_PURGE);
 
         LOGGER.debug("Purge scope {}", scope);
