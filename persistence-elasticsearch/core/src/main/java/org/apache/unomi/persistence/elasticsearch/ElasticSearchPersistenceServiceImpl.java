@@ -2726,13 +2726,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override public void purge(final String scope) {
-        LOGGER.debug("Purge scope {}", scope);
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_PURGE);
+        Query query = buildScopePurgeQuery(scope, finalTenantId);
+        LOGGER.debug("Purge scope {}", scope);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext,
                 this.fatalIllegalStateErrors, throwExceptions) {
             @Override protected Void execute(Object... args) throws IOException {
-                Query query = TermQuery.of(builder -> builder.field("scope").value(scope).field("tenantId").value(ConditionContextHelper.foldToASCII(finalTenantId)))._toQuery();
-
                 List<BulkOperation> operations = new ArrayList<>();
 
                 Time keepAlive = Time.of(t -> t.time("1h"));
@@ -2745,7 +2744,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 String scrollId = searchResponse.scrollId();
                 // Scroll until no more hits are returned
                 while (!hits.isEmpty()) {
-                    for (Hit<JsonData> hit : searchResponse.hits().hits()) {
+                    for (Hit<JsonData> hit : hits) {
                         // add hit to bulk delete
                         operations.add(BulkOperation.of(builder -> builder.delete(d -> d.index(hit.index()).id(hit.id()))));
                     }
@@ -2775,6 +2774,25 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return null;
             }
         }.catchingExecuteInClassLoader(true);
+    }
+
+    /**
+     * Builds the search used by {@link #purge(String)}.
+     * A {@code TermQuery} has a single field, so both filters must be bool must clauses.
+     * Both values are folded, as the fields are indexed with the folding analyzer.
+     * Keep in step with the OpenSearch implementation.
+     */
+    static Query buildScopePurgeQuery(String scope, String tenantId) {
+        if (scope == null || scope.isBlank()) {
+            throw new IllegalArgumentException("A scope is required to purge by scope");
+        }
+        if (tenantId == null || tenantId.isBlank()) {
+            throw new IllegalArgumentException("A tenant is required to purge by scope");
+        }
+        return Query.of(q -> q.bool(b -> b
+                .must(m -> m.term(t -> t.field("scope").value(ConditionContextHelper.foldToASCII(scope))))
+                .must(m -> m.term(t -> t.field("tenantId")
+                        .value(ConditionContextHelper.foldToASCII(tenantId))))));
     }
 
     @Override public Map<String, Double> getSingleValuesMetrics(final Condition condition, final String[] metrics, final String field,
