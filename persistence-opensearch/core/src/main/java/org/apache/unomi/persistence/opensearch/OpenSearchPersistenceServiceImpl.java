@@ -2666,10 +2666,8 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public void purge(final String scope) {
-        if (scope == null || scope.isBlank()) {
-            throw new IllegalArgumentException("A scope is required to purge by scope");
-        }
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_PURGE);
+        Query query = buildScopePurgeQuery(scope, finalTenantId);
 
         LOGGER.debug("Purge scope {}", scope);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
@@ -2677,22 +2675,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             protected Void execute(Object... args) throws IOException {
 
                 SearchResponse<Item> response = client.search(s -> s
-                        .query(q -> q
-                                .bool(b -> b
-                                        .must(m -> m
-                                .term(t -> t
-                                        .field("scope")
-                                                        .value(v -> v.stringValue(scope))
-                                                )
-                                        )
-                                        .must(m -> m
-                                                .term(t -> t
-                                                        .field("tenantId")
-                                                        .value(v -> v.stringValue(ConditionContextHelper.foldToASCII(finalTenantId)))
-                                                )
-                                        )
-                                )
-                        )
+                        .query(query)
                         .size(100)
                         .scroll(scr -> scr
                                 .time("1h")
@@ -2731,6 +2714,25 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 return null;
             }
         }.catchingExecuteInClassLoader(true);
+    }
+
+    /**
+     * Builds the search used by {@link #purge(String)}.
+     * Both values are folded, as the fields are indexed with the folding analyzer.
+     * Keep in step with the Elasticsearch implementation.
+     */
+    static Query buildScopePurgeQuery(String scope, String tenantId) {
+        if (scope == null || scope.isBlank()) {
+            throw new IllegalArgumentException("A scope is required to purge by scope");
+        }
+        if (tenantId == null || tenantId.isBlank()) {
+            throw new IllegalArgumentException("A tenant is required to purge by scope");
+        }
+        return Query.of(q -> q.bool(b -> b
+                .must(m -> m.term(t -> t.field("scope")
+                        .value(v -> v.stringValue(ConditionContextHelper.foldToASCII(scope)))))
+                .must(m -> m.term(t -> t.field("tenantId")
+                        .value(v -> v.stringValue(ConditionContextHelper.foldToASCII(tenantId)))))));
     }
 
     @Override

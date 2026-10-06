@@ -135,15 +135,19 @@ public class PersistenceServiceIT extends BaseIT {
     public void testPurgeByScopeDoesNotRemoveAnotherTenantsEvents() throws Exception {
         String suffix = UUID.randomUUID().toString();
         String scope = "purge-shared-scope-" + suffix;
+        // Items of the other tenant are not tracked for tearDown, which runs as the current tenant and would not find them
+        String otherProfileId = "purge-other-profile-" + suffix;
+        String otherEventId = "purge-other-event-" + suffix;
         Tenant otherTenant = tenantService.createTenant("purge-other-" + suffix.substring(0, 8), Collections.emptyMap());
-        Event localEvent = saveViewEvent("purge-local-event-" + suffix, saveProfile("purge-local-profile-" + suffix), scope);
-        Event otherEvent = executionContextManager.executeAsTenant(otherTenant.getItemId(), () -> {
-            Profile otherProfile = saveProfile("purge-other-profile-" + suffix);
-            return saveViewEvent("purge-other-event-" + suffix, otherProfile, scope);
-        });
-        refreshPersistence(Event.class, Profile.class);
-
         try {
+            Event localEvent = saveViewEvent("purge-local-event-" + suffix, saveProfile("purge-local-profile-" + suffix), scope);
+            executionContextManager.executeAsTenant(otherTenant.getItemId(), () -> {
+                Profile otherProfile = new Profile(otherProfileId);
+                persistenceService.save(otherProfile);
+                persistenceService.save(new Event(otherEventId, "view", null, otherProfile, scope, null, null, new Date()));
+            });
+            refreshPersistence(Event.class, Profile.class);
+
             persistenceService.purge(scope);
             refreshPersistence(Event.class, Profile.class);
 
@@ -151,11 +155,52 @@ public class PersistenceServiceIT extends BaseIT {
                     persistenceService.load(localEvent.getItemId(), Event.class));
             executionContextManager.executeAsTenant(otherTenant.getItemId(), () -> {
                 Assert.assertNotNull("Other tenant events in a scope with the same name should stay",
-                        persistenceService.load(otherEvent.getItemId(), Event.class));
+                        persistenceService.load(otherEventId, Event.class));
             });
         } finally {
-            tenantService.deleteTenant(otherTenant.getItemId());
+            try {
+                executionContextManager.executeAsTenant(otherTenant.getItemId(), () -> {
+                    persistenceService.remove(otherEventId, Event.class);
+                    persistenceService.remove(otherProfileId, Profile.class);
+                });
+            } finally {
+                tenantService.deleteTenant(otherTenant.getItemId());
+            }
         }
+    }
+
+    @Test
+    public void testPurgeByScopeRemovesMoreThanOnePageOfItems() throws InterruptedException {
+        String suffix = UUID.randomUUID().toString();
+        String scope = "purge-many-" + suffix;
+        Profile profile = saveProfile("purge-many-profile-" + suffix);
+        // purge reads matching items 100 at a time
+        int eventCount = 250;
+        for (int i = 0; i < eventCount; i++) {
+            saveViewEvent("purge-many-event-" + i + "-" + suffix, profile, scope);
+        }
+        refreshPersistence(Event.class, Profile.class);
+
+        persistenceService.purge(scope);
+        refreshPersistence(Event.class, Profile.class);
+
+        for (int i = 0; i < eventCount; i++) {
+            Assert.assertNull("Event " + i + " of the purged scope should be gone",
+                    persistenceService.load("purge-many-event-" + i + "-" + suffix, Event.class));
+        }
+    }
+
+    @Test
+    public void testPurgeByScopeMatchesMixedCaseAndAccentedScope() throws InterruptedException {
+        String suffix = UUID.randomUUID().toString();
+        String scope = "Purge-Mixed-Scopé-" + suffix;
+        Event event = saveViewEvent("purge-mixed-event-" + suffix, saveProfile("purge-mixed-profile-" + suffix), scope);
+        refreshPersistence(Event.class, Profile.class);
+
+        persistenceService.purge(scope);
+        refreshPersistence(Event.class, Profile.class);
+
+        Assert.assertNull("Events of the purged scope should be gone", persistenceService.load(event.getItemId(), Event.class));
     }
 
     @Test

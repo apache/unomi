@@ -57,7 +57,16 @@ public class ElasticSearchScopePurgeQueryTest {
     }
 
     @Test
-    public void buildScopePurgeQueryRejectsBlankScope() {
+    public void buildScopePurgeQueryFoldsScopeAndTenant() throws Exception {
+        Query query = ElasticSearchPersistenceServiceImpl.buildScopePurgeQuery("Drop_Scopé", "Tenant_A");
+        JsonNode must = OBJECT_MAPPER.readTree(toJson(query)).path("bool").path("must");
+
+        assertEquals("drop_scope", termValue(must, "scope"));
+        assertEquals("tenant_a", termValue(must, "tenantId"));
+    }
+
+    @Test
+    public void buildScopePurgeQueryRejectsBlankScopeOrTenant() {
         assertIllegalArgument(() -> ElasticSearchPersistenceServiceImpl.buildScopePurgeQuery("  ", "tenant_a"));
         assertIllegalArgument(() -> ElasticSearchPersistenceServiceImpl.buildScopePurgeQuery(null, "tenant_a"));
         assertIllegalArgument(() -> ElasticSearchPersistenceServiceImpl.buildScopePurgeQuery("drop_scope", " "));
