@@ -16,13 +16,15 @@
  */
 package org.apache.unomi.itests.migration;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.unomi.itests.BaseIT;
 import org.apache.unomi.itests.persistence.SearchBackendIT;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.apache.unomi.shell.migration.utils.MigrationUtils;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -93,7 +95,7 @@ public class Migrate40IndexMappingIT extends BaseIT {
                     migrationBundles, httpClient, es, UNKNOWN_INDEX, "does-not-exist.json");
             Assert.assertTrue("copied mapping should keep itemType", mapping.contains("itemType"));
 
-            Assert.assertEquals("sfdcconfiguration",
+            Assert.assertEquals("unomi996unknown",
                     MigrationUtils.resolveItemType(UNKNOWN_INDEX, "context",
                             Arrays.asList("profile", "event", "clusterNode", "generic")));
 
@@ -103,40 +105,40 @@ public class Migrate40IndexMappingIT extends BaseIT {
 
             String painless = MigrationUtils.getFileWithoutComments(
                     migrationBundles, "requestBody/4.0.0/initialize_tenant_and_audit_fields.painless");
-            JSONObject paramsObj = new JSONObject();
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode paramsObj = mapper.createObjectNode();
             paramsObj.put("tenantId", TEST_TENANT_ID);
             paramsObj.put("systemTenantId", "system");
             paramsObj.put("forceDefaultTenant", true);
             paramsObj.put("itemType", "generic");
             paramsObj.put("date", "2026-01-01T00:00:00Z");
-            paramsObj.put("systemItems", new JSONArray());
+            paramsObj.set("systemItems", mapper.createArrayNode());
 
-            JSONObject scriptObj = new JSONObject();
+            ObjectNode scriptObj = mapper.createObjectNode();
             scriptObj.put("source", painless);
             scriptObj.put("lang", "painless");
-            scriptObj.put("params", paramsObj);
+            scriptObj.set("params", paramsObj);
 
-            JSONObject reindex = new JSONObject();
-            reindex.put("source", new JSONObject().put("index", UNKNOWN_INDEX));
-            reindex.put("dest", new JSONObject().put("index", DEST_INDEX));
-            reindex.put("script", scriptObj);
+            ObjectNode reindex = mapper.createObjectNode();
+            reindex.set("source", mapper.createObjectNode().put("index", UNKNOWN_INDEX));
+            reindex.set("dest", mapper.createObjectNode().put("index", DEST_INDEX));
+            reindex.set("script", scriptObj);
             HttpUtils.executePostRequest(httpClient, es + "/_reindex?refresh=true&wait_for_completion=true",
-                    reindex.toString(), null);
+                    mapper.writeValueAsString(reindex), null);
 
             String search = HttpUtils.executeGetRequest(httpClient,
                     es + "/" + DEST_INDEX + "/_search?size=10", null);
-            JSONArray hits = new JSONObject(search).getJSONObject("hits").getJSONArray("hits");
-            Assert.assertEquals(2, hits.length());
-            for (int i = 0; i < hits.length(); i++) {
-                JSONObject hit = hits.getJSONObject(i);
-                String id = hit.getString("_id");
-                JSONObject source = hit.getJSONObject("_source");
+            ArrayNode hits = (ArrayNode) mapper.readTree(search).path("hits").path("hits");
+            Assert.assertEquals(2, hits.size());
+            for (JsonNode hit : hits) {
+                String id = hit.path("_id").asText();
+                JsonNode source = hit.path("_source");
                 Assert.assertTrue("document id should use the configured tenant: " + id,
                         id.startsWith(TEST_TENANT_ID + "_"));
                 Assert.assertFalse("unknown index documents must not use the system tenant: " + id,
                         id.startsWith("system_"));
-                Assert.assertEquals(TEST_TENANT_ID, source.getString("tenantId"));
-                Assert.assertNotEquals("system", source.getString("tenantId"));
+                Assert.assertEquals(TEST_TENANT_ID, source.path("tenantId").asText());
+                Assert.assertNotEquals("system", source.path("tenantId").asText());
             }
         }
     }
