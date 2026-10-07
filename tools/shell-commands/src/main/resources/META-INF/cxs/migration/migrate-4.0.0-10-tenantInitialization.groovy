@@ -107,10 +107,10 @@ ${sep}
 Generated : ${isoDate}
 Tenant ID : ${tenantId}
 
-PUBLIC KEY  (X-Unomi-Public-Key header -- context.json / event collector):
+PUBLIC KEY  (X-Unomi-Api-Key header -- context.json / event collector):
   ${generatedPublicKey}
 
-PRIVATE KEY (X-Unomi-Key header -- protected / admin endpoints):
+PRIVATE KEY  (HTTP Basic authentication as tenantId:privateKey -- protected / admin endpoints):
   ${generatedPrivateKey}
 
 IMPORTANT: These keys cannot be recovered after this file is deleted.
