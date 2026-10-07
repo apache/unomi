@@ -932,22 +932,25 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         Class<T> itemClass = (Class<T>) item.getClass();
         T existingItem = persistenceService.load(itemId, itemClass);
 
-        boolean itemExists = false;
-        if (existingItem != null) {
-            // Item exists in persistence, check if it has audit metadata
-            itemExists = existingItem.getCreatedBy() != null && existingItem.getCreationDate() != null;
-        } else {
-            // Item doesn't exist in persistence, check if current item has audit metadata (might be a reload from cache)
-            itemExists = item.getCreatedBy() != null && item.getCreationDate() != null;
+        // Bundle JSON definitions have no creator, and Item() defaults their creation date and
+        // version to "now" and 0. If persistence already has create audit (e.g. from migration),
+        // carry it over to the incoming item so the save below does not overwrite it (UNOMI-997).
+        if (existingItem != null && item.getCreatedBy() == null
+                && existingItem.getCreatedBy() != null && existingItem.getCreationDate() != null) {
+            item.setCreatedBy(existingItem.getCreatedBy());
+            item.setCreationDate(existingItem.getCreationDate());
+            if (existingItem.getVersion() != null) {
+                item.setVersion(existingItem.getVersion());
+            }
         }
+
+        boolean hasCreateAudit = item.getCreatedBy() != null && item.getCreationDate() != null;
 
         // Set audit metadata for bundle-deployed items
         if (auditService != null) {
-            if (itemExists) {
-                // Item exists, this is an update
+            if (hasCreateAudit) {
                 auditService.auditUpdate(item, "system-bundle");
             } else {
-                // New item, this is a create
                 auditService.auditCreate(item, "system-bundle");
             }
         }

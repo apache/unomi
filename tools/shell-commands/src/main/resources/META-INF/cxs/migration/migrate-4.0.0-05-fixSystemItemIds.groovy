@@ -1,7 +1,6 @@
 import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.MigrationUtils
 import org.apache.unomi.shell.migration.utils.HttpUtils
-import org.json.JSONObject
 import static org.apache.unomi.shell.migration.service.MigrationConfig.*
 
 /*
@@ -25,7 +24,7 @@ MigrationContext context = migrationContext
 String esAddress = context.getConfigString(CONFIG_ES_ADDRESS)
 String indexPrefix = context.getConfigString(INDEX_PREFIX)
 
-// Get all system item types
+// Get all system item types (keep the casing returned by the index for keyword queries)
 Set<String> systemItems = MigrationUtils.getAllItemTypes(context.getHttpClient(), esAddress, indexPrefix, "systemitems", bundleContext)
 context.printMessage("Found " + systemItems.size() + " system item types")
 
@@ -38,48 +37,39 @@ context.printMessage("Found " + systemItems.size() + " system item types")
 // incorrectly processed the baseId, we need to fix the itemId in the source to match the document ID.
 context.performMigrationStep("4.0.0-fix-system-item-ids", () -> {
     String systemItemsIndex = "${indexPrefix}-systemitems"
-    
+
     if (MigrationUtils.indexExists(context.getHttpClient(), esAddress, systemItemsIndex)) {
         context.printMessage("Fixing itemIds in systemitems index that end with itemType suffix")
-        
-        // Process each system item type
+
+        long totalUpdated = 0L
+        List<String> failedItemTypes = []
+
+        // Process each system item type. The query matches camelCase values such as
+        // conditionType / actionType / propertyType (UNOMI-997).
         systemItems.each { itemType ->
             context.printMessage("Fixing items of type: ${itemType}")
-            
-            // Get the Painless script from file
+
             String fixScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/4.0.0/fix_system_item_ids.painless")
-            
-            // Build the update request using JSONObject to properly escape the script
-            // This is the same approach used in MigrationUtils.getScriptPart() and other migrations
-            JSONObject scriptObj = new JSONObject()
-            scriptObj.put("source", fixScript)
-            scriptObj.put("lang", "painless")
-            
-            JSONObject queryObj = new JSONObject()
-            JSONObject termObj = new JSONObject()
-            termObj.put("itemType", itemType)
-            queryObj.put("term", termObj)
-            
-            JSONObject updateRequestObj = new JSONObject()
-            updateRequestObj.put("script", scriptObj)
-            updateRequestObj.put("query", queryObj)
-            
-            String updateRequest = updateRequestObj.toString()
-            
+
+            String updateRequest = MigrationUtils.buildItemTypeUpdateRequest(fixScript, itemType)
+
             try {
-                MigrationUtils.updateByQuery(context.getHttpClient(), esAddress, systemItemsIndex, updateRequest)
-                context.printMessage("Fixed itemIds for item type: ${itemType}")
+                long updated = MigrationUtils.updateByQueryAndCount(context.getHttpClient(), esAddress, systemItemsIndex, updateRequest)
+                totalUpdated += updated
+                context.printMessage("Fixed ${updated} itemId(s) for item type: ${itemType}")
             } catch (Exception e) {
                 context.printMessage("Warning: Could not fix itemIds for item type ${itemType}: ${e.getMessage()}")
-                // Continue with other item types even if one fails
+                failedItemTypes.add(itemType)
             }
         }
-        
-        // Refresh the index to make changes visible
+
         HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/${systemItemsIndex}/_refresh", null, null)
-        context.printMessage("Fixed itemIds in systemitems index")
+        context.printMessage("Fixed ${totalUpdated} itemId(s) in systemitems index")
+        // Fail the step so it is retried on the next run instead of being recorded as completed
+        if (!failedItemTypes.isEmpty()) {
+            throw new IllegalStateException("Could not fix itemIds for item types: " + failedItemTypes)
+        }
     } else {
         context.printMessage("Systemitems index does not exist, skipping itemId fix")
     }
 })
-

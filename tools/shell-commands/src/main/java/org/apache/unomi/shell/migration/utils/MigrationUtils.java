@@ -365,6 +365,66 @@ public class MigrationUtils {
         return name;
     }
 
+    /**
+     * Loads the definitions Unomi ships and reloads at startup, as lower-case item ids grouped by
+     * lower-case item type (for example {@code conditiontype -> booleancondition}).
+     * The migrate command bundle ships a snapshot of that list so it is available before plugins start.
+     * <p>
+     * Matching is by type and id only: a 3.0 item that shares both with a shipped definition (such as a
+     * built-in rule edited in place) is migrated to the system tenant and replaced by the 4.0 version
+     * at the next startup.
+     *
+     * @throws IllegalStateException if the list is empty or an entry is not {@code itemType:itemId}
+     */
+    public static Map<String, Set<String>> loadShippedDefinitionIds(BundleContext bundleContext) {
+        String resource = "requestBody/4.0.0/shipped_system_definitions.json";
+        JSONArray array = new JSONArray(resourceAsString(bundleContext, resource));
+        Map<String, Set<String>> idsByType = new TreeMap<>();
+        for (int i = 0; i < array.length(); i++) {
+            String key = String.valueOf(array.get(i)).toLowerCase(Locale.ROOT);
+            int separator = key.indexOf(':');
+            if (separator <= 0 || separator == key.length() - 1) {
+                throw new IllegalStateException("Invalid entry in " + resource + ": " + key);
+            }
+            idsByType.computeIfAbsent(key.substring(0, separator), type -> new TreeSet<>()).add(key.substring(separator + 1));
+        }
+        if (idsByType.isEmpty()) {
+            throw new IllegalStateException(resource + " is empty: shipped definitions would be migrated to the wrong tenant");
+        }
+        return idsByType;
+    }
+
+    /**
+     * Builds an update by query request running a Painless script on the documents of an item type.
+     * The item type is matched on both the keyword sub-field and the folded text field, so camelCase
+     * values such as {@code conditionType} are not missed.
+     */
+    public static String buildItemTypeUpdateRequest(String painlessScript, String itemType) {
+        JSONArray should = new JSONArray()
+                .put(new JSONObject().put("term", new JSONObject().put("itemType.keyword", itemType)))
+                .put(new JSONObject().put("term", new JSONObject().put("itemType", itemType.toLowerCase(Locale.ROOT))));
+        return new JSONObject()
+                .put("script", new JSONObject().put("source", painlessScript).put("lang", "painless"))
+                .put("query", new JSONObject().put("bool", new JSONObject().put("should", should).put("minimum_should_match", 1)))
+                .toString();
+    }
+
+    /**
+     * Runs an update by query synchronously, refreshes the index and returns how many documents were
+     * actually changed (documents the script marks as noop are not counted).
+     *
+     * @throws IOException if the update timed out or reported failures; version conflicts abort the request
+     */
+    public static long updateByQueryAndCount(CloseableHttpClient httpClient, String esAddress, String indexName, String requestBody) throws IOException {
+        JSONObject response = new JSONObject(HttpUtils.executePostRequest(
+                httpClient, esAddress + "/" + indexName + "/_update_by_query?refresh=true", requestBody, null));
+        JSONArray failures = response.optJSONArray("failures");
+        if (response.optBoolean("timed_out") || (failures != null && !failures.isEmpty())) {
+            throw new IOException("Update by query on " + indexName + " did not complete: " + response);
+        }
+        return response.optLong("updated", 0L);
+    }
+
     public static String buildIndexCreationRequest(String baseIndexSettings, String mapping, MigrationContext context, boolean isMonthlyIndex) throws IOException {
         String settings = baseIndexSettings
                 .replace("#numberOfShards", context.getConfigString(isMonthlyIndex ? MONTHLY_NUMBER_OF_SHARDS : NUMBER_OF_SHARDS))

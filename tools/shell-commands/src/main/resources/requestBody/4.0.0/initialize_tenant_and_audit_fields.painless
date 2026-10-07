@@ -14,37 +14,63 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// Decide the tenant for this document (UNOMI-997).
+// Shipped definitions and geonames go to system. User-created rules/segments/scorings/goals
+// stay in the configured tenant even when their 3.0 scope is "systemscope".
+// A shipped definition is recognised by item type and id only, so a 3.0 item sharing both
+// (such as a built-in rule edited in place) also goes to system.
+boolean useSystemTenant = false;
+if (params.forceDefaultTenant != true) {
+    def itemTypeLower = ctx._source.itemType != null ? ctx._source.itemType.toLowerCase(Locale.ROOT) : '';
+    // Shipped ids are grouped by item type, so other types (profiles, events...) skip the lookup
+    def shippedIds = params.shippedDefinitionIds != null ? params.shippedDefinitionIds.get(itemTypeLower) : null;
+    if (itemTypeLower == 'geonameentry' || (ctx._index != null && ctx._index.toLowerCase(Locale.ROOT).endsWith('-geonameentry'))) {
+        useSystemTenant = true;
+    } else if (shippedIds != null) {
+        def rawId = ctx._source.itemId != null ? ctx._source.itemId : ctx._id;
+        if (rawId != null) {
+            def shippedId = rawId.toLowerCase(Locale.ROOT);
+            if (shippedId.endsWith('_' + itemTypeLower)) {
+                shippedId = shippedId.substring(0, shippedId.length() - itemTypeLower.length() - 1);
+            }
+            useSystemTenant = shippedIds.contains(shippedId);
+        }
+    }
+    // Literal "system" only — not the 3.0 default "systemscope"
+    if (!useSystemTenant && ctx._source.scope == 'system') {
+        useSystemTenant = true;
+    }
+}
+def assignedTenantId = useSystemTenant ? params.systemTenantId : params.tenantId;
+
 // Update document ID with tenant prefix
 if (ctx._id != null) {
     // Skip if already has tenant prefix
     if (!ctx._id.startsWith(params.tenantId + '_') && !ctx._id.startsWith(params.systemTenantId + '_')) {
-        // Cluster nodes and unknown indices always stay in the configured (default) tenant
-        if (params.forceDefaultTenant == true) {
-            ctx._id = params.tenantId + '_' + ctx._id;
-        } else if (ctx._index.endsWith('-geonames') || (ctx._source.scope != null && ctx._source.scope == 'system')) {
-            // Preserve the entire original document ID (it may contain underscores, e.g., "dummy_scope")
-            // Do NOT split on underscores - this was a bug in the original migration that caused itemIds
-            // like "dummy_scope" to become "dummy" when the document ID was "dummy_scope_scope"
-            def baseId = ctx._id;
-            if (ctx._index.endsWith('-systemitems')) {
-                // For system items, ensure itemType is lowercase and matches the format in ElasticSearchPersistenceServiceImpl
-                def itemType = ctx._source.itemType != null ? ctx._source.itemType.toLowerCase() : null;
-                if (itemType != null && params.systemItems.contains(itemType)) {
-                    ctx._id = ctx._source.scope == 'system' ? params.systemTenantId + '_' + baseId + '_' + itemType : params.tenantId + '_' + baseId + '_' + itemType;
-                } else {
-                    ctx._id = ctx._source.scope == 'system' ? params.systemTenantId + '_' + baseId : params.tenantId + '_' + baseId;
-                }
+        def baseId = ctx._id;
+        if (ctx._index != null && ctx._index.toLowerCase(Locale.ROOT).endsWith('-systemitems')) {
+            // For system items the document ID is tenantId_itemId_itemtype (see getDocumentIDForItemType).
+            // 3.0 document IDs already carry the lower-case _itemtype suffix, so only add it when missing.
+            def itemType = ctx._source.itemType != null ? ctx._source.itemType.toLowerCase(Locale.ROOT) : null;
+            if (itemType != null && params.systemItems != null && params.systemItems.contains(itemType)
+                    && !baseId.toLowerCase(Locale.ROOT).endsWith('_' + itemType)) {
+                ctx._id = assignedTenantId + '_' + baseId + '_' + itemType;
             } else {
-                ctx._id = params.systemTenantId + '_' + baseId;
+                ctx._id = assignedTenantId + '_' + baseId;
             }
         } else {
-            ctx._id = params.tenantId + '_' + ctx._id;
+            ctx._id = assignedTenantId + '_' + baseId;
         }
     }
 }
 
-// Update audit fields
-if (!ctx._index.endsWith('-systemitems') && !ctx._index.endsWith('-geonames')) {
+// Update audit fields (skip geonames — not asserted and high volume).
+// systemitems must get audit here: UNOMI-997 puts shipped defs under the system
+// tenant before Unomi starts, so bundle deploy treats them as updates and would
+// otherwise leave createdBy unset on docs that never had it.
+def indexLower = ctx._index != null ? ctx._index.toLowerCase(Locale.ROOT) : '';
+if (!indexLower.endsWith('-geonameentry') && !indexLower.endsWith('-geonames')) {
     // Handle creation date based on item type
     if (ctx._source.creationDate == null) {
         if (params.itemType == 'profile' && ctx._source.properties != null) {
@@ -59,7 +85,7 @@ if (!ctx._index.endsWith('-systemitems') && !ctx._index.endsWith('-geonames')) {
             ctx._source.creationDate = params.date;
         }
     }
-    
+
     // Handle last modification date based on item type
     if (ctx._source.lastModificationDate == null) {
         if (params.itemType == 'profile' && ctx._source.properties != null) {
@@ -74,7 +100,7 @@ if (!ctx._index.endsWith('-systemitems') && !ctx._index.endsWith('-geonames')) {
             ctx._source.lastModificationDate = ctx._source.creationDate;
         }
     }
-    
+
     // Set creator fields
     if (ctx._source.createdBy == null) {
         ctx._source.createdBy = 'system-migration-4.0.0';
@@ -82,7 +108,7 @@ if (!ctx._index.endsWith('-systemitems') && !ctx._index.endsWith('-geonames')) {
     if (ctx._source.lastModifiedBy == null) {
         ctx._source.lastModifiedBy = 'system-migration-4.0.0';
     }
-    
+
     // Initialize source tracking fields
     if (ctx._source.sourceInstanceId == null) {
         ctx._source.sourceInstanceId = null;
@@ -92,13 +118,7 @@ if (!ctx._index.endsWith('-systemitems') && !ctx._index.endsWith('-geonames')) {
     }
 }
 
-// Set tenant ID in the source document based on scope for ALL items
+// Set tenant ID in the source document
 if (ctx._source.tenantId == null) {
-    if (params.forceDefaultTenant == true) {
-        ctx._source.tenantId = params.tenantId;
-    } else if (ctx._index.endsWith('-geonames') || (ctx._source.scope != null && ctx._source.scope == 'system')) {
-        ctx._source.tenantId = params.systemTenantId;
-    } else {
-        ctx._source.tenantId = params.tenantId;
-    }
-} 
+    ctx._source.tenantId = assignedTenantId;
+}

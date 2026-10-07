@@ -155,6 +155,7 @@ public class Migrate40IndexMappingIT extends BaseIT {
             params.put("itemType", itemType);
             params.put("date", "2026-01-01T00:00:00Z");
             params.put("systemItems", Collections.emptySet());
+            params.put("shippedDefinitionIds", Collections.emptyMap());
 
             String painless = MigrationUtils.getFileWithoutComments(
                     migrationBundles, "requestBody/4.0.0/initialize_tenant_and_audit_fields.painless");

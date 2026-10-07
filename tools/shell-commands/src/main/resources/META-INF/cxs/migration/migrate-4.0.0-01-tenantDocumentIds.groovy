@@ -26,7 +26,7 @@ MigrationContext context = migrationContext
 String esAddress = context.getConfigString(CONFIG_ES_ADDRESS)
 String indexPrefix = context.getConfigString(INDEX_PREFIX)
 String tenantId = context.getConfigString(TENANT_ID)
-String systemTenantId = "system" // System tenant ID for system-level items
+String systemTenantId = "system"
 String rolloverPolicyName = indexPrefix + "-unomi-rollover-policy"
 String rolloverSessionAlias = indexPrefix + "-session"
 String rolloverEventAlias = indexPrefix + "-event"
@@ -104,9 +104,13 @@ context.performMigrationStep("4.0.0-get-all-indices", () -> {
     Set<String> allItemTypes = MigrationUtils.getAllItemTypes(context.getHttpClient(), esAddress, indexPrefix, "*", bundleContext)
     context.printMessage("Found " + allItemTypes.size() + " item types")
 
-    // Get all system items from the systemitems index
+    // Get all system items from the systemitems index (store lower-case for painless checks)
     Set<String> systemItems = MigrationUtils.getAllItemTypes(context.getHttpClient(), esAddress, indexPrefix, "systemitems", bundleContext)
+            .collect { it.toLowerCase(java.util.Locale.ROOT) } as Set
     context.printMessage("Found " + systemItems.size() + " system items")
+
+    Map<String, Set<String>> shippedDefinitionIds = MigrationUtils.loadShippedDefinitionIds(bundleContext)
+    context.printMessage("Loaded " + shippedDefinitionIds.values().sum { it.size() } + " shipped definition ids")
 
     // Create base parameters
     Map<String, Object> baseParams = new HashMap<>()
@@ -114,6 +118,7 @@ context.performMigrationStep("4.0.0-get-all-indices", () -> {
     baseParams.put("tenantId", tenantId)
     baseParams.put("systemTenantId", systemTenantId)
     baseParams.put("systemItems", systemItems)
+    baseParams.put("shippedDefinitionIds", shippedDefinitionIds)
 
     context.printMessage("Using tenant ID: " + tenantId)
 

@@ -21,6 +21,7 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
+import org.apache.unomi.api.tenants.AuditService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -61,6 +62,9 @@ public class AbstractMultiTypeCachingServiceTest {
 
     @Mock
     private TenantService tenantService;
+
+    @Mock
+    private AuditService auditService;
 
     private TestCachingServiceImpl testCachingService;
 
@@ -194,6 +198,7 @@ public class AbstractMultiTypeCachingServiceTest {
         testCachingService.setContextManager(contextManager);
         testCachingService.setCacheService(cacheService);
         testCachingService.setTenantService(tenantService);
+        testCachingService.setAuditService(auditService);
         testCachingService.makeConfigPersistable();
 
         // Mock tenant service to return tenant list
@@ -466,5 +471,50 @@ public class AbstractMultiTypeCachingServiceTest {
         assertFalse("saveThread should have finished", saveThread.isAlive());
         assertFalse("saveItem() must not proceed until the concurrent refresh released its write lock",
             refreshStillRunningWhenSaveReturned.get());
+    }
+
+    /**
+     * Bundle redeploy loads JSON without a creator, with the creation date and version defaulted by
+     * {@code Item()}. If persistence already has create audit (for example after migration),
+     * saveItem must keep it instead of overwriting it with those defaults.
+     */
+    @Test
+    public void testSaveItemPreservesMigratedCreateAuditOnBundleRedeploy() {
+        Date creationDate = new Date(1_700_000_000_000L);
+        TestItem existing = new TestItem("item1");
+        existing.setCreatedBy("system-migration-4.0.0");
+        existing.setCreationDate(creationDate);
+        existing.setVersion(3L);
+        when(persistenceService.load("item1", TestItem.class)).thenReturn(existing);
+
+        TestItem fromBundle = new TestItem("item1");
+        assertNull(fromBundle.getCreatedBy());
+        assertNotNull("Item() defaults the creation date", fromBundle.getCreationDate());
+
+        testCachingService.callSaveItem(fromBundle);
+
+        ArgumentCaptor<TestItem> saved = ArgumentCaptor.forClass(TestItem.class);
+        verify(persistenceService).save(saved.capture());
+        assertEquals("system-migration-4.0.0", saved.getValue().getCreatedBy());
+        assertEquals(creationDate, saved.getValue().getCreationDate());
+        assertEquals(Long.valueOf(3L), saved.getValue().getVersion());
+        verify(auditService).auditUpdate(same(fromBundle), eq("system-bundle"));
+        verify(auditService, never()).auditCreate(any(), anyString());
+    }
+
+    /**
+     * A persisted item without complete create audit is still audited as a creation.
+     */
+    @Test
+    public void testSaveItemAuditsCreateWhenExistingItemHasNoCreateAudit() {
+        TestItem existing = new TestItem("item1");
+        existing.setCreatedBy(null);
+        when(persistenceService.load("item1", TestItem.class)).thenReturn(existing);
+
+        TestItem fromBundle = new TestItem("item1");
+        testCachingService.callSaveItem(fromBundle);
+
+        verify(auditService).auditCreate(same(fromBundle), eq("system-bundle"));
+        verify(auditService, never()).auditUpdate(any(), anyString());
     }
 }

@@ -38,34 +38,15 @@ if (ctx._source.itemId != null && ctx._source.itemType != null && ctx._id != nul
         documentIdWithoutTenant = documentIdWithoutTenant.substring(firstUnderscoreIndex + 1);
     }
     
-    // For system items, the expected format after 2.2.0 migration is itemId = documentId (with suffix)
-    // However, new items created after migrations may have itemId = original (without suffix)
-    // Both work because setMetadata() extracts from document ID, but we normalize to the migrated format
-    // for consistency and to fix items affected by the 4.0.0-00 bug
-    def itemTypeSuffix = '_' + ctx._source.itemType.toLowerCase();
-    if (documentIdWithoutTenant.endsWith(itemTypeSuffix)) {
-        // Document ID has the expected suffix format - itemId should match it
-        if (ctx._source.itemId != documentIdWithoutTenant) {
-            ctx._source.itemId = documentIdWithoutTenant;
-        }
+    // Every case above ends the same way: itemId must equal the document ID minus the tenant prefix.
+    // When the document ID lost its suffix (4.0.0-00 bug) it cannot be repaired by update_by_query
+    // (that needs a reindex), but aligning itemId on it still lets setMetadata() work.
+    // Documents that are already consistent are left untouched so they are not counted as updated.
+    if (ctx._source.itemId != documentIdWithoutTenant) {
+        ctx._source.itemId = documentIdWithoutTenant;
     } else {
-        // Document ID doesn't have suffix (pre-2.2.0 format or incorrectly processed by 4.0.0-00)
-        // Check if source itemId has the suffix - this indicates the document ID is wrong (from buggy 4.0.0-00)
-        if (ctx._source.itemId != null && ctx._source.itemId.endsWith(itemTypeSuffix)) {
-            // Source itemId has suffix but document ID doesn't - document ID was incorrectly processed
-            // We can't fix the document ID with update_by_query (would need reindexing),
-            // but we can at least ensure itemId matches the document ID so setMetadata() can work
-            // Note: This item will need to be reindexed to fix the document ID properly
-            if (ctx._source.itemId != documentIdWithoutTenant) {
-                ctx._source.itemId = documentIdWithoutTenant;
-            }
-        } else {
-            // Document ID doesn't have suffix and source itemId doesn't either
-            // This is either pre-2.2.0 format or a legitimate case - ensure they match
-            if (ctx._source.itemId != documentIdWithoutTenant) {
-                ctx._source.itemId = documentIdWithoutTenant;
-            }
-        }
+        ctx.op = 'noop';
     }
+} else {
+    ctx.op = 'noop';
 }
-
