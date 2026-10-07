@@ -20,12 +20,18 @@
 // stay in the configured tenant even when their 3.0 scope is "systemscope".
 // A shipped definition is recognised by item type and id only, so a 3.0 item sharing both
 // (such as a built-in rule edited in place) also goes to system.
+// The reindex reads from the "-cloned" backup and ctx._index is that source index, so drop the suffix.
+def indexLower = ctx._index != null ? ctx._index.toLowerCase(Locale.ROOT) : '';
+if (indexLower.endsWith('-cloned')) {
+    indexLower = indexLower.substring(0, indexLower.length() - '-cloned'.length());
+}
+
 boolean useSystemTenant = false;
 if (params.forceDefaultTenant != true) {
     def itemTypeLower = ctx._source.itemType != null ? ctx._source.itemType.toLowerCase(Locale.ROOT) : '';
     // Shipped ids are grouped by item type, so other types (profiles, events...) skip the lookup
     def shippedIds = params.shippedDefinitionIds != null ? params.shippedDefinitionIds.get(itemTypeLower) : null;
-    if (itemTypeLower == 'geonameentry' || (ctx._index != null && ctx._index.toLowerCase(Locale.ROOT).endsWith('-geonameentry'))) {
+    if (itemTypeLower == 'geonameentry' || indexLower.endsWith('-geonameentry')) {
         useSystemTenant = true;
     } else if (shippedIds != null) {
         def rawId = ctx._source.itemId != null ? ctx._source.itemId : ctx._id;
@@ -49,7 +55,7 @@ if (ctx._id != null) {
     // Skip if already has tenant prefix
     if (!ctx._id.startsWith(params.tenantId + '_') && !ctx._id.startsWith(params.systemTenantId + '_')) {
         def baseId = ctx._id;
-        if (ctx._index != null && ctx._index.toLowerCase(Locale.ROOT).endsWith('-systemitems')) {
+        if (indexLower.endsWith('-systemitems')) {
             // For system items the document ID is tenantId_itemId_itemtype (see getDocumentIDForItemType).
             // 3.0 document IDs already carry the lower-case _itemtype suffix, so only add it when missing.
             def itemType = ctx._source.itemType != null ? ctx._source.itemType.toLowerCase(Locale.ROOT) : null;
@@ -69,7 +75,6 @@ if (ctx._id != null) {
 // systemitems must get audit here: UNOMI-997 puts shipped defs under the system
 // tenant before Unomi starts, so bundle deploy treats them as updates and would
 // otherwise leave createdBy unset on docs that never had it.
-def indexLower = ctx._index != null ? ctx._index.toLowerCase(Locale.ROOT) : '';
 if (!indexLower.endsWith('-geonameentry') && !indexLower.endsWith('-geonames')) {
     // Handle creation date based on item type
     if (ctx._source.creationDate == null) {
