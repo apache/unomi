@@ -100,6 +100,7 @@ public class OpenSearchITBackend implements PersistenceITBackend {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.password", OS_PASSWORD),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.sslEnable", "false"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.sslTrustAllCertificates", "true"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.rollover.maxDocs", "300"),
         };
     }
 

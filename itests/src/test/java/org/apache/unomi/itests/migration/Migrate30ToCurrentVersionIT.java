@@ -22,8 +22,10 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.itests.BaseIT;
 import org.apache.unomi.itests.persistence.SearchBackendIT;
+import org.apache.unomi.shell.migration.utils.HttpRequestException;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.apache.unomi.shell.migration.utils.MigrationUtils;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
@@ -34,7 +36,6 @@ import org.osgi.framework.FrameworkUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
@@ -46,8 +47,8 @@ import java.util.Arrays;
  * UNOMI-998: migrate a synthetic Unomi 3.0 data set with {@code unomi:migrate 3.0.0}
  * before Unomi starts, then assert the post-migration shape that 996/997 fixed.
  * <p>
- * Must run before {@link Migrate16xToCurrentVersionIT} so that the 1.6 snapshot restore
- * can wipe this fixture afterward. Uses HTTP seeding so both Elasticsearch and OpenSearch
+ * Must run before {@link Migrate16xToCurrentVersionIT}, which deletes this fixture and the
+ * migration history before restoring its 1.6 snapshot. Uses HTTP seeding so both Elasticsearch and OpenSearch
  * can run it ({@code httpAdminApi}), unlike the 1.6 snapshot path.
  * <p>
  * One {@code @Test} method only: {@code @Before} must not re-seed on every method, or the
@@ -80,12 +81,14 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
     private static final String SFDC_ID = "unomi998-sfdc";
     private static final String PROFILE_ID = "unomi998-profile";
     private static final String OLD_CONDITION_MARKER = "unomi998-3.0-seed-booleanCondition";
+    // Post-2.2 document id for system condition types: system_<id>_conditiontype
+    private static final String SHIPPED_CONDITION_DOC_ID = "system_booleanCondition_conditiontype";
 
     private static final String SIMPLE_MAPPING = "{"
             + "\"settings\":{\"number_of_shards\":1,\"number_of_replicas\":0},"
             + "\"mappings\":{\"properties\":{"
             + "\"itemId\":{\"type\":\"keyword\"},"
-            + "\"itemType\":{\"type\":\"keyword\"},"
+            + "\"itemType\":{\"type\":\"text\",\"fields\":{\"keyword\":{\"type\":\"keyword\"}}},"
             + "\"scope\":{\"type\":\"keyword\"},"
             + "\"tenantId\":{\"type\":\"keyword\"},"
             + "\"metadata\":{\"type\":\"object\",\"enabled\":true},"
@@ -109,6 +112,9 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
 
         try {
             httpClient = createSearchEngineHttpClient();
+            // A completed history from an earlier run would make this migrate skip every step
+            Path history = Paths.get(karafData(), "migration", "history.json");
+            Files.deleteIfExists(history);
             seedUnomi30Dataset(httpClient);
             assertMigrationBundleShipsEngineMappings();
 
@@ -118,14 +124,13 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
             System.out.println("Migration command output results:");
             System.out.println(migrationOutput);
             Assert.assertNotNull(migrationOutput);
-            Assert.assertFalse("migration must not abort",
-                    migrationOutput.toLowerCase().contains("migration process aborted"));
             Assert.assertTrue("migration must run 4.0.0 tenant scripts",
                     migrationOutput.contains("tenantDocumentIds"));
-            Assert.assertTrue("migration must finish",
-                    migrationOutput.contains("Finish execution of:")
-                            || migrationOutput.contains("migrationStatus"));
+            // Only written once every script has finished without error
+            Assert.assertEquals("migration must finish", "COMPLETED",
+                    getObjectMapper().readTree(history.toFile()).path("migrationStatus").asText());
 
+            assertMigrationWroteSystemDefinitionAndTenant();
             prepareSearchEngineAfterMigration();
         } catch (Throwable t) {
             LOGGER.error("Error during 3.0 migration setup", t);
@@ -133,6 +138,13 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
         }
 
         super.waitForStartup();
+    }
+
+    @After
+    public void closeHttpClient() throws Exception {
+        if (httpClient != null) {
+            httpClient.close();
+        }
     }
 
     @Test
@@ -147,6 +159,24 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
         assertEverySeededDocumentHasATenant();
         assertShippedDefinitionsAreFourZero();
         assertApiKeyFileNamesCorrectHeaders();
+    }
+
+    /**
+     * Checked before Unomi starts: startup deploys the bundled definitions and BaseIT creates the
+     * test tenant when it is missing, so afterwards both would exist whatever the migration did.
+     */
+    private void assertMigrationWroteSystemDefinitionAndTenant() throws Exception {
+        HttpUtils.executePostRequest(httpClient, getSearchEngineBaseUrl() + "/_refresh", null, null);
+
+        JsonNode shipped = getByDocumentId(INDEX_SYSTEMITEMS, SHIPPED_CONDITION_DOC_ID);
+        Assert.assertNotNull("migration must write " + SHIPPED_CONDITION_DOC_ID, shipped);
+        Assert.assertEquals("shipped definitions go to system", "system",
+                shipped.path("_source").path("tenantId").asText());
+
+        JsonNode tenants = getObjectMapper().readTree(HttpUtils.executeGetRequest(httpClient,
+                getSearchEngineBaseUrl() + "/" + INDEX_TENANT + "/_search", null)).path("hits").path("hits");
+        Assert.assertEquals("migration must write the default tenant", 1, tenants.size());
+        Assert.assertEquals(TEST_TENANT_ID, tenants.get(0).path("_source").path("itemId").asText());
     }
 
     private void assertDefaultTenantExists() throws Exception {
@@ -198,15 +228,11 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
             if (!MigrationUtils.indexExists(httpClient, getSearchEngineBaseUrl(), index)) {
                 continue;
             }
-            JsonNode hits = getObjectMapper().readTree(HttpUtils.executeGetRequest(httpClient,
-                    getSearchEngineBaseUrl() + "/" + index + "/_search?size=100", null))
+            JsonNode hits = getObjectMapper().readTree(HttpUtils.executePostRequest(httpClient,
+                    getSearchEngineBaseUrl() + "/" + index + "/_search",
+                    "{\"size\":10,\"_source\":false,\"query\":{\"bool\":{\"must_not\":{\"exists\":{\"field\":\"tenantId\"}}}}}", null))
                     .path("hits").path("hits");
-            Assert.assertTrue(index + " should have documents", hits.size() > 0);
-            for (JsonNode hit : hits) {
-                Assert.assertTrue(index + " document " + hit.path("_id").asText() + " must have tenantId",
-                        hit.path("_source").hasNonNull("tenantId")
-                                && !hit.path("_source").path("tenantId").asText().isBlank());
-            }
+            Assert.assertEquals(index + " has documents without tenantId: " + hits, 0, hits.size());
         }
     }
 
@@ -217,17 +243,6 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
                 ? booleanCondition.getMetadata().getDescription() : null;
         Assert.assertNotEquals("3.0 seeded marker must not win over the 4.0 bundle definition",
                 OLD_CONDITION_MARKER, description);
-
-        // Post-2.2 document id for system condition types: system_<id>_conditiontype
-        JsonNode migratedShipped = getByDocumentId(INDEX_SYSTEMITEMS, "system_booleanCondition_conditiontype");
-        if (migratedShipped == null) {
-            migratedShipped = findByItemId(INDEX_SYSTEMITEMS, "booleanCondition");
-        }
-        Assert.assertNotNull("booleanCondition must exist in systemitems after migration", migratedShipped);
-        Assert.assertEquals("shipped definitions go to system", "system",
-                migratedShipped.path("_source").path("tenantId").asText());
-        Assert.assertTrue("shipped definition document id must use the system tenant prefix",
-                migratedShipped.path("_id").asText().startsWith("system_"));
     }
 
     private void assertApiKeyFileNamesCorrectHeaders() throws Exception {
@@ -259,6 +274,8 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
         System.out.println("Seeding synthetic Unomi 3.0 dataset...");
         LOGGER.info("Seeding synthetic Unomi 3.0 dataset...");
 
+        // The migration only creates the tenant (and its key file) when the tenant index is missing
+        MigrationUtils.deleteIndex(client, es, INDEX_TENANT);
         for (String index : Arrays.asList(INDEX_SYSTEMITEMS, INDEX_PROFILE, INDEX_GEONAME, INDEX_CLUSTERNODE, INDEX_SFDC)) {
             MigrationUtils.deleteIndex(client, es, index);
             MigrationUtils.createIndex(client, es, index, SIMPLE_MAPPING);
@@ -290,7 +307,8 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
         Bundle migrationBundle = FrameworkUtil.getBundle(MigrationUtils.class);
         Assert.assertNotNull(migrationBundle);
         for (String engine : Arrays.asList("elasticsearch", "opensearch")) {
-            for (String mappingFile : Arrays.asList("clusterNode.json", "profile.json", "geonameEntry.json", "systemItems.json")) {
+            for (String mappingFile : Arrays.asList("clusterNode.json", "event.json", "geonameEntry.json",
+                    "personaSession.json", "profile.json", "profileAlias.json", "session.json", "systemItems.json", "tenant.json")) {
                 String path = "META-INF/cxs/migration-mappings/" + engine + "/" + mappingFile;
                 Assert.assertNotNull("boot migrate needs " + path + " in shell-commands",
                         migrationBundle.getEntry(path));
@@ -315,8 +333,11 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
                 return null;
             }
             return node;
-        } catch (IOException e) {
+        } catch (HttpRequestException e) {
             // HttpUtils throws on HTTP 404 when the document is missing
+            if (e.getCode() != 404) {
+                throw e;
+            }
             return null;
         }
     }

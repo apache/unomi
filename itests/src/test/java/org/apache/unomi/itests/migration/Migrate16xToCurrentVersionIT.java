@@ -40,6 +40,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 @Category(SearchBackendIT.class)
@@ -127,7 +129,12 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
         try (CloseableHttpClient httpClient = createSearchEngineHttpClient()) {
             // A prior migration IT (e.g. Migrate30) may have left open context-* indices.
             // Snapshot restore refuses to overwrite open indices, so clear them first.
-            deleteExistingContextIndices(httpClient);
+            for (String index : MigrationUtils.getIndexesPrefixedBy(httpClient, getEsBaseUrl(), INDEX_PREFIX_CONTEXT)) {
+                LOGGER.info("Deleting existing index before 1.6 snapshot restore: {}", index);
+                MigrationUtils.deleteIndex(httpClient, getEsBaseUrl(), index);
+            }
+            // Its completed history would make this migration skip every 4.0.0 step.
+            Files.deleteIfExists(Paths.get(karafData(), "migration", "history.json"));
 
             // Create snapshot repo
             HttpUtils.executePutRequest(httpClient, getEsSnapshotRepo(), resourceAsString(RESOURCE_CREATE_SNAPSHOTS_REPO), null);
@@ -192,25 +199,6 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
             LOGGER.error("Error during cleanup", t);
             System.err.println("Error during cleanup");
             t.printStackTrace();
-        }
-    }
-
-    private void deleteExistingContextIndices(CloseableHttpClient httpClient) throws Exception {
-        String indicesJson = HttpUtils.executeGetRequest(httpClient,
-                getEsBaseUrl() + "/_cat/indices?h=index&format=json", null);
-        if (indicesJson == null || indicesJson.isBlank() || "[]".equals(indicesJson.trim())) {
-            return;
-        }
-        JsonNode indices = getObjectMapper().readTree(indicesJson);
-        if (!indices.isArray()) {
-            return;
-        }
-        for (JsonNode index : indices) {
-            String indexName = index.path("index").asText(null);
-            if (indexName != null && indexName.startsWith(INDEX_PREFIX_CONTEXT)) {
-                LOGGER.info("Deleting existing index before 1.6 snapshot restore: {}", indexName);
-                MigrationUtils.deleteIndex(httpClient, getEsBaseUrl(), indexName);
-            }
         }
     }
 
