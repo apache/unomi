@@ -57,9 +57,12 @@ if (ctx._id != null) {
     }
 }
 
-// Update audit fields (not for systemitems or geonames)
+// Update audit fields (skip geonames — not asserted and high volume).
+// systemitems must get audit here: UNOMI-997 puts shipped defs under the system
+// tenant before Unomi starts, so bundle deploy treats them as updates and would
+// otherwise leave createdBy unset on docs that never had it.
 def indexLower = ctx._index != null ? ctx._index.toLowerCase() : '';
-if (!indexLower.endsWith('-systemitems') && !indexLower.endsWith('-geonameentry')) {
+if (!indexLower.endsWith('-geonameentry') && !indexLower.endsWith('-geonames')) {
     // Handle creation date based on item type
     if (ctx._source.creationDate == null) {
         if (params.itemType == 'profile' && ctx._source.properties != null) {

@@ -611,7 +611,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
                 }
 
                 // Check audit metadata
-                checkAuditMetadata(source);
+                checkAuditMetadata(source, itemId);
             }
         }
     }
@@ -619,22 +619,23 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
     /**
      * Helper method to check audit metadata fields
      * @param source The document source containing the metadata
+     * @param itemId Document id included in assertion messages
      */
-    private void checkAuditMetadata(JsonNode source) {
-        Assert.assertNotNull("Created by should be set", source.get("createdBy"));
+    private void checkAuditMetadata(JsonNode source, String itemId) {
+        Assert.assertNotNull("Created by should be set for " + itemId, source.get("createdBy"));
         String createdBy = source.get("createdBy").asText();
         // After migration, documents may be refreshed by bundles during startup,
         // which changes createdBy from system-migration-4.0.0 to system-bundle
         // Both are valid - migration sets it, bundles may refresh it
         boolean isValidCreatedBy = "system-migration-4.0.0".equals(createdBy) || "system-bundle".equals(createdBy);
-        Assert.assertTrue("Created by should be system-migration-4.0.0 or system-bundle, but was: " + createdBy, isValidCreatedBy);
-        Assert.assertNotNull("Creation date should be set", source.get("creationDate"));
-        Assert.assertNotNull("Last modified by should be set", source.get("lastModifiedBy"));
+        Assert.assertTrue("Created by should be system-migration-4.0.0 or system-bundle for " + itemId + ", but was: " + createdBy, isValidCreatedBy);
+        Assert.assertNotNull("Creation date should be set for " + itemId, source.get("creationDate"));
+        Assert.assertNotNull("Last modified by should be set for " + itemId, source.get("lastModifiedBy"));
         String lastModifiedBy = source.get("lastModifiedBy").asText();
         // Similarly, lastModifiedBy may be updated by bundles after migration
         boolean isValidLastModifiedBy = "system-migration-4.0.0".equals(lastModifiedBy) || "system-bundle".equals(lastModifiedBy);
-        Assert.assertTrue("Last modified by should be system-migration-4.0.0 or system-bundle, but was: " + lastModifiedBy, isValidLastModifiedBy);
-        Assert.assertNotNull("Last modification date should be set", source.get("lastModificationDate"));
+        Assert.assertTrue("Last modified by should be system-migration-4.0.0 or system-bundle for " + itemId + ", but was: " + lastModifiedBy, isValidLastModifiedBy);
+        Assert.assertNotNull("Last modification date should be set for " + itemId, source.get("lastModificationDate"));
     }
 
     /**
