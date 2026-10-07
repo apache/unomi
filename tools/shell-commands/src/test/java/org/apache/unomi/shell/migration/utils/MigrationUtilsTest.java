@@ -16,23 +16,34 @@
  */
 package org.apache.unomi.shell.migration.utils;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
@@ -305,58 +316,97 @@ public class MigrationUtilsTest {
         assertEquals("generic", MigrationUtils.resolveItemType("other-profile", "context", types));
     }
 
+    private static final String SHIPPED_DEFINITIONS = "requestBody/4.0.0/shipped_system_definitions.json";
+
     @Test
-    public void resolveBaseItemIdStripsItemTypeSuffixIgnoringCase() {
-        assertEquals("booleanCondition",
-                MigrationUtils.resolveBaseItemId("booleanCondition_conditionType", "conditionType"));
-        assertEquals("booleanCondition",
-                MigrationUtils.resolveBaseItemId("booleanCondition_conditiontype", "conditionType"));
-        assertEquals("booleanCondition",
-                MigrationUtils.resolveBaseItemId("booleanCondition", "conditionType"));
+    public void loadShippedDefinitionIdsGroupsLowerCaseIdsByType() throws Exception {
+        stubShippedDefinitions("[\"conditionType:booleanCondition\", \"rule:_abc_myRule.json\", \"rule:other\"]");
+        Map<String, Set<String>> shipped = MigrationUtils.loadShippedDefinitionIds(bundleContext);
+        assertEquals(Set.of("conditiontype", "rule"), shipped.keySet());
+        assertEquals(Set.of("booleancondition"), shipped.get("conditiontype"));
+        assertEquals(Set.of("_abc_myrule.json", "other"), shipped.get("rule"));
     }
 
     @Test
-    public void shouldAssignToSystemTenantForShippedConditionWithoutScope() {
-        Collection<String> shipped = Collections.singleton("conditiontype:booleancondition");
-        assertTrue(MigrationUtils.shouldAssignToSystemTenant(
-                "conditionType", "booleanCondition", null, "context-systemitems", false, shipped));
+    public void loadShippedDefinitionIdsRejectsEmptyOrMalformedLists() throws Exception {
+        for (String content : Arrays.asList("[]", "[\"booleanCondition\"]", "[\":booleanCondition\"]", "[\"rule:\"]", "[42]")) {
+            stubShippedDefinitions(content);
+            assertThrows(content, IllegalStateException.class, () -> MigrationUtils.loadShippedDefinitionIds(bundleContext));
+        }
+    }
+
+    /**
+     * The shipped list is a snapshot: it must be updated whenever a definition is added to or
+     * removed from the bundles, or migrated copies land in the wrong tenant.
+     */
+    @Test
+    public void shippedDefinitionsListMatchesTheDefinitionsInTheSourceTree() throws Exception {
+        Path repositoryRoot = Path.of("").toAbsolutePath().getParent().getParent();
+        assertTrue("Unexpected source layout: " + repositoryRoot, Files.isDirectory(repositoryRoot.resolve("plugins")));
+
+        Map<String, String> typeByDirectory = Map.of("conditions", "conditiontype", "actions", "actiontype",
+                "properties", "propertytype", "rules", "rule", "personas", "persona");
+        Map<String, Set<String>> expected = new TreeMap<>();
+        Files.walkFileTree(repositoryRoot, new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                String name = dir.getFileName().toString();
+                boolean skip = name.startsWith(".") || name.equals("target") || name.equals("node_modules") || name.equals("test");
+                return skip ? FileVisitResult.SKIP_SUBTREE : FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                String path = repositoryRoot.relativize(file).toString().replace(File.separatorChar, '/');
+                int cxs = path.indexOf("/src/main/resources/META-INF/cxs/");
+                if (cxs < 0 || !path.endsWith(".json")) {
+                    return FileVisitResult.CONTINUE;
+                }
+                String directory = path.substring(cxs + "/src/main/resources/META-INF/cxs/".length()).split("/")[0];
+                String type = typeByDirectory.get(directory);
+                if (type == null) {
+                    return FileVisitResult.CONTINUE;
+                }
+                JSONObject definition = new JSONObject(Files.readString(file));
+                if ("persona".equals(type)) {
+                    addExpected(expected, type, definition.getJSONObject("persona").getString("itemId"));
+                    JSONArray sessions = definition.getJSONArray("sessions");
+                    for (int i = 0; i < sessions.length(); i++) {
+                        addExpected(expected, "personasession", sessions.getJSONObject(i).getString("itemId"));
+                    }
+                } else {
+                    addExpected(expected, type, definition.getJSONObject("metadata").getString("id"));
+                }
+                return FileVisitResult.CONTINUE;
+            }
+        });
+
+        when(bundle.getResource(SHIPPED_DEFINITIONS)).thenReturn(getClass().getResource("/" + SHIPPED_DEFINITIONS));
+        assertEquals("Update " + SHIPPED_DEFINITIONS + " to match the definitions shipped under META-INF/cxs",
+                expected, MigrationUtils.loadShippedDefinitionIds(bundleContext));
+    }
+
+    private static void addExpected(Map<String, Set<String>> expected, String type, String id) {
+        expected.computeIfAbsent(type, key -> new TreeSet<>()).add(id.toLowerCase(Locale.ROOT));
+    }
+
+    private void stubShippedDefinitions(String content) throws IOException {
+        Path file = Files.createTempFile("shipped-definitions", ".json");
+        file.toFile().deleteOnExit();
+        Files.writeString(file, content);
+        when(bundle.getResource(SHIPPED_DEFINITIONS)).thenReturn(file.toUri().toURL());
     }
 
     @Test
-    public void shouldAssignUserContentWithSystemScopeToDefaultTenant() {
-        Collection<String> shipped = Collections.singleton("conditiontype:booleancondition");
-        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
-                "rule", "my-user-rule", "systemscope", "context-systemitems", false, shipped));
-        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
-                "segment", "my-segment", "systemscope", "context-systemitems", false, shipped));
-        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
-                "scoring", "my-scoring", "systemscope", "context-systemitems", false, shipped));
-        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
-                "goal", "my-goal", "systemscope", "context-systemitems", false, shipped));
-    }
-
-    @Test
-    public void shouldAssignGeonamesToSystemTenant() {
-        assertTrue(MigrationUtils.shouldAssignToSystemTenant(
-                "geonameEntry", "paris", null, "context-geonameentry", false, Collections.emptySet()));
-        assertTrue(MigrationUtils.shouldAssignToSystemTenant(
-                null, "paris", null, "context-geonameentry", false, Collections.emptySet()));
-    }
-
-    @Test
-    public void shouldAssignProfilesEventsAndForcedDefaultToConfiguredTenant() {
-        Collection<String> shipped = Collections.singleton("conditiontype:booleancondition");
-        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
-                "profile", "p1", null, "context-profile", false, shipped));
-        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
-                "event", "e1", null, "context-event-000001", false, shipped));
-        assertFalse(MigrationUtils.shouldAssignToSystemTenant(
-                "clusterNode", "node1", "system", "context-clusternode", true, shipped));
-    }
-
-    @Test
-    public void shouldAssignLiteralSystemScopeToSystemTenant() {
-        assertTrue(MigrationUtils.shouldAssignToSystemTenant(
-                "sfdcConfiguration", "cfg1", "system", "context-sfdcconfiguration", false, Collections.emptySet()));
+    public void buildItemTypeUpdateRequestMatchesKeywordAndFoldedItemType() {
+        JSONObject request = new JSONObject(MigrationUtils.buildItemTypeUpdateRequest("ctx.op = 'noop'", "conditionType"));
+        assertEquals("ctx.op = 'noop'", request.getJSONObject("script").getString("source"));
+        assertEquals("painless", request.getJSONObject("script").getString("lang"));
+        JSONObject bool = request.getJSONObject("query").getJSONObject("bool");
+        assertEquals(1, bool.getInt("minimum_should_match"));
+        JSONArray should = bool.getJSONArray("should");
+        assertEquals(2, should.length());
+        assertEquals("conditionType", should.getJSONObject(0).getJSONObject("term").getString("itemType.keyword"));
+        assertEquals("conditiontype", should.getJSONObject(1).getJSONObject("term").getString("itemType"));
     }
 }

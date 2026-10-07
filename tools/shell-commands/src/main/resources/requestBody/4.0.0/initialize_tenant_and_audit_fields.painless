@@ -18,21 +18,27 @@
 // Decide the tenant for this document (UNOMI-997).
 // Shipped definitions and geonames go to system. User-created rules/segments/scorings/goals
 // stay in the configured tenant even when their 3.0 scope is "systemscope".
+// A shipped definition is recognised by item type and id only, so a 3.0 item sharing both
+// (such as a built-in rule edited in place) also goes to system.
 boolean useSystemTenant = false;
 if (params.forceDefaultTenant != true) {
-    def itemTypeLower = ctx._source.itemType != null ? ctx._source.itemType.toLowerCase() : '';
-    def rawId = ctx._source.itemId != null ? ctx._source.itemId : ctx._id;
-    def baseId = rawId;
-    if (baseId != null && itemTypeLower != '' && baseId.toLowerCase().endsWith('_' + itemTypeLower)) {
-        baseId = baseId.substring(0, baseId.length() - itemTypeLower.length() - 1);
+    def itemTypeLower = ctx._source.itemType != null ? ctx._source.itemType.toLowerCase(Locale.ROOT) : '';
+    // Shipped ids are grouped by item type, so other types (profiles, events...) skip the lookup
+    def shippedIds = params.shippedDefinitionIds != null ? params.shippedDefinitionIds.get(itemTypeLower) : null;
+    if (itemTypeLower == 'geonameentry' || (ctx._index != null && ctx._index.toLowerCase(Locale.ROOT).endsWith('-geonameentry'))) {
+        useSystemTenant = true;
+    } else if (shippedIds != null) {
+        def rawId = ctx._source.itemId != null ? ctx._source.itemId : ctx._id;
+        if (rawId != null) {
+            def shippedId = rawId.toLowerCase(Locale.ROOT);
+            if (shippedId.endsWith('_' + itemTypeLower)) {
+                shippedId = shippedId.substring(0, shippedId.length() - itemTypeLower.length() - 1);
+            }
+            useSystemTenant = shippedIds.contains(shippedId);
+        }
     }
-    if (itemTypeLower == 'geonameentry' || (ctx._index != null && ctx._index.toLowerCase().endsWith('-geonameentry'))) {
-        useSystemTenant = true;
-    } else if (baseId != null && params.shippedDefinitionIds != null
-            && params.shippedDefinitionIds.contains(itemTypeLower + ':' + baseId.toLowerCase())) {
-        useSystemTenant = true;
-    } else if (ctx._source.scope != null && ctx._source.scope == 'system') {
-        // Literal "system" only — not the 3.0 default "systemscope"
+    // Literal "system" only — not the 3.0 default "systemscope"
+    if (!useSystemTenant && ctx._source.scope == 'system') {
         useSystemTenant = true;
     }
 }
@@ -43,10 +49,12 @@ if (ctx._id != null) {
     // Skip if already has tenant prefix
     if (!ctx._id.startsWith(params.tenantId + '_') && !ctx._id.startsWith(params.systemTenantId + '_')) {
         def baseId = ctx._id;
-        if (ctx._index != null && ctx._index.toLowerCase().endsWith('-systemitems')) {
-            // For system items, ensure itemType is lowercase and matches the format in ElasticSearchPersistenceServiceImpl
-            def itemType = ctx._source.itemType != null ? ctx._source.itemType.toLowerCase() : null;
-            if (itemType != null && params.systemItems != null && params.systemItems.contains(itemType)) {
+        if (ctx._index != null && ctx._index.toLowerCase(Locale.ROOT).endsWith('-systemitems')) {
+            // For system items the document ID is tenantId_itemId_itemtype (see getDocumentIDForItemType).
+            // 3.0 document IDs already carry the lower-case _itemtype suffix, so only add it when missing.
+            def itemType = ctx._source.itemType != null ? ctx._source.itemType.toLowerCase(Locale.ROOT) : null;
+            if (itemType != null && params.systemItems != null && params.systemItems.contains(itemType)
+                    && !baseId.toLowerCase(Locale.ROOT).endsWith('_' + itemType)) {
                 ctx._id = assignedTenantId + '_' + baseId + '_' + itemType;
             } else {
                 ctx._id = assignedTenantId + '_' + baseId;
@@ -61,7 +69,7 @@ if (ctx._id != null) {
 // systemitems must get audit here: UNOMI-997 puts shipped defs under the system
 // tenant before Unomi starts, so bundle deploy treats them as updates and would
 // otherwise leave createdBy unset on docs that never had it.
-def indexLower = ctx._index != null ? ctx._index.toLowerCase() : '';
+def indexLower = ctx._index != null ? ctx._index.toLowerCase(Locale.ROOT) : '';
 if (!indexLower.endsWith('-geonameentry') && !indexLower.endsWith('-geonames')) {
     // Handle creation date based on item type
     if (ctx._source.creationDate == null) {

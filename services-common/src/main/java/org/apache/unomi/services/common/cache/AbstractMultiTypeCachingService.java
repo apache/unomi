@@ -932,17 +932,14 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         Class<T> itemClass = (Class<T>) item.getClass();
         T existingItem = persistenceService.load(itemId, itemClass);
 
-        // Bundle JSON definitions have no create audit. If persistence already has create
-        // fields (e.g. from migration), copy them onto the incoming item before save so a
-        // later auditUpdate does not wipe them with nulls (UNOMI-997).
-        if (existingItem != null) {
-            if (item.getCreatedBy() == null && existingItem.getCreatedBy() != null) {
-                item.setCreatedBy(existingItem.getCreatedBy());
-            }
-            if (item.getCreationDate() == null && existingItem.getCreationDate() != null) {
-                item.setCreationDate(existingItem.getCreationDate());
-            }
-            if (item.getVersion() == null && existingItem.getVersion() != null) {
+        // Bundle JSON definitions have no creator, and Item() defaults their creation date and
+        // version to "now" and 0. If persistence already has create audit (e.g. from migration),
+        // carry it over to the incoming item so the save below does not overwrite it (UNOMI-997).
+        if (existingItem != null && item.getCreatedBy() == null
+                && existingItem.getCreatedBy() != null && existingItem.getCreationDate() != null) {
+            item.setCreatedBy(existingItem.getCreatedBy());
+            item.setCreationDate(existingItem.getCreationDate());
+            if (existingItem.getVersion() != null) {
                 item.setVersion(existingItem.getVersion());
             }
         }

@@ -1,7 +1,6 @@
 import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.MigrationUtils
 import org.apache.unomi.shell.migration.utils.HttpUtils
-import org.json.JSONObject
 import static org.apache.unomi.shell.migration.service.MigrationConfig.*
 
 /*
@@ -43,41 +42,33 @@ context.performMigrationStep("4.0.0-fix-system-item-ids", () -> {
         context.printMessage("Fixing itemIds in systemitems index that end with itemType suffix")
 
         long totalUpdated = 0L
+        List<String> failedItemTypes = []
 
-        // Process each system item type. Match on itemType.keyword so camelCase values
-        // such as conditionType / actionType / propertyType are not missed (UNOMI-997).
+        // Process each system item type. The query matches camelCase values such as
+        // conditionType / actionType / propertyType (UNOMI-997).
         systemItems.each { itemType ->
             context.printMessage("Fixing items of type: ${itemType}")
 
             String fixScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/4.0.0/fix_system_item_ids.painless")
 
-            JSONObject scriptObj = new JSONObject()
-            scriptObj.put("source", fixScript)
-            scriptObj.put("lang", "painless")
-
-            // Match camelCase item types on both the keyword sub-field and the folded text field
-            JSONObject keywordTerm = new JSONObject().put("term", new JSONObject().put("itemType.keyword", itemType))
-            JSONObject foldedTerm = new JSONObject().put("term", new JSONObject().put("itemType", itemType.toLowerCase(java.util.Locale.ROOT)))
-            JSONObject boolQuery = new JSONObject()
-            boolQuery.put("should", [keywordTerm, foldedTerm])
-            boolQuery.put("minimum_should_match", 1)
-            JSONObject queryObj = new JSONObject().put("bool", boolQuery)
-
-            JSONObject updateRequestObj = new JSONObject()
-            updateRequestObj.put("script", scriptObj)
-            updateRequestObj.put("query", queryObj)
+            String updateRequest = MigrationUtils.buildItemTypeUpdateRequest(fixScript, itemType)
 
             try {
-                long updated = MigrationUtils.updateByQueryAndCount(context.getHttpClient(), esAddress, systemItemsIndex, updateRequestObj.toString())
+                long updated = MigrationUtils.updateByQueryAndCount(context.getHttpClient(), esAddress, systemItemsIndex, updateRequest)
                 totalUpdated += updated
                 context.printMessage("Fixed ${updated} itemId(s) for item type: ${itemType}")
             } catch (Exception e) {
                 context.printMessage("Warning: Could not fix itemIds for item type ${itemType}: ${e.getMessage()}")
+                failedItemTypes.add(itemType)
             }
         }
 
         HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/${systemItemsIndex}/_refresh", null, null)
         context.printMessage("Fixed ${totalUpdated} itemId(s) in systemitems index")
+        // Fail the step so it is retried on the next run instead of being recorded as completed
+        if (!failedItemTypes.isEmpty()) {
+            throw new IllegalStateException("Could not fix itemIds for item types: " + failedItemTypes)
+        }
     } else {
         context.printMessage("Systemitems index does not exist, skipping itemId fix")
     }

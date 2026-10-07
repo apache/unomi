@@ -366,75 +366,62 @@ public class MigrationUtils {
     }
 
     /**
-     * Loads the set of definitions Unomi ships and reloads at startup.
-     * Keys are {@code itemType:itemId} in lower case (for example {@code conditiontype:booleanCondition}).
+     * Loads the definitions Unomi ships and reloads at startup, as lower-case item ids grouped by
+     * lower-case item type (for example {@code conditiontype -> booleancondition}).
      * The migrate command bundle ships a snapshot of that list so it is available before plugins start.
+     * <p>
+     * Matching is by type and id only: a 3.0 item that shares both with a shipped definition (such as a
+     * built-in rule edited in place) is migrated to the system tenant and replaced by the 4.0 version
+     * at the next startup.
+     *
+     * @throws IllegalStateException if the list is empty or an entry is not {@code itemType:itemId}
      */
-    public static Set<String> loadShippedDefinitionIds(BundleContext bundleContext) throws IOException {
-        Set<String> ids = new LinkedHashSet<>();
-        String resource = resourceAsString(bundleContext, "requestBody/4.0.0/shipped_system_definitions.json");
-        JSONArray array = new JSONArray(resource);
+    public static Map<String, Set<String>> loadShippedDefinitionIds(BundleContext bundleContext) {
+        String resource = "requestBody/4.0.0/shipped_system_definitions.json";
+        JSONArray array = new JSONArray(resourceAsString(bundleContext, resource));
+        Map<String, Set<String>> idsByType = new TreeMap<>();
         for (int i = 0; i < array.length(); i++) {
-            String key = array.optString(i, null);
-            if (key != null && !key.isBlank()) {
-                ids.add(key.toLowerCase(Locale.ROOT));
+            String key = String.valueOf(array.get(i)).toLowerCase(Locale.ROOT);
+            int separator = key.indexOf(':');
+            if (separator <= 0 || separator == key.length() - 1) {
+                throw new IllegalStateException("Invalid entry in " + resource + ": " + key);
             }
+            idsByType.computeIfAbsent(key.substring(0, separator), type -> new TreeSet<>()).add(key.substring(separator + 1));
         }
-        return ids;
+        if (idsByType.isEmpty()) {
+            throw new IllegalStateException(resource + " is empty: shipped definitions would be migrated to the wrong tenant");
+        }
+        return idsByType;
     }
 
     /**
-     * Strips a trailing {@code _itemType} suffix (any case) from a document or item id.
+     * Builds an update by query request running a Painless script on the documents of an item type.
+     * The item type is matched on both the keyword sub-field and the folded text field, so camelCase
+     * values such as {@code conditionType} are not missed.
      */
-    public static String resolveBaseItemId(String documentOrItemId, String itemType) {
-        if (documentOrItemId == null || documentOrItemId.isBlank()) {
-            return documentOrItemId;
-        }
-        if (itemType == null || itemType.isBlank()) {
-            return documentOrItemId;
-        }
-        String suffix = "_" + itemType;
-        if (documentOrItemId.regionMatches(true, documentOrItemId.length() - suffix.length(), suffix, 0, suffix.length())) {
-            return documentOrItemId.substring(0, documentOrItemId.length() - suffix.length());
-        }
-        return documentOrItemId;
+    public static String buildItemTypeUpdateRequest(String painlessScript, String itemType) {
+        JSONArray should = new JSONArray()
+                .put(new JSONObject().put("term", new JSONObject().put("itemType.keyword", itemType)))
+                .put(new JSONObject().put("term", new JSONObject().put("itemType", itemType.toLowerCase(Locale.ROOT))));
+        return new JSONObject()
+                .put("script", new JSONObject().put("source", painlessScript).put("lang", "painless"))
+                .put("query", new JSONObject().put("bool", new JSONObject().put("should", should).put("minimum_should_match", 1)))
+                .toString();
     }
 
     /**
-     * Decides whether a 3.0 item must land in the system tenant after migration.
-     * Shipped definitions and geonames go to system. User-created rules, segments,
-     * scorings and goals stay in the configured tenant even when their 3.0 scope is
-     * {@code systemscope}. Unknown indices forced to the default tenant never use system.
+     * Runs an update by query synchronously, refreshes the index and returns how many documents were
+     * actually changed (documents the script marks as noop are not counted).
+     *
+     * @throws IOException if the update timed out or reported failures; version conflicts abort the request
      */
-    public static boolean shouldAssignToSystemTenant(String itemType, String itemId, String scope,
-                                                     String indexName, boolean forceDefaultTenant,
-                                                     Collection<String> shippedDefinitionIds) {
-        if (forceDefaultTenant) {
-            return false;
-        }
-        String typeLower = itemType == null ? "" : itemType.toLowerCase(Locale.ROOT);
-        if ("geonameentry".equals(typeLower)
-                || (indexName != null && indexName.toLowerCase(Locale.ROOT).endsWith("-geonameentry"))) {
-            return true;
-        }
-        String baseId = resolveBaseItemId(itemId, itemType);
-        if (baseId != null && shippedDefinitionIds != null && !typeLower.isEmpty()) {
-            String key = typeLower + ":" + baseId.toLowerCase(Locale.ROOT);
-            if (shippedDefinitionIds.contains(key)) {
-                return true;
-            }
-        }
-        // Literal scope "system" only — not the 3.0 default "systemscope" used by user content
-        return "system".equals(scope);
-    }
-
-    /**
-     * Same as {@link #updateByQuery(CloseableHttpClient, String, String, String)} but returns how
-     * many documents were updated, so callers can log the count.
-     */
-    public static long updateByQueryAndCount(CloseableHttpClient httpClient, String esAddress, String indexName, String requestBody) throws Exception {
+    public static long updateByQueryAndCount(CloseableHttpClient httpClient, String esAddress, String indexName, String requestBody) throws IOException {
         JSONObject response = new JSONObject(HttpUtils.executePostRequest(
-                httpClient, esAddress + "/" + indexName + "/_update_by_query?refresh=true&conflicts=proceed", requestBody, null));
+                httpClient, esAddress + "/" + indexName + "/_update_by_query?refresh=true", requestBody, null));
+        JSONArray failures = response.optJSONArray("failures");
+        if (response.optBoolean("timed_out") || (failures != null && !failures.isEmpty())) {
+            throw new IOException("Update by query on " + indexName + " did not complete: " + response);
+        }
         return response.optLong("updated", 0L);
     }
 

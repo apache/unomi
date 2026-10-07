@@ -474,8 +474,9 @@ public class AbstractMultiTypeCachingServiceTest {
     }
 
     /**
-     * Bundle redeploy loads JSON without create audit. If persistence already has create fields
-     * (for example after migration), saveItem must keep them instead of overwriting with nulls.
+     * Bundle redeploy loads JSON without a creator, with the creation date and version defaulted by
+     * {@code Item()}. If persistence already has create audit (for example after migration),
+     * saveItem must keep it instead of overwriting it with those defaults.
      */
     @Test
     public void testSaveItemPreservesMigratedCreateAuditOnBundleRedeploy() {
@@ -487,9 +488,8 @@ public class AbstractMultiTypeCachingServiceTest {
         when(persistenceService.load("item1", TestItem.class)).thenReturn(existing);
 
         TestItem fromBundle = new TestItem("item1");
-        // Simulate a bundle JSON definition that has no create audit (Item may default dates).
-        fromBundle.setCreatedBy(null);
-        fromBundle.setCreationDate(null);
+        assertNull(fromBundle.getCreatedBy());
+        assertNotNull("Item() defaults the creation date", fromBundle.getCreationDate());
 
         testCachingService.callSaveItem(fromBundle);
 
@@ -497,7 +497,24 @@ public class AbstractMultiTypeCachingServiceTest {
         verify(persistenceService).save(saved.capture());
         assertEquals("system-migration-4.0.0", saved.getValue().getCreatedBy());
         assertEquals(creationDate, saved.getValue().getCreationDate());
+        assertEquals(Long.valueOf(3L), saved.getValue().getVersion());
         verify(auditService).auditUpdate(same(fromBundle), eq("system-bundle"));
         verify(auditService, never()).auditCreate(any(), anyString());
+    }
+
+    /**
+     * A persisted item without complete create audit is still audited as a creation.
+     */
+    @Test
+    public void testSaveItemAuditsCreateWhenExistingItemHasNoCreateAudit() {
+        TestItem existing = new TestItem("item1");
+        existing.setCreatedBy(null);
+        when(persistenceService.load("item1", TestItem.class)).thenReturn(existing);
+
+        TestItem fromBundle = new TestItem("item1");
+        testCachingService.callSaveItem(fromBundle);
+
+        verify(auditService).auditCreate(same(fromBundle), eq("system-bundle"));
+        verify(auditService, never()).auditUpdate(any(), anyString());
     }
 }
