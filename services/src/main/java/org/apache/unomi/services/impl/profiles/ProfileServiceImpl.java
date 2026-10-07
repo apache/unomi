@@ -365,13 +365,24 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
                         long purgeStartTime = System.currentTimeMillis();
                         LOGGER.info("Purge: triggered");
 
-                        // Profile purge
-                        purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
-                        if (purgeSessionExistTime > 0) {
-                            purgeSessionItems(purgeSessionExistTime);
-                        }
-                        if (purgeEventExistTime > 0) {
-                            purgeEventItems(purgeEventExistTime);
+                        // Run under each tenant so persistence sees that tenant's data
+                        // (system context alone only matches tenantId=system).
+                        for (String tenantId : getTenants()) {
+                            try {
+                                contextManager.executeAsTenant(tenantId, () -> {
+                                    purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
+                                    if (purgeSessionExistTime > 0) {
+                                        purgeSessionItems(purgeSessionExistTime);
+                                    }
+                                    if (purgeEventExistTime > 0) {
+                                        purgeEventItems(purgeEventExistTime);
+                                    }
+                                    return null;
+                                });
+                            } catch (Throwable t) {
+                                LOGGER.error("Error while purging profiles, sessions, or events for tenant {}",
+                                        tenantId, t);
+                            }
                         }
                         LOGGER.info("Purge: executed in {} ms", System.currentTimeMillis() - purgeStartTime);
 

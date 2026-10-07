@@ -195,7 +195,16 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             .nonPersistent()
             .withPeriod(rulesStatisticsRefreshInterval, TimeUnit.MILLISECONDS)
             .withFixedDelay()
-            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> syncRuleStatistics()))
+            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> {
+                // Flush in-memory stats for every tenant; system context alone only persists system.
+                for (String tenantId : getTenants()) {
+                    try {
+                        contextManager.executeAsTenant(tenantId, () -> syncRuleStatistics());
+                    } catch (Throwable t) {
+                        LOGGER.error("Error syncing rule statistics for tenant {}", tenantId, t);
+                    }
+                }
+            }))
             .schedule();
 
         LOGGER.info("Rule service initialized.");

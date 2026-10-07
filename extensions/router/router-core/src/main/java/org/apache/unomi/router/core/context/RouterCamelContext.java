@@ -31,6 +31,8 @@ import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
@@ -95,6 +97,7 @@ public class RouterCamelContext implements IRouterCamelContext {
     private ConfigSharingService configSharingService;
     private ExecutionContextManager contextManager;
     private SecurityService securityService;
+    private TenantService tenantService;
 
     private SchedulerService schedulerService;
     private ScheduledTask scheduledTask;
@@ -125,6 +128,10 @@ public class RouterCamelContext implements IRouterCamelContext {
 
     public void setContextManager(ExecutionContextManager contextManager) {
         this.contextManager = contextManager;
+    }
+
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
     }
 
     /** {@inheritDoc} */
@@ -285,6 +292,8 @@ public class RouterCamelContext implements IRouterCamelContext {
         ProfileImportFromSourceRouteBuilder builderReader = new ProfileImportFromSourceRouteBuilder(kafkaProps, configType);
         builderReader.setProfileService(profileService);
         builderReader.setImportConfigurationService(importConfigurationService);
+        // Load configs under each tenant: getAll() alone only sees the current (system) context.
+        builderReader.setImportConfigurationList(loadConfigurationsAcrossTenants(importConfigurationService));
         builderReader.setJacksonDataFormat(jacksonDataFormat);
         builderReader.setAllowedEndpoints(allowedEndpoints);
         builderReader.setPermittedImportBaseDirs(permittedImportBaseDirs);
@@ -314,7 +323,7 @@ public class RouterCamelContext implements IRouterCamelContext {
 
         //Profiles collect
         ProfileExportCollectRouteBuilder profileExportCollectRouteBuilder = new ProfileExportCollectRouteBuilder(kafkaProps, configType);
-        profileExportCollectRouteBuilder.setExportConfigurationList(exportConfigurationService.getAll());
+        profileExportCollectRouteBuilder.setExportConfigurationList(loadConfigurationsAcrossTenants(exportConfigurationService));
         profileExportCollectRouteBuilder.setExportConfigurationService(exportConfigurationService);
         profileExportCollectRouteBuilder.setPersistenceService(persistenceService);
         profileExportCollectRouteBuilder.setAllowedEndpoints(allowedEndpoints);
@@ -506,5 +515,43 @@ public class RouterCamelContext implements IRouterCamelContext {
      */
     public void setPermittedExportBaseDirs(String permittedExportBaseDirs) {
         this.permittedExportBaseDirs = permittedExportBaseDirs;
+    }
+
+    /**
+     * Loads import/export configurations for every real tenant plus the system tenant.
+     * {@link ImportExportConfigurationService#getAll()} is context-scoped, so a single call
+     * under the system context at startup would miss recurring configs of migrated tenants.
+     */
+    private <T> List<T> loadConfigurationsAcrossTenants(ImportExportConfigurationService<T> service) {
+        if (service == null || contextManager == null) {
+            return new ArrayList<>();
+        }
+        // Startup has no request subject; nest tenant switches under system like other router paths.
+        return contextManager.executeAsSystem(() -> {
+            List<T> all = new ArrayList<>();
+            Set<String> tenantIds = new LinkedHashSet<>();
+            if (tenantService != null) {
+                try {
+                    for (Tenant tenant : tenantService.getAllTenants()) {
+                        tenantIds.add(tenant.getItemId());
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Could not list tenants while loading router configurations", e);
+                }
+            }
+            tenantIds.add(TenantService.SYSTEM_TENANT);
+
+            for (String tenantId : tenantIds) {
+                try {
+                    List<T> tenantConfigs = contextManager.executeAsTenant(tenantId, service::getAll);
+                    if (tenantConfigs != null) {
+                        all.addAll(tenantConfigs);
+                    }
+                } catch (Exception e) {
+                    LOGGER.error("Could not load router configurations for tenant {}", tenantId, e);
+                }
+            }
+            return all;
+        });
     }
 }
