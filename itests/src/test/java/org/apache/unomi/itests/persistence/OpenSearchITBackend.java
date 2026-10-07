@@ -82,15 +82,24 @@ public class OpenSearchITBackend implements PersistenceITBackend {
     @Override
     public Option[] configurationOptions() {
         String port = searchPort();
+        String address = "localhost:" + port;
         return new Option[]{
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.cluster.name", "contextElasticSearchITests"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.addresses", "localhost:" + port),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.addresses", address),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.username", OS_USER),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.password", OS_PASSWORD),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslEnable", "false"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslTrustAllCertificates", "true"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.rollover.maxDocs", "300"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
+                // org.apache.unomi.migration.cfg still resolves connection settings from the
+                // elasticsearch.* placeholders. Mirror OpenSearch here so unomi:migrate (e.g.
+                // Migrate30ToCurrentVersionIT) does not fall back to localhost:9200.
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", address),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.username", OS_USER),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.password", OS_PASSWORD),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.sslEnable", "false"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.sslTrustAllCertificates", "true"),
         };
     }
 
