@@ -48,7 +48,8 @@ import java.util.Arrays;
  * before Unomi starts, then assert the post-migration shape that 996/997 fixed.
  * <p>
  * Must run before {@link Migrate16xToCurrentVersionIT}, which deletes this fixture and the
- * migration history before restoring its 1.6 snapshot. Uses HTTP seeding so both Elasticsearch and OpenSearch
+ * migration history before restoring its 1.6 snapshot. Where that snapshot migration runs
+ * (Elasticsearch), this test leaves Unomi stopped and only checks the migrated indices. Uses HTTP seeding so both Elasticsearch and OpenSearch
  * can run it ({@code httpAdminApi}), unlike the 1.6 snapshot path.
  * <p>
  * One {@code @Test} method only: {@code @Before} must not re-seed on every method, or the
@@ -137,7 +138,11 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
             throw new RuntimeException("Error during 3.0 migration setup", t);
         }
 
-        super.waitForStartup();
+        // Where the 1.6 snapshot migration runs next, it needs Unomi still stopped: started here,
+        // Unomi would keep running on indices that test deletes and never redeploy its definitions.
+        if (!persistenceCapabilities().snapshotRestoreMigration()) {
+            super.waitForStartup();
+        }
     }
 
     @After
@@ -153,12 +158,14 @@ public class Migrate30ToCurrentVersionIT extends BaseIT {
                 "HTTP admin API required (provider=" + getPersistenceBackend().providerId() + ")",
                 persistenceCapabilities().httpAdminApi());
 
-        assertDefaultTenantExists();
         assertUserContentStaysOutOfSystemTenant();
         assertGeonamesClusterNodeAndSfdc();
         assertEverySeededDocumentHasATenant();
-        assertShippedDefinitionsAreFourZero();
         assertApiKeyFileNamesCorrectHeaders();
+        if (unomiStarted) {
+            assertDefaultTenantExists();
+            assertShippedDefinitionsAreFourZero();
+        }
     }
 
     /**
