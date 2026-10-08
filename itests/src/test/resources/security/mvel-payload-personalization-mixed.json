@@ -1,0 +1,32 @@
+{
+  "personalizations": [
+    {
+      "id": "mixed-sanitize",
+      "strategy": "matching-first",
+      "strategyOptions": {
+        "fallback": "safe-fallback"
+      },
+      "contents": [
+        {
+          "id": "injected",
+          "filters": [
+            {
+              "condition": {
+                "type": "profilePropertyCondition",
+                "parameterValues": {
+                  "propertyName": "firstName",
+                  "comparisonOperator": "equals",
+                  "propertyValue": "script::Runtime r = Runtime.getRuntime(); r.exec(\"touch ###VULN_FILE_PATH###\");"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "safe-fallback"
+        }
+      ]
+    }
+  ],
+  "sessionId": "demo-session-id"
+}
