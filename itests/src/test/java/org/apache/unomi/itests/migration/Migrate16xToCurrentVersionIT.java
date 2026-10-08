@@ -40,6 +40,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 @Category(SearchBackendIT.class)
@@ -125,6 +127,15 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
 
         // Restore snapshot from 1.6.x
         try (CloseableHttpClient httpClient = createSearchEngineHttpClient()) {
+            // A prior migration IT (e.g. Migrate30) may have left open context-* indices.
+            // Snapshot restore refuses to overwrite open indices, so clear them first.
+            for (String index : MigrationUtils.getIndexesPrefixedBy(httpClient, getEsBaseUrl(), INDEX_PREFIX_CONTEXT)) {
+                LOGGER.info("Deleting existing index before 1.6 snapshot restore: {}", index);
+                MigrationUtils.deleteIndex(httpClient, getEsBaseUrl(), index);
+            }
+            // Its completed history would make this migration skip every 4.0.0 step.
+            Files.deleteIfExists(Paths.get(karafData(), "migration", "history.json"));
+
             // Create snapshot repo
             HttpUtils.executePutRequest(httpClient, getEsSnapshotRepo(), resourceAsString(RESOURCE_CREATE_SNAPSHOTS_REPO), null);
             // Get snapshot, insure it exists
