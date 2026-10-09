@@ -265,7 +265,7 @@ public class RouterCamelContextTenantLoadTest {
     }
 
     @Test
-    public void shutdownAfterAFailedStartDoesNotFail() throws Exception {
+    public void shutdownOfARouterThatNeverStartedDoesNotFail() throws Exception {
         RouterCamelContext neverStarted = new RouterCamelContext();
 
         neverStarted.destroy();

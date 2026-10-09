@@ -34,6 +34,8 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.time.LocalDate;
@@ -49,6 +51,8 @@ import java.util.Objects;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class BackgroundTenantTasksIT extends BaseIT {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(BackgroundTenantTasksIT.class);
 
     private static final String RULE_ID = "unomi1000-statistics-rule";
     private static final String EVENT_TYPE = "unomi1000StatisticsEvent";
@@ -78,15 +82,23 @@ public class BackgroundTenantTasksIT extends BaseIT {
             createAndWaitForRule(rule);
             rulesService.refreshRules();
 
-            // The refresh runs every 10 seconds by default; keep the rule firing until its count is stored.
-            RuleStatistics statistics = keepTrying("Statistics of a tenant rule were not persisted for the tenant",
+            // Fire the rule; its execution is first counted in memory.
+            keepTrying("The rule did not fire",
                     () -> {
                         Event event = new Event(EVENT_TYPE, null, profile, null, null, profile, new Date());
                         event.setPersistent(false);
                         Assert.assertNotEquals(EventService.ERROR, eventService.send(event));
-                        return persistenceService.load(RULE_ID, RuleStatistics.class);
+                        return rulesService.getRuleStatistics(RULE_ID);
                     },
-                    stored -> stored != null && stored.getExecutionCount() > 0,
+                    counted -> counted != null && counted.getLocalExecutionCount() + counted.getExecutionCount() > 0,
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+            // The rule statistics refresh runs every 10 seconds by default. Wait until it has stored the count
+            // and nothing is left to flush, so that no later refresh stores statistics for the removed rule.
+            RuleStatistics statistics = keepTrying("Statistics of a tenant rule were not persisted for the tenant",
+                    () -> persistenceService.load(RULE_ID, RuleStatistics.class),
+                    stored -> stored != null && stored.getExecutionCount() > 0
+                            && rulesService.getRuleStatistics(RULE_ID).getLocalExecutionCount() == 0,
                     1000, 60);
             Assert.assertEquals("Statistics must be stored in the tenant owning the rule", TEST_TENANT_ID, statistics.getTenantId());
         } finally {
@@ -169,12 +181,23 @@ public class BackgroundTenantTasksIT extends BaseIT {
             Assert.assertTrue("Deleting one tenant's configuration must not remove the route of another tenant's configuration",
                     camelRouteExists(TEST_TENANT_ID, IMPORT_CONFIG_ID));
         } finally {
+            // Clean up without hiding what the test itself reported.
             try {
                 importConfigurationService.delete(IMPORT_CONFIG_ID);
                 keepTrying("The route of the test tenant's configuration is still there after its deletion",
                         () -> camelRouteExists(TEST_TENANT_ID, IMPORT_CONFIG_ID), exists -> !exists, 1000, 30);
-            } finally {
+            } catch (Exception | AssertionError cleanupFailure) {
+                LOGGER.warn("Could not remove the import configuration of the test tenant", cleanupFailure);
+            }
+            try {
+                executionContextManager.executeAsTenant(otherTenantId, () -> {
+                    if (importConfigurationService.load(IMPORT_CONFIG_ID) != null) {
+                        importConfigurationService.delete(IMPORT_CONFIG_ID);
+                    }
+                });
                 tenantService.deleteTenant(otherTenantId);
+            } catch (Exception cleanupFailure) {
+                LOGGER.warn("Could not remove tenant {}", otherTenantId, cleanupFailure);
             }
         }
     }

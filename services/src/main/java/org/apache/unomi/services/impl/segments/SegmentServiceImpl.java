@@ -1278,20 +1278,16 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         Collection<Segment> tenantSegments = getAllItems(Segment.class, true);
         Collection<Scoring> tenantScoring = getAllItems(Scoring.class, true);
 
-        if (tenantSegments != null) {
-            segmentOrScoringIdsToReevaluate.addAll(tenantSegments.stream()
-                    .filter(segment -> segment.getCondition() != null && segment.getCondition().toString().contains("propertyValueDateExpr"))
-                    .map(Item::getItemId)
-                    .collect(Collectors.toList()));
-        }
+        segmentOrScoringIdsToReevaluate.addAll(tenantSegments.stream()
+                .filter(segment -> segment.getCondition() != null && segment.getCondition().toString().contains("propertyValueDateExpr"))
+                .map(Item::getItemId)
+                .collect(Collectors.toList()));
 
-        if (tenantScoring != null) {
-            segmentOrScoringIdsToReevaluate.addAll(tenantScoring.stream()
-                    .filter(scoring -> scoring.getElements() != null && !scoring.getElements().isEmpty() && scoring.getElements().stream()
-                            .anyMatch(scoringElement -> scoringElement != null && scoringElement.getCondition() != null && scoringElement.getCondition().toString().contains("propertyValueDateExpr")))
-                    .map(Item::getItemId)
-                    .collect(Collectors.toList()));
-        }
+        segmentOrScoringIdsToReevaluate.addAll(tenantScoring.stream()
+                .filter(scoring -> scoring.getElements() != null && !scoring.getElements().isEmpty() && scoring.getElements().stream()
+                        .anyMatch(scoringElement -> scoringElement != null && scoringElement.getCondition() != null && scoringElement.getCondition().toString().contains("propertyValueDateExpr")))
+                .map(Item::getItemId)
+                .collect(Collectors.toList()));
         LOGGER.info("Found {} segments or scoring plans containing date relative expressions", segmentOrScoringIdsToReevaluate.size() - pastEventSegmentsAndScoringsSize);
 
         // reevaluate segments and scoring.

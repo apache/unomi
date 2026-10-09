@@ -194,10 +194,12 @@ public class RouterCamelContext implements IRouterCamelContext {
         }
         //This is to shutdown Camel context
         //(will stop all routes/components/endpoints etc and clear internal state/cache)
-        if (camelContext != null) {
-            // null when init() failed before the context could be started
-            camelContext.stop();
+        if (camelContext == null) {
+            // init() failed before the context could be started
+            LOGGER.info("Camel context for profile import was not started, nothing to shut down.");
+            return;
         }
+        camelContext.stop();
         LOGGER.info("Camel context for profile import is shutdown.");
     }
 
@@ -251,7 +253,7 @@ public class RouterCamelContext implements IRouterCamelContext {
                                 routeCreationRetryCount.remove(retryKey);
                             }
                         } catch (Exception e) {
-                            retryRefreshOrGiveUp(service, retryKey, refreshType, routeCreationFailureMarker, e);
+                            retryRefreshOrGiveUp(service, retryKey, refreshType, routeCreationFailureMarker, e, true);
                         }
                     }
                 });
@@ -262,8 +264,9 @@ public class RouterCamelContext implements IRouterCamelContext {
                 LOGGER.error("Could not switch to tenant {} to refresh its {} camel routes", tenantId, direction, e);
                 for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> configToRefresh : tenantConfigsToRefresh.getValue().entrySet()) {
                     // no failure status can be recorded on a configuration of a tenant that cannot be switched to
+                    // the stack trace was logged once above, for the tenant
                     retryRefreshOrGiveUp(service, new RetryKey(direction, tenantId, configToRefresh.getKey()), configToRefresh.getValue(),
-                            null, e);
+                            null, e, false);
                 }
             }
         }
@@ -275,26 +278,43 @@ public class RouterCamelContext implements IRouterCamelContext {
      */
     private void retryRefreshOrGiveUp(ImportExportConfigurationService<?> service, RetryKey retryKey,
                                       RouterConstants.CONFIG_CAMEL_REFRESH refreshType, Consumer<String> routeCreationFailureMarker,
-                                      Exception failure) {
+                                      Exception failure, boolean logStackTrace) {
         String configId = retryKey.configId();
         try {
             int attempt = routeCreationRetryCount.merge(retryKey, 1, Integer::sum);
             if (attempt <= MAX_ROUTE_CREATION_RETRIES) {
-                LOGGER.error("Refreshing({}) camel route {} failed (attempt {}/{}) — will retry on next tick",
-                        refreshType, configId, attempt, MAX_ROUTE_CREATION_RETRIES, failure);
+                if (logStackTrace) {
+                    LOGGER.error("Refreshing({}) camel route {} failed (attempt {}/{}) — will retry on next tick",
+                            refreshType, configId, attempt, MAX_ROUTE_CREATION_RETRIES, failure);
+                } else {
+                    LOGGER.error("Refreshing({}) camel route {} failed (attempt {}/{}) — will retry on next tick: {}",
+                            refreshType, configId, attempt, MAX_ROUTE_CREATION_RETRIES, failure.toString());
+                }
                 service.requeueForRefresh(retryKey.tenantId(), configId, refreshType);
             } else {
-                LOGGER.error("Refreshing({}) camel route {} failed after {} attempts — giving up",
-                        refreshType, configId, MAX_ROUTE_CREATION_RETRIES, failure);
+                if (logStackTrace) {
+                    LOGGER.error("Refreshing({}) camel route {} failed after {} attempts — giving up",
+                            refreshType, configId, MAX_ROUTE_CREATION_RETRIES, failure);
+                } else {
+                    LOGGER.error("Refreshing({}) camel route {} failed after {} attempts — giving up: {}",
+                            refreshType, configId, MAX_ROUTE_CREATION_RETRIES, failure.toString());
+                }
                 routeCreationRetryCount.remove(retryKey);
-                // drop what the last failed attempt may have left in the context
-                killExistingRoute(retryKey.tenantId(), configId, false);
+                try {
+                    // drop what the last failed attempt may have left in the context
+                    killExistingRoute(retryKey.tenantId(), configId, false);
+                } catch (Exception e) {
+                    // must not keep the failure from being recorded on the configuration below
+                    LOGGER.warn("Could not remove what is left of {} camel route {} of tenant {}", retryKey.direction(), configId,
+                            retryKey.tenantId(), e);
+                }
                 if (routeCreationFailureMarker != null) {
                     routeCreationFailureMarker.accept(configId);
                 }
             }
         } catch (Exception e) {
-            LOGGER.error("Could not record the failed refresh of camel route {} of tenant {}", configId, retryKey.tenantId(), e);
+            LOGGER.error("Could not record the failed refresh({}) of {} camel route {} of tenant {}", refreshType, retryKey.direction(),
+                    configId, retryKey.tenantId(), e);
         }
     }
 
@@ -401,8 +421,7 @@ public class RouterCamelContext implements IRouterCamelContext {
                 }
             });
         } catch (Exception e) {
-            LOGGER.error("Could not load router configurations for tenant {}, its recurring routes are not "
-                    + "started; the load will be retried", tenantId, e);
+            LOGGER.error("Could not start the recurring routes of tenant {}; this will be retried", tenantId, e);
             tenantsToRetry.add(tenantId);
             tenantsWithLoggedLoadFailure.add(tenantId);
         }

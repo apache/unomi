@@ -65,10 +65,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -330,6 +334,23 @@ public class BackgroundTenantTasksTest {
     }
 
     @Test
+    public void ruleStatisticsRefreshOnlyQueriesPersistenceForTenantsWithStatistics() throws Exception {
+        AtomicReference<TaskExecutor> statsExecutor = new AtomicReference<>();
+        PersistenceService spiedPersistence = spy(persistenceService);
+        RulesServiceImpl rulesService = newRulesService(capturingScheduler("rules-statistics-refresh", statsExecutor), spiedPersistence);
+
+        clearInvocations(spiedPersistence);
+        assertNull(runExecutor(statsExecutor.get()), "statistics refresh should complete");
+        verify(spiedPersistence, never()).getAllItems(RuleStatistics.class);
+
+        saveRuleStatistics(TENANT_A, "a-rule", 10);
+        executionContextManager.executeAsTenant(TENANT_A, () -> rulesService.getRuleStatistics("a-rule"));
+        clearInvocations(spiedPersistence);
+        assertNull(runExecutor(statsExecutor.get()), "statistics refresh should complete");
+        verify(spiedPersistence, times(1)).getAllItems(RuleStatistics.class);
+    }
+
+    @Test
     public void ruleStatisticsRefreshKeepsSystemStatisticsInTheSystemTenant() throws Exception {
         AtomicReference<TaskExecutor> statsExecutor = new AtomicReference<>();
         RulesServiceImpl rulesService = newRulesService(capturingScheduler("rules-statistics-refresh", statsExecutor));
@@ -418,6 +439,10 @@ public class BackgroundTenantTasksTest {
     }
 
     private RulesServiceImpl newRulesService(SchedulerServiceImpl scheduler) {
+        return newRulesService(scheduler, persistenceService);
+    }
+
+    private RulesServiceImpl newRulesService(SchedulerServiceImpl scheduler, PersistenceService persistenceService) {
         RulesServiceImpl rulesService = new RulesServiceImpl();
         rulesService.setBundleContext(bundleContext);
         rulesService.setPersistenceService(persistenceService);

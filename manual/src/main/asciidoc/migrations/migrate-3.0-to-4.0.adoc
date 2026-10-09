@@ -310,7 +310,9 @@ migrated data included.
   tenant. Code that looks routes up in the router's Camel context must build the identifier with
   `org.apache.unomi.router.api.RouteIds`. The `killExistingRoute`, `updateProfileImportReaderRoute` and
   `updateProfileExportReaderRoute` methods of `IRouterCamelContext` take the tenant identifier as their first
-  parameter.
+  parameter. A tenant identifier containing a colon gets no recurrent route: the identifier given to
+  `org.apache.unomi.migration.tenant.id` must follow the tenant identifier rules (letters, digits, hyphens and
+  underscores).
 
 ==== Migration Steps
 
