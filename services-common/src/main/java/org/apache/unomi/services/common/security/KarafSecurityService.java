@@ -54,6 +54,8 @@ public class KarafSecurityService implements SecurityService {
     private EncryptionService encryptionService;
     private AuditService tenantAuditService;
 
+    private static final String TRUSTED_PROXIES_PROPERTY = "org.apache.unomi.ip.trustedProxies";
+
     private final ThreadLocal<Subject> currentSubject = new ThreadLocal<>();
     private final ThreadLocal<Subject> privilegedSubject = new ThreadLocal<>();
 
@@ -226,6 +228,57 @@ public class KarafSecurityService implements SecurityService {
     @Override
     public boolean hasSystemAccess() {
         return hasRole(UnomiRoles.ADMINISTRATOR) || hasRole(UnomiRoles.TENANT_ADMINISTRATOR);
+    }
+
+    @Override
+    public void recordRequestTransport(boolean secure, String remoteAddr, String forwardedProto) {
+        if (secure || isForwardedAsSecure(remoteAddr, forwardedProto)) {
+            return;
+        }
+        Subject current = currentSubject.get();
+        if (current == null) {
+            return;
+        }
+        // Work on a copy: the bound subject may be shared or read-only.
+        Subject marked = new Subject();
+        marked.getPrincipals().addAll(current.getPrincipals());
+        marked.getPrincipals().add(InsecureTransportPrincipal.INSTANCE);
+        marked.getPublicCredentials().addAll(current.getPublicCredentials());
+        marked.getPrivateCredentials().addAll(current.getPrivateCredentials());
+        currentSubject.set(marked);
+    }
+
+    /**
+     * Whether a trusted proxy vouches that the client connection was encrypted. Every protocol the
+     * header lists must be {@code https}, because a proxy that appends to the header leaves a
+     * client-supplied value in front.
+     */
+    private boolean isForwardedAsSecure(String remoteAddr, String forwardedProto) {
+        if (forwardedProto == null || forwardedProto.isBlank()) {
+            return false;
+        }
+        Set<String> trustedProxies = Arrays.stream(System.getProperty(TRUSTED_PROXIES_PROPERTY, "").split(","))
+                .map(String::trim)
+                .filter(proxy -> !proxy.isEmpty())
+                .collect(Collectors.toSet());
+        if (trustedProxies.isEmpty() || !IPValidationUtils.isIpAuthorized(remoteAddr, trustedProxies)) {
+            return false;
+        }
+        return Arrays.stream(forwardedProto.split(",")).allMatch(proto -> "https".equalsIgnoreCase(proto.trim()));
+    }
+
+    @Override
+    public boolean hasCompatPeerAbility(String ability) {
+        Subject subject = getRequestSubject();
+        if (subject == null) {
+            return false;
+        }
+        for (CompatPeerPrincipal peer : subject.getPrincipals(CompatPeerPrincipal.class)) {
+            if (peer.hasAbility(ability)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

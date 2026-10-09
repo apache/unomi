@@ -24,6 +24,7 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
+import org.apache.unomi.api.security.CompatPeerPrincipal;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.utils.LogSanitizer;
 import org.apache.unomi.api.services.EventService;
@@ -71,6 +72,7 @@ public class UpdatePropertiesAction implements ActionExecutor {
     private EventService eventService;
     private TracerService tracerService;
     private SecurityService securityService;
+    private boolean requireSecureTransport;
 
     public int execute(Action action, Event event) {
         RequestTracer tracer = null;
@@ -226,7 +228,12 @@ public class UpdatePropertiesAction implements ActionExecutor {
     }
 
     private boolean isTrustedIdentityCaller() {
-        return IdentityTrust.isTrustedIdentityCaller(securityService);
+        return IdentityTrust.isTrustedIdentityCaller(securityService,
+                CompatPeerPrincipal.ABILITY_UPDATE_OTHER_PROFILES, requireSecureTransport);
+    }
+
+    public void setRequireSecureTransport(boolean requireSecureTransport) {
+        this.requireSecureTransport = requireSecureTransport;
     }
 
     public void setProfileService(ProfileService profileService) {

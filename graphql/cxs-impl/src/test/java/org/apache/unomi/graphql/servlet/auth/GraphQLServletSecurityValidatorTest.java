@@ -55,6 +55,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.refEq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -128,7 +129,8 @@ class GraphQLServletSecurityValidatorTest {
 
         assertFalse(authenticated);
         verify(executionContextManager, never()).setCurrentContext(any());
-        verify(securityService).clearCurrentSubject();
+        // Once before authenticating, and once more to drop the role-less subject it logged in.
+        verify(securityService, times(2)).clearCurrentSubject();
         verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED);
     }
 

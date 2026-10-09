@@ -1153,6 +1153,19 @@ Key security recommendations:
 * *Implement rate limiting* for merge operations to prevent abuse
 * *Consider additional verification* before merging profiles with sensitive data
 
+===== Requiring HTTPS for merges
+
+A tenant private key or an administrator password sent over plain HTTP can be read by anyone on the network path, and whoever holds it can merge profiles. Set `org.apache.unomi.plugins.base.requireSecureTransport=true` (environment variable `UNOMI_REQUIRE_SECURE_TRANSPORT`) in production. It is `false` by default so that a local development install keeps working over HTTP.
+
+When it is on, a caller trusted for its private key or administrator login may only merge profiles, record a merge identifier, update another profile or write `systemProperties` if the request arrived over HTTPS. The same request over HTTP is still processed, but those steps are refused and a warning is logged.
+
+If a reverse proxy terminates TLS in front of Unomi, the request Unomi sees is plain HTTP. Unomi then accepts the proxy's word only when both of these hold:
+
+* the proxy's address is listed in `org.apache.unomi.ip.trustedProxies` (`UNOMI_IP_TRUSTED_PROXIES`). The default list covers every private address range; narrow it to your proxies, or any host on those networks can claim HTTPS.
+* the proxy sends `X-Forwarded-Proto: https`. Configure it to overwrite the header: if any listed protocol is not `https`, the request is treated as plain HTTP.
+
+Changing `org.apache.unomi.ip.trustedProxies` in `custom.system.properties` needs a restart. The setting does not apply to `X-Unomi-Peer` keys in <<_single_tenant_compatibility_mode,single-tenant compatibility mode>>, which keep their Unomi 3.0 behaviour, nor to merges Unomi runs itself outside an HTTP request.
+
 ==== Troubleshooting profile merges
 
 If profiles aren't merging as expected, check:

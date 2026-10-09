@@ -34,6 +34,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import jakarta.annotation.Priority;
+import org.apache.cxf.message.Message;
+import javax.servlet.http.HttpServletRequest;
 import javax.security.auth.Subject;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.container.ContainerRequestContext;
@@ -138,7 +140,33 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
+        authenticate(requestContext);
+        recordRequestTransport(requestContext);
+    }
+
+    /**
+     * Tells the security service whether the request was encrypted, so that operations which
+     * require a secure transport can refuse a credential that travelled in clear.
+     */
+    private void recordRequestTransport(ContainerRequestContext requestContext) {
+        Message message = JAXRSUtils.getCurrentMessage();
+        Object request = message != null ? message.get("HTTP.REQUEST") : null;
+        if (request instanceof HttpServletRequest) {
+            HttpServletRequest httpRequest = (HttpServletRequest) request;
+            securityService.recordRequestTransport(httpRequest.isSecure(), httpRequest.getRemoteAddr(),
+                    httpRequest.getHeader("X-Forwarded-Proto"));
+        } else {
+            // No servlet request to ask: without proof of encryption the request is not secure.
+            securityService.recordRequestTransport(false, null, null);
+        }
+    }
+
+    private void authenticate(ContainerRequestContext requestContext) throws IOException {
         try {
+            // Request threads are pooled. Start from no subject at all, so a subject or privileged
+            // subject left behind by earlier work on this thread can never make this request trusted.
+            securityService.clearCurrentSubject();
+
             String path = requestContext.getUriInfo().getPath();
 
             // Check if single-tenant compatibility mode is enabled

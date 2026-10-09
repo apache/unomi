@@ -372,6 +372,60 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
     }
 
     @Test
+    public void testCompatPeerCanChooseProfileIdAndSetEventItemId() throws Exception {
+        LOGGER.info("Testing compat peer abilities: chooseProfileId and setEventId");
+
+        updateConfiguration(null, "org.apache.unomi.rest.authentication", "singletenantcompatibility.enabled", true);
+        keepTrying("single-tenant compatibility mode not enabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
+                enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String chosenProfileId = "compat-peer-profile-" + UUID.randomUUID();
+        String chosenEventId = "compat-peer-event-" + UUID.randomUUID();
+
+        Event loginEvent = new Event();
+        loginEvent.setItemId(chosenEventId);
+        loginEvent.setEventType("login");
+        loginEvent.setScope(TEST_SCOPE);
+
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+        contextRequest.setProfileId(chosenProfileId);
+        contextRequest.setEvents(Collections.singletonList(loginEvent));
+
+        // Without peer: body profileId and event itemId must not be honoured (975 / event-id gate).
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
+        assertEquals(200, response.getStatusCode());
+        assertNotEquals("Visitor must not bind a body profileId", chosenProfileId, response.getContextResponse().getProfileId());
+        assertEquals("Protected login without peer must not be processed", 0, response.getContextResponse().getProcessedEvents());
+
+        // With valid peer: profile id and event item id are accepted.
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.addHeader(UNOMI_PEER_HEADER, V2ThirdPartyConfigService.EXAMPLE_PROVIDER_KEY);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
+        assertEquals(200, response.getStatusCode());
+        assertEquals("Compat peer must bind the body profileId", chosenProfileId, response.getContextResponse().getProfileId());
+        assertEquals(1, response.getContextResponse().getProcessedEvents());
+
+        keepTrying("Peer-created profile not found",
+                () -> {
+                    executionContextManager.setCurrentContext(executionContextManager.createContext(COMPATIBILITY_TENANT_ID));
+                    try {
+                        return profileService.load(chosenProfileId);
+                    } finally {
+                        executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
+                    }
+                },
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        Event stored = waitForCompatTenantEvent("Compat peer must keep the client-supplied event item id", chosenEventId);
+        assertEquals("login", stored.getEventType());
+    }
+
+    @Test
     public void testV2CompatibilityProtectedEventNegativeCases() throws Exception {
         LOGGER.info("Testing single-tenant compatibility mode - protected event negative cases");
 
@@ -396,6 +450,7 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
         assertEquals("Protected event with unknown provider key should return 200", 200, response.getStatusCode());
         assertEquals("Protected event with unknown provider key should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
 
+        Dictionary<String, Object> originalThirdPartyConfig = snapshotThirdPartyConfig();
         try {
             // Case 2: valid key but source IP not in provider's allowed list.
             // Configure a provider whose IP allowlist only contains a non-loopback address so
@@ -436,9 +491,155 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
             assertEquals("Protected login event with key that only allows updateProperties should return 200", 200, response.getStatusCode());
             assertEquals("Protected login event with key that only allows updateProperties should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
         } finally {
-            // Restore thirdparty config to defaults by deleting the test entries
-            configurationAdmin.getConfiguration("org.apache.unomi.thirdparty", null).delete();
+            restoreThirdPartyConfig(originalThirdPartyConfig, "testprovider", "limitedprovider");
         }
+    }
+
+    @Test
+    public void testPeerHeaderDoesNotElevateWhenCompatOff() throws Exception {
+        LOGGER.info("Testing that X-Unomi-Peer does not elevate when compatibility mode is off");
+
+        updateConfiguration(null, "org.apache.unomi.rest.authentication", "singletenantcompatibility.enabled", false);
+        keepTrying("single-tenant compatibility mode not disabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
+                enabled -> !enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String chosenProfileId = "non-compat-peer-profile-" + UUID.randomUUID();
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+        contextRequest.setProfileId(chosenProfileId);
+
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.addHeader(UNOMI_PEER_HEADER, V2ThirdPartyConfigService.EXAMPLE_PROVIDER_KEY);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        // withAuth=true adds the public API key (V3 path); peer must still not grant chooseProfileId.
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
+        assertEquals(200, response.getStatusCode());
+        assertNotEquals("Peer header must not bind body profileId when compat mode is off",
+                chosenProfileId, response.getContextResponse().getProfileId());
+    }
+
+    @Test
+    public void testCompatPeerAbilitySubset() throws Exception {
+        LOGGER.info("Testing compat peer with ability subset: setEventId without chooseProfileId");
+
+        updateConfiguration(null, "org.apache.unomi.rest.authentication", "singletenantcompatibility.enabled", true);
+        keepTrying("single-tenant compatibility mode not enabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
+                enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String subsetKey = "testprovidersubset000000000000000";
+        String chosenProfileId = "compat-subset-profile-" + UUID.randomUUID();
+        String chosenEventId = "compat-subset-event-" + UUID.randomUUID();
+
+        Dictionary<String, Object> originalThirdPartyConfig = snapshotThirdPartyConfig();
+        try {
+            Map<String, Object> subsetConfig = new HashMap<>();
+            subsetConfig.put("thirdparty.subsetprovider.key", subsetKey);
+            subsetConfig.put("thirdparty.subsetprovider.ipAddresses", "127.0.0.1,::1");
+            subsetConfig.put("thirdparty.subsetprovider.allowedEvents", "login");
+            subsetConfig.put("thirdparty.subsetprovider.abilities", "setEventId");
+            updateConfiguration(null, "org.apache.unomi.thirdparty", subsetConfig);
+            keepTrying("Third-party subset-abilities config not applied",
+                    () -> v2ThirdPartyConfigService.getProviderKey("subsetprovider"),
+                    subsetKey::equals, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+            Event loginEvent = new Event();
+            loginEvent.setItemId(chosenEventId);
+            loginEvent.setEventType("login");
+            loginEvent.setScope(TEST_SCOPE);
+
+            ContextRequest contextRequest = new ContextRequest();
+            contextRequest.setSessionId(TEST_SESSION_ID);
+            contextRequest.setProfileId(chosenProfileId);
+            contextRequest.setEvents(Collections.singletonList(loginEvent));
+
+            HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+            request.addHeader(UNOMI_PEER_HEADER, subsetKey);
+            request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+            TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
+            assertEquals(200, response.getStatusCode());
+            assertNotEquals("Peer without chooseProfileId must not bind body profileId",
+                    chosenProfileId, response.getContextResponse().getProfileId());
+            assertEquals("Peer with setEventId must still process allowed login", 1,
+                    response.getContextResponse().getProcessedEvents());
+
+            waitForCompatTenantEvent("Peer with setEventId must keep the client-supplied event item id", chosenEventId);
+        } finally {
+            restoreThirdPartyConfig(originalThirdPartyConfig, "subsetprovider");
+        }
+    }
+
+    @Test
+    public void testCompatPeerDoesNotOpenPrivateEndpoint() throws Exception {
+        LOGGER.info("Testing that a valid peer key does not open private endpoints");
+
+        updateConfiguration(null, "org.apache.unomi.rest.authentication", "singletenantcompatibility.enabled", true);
+        keepTrying("single-tenant compatibility mode not enabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
+                enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // First show the key is a valid peer here, or the 401 below would prove nothing about it.
+        String chosenProfileId = "compat-peer-private-" + UUID.randomUUID();
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+        contextRequest.setProfileId(chosenProfileId);
+        HttpPost publicRequest = new HttpPost(getFullUrl(CONTEXT_URL));
+        publicRequest.addHeader(UNOMI_PEER_HEADER, V2ThirdPartyConfigService.EXAMPLE_PROVIDER_KEY);
+        publicRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse publicResponse = executeContextJSONRequest(publicRequest, TEST_SESSION_ID);
+        assertEquals(200, publicResponse.getStatusCode());
+        assertEquals("The key must be accepted as a peer on the public endpoint",
+                chosenProfileId, publicResponse.getContextResponse().getProfileId());
+
+        HttpGet getRequest = new HttpGet(getFullUrl("/cxs/profiles/" + chosenProfileId));
+        getRequest.addHeader(UNOMI_PEER_HEADER, V2ThirdPartyConfigService.EXAMPLE_PROVIDER_KEY);
+
+        try (CloseableHttpClient client = HttpClients.createDefault();
+             CloseableHttpResponse response = client.execute(getRequest)) {
+            assertEquals("Peer key alone must not authorize private endpoints",
+                    401, response.getStatusLine().getStatusCode());
+        }
+    }
+
+    private static final String THIRDPARTY_PID = "org.apache.unomi.thirdparty";
+
+    /** The event may not be readable yet when the response comes back, so poll for it. */
+    private Event waitForCompatTenantEvent(String failMessage, String eventId) throws InterruptedException {
+        return keepTrying(failMessage,
+                () -> {
+                    executionContextManager.setCurrentContext(executionContextManager.createContext(COMPATIBILITY_TENANT_ID));
+                    try {
+                        return persistenceService.load(eventId, Event.class);
+                    } finally {
+                        executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
+                    }
+                },
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
+    private Dictionary<String, Object> snapshotThirdPartyConfig() throws IOException {
+        Dictionary<String, Object> current = configurationAdmin.getConfiguration(THIRDPARTY_PID, null).getProperties();
+        Dictionary<String, Object> snapshot = new Hashtable<>();
+        if (current != null) {
+            for (String key : Collections.list(current.keys())) {
+                snapshot.put(key, current.get(key));
+            }
+        }
+        return snapshot;
+    }
+
+    /**
+     * Puts the third-party configuration back as it was. Deleting it instead would leave the rest of
+     * the suite, which shares this Karaf instance, without any provider.
+     */
+    private void restoreThirdPartyConfig(Dictionary<String, Object> original, String... addedProviders)
+            throws IOException, InterruptedException {
+        configurationAdmin.getConfiguration(THIRDPARTY_PID, null).update(original);
+        keepTrying("Third-party config not restored",
+                () -> Arrays.stream(addedProviders).noneMatch(v2ThirdPartyConfigService::isValidProvider)
+                        && v2ThirdPartyConfigService.isValidProvider("provider1"),
+                restored -> restored, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     private static void addPrivateTenantAuth(HttpPost request, Tenant tenant, String privateKeyValue) {

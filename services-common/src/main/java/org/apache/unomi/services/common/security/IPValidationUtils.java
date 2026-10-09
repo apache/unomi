@@ -44,6 +44,24 @@ public class IPValidationUtils {
         System.getProperty(SUPPRESS_STACK_TRACES_PROPERTY, "false"));
     
     /**
+     * Check whether a configured value is an IP address or CIDR range that
+     * {@link #isIpAuthorized(String, Set)} is able to match against.
+     *
+     * @param value the configured address or range
+     * @return true if the value can be parsed, false otherwise
+     */
+    public static boolean isValidAddressOrRange(String value) {
+        if (StringUtils.isBlank(value)) {
+            return false;
+        }
+        try {
+            return new IPAddressString(value.trim()).toAddress() != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * Check if a source IP address is authorized against a set of allowed IP addresses.
      * 
      * @param sourceIP the source IP address to validate

@@ -20,6 +20,8 @@ package org.apache.unomi.services.common.security;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class SecurityUtilsTest {
 
@@ -59,5 +61,14 @@ public class SecurityUtilsTest {
     public void testFiveCharSecret() {
         // One char beyond threshold — prefix visible, rest masked
         assertEquals("abcd****", SecurityUtils.maskSecret("abcde"));
+    }
+
+    @Test
+    public void constantTimeEqualsMatchesEqualStrings() {
+        assertTrue(SecurityUtils.constantTimeEquals("same-secret", "same-secret"));
+        assertFalse(SecurityUtils.constantTimeEquals("same-secret", "other-secret"));
+        assertFalse(SecurityUtils.constantTimeEquals("short", "longer-value"));
+        assertFalse(SecurityUtils.constantTimeEquals(null, "x"));
+        assertFalse(SecurityUtils.constantTimeEquals(null, null));
     }
 }

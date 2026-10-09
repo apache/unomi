@@ -172,38 +172,59 @@ When single-tenant compatibility mode is enabled:
 - **All operations** use tenant `default`
 - **Non-protected events** require no authentication (same as V2)
 
-===== Protected Events in V2 Compatibility Mode
+===== Protected Events and Peer Abilities
 
-In single-tenant compatibility mode, protected event types are configured dynamically using the V2 third-party configuration file. By default, the following event types are protected:
+In single-tenant compatibility mode, a server that sends a valid `X-Unomi-Peer` key from an allowed IP address keeps the same abilities it had in Unomi 3.0 on *public* endpoints only:
+
+- send protected events listed for that provider (for example `login`, `updateProperties`)
+- set the event item id
+- choose the profile id in the request body
+- merge profiles on login / claim a merge identifier
+- update another profile's properties, segments, scores, consents and `systemProperties`
+
+The peer header does **not** open private / admin endpoints, and it does nothing when compatibility mode is off. Visitors without a valid peer key still get none of these abilities (UNOMI-975 / UNOMI-978 stay in force for them).
+
+By default the following event types are protected for `provider1`:
 
 - `login` - User authentication events
 - `updateProperties` - Profile property updates
 
-Additional event types can be configured as protected by editing the V2 third-party configuration file.
-
 For protected events, clients must:
-1. Send the request from an authorized IP address (configured in the V2 third-party configuration)
-2. Include the `X-Unomi-Peer` header with the third-party ID (e.g., "provider1")
 
-All other event types are considered non-protected and require no authentication.
+1. Send the request from an authorized IP address (or from behind a configured trusted reverse proxy)
+2. Include the `X-Unomi-Peer` header with the provider *key* (the secret, not the provider name)
+
+All other event types are non-protected and require no peer header.
 
 ===== V2 Third-Party Configuration
 
-The protected events and third-party providers are configured in the original V2 configuration file `etc/org.apache.unomi.thirdparty.cfg`. The system dynamically detects any number of providers using the pattern `thirdparty.{providerName}.{property}`:
+Providers are configured in `etc/org.apache.unomi.thirdparty.cfg` with the pattern `thirdparty.{providerName}.{property}`:
 
 ```properties
-# Provider 1 Configuration (default provider)
+# Global (optional)
+# allowExampleKey=true logs a warning at every start. Never use it in production: the example key is public
+allowExampleKey=${org.apache.unomi.thirdparty.allowExampleKey:-false}
+# When the direct connection is in this list, the last X-Forwarded-For entry that is not a trusted proxy is used for IP checks
+trustedProxies=${org.apache.unomi.thirdparty.trustedProxies:-}
+
+# Provider 1 — replace the key before production use
 thirdparty.provider1.key=${org.apache.unomi.thirdparty.provider1.key:-670c26d1cc413346c3b2fd9ce65dab41}
 thirdparty.provider1.ipAddresses=${org.apache.unomi.thirdparty.provider1.ipAddresses:-127.0.0.1,::1}
 thirdparty.provider1.allowedEvents=${org.apache.unomi.thirdparty.provider1.allowedEvents:-login,updateProperties}
+thirdparty.provider1.abilities=${org.apache.unomi.thirdparty.provider1.abilities:-setEventId,chooseProfileId,mergeOnLogin,updateOtherProfiles}
 
-# Additional providers can be added dynamically
-thirdparty.myapp.key=${org.apache.unomi.thirdparty.myapp.key:-my-secret-key}
-thirdparty.myapp.ipAddresses=${org.apache.unomi.thirdparty.myapp.ipAddresses:-192.168.1.0/24}
-thirdparty.myapp.allowedEvents=${org.apache.unomi.thirdparty.myapp.allowedEvents:-login,updateProperties,sessionCreated}
+# Additional providers
+thirdparty.myapp.key=replace-with-a-long-unique-secret
+thirdparty.myapp.ipAddresses=192.168.1.0/24
+thirdparty.myapp.allowedEvents=login,updateProperties,sessionCreated
+# abilities omitted → all four Unomi 3.0 peer abilities
 ```
 
-This uses the exact same configuration format as V2, ensuring complete compatibility with existing V2 setups. The system automatically detects and configures any provider that has a valid key.
+Ability names are case-sensitive. A provider with no `abilities` property gets all four. An empty value (`thirdparty.myapp.abilities=`) grants no peer ability, so the provider can only send its protected events. A value that names no known ability, for example a misspelt one, disables the provider and logs an error, so a typo never widens what a provider may do.
+
+When an `X-Unomi-Peer` header is present but not accepted, Unomi logs a warning that says whether the key is unknown or the caller's IP address is not in the provider's allowlist. The request then continues as an ordinary visitor.
+
+A provider whose key is empty, shorter than 16 characters, or equal to the well-known example value is **disabled** at startup with a clear error, unless `allowExampleKey=true`. Keys are compared in constant time and never written in full to the logs.
 
 ===== Configuration Management
 
@@ -239,12 +260,24 @@ The V2 third-party configuration supports dynamic updates:
    ./bin/start
    ```
 
+===== IP allowlists and reverse proxies
+
+Peer checks use the TCP peer Unomi sees (`remoteAddr`). They only read `X-Forwarded-For` when that peer is listed in `trustedProxies`. That stops a client on the open network from inventing a client IP in a header.
+
+Operators should still treat IP allowlists as a second factor next to the peer key, not as the only control:
+
+* Always set an explicit `thirdparty.{name}.ipAddresses` list (single addresses or CIDR ranges). The list is required: a provider with an empty list is refused from every address, as in Unomi 3.0, and Unomi logs an error for it at startup. The key alone is never enough. An entry that is not an address or CIDR range is reported as an error at startup and never matches.
+* Keep `trustedProxies` limited to reverse proxies that sit in front of Unomi, and list every proxy in the chain. Unomi reads `X-Forwarded-For` from the last entry backwards and uses the first entry that is not a trusted proxy, so an entry a client puts at the front of the header is ignored whether the proxy appends to the header or overwrites it.
+* Prefer placing Unomi (or the peer callers) on a private network or behind a firewall so only known hosts can reach the public endpoints.
+* Rotate peer keys and keep them long and unique. For stronger assurance than key + IP, put mutual TLS or equivalent at the edge in front of Unomi.
+
 ===== Recommendations
 
 1. **Use single-tenant compatibility mode temporarily** during migration
 2. **Plan for gradual migration** to V3 authentication
 3. **Monitor access patterns** during the transition
 4. **Disable single-tenant compatibility mode** once migration is complete
+5. **Configure non-empty IP allowlists** and minimal `trustedProxies` before production use
 
 ==== Troubleshooting
 
