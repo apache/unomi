@@ -63,6 +63,7 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.IRouterCamelContext;
+import org.apache.unomi.router.api.RouteIds;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.schema.api.SchemaService;
@@ -684,6 +685,11 @@ public abstract class BaseIT extends KarafTestSupport {
                 // crash recovery repeatedly (mis)reclaims them, logging "Lock verification failed... after
                 // CAS" every checker tick. Widen it for ITs so heartbeats/checker never starve.
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.scheduler.thread.poolSize", "10"),
+                // The scheduled purge runs seconds after startup for every tenant and would delete the
+                // years-old profiles, sessions and events the migration ITs restore from snapshots before
+                // they are checked. Purge ITs call the purge methods directly, so switch the schedule off.
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.profile.purge.inactiveTime", "-1"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.monthly.index.purge.existTime", "-1"),
 
                 // The router's base directories have to be set here rather than in
                 // etc/org.apache.unomi.router.cfg: Karaf's configuration plugin overrides every
@@ -1795,10 +1801,12 @@ public abstract class BaseIT extends KarafTestSupport {
      * Checks if a Camel route with the given route ID exists.
      * Uses official Camel API: CamelContext.getRoute(String routeId)
      *
-     * @param routeId The route ID to check (typically the import configuration itemId)
+     * @param tenantId The tenant owning the import/export configuration
+     * @param configId The import/export configuration ID; the route ID is built from both
      * @return true if the route exists, false otherwise
      */
-    protected boolean camelRouteExists(String routeId) {
+    protected boolean camelRouteExists(String tenantId, String configId) {
+        String routeId = RouteIds.of(tenantId, configId);
         CamelContext camelContext = getCamelContext();
         if (camelContext == null) {
             return false;
@@ -1812,10 +1820,12 @@ public abstract class BaseIT extends KarafTestSupport {
      * Uses Camel 2.23.1 API directly.
      * Returns ServiceStatus enum: Started, Stopped, Suspended, etc.
      *
-     * @param routeId The route ID to get status for
+     * @param tenantId The tenant owning the import/export configuration
+     * @param configId The import/export configuration ID; the route ID is built from both
      * @return The route status, or null if route doesn't exist or status unavailable
      */
-    protected ServiceStatus getCamelRouteStatus(String routeId) {
+    protected ServiceStatus getCamelRouteStatus(String tenantId, String configId) {
+        String routeId = RouteIds.of(tenantId, configId);
         CamelContext camelContext = getCamelContext();
         if (camelContext == null) {
             return null;
@@ -1839,11 +1849,12 @@ public abstract class BaseIT extends KarafTestSupport {
      * Checks if a Camel route is started (running).
      * Uses official Camel API to check route status.
      *
-     * @param routeId The route ID to check
+     * @param tenantId The tenant owning the import/export configuration
+     * @param configId The import/export configuration ID; the route ID is built from both
      * @return true if the route exists and is started, false otherwise
      */
-    protected boolean isCamelRouteStarted(String routeId) {
-        ServiceStatus status = getCamelRouteStatus(routeId);
+    protected boolean isCamelRouteStarted(String tenantId, String configId) {
+        ServiceStatus status = getCamelRouteStatus(tenantId, configId);
         return status != null && status.isStarted();
     }
 
@@ -1851,10 +1862,12 @@ public abstract class BaseIT extends KarafTestSupport {
      * Gets detailed information about a Camel route including status, endpoints, and configuration.
      * Uses Camel 2.23.1 API to inspect route definitions and endpoints.
      *
-     * @param routeId The route ID to get information for
+     * @param tenantId The tenant owning the import/export configuration
+     * @param configId The import/export configuration ID; the route ID is built from both
      * @return A string describing the route status, endpoints, and configuration, or error message if route doesn't exist
      */
-    protected String getCamelRouteInfo(String routeId) {
+    protected String getCamelRouteInfo(String tenantId, String configId) {
+        String routeId = RouteIds.of(tenantId, configId);
         CamelContext camelContext = getCamelContext();
         if (camelContext == null) {
             return "CamelContext not available";
@@ -1869,7 +1882,7 @@ public abstract class BaseIT extends KarafTestSupport {
             info.append("Route '").append(routeId).append("': ");
 
             // Get route status using official API
-            ServiceStatus status = getCamelRouteStatus(routeId);
+            ServiceStatus status = getCamelRouteStatus(tenantId, configId);
             if (status != null) {
                 info.append("status=").append(status);
             } else {
@@ -1929,22 +1942,24 @@ public abstract class BaseIT extends KarafTestSupport {
      * Waits for a Camel route to be created and started.
      * This is useful for tests that need to verify the route was created by the timer.
      *
-     * @param routeId The route ID to wait for
+     * @param tenantId The tenant owning the import/export configuration
+     * @param configId The import/export configuration ID; the route ID is built from both
      * @param timeoutMs Timeout in milliseconds between retries
      * @param maxRetries Maximum number of retries
      * @return true if the route exists and is started, false if timeout
      * @throws InterruptedException if interrupted
      */
-    protected boolean waitForCamelRouteStarted(String routeId, int timeoutMs, int maxRetries) throws InterruptedException {
+    protected boolean waitForCamelRouteStarted(String tenantId, String configId, int timeoutMs, int maxRetries) throws InterruptedException {
+        String routeId = RouteIds.of(tenantId, configId);
         for (int i = 0; i < maxRetries; i++) {
-            if (isCamelRouteStarted(routeId)) {
-                String routeInfo = getCamelRouteInfo(routeId);
+            if (isCamelRouteStarted(tenantId, configId)) {
+                String routeInfo = getCamelRouteInfo(tenantId, configId);
                 LOGGER.debug("Camel route '{}' is started. {}", routeId, routeInfo);
                 return true;
             }
             Thread.sleep(timeoutMs);
         }
-        String routeInfo = getCamelRouteInfo(routeId);
+        String routeInfo = getCamelRouteInfo(tenantId, configId);
         LOGGER.warn("Camel route '{}' did not start within timeout. {}", routeId, routeInfo);
         return false;
     }
@@ -1966,10 +1981,8 @@ public abstract class BaseIT extends KarafTestSupport {
                 // In Camel 2.23.1, Route has getId() method
                 String routeId = route.getId();
                 if (routeId != null) {
-                    ServiceStatus status = getCamelRouteStatus(routeId);
-                    if (status != null) {
-                        routes.put(routeId, status);
-                    }
+                    // a route that exists in the context counts as started, as for getCamelRouteStatus(tenantId, configId)
+                    routes.put(routeId, ServiceStatus.Started);
                 }
             }
         } catch (Exception e) {

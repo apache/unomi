@@ -197,13 +197,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             .withFixedDelay()
             .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> {
                 // Flush in-memory stats for every tenant; system context alone only persists system.
-                for (String tenantId : getTenants()) {
-                    try {
-                        contextManager.executeAsTenant(tenantId, () -> syncRuleStatistics());
-                    } catch (Throwable t) {
-                        LOGGER.error("Error syncing rule statistics for tenant {}", tenantId, t);
-                    }
-                }
+                executeForEachTenant("rule statistics sync", () -> syncRuleStatistics());
             }))
             .schedule();
 
@@ -830,16 +824,9 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                 persistenceService.save(ruleStatistics, null, true);
             }
         }
-
-        // Also sync system tenant statistics if needed
-        if (!SYSTEM_TENANT.equals(currentTenant)) {
-            Map<String, RuleStatistics> systemStats = getRuleStatisticsForTenant(SYSTEM_TENANT);
-            for (RuleStatistics ruleStatistics : systemStats.values()) {
-                if (!tenantStats.containsKey(ruleStatistics.getItemId())) {
-                    tenantStats.put(ruleStatistics.getItemId(), ruleStatistics);
-                }
-            }
-        }
+        // System-tenant statistics are synced by the system tenant's own run and read through the
+        // fallback in getRuleStatistics()/getAllRuleStatistics(). Copying them into this tenant's map
+        // would have this tenant's next sync save them under its own tenantId and drop their counts.
     }
 
     public void bind(ServiceReference<RuleListenerService> serviceReference) {

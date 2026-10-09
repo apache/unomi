@@ -27,6 +27,7 @@ import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.router.api.EndpointValidator;
 import org.apache.unomi.router.api.ImportConfiguration;
+import org.apache.unomi.router.api.RouteIds;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.exceptions.BadProfileDataFormatException;
@@ -149,7 +150,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                 recordEndpointOutcome(importConfiguration, importConfigurationService, refusal, executionContextManager);
                 if (refusal == null) {
                     ProcessorDefinition prDef = from(endpoint)
-                            .routeId(importConfiguration.getItemId())// This allow identification of the route for manual start/stop
+                            .routeId(RouteIds.of(importConfiguration.getTenantId(), importConfiguration.getItemId()))// This allow identification of the route for manual start/stop
                             .autoStartup(importConfiguration.isActive())// Auto-start if the import configuration is set active
                             .shutdownRunningTask(ShutdownRunningTask.CompleteAllTasks)
                             .onCompletion()

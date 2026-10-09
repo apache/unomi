@@ -22,6 +22,7 @@ import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.RouterUtils;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
+import org.apache.unomi.router.api.RouteIds;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +73,7 @@ public class ExportRouteCompletionProcessor implements Processor {
     @Override
     public void process(Exchange exchange) throws Exception {
         // We load the conf from ES because we are going to increment the execution number
-        ExportConfiguration exportConfiguration = exportConfigurationService.load(exchange.getFromRouteId());
+        ExportConfiguration exportConfiguration = exportConfigurationService.load(RouteIds.configId(exchange.getFromRouteId()));
         if (exportConfiguration == null) {
             LOGGER.warn("Unable to complete export, config cannot not found: {}", exchange.getFromRouteId());
             return;

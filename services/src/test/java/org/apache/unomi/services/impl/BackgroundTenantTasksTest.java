@@ -17,7 +17,11 @@
 package org.apache.unomi.services.impl;
 
 import org.apache.unomi.api.ExecutionContext;
+import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.rules.RuleStatistics;
+import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SegmentService;
@@ -45,20 +49,22 @@ import org.mockito.quality.Strictness;
 import org.osgi.framework.Bundle;
 
 import java.util.Collections;
+import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -66,9 +72,11 @@ import static org.mockito.Mockito.when;
 /**
  * UNOMI-1000: background jobs must visit every tenant (not only {@code system}).
  * <p>
- * These tests fail on the 4.0.0 RC behaviour where purge / segment recalculation /
- * rule-statistics refresh ran solely under {@code executeAsSystem}, so persistence
- * only ever saw {@code tenantId=system}.
+ * These tests fail when purge / segment recalculation / rule-statistics refresh run
+ * solely under {@code executeAsSystem}, where persistence only ever sees
+ * {@code tenantId=system}. They also cover what running per tenant adds:
+ * one tenant's failure is reported without stopping the others, and system-owned
+ * statistics stay in the system tenant.
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -124,39 +132,21 @@ public class BackgroundTenantTasksTest {
     }
 
     @Test
-    public void profilePurgeTaskRunsUnderEveryTenantAndRestoresContext() throws Exception {
-        Set<String> visitedTenants = ConcurrentHashMap.newKeySet();
-        ExecutionContextManagerImpl spiedContext = spy(executionContextManager);
-        trackTenantVisits(spiedContext, visitedTenants);
-
+    public void profilePurgeTaskPurgesEveryTenantAndRestoresContext() throws Exception {
         AtomicReference<TaskExecutor> purgeExecutor = new AtomicReference<>();
-        SchedulerServiceImpl spiedScheduler = spy(schedulerService);
-        captureExecutor(spiedScheduler, "profile-purge", purgeExecutor);
-
-        ProfileServiceImpl profileService = new ProfileServiceImpl();
-        profileService.setBundleContext(bundleContext);
-        profileService.setPersistenceService(persistenceService);
-        profileService.setDefinitionsService(definitionsService);
-        profileService.setContextManager(spiedContext);
-        profileService.setSchedulerService(spiedScheduler);
-        profileService.setCacheService(multiTypeCacheService);
-        profileService.setTenantService(tenantService);
-        profileService.setSegmentService(mock(SegmentService.class));
-        profileService.setPurgeProfileExistTime(30);
-        profileService.setPurgeProfileInterval(1);
-        profileService.postConstruct();
-
-        assertNotNull(purgeExecutor.get(), "profile-purge executor must be registered");
+        ExecutionContextManagerImpl spiedContext = spy(executionContextManager);
+        newProfileService(spiedContext, capturingScheduler("profile-purge", purgeExecutor));
+        saveOldProfile(TENANT_A, "a-old");
+        saveOldProfile(TENANT_B, "b-old");
 
         ExecutionContext before = spiedContext.getCurrentContext();
         String beforeTenant = before != null ? before.getTenantId() : null;
 
-        runExecutor(purgeExecutor.get());
+        assertNull(runExecutor(purgeExecutor.get()), "purge task should complete");
+        persistenceService.refresh();
 
-        assertTrue(visitedTenants.contains(TENANT_A), "purge must visit tenant1, visited=" + visitedTenants);
-        assertTrue(visitedTenants.contains(TENANT_B), "purge must visit tenant2, visited=" + visitedTenants);
-        assertTrue(visitedTenants.contains(TenantService.SYSTEM_TENANT),
-                "purge must also visit system, visited=" + visitedTenants);
+        assertNull(loadProfile(TENANT_A, "a-old"), "purge must remove tenant1's old profile");
+        assertNull(loadProfile(TENANT_B, "b-old"), "purge must remove tenant2's old profile");
 
         ExecutionContext after = spiedContext.getCurrentContext();
         String afterTenant = after != null ? after.getTenantId() : null;
@@ -164,70 +154,140 @@ public class BackgroundTenantTasksTest {
     }
 
     @Test
+    public void profilePurgeFailureInOneTenantIsReportedAndDoesNotStopTheOthers() throws Exception {
+        AtomicReference<TaskExecutor> purgeExecutor = new AtomicReference<>();
+        ExecutionContextManagerImpl spiedContext = spy(executionContextManager);
+        newProfileService(spiedContext, capturingScheduler("profile-purge", purgeExecutor));
+        failTenant(spiedContext, TENANT_A);
+        saveOldProfile(TENANT_A, "a-old");
+        saveOldProfile(TENANT_B, "b-old");
+
+        ExecutionContext before = spiedContext.getCurrentContext();
+        String beforeTenant = before != null ? before.getTenantId() : null;
+
+        String failure = runExecutor(purgeExecutor.get());
+        persistenceService.refresh();
+
+        assertNotNull(failure, "a tenant failure must fail the task instead of being reported as success");
+        assertTrue(failure.contains(TENANT_A), "failure must name the tenant: " + failure);
+        assertFalse(failure.contains(TENANT_B), "failure must not name a tenant that succeeded: " + failure);
+        assertNotNull(loadProfile(TENANT_A, "a-old"), "the failing tenant keeps its data");
+        assertNull(loadProfile(TENANT_B, "b-old"), "the other tenant must still be purged");
+
+        ExecutionContext after = spiedContext.getCurrentContext();
+        String afterTenant = after != null ? after.getTenantId() : null;
+        assertEquals(beforeTenant, afterTenant, "tenant context must be restored after a tenant failure");
+    }
+
+    @Test
+    public void profilePurgeInterruptedBeforeItsTenantsIsNotReportedAsDone() throws Exception {
+        AtomicReference<TaskExecutor> purgeExecutor = new AtomicReference<>();
+        newProfileService(executionContextManager, capturingScheduler("profile-purge", purgeExecutor));
+        saveOldProfile(TENANT_A, "a-old");
+
+        String failure;
+        Thread.currentThread().interrupt();
+        try {
+            failure = runExecutor(purgeExecutor.get());
+        } finally {
+            Thread.interrupted();
+        }
+
+        assertNotNull(failure, "tenants skipped by an interruption must not be reported as purged");
+        for (String tenantId : new String[]{TENANT_A, TENANT_B, TenantService.SYSTEM_TENANT}) {
+            assertTrue(failure.contains(tenantId), "every skipped tenant must be named: " + failure);
+        }
+        assertNotNull(loadProfile(TENANT_A, "a-old"), "an interrupted purge must not have run");
+    }
+
+    @Test
     public void segmentDateRecalculationTaskRunsUnderEveryTenant() throws Exception {
         Set<String> visitedTenants = ConcurrentHashMap.newKeySet();
         ExecutionContextManagerImpl spiedContext = spy(executionContextManager);
         trackTenantVisits(spiedContext, visitedTenants);
-
         AtomicReference<TaskExecutor> segmentExecutor = new AtomicReference<>();
-        SchedulerServiceImpl spiedScheduler = spy(schedulerService);
-        captureExecutor(spiedScheduler, "segment-date-recalculation", segmentExecutor);
+        newSegmentService(spiedContext, capturingScheduler("segment-date-recalculation", segmentExecutor));
 
-        RulesService rulesService = mock(RulesService.class);
-        when(rulesService.getAllRules()).thenReturn(Collections.emptyList());
+        assertNull(runExecutor(segmentExecutor.get()), "segment recalculation should complete");
 
-        SegmentServiceImpl segmentService = new SegmentServiceImpl();
-        segmentService.setBundleContext(bundleContext);
-        segmentService.setPersistenceService(persistenceService);
-        segmentService.setDefinitionsService(definitionsService);
-        segmentService.setContextManager(spiedContext);
-        segmentService.setSchedulerService(spiedScheduler);
-        segmentService.setCacheService(multiTypeCacheService);
-        segmentService.setTenantService(tenantService);
-        segmentService.setRulesService(rulesService);
-        segmentService.setEventService(mock(EventService.class));
-        segmentService.setTracerService(TestHelper.createTracerService());
-        segmentService.postConstruct();
-
-        assertNotNull(segmentExecutor.get(), "segment-date-recalculation executor must be registered");
-        runExecutor(segmentExecutor.get());
-
-        assertTrue(visitedTenants.contains(TENANT_A), "segment recalc must visit tenant1, visited=" + visitedTenants);
-        assertTrue(visitedTenants.contains(TENANT_B), "segment recalc must visit tenant2, visited=" + visitedTenants);
+        assertEquals(Set.of(TENANT_A, TENANT_B, TenantService.SYSTEM_TENANT), visitedTenants);
     }
 
     @Test
-    public void ruleStatisticsRefreshVisitsEveryTenant() throws Exception {
-        Set<String> visitedTenants = ConcurrentHashMap.newKeySet();
+    public void segmentDateRecalculationTaskUpdatesProfilesOfEveryTenant() throws Exception {
+        AtomicReference<TaskExecutor> segmentExecutor = new AtomicReference<>();
+        SegmentServiceImpl segmentService = newSegmentService(executionContextManager,
+                capturingScheduler("segment-date-recalculation", segmentExecutor));
+        saveInactiveProfilesAndTheirSegments(segmentService);
+        assertFalse(loadProfile(TENANT_A, "inactive-profile").getSegments().contains("inactive-" + TENANT_A),
+                "the profile must not be in the segment before the task runs");
+
+        assertNull(runExecutor(segmentExecutor.get()), "segment recalculation should complete");
+        persistenceService.refresh();
+
+        assertEquals(Set.of("inactive-" + TENANT_A), loadProfile(TENANT_A, "inactive-profile").getSegments(),
+                "tenant1's profile must enter tenant1's date-relative segment only");
+        assertEquals(Set.of("inactive-" + TENANT_B), loadProfile(TENANT_B, "inactive-profile").getSegments(),
+                "tenant2's profile must enter tenant2's date-relative segment only");
+    }
+
+    @Test
+    public void segmentDateRecalculationFailureInOneTenantIsReportedAndDoesNotStopTheOthers() throws Exception {
         ExecutionContextManagerImpl spiedContext = spy(executionContextManager);
-        trackTenantVisits(spiedContext, visitedTenants);
+        AtomicReference<TaskExecutor> segmentExecutor = new AtomicReference<>();
+        SegmentServiceImpl segmentService = newSegmentService(spiedContext,
+                capturingScheduler("segment-date-recalculation", segmentExecutor));
+        saveInactiveProfilesAndTheirSegments(segmentService);
+        failTenant(spiedContext, TENANT_B);
 
+        String failure = runExecutor(segmentExecutor.get());
+        persistenceService.refresh();
+
+        assertNotNull(failure, "a tenant failure must fail the task instead of being reported as success");
+        assertTrue(failure.contains(TENANT_B), "failure must name the tenant: " + failure);
+        assertFalse(failure.contains(TENANT_A), "failure must not name a tenant that succeeded: " + failure);
+        assertEquals(Set.of("inactive-" + TENANT_A), loadProfile(TENANT_A, "inactive-profile").getSegments(),
+                "the other tenant must still be recalculated");
+        assertTrue(loadProfile(TENANT_B, "inactive-profile").getSegments().isEmpty(),
+                "the failing tenant's profiles are left as they were");
+    }
+
+    @Test
+    public void ruleStatisticsRefreshPersistsEachTenantsOwnStatistics() throws Exception {
         AtomicReference<TaskExecutor> statsExecutor = new AtomicReference<>();
-        SchedulerServiceImpl spiedScheduler = spy(schedulerService);
-        captureExecutor(spiedScheduler, "rules-statistics-refresh", statsExecutor);
+        RulesServiceImpl rulesService = newRulesService(capturingScheduler("rules-statistics-refresh", statsExecutor));
+        saveRuleStatistics(TENANT_A, "a-rule", 10);
+        // getRuleStatistics() hands out the live in-memory statistics the rule engine increments
+        RuleStatistics liveStats = executionContextManager.executeAsTenant(TENANT_A, () -> rulesService.getRuleStatistics("a-rule"));
+        liveStats.setLocalExecutionCount(4);
 
-        RulesServiceImpl rulesService = new RulesServiceImpl();
-        rulesService.setBundleContext(bundleContext);
-        rulesService.setPersistenceService(persistenceService);
-        rulesService.setDefinitionsService(definitionsService);
-        rulesService.setContextManager(spiedContext);
-        rulesService.setSchedulerService(spiedScheduler);
-        rulesService.setCacheService(multiTypeCacheService);
-        rulesService.setTenantService(tenantService);
-        rulesService.setEventService(mock(EventService.class));
-        rulesService.setActionExecutorDispatcher(mock(org.apache.unomi.services.actions.ActionExecutorDispatcher.class));
-        rulesService.setTracerService(TestHelper.createTracerService());
-        rulesService.setRulesRefreshInterval(60000);
-        rulesService.setRulesStatisticsRefreshInterval(60000);
-        rulesService.postConstruct();
+        assertNull(runExecutor(statsExecutor.get()), "statistics refresh should complete");
+        persistenceService.refresh();
 
-        assertNotNull(statsExecutor.get(), "rules-statistics-refresh executor must be registered");
-        runExecutor(statsExecutor.get());
+        assertEquals(14L, loadRuleStatistics(TENANT_A, "a-rule").getExecutionCount(),
+                "tenant1's pending executions must be flushed to tenant1's statistics");
+        assertNull(loadRuleStatistics(TENANT_B, "a-rule"), "tenant2 must not receive tenant1's statistics");
+    }
 
-        assertTrue(visitedTenants.contains(TENANT_A), "stats refresh must visit tenant1, visited=" + visitedTenants);
-        assertTrue(visitedTenants.contains(TENANT_B), "stats refresh must visit tenant2, visited=" + visitedTenants);
-        assertTrue(visitedTenants.contains(TenantService.SYSTEM_TENANT),
-                "stats refresh must visit system, visited=" + visitedTenants);
+    @Test
+    public void ruleStatisticsRefreshKeepsSystemStatisticsInTheSystemTenant() throws Exception {
+        AtomicReference<TaskExecutor> statsExecutor = new AtomicReference<>();
+        RulesServiceImpl rulesService = newRulesService(capturingScheduler("rules-statistics-refresh", statsExecutor));
+        saveRuleStatistics(TenantService.SYSTEM_TENANT, "system-rule", 5);
+        RuleStatistics liveStats = executionContextManager.executeAsSystem(() -> rulesService.getRuleStatistics("system-rule"));
+
+        // Several ticks: a tenant run must never pick up the system statistics a previous tick exposed to it.
+        for (int tick = 1; tick <= 3; tick++) {
+            liveStats.setLocalExecutionCount(liveStats.getLocalExecutionCount() + 1);
+            assertNull(runExecutor(statsExecutor.get()), "statistics refresh should complete");
+            persistenceService.refresh();
+
+            assertEquals(5L + tick, loadRuleStatistics(TenantService.SYSTEM_TENANT, "system-rule").getExecutionCount(),
+                    "system rule executions must be flushed to the system statistics on tick " + tick);
+            assertNull(loadRuleStatistics(TENANT_A, "system-rule"), "tenant1 must not get a copy of system statistics");
+            assertNull(loadRuleStatistics(TENANT_B, "system-rule"), "tenant2 must not get a copy of system statistics");
+            assertEquals(TenantService.SYSTEM_TENANT, liveStats.getTenantId(), "system statistics must stay in the system tenant");
+        }
     }
 
     @Test
@@ -253,44 +313,120 @@ public class BackgroundTenantTasksTest {
         });
     }
 
-    @Test
-    public void purgeForOneTenantDoesNotRemoveAnotherTenantsProfiles() {
+    private ProfileServiceImpl newProfileService(ExecutionContextManagerImpl contextManager, SchedulerServiceImpl scheduler) {
         ProfileServiceImpl profileService = new ProfileServiceImpl();
         profileService.setBundleContext(bundleContext);
         profileService.setPersistenceService(persistenceService);
         profileService.setDefinitionsService(definitionsService);
-        profileService.setContextManager(executionContextManager);
-        profileService.setSchedulerService(schedulerService);
+        profileService.setContextManager(contextManager);
+        profileService.setSchedulerService(scheduler);
         profileService.setCacheService(multiTypeCacheService);
         profileService.setTenantService(tenantService);
         profileService.setSegmentService(mock(SegmentService.class));
+        profileService.setPurgeProfileExistTime(30);
+        profileService.setPurgeProfileInterval(1);
         profileService.postConstruct();
+        return profileService;
+    }
 
-        executionContextManager.executeAsTenant(TENANT_A, () -> {
-            Profile old = new Profile("a-old");
-            old.setProperty("firstVisit", new java.util.Date(0));
+    private SegmentServiceImpl newSegmentService(ExecutionContextManagerImpl contextManager, SchedulerServiceImpl scheduler) {
+        RulesService rulesService = mock(RulesService.class);
+        when(rulesService.getAllRules()).thenReturn(Collections.emptyList());
+
+        SegmentServiceImpl segmentService = new SegmentServiceImpl();
+        segmentService.setBundleContext(bundleContext);
+        segmentService.setPersistenceService(persistenceService);
+        segmentService.setDefinitionsService(definitionsService);
+        segmentService.setContextManager(contextManager);
+        segmentService.setSchedulerService(scheduler);
+        segmentService.setCacheService(multiTypeCacheService);
+        segmentService.setTenantService(tenantService);
+        segmentService.setRulesService(rulesService);
+        segmentService.setEventService(mock(EventService.class));
+        segmentService.setTracerService(TestHelper.createTracerService());
+        segmentService.postConstruct();
+        return segmentService;
+    }
+
+    private RulesServiceImpl newRulesService(SchedulerServiceImpl scheduler) {
+        RulesServiceImpl rulesService = new RulesServiceImpl();
+        rulesService.setBundleContext(bundleContext);
+        rulesService.setPersistenceService(persistenceService);
+        rulesService.setDefinitionsService(definitionsService);
+        rulesService.setContextManager(executionContextManager);
+        rulesService.setSchedulerService(scheduler);
+        rulesService.setCacheService(multiTypeCacheService);
+        rulesService.setTenantService(tenantService);
+        rulesService.setEventService(mock(EventService.class));
+        rulesService.setActionExecutorDispatcher(mock(org.apache.unomi.services.actions.ActionExecutorDispatcher.class));
+        rulesService.setTracerService(TestHelper.createTracerService());
+        rulesService.setRulesRefreshInterval(60000);
+        rulesService.setRulesStatisticsRefreshInterval(60000);
+        rulesService.postConstruct();
+        return rulesService;
+    }
+
+    /**
+     * Gives each tenant a date-relative segment, then a profile matching it. The profile is saved after the
+     * segment was defined, straight to persistence: only the scheduled recalculation can put it in the
+     * segment, as when time makes a profile match.
+     */
+    private void saveInactiveProfilesAndTheirSegments(SegmentServiceImpl segmentService) {
+        for (String tenantId : new String[]{TENANT_A, TENANT_B}) {
+            executionContextManager.executeAsTenant(tenantId, () -> {
+                segmentService.setSegmentDefinition(inactiveSinceSegment("inactive-" + tenantId));
+                Profile inactive = new Profile("inactive-profile");
+                inactive.setProperty("lastVisit", new Date(0));
+                persistenceService.save(inactive);
+            });
+        }
+        persistenceService.refresh();
+    }
+
+    /** A segment of the profiles whose last visit is more than 30 days old: its membership changes as time passes. */
+    private Segment inactiveSinceSegment(String segmentId) {
+        Metadata metadata = new Metadata();
+        metadata.setId(segmentId);
+        metadata.setName(segmentId);
+        metadata.setScope("systemscope");
+        metadata.setEnabled(true);
+
+        Condition condition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        condition.setParameter("propertyName", "properties.lastVisit");
+        condition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+        condition.setParameter("propertyValueDateExpr", "now-30d");
+
+        Segment segment = new Segment();
+        segment.setItemId(segmentId);
+        segment.setMetadata(metadata);
+        segment.setCondition(condition);
+        return segment;
+    }
+
+    private void saveOldProfile(String tenantId, String profileId) {
+        executionContextManager.executeAsTenant(tenantId, () -> {
+            Profile old = new Profile(profileId);
+            old.setProperty("firstVisit", new Date(0));
             persistenceService.save(old);
-            return null;
-        });
-        executionContextManager.executeAsTenant(TENANT_B, () -> {
-            Profile old = new Profile("b-old");
-            old.setProperty("firstVisit", new java.util.Date(0));
-            persistenceService.save(old);
-            return null;
         });
         persistenceService.refresh();
+    }
 
-        executionContextManager.executeAsTenant(TENANT_A, () -> {
-            profileService.purgeProfiles(0, 1);
-            return null;
+    private Profile loadProfile(String tenantId, String profileId) {
+        return executionContextManager.executeAsTenant(tenantId, () -> persistenceService.load(profileId, Profile.class));
+    }
+
+    private void saveRuleStatistics(String tenantId, String ruleId, long executionCount) {
+        executionContextManager.executeAsTenant(tenantId, () -> {
+            RuleStatistics statistics = new RuleStatistics(ruleId);
+            statistics.setExecutionCount(executionCount);
+            persistenceService.save(statistics);
         });
         persistenceService.refresh();
+    }
 
-        executionContextManager.executeAsTenant(TENANT_A, () ->
-                assertNull(persistenceService.load("a-old", Profile.class)));
-        executionContextManager.executeAsTenant(TENANT_B, () ->
-                assertNotNull(persistenceService.load("b-old", Profile.class),
-                        "tenant B profiles must stay when purge runs only for tenant A"));
+    private RuleStatistics loadRuleStatistics(String tenantId, String ruleId) {
+        return executionContextManager.executeAsTenant(tenantId, () -> persistenceService.load(ruleId, RuleStatistics.class));
     }
 
     @SuppressWarnings("unchecked")
@@ -301,19 +437,34 @@ public class BackgroundTenantTasksTest {
         }).when(spiedContext).executeAsTenant(any(String.class), any(Supplier.class));
     }
 
-    private static void captureExecutor(SchedulerServiceImpl spiedScheduler, String taskType,
-                                        AtomicReference<TaskExecutor> target) {
+    /** Makes every later switch into the given tenant fail, as if that tenant's work had thrown. */
+    @SuppressWarnings("unchecked")
+    private static void failTenant(ExecutionContextManagerImpl spiedContext, String tenantId) {
+        doThrow(new IllegalStateException("simulated failure for " + tenantId))
+                .when(spiedContext).executeAsTenant(eq(tenantId), any(Supplier.class));
+    }
+
+    /**
+     * Returns a scheduler that hands the executor registered for the given task type to the test instead of
+     * registering it: only the test runs that task, the scheduler's own threads cannot run it concurrently.
+     */
+    private SchedulerServiceImpl capturingScheduler(String taskType, AtomicReference<TaskExecutor> target) {
+        SchedulerServiceImpl spiedScheduler = spy(schedulerService);
         doAnswer(invocation -> {
             TaskExecutor executor = invocation.getArgument(0);
             if (taskType.equals(executor.getTaskType())) {
                 target.set(executor);
+                return null;
             }
             return invocation.callRealMethod();
         }).when(spiedScheduler).registerTaskExecutor(any(TaskExecutor.class));
+        return spiedScheduler;
     }
 
-    private static void runExecutor(TaskExecutor executor) throws Exception {
-        CountDownLatch done = new CountDownLatch(1);
+    /** Runs the executor to its end and returns the failure it reported, or {@code null} when it completed. */
+    private String runExecutor(TaskExecutor executor) throws Exception {
+        assertNotNull(executor, "the task executor must be registered");
+        AtomicReference<Boolean> done = new AtomicReference<>(false);
         AtomicReference<String> failure = new AtomicReference<>();
         executor.execute(mock(ScheduledTask.class), new TaskExecutor.TaskStatusCallback() {
             @Override
@@ -330,16 +481,16 @@ public class BackgroundTenantTasksTest {
 
             @Override
             public void complete() {
-                done.countDown();
+                done.set(true);
             }
 
             @Override
             public void fail(String error) {
                 failure.set(error);
-                done.countDown();
+                done.set(true);
             }
         });
-        assertTrue(done.await(30, TimeUnit.SECONDS), "task should finish");
-        assertNull(failure.get(), "task should not fail: " + failure.get());
+        assertTrue(done.get(), "task should report its outcome before returning");
+        return failure.get();
     }
 }

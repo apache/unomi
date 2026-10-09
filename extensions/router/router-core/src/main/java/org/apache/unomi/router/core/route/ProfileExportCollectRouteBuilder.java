@@ -23,6 +23,7 @@ import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.EndpointValidator;
 import org.apache.unomi.router.api.ExportConfiguration;
+import org.apache.unomi.router.api.RouteIds;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.core.bean.CollectProfileBean;
@@ -116,7 +117,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                             timerString += "&delay=" + (String) exportConfiguration.getProperties().get("delay");
                         }
                         ProcessorDefinition prDef = from(timerString)
-                                .routeId(exportConfiguration.getItemId())// This allow identification of the route for manual start/stop
+                                .routeId(RouteIds.of(exportConfiguration.getTenantId(), exportConfiguration.getItemId()))// This allow identification of the route for manual start/stop
                                 .autoStartup(exportConfiguration.isActive())
                                 .setHeader(RouterConstants.HEADER_TENANT_ID, constant(exportConfiguration.getTenantId()))
                                 .bean(collectProfileBean, "extractProfileBySegment(" + exportConfiguration.getProperties().get("segment") + "," + exportConfiguration.getTenantId() + ")")
