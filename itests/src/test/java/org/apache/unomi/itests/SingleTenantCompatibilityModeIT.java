@@ -421,14 +421,8 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
                 },
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        executionContextManager.setCurrentContext(executionContextManager.createContext(COMPATIBILITY_TENANT_ID));
-        try {
-            Event stored = persistenceService.load(chosenEventId, Event.class);
-            assertNotNull("Compat peer must keep the client-supplied event item id", stored);
-            assertEquals("login", stored.getEventType());
-        } finally {
-            executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
-        }
+        Event stored = waitForCompatTenantEvent("Compat peer must keep the client-supplied event item id", chosenEventId);
+        assertEquals("login", stored.getEventType());
     }
 
     @Test
@@ -456,6 +450,7 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
         assertEquals("Protected event with unknown provider key should return 200", 200, response.getStatusCode());
         assertEquals("Protected event with unknown provider key should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
 
+        Dictionary<String, Object> originalThirdPartyConfig = snapshotThirdPartyConfig();
         try {
             // Case 2: valid key but source IP not in provider's allowed list.
             // Configure a provider whose IP allowlist only contains a non-loopback address so
@@ -496,8 +491,7 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
             assertEquals("Protected login event with key that only allows updateProperties should return 200", 200, response.getStatusCode());
             assertEquals("Protected login event with key that only allows updateProperties should have 0 processed events", 0, response.getContextResponse().getProcessedEvents());
         } finally {
-            // Restore thirdparty config to defaults by deleting the test entries
-            configurationAdmin.getConfiguration("org.apache.unomi.thirdparty", null).delete();
+            restoreThirdPartyConfig(originalThirdPartyConfig, "testprovider", "limitedprovider");
         }
     }
 
@@ -538,6 +532,7 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
         String chosenProfileId = "compat-subset-profile-" + UUID.randomUUID();
         String chosenEventId = "compat-subset-event-" + UUID.randomUUID();
 
+        Dictionary<String, Object> originalThirdPartyConfig = snapshotThirdPartyConfig();
         try {
             Map<String, Object> subsetConfig = new HashMap<>();
             subsetConfig.put("thirdparty.subsetprovider.key", subsetKey);
@@ -569,15 +564,9 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
             assertEquals("Peer with setEventId must still process allowed login", 1,
                     response.getContextResponse().getProcessedEvents());
 
-            executionContextManager.setCurrentContext(executionContextManager.createContext(COMPATIBILITY_TENANT_ID));
-            try {
-                Event stored = persistenceService.load(chosenEventId, Event.class);
-                assertNotNull("Peer with setEventId must keep the client-supplied event item id", stored);
-            } finally {
-                executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
-            }
+            waitForCompatTenantEvent("Peer with setEventId must keep the client-supplied event item id", chosenEventId);
         } finally {
-            configurationAdmin.getConfiguration("org.apache.unomi.thirdparty", null).delete();
+            restoreThirdPartyConfig(originalThirdPartyConfig, "subsetprovider");
         }
     }
 
@@ -590,7 +579,20 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
                 () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
                 enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        HttpGet getRequest = new HttpGet(getFullUrl("/cxs/profiles/" + TEST_PROFILE_ID));
+        // First show the key is a valid peer here, or the 401 below would prove nothing about it.
+        String chosenProfileId = "compat-peer-private-" + UUID.randomUUID();
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+        contextRequest.setProfileId(chosenProfileId);
+        HttpPost publicRequest = new HttpPost(getFullUrl(CONTEXT_URL));
+        publicRequest.addHeader(UNOMI_PEER_HEADER, V2ThirdPartyConfigService.EXAMPLE_PROVIDER_KEY);
+        publicRequest.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse publicResponse = executeContextJSONRequest(publicRequest, TEST_SESSION_ID);
+        assertEquals(200, publicResponse.getStatusCode());
+        assertEquals("The key must be accepted as a peer on the public endpoint",
+                chosenProfileId, publicResponse.getContextResponse().getProfileId());
+
+        HttpGet getRequest = new HttpGet(getFullUrl("/cxs/profiles/" + chosenProfileId));
         getRequest.addHeader(UNOMI_PEER_HEADER, V2ThirdPartyConfigService.EXAMPLE_PROVIDER_KEY);
 
         try (CloseableHttpClient client = HttpClients.createDefault();
@@ -598,6 +600,46 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
             assertEquals("Peer key alone must not authorize private endpoints",
                     401, response.getStatusLine().getStatusCode());
         }
+    }
+
+    private static final String THIRDPARTY_PID = "org.apache.unomi.thirdparty";
+
+    /** The event may not be readable yet when the response comes back, so poll for it. */
+    private Event waitForCompatTenantEvent(String failMessage, String eventId) throws InterruptedException {
+        return keepTrying(failMessage,
+                () -> {
+                    executionContextManager.setCurrentContext(executionContextManager.createContext(COMPATIBILITY_TENANT_ID));
+                    try {
+                        return persistenceService.load(eventId, Event.class);
+                    } finally {
+                        executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
+                    }
+                },
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
+    private Dictionary<String, Object> snapshotThirdPartyConfig() throws IOException {
+        Dictionary<String, Object> current = configurationAdmin.getConfiguration(THIRDPARTY_PID, null).getProperties();
+        Dictionary<String, Object> snapshot = new Hashtable<>();
+        if (current != null) {
+            for (String key : Collections.list(current.keys())) {
+                snapshot.put(key, current.get(key));
+            }
+        }
+        return snapshot;
+    }
+
+    /**
+     * Puts the third-party configuration back as it was. Deleting it instead would leave the rest of
+     * the suite, which shares this Karaf instance, without any provider.
+     */
+    private void restoreThirdPartyConfig(Dictionary<String, Object> original, String... addedProviders)
+            throws IOException, InterruptedException {
+        configurationAdmin.getConfiguration(THIRDPARTY_PID, null).update(original);
+        keepTrying("Third-party config not restored",
+                () -> Arrays.stream(addedProviders).noneMatch(v2ThirdPartyConfigService::isValidProvider)
+                        && v2ThirdPartyConfigService.isValidProvider("provider1"),
+                restored -> restored, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     private static void addPrivateTenantAuth(HttpPost request, Tenant tenant, String privateKeyValue) {
