@@ -229,6 +229,26 @@ public class KarafSecurityService implements SecurityService {
     }
 
     @Override
+    public boolean hasCompatPeerAbility(String ability) {
+        if (ability == null || ability.isBlank()) {
+            return false;
+        }
+        Subject subject = getRequestSubject();
+        if (subject == null) {
+            subject = currentSubject.get();
+        }
+        if (subject == null) {
+            return false;
+        }
+        for (CompatPeerPrincipal peer : subject.getPrincipals(CompatPeerPrincipal.class)) {
+            if (peer.hasAbility(ability)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
     public boolean hasTenantAccess(String tenantId) {
         if (hasRole(UnomiRoles.ADMINISTRATOR)) {
             return true;

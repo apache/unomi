@@ -372,6 +372,66 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
     }
 
     @Test
+    public void testCompatPeerCanChooseProfileIdAndSetEventItemId() throws Exception {
+        LOGGER.info("Testing compat peer abilities: chooseProfileId and setEventId");
+
+        updateConfiguration(null, "org.apache.unomi.rest.authentication", "singletenantcompatibility.enabled", true);
+        keepTrying("single-tenant compatibility mode not enabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
+                enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String chosenProfileId = "compat-peer-profile-" + UUID.randomUUID();
+        String chosenEventId = "compat-peer-event-" + UUID.randomUUID();
+
+        Event loginEvent = new Event();
+        loginEvent.setItemId(chosenEventId);
+        loginEvent.setEventType("login");
+        loginEvent.setScope(TEST_SCOPE);
+
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+        contextRequest.setProfileId(chosenProfileId);
+        contextRequest.setEvents(Collections.singletonList(loginEvent));
+
+        // Without peer: body profileId and event itemId must not be honoured (975 / event-id gate).
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
+        assertEquals(200, response.getStatusCode());
+        assertNotEquals("Visitor must not bind a body profileId", chosenProfileId, response.getContextResponse().getProfileId());
+        assertEquals("Protected login without peer must not be processed", 0, response.getContextResponse().getProcessedEvents());
+
+        // With valid peer: profile id and event item id are accepted.
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.addHeader(UNOMI_PEER_HEADER, V2ThirdPartyConfigService.EXAMPLE_PROVIDER_KEY);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = executeContextJSONRequest(request, TEST_SESSION_ID);
+        assertEquals(200, response.getStatusCode());
+        assertEquals("Compat peer must bind the body profileId", chosenProfileId, response.getContextResponse().getProfileId());
+        assertEquals(1, response.getContextResponse().getProcessedEvents());
+
+        keepTrying("Peer-created profile not found",
+                () -> {
+                    executionContextManager.setCurrentContext(executionContextManager.createContext(COMPATIBILITY_TENANT_ID));
+                    try {
+                        return profileService.load(chosenProfileId);
+                    } finally {
+                        executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
+                    }
+                },
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        executionContextManager.setCurrentContext(executionContextManager.createContext(COMPATIBILITY_TENANT_ID));
+        try {
+            Event stored = persistenceService.load(chosenEventId, Event.class);
+            assertNotNull("Compat peer must keep the client-supplied event item id", stored);
+            assertEquals("login", stored.getEventType());
+        } finally {
+            executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
+        }
+    }
+
+    @Test
     public void testV2CompatibilityProtectedEventNegativeCases() throws Exception {
         LOGGER.info("Testing single-tenant compatibility mode - protected event negative cases");
 

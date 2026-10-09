@@ -172,38 +172,55 @@ When single-tenant compatibility mode is enabled:
 - **All operations** use tenant `default`
 - **Non-protected events** require no authentication (same as V2)
 
-===== Protected Events in V2 Compatibility Mode
+===== Protected Events and Peer Abilities
 
-In single-tenant compatibility mode, protected event types are configured dynamically using the V2 third-party configuration file. By default, the following event types are protected:
+In single-tenant compatibility mode, a server that sends a valid `X-Unomi-Peer` key from an allowed IP address keeps the same abilities it had in Unomi 3.0 on *public* endpoints only:
+
+- send protected events listed for that provider (for example `login`, `updateProperties`)
+- set the event item id
+- choose the profile id in the request body
+- merge profiles on login / claim a merge identifier
+- update another profile's properties, segments, scores, consents and `systemProperties`
+
+The peer header does **not** open private / admin endpoints, and it does nothing when compatibility mode is off. Visitors without a valid peer key still get none of these abilities (UNOMI-975 / UNOMI-978 stay in force for them).
+
+By default the following event types are protected for `provider1`:
 
 - `login` - User authentication events
 - `updateProperties` - Profile property updates
 
-Additional event types can be configured as protected by editing the V2 third-party configuration file.
-
 For protected events, clients must:
-1. Send the request from an authorized IP address (configured in the V2 third-party configuration)
-2. Include the `X-Unomi-Peer` header with the third-party ID (e.g., "provider1")
 
-All other event types are considered non-protected and require no authentication.
+1. Send the request from an authorized IP address (or from behind a configured trusted reverse proxy)
+2. Include the `X-Unomi-Peer` header with the provider *key* (the secret, not the provider name)
+
+All other event types are non-protected and require no peer header.
 
 ===== V2 Third-Party Configuration
 
-The protected events and third-party providers are configured in the original V2 configuration file `etc/org.apache.unomi.thirdparty.cfg`. The system dynamically detects any number of providers using the pattern `thirdparty.{providerName}.{property}`:
+Providers are configured in `etc/org.apache.unomi.thirdparty.cfg` with the pattern `thirdparty.{providerName}.{property}`:
 
 ```properties
-# Provider 1 Configuration (default provider)
+# Global (optional)
+# allowExampleKey=true only during a transition; logs a warning at every start
+allowExampleKey=${org.apache.unomi.thirdparty.allowExampleKey:-false}
+# When the direct connection is in this list, the first X-Forwarded-For hop is used for IP checks
+trustedProxies=${org.apache.unomi.thirdparty.trustedProxies:-}
+
+# Provider 1 — replace the key before production use
 thirdparty.provider1.key=${org.apache.unomi.thirdparty.provider1.key:-670c26d1cc413346c3b2fd9ce65dab41}
 thirdparty.provider1.ipAddresses=${org.apache.unomi.thirdparty.provider1.ipAddresses:-127.0.0.1,::1}
 thirdparty.provider1.allowedEvents=${org.apache.unomi.thirdparty.provider1.allowedEvents:-login,updateProperties}
+thirdparty.provider1.abilities=${org.apache.unomi.thirdparty.provider1.abilities:-setEventId,chooseProfileId,mergeOnLogin,updateOtherProfiles}
 
-# Additional providers can be added dynamically
-thirdparty.myapp.key=${org.apache.unomi.thirdparty.myapp.key:-my-secret-key}
-thirdparty.myapp.ipAddresses=${org.apache.unomi.thirdparty.myapp.ipAddresses:-192.168.1.0/24}
-thirdparty.myapp.allowedEvents=${org.apache.unomi.thirdparty.myapp.allowedEvents:-login,updateProperties,sessionCreated}
+# Additional providers
+thirdparty.myapp.key=replace-with-a-long-unique-secret
+thirdparty.myapp.ipAddresses=192.168.1.0/24
+thirdparty.myapp.allowedEvents=login,updateProperties,sessionCreated
+# abilities omitted → all four Unomi 3.0 peer abilities
 ```
 
-This uses the exact same configuration format as V2, ensuring complete compatibility with existing V2 setups. The system automatically detects and configures any provider that has a valid key.
+A provider whose key is empty, shorter than 16 characters, or equal to the well-known example value is **disabled** at startup with a clear error, unless `allowExampleKey=true`. Keys are compared in constant time and never written in full to the logs.
 
 ===== Configuration Management
 

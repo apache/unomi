@@ -21,6 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.interceptor.security.RolePrefixSecurityContextImpl;
 import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.apache.unomi.api.*;
+import org.apache.unomi.api.security.CompatPeerPrincipal;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.utils.LogSanitizer;
 import org.apache.unomi.api.security.TenantPrincipal;
@@ -122,6 +123,9 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     public EventsRequestContext initEventsRequest(String scope, String sessionId, String profileId, String personaId,
                                                   boolean invalidateProfile, boolean invalidateSession,
                                                   HttpServletRequest request, HttpServletResponse response, Date timestamp) {
+
+        // Attach 3.0 peer abilities before profile binding so chooseProfileId can apply.
+        applyCompatPeerTrust(request);
 
         // Build context
         EventsRequestContext eventsRequestContext = new EventsRequestContext(timestamp, null, null, request, response);
@@ -405,7 +409,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                             continue;
                         }
                     }
-                    if (securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR) && event.getItemId() != null) {
+                    if (event.getItemId() != null && canSetEventItemId(securityContext)) {
                         eventToSend = new Event(event.getItemId(), event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
                                 event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                         eventToSend.setFlattenedProperties(event.getFlattenedProperties());
@@ -519,7 +523,45 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
      * in the log to explain it, which is far harder to diagnose than the NPE that says so outright.
      */
     private boolean isTrustedProfileCaller() {
-        return securityService.hasSystemAccess();
+        return securityService.hasSystemAccess()
+                || securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_CHOOSE_PROFILE_ID);
+    }
+
+    private boolean canSetEventItemId(SecurityContext securityContext) {
+        return securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR)
+                || securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_SET_EVENT_ID);
+    }
+
+    /**
+     * When single-tenant compatibility mode is on and the request carries a valid {@code X-Unomi-Peer}
+     * key from an allowed IP, attach a {@link CompatPeerPrincipal} to the current guest subject.
+     * Does not grant administrator roles or open private endpoints.
+     */
+    private void applyCompatPeerTrust(HttpServletRequest request) {
+        if (request == null || !restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()) {
+            return;
+        }
+        Optional<CompatPeerPrincipal> peer = v2ThirdPartyConfigService.authenticatePeer(request);
+        if (peer.isEmpty()) {
+            return;
+        }
+        Subject current = securityService.getRequestSubject();
+        if (current == null) {
+            current = securityService.getCurrentSubject();
+        }
+        if (current == null) {
+            return;
+        }
+        if (!current.getPrincipals(CompatPeerPrincipal.class).isEmpty()) {
+            return;
+        }
+        Subject elevated = new Subject();
+        elevated.getPrincipals().addAll(current.getPrincipals());
+        elevated.getPrincipals().add(peer.get());
+        elevated.getPublicCredentials().addAll(current.getPublicCredentials());
+        elevated.getPrivateCredentials().addAll(current.getPrivateCredentials());
+        securityService.setCurrentSubject(elevated);
+        LOGGER.debug("Attached compat peer principal for provider {}", peer.get().getProviderId());
     }
 
     /**
@@ -555,7 +597,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         }
 
         // For protected events, check IP + third-party key (V2-style)
-        String sourceIP = request.getRemoteAddr();
+        String sourceIP = v2ThirdPartyConfigService.resolveClientIp(request);
         String thirdPartyKey = request.getHeader("X-Unomi-Peer");
 
         if (StringUtils.isBlank(thirdPartyKey)) {

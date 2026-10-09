@@ -207,6 +207,19 @@ public interface SecurityService {
     boolean hasSystemAccess();
 
     /**
+     * Checks whether the current subject is a validated single-tenant-compatibility peer
+     * that was granted the given ability (see {@link CompatPeerPrincipal}).
+     * <p>
+     * This is never true for an administrator role on its own: only a subject that carries a
+     * {@link CompatPeerPrincipal} with that ability returns {@code true}. Callers that also accept
+     * admin trust should check {@link #hasSystemAccess()} separately.
+     *
+     * @param ability one of the ability constants on {@link CompatPeerPrincipal}
+     * @return {@code true} when the request subject is a compat peer with that ability
+     */
+    boolean hasCompatPeerAbility(String ability);
+
+    /**
      * System subject with administrative privileges.
      *
      * @return the system subject

@@ -25,6 +25,7 @@ import org.apache.unomi.api.Session;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.security.CompatPeerPrincipal;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -354,7 +355,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
      * no candidate profile exists yet: the switch still rebinds the session to a new profile.
      */
     private boolean isTrustedIdentityCaller() {
-        return IdentityTrust.isTrustedIdentityCaller(securityService);
+        return IdentityTrust.isTrustedIdentityCaller(securityService, CompatPeerPrincipal.ABILITY_MERGE_ON_LOGIN);
     }
 
     public void setProfileService(ProfileService profileService) {

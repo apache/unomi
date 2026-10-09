@@ -690,6 +690,8 @@ public abstract class BaseIT extends KarafTestSupport {
                 // they are checked. Purge ITs call the purge methods directly, so switch the schedule off.
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.profile.purge.inactiveTime", "-1"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.monthly.index.purge.existTime", "-1"),
+                // Compatibility-mode ITs use the shipped example X-Unomi-Peer key on localhost.
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.thirdparty.allowExampleKey", "true"),
 
                 // The router's base directories have to be set here rather than in
                 // etc/org.apache.unomi.router.cfg: Karaf's configuration plugin overrides every

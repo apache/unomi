@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.plugins.baseplugin.actions;
 
+import org.apache.unomi.api.security.CompatPeerPrincipal;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.UnomiRoles;
 
@@ -24,10 +25,10 @@ import org.apache.unomi.api.security.UnomiRoles;
  * profiles, recording a merge identifier, updating another profile, or writing
  * {@code systemProperties}.
  * <p>
- * This is a role check, not a check of the credential that produced it: a tenant private key
- * authenticates as {@link UnomiRoles#TENANT_ADMINISTRATOR} and therefore passes, while a tenant
- * public API key or an unauthenticated context event does not. A missing
- * {@link SecurityService} fails closed.
+ * A tenant private key authenticates as {@link UnomiRoles#TENANT_ADMINISTRATOR} and therefore
+ * passes. A validated single-tenant-compatibility peer with the matching ability also passes
+ * (see {@link CompatPeerPrincipal}). A tenant public API key or an unauthenticated context event
+ * does not. A missing {@link SecurityService} fails closed.
  */
 final class IdentityTrust {
 
@@ -36,9 +37,13 @@ final class IdentityTrust {
 
     /**
      * @param securityService the security service, possibly null while OSGi wiring is in flux
-     * @return whether the caller holds system access (administrator or tenant administrator)
+     * @param ability         a {@link CompatPeerPrincipal} ability required of a compat peer
+     * @return whether the caller holds system access or the given compat-peer ability
      */
-    static boolean isTrustedIdentityCaller(SecurityService securityService) {
-        return securityService != null && securityService.hasSystemAccess();
+    static boolean isTrustedIdentityCaller(SecurityService securityService, String ability) {
+        if (securityService == null) {
+            return false;
+        }
+        return securityService.hasSystemAccess() || securityService.hasCompatPeerAbility(ability);
     }
 }
