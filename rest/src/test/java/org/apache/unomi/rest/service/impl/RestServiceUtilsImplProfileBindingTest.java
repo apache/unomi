@@ -21,6 +21,7 @@ import org.apache.unomi.api.PersonaSession;
 import org.apache.unomi.api.PersonaWithSessions;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
+import org.apache.unomi.api.security.CompatPeerPrincipal;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ConfigSharingService;
@@ -37,18 +38,22 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import javax.security.auth.Subject;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -91,7 +96,65 @@ class RestServiceUtilsImplProfileBindingTest {
         lenient().when(configSharingService.getProperty("profileIdCookieName")).thenReturn(COOKIE_NAME);
         lenient().when(schemaService.isValid(anyString(), anyString())).thenReturn(true);
         lenient().when(securityService.hasSystemAccess()).thenReturn(false);
+        lenient().when(securityService.hasCompatPeerAbility(anyString())).thenReturn(false);
+        lenient().when(restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()).thenReturn(false);
         lenient().when(privacyService.isRequireAnonymousBrowsing(org.mockito.ArgumentMatchers.any(Profile.class))).thenReturn(false);
+    }
+
+    @Test
+    void initEventsRequest_doesNotAuthenticatePeerWhenCompatOff() {
+        Profile cookieProfile = new Profile("cookie-profile");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+        when(profileService.load("cookie-profile")).thenReturn(cookieProfile);
+
+        restServiceUtils.initEventsRequest(
+                "systemscope", null, null, null,
+                false, false, request, response, new Date());
+
+        verify(v2ThirdPartyConfigService, never()).authenticatePeer(any());
+        verify(securityService, never()).setCurrentSubject(any());
+    }
+
+    @Test
+    void initEventsRequest_compatPeerWithChooseProfileIdBindsBodyProfile() {
+        when(restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()).thenReturn(true);
+        CompatPeerPrincipal peer = new CompatPeerPrincipal("provider1",
+                Set.of(CompatPeerPrincipal.ABILITY_CHOOSE_PROFILE_ID));
+        when(v2ThirdPartyConfigService.authenticatePeer(request)).thenReturn(Optional.of(peer));
+        when(securityService.getRequestSubject()).thenReturn(new Subject());
+        when(securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_CHOOSE_PROFILE_ID)).thenReturn(true);
+
+        Profile bodyProfile = new Profile("peer-chosen");
+        when(request.getCookies()).thenReturn(null);
+        when(profileService.load("peer-chosen")).thenReturn(bodyProfile);
+
+        EventsRequestContext ctx = restServiceUtils.initEventsRequest(
+                "systemscope", null, "peer-chosen", null,
+                false, false, request, response, new Date());
+
+        assertEquals("peer-chosen", ctx.getProfile().getItemId());
+        verify(securityService).setCurrentSubject(any(Subject.class));
+    }
+
+    @Test
+    void initEventsRequest_compatPeerWithoutChooseProfileIdIgnoresBodyProfile() {
+        when(restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()).thenReturn(true);
+        CompatPeerPrincipal peer = new CompatPeerPrincipal("provider1",
+                Set.of(CompatPeerPrincipal.ABILITY_SET_EVENT_ID));
+        when(v2ThirdPartyConfigService.authenticatePeer(request)).thenReturn(Optional.of(peer));
+        when(securityService.getRequestSubject()).thenReturn(new Subject());
+        when(securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_CHOOSE_PROFILE_ID)).thenReturn(false);
+
+        Profile cookieProfile = new Profile("cookie-profile");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+        when(profileService.load("cookie-profile")).thenReturn(cookieProfile);
+
+        EventsRequestContext ctx = restServiceUtils.initEventsRequest(
+                "systemscope", null, "peer-chosen", null,
+                false, false, request, response, new Date());
+
+        assertEquals("cookie-profile", ctx.getProfile().getItemId());
+        verify(profileService, never()).load("peer-chosen");
     }
 
     @Test

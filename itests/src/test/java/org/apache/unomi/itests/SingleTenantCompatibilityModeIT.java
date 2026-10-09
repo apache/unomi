@@ -501,6 +501,105 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
         }
     }
 
+    @Test
+    public void testPeerHeaderDoesNotElevateWhenCompatOff() throws Exception {
+        LOGGER.info("Testing that X-Unomi-Peer does not elevate when compatibility mode is off");
+
+        updateConfiguration(null, "org.apache.unomi.rest.authentication", "singletenantcompatibility.enabled", false);
+        keepTrying("single-tenant compatibility mode not disabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
+                enabled -> !enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String chosenProfileId = "non-compat-peer-profile-" + UUID.randomUUID();
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+        contextRequest.setProfileId(chosenProfileId);
+
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.addHeader(UNOMI_PEER_HEADER, V2ThirdPartyConfigService.EXAMPLE_PROVIDER_KEY);
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        // withAuth=true adds the public API key (V3 path); peer must still not grant chooseProfileId.
+        TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
+        assertEquals(200, response.getStatusCode());
+        assertNotEquals("Peer header must not bind body profileId when compat mode is off",
+                chosenProfileId, response.getContextResponse().getProfileId());
+    }
+
+    @Test
+    public void testCompatPeerAbilitySubset() throws Exception {
+        LOGGER.info("Testing compat peer with ability subset: setEventId without chooseProfileId");
+
+        updateConfiguration(null, "org.apache.unomi.rest.authentication", "singletenantcompatibility.enabled", true);
+        keepTrying("single-tenant compatibility mode not enabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
+                enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String subsetKey = "testprovidersubset000000000000000";
+        String chosenProfileId = "compat-subset-profile-" + UUID.randomUUID();
+        String chosenEventId = "compat-subset-event-" + UUID.randomUUID();
+
+        try {
+            Map<String, Object> subsetConfig = new HashMap<>();
+            subsetConfig.put("thirdparty.subsetprovider.key", subsetKey);
+            subsetConfig.put("thirdparty.subsetprovider.ipAddresses", "127.0.0.1,::1");
+            subsetConfig.put("thirdparty.subsetprovider.allowedEvents", "login");
+            subsetConfig.put("thirdparty.subsetprovider.abilities", "setEventId");
+            updateConfiguration(null, "org.apache.unomi.thirdparty", subsetConfig);
+            keepTrying("Third-party subset-abilities config not applied",
+                    () -> v2ThirdPartyConfigService.getProviderKey("subsetprovider"),
+                    subsetKey::equals, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+            Event loginEvent = new Event();
+            loginEvent.setItemId(chosenEventId);
+            loginEvent.setEventType("login");
+            loginEvent.setScope(TEST_SCOPE);
+
+            ContextRequest contextRequest = new ContextRequest();
+            contextRequest.setSessionId(TEST_SESSION_ID);
+            contextRequest.setProfileId(chosenProfileId);
+            contextRequest.setEvents(Collections.singletonList(loginEvent));
+
+            HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+            request.addHeader(UNOMI_PEER_HEADER, subsetKey);
+            request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+            TestUtils.RequestResponse response = executeContextJSONRequest(request, TEST_SESSION_ID);
+            assertEquals(200, response.getStatusCode());
+            assertNotEquals("Peer without chooseProfileId must not bind body profileId",
+                    chosenProfileId, response.getContextResponse().getProfileId());
+            assertEquals("Peer with setEventId must still process allowed login", 1,
+                    response.getContextResponse().getProcessedEvents());
+
+            executionContextManager.setCurrentContext(executionContextManager.createContext(COMPATIBILITY_TENANT_ID));
+            try {
+                Event stored = persistenceService.load(chosenEventId, Event.class);
+                assertNotNull("Peer with setEventId must keep the client-supplied event item id", stored);
+            } finally {
+                executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
+            }
+        } finally {
+            configurationAdmin.getConfiguration("org.apache.unomi.thirdparty", null).delete();
+        }
+    }
+
+    @Test
+    public void testCompatPeerDoesNotOpenPrivateEndpoint() throws Exception {
+        LOGGER.info("Testing that a valid peer key does not open private endpoints");
+
+        updateConfiguration(null, "org.apache.unomi.rest.authentication", "singletenantcompatibility.enabled", true);
+        keepTrying("single-tenant compatibility mode not enabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
+                enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        HttpGet getRequest = new HttpGet(getFullUrl("/cxs/profiles/" + TEST_PROFILE_ID));
+        getRequest.addHeader(UNOMI_PEER_HEADER, V2ThirdPartyConfigService.EXAMPLE_PROVIDER_KEY);
+
+        try (CloseableHttpClient client = HttpClients.createDefault();
+             CloseableHttpResponse response = client.execute(getRequest)) {
+            assertEquals("Peer key alone must not authorize private endpoints",
+                    401, response.getStatusLine().getStatusCode());
+        }
+    }
+
     private static void addPrivateTenantAuth(HttpPost request, Tenant tenant, String privateKeyValue) {
         request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
             (tenant.getItemId() + ":" + privateKeyValue).getBytes()));

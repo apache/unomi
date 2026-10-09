@@ -31,6 +31,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -125,6 +126,53 @@ class V2ThirdPartyConfigServiceTest {
         service.modified(props);
         assertTrue(service.validateProviderByKey("long-enough-secret-01", "login", "127.0.0.1"));
         assertFalse(service.validateProviderByKey("long-enough-secret-01", "view", "127.0.0.1"));
+    }
+
+    @Test
+    void validateProviderByKeyRejectsWrongIp() {
+        Map<String, Object> props = baseProvider("long-enough-secret-01");
+        service.modified(props);
+        assertFalse(service.validateProviderByKey("long-enough-secret-01", "login", "10.0.0.1"));
+    }
+
+    @Test
+    void authenticatePeerCarriesConfiguredAbilitySubset() {
+        Map<String, Object> props = baseProvider("long-enough-secret-01");
+        props.put("thirdparty.provider1.abilities", "setEventId");
+        service.modified(props);
+
+        when(request.getHeader("X-Unomi-Peer")).thenReturn("long-enough-secret-01");
+        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+        Optional<CompatPeerPrincipal> peer = service.authenticatePeer(request);
+        assertTrue(peer.isPresent());
+        assertEquals(1, peer.get().getAbilities().size());
+        assertTrue(peer.get().getAbilities().contains(CompatPeerPrincipal.ABILITY_SET_EVENT_ID));
+        assertFalse(peer.get().getAbilities().contains(CompatPeerPrincipal.ABILITY_CHOOSE_PROFILE_ID));
+    }
+
+    @Test
+    void authenticatePeerUsesXffIpAgainstAllowlistBehindTrustedProxy() {
+        Map<String, Object> props = baseProvider("long-enough-secret-01");
+        props.put("trustedProxies", "10.0.0.1");
+        props.put("thirdparty.provider1.ipAddresses", "203.0.113.9");
+        service.modified(props);
+
+        when(request.getHeader("X-Unomi-Peer")).thenReturn("long-enough-secret-01");
+        when(request.getRemoteAddr()).thenReturn("10.0.0.1");
+        when(request.getHeader("X-Forwarded-For")).thenReturn("203.0.113.9, 10.0.0.1");
+        assertTrue(service.authenticatePeer(request).isPresent());
+
+        when(request.getHeader("X-Forwarded-For")).thenReturn("198.51.100.1, 10.0.0.1");
+        assertTrue(service.authenticatePeer(request).isEmpty());
+
+        // Direct client that is not a trusted proxy: allowlist matches remoteAddr (XFF unused).
+        when(request.getRemoteAddr()).thenReturn("203.0.113.9");
+        assertTrue(service.authenticatePeer(request).isPresent());
+
+        // Forged XFF from a non-proxy peer must not satisfy the allowlist (header is unused).
+        when(request.getRemoteAddr()).thenReturn("198.51.100.1");
+        lenient().when(request.getHeader("X-Forwarded-For")).thenReturn("203.0.113.9");
+        assertTrue(service.authenticatePeer(request).isEmpty());
     }
 
     private static Map<String, Object> baseProvider(String key) {
