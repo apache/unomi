@@ -37,6 +37,7 @@ import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.api.services.ExecutionContextManager;
 
+import javax.security.auth.Subject;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -53,6 +54,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private TracerService tracerService;
     private ExecutionContextManager executionContextManager;
     private SecurityService securityService;
+    private boolean requireSecureTransport;
     // TODO we can remove this limit after dealing with: UNOMI-776 (50 is completely arbitrary and it's used to bypass the auto-scroll done by the persistence Service)
     private int maxProfilesInOneMerge = 50;
 
@@ -268,28 +270,38 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                     String masterProfile = (String) parameters.get("masterProfileId");
                     String tenantId = (String) parameters.get("tenantId");
 
+                    // The scheduler thread is pooled: put its subject back afterwards, so the
+                    // tenant-administrator subject does not stay on it for whatever runs next.
+                    Subject previousSubject = securityService.getRequestSubject();
                     securityService.setCurrentSubject(securityService.createSubject(tenantId, true));
+                    try {
+                        // Execute the merge operation in the correct tenant context
+                        executionContextManager.executeAsTenant(tenantId, () -> {
+                            if (!isAnonymousBrowsing) {
+                                Condition profileIdsCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+                                profileIdsCondition.setParameter("propertyName","profileId");
+                                profileIdsCondition.setParameter("comparisonOperator","in");
+                                profileIdsCondition.setParameter("propertyValues", profilesIds);
 
-                    // Execute the merge operation in the correct tenant context
-                    executionContextManager.executeAsTenant(tenantId, () -> {
-                        if (!isAnonymousBrowsing) {
-                            Condition profileIdsCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-                            profileIdsCondition.setParameter("propertyName","profileId");
-                            profileIdsCondition.setParameter("comparisonOperator","in");
-                            profileIdsCondition.setParameter("propertyValues", profilesIds);
+                                String[] scripts = new String[]{"updateProfileId"};
+                                Map<String, Object>[] scriptParams = new Map[]{Collections.singletonMap("profileId", masterProfile)};
+                                Condition[] conditions = new Condition[]{profileIdsCondition};
 
-                            String[] scripts = new String[]{"updateProfileId"};
-                            Map<String, Object>[] scriptParams = new Map[]{Collections.singletonMap("profileId", masterProfile)};
-                            Condition[] conditions = new Condition[]{profileIdsCondition};
-
-                            persistenceService.updateWithQueryAndStoredScript(new Class[]{Session.class, Event.class}, scripts, scriptParams, conditions, false);
-                        } else {
-                            for (String mergedProfileId : profilesIds) {
-                                privacyService.anonymizeBrowsingData(mergedProfileId);
+                                persistenceService.updateWithQueryAndStoredScript(new Class[]{Session.class, Event.class}, scripts, scriptParams, conditions, false);
+                            } else {
+                                for (String mergedProfileId : profilesIds) {
+                                    privacyService.anonymizeBrowsingData(mergedProfileId);
+                                }
                             }
+                            return null;
+                        });
+                    } finally {
+                        if (previousSubject == null) {
+                            securityService.clearRequestSubject();
+                        } else {
+                            securityService.setCurrentSubject(previousSubject);
                         }
-                        return null;
-                    });
+                    }
 
                     callback.complete();
                 } catch (Exception e) {
@@ -355,7 +367,12 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
      * no candidate profile exists yet: the switch still rebinds the session to a new profile.
      */
     private boolean isTrustedIdentityCaller() {
-        return IdentityTrust.isTrustedIdentityCaller(securityService, CompatPeerPrincipal.ABILITY_MERGE_ON_LOGIN);
+        return IdentityTrust.isTrustedIdentityCaller(securityService, CompatPeerPrincipal.ABILITY_MERGE_ON_LOGIN,
+                requireSecureTransport);
+    }
+
+    public void setRequireSecureTransport(boolean requireSecureTransport) {
+        this.requireSecureTransport = requireSecureTransport;
     }
 
     public void setProfileService(ProfileService profileService) {

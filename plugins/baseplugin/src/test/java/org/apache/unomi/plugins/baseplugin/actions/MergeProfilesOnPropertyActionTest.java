@@ -21,6 +21,8 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.security.CompatPeerPrincipal;
+import org.apache.unomi.api.security.InsecureTransportPrincipal;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.DefinitionsService;
@@ -34,6 +36,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import javax.security.auth.Subject;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
@@ -136,6 +139,60 @@ public class MergeProfilesOnPropertyActionTest {
 
         assertEquals(EventService.PROFILE_UPDATED, changes);
         assertEquals("me@example.com", caller.getSystemProperties().get("mergeIdentifier"));
+    }
+
+    @Test
+    public void compatPeerWithMergeOnLogin_recordsMergeIdentifier() {
+        when(securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_MERGE_ON_LOGIN)).thenReturn(true);
+        Profile caller = new Profile("caller");
+
+        when(persistenceService.query(any(), anyString(), eq(Profile.class), anyInt(), anyInt()))
+                .thenReturn(new PartialList<>(new ArrayList<>(), 0, 0, 0, PartialList.Relation.EQUAL));
+
+        Event event = new Event("login", null, caller, "systemscope", null, null, null, new Date(), true);
+
+        int changes = actionExecutor.execute(mergeAction("me@example.com"), event);
+
+        assertEquals(EventService.PROFILE_UPDATED, changes);
+        assertEquals("me@example.com", caller.getSystemProperties().get("mergeIdentifier"));
+    }
+
+    /** Each action asks for its own ability: holding the update ability must not unlock merging. */
+    @Test
+    public void compatPeerWithOnlyUpdateOtherProfiles_cannotRecordMergeIdentifier() {
+        when(securityService.hasCompatPeerAbility(anyString())).thenAnswer(invocation ->
+                CompatPeerPrincipal.ABILITY_UPDATE_OTHER_PROFILES.equals(invocation.getArgument(0)));
+        Profile caller = new Profile("caller");
+
+        when(persistenceService.query(any(), anyString(), eq(Profile.class), anyInt(), anyInt()))
+                .thenReturn(new PartialList<>(new ArrayList<>(), 0, 0, 0, PartialList.Relation.EQUAL));
+
+        Event event = new Event("login", null, caller, "systemscope", null, null, null, new Date(), true);
+
+        int changes = actionExecutor.execute(mergeAction("victim@example.com"), event);
+
+        assertEquals(EventService.NO_CHANGE, changes);
+        assertNull(caller.getSystemProperties().get("mergeIdentifier"));
+    }
+
+    @Test
+    public void trustedTenantAdminOverPlainHttp_cannotRecordMergeIdentifierWhenSecureTransportIsRequired() {
+        actionExecutor.setRequireSecureTransport(true);
+        when(securityService.hasSystemAccess()).thenReturn(true);
+        Subject overHttp = new Subject();
+        overHttp.getPrincipals().add(InsecureTransportPrincipal.INSTANCE);
+        when(securityService.getRequestSubject()).thenReturn(overHttp);
+        Profile caller = new Profile("caller");
+
+        when(persistenceService.query(any(), anyString(), eq(Profile.class), anyInt(), anyInt()))
+                .thenReturn(new PartialList<>(new ArrayList<>(), 0, 0, 0, PartialList.Relation.EQUAL));
+
+        Event event = new Event("login", null, caller, "systemscope", null, null, null, new Date(), true);
+
+        int changes = actionExecutor.execute(mergeAction("me@example.com"), event);
+
+        assertEquals(EventService.NO_CHANGE, changes);
+        assertNull(caller.getSystemProperties().get("mergeIdentifier"));
     }
 
     @Test

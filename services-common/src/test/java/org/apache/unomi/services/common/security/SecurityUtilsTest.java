@@ -69,6 +69,6 @@ public class SecurityUtilsTest {
         assertFalse(SecurityUtils.constantTimeEquals("same-secret", "other-secret"));
         assertFalse(SecurityUtils.constantTimeEquals("short", "longer-value"));
         assertFalse(SecurityUtils.constantTimeEquals(null, "x"));
-        assertTrue(SecurityUtils.constantTimeEquals(null, null));
+        assertFalse(SecurityUtils.constantTimeEquals(null, null));
     }
 }

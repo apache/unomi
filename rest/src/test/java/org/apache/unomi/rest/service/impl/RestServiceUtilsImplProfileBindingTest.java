@@ -42,7 +42,9 @@ import javax.security.auth.Subject;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.core.SecurityContext;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Optional;
@@ -155,6 +157,33 @@ class RestServiceUtilsImplProfileBindingTest {
 
         assertEquals("cookie-profile", ctx.getProfile().getItemId());
         verify(profileService, never()).load("peer-chosen");
+    }
+
+    @Test
+    void canSetEventItemId_onlyForTenantAdminOrPeerWithSetEventId() throws Exception {
+        SecurityContext securityContext = org.mockito.Mockito.mock(SecurityContext.class);
+        when(securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR)).thenReturn(false);
+
+        assertFalse(canSetEventItemId(securityContext), "a visitor must not choose the event id");
+
+        // A peer holding every ability except setEventId.
+        when(securityService.hasCompatPeerAbility(anyString())).thenAnswer(invocation ->
+                !CompatPeerPrincipal.ABILITY_SET_EVENT_ID.equals(invocation.getArgument(0)));
+        assertFalse(canSetEventItemId(securityContext), "a peer without setEventId must not choose the event id");
+
+        when(securityService.hasCompatPeerAbility(anyString())).thenAnswer(invocation ->
+                CompatPeerPrincipal.ABILITY_SET_EVENT_ID.equals(invocation.getArgument(0)));
+        assertTrue(canSetEventItemId(securityContext));
+
+        lenient().when(securityService.hasCompatPeerAbility(anyString())).thenReturn(false);
+        when(securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR)).thenReturn(true);
+        assertTrue(canSetEventItemId(securityContext));
+    }
+
+    private boolean canSetEventItemId(SecurityContext securityContext) throws Exception {
+        Method method = RestServiceUtilsImpl.class.getDeclaredMethod("canSetEventItemId", SecurityContext.class);
+        method.setAccessible(true);
+        return (boolean) method.invoke(restServiceUtils, securityContext);
     }
 
     @Test

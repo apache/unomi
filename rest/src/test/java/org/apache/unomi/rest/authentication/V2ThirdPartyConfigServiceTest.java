@@ -27,6 +27,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -88,6 +89,75 @@ class V2ThirdPartyConfigServiceTest {
     }
 
     @Test
+    void keyLengthBoundary() {
+        Map<String, Object> props = new HashMap<>();
+        props.put("thirdparty.fifteen.key", "123456789012345");
+        props.put("thirdparty.sixteen.key", "1234567890123456");
+        service.modified(props);
+        assertFalse(service.isValidProvider("fifteen"));
+        assertTrue(service.isValidProvider("sixteen"));
+    }
+
+    @Test
+    void misspeltAbilitiesDisableTheProviderInsteadOfGrantingEverything() {
+        Map<String, Object> props = baseProvider("long-enough-secret-01");
+        props.put("thirdparty.provider1.abilities", "setEventID,merge");
+        service.modified(props);
+        assertFalse(service.isValidProvider("provider1"));
+
+        when(request.getHeader("X-Unomi-Peer")).thenReturn("long-enough-secret-01");
+        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+        assertTrue(service.authenticatePeer(request).isEmpty());
+    }
+
+    @Test
+    void unknownAbilityNextToAKnownOneIsDropped() {
+        Map<String, Object> props = baseProvider("long-enough-secret-01");
+        props.put("thirdparty.provider1.abilities", "setEventId,chooseProfileID");
+        service.modified(props);
+        assertEquals(Set.of(CompatPeerPrincipal.ABILITY_SET_EVENT_ID),
+                service.getProviders().get("provider1").getAbilities());
+    }
+
+    @Test
+    void emptyAbilitiesGrantNoAbilityButKeepProtectedEvents() {
+        Map<String, Object> props = baseProvider("long-enough-secret-01");
+        props.put("thirdparty.provider1.abilities", "");
+        service.modified(props);
+        assertTrue(service.getProviders().get("provider1").getAbilities().isEmpty());
+        assertTrue(service.validateProviderByKey("long-enough-secret-01", "login", "127.0.0.1"));
+
+        when(request.getHeader("X-Unomi-Peer")).thenReturn("long-enough-secret-01");
+        when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+        Optional<CompatPeerPrincipal> peer = service.authenticatePeer(request);
+        assertTrue(peer.isPresent());
+        for (String ability : CompatPeerPrincipal.DEFAULT_ABILITIES) {
+            assertFalse(peer.get().hasAbility(ability));
+        }
+    }
+
+    @Test
+    void providerWithoutIpAllowlistIsRefusedFromEveryAddress() {
+        Map<String, Object> props = baseProvider("long-enough-secret-01");
+        for (String ipAddresses : new String[]{null, "", " , "}) {
+            if (ipAddresses == null) {
+                props.remove("thirdparty.provider1.ipAddresses");
+            } else {
+                props.put("thirdparty.provider1.ipAddresses", ipAddresses);
+            }
+            service.modified(props);
+
+            when(request.getHeader("X-Unomi-Peer")).thenReturn("long-enough-secret-01");
+            when(request.getRemoteAddr()).thenReturn("127.0.0.1");
+            assertTrue(service.authenticatePeer(request).isEmpty(), "ipAddresses=" + ipAddresses);
+            assertFalse(service.validateProviderByKey("long-enough-secret-01", "login", "127.0.0.1"),
+                    "ipAddresses=" + ipAddresses);
+            // The provider's events stay protected, so they are not downgraded to public events.
+            assertTrue(service.isProtectedEventType("login"));
+        }
+    }
+
+    @Test
     void authenticatePeerRequiresKeyAndIp() {
         Map<String, Object> props = baseProvider("long-enough-secret-01");
         service.modified(props);
@@ -118,6 +188,39 @@ class V2ThirdPartyConfigServiceTest {
 
         when(request.getRemoteAddr()).thenReturn("203.0.113.1");
         assertEquals("203.0.113.1", service.resolveClientIp(request));
+    }
+
+    @Test
+    void resolveClientIpIgnoresClientSuppliedLeadingXffEntries() {
+        Map<String, Object> props = baseProvider("long-enough-secret-01");
+        props.put("trustedProxies", "10.0.0.0/24");
+        service.modified(props);
+        when(request.getRemoteAddr()).thenReturn("10.0.0.1");
+
+        // The client sent "127.0.0.1"; the proxy appended the address it really saw.
+        when(request.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1, 198.51.100.7");
+        assertEquals("198.51.100.7", service.resolveClientIp(request));
+
+        // A second trusted proxy in the chain is skipped as well.
+        when(request.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1, 198.51.100.7, 10.0.0.2");
+        assertEquals("198.51.100.7", service.resolveClientIp(request));
+
+        when(request.getHeader("X-Unomi-Peer")).thenReturn("long-enough-secret-01");
+        when(request.getHeader("X-Forwarded-For")).thenReturn("127.0.0.1, 198.51.100.7");
+        assertTrue(service.authenticatePeer(request).isEmpty());
+    }
+
+    @Test
+    void resolveClientIpFallsBackToRemoteAddrWhenXffHasNoUsableEntry() {
+        Map<String, Object> props = baseProvider("long-enough-secret-01");
+        props.put("trustedProxies", "10.0.0.1");
+        service.modified(props);
+        when(request.getRemoteAddr()).thenReturn("10.0.0.1");
+
+        for (String header : new String[]{",", ",,", " , ", "10.0.0.1", "", null}) {
+            when(request.getHeader("X-Forwarded-For")).thenReturn(header);
+            assertEquals("10.0.0.1", service.resolveClientIp(request), "X-Forwarded-For: " + header);
+        }
     }
 
     @Test

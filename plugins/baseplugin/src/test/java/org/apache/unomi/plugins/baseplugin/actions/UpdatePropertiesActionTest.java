@@ -19,6 +19,7 @@ package org.apache.unomi.plugins.baseplugin.actions;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
+import org.apache.unomi.api.security.CompatPeerPrincipal;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.EventService;
@@ -166,6 +167,42 @@ public class UpdatePropertiesActionTest {
         actionExecutor.execute(new Action(), event);
 
         assertEquals("admin-set@example.com", caller.getSystemProperties().get("mergeIdentifier"));
+    }
+
+    @Test
+    public void compatPeerWithUpdateOtherProfiles_canUpdateAnotherProfile() {
+        when(securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_UPDATE_OTHER_PROFILES)).thenReturn(true);
+
+        Profile other = new Profile("other");
+        when(profileService.load("other")).thenReturn(other);
+
+        actionExecutor.execute(new Action(), updateOtherProfileEvent());
+
+        verify(profileService).save(other);
+    }
+
+    /** Each action asks for its own ability: holding the merge ability must not unlock this one. */
+    @Test
+    public void compatPeerWithOnlyMergeOnLogin_cannotUpdateAnotherProfile() {
+        when(securityService.hasCompatPeerAbility(any(String.class))).thenAnswer(invocation ->
+                CompatPeerPrincipal.ABILITY_MERGE_ON_LOGIN.equals(invocation.getArgument(0)));
+
+        int changes = actionExecutor.execute(new Action(), updateOtherProfileEvent());
+
+        assertEquals(EventService.NO_CHANGE, changes);
+        verify(profileService, never()).load(any(String.class));
+        verify(profileService, never()).save(any(Profile.class));
+    }
+
+    private static Event updateOtherProfileEvent() {
+        Map<String, Object> updateMap = new HashMap<>();
+        updateMap.put("properties.email", "peer-set");
+        Map<String, Object> eventProps = new HashMap<>();
+        eventProps.put(UpdatePropertiesAction.TARGET_ID_KEY, "other");
+        eventProps.put(UpdatePropertiesAction.TARGET_TYPE_KEY, UpdatePropertiesAction.TARGET_TYPE_PROFILE);
+        eventProps.put(UpdatePropertiesAction.PROPS_TO_UPDATE, updateMap);
+        return new Event("updateProperties", null, new Profile("caller"), "systemscope", null, null, eventProps,
+                new Date(), true);
     }
 
     @Test

@@ -18,7 +18,9 @@ package org.apache.unomi.services.common.security;
 
 import org.apache.karaf.jaas.boot.principal.RolePrincipal;
 import org.apache.karaf.jaas.boot.principal.UserPrincipal;
+import org.apache.unomi.api.security.CompatPeerPrincipal;
 import org.apache.unomi.api.security.EncryptionService;
+import org.apache.unomi.api.security.InsecureTransportPrincipal;
 import org.apache.unomi.api.security.SecurityServiceConfiguration;
 import org.apache.unomi.api.security.TenantPrincipal;
 import org.apache.unomi.api.security.UnomiRoles;
@@ -72,6 +74,82 @@ public class KarafSecurityServiceTest {
     public void tearDown() {
         securityService.clearCurrentSubject();
         securityService.clearPrivilegedSubject();
+    }
+
+    @Test
+    public void testHasCompatPeerAbilityOnlyForAbilitiesThePeerHolds() {
+        Subject subject = new Subject();
+        subject.getPrincipals().add(new CompatPeerPrincipal("provider1",
+                Collections.singleton(CompatPeerPrincipal.ABILITY_SET_EVENT_ID)));
+        securityService.setCurrentSubject(subject);
+
+        assertTrue(securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_SET_EVENT_ID));
+        assertFalse(securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_CHOOSE_PROFILE_ID));
+        assertFalse(securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_MERGE_ON_LOGIN));
+        assertFalse(securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_UPDATE_OTHER_PROFILES));
+        assertFalse(securityService.hasCompatPeerAbility(null));
+        assertFalse(securityService.hasCompatPeerAbility("unknown"));
+        assertFalse("A compat peer must not gain system access", securityService.hasSystemAccess());
+    }
+
+    @Test
+    public void testHasCompatPeerAbilityIsFalseWithoutPeerPrincipal() {
+        assertFalse("No subject", securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_SET_EVENT_ID));
+
+        Subject admin = new Subject();
+        admin.getPrincipals().add(new RolePrincipal(UnomiRoles.ADMINISTRATOR));
+        securityService.setCurrentSubject(admin);
+        assertFalse("An administrator role is not a peer ability",
+                securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_SET_EVENT_ID));
+    }
+
+    @Test
+    public void testHasCompatPeerAbilityIgnoresPrivilegedSubject() {
+        Subject privileged = new Subject();
+        privileged.getPrincipals().add(new CompatPeerPrincipal("provider1", CompatPeerPrincipal.DEFAULT_ABILITIES));
+        securityService.setPrivilegedSubject(privileged);
+
+        assertFalse(securityService.hasCompatPeerAbility(CompatPeerPrincipal.ABILITY_SET_EVENT_ID));
+    }
+
+    @Test
+    public void testRecordRequestTransportMarksOnlyUnencryptedRequests() {
+        String previous = System.getProperty("org.apache.unomi.ip.trustedProxies");
+        System.setProperty("org.apache.unomi.ip.trustedProxies", "10.0.0.1");
+        try {
+            assertFalse("HTTPS seen by the container", isMarkedInsecure(true, "203.0.113.9", null));
+            assertTrue("plain HTTP", isMarkedInsecure(false, "203.0.113.9", null));
+            assertFalse("trusted proxy reports https", isMarkedInsecure(false, "10.0.0.1", "https"));
+            assertTrue("trusted proxy reports http", isMarkedInsecure(false, "10.0.0.1", "http"));
+            assertTrue("client-supplied value in front of the proxy's", isMarkedInsecure(false, "10.0.0.1", "https, http"));
+            assertTrue("header from an untrusted address", isMarkedInsecure(false, "203.0.113.9", "https"));
+
+            System.clearProperty("org.apache.unomi.ip.trustedProxies");
+            assertTrue("no trusted proxy configured", isMarkedInsecure(false, "10.0.0.1", "https"));
+        } finally {
+            if (previous == null) {
+                System.clearProperty("org.apache.unomi.ip.trustedProxies");
+            } else {
+                System.setProperty("org.apache.unomi.ip.trustedProxies", previous);
+            }
+        }
+    }
+
+    @Test
+    public void testRecordRequestTransportKeepsRolesAndIgnoresMissingSubject() {
+        securityService.recordRequestTransport(false, "203.0.113.9", null);
+        assertNull(securityService.getRequestSubject());
+
+        securityService.setCurrentSubject(securityService.createSubject("tenant1", true));
+        securityService.recordRequestTransport(false, "203.0.113.9", null);
+        assertTrue(securityService.hasSystemAccess());
+        assertEquals("tenant1", securityService.getCurrentSubjectTenantId());
+    }
+
+    private boolean isMarkedInsecure(boolean secure, String remoteAddr, String forwardedProto) {
+        securityService.setCurrentSubject(securityService.createSubject("tenant1", true));
+        securityService.recordRequestTransport(secure, remoteAddr, forwardedProto);
+        return !securityService.getRequestSubject().getPrincipals(InsecureTransportPrincipal.class).isEmpty();
     }
 
     @Test

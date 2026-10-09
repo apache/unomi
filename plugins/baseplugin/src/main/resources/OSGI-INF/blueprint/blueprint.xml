@@ -28,6 +28,7 @@
             <cm:property name="useEventToUpdateProfile" value="false"/>
             <cm:property name="usePropertyConditionOptimizations" value="true"/>
             <cm:property name="maxProfilesInOneMerge" value="50"/>
+            <cm:property name="requireSecureTransport" value="false"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -182,6 +183,7 @@
             <property name="eventService" ref="eventService"/>
             <property name="tracerService" ref="tracerService"/>
             <property name="securityService" ref="securityService"/>
+            <property name="requireSecureTransport" value="${base.requireSecureTransport}"/>
         </bean>
     </service>
 
@@ -245,6 +247,7 @@
         <property name="schedulerService" ref="schedulerService"/>
         <property name="tracerService" ref="tracerService"/>
         <property name="maxProfilesInOneMerge" value="${base.maxProfilesInOneMerge}"/>
+        <property name="requireSecureTransport" value="${base.requireSecureTransport}"/>
     </bean>
 
     <service interface="org.apache.unomi.api.actions.ActionExecutor" ref="mergeProfilesOnPropertyAction">

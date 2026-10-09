@@ -202,9 +202,9 @@ Providers are configured in `etc/org.apache.unomi.thirdparty.cfg` with the patte
 
 ```properties
 # Global (optional)
-# allowExampleKey=true only during a transition; logs a warning at every start
+# allowExampleKey=true logs a warning at every start. Never use it in production: the example key is public
 allowExampleKey=${org.apache.unomi.thirdparty.allowExampleKey:-false}
-# When the direct connection is in this list, the first X-Forwarded-For hop is used for IP checks
+# When the direct connection is in this list, the last X-Forwarded-For entry that is not a trusted proxy is used for IP checks
 trustedProxies=${org.apache.unomi.thirdparty.trustedProxies:-}
 
 # Provider 1 — replace the key before production use
@@ -219,6 +219,10 @@ thirdparty.myapp.ipAddresses=192.168.1.0/24
 thirdparty.myapp.allowedEvents=login,updateProperties,sessionCreated
 # abilities omitted → all four Unomi 3.0 peer abilities
 ```
+
+Ability names are case-sensitive. A provider with no `abilities` property gets all four. An empty value (`thirdparty.myapp.abilities=`) grants no peer ability, so the provider can only send its protected events. A value that names no known ability, for example a misspelt one, disables the provider and logs an error, so a typo never widens what a provider may do.
+
+When an `X-Unomi-Peer` header is present but not accepted, Unomi logs a warning that says whether the key is unknown or the caller's IP address is not in the provider's allowlist. The request then continues as an ordinary visitor.
 
 A provider whose key is empty, shorter than 16 characters, or equal to the well-known example value is **disabled** at startup with a clear error, unless `allowExampleKey=true`. Keys are compared in constant time and never written in full to the logs.
 
@@ -262,8 +266,8 @@ Peer checks use the TCP peer Unomi sees (`remoteAddr`). They only read `X-Forwar
 
 Operators should still treat IP allowlists as a second factor next to the peer key, not as the only control:
 
-* Always set an explicit `thirdparty.{name}.ipAddresses` list (single addresses or CIDR ranges). An empty list means *no* IP restriction: the key alone is enough.
-* Keep `trustedProxies` limited to reverse proxies that sit in front of Unomi. Those proxies must set or overwrite `X-Forwarded-For` themselves; do not forward a client-supplied value unchanged.
+* Always set an explicit `thirdparty.{name}.ipAddresses` list (single addresses or CIDR ranges). The list is required: a provider with an empty list is refused from every address, as in Unomi 3.0, and Unomi logs an error for it at startup. The key alone is never enough. An entry that is not an address or CIDR range is reported as an error at startup and never matches.
+* Keep `trustedProxies` limited to reverse proxies that sit in front of Unomi, and list every proxy in the chain. Unomi reads `X-Forwarded-For` from the last entry backwards and uses the first entry that is not a trusted proxy, so an entry a client puts at the front of the header is ignored whether the proxy appends to the header or overwrites it.
 * Prefer placing Unomi (or the peer callers) on a private network or behind a firewall so only known hosts can reach the public endpoints.
 * Rotate peer keys and keep them long and unique. For stronger assurance than key + IP, put mutual TLS or equivalent at the edge in front of Unomi.
 

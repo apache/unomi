@@ -214,10 +214,39 @@ public interface SecurityService {
      * {@link CompatPeerPrincipal} with that ability returns {@code true}. Callers that also accept
      * admin trust should check {@link #hasSystemAccess()} separately.
      *
+     * <p>
+     * Only the request subject is consulted, so a privileged or system execution scope neither
+     * grants nor hides a peer ability. The answer is {@code false} when there is no request
+     * subject, when the ability is {@code null} or unknown, and whenever single-tenant
+     * compatibility mode is off, since no peer principal is attached in that case.
+     * <p>
+     * The default implementation answers {@code false}, so an implementation that knows nothing
+     * about compat peers grants none.
+     *
      * @param ability one of the ability constants on {@link CompatPeerPrincipal}
      * @return {@code true} when the request subject is a compat peer with that ability
      */
-    boolean hasCompatPeerAbility(String ability);
+    default boolean hasCompatPeerAbility(String ability) {
+        return false;
+    }
+
+    /**
+     * Records how the current HTTP request reached Unomi, once its subject has been bound with
+     * {@link #setCurrentSubject(Subject)}. When the request was not encrypted, the request subject
+     * gains an {@link InsecureTransportPrincipal}.
+     * <p>
+     * A request counts as encrypted when the container says so, or when it comes from a trusted
+     * proxy that reports {@code https} in {@code X-Forwarded-Proto}. Trusted proxies are the
+     * addresses in the {@code org.apache.unomi.ip.trustedProxies} system property.
+     * <p>
+     * The default implementation records nothing.
+     *
+     * @param secure         whether the container received the request over an encrypted connection
+     * @param remoteAddr     the address the request was received from, may be {@code null}
+     * @param forwardedProto the {@code X-Forwarded-Proto} header value, may be {@code null}
+     */
+    default void recordRequestTransport(boolean secure, String remoteAddr, String forwardedProto) {
+    }
 
     /**
      * System subject with administrative privileges.

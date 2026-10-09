@@ -72,6 +72,7 @@ public class UpdatePropertiesAction implements ActionExecutor {
     private EventService eventService;
     private TracerService tracerService;
     private SecurityService securityService;
+    private boolean requireSecureTransport;
 
     public int execute(Action action, Event event) {
         RequestTracer tracer = null;
@@ -228,7 +229,11 @@ public class UpdatePropertiesAction implements ActionExecutor {
 
     private boolean isTrustedIdentityCaller() {
         return IdentityTrust.isTrustedIdentityCaller(securityService,
-                CompatPeerPrincipal.ABILITY_UPDATE_OTHER_PROFILES);
+                CompatPeerPrincipal.ABILITY_UPDATE_OTHER_PROFILES, requireSecureTransport);
+    }
+
+    public void setRequireSecureTransport(boolean requireSecureTransport) {
+        this.requireSecureTransport = requireSecureTransport;
     }
 
     public void setProfileService(ProfileService profileService) {

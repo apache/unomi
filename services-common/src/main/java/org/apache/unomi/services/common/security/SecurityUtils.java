@@ -44,24 +44,17 @@ public class SecurityUtils {
     }
 
     /**
-     * Compares two strings in constant time relative to their UTF-8 byte lengths.
-     * Different lengths still return {@code false}; a dummy compare runs so the call cost does not
-     * collapse to a single length check.
+     * Compares two strings without stopping at the first differing byte, so the time taken does
+     * not reveal how much of a secret matched. The lengths of the values are not hidden.
      *
      * @param left  first value, may be {@code null}
      * @param right second value, may be {@code null}
      * @return {@code true} only when both are non-null and their UTF-8 bytes are equal
      */
     public static boolean constantTimeEquals(String left, String right) {
-        byte[] leftBytes = left == null ? new byte[0] : left.getBytes(StandardCharsets.UTF_8);
-        byte[] rightBytes = right == null ? new byte[0] : right.getBytes(StandardCharsets.UTF_8);
-        if (leftBytes.length != rightBytes.length) {
-            MessageDigest.isEqual(leftBytes, leftBytes);
+        if (left == null || right == null) {
             return false;
         }
-        if (left == null || right == null) {
-            return left == right;
-        }
-        return MessageDigest.isEqual(leftBytes, rightBytes);
+        return MessageDigest.isEqual(left.getBytes(StandardCharsets.UTF_8), right.getBytes(StandardCharsets.UTF_8));
     }
 }

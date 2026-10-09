@@ -94,6 +94,21 @@ public class GraphQLServletSecurityValidator {
     }
 
     public boolean validate(String query, String operationName, HttpServletRequest req, HttpServletResponse res) throws IOException {
+        boolean authenticated = authenticate(query, operationName, req, res);
+        if (authenticated) {
+            // Tell the security service whether the request was encrypted, so that operations which
+            // require a secure transport can refuse a credential that travelled in clear.
+            securityService.recordRequestTransport(req.isSecure(), req.getRemoteAddr(),
+                    req.getHeader("X-Forwarded-Proto"));
+        }
+        return authenticated;
+    }
+
+    private boolean authenticate(String query, String operationName, HttpServletRequest req, HttpServletResponse res) throws IOException {
+        // Request threads are pooled. Start from no subject at all, so a subject or privileged
+        // subject left behind by earlier work on this thread can never make this request trusted.
+        securityService.clearCurrentSubject();
+
         if (isPublicOperation(query, operationName)) {
             // For public operations, check API key
             String apiKey = req.getHeader("X-Unomi-Api-Key");

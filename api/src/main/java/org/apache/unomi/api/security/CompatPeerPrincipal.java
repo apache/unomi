@@ -17,7 +17,6 @@
 package org.apache.unomi.api.security;
 
 import java.security.Principal;
-import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
 
@@ -28,7 +27,7 @@ import java.util.Set;
  * that passed the {@code X-Unomi-Peer} check (choose a profile id, set an event id, merge on login,
  * update another profile). Private / admin endpoints ignore it.
  */
-public class CompatPeerPrincipal implements Principal {
+public final class CompatPeerPrincipal implements Principal {
 
     /** Ability to keep a client-supplied event item id. */
     public static final String ABILITY_SET_EVENT_ID = "setEventId";
@@ -39,7 +38,7 @@ public class CompatPeerPrincipal implements Principal {
     /** Ability to update another profile and write segments, scores, consents and systemProperties. */
     public static final String ABILITY_UPDATE_OTHER_PROFILES = "updateOtherProfiles";
 
-    /** The 3.0 peer set: every ability above. Used when a provider lists no abilities of its own. */
+    /** The 3.0 peer set: every ability above. Used when a provider does not configure abilities at all. */
     public static final Set<String> DEFAULT_ABILITIES = Set.of(
             ABILITY_SET_EVENT_ID,
             ABILITY_CHOOSE_PROFILE_ID,
@@ -52,18 +51,23 @@ public class CompatPeerPrincipal implements Principal {
 
     /**
      * @param providerId the configured provider name
-     * @param abilities  abilities granted to this peer; empty or null means {@link #DEFAULT_ABILITIES}
+     * @param abilities  abilities granted to this peer, each one of the {@code ABILITY_*} constants.
+     *                   An empty set grants nothing; pass {@link #DEFAULT_ABILITIES} for the 3.0 set.
+     * @throws IllegalArgumentException when the provider id is blank, or the abilities are
+     *                                  {@code null} or contain a name that is not a known ability
      */
     public CompatPeerPrincipal(String providerId, Set<String> abilities) {
         if (providerId == null || providerId.isBlank()) {
             throw new IllegalArgumentException("providerId cannot be blank");
         }
-        this.providerId = providerId;
-        if (abilities == null || abilities.isEmpty()) {
-            this.abilities = DEFAULT_ABILITIES;
-        } else {
-            this.abilities = Collections.unmodifiableSet(Set.copyOf(abilities));
+        if (abilities == null) {
+            throw new IllegalArgumentException("abilities cannot be null");
         }
+        if (!DEFAULT_ABILITIES.containsAll(abilities)) {
+            throw new IllegalArgumentException("Unknown compat peer ability in " + abilities);
+        }
+        this.providerId = providerId;
+        this.abilities = Set.copyOf(abilities);
     }
 
     public String getProviderId() {

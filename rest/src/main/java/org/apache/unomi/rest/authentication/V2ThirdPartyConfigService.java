@@ -19,6 +19,7 @@ package org.apache.unomi.rest.authentication;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.security.CompatPeerPrincipal;
+import org.apache.unomi.api.utils.LogSanitizer;
 import org.apache.unomi.services.common.security.IPValidationUtils;
 import org.apache.unomi.services.common.security.SecurityUtils;
 import org.osgi.service.component.annotations.Activate;
@@ -33,7 +34,6 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -73,18 +73,30 @@ public class V2ThirdPartyConfigService {
      * A configured provider that passed key hygiene checks.
      */
     public static final class ProviderConfig {
+        private final String providerId;
         private final String key;
         private final Set<String> ipAddresses;
         private final Set<String> allowedEvents;
-        private final Set<String> abilities;
+        private final CompatPeerPrincipal principal;
 
-        public ProviderConfig(String key, Set<String> ipAddresses, Set<String> allowedEvents, Set<String> abilities) {
+        /**
+         * @param providerId    the provider name from the configuration
+         * @param key           the provider key
+         * @param ipAddresses   allowed addresses or CIDR ranges; empty means no address is allowed
+         * @param allowedEvents protected event types this provider may send
+         * @param abilities     peer abilities of this provider; empty means none
+         */
+        public ProviderConfig(String providerId, String key, Set<String> ipAddresses, Set<String> allowedEvents,
+                Set<String> abilities) {
+            this.providerId = providerId;
             this.key = key;
             this.ipAddresses = ipAddresses;
             this.allowedEvents = allowedEvents;
-            this.abilities = abilities == null || abilities.isEmpty()
-                    ? CompatPeerPrincipal.DEFAULT_ABILITIES
-                    : Collections.unmodifiableSet(abilities);
+            this.principal = new CompatPeerPrincipal(providerId, abilities);
+        }
+
+        public String getProviderId() {
+            return providerId;
         }
 
         public String getKey() {
@@ -100,7 +112,12 @@ public class V2ThirdPartyConfigService {
         }
 
         public Set<String> getAbilities() {
-            return abilities;
+            return principal.getAbilities();
+        }
+
+        /** @return the principal attached to a request this provider authenticated */
+        public CompatPeerPrincipal getPrincipal() {
+            return principal;
         }
     }
 
@@ -127,11 +144,12 @@ public class V2ThirdPartyConfigService {
     public void modified(Map<String, Object> properties) {
         Map<String, ProviderConfig> newProviders = new HashMap<>();
         boolean allowExample = false;
-        Set<String> proxies = new LinkedHashSet<>();
+        Set<String> proxies = new HashSet<>();
 
         if (properties != null) {
             allowExample = Boolean.parseBoolean(String.valueOf(properties.getOrDefault(PROP_ALLOW_EXAMPLE_KEY, "false")));
             proxies.addAll(parseCommaSeparatedList(stringValue(properties.get(PROP_TRUSTED_PROXIES))));
+            reportInvalidAddresses(proxies, PROP_TRUSTED_PROXIES);
 
             Map<String, Map<String, String>> rawProviders = new HashMap<>();
             for (Map.Entry<String, Object> entry : properties.entrySet()) {
@@ -140,7 +158,7 @@ public class V2ThirdPartyConfigService {
                     continue;
                 }
                 String[] parts = propKey.split("\\.");
-                if (parts.length >= 3) {
+                if (parts.length >= 3 && StringUtils.isNotBlank(parts[1])) {
                     String providerName = parts[1];
                     String property = parts[2];
                     rawProviders.computeIfAbsent(providerName, k -> new HashMap<>())
@@ -177,11 +195,25 @@ public class V2ThirdPartyConfigService {
                             providerName, providerName);
                 }
 
+                String configAbilities = props.get("abilities");
+                Set<String> abilities = parseAbilities(providerName, configAbilities);
+                if (abilities.isEmpty() && StringUtils.isNotBlank(configAbilities)) {
+                    LOGGER.error("Third-party provider '{}' is disabled: thirdparty.{}.abilities names no known "
+                            + "ability. Use any of {}, or leave the value empty to grant no peer ability.",
+                            providerName, providerName, CompatPeerPrincipal.DEFAULT_ABILITIES);
+                    continue;
+                }
+
                 Set<String> configIpAddresses = parseCommaSeparatedList(props.getOrDefault("ipAddresses", ""));
+                if (configIpAddresses.isEmpty()) {
+                    LOGGER.error("Third-party provider '{}' has no IP allowlist, so its key is refused from every "
+                            + "address. Set thirdparty.{}.ipAddresses to the addresses allowed to use it.",
+                            providerName, providerName);
+                }
+                reportInvalidAddresses(configIpAddresses, "thirdparty." + providerName + ".ipAddresses");
                 Set<String> configAllowedEvents = parseCommaSeparatedList(props.getOrDefault("allowedEvents", ""));
-                Set<String> abilities = parseAbilities(props.get("abilities"));
-                newProviders.put(providerName,
-                        new ProviderConfig(configKey, configIpAddresses, configAllowedEvents, abilities));
+                newProviders.put(providerName, new ProviderConfig(providerName, configKey, configIpAddresses,
+                        configAllowedEvents, abilities));
             }
         }
 
@@ -248,12 +280,20 @@ public class V2ThirdPartyConfigService {
             return Optional.empty();
         }
         String sourceIP = resolveClientIp(request);
-        return findProviderByKey(providerKey)
-                .filter(match -> IPValidationUtils.isIpAuthorized(sourceIP, match.config().getIpAddresses()))
-                .map(match -> {
-                    LOGGER.debug("Compat peer authenticated: provider={} from IP={}", match.providerId(), sourceIP);
-                    return new CompatPeerPrincipal(match.providerId(), match.config().getAbilities());
-                });
+        Optional<ProviderConfig> provider = findProviderByKey(providerKey);
+        if (provider.isEmpty()) {
+            LOGGER.warn("X-Unomi-Peer header ignored: no enabled third-party provider has key {} (request from IP {})",
+                    SecurityUtils.maskSecret(providerKey), LogSanitizer.forLogging(sourceIP));
+            return Optional.empty();
+        }
+        ProviderConfig config = provider.get();
+        if (!isIpAllowed(config, sourceIP)) {
+            LOGGER.warn("X-Unomi-Peer header ignored: IP {} is not in thirdparty.{}.ipAddresses",
+                    LogSanitizer.forLogging(sourceIP), config.getProviderId());
+            return Optional.empty();
+        }
+        LOGGER.debug("Compat peer authenticated: provider={} from IP={}", config.getProviderId(), sourceIP);
+        return Optional.of(config.getPrincipal());
     }
 
     /**
@@ -269,14 +309,14 @@ public class V2ThirdPartyConfigService {
             return false;
         }
 
-        Optional<ProviderMatch> match = findProviderByKey(providerKey);
+        Optional<ProviderConfig> match = findProviderByKey(providerKey);
         if (match.isEmpty()) {
             LOGGER.debug("V2 compatibility mode: Unknown provider key: {}", SecurityUtils.maskSecret(providerKey));
             return false;
         }
 
-        ProviderConfig config = match.get().config();
-        String foundProviderId = match.get().providerId();
+        ProviderConfig config = match.get();
+        String foundProviderId = config.getProviderId();
 
         if (!config.getAllowedEvents().contains(eventType)) {
             LOGGER.debug("V2 compatibility mode: Event type {} not allowed for provider {} (key: {})",
@@ -284,7 +324,7 @@ public class V2ThirdPartyConfigService {
             return false;
         }
 
-        boolean ipAuthorized = IPValidationUtils.isIpAuthorized(sourceIP, config.getIpAddresses());
+        boolean ipAuthorized = isIpAllowed(config, sourceIP);
         if (!ipAuthorized) {
             LOGGER.debug("V2 compatibility mode: IP {} not authorized for provider {} (key: {})",
                     sourceIP, foundProviderId, SecurityUtils.maskSecret(providerKey));
@@ -293,24 +333,46 @@ public class V2ThirdPartyConfigService {
     }
 
     /**
-     * Resolves the client IP for peer checks: the direct remote address, or the first
-     * {@code X-Forwarded-For} hop only when that direct address is a configured trusted proxy.
+     * Resolves the client IP for peer checks: the direct remote address, unless that address is a
+     * configured trusted proxy. In that case {@code X-Forwarded-For} is read from the last entry
+     * backwards and the first entry that is not itself a trusted proxy is used, because entries to
+     * the left of it were supplied by the client.
      *
      * @param request the HTTP request
      * @return the IP to match against provider allow-lists
      */
     public String resolveClientIp(HttpServletRequest request) {
         String remoteAddr = request.getRemoteAddr();
-        if (!trustedProxies.isEmpty() && IPValidationUtils.isIpAuthorized(remoteAddr, trustedProxies)) {
-            String xff = request.getHeader("X-Forwarded-For");
-            if (StringUtils.isNotBlank(xff)) {
-                String candidate = xff.split(",")[0].trim();
-                if (StringUtils.isNotBlank(candidate)) {
-                    return candidate;
-                }
+        if (!isTrustedProxy(remoteAddr)) {
+            return remoteAddr;
+        }
+        String xff = request.getHeader("X-Forwarded-For");
+        if (StringUtils.isBlank(xff)) {
+            return remoteAddr;
+        }
+        String[] hops = xff.split(",");
+        for (int i = hops.length - 1; i >= 0; i--) {
+            String candidate = hops[i].trim();
+            if (!candidate.isEmpty() && !isTrustedProxy(candidate)) {
+                return candidate;
             }
         }
         return remoteAddr;
+    }
+
+    /**
+     * A provider without an IP allowlist is refused from every address, as in Unomi 3.0. The key
+     * alone must never be enough; {@link IPValidationUtils} would read an empty list as "any address".
+     */
+    private static boolean isIpAllowed(ProviderConfig config, String sourceIP) {
+        Set<String> allowed = config.getIpAddresses();
+        return !allowed.isEmpty() && IPValidationUtils.isIpAuthorized(sourceIP, allowed);
+    }
+
+    /** An empty proxy list trusts nothing; {@link IPValidationUtils} would read it as "any address". */
+    private boolean isTrustedProxy(String address) {
+        Set<String> proxies = trustedProxies;
+        return !proxies.isEmpty() && IPValidationUtils.isIpAuthorized(address, proxies);
     }
 
     /**
@@ -349,54 +411,48 @@ public class V2ThirdPartyConfigService {
         return Collections.unmodifiableMap(providers);
     }
 
-    private Optional<ProviderMatch> findProviderByKey(String providerKey) {
-        for (Map.Entry<String, ProviderConfig> entry : providers.entrySet()) {
-            if (SecurityUtils.constantTimeEquals(providerKey, entry.getValue().getKey())) {
-                return Optional.of(new ProviderMatch(entry.getKey(), entry.getValue()));
+    private Optional<ProviderConfig> findProviderByKey(String providerKey) {
+        for (ProviderConfig config : providers.values()) {
+            if (SecurityUtils.constantTimeEquals(providerKey, config.getKey())) {
+                return Optional.of(config);
             }
         }
         return Optional.empty();
     }
 
-    private static final class ProviderMatch {
-        private final String providerId;
-        private final ProviderConfig config;
-
-        private ProviderMatch(String providerId, ProviderConfig config) {
-            this.providerId = providerId;
-            this.config = config;
+    /**
+     * @return the configured abilities: the 3.0 set when the property is absent, otherwise the known
+     *         names it lists, which is empty when it is blank or lists only unknown names
+     */
+    private Set<String> parseAbilities(String providerName, String value) {
+        if (value == null) {
+            return CompatPeerPrincipal.DEFAULT_ABILITIES;
         }
-
-        private String providerId() {
-            return providerId;
-        }
-
-        private ProviderConfig config() {
-            return config;
-        }
-    }
-
-    private Set<String> parseAbilities(String value) {
-        if (StringUtils.isBlank(value)) {
-            return new HashSet<>(CompatPeerPrincipal.DEFAULT_ABILITIES);
-        }
-        Set<String> parsed = parseCommaSeparatedList(value);
         Set<String> known = new HashSet<>();
-        for (String ability : parsed) {
+        for (String ability : parseCommaSeparatedList(value)) {
             if (CompatPeerPrincipal.DEFAULT_ABILITIES.contains(ability)) {
                 known.add(ability);
             } else {
-                LOGGER.warn("Ignoring unknown third-party ability '{}'", ability);
+                LOGGER.warn("Ignoring unknown ability '{}' in thirdparty.{}.abilities", ability, providerName);
             }
         }
-        return known.isEmpty() ? new HashSet<>(CompatPeerPrincipal.DEFAULT_ABILITIES) : known;
+        return known;
+    }
+
+    private static void reportInvalidAddresses(Set<String> addresses, String propertyName) {
+        for (String address : addresses) {
+            if (!IPValidationUtils.isValidAddressOrRange(address)) {
+                LOGGER.error("'{}' in {} is not an IP address or CIDR range and will never match", address,
+                        propertyName);
+            }
+        }
     }
 
     private static String stringValue(Object value) {
         return value != null ? value.toString() : "";
     }
 
-    private Set<String> parseCommaSeparatedList(String value) {
+    private static Set<String> parseCommaSeparatedList(String value) {
         if (StringUtils.isBlank(value)) {
             return new HashSet<>();
         }
