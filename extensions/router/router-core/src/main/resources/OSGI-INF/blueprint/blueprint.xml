@@ -133,6 +133,7 @@
         <property name="profileExportService" ref="profileExportService"/>
         <property name="profileService" ref="profileService"/>
         <property name="contextManager" ref="contextManager"/>
+        <property name="tenantService" ref="tenantService"/>
         <property name="schedulerService" ref="schedulerService"/>
         <property name="securityService" ref="securityService"/>
         <property name="configsRefreshInterval" value="${configs.refresh.interval}"/>

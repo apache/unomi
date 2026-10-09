@@ -20,6 +20,7 @@ import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
+import org.apache.unomi.router.api.RouteIds;
 import org.apache.unomi.router.api.ProfileToImport;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
@@ -44,6 +45,7 @@ import static org.apache.unomi.router.core.route.RouterTestFixtures.noOpProfileS
 import static org.apache.unomi.router.core.route.RouterTestFixtures.recurrentExport;
 import static org.apache.unomi.router.core.route.RouterTestFixtures.recurrentImport;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -461,7 +463,7 @@ public class FileEndpointContainmentTest {
         assertRouteRefused("shared-base", "the shared base directory is not a tenant directory");
         assertRouteRefused("other-tenant", "acme may not read beta's directory");
         assertRouteBuilt("own-tenant", "acme may read its own directory");
-        assertRouteBuilt("beta-tenant", "beta may read its own directory");
+        assertRouteBuilt("beta", "beta-tenant", "beta may read its own directory");
     }
 
     @Test
@@ -767,20 +769,26 @@ public class FileEndpointContainmentTest {
     // Fixtures
     // ---------------------------------------------------------------------------------------------
 
-    private void assertRouteBuilt(String routeId, String why) {
-        assertNotNull("no route was built for configuration '" + routeId + "', although " + why,
-                camelContext.getRouteDefinition(routeId));
+    private void assertRouteBuilt(String configId, String why) {
+        assertRouteBuilt(TENANT, configId, why);
+    }
+
+    private void assertRouteBuilt(String tenantId, String configId, String why) {
+        assertNotNull("no route was built for configuration '" + configId + "' of " + tenantId + ", although " + why,
+                camelContext.getRouteDefinition(RouteIds.of(tenantId, configId)));
     }
 
     /** The endpoint URI the route was actually built on, which is not the one that was configured. */
-    private String builtEndpointUri(String routeId) {
-        assertRouteBuilt(routeId, "there is no endpoint to look at otherwise");
-        return camelContext.getRouteDefinition(routeId).getInputs().get(0).getUri();
+    private String builtEndpointUri(String configId) {
+        assertRouteBuilt(configId, "there is no endpoint to look at otherwise");
+        return camelContext.getRouteDefinition(RouteIds.of(TENANT, configId)).getInputs().get(0).getUri();
     }
 
-    private void assertRouteRefused(String routeId, String why) {
-        assertNull("a route was built for configuration '" + routeId + "', although " + why,
-                camelContext.getRouteDefinition(routeId));
+    /** No tenant may have got a route out of the configuration: route ids carry the tenant. */
+    private void assertRouteRefused(String configId, String why) {
+        assertFalse("a route was built for configuration '" + configId + "', although " + why,
+                camelContext.getRouteDefinitions().stream()
+                        .anyMatch(route -> configId.equals(RouteIds.configId(route.getId()))));
     }
 
     private void addImportRoutes(ImportConfiguration... configurations) throws Exception {

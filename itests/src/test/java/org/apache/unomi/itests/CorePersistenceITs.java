@@ -91,6 +91,7 @@ import org.junit.runners.Suite.SuiteClasses;
         OtherCommandsIT.class,
         LegacyQueryBuilderMappingIT.class,
         TenantIT.class,
+        BackgroundTenantTasksIT.class,
         SchedulerIT.class,
         EventsCollectorIT.class,
         RolloverIT.class,

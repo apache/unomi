@@ -365,17 +365,22 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
                         long purgeStartTime = System.currentTimeMillis();
                         LOGGER.info("Purge: triggered");
 
-                        // Profile purge
-                        purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
-                        if (purgeSessionExistTime > 0) {
-                            purgeSessionItems(purgeSessionExistTime);
+                        // Run under each tenant so persistence sees that tenant's data
+                        // (system context alone only matches tenantId=system).
+                        boolean purged = executeForEachTenant("purge of profiles, sessions and events", () -> {
+                            purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
+                            if (purgeSessionExistTime > 0) {
+                                purgeSessionItems(purgeSessionExistTime);
+                            }
+                            if (purgeEventExistTime > 0) {
+                                purgeEventItems(purgeEventExistTime);
+                            }
+                        }, callback);
+                        if (purged) {
+                            LOGGER.info("Purge: executed in {} ms", System.currentTimeMillis() - purgeStartTime);
+                        } else {
+                            LOGGER.warn("Purge: failed for some tenants after {} ms", System.currentTimeMillis() - purgeStartTime);
                         }
-                        if (purgeEventExistTime > 0) {
-                            purgeEventItems(purgeEventExistTime);
-                        }
-                        LOGGER.info("Purge: executed in {} ms", System.currentTimeMillis() - purgeStartTime);
-
-                        callback.complete();
                     } catch (Throwable t) {
                         // During shutdown, services may be unavailable - only log if not shutting down
                         LOGGER.error("Error while purging profiles, sessions, or events", t);

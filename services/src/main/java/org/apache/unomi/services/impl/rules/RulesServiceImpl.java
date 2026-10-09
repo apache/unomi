@@ -195,7 +195,10 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             .nonPersistent()
             .withPeriod(rulesStatisticsRefreshInterval, TimeUnit.MILLISECONDS)
             .withFixedDelay()
-            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> syncRuleStatistics()))
+            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> {
+                // Flush in-memory stats for every tenant; system context alone only persists system.
+                executeForEachTenant("rule statistics sync", () -> syncRuleStatistics());
+            }))
             .schedule();
 
         LOGGER.info("Rule service initialized.");
@@ -764,15 +767,19 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
     }
 
     private void syncRuleStatistics() {
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+
+        Map<String, RuleStatistics> tenantStats = getRuleStatisticsForTenant(currentTenant);
+        if (tenantStats.isEmpty()) {
+            // nothing to flush or to refresh for this tenant: spare the query, the sync runs for every tenant
+            return;
+        }
+
         List<RuleStatistics> allPersistedRuleStatisticsList = persistenceService.getAllItems(RuleStatistics.class);
         Map<String, RuleStatistics> allPersistedRuleStatistics = new HashMap<>();
         for (RuleStatistics ruleStatistics : allPersistedRuleStatisticsList) {
             allPersistedRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
         }
-
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-
-        Map<String, RuleStatistics> tenantStats = getRuleStatisticsForTenant(currentTenant);
 
         // Sync tenant statistics
         for (RuleStatistics ruleStatistics : tenantStats.values()) {
@@ -821,16 +828,9 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                 persistenceService.save(ruleStatistics, null, true);
             }
         }
-
-        // Also sync system tenant statistics if needed
-        if (!SYSTEM_TENANT.equals(currentTenant)) {
-            Map<String, RuleStatistics> systemStats = getRuleStatisticsForTenant(SYSTEM_TENANT);
-            for (RuleStatistics ruleStatistics : systemStats.values()) {
-                if (!tenantStats.containsKey(ruleStatistics.getItemId())) {
-                    tenantStats.put(ruleStatistics.getItemId(), ruleStatistics);
-                }
-            }
-        }
+        // System-tenant statistics are synced by the system tenant's own run and read through the
+        // fallback in getRuleStatistics()/getAllRuleStatistics(). Copying them into this tenant's map
+        // would have this tenant's next sync save them under its own tenantId and drop their counts.
     }
 
     public void bind(ServiceReference<RuleListenerService> serviceReference) {

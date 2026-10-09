@@ -98,9 +98,9 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         // Wait for Camel route to be created and started (the timer runs every 1 second to process config refreshes)
         // This gives us visibility into what Camel is doing instead of just waiting for results
-        boolean routeStarted = waitForCamelRouteStarted(itemId1, 1000, 10);
+        boolean routeStarted = waitForCamelRouteStarted(TEST_TENANT_ID, itemId1, 1000, 10);
         if (routeStarted) {
-            String routeInfo = getCamelRouteInfo(itemId1);
+            String routeInfo = getCamelRouteInfo(TEST_TENANT_ID, itemId1);
             LOGGER.info("Camel Route Status: {}", routeInfo);
         } else {
             LOGGER.warn("Camel Route '{}' was not started within timeout", itemId1);
@@ -166,9 +166,9 @@ public class ProfileImportSurfersIT extends BaseIT {
         LOGGER.info("ProfileImportSurfersOverwriteIT setup successfully.");
 
         // Wait for Camel route to be created and started
-        boolean routeStarted2 = waitForCamelRouteStarted(itemId2, 1000, 10);
+        boolean routeStarted2 = waitForCamelRouteStarted(TEST_TENANT_ID, itemId2, 1000, 10);
         if (routeStarted2) {
-            String routeInfo = getCamelRouteInfo(itemId2);
+            String routeInfo = getCamelRouteInfo(TEST_TENANT_ID, itemId2);
             LOGGER.info("Camel Route Status: {}", routeInfo);
         } else {
             LOGGER.warn("Camel Route '{}' was not started within timeout", itemId2);
@@ -229,9 +229,9 @@ public class ProfileImportSurfersIT extends BaseIT {
         LOGGER.info("ProfileImportSurfersDeleteIT setup successfully.");
 
         // Wait for Camel route to be created and started
-        boolean routeStarted3 = waitForCamelRouteStarted(itemId3, 1000, 10);
+        boolean routeStarted3 = waitForCamelRouteStarted(TEST_TENANT_ID, itemId3, 1000, 10);
         if (routeStarted3) {
-            String routeInfo = getCamelRouteInfo(itemId3);
+            String routeInfo = getCamelRouteInfo(TEST_TENANT_ID, itemId3);
             LOGGER.info("Camel Route Status: {}", routeInfo);
         } else {
             LOGGER.warn("Camel Route '{}' was not started within timeout", itemId3);

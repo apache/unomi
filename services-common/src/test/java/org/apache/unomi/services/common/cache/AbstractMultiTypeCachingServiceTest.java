@@ -517,4 +517,84 @@ public class AbstractMultiTypeCachingServiceTest {
         verify(auditService).auditCreate(same(fromBundle), eq("system-bundle"));
         verify(auditService, never()).auditUpdate(any(), anyString());
     }
+
+    @Test
+    public void testExecuteForEachTenantRunsUnderEveryTenantAndSystem() {
+        List<String> tenantsRun = new ArrayList<>();
+        recordTenantsRun(tenantsRun, null);
+
+        List<String> failed = testCachingService.executeForEachTenant("test task", () -> { });
+
+        assertTrue("no tenant failed", failed.isEmpty());
+        assertEquals(new HashSet<>(Arrays.asList(TEST_TENANT, SYSTEM_TENANT)), new HashSet<>(tenantsRun));
+        assertEquals("each tenant runs once", 2, tenantsRun.size());
+    }
+
+    @Test
+    public void testExecuteForEachTenantReportsTheFailingTenantAndRunsTheOthers() {
+        List<String> tenantsRun = new ArrayList<>();
+        recordTenantsRun(tenantsRun, TEST_TENANT);
+
+        List<String> failed = testCachingService.executeForEachTenant("test task", () -> { });
+
+        assertEquals(Collections.singletonList(TEST_TENANT), failed);
+        assertEquals(Collections.singletonList(SYSTEM_TENANT), tenantsRun);
+    }
+
+    @Test
+    public void testExecuteForEachTenantReportsTenantsSkippedByAnInterruption() {
+        List<String> tenantsRun = new ArrayList<>();
+        recordTenantsRun(tenantsRun, null);
+
+        List<String> failed;
+        Thread.currentThread().interrupt();
+        try {
+            failed = testCachingService.executeForEachTenant("test task", () -> { });
+        } finally {
+            Thread.interrupted();
+        }
+
+        assertEquals(new HashSet<>(Arrays.asList(TEST_TENANT, SYSTEM_TENANT)), new HashSet<>(failed));
+        assertTrue("no tenant runs once the thread is interrupted", tenantsRun.isEmpty());
+    }
+
+    @Test
+    public void testExecuteForEachTenantCompletesTheTaskWhenEveryTenantRan() {
+        recordTenantsRun(new ArrayList<>(), null);
+        org.apache.unomi.api.tasks.TaskExecutor.TaskStatusCallback callback =
+                mock(org.apache.unomi.api.tasks.TaskExecutor.TaskStatusCallback.class);
+
+        assertTrue(testCachingService.executeForEachTenant("test task", () -> { }, callback));
+
+        verify(callback).complete();
+        verify(callback, never()).fail(anyString());
+    }
+
+    @Test
+    public void testExecuteForEachTenantFailsTheTaskNamingTheTenantsThatFailed() {
+        recordTenantsRun(new ArrayList<>(), TEST_TENANT);
+        org.apache.unomi.api.tasks.TaskExecutor.TaskStatusCallback callback =
+                mock(org.apache.unomi.api.tasks.TaskExecutor.TaskStatusCallback.class);
+
+        assertFalse(testCachingService.executeForEachTenant("test task", () -> { }, callback));
+
+        ArgumentCaptor<String> failure = ArgumentCaptor.forClass(String.class);
+        verify(callback).fail(failure.capture());
+        verify(callback, never()).complete();
+        assertTrue(failure.getValue(), failure.getValue().contains(TEST_TENANT));
+        assertFalse(failure.getValue(), failure.getValue().contains(SYSTEM_TENANT));
+    }
+
+    /** Records the tenants the action runs under; switching to {@code failingTenant} throws instead. */
+    private void recordTenantsRun(List<String> tenantsRun, String failingTenant) {
+        doAnswer(invocation -> {
+            String tenantId = invocation.getArgument(0);
+            if (tenantId.equals(failingTenant)) {
+                throw new IllegalStateException("simulated failure for " + tenantId);
+            }
+            tenantsRun.add(tenantId);
+            ((Runnable) invocation.getArgument(1)).run();
+            return null;
+        }).when(contextManager).executeAsTenant(anyString(), any(Runnable.class));
+    }
 }

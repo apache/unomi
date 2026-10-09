@@ -97,10 +97,10 @@ public class ProfileImportActorsIT extends BaseIT {
         // Gate: wait for the Camel route to be created and started before polling for results.
         // The timer fires every ~1 second to pick up config changes, so 15 retries (15 s) is generous.
         keepTrying("Camel route '" + itemId + "' did not start — timer may not have fired or route creation failed",
-                () -> isCamelRouteStarted(itemId),
+                () -> isCamelRouteStarted(TEST_TENANT_ID, itemId),
                 started -> started,
                 1000, 15);
-        System.out.println("==== Camel Route Status: " + getCamelRouteInfo(itemId) + " ====");
+        System.out.println("==== Camel Route Status: " + getCamelRouteInfo(TEST_TENANT_ID, itemId) + " ====");
 
         // Wait for data to be processed. Force an ES index refresh before each search attempt so
         // profiles written by UnomiStorageProcessor are visible to the Search API immediately.

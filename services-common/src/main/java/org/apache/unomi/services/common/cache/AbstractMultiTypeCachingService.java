@@ -23,6 +23,7 @@ import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.api.tenants.AuditService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
@@ -549,6 +550,52 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         }
         tenants.add(SYSTEM_TENANT);
         return tenants;
+    }
+
+    /**
+     * Runs an action once under every tenant, system tenant included. A tenant whose run fails is logged
+     * and does not stop the others; once the thread is interrupted the remaining tenants are skipped.
+     *
+     * @param taskName short description of the work, used in log messages
+     * @param action   the work to run under each tenant's execution context
+     * @return identifiers of the tenants for which the action failed or was skipped, empty when all succeeded
+     */
+    protected List<String> executeForEachTenant(String taskName, Runnable action) {
+        List<String> failedTenants = new ArrayList<>();
+        for (String tenantId : getTenants()) {
+            if (Thread.currentThread().isInterrupted()) {
+                logger.warn("Interrupted during {}, skipping tenant {}", taskName, tenantId);
+                failedTenants.add(tenantId);
+                continue;
+            }
+            try {
+                contextManager.executeAsTenant(tenantId, action);
+            } catch (Exception e) {
+                logger.error("Error during {} for tenant {}", taskName, tenantId, e);
+                failedTenants.add(tenantId);
+            }
+        }
+        return failedTenants;
+    }
+
+    /**
+     * Runs a scheduled task's action once under every tenant and reports the outcome to the scheduler:
+     * the task completes when every tenant was processed, and fails naming the tenants that were not.
+     * A failed task is retried by the scheduler for every tenant, so the action must be safe to repeat.
+     *
+     * @param taskName short description of the work, used in log messages and in the failure reported
+     * @param action   the work to run under each tenant's execution context
+     * @param callback the scheduler callback of the running task
+     * @return {@code true} when the task completed, {@code false} when it was reported as failed
+     */
+    protected boolean executeForEachTenant(String taskName, Runnable action, TaskExecutor.TaskStatusCallback callback) {
+        List<String> failedTenants = executeForEachTenant(taskName, action);
+        if (failedTenants.isEmpty()) {
+            callback.complete();
+            return true;
+        }
+        callback.fail("The " + taskName + " failed for tenants " + failedTenants);
+        return false;
     }
 
     /**

@@ -76,9 +76,13 @@ public class ImportRouteCompletionProcessor implements Processor {
         if (importConfigOneShot != null) {
             importConfigId = importConfigOneShot.getItemId();
         } else {
-            importConfigId = exchange.getFromRouteId();
+            importConfigId = RouteIds.configId(exchange.getFromRouteId());
         }
         ImportConfiguration importConfiguration = importConfigurationService.load(importConfigId);
+        if (importConfiguration == null) {
+            LOGGER.error("Unable to complete import, config cannot be found: {}. Its status is left as it is.", importConfigId);
+            return;
+        }
         long successCount = 0;
         long failureCount = 0;
         long ignoreCount = 0;

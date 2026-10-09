@@ -21,6 +21,7 @@ import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.ImportConfiguration;
+import org.apache.unomi.router.api.RouteIds;
 import org.apache.unomi.router.api.ProfileToImport;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
@@ -117,7 +118,7 @@ public class RefusedConfigurationStatusTest {
 
         addImportRoutes(configuration);
 
-        assertNull("no route should have been built", camelContext.getRouteDefinition("out-of-bounds"));
+        assertNull("no route should have been built", camelContext.getRouteDefinition(RouteIds.of(TENANT, "out-of-bounds")));
         assertEquals("the configuration should be recorded as failed",
                 RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT, configuration.getStatus());
         assertTrue("the configuration should have been saved so the failure is visible",
@@ -130,7 +131,7 @@ public class RefusedConfigurationStatusTest {
 
         addExportRoutes(configuration);
 
-        assertNull("no route should have been built", camelContext.getRouteDefinition("out-of-bounds"));
+        assertNull("no route should have been built", camelContext.getRouteDefinition(RouteIds.of(TENANT, "out-of-bounds")));
         assertEquals("the configuration should be recorded as failed",
                 RouterConstants.CONFIG_STATUS_INVALID_ENDPOINT, configuration.getStatus());
         assertTrue("the configuration should have been saved so the failure is visible",
@@ -178,9 +179,9 @@ public class RefusedConfigurationStatusTest {
         addImportRoutes(noSystemSubject, recurrentImport(fileUri(arbitraryDir, "?fileName=profiles.csv")),
                 inBoundsImport("in-bounds"));
 
-        assertNull("the refused configuration still gets no route", camelContext.getRouteDefinition("out-of-bounds"));
+        assertNull("the refused configuration still gets no route", camelContext.getRouteDefinition(RouteIds.of(TENANT, "out-of-bounds")));
         assertNotNull("failing to switch context must not cost the other configurations their routes",
-                camelContext.getRouteDefinition("in-bounds"));
+                camelContext.getRouteDefinition(RouteIds.of(TENANT, "in-bounds")));
     }
 
     @Test
@@ -190,9 +191,9 @@ public class RefusedConfigurationStatusTest {
         addImportRoutes(recurrentImport(fileUri(arbitraryDir, "?fileName=profiles.csv")),
                 inBoundsImport("in-bounds"));
 
-        assertNull("the refused configuration still gets no route", camelContext.getRouteDefinition("out-of-bounds"));
+        assertNull("the refused configuration still gets no route", camelContext.getRouteDefinition(RouteIds.of(TENANT, "out-of-bounds")));
         assertNotNull("failing to record the refusal must not cost the other configurations their routes",
-                camelContext.getRouteDefinition("in-bounds"));
+                camelContext.getRouteDefinition(RouteIds.of(TENANT, "in-bounds")));
     }
 
     @Test

@@ -33,7 +33,8 @@ package org.apache.unomi.router.api;
  * <p>Typical usage:
  * <ul>
  *   <li>Management services call update methods when import/export configuration documents change</li>
- *   <li>Cleanup paths call {@link #killExistingRoute(String, boolean)} to drop routes whose configs were removed</li>
+ *   <li>Cleanup paths call {@link #killExistingRoute(String, String, boolean)} to drop the route of a tenant's
+ *       removed config; Camel route ids are built by {@link RouteIds}</li>
  * </ul>
  *
  * @since 1.0
@@ -41,36 +42,41 @@ package org.apache.unomi.router.api;
 public interface IRouterCamelContext {
 
     /**
-     * Stops and removes an existing Camel route by id, if it is currently registered in the context.
+     * Stops and removes the Camel route of a tenant's import/export configuration, if it is currently
+     * registered in the context. A configuration of the same id in another tenant keeps its route.
      *
-     * @param routeId   Camel route identifier (usually aligned with import/export configuration id)
+     * @param tenantId  tenant owning the configuration
+     * @param configId  identifier of the import/export configuration whose route is removed
      * @param fireEvent when {@code true}, signals that router lifecycle events may be emitted; the concrete
      *                  implementation defines whether events are fired (reserved hook for observability)
      * @throws Exception if Camel fails to remove the route definition
      */
-    void killExistingRoute(String routeId, boolean fireEvent) throws Exception;
+    void killExistingRoute(String tenantId, String configId, boolean fireEvent) throws Exception;
 
     /**
-     * Refreshes the profile import reader route for the given configuration: removes any existing route with the
-     * same id, loads the {@link org.apache.unomi.router.api.ImportConfiguration}, and—for recurrent configs—
-     * registers a new route built from current settings.
+     * Refreshes the profile import reader route for the given configuration: removes the existing route of that
+     * tenant's configuration, loads the {@link org.apache.unomi.router.api.ImportConfiguration}, and—for recurrent
+     * configs—registers a new route built from current settings. Must be called in the tenant's execution context.
      *
+     * @param tenantId  tenant owning the configuration
      * @param configId  identifier of the import configuration whose reader route should be updated
      * @param fireEvent when {@code true}, signals that router lifecycle events may be emitted after the update
      * @throws Exception if route removal or registration fails
      */
-    void updateProfileImportReaderRoute(String configId, boolean fireEvent) throws Exception;
+    void updateProfileImportReaderRoute(String tenantId, String configId, boolean fireEvent) throws Exception;
 
     /**
-     * Refreshes the profile export reader (collect) route for the given configuration: removes any existing route
-     * with the same id, loads the {@link org.apache.unomi.router.api.ExportConfiguration}, and—for recurrent
-     * configs—registers a new collect route built from current settings.
+     * Refreshes the profile export reader (collect) route for the given configuration: removes the existing route
+     * of that tenant's configuration, loads the {@link org.apache.unomi.router.api.ExportConfiguration}, and—for
+     * recurrent configs—registers a new collect route built from current settings. Must be called in the tenant's
+     * execution context.
      *
+     * @param tenantId  tenant owning the configuration
      * @param configId  identifier of the export configuration whose reader route should be updated
      * @param fireEvent when {@code true}, signals that router lifecycle events may be emitted after the update
      * @throws Exception if route removal or registration fails
      */
-    void updateProfileExportReaderRoute(String configId, boolean fireEvent) throws Exception;
+    void updateProfileExportReaderRoute(String tenantId, String configId, boolean fireEvent) throws Exception;
 
     /**
      * Enables or disables Camel route tracing on the underlying {@code CamelContext} for debugging (message flow,

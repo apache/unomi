@@ -1273,25 +1273,21 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         int pastEventSegmentsAndScoringsSize = segmentOrScoringIdsToReevaluate.size();
         LOGGER.info("Found {} segments or scoring plans containing pastEventCondition conditions", pastEventSegmentsAndScoringsSize);
 
-        // get Segments and Scoring that contains relative date expressions
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-        Map<String, Segment> tenantSegments = cacheService.getTenantCache(currentTenant, Segment.class);
-        Map<String, Scoring> tenantScoring = cacheService.getTenantCache(currentTenant, Scoring.class);
+        // get Segments and Scoring that contains relative date expressions, those inherited from the system
+        // tenant included: they apply to this tenant's profiles too (see getSegmentsAndScoresForProfile)
+        Collection<Segment> tenantSegments = getAllItems(Segment.class, true);
+        Collection<Scoring> tenantScoring = getAllItems(Scoring.class, true);
 
-        if (tenantSegments != null) {
-            segmentOrScoringIdsToReevaluate.addAll(tenantSegments.values().stream()
-                    .filter(segment -> segment.getCondition() != null && segment.getCondition().toString().contains("propertyValueDateExpr"))
-                    .map(Item::getItemId)
-                    .collect(Collectors.toList()));
-        }
+        segmentOrScoringIdsToReevaluate.addAll(tenantSegments.stream()
+                .filter(segment -> segment.getCondition() != null && segment.getCondition().toString().contains("propertyValueDateExpr"))
+                .map(Item::getItemId)
+                .collect(Collectors.toList()));
 
-        if (tenantScoring != null) {
-            segmentOrScoringIdsToReevaluate.addAll(tenantScoring.values().stream()
-                    .filter(scoring -> scoring.getElements() != null && !scoring.getElements().isEmpty() && scoring.getElements().stream()
-                            .anyMatch(scoringElement -> scoringElement != null && scoringElement.getCondition() != null && scoringElement.getCondition().toString().contains("propertyValueDateExpr")))
-                    .map(Item::getItemId)
-                    .collect(Collectors.toList()));
-        }
+        segmentOrScoringIdsToReevaluate.addAll(tenantScoring.stream()
+                .filter(scoring -> scoring.getElements() != null && !scoring.getElements().isEmpty() && scoring.getElements().stream()
+                        .anyMatch(scoringElement -> scoringElement != null && scoringElement.getCondition() != null && scoringElement.getCondition().toString().contains("propertyValueDateExpr")))
+                .map(Item::getItemId)
+                .collect(Collectors.toList()));
         LOGGER.info("Found {} segments or scoring plans containing date relative expressions", segmentOrScoringIdsToReevaluate.size() - pastEventSegmentsAndScoringsSize);
 
         // reevaluate segments and scoring.
@@ -1554,9 +1550,15 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                     try {
                         long currentTimeMillis = System.currentTimeMillis();
                         LOGGER.info("Running scheduled task to recalculate segments and scoring that contains date relative conditions...");
-                        recalculatePastEventConditions();
-                        LOGGER.info("...Finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
-                        callback.complete();
+                        // Run under each tenant so rules/segments/profiles of real tenants are seen
+                        // (system context alone only matches tenantId=system).
+                        boolean recalculated = executeForEachTenant("recalculation of date-relative segments and scoring",
+                                () -> recalculatePastEventConditions(), callback);
+                        if (recalculated) {
+                            LOGGER.info("...Finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
+                        } else {
+                            LOGGER.warn("...Failed for some tenants to recalculate segments and scoring that contains date relative conditions after {}ms. ", System.currentTimeMillis() - currentTimeMillis);
+                        }
                     } catch (Throwable t) {
                         LOGGER.error("Error while updating profiles for segments and scoring that contains date relative conditions", t);
                         callback.fail(t.getMessage());

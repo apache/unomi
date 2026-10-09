@@ -18,7 +18,6 @@ package org.apache.unomi.router.core.context;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.Exchange;
-import org.apache.camel.Route;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.core.osgi.OsgiDefaultCamelContext;
 import org.apache.camel.management.event.ExchangeCompletedEvent;
@@ -26,16 +25,20 @@ import org.apache.camel.management.event.ExchangeCreatedEvent;
 import org.apache.camel.management.event.ExchangeSentEvent;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.support.EventNotifierSupport;
+import org.apache.unomi.api.Item;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.IRouterCamelContext;
 import org.apache.unomi.router.api.ImportConfiguration;
+import org.apache.unomi.router.api.RouteIds;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.services.ProfileExportService;
@@ -51,6 +54,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * The main Camel context manager for the Unomi Router component.
@@ -95,6 +99,20 @@ public class RouterCamelContext implements IRouterCamelContext {
     private ConfigSharingService configSharingService;
     private ExecutionContextManager contextManager;
     private SecurityService securityService;
+    private TenantService tenantService;
+
+    /**
+     * Tenants whose recurring routes could not be built at startup; the refresh timer retries them.
+     * The sets and the flag are filled at startup and emptied by the refresh timer; the two retry times
+     * below are only read and written by the refresh timer, which runs one tick at a time.
+     */
+    private final Set<String> importTenantsToRetry = ConcurrentHashMap.newKeySet();
+    private final Set<String> exportTenantsToRetry = ConcurrentHashMap.newKeySet();
+    private volatile boolean tenantListingToRetry;
+    private final Set<String> tenantsWithLoggedLoadFailure = ConcurrentHashMap.newKeySet();
+    static final long MAX_STARTUP_RETRY_DELAY_MS = 60_000;
+    private long startupRetryDelay;
+    private long nextStartupRetryTime;
 
     private SchedulerService schedulerService;
     private ScheduledTask scheduledTask;
@@ -127,6 +145,10 @@ public class RouterCamelContext implements IRouterCamelContext {
         this.contextManager = contextManager;
     }
 
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
+    }
+
     /** {@inheritDoc} */
     @Override
     public void setTracing(boolean tracing) {
@@ -147,7 +169,20 @@ public class RouterCamelContext implements IRouterCamelContext {
         configSharingService.setProperty(RouterConstants.CONFIG_EXPORT_BASE_DIRS, permittedExportBaseDirs);
         configSharingService.setProperty(RouterConstants.KEY_HISTORY_SIZE, execHistorySize);
 
-        initCamel();
+        try {
+            initCamel();
+        } catch (Exception e) {
+            // Do not leave a context behind that nothing will ever stop.
+            if (camelContext != null) {
+                try {
+                    camelContext.stop();
+                } catch (Exception stopFailure) {
+                    e.addSuppressed(stopFailure);
+                }
+                camelContext = null;
+            }
+            throw e;
+        }
 
         initTimers();
         LOGGER.info("Camel Context initialized successfully.");
@@ -159,7 +194,12 @@ public class RouterCamelContext implements IRouterCamelContext {
         }
         //This is to shutdown Camel context
         //(will stop all routes/components/endpoints etc and clear internal state/cache)
-        this.camelContext.stop();
+        if (camelContext == null) {
+            // init() failed before the context could be started
+            LOGGER.info("Camel context for profile import was not started, nothing to shut down.");
+            return;
+        }
+        camelContext.stop();
         LOGGER.info("Camel context for profile import is shutdown.");
     }
 
@@ -167,93 +207,124 @@ public class RouterCamelContext implements IRouterCamelContext {
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                try {
-                    Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> tenantsImportConfigsToRefresh = importConfigurationService.consumeConfigsToBeRefresh();
-
-                    for (Map.Entry<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> tenantImportConfigsToRefresh : tenantsImportConfigsToRefresh.entrySet()) {
-                        String tenantId = tenantImportConfigsToRefresh.getKey();
-                        contextManager.executeAsTenant(tenantId, () -> {
-                            try {
-                                for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> importConfigToRefresh : tenantImportConfigsToRefresh.getValue().entrySet()) {
-                                    String configId = importConfigToRefresh.getKey();
-                                    RouterConstants.CONFIG_CAMEL_REFRESH refreshType = importConfigToRefresh.getValue();
-                                    RetryKey retryKey = new RetryKey("import", tenantId, configId);
-                                    try {
-                                        if (refreshType.equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {
-                                            updateProfileImportReaderRoute(configId, true);
-                                            routeCreationRetryCount.remove(retryKey);
-                                        } else if (refreshType.equals(RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED)) {
-                                            killExistingRoute(configId, true);
-                                            routeCreationRetryCount.remove(retryKey);
-                                        }
-                                    } catch (Exception e) {
-                                        int attempt = routeCreationRetryCount.merge(retryKey, 1, Integer::sum);
-                                        if (attempt <= MAX_ROUTE_CREATION_RETRIES) {
-                                            LOGGER.error("Refreshing({}) camel route {} failed (attempt {}/{}) — will retry on next tick",
-                                                    refreshType, configId, attempt, MAX_ROUTE_CREATION_RETRIES, e);
-                                            importConfigurationService.requeueForRefresh(tenantId, configId, refreshType);
-                                        } else {
-                                            LOGGER.error("Refreshing({}) camel route {} failed after {} attempts — giving up",
-                                                    refreshType, configId, MAX_ROUTE_CREATION_RETRIES, e);
-                                            routeCreationRetryCount.remove(retryKey);
-                                            markImportRouteCreationFailed(configId);
-                                        }
-                                    }
-                                }
-                            } catch (Exception e) {
-                                LOGGER.error("Unexpected error while refreshing import/export camel routes for tenant {}", tenantId, e);
-                            }
-                            return null;
-                        });
-                    }
-
-                    Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> tenantsExportConfigsToRefresh = exportConfigurationService.consumeConfigsToBeRefresh();
-                    for (Map.Entry<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> tenantExportConfigsToRefresh : tenantsExportConfigsToRefresh.entrySet()) {
-                        String tenantId = tenantExportConfigsToRefresh.getKey();
-                        contextManager.executeAsTenant(tenantId, () -> {
-                            try {
-                                for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> exportConfigToRefresh : tenantExportConfigsToRefresh.getValue().entrySet()) {
-                                    String configId = exportConfigToRefresh.getKey();
-                                    RouterConstants.CONFIG_CAMEL_REFRESH refreshType = exportConfigToRefresh.getValue();
-                                    RetryKey retryKey = new RetryKey("export", tenantId, configId);
-                                    try {
-                                        if (refreshType.equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {
-                                            updateProfileExportReaderRoute(configId, true);
-                                            routeCreationRetryCount.remove(retryKey);
-                                        } else if (refreshType.equals(RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED)) {
-                                            killExistingRoute(configId, true);
-                                            routeCreationRetryCount.remove(retryKey);
-                                        }
-                                    } catch (Exception e) {
-                                        int attempt = routeCreationRetryCount.merge(retryKey, 1, Integer::sum);
-                                        if (attempt <= MAX_ROUTE_CREATION_RETRIES) {
-                                            LOGGER.error("Refreshing({}) camel route {} failed (attempt {}/{}) — will retry on next tick",
-                                                    refreshType, configId, attempt, MAX_ROUTE_CREATION_RETRIES, e);
-                                            exportConfigurationService.requeueForRefresh(tenantId, configId, refreshType);
-                                        } else {
-                                            LOGGER.error("Refreshing({}) camel route {} failed after {} attempts — giving up",
-                                                    refreshType, configId, MAX_ROUTE_CREATION_RETRIES, e);
-                                            routeCreationRetryCount.remove(retryKey);
-                                            markExportRouteCreationFailed(configId);
-                                        }
-                                    }
-                                }
-                            } catch (Exception e) {
-                                LOGGER.error("Unexpected error while refreshing import/export camel routes for tenant {}", tenantId, e);
-                            }
-                            return null;
-                        });
-                    }
-                } catch (Exception e) {
-                    LOGGER.error("Unexpected error while refreshing import/export camel routes", e);
-                }
+                refreshRoutes();
             }
         };
         scheduledTask = schedulerService.createRecurringTask("camel-route-refresh", configsRefreshInterval, TimeUnit.MILLISECONDS, task, false);
     }
 
-    private void initCamel() throws Exception {
-        camelContext = new OsgiDefaultCamelContext(bundleContext);
+    /**
+     * One tick of the refresh timer: retries what could not be started at startup, then rebuilds or removes
+     * the routes of the configurations that were saved, deleted or re-queued since the previous tick.
+     */
+    void refreshRoutes() {
+        try {
+            retryStartupLoadsWhenDue(System.currentTimeMillis());
+        } catch (Exception e) {
+            // must not keep the refreshes below from being processed
+            LOGGER.warn("Unexpected error while retrying to start the recurring routes that could not be started at startup", e);
+        }
+        try {
+            refreshRoutes("import", importConfigurationService, this::updateProfileImportReaderRoute, this::markImportRouteCreationFailed);
+            refreshRoutes("export", exportConfigurationService, this::updateProfileExportReaderRoute, this::markExportRouteCreationFailed);
+        } catch (Exception e) {
+            LOGGER.error("Unexpected error while refreshing import/export camel routes", e);
+        }
+    }
+
+    /** Rebuilds or removes the routes of the import or of the export configurations queued for a refresh. */
+    private void refreshRoutes(String direction, ImportExportConfigurationService<?> service, RouteUpdater routeUpdater,
+                               Consumer<String> routeCreationFailureMarker) {
+        Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> tenantsConfigsToRefresh = service.consumeConfigsToBeRefresh();
+        for (Map.Entry<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> tenantConfigsToRefresh : tenantsConfigsToRefresh.entrySet()) {
+            String tenantId = tenantConfigsToRefresh.getKey();
+            try {
+                contextManager.executeAsTenant(tenantId, () -> {
+                    for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> configToRefresh : tenantConfigsToRefresh.getValue().entrySet()) {
+                        String configId = configToRefresh.getKey();
+                        RouterConstants.CONFIG_CAMEL_REFRESH refreshType = configToRefresh.getValue();
+                        RetryKey retryKey = new RetryKey(direction, tenantId, configId);
+                        try {
+                            if (refreshType.equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {
+                                routeUpdater.update(tenantId, configId, true);
+                                routeCreationRetryCount.remove(retryKey);
+                            } else if (refreshType.equals(RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED)) {
+                                killExistingRoute(tenantId, configId, true);
+                                routeCreationRetryCount.remove(retryKey);
+                            }
+                        } catch (Exception e) {
+                            retryRefreshOrGiveUp(service, retryKey, refreshType, routeCreationFailureMarker, e, true);
+                        }
+                    }
+                });
+            } catch (Exception e) {
+                // The tenant could not be switched to: none of its refreshes ran. They were already taken off
+                // the queue, so they are counted and queued again like any other failed refresh, and the
+                // other tenants are still refreshed.
+                LOGGER.error("Could not switch to tenant {} to refresh its {} camel routes", tenantId, direction, e);
+                for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> configToRefresh : tenantConfigsToRefresh.getValue().entrySet()) {
+                    // no failure status can be recorded on a configuration of a tenant that cannot be switched to
+                    // the stack trace was logged once above, for the tenant
+                    retryRefreshOrGiveUp(service, new RetryKey(direction, tenantId, configToRefresh.getKey()), configToRefresh.getValue(),
+                            null, e, false);
+                }
+            }
+        }
+    }
+
+    /**
+     * Queues a failed refresh again until it has failed {@link #MAX_ROUTE_CREATION_RETRIES} times, then gives up
+     * and records the failure on the configuration. Never throws: the refreshes that follow must still run.
+     */
+    private void retryRefreshOrGiveUp(ImportExportConfigurationService<?> service, RetryKey retryKey,
+                                      RouterConstants.CONFIG_CAMEL_REFRESH refreshType, Consumer<String> routeCreationFailureMarker,
+                                      Exception failure, boolean logStackTrace) {
+        String configId = retryKey.configId();
+        try {
+            int attempt = routeCreationRetryCount.merge(retryKey, 1, Integer::sum);
+            if (attempt <= MAX_ROUTE_CREATION_RETRIES) {
+                if (logStackTrace) {
+                    LOGGER.error("Refreshing({}) camel route {} failed (attempt {}/{}) — will retry on next tick",
+                            refreshType, configId, attempt, MAX_ROUTE_CREATION_RETRIES, failure);
+                } else {
+                    LOGGER.error("Refreshing({}) camel route {} failed (attempt {}/{}) — will retry on next tick: {}",
+                            refreshType, configId, attempt, MAX_ROUTE_CREATION_RETRIES, failure.toString());
+                }
+                service.requeueForRefresh(retryKey.tenantId(), configId, refreshType);
+            } else {
+                if (logStackTrace) {
+                    LOGGER.error("Refreshing({}) camel route {} failed after {} attempts — giving up",
+                            refreshType, configId, MAX_ROUTE_CREATION_RETRIES, failure);
+                } else {
+                    LOGGER.error("Refreshing({}) camel route {} failed after {} attempts — giving up: {}",
+                            refreshType, configId, MAX_ROUTE_CREATION_RETRIES, failure.toString());
+                }
+                routeCreationRetryCount.remove(retryKey);
+                try {
+                    // drop what the last failed attempt may have left in the context
+                    killExistingRoute(retryKey.tenantId(), configId, false);
+                } catch (Exception e) {
+                    // must not keep the failure from being recorded on the configuration below
+                    LOGGER.warn("Could not remove what is left of {} camel route {} of tenant {}", retryKey.direction(), configId,
+                            retryKey.tenantId(), e);
+                }
+                if (routeCreationFailureMarker != null) {
+                    routeCreationFailureMarker.accept(configId);
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("Could not record the failed refresh({}) of {} camel route {} of tenant {}", refreshType, retryKey.direction(),
+                    configId, retryKey.tenantId(), e);
+        }
+    }
+
+    /** Creates the Camel context the routes are added to; a seam for running the route setup outside OSGi. */
+    CamelContext createCamelContext() {
+        return new OsgiDefaultCamelContext(bundleContext);
+    }
+
+    void initCamel() throws Exception {
+        camelContext = createCamelContext();
 
         // Setup listener, we might want to improve this to know exactly what is running at a given time and expose an API to query this information
         camelContext.getManagementStrategy().addEventNotifier(new EventNotifierSupport() {
@@ -281,18 +352,6 @@ public class RouterCamelContext implements IRouterCamelContext {
 
         //--IMPORT ROUTES
 
-        //Source
-        ProfileImportFromSourceRouteBuilder builderReader = new ProfileImportFromSourceRouteBuilder(kafkaProps, configType);
-        builderReader.setProfileService(profileService);
-        builderReader.setImportConfigurationService(importConfigurationService);
-        builderReader.setJacksonDataFormat(jacksonDataFormat);
-        builderReader.setAllowedEndpoints(allowedEndpoints);
-        builderReader.setPermittedImportBaseDirs(permittedImportBaseDirs);
-        builderReader.setContext(camelContext);
-        builderReader.setExecutionContextManager(contextManager);
-        builderReader.setSecurityService(securityService);
-        camelContext.addRoutes(builderReader);
-
         //One shot import route
         ProfileImportOneShotRouteBuilder builderOneShot = new ProfileImportOneShotRouteBuilder(kafkaProps, configType);
         builderOneShot.setProfileService(profileService);
@@ -312,18 +371,6 @@ public class RouterCamelContext implements IRouterCamelContext {
 
         //--EXPORT ROUTES
 
-        //Profiles collect
-        ProfileExportCollectRouteBuilder profileExportCollectRouteBuilder = new ProfileExportCollectRouteBuilder(kafkaProps, configType);
-        profileExportCollectRouteBuilder.setExportConfigurationList(exportConfigurationService.getAll());
-        profileExportCollectRouteBuilder.setExportConfigurationService(exportConfigurationService);
-        profileExportCollectRouteBuilder.setPersistenceService(persistenceService);
-        profileExportCollectRouteBuilder.setAllowedEndpoints(allowedEndpoints);
-        profileExportCollectRouteBuilder.setPermittedExportBaseDirs(permittedExportBaseDirs);
-        profileExportCollectRouteBuilder.setJacksonDataFormat(jacksonDataFormat);
-        profileExportCollectRouteBuilder.setContext(camelContext);
-        profileExportCollectRouteBuilder.setExecutionContextManager(contextManager);
-        camelContext.addRoutes(profileExportCollectRouteBuilder);
-
         //Write to destination
         ProfileExportProducerRouteBuilder profileExportProducerRouteBuilder = new ProfileExportProducerRouteBuilder(kafkaProps, configType);
         profileExportProducerRouteBuilder.setProfileService(profileService);
@@ -335,6 +382,49 @@ public class RouterCamelContext implements IRouterCamelContext {
         camelContext.addRoutes(profileExportProducerRouteBuilder);
 
         camelContext.start();
+
+        startRecurrentRoutes();
+    }
+
+    /**
+     * Starts the routes of the recurrent import/export configurations of every real tenant plus the system
+     * tenant. {@link ImportExportConfigurationService#getAll()} is context-scoped, so a single call under the
+     * system context at startup would miss recurring configs of migrated tenants.
+     * <p>Each route is added on its own, once the context runs: a configuration whose route cannot be built
+     * is handed to the refresh timer, with its retries and failure status, and does not keep the routes of
+     * the other configurations, or of the other tenants, from starting. A tenant whose configurations cannot
+     * be loaded is retried by the refresh timer too.</p>
+     */
+    private void startRecurrentRoutes() {
+        // Startup has no request subject; nest tenant switches under system like other router paths.
+        contextManager.executeAsSystem(() -> {
+            // Listed once for the import and the export routes, so that both start for the same tenants.
+            for (String tenantId : startupTenantIds()) {
+                startRecurrentRoutes(tenantId, importConfigurationService, importTenantsToRetry, this::addImportReaderRoute);
+                startRecurrentRoutes(tenantId, exportConfigurationService, exportTenantsToRetry, this::addExportReaderRoute);
+            }
+        });
+    }
+
+    private <T extends Item> void startRecurrentRoutes(String tenantId, ImportExportConfigurationService<T> service,
+                                                       Set<String> tenantsToRetry, RouteAdder<T> routeAdder) {
+        try {
+            contextManager.executeAsTenant(tenantId, () -> {
+                for (T config : service.getAll()) {
+                    try {
+                        routeAdder.add(config);
+                    } catch (Exception e) {
+                        LOGGER.error("Could not start the camel route of configuration {} of tenant {}, the route refresh "
+                                + "will retry it", config.getItemId(), tenantId, e);
+                        service.requeueForRefresh(tenantId, config.getItemId(), RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED);
+                    }
+                }
+            });
+        } catch (Exception e) {
+            LOGGER.error("Could not start the recurring routes of tenant {}; this will be retried", tenantId, e);
+            tenantsToRetry.add(tenantId);
+            tenantsWithLoggedLoadFailure.add(tenantId);
+        }
     }
 
     /** Persists a visible failure status on the configuration once route creation has exhausted all retries, instead of only logging it. */
@@ -357,27 +447,31 @@ public class RouterCamelContext implements IRouterCamelContext {
 
     /** {@inheritDoc} */
     @Override
-    public void killExistingRoute(String routeId, boolean fireEvent) throws Exception {
-        //Active routes
-        Route route = camelContext.getRoute(routeId);
-        if (route != null) {
-            RouteDefinition routeDefinition = camelContext.getRouteDefinition(routeId);
-            if (routeDefinition != null) {
-                camelContext.removeRouteDefinition(routeDefinition);
-            }
+    public void killExistingRoute(String tenantId, String configId, boolean fireEvent) throws Exception {
+        String routeId = RouteIds.of(tenantId, configId);
+        // The definition is removed whether or not it has a running route: a route that failed to start
+        // leaves its definition behind, which must not survive the configuration or pile up over retries.
+        RouteDefinition routeDefinition = camelContext.getRouteDefinition(routeId);
+        if (routeDefinition != null) {
+            camelContext.removeRouteDefinition(routeDefinition);
         }
     }
 
     /** {@inheritDoc} */
     @Override
-    public void updateProfileImportReaderRoute(String configId, boolean fireEvent) throws Exception {
-        killExistingRoute(configId, false);
+    public void updateProfileImportReaderRoute(String tenantId, String configId, boolean fireEvent) throws Exception {
+        killExistingRoute(tenantId, configId, false);
 
         ImportConfiguration importConfiguration = importConfigurationService.load(configId);
         if (importConfiguration == null) {
             throw new IllegalStateException("Cannot update profile import reader route, config: " + configId + " not found — will be retried");
         }
 
+        addImportReaderRoute(importConfiguration);
+    }
+
+    /** Adds the route of a recurrent import configuration to the running context; other configurations get none. */
+    private void addImportReaderRoute(ImportConfiguration importConfiguration) throws Exception {
         if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType())) {
             ProfileImportFromSourceRouteBuilder builder = new ProfileImportFromSourceRouteBuilder(kafkaProps, configType);
             builder.setImportConfigurationList(Arrays.asList(importConfiguration));
@@ -395,14 +489,19 @@ public class RouterCamelContext implements IRouterCamelContext {
 
     /** {@inheritDoc} */
     @Override
-    public void updateProfileExportReaderRoute(String configId, boolean fireEvent) throws Exception {
-        killExistingRoute(configId, false);
+    public void updateProfileExportReaderRoute(String tenantId, String configId, boolean fireEvent) throws Exception {
+        killExistingRoute(tenantId, configId, false);
 
         ExportConfiguration exportConfiguration = exportConfigurationService.load(configId);
         if (exportConfiguration == null) {
             throw new IllegalStateException("Cannot update profile export reader route, config: " + configId + " not found — will be retried");
         }
 
+        addExportReaderRoute(exportConfiguration);
+    }
+
+    /** Adds the collect route of a recurrent export configuration to the running context; other configurations get none. */
+    private void addExportReaderRoute(ExportConfiguration exportConfiguration) throws Exception {
         if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfiguration.getConfigType())) {
             ProfileExportCollectRouteBuilder profileExportCollectRouteBuilder = new ProfileExportCollectRouteBuilder(kafkaProps, configType);
             profileExportCollectRouteBuilder.setExportConfigurationList(Collections.singletonList(exportConfiguration));
@@ -506,5 +605,109 @@ public class RouterCamelContext implements IRouterCamelContext {
      */
     public void setPermittedExportBaseDirs(String permittedExportBaseDirs) {
         this.permittedExportBaseDirs = permittedExportBaseDirs;
+    }
+
+    /** Every tenant plus the system tenant, or the system tenant alone until tenants can be listed. */
+    private Set<String> startupTenantIds() {
+        Set<String> tenantIds = new LinkedHashSet<>();
+        try {
+            for (Tenant tenant : tenantService.getAllTenants()) {
+                tenantIds.add(tenant.getItemId());
+            }
+        } catch (Exception e) {
+            LOGGER.error("Could not list tenants, only the recurring routes of the system tenant are started; "
+                    + "the load will be retried", e);
+            tenantListingToRetry = true;
+        }
+        tenantIds.add(TenantService.SYSTEM_TENANT);
+        return tenantIds;
+    }
+
+    /**
+     * Called on every tick of the refresh timer: retries what could not be started at startup, waiting
+     * twice as long after each unsuccessful attempt, up to {@link #MAX_STARTUP_RETRY_DELAY_MS}.
+     *
+     * @param now the current time in milliseconds
+     */
+    void retryStartupLoadsWhenDue(long now) {
+        if (now < nextStartupRetryTime) {
+            return;
+        }
+        if (retryStartupLoads()) {
+            startupRetryDelay = 0;
+        } else {
+            startupRetryDelay = Math.min(Math.max(configsRefreshInterval, startupRetryDelay * 2), MAX_STARTUP_RETRY_DELAY_MS);
+            LOGGER.warn("Not all recurring routes could be started yet (tenants still to list: {}, import tenants to load: {}, "
+                            + "export tenants to load: {}), next attempt in {} ms",
+                    tenantListingToRetry, importTenantsToRetry, exportTenantsToRetry, startupRetryDelay);
+        }
+        nextStartupRetryTime = now + startupRetryDelay;
+    }
+
+    /**
+     * Builds the recurring routes that could not be built at startup because tenants could not be listed or
+     * a tenant's configurations could not be loaded.
+     *
+     * @return {@code true} when nothing is left to retry
+     */
+    boolean retryStartupLoads() {
+        if (nothingToRetry()) {
+            return true;
+        }
+        contextManager.executeAsSystem(() -> {
+            if (tenantListingToRetry) {
+                try {
+                    // the system tenant was loaded at startup, the others were not known
+                    for (Tenant tenant : tenantService.getAllTenants()) {
+                        importTenantsToRetry.add(tenant.getItemId());
+                        exportTenantsToRetry.add(tenant.getItemId());
+                    }
+                    tenantListingToRetry = false;
+                } catch (Exception e) {
+                    // the stack trace was logged at startup
+                    LOGGER.warn("Still cannot list tenants to start their recurring routes: {}", e.toString());
+                }
+            }
+            retryStartupLoad(importTenantsToRetry, importConfigurationService);
+            retryStartupLoad(exportTenantsToRetry, exportConfigurationService);
+        });
+        return nothingToRetry();
+    }
+
+    private boolean nothingToRetry() {
+        return !tenantListingToRetry && importTenantsToRetry.isEmpty() && exportTenantsToRetry.isEmpty();
+    }
+
+    /**
+     * Hands the configurations of the tenants that can now be loaded to the refresh the timer runs next,
+     * which builds their routes with its usual retries and failure status.
+     */
+    private <T extends Item> void retryStartupLoad(Set<String> tenantsToRetry, ImportExportConfigurationService<T> service) {
+        for (String tenantId : tenantsToRetry) {
+            try {
+                List<T> configs = contextManager.executeAsTenant(tenantId, service::getAll);
+                for (T config : configs) {
+                    service.requeueForRefresh(tenantId, config.getItemId(), RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED);
+                }
+                tenantsToRetry.remove(tenantId);
+                tenantsWithLoggedLoadFailure.remove(tenantId);
+                LOGGER.info("Router configurations of tenant {} loaded, its recurring routes are being started", tenantId);
+            } catch (Exception e) {
+                if (tenantsWithLoggedLoadFailure.add(tenantId)) {
+                    LOGGER.warn("Still cannot load router configurations for tenant {}", tenantId, e);
+                } else {
+                    // the stack trace was logged with the first failure
+                    LOGGER.warn("Still cannot load router configurations for tenant {}: {}", tenantId, e.toString());
+                }
+            }
+        }
+    }
+
+    private interface RouteUpdater {
+        void update(String tenantId, String configId, boolean fireEvent) throws Exception;
+    }
+
+    private interface RouteAdder<T> {
+        void add(T config) throws Exception;
     }
 }
