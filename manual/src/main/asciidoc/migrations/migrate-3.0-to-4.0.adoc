@@ -292,6 +292,26 @@ files under `{baseDir}/{tenantId}` and update its `source` or `destination` acco
 base-directory properties at the directories already in use. The mark clears on its own once the endpoint is
 accepted again. The "Profile import and export" chapter describes the rule in full.
 
+==== Background tasks and recurrent routes run for every tenant
+
+The scheduled purge, the daily recalculation of date-relative segments and scoring plans, the rule statistics
+refresh and the start of recurrent import and export routes apply to every tenant, the tenant holding the
+migrated data included.
+
+- The first purge after the upgrade applies the configured retention (`org.apache.unomi.profile.purge.*`,
+  `org.apache.unomi.session.purge.existTime`, `org.apache.unomi.event.purge.existTime`,
+  `org.apache.unomi.monthly.index.purge.existTime`) to the migrated tenant in one pass, shortly after startup.
+  Review these values before starting 4.0 if the 3.0 deployment ran with the purge disabled or with a longer
+  retention.
+- A purge or recalculation that fails for one tenant is still run for the others; the task is then reported as
+  failed, naming the tenants concerned, and the scheduler retries it.
+- The Camel route of a recurrent import or export configuration is identified by `{tenantId}:{configId}`
+  instead of the configuration identifier alone, since configuration identifiers are only unique within a
+  tenant. Code that looks routes up in the router's Camel context must build the identifier with
+  `org.apache.unomi.router.api.RouteIds`. The `killExistingRoute`, `updateProfileImportReaderRoute` and
+  `updateProfileExportReaderRoute` methods of `IRouterCamelContext` take the tenant identifier as their first
+  parameter.
+
 ==== Migration Steps
 
 1. **Understand Multi-Tenancy Impact**

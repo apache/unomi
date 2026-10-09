@@ -31,7 +31,7 @@ import java.util.Collections;
  * place so that the tests of route construction and of the recorded status cannot come to disagree
  * about it.
  */
-final class RouterTestFixtures {
+public final class RouterTestFixtures {
 
     static final String TENANT = "acme";
 
@@ -70,7 +70,7 @@ final class RouterTestFixtures {
      * The route builders ask the profile service for the profile property types while they build.
      * Nothing in these tests depends on what it answers.
      */
-    static ProfileService noOpProfileService() {
+    public static ProfileService noOpProfileService() {
         return (ProfileService) Proxy.newProxyInstance(
                 ProfileService.class.getClassLoader(),
                 new Class<?>[]{ProfileService.class},

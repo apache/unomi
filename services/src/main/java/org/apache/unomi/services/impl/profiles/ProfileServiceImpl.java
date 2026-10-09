@@ -376,8 +376,11 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
                                 purgeEventItems(purgeEventExistTime);
                             }
                         }, callback);
-                        LOGGER.info("Purge: {} in {} ms", purged ? "executed" : "failed for some tenants",
-                                System.currentTimeMillis() - purgeStartTime);
+                        if (purged) {
+                            LOGGER.info("Purge: executed in {} ms", System.currentTimeMillis() - purgeStartTime);
+                        } else {
+                            LOGGER.warn("Purge: failed for some tenants after {} ms", System.currentTimeMillis() - purgeStartTime);
+                        }
                     } catch (Throwable t) {
                         // During shutdown, services may be unavailable - only log if not shutting down
                         LOGGER.error("Error while purging profiles, sessions, or events", t);

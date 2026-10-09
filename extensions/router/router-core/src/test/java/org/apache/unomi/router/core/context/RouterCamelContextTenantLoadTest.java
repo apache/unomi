@@ -22,7 +22,6 @@ import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.services.ExecutionContextManager;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.router.api.ExportConfiguration;
@@ -34,9 +33,9 @@ import org.apache.unomi.router.core.processor.ExportRouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
 import org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.UnomiStorageProcessor;
+import org.apache.unomi.router.core.route.RouterTestFixtures;
 import org.apache.unomi.router.api.RouteIds;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -45,16 +44,12 @@ import java.io.File;
 import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -79,40 +74,16 @@ public class RouterCamelContextTenantLoadTest {
     private String failingTenant;
     private boolean tenantListingFails;
 
-    private RouterCamelContext context;
     private DefaultCamelContext camelContext;
     private TenantScopedService<ImportConfiguration> importService;
     private TenantScopedService<ExportConfiguration> exportService;
     private String unswitchableTenant;
-
-    @Before
-    public void setUp() {
-        context = new RouterCamelContext();
-        context.setContextManager(new TenantTrackingContextManager());
-        context.setTenantService(tenantService("tenant-a", "tenant-b"));
-    }
 
     @After
     public void tearDown() throws Exception {
         if (camelContext != null) {
             camelContext.stop();
         }
-    }
-
-    @Test
-    public void loadsConfigurationsOfEveryTenantIncludingSystem() {
-        configsByTenant.put("tenant-a", Collections.singletonList(config("import-a", "tenant-a")));
-        configsByTenant.put("tenant-b", Collections.singletonList(config("import-b", "tenant-b")));
-        configsByTenant.put(TenantService.SYSTEM_TENANT, Collections.singletonList(config("import-system", TenantService.SYSTEM_TENANT)));
-        Set<String> tenantsToRetry = new HashSet<>();
-
-        List<ImportConfiguration> loaded = context.loadConfigurationsAcrossTenants(
-                new TenantScopedService<>(configsByTenant), context.startupTenantIds(), tenantsToRetry);
-
-        assertEquals(Arrays.asList("import-a", "import-b", "import-system"), ids(loaded));
-        assertEquals(Arrays.asList("tenant-a", "tenant-b", TenantService.SYSTEM_TENANT), visitedTenants);
-        assertTrue(tenantsToRetry.isEmpty());
-        assertNull("tenant context must be restored after the load", currentTenant);
     }
 
     /**
@@ -123,9 +94,10 @@ public class RouterCamelContextTenantLoadTest {
     public void startupBuildsTheRecurrentRoutesOfEveryTenant() throws Exception {
         RouterCamelContext router = startRouter();
 
-        for (String tenantId : Arrays.asList("tenant-a", "tenant-b")) {
+        for (String tenantId : Arrays.asList("tenant-a", "tenant-b", TenantService.SYSTEM_TENANT)) {
             assertRoutesBuilt(tenantId);
         }
+        assertNull("tenant context must be restored after startup", currentTenant);
 
         // Removing one tenant's route must leave the other tenant's route of the same configuration id.
         router.killExistingRoute("tenant-a", "crm-import", false);
@@ -237,6 +209,69 @@ public class RouterCamelContextTenantLoadTest {
     }
 
     @Test
+    public void configurationWhoseRouteCannotBeBuiltDoesNotKeepTheOthersFromStarting() throws Exception {
+        // an export without a period cannot be turned into a timer route
+        ExportConfiguration broken = recurrentExport("broken-export", "tenant-a", new File(exportRoot(), "tenant-a"));
+        broken.getProperties().remove("period");
+        // active, so that the route is started, which is when its timer endpoint is found to be unusable
+        broken.setActive(true);
+        exportConfigsByTenant.computeIfAbsent("tenant-a", k -> new ArrayList<>()).add(broken);
+
+        RouterCamelContext router = startRouter();
+
+        for (String tenantId : Arrays.asList("tenant-a", "tenant-b", TenantService.SYSTEM_TENANT)) {
+            assertRoutesBuilt(tenantId);
+        }
+        assertNull(camelContext.getRoute(RouteIds.of("tenant-a", "broken-export")));
+
+        // the refresh retries it, then gives up and records the failure on the configuration
+        for (int tick = 0; tick < 10; tick++) {
+            router.refreshRoutes();
+        }
+        assertEquals(RouterConstants.CONFIG_STATUS_ROUTE_CREATION_FAILED, broken.getStatus());
+        assertTrue("a configuration that was given up on is not retried forever", exportService.toRefresh.isEmpty());
+        assertEquals("failed attempts must not leave route definitions behind", 0, camelContext.getRouteDefinitions().stream()
+                .filter(route -> RouteIds.of("tenant-a", "broken-export").equals(route.getId())).count());
+        assertRoutesBuilt("tenant-a");
+    }
+
+    @Test
+    public void refreshesOfATenantThatCannotBeSwitchedToAreRetriedOnTheNextTicks() throws Exception {
+        RouterCamelContext router = startRouter();
+        router.killExistingRoute("tenant-a", "crm-import", false);
+        importService.requeueForRefresh("tenant-a", "crm-import", RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED);
+        unswitchableTenant = "tenant-a";
+
+        router.refreshRoutes();
+        assertNull(camelContext.getRouteDefinition(RouteIds.of("tenant-a", "crm-import")));
+
+        unswitchableTenant = null;
+        router.refreshRoutes();
+        assertNotNull("the refresh that could not run must not be lost",
+                camelContext.getRouteDefinition(RouteIds.of("tenant-a", "crm-import")));
+    }
+
+    @Test
+    public void refreshesOfATenantThatCanNeverBeSwitchedToAreGivenUpOn() throws Exception {
+        RouterCamelContext router = startRouter();
+        importService.requeueForRefresh("tenant-a", "crm-import", RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED);
+        unswitchableTenant = "tenant-a";
+
+        for (int tick = 0; tick < 10; tick++) {
+            router.refreshRoutes();
+        }
+
+        assertTrue("a tenant that is gone must not be retried on every tick forever", importService.toRefresh.isEmpty());
+    }
+
+    @Test
+    public void shutdownAfterAFailedStartDoesNotFail() throws Exception {
+        RouterCamelContext neverStarted = new RouterCamelContext();
+
+        neverStarted.destroy();
+    }
+
+    @Test
     public void tenantListingFailureAtStartupIsRetried() throws Exception {
         tenantListingFails = true;
 
@@ -264,17 +299,18 @@ public class RouterCamelContextTenantLoadTest {
     }
 
     /**
-     * Starts a router over two tenants that both own a recurrent import and a recurrent export, under the same
-     * configuration ids: ids are only unique within a tenant.
+     * Starts a router over two tenants and the system tenant, which all own a recurrent import and a recurrent
+     * export under the same configuration ids: ids are only unique within a tenant. Configurations a test put
+     * in place beforehand are kept.
      */
     private RouterCamelContext startRouter() throws Exception {
-        File importRoot = tmp.newFolder("permitted-import");
-        File exportRoot = tmp.newFolder("permitted-export");
-        for (String tenantId : Arrays.asList("tenant-a", "tenant-b")) {
-            configsByTenant.put(tenantId, Collections.singletonList(
-                    recurrentImport("crm-import", tenantId, new File(importRoot, tenantId))));
-            exportConfigsByTenant.put(tenantId, Collections.singletonList(
-                    recurrentExport("crm-export", tenantId, new File(exportRoot, tenantId))));
+        File importRoot = new File(tmp.getRoot(), "permitted-import");
+        File exportRoot = exportRoot();
+        for (String tenantId : Arrays.asList("tenant-a", "tenant-b", TenantService.SYSTEM_TENANT)) {
+            configsByTenant.computeIfAbsent(tenantId, k -> new ArrayList<>())
+                    .add(recurrentImport("crm-import", tenantId, new File(importRoot, tenantId)));
+            exportConfigsByTenant.computeIfAbsent(tenantId, k -> new ArrayList<>())
+                    .add(recurrentExport("crm-export", tenantId, new File(exportRoot, tenantId)));
         }
 
         camelContext = new DefaultCamelContext();
@@ -290,7 +326,7 @@ public class RouterCamelContextTenantLoadTest {
         router.setImportConfigurationService(importService);
         exportService = new TenantScopedService<>(exportConfigsByTenant);
         router.setExportConfigurationService(exportService);
-        router.setProfileService(noOpProfileService());
+        router.setProfileService(RouterTestFixtures.noOpProfileService());
         router.setKafkaProps(NO_KAFKA);
         router.setConfigType(RouterConstants.CONFIG_TYPE_NOBROKER);
         router.setJacksonDataFormat(new JacksonDataFormat(ProfileToImport.class));
@@ -310,6 +346,10 @@ public class RouterCamelContextTenantLoadTest {
         return importService.loadAttempts.getOrDefault(tenantId, 0) - 1;
     }
 
+    private File exportRoot() {
+        return new File(tmp.getRoot(), "permitted-export");
+    }
+
     private void assertRoutesBuilt(String tenantId) {
         for (String configId : Arrays.asList("crm-import", "crm-export")) {
             assertNotNull("the route of " + configId + " must be built for " + tenantId,
@@ -318,7 +358,7 @@ public class RouterCamelContextTenantLoadTest {
     }
 
     private static ImportConfiguration recurrentImport(String id, String tenantId, File directory) {
-        assertTrue(directory.mkdirs());
+        assertTrue(directory.isDirectory() || directory.mkdirs());
         ImportConfiguration configuration = config(id, tenantId);
         configuration.setConfigType(RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT);
         // inactive: the route is built but does not start polling during the test
@@ -329,7 +369,7 @@ public class RouterCamelContextTenantLoadTest {
     }
 
     private static ExportConfiguration recurrentExport(String id, String tenantId, File directory) {
-        assertTrue(directory.mkdirs());
+        assertTrue(directory.isDirectory() || directory.mkdirs());
         ExportConfiguration configuration = new ExportConfiguration();
         configuration.setItemId(id);
         configuration.setTenantId(tenantId);
@@ -340,18 +380,6 @@ public class RouterCamelContextTenantLoadTest {
         configuration.getProperties().put("segment", "exportSegment");
         configuration.getProperties().put("period", "1m");
         return configuration;
-    }
-
-    private static ProfileService noOpProfileService() {
-        return (ProfileService) Proxy.newProxyInstance(
-                ProfileService.class.getClassLoader(),
-                new Class<?>[]{ProfileService.class},
-                (proxy, method, args) -> Collection.class.isAssignableFrom(method.getReturnType())
-                        ? Collections.emptyList() : null);
-    }
-
-    private static List<String> ids(List<ImportConfiguration> configs) {
-        return configs.stream().map(ImportConfiguration::getItemId).collect(Collectors.toList());
     }
 
     private static ImportConfiguration config(String id, String tenantId) {

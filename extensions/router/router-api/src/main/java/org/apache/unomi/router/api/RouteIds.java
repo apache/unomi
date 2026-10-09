@@ -18,6 +18,8 @@ package org.apache.unomi.router.api;
 
 import org.apache.unomi.api.ExecutionContext;
 
+import java.util.Objects;
+
 /**
  * Identifiers of the Camel routes built from recurrent import/export configurations.
  * <p>A configuration identifier is only unique within its tenant, while Camel route identifiers are
@@ -37,9 +39,16 @@ public final class RouteIds {
      * @param tenantId the tenant owning the configuration, the system tenant when {@code null}
      * @param configId the configuration identifier
      * @return the Camel route identifier
+     * @throws IllegalArgumentException if the tenant identifier contains a colon, which would make the
+     *                                  configuration identifier impossible to recover from the route identifier
      */
     public static String of(String tenantId, String configId) {
-        return (tenantId != null ? tenantId : ExecutionContext.SYSTEM_TENANT) + SEPARATOR + configId;
+        Objects.requireNonNull(configId, "configId");
+        String owner = tenantId != null ? tenantId : ExecutionContext.SYSTEM_TENANT;
+        if (owner.indexOf(SEPARATOR) >= 0) {
+            throw new IllegalArgumentException("Tenant identifier must not contain '" + SEPARATOR + "': " + owner);
+        }
+        return owner + SEPARATOR + configId;
     }
 
     /**

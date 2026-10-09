@@ -767,15 +767,19 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
     }
 
     private void syncRuleStatistics() {
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+
+        Map<String, RuleStatistics> tenantStats = getRuleStatisticsForTenant(currentTenant);
+        if (tenantStats.isEmpty()) {
+            // nothing to flush or to refresh for this tenant: spare the query, the sync runs for every tenant
+            return;
+        }
+
         List<RuleStatistics> allPersistedRuleStatisticsList = persistenceService.getAllItems(RuleStatistics.class);
         Map<String, RuleStatistics> allPersistedRuleStatistics = new HashMap<>();
         for (RuleStatistics ruleStatistics : allPersistedRuleStatisticsList) {
             allPersistedRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
         }
-
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-
-        Map<String, RuleStatistics> tenantStats = getRuleStatisticsForTenant(currentTenant);
 
         // Sync tenant statistics
         for (RuleStatistics ruleStatistics : tenantStats.values()) {

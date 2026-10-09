@@ -21,6 +21,7 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertThrows;
 
 public class RouteIdsTest {
 
@@ -38,6 +39,16 @@ public class RouteIdsTest {
     @Test
     public void configurationWithoutTenantBelongsToTheSystemTenant() {
         assertEquals(RouteIds.of("system", "crm-import"), RouteIds.of(null, "crm-import"));
+    }
+
+    @Test
+    public void tenantIdThatWouldMakeTheRouteIdAmbiguousIsRefused() {
+        assertThrows(IllegalArgumentException.class, () -> RouteIds.of("tenant:a", "crm-import"));
+    }
+
+    @Test
+    public void routeIdNeedsAConfigurationId() {
+        assertThrows(NullPointerException.class, () -> RouteIds.of("tenant-a", null));
     }
 
     @Test

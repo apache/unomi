@@ -17,8 +17,10 @@
 package org.apache.unomi.services.impl;
 
 import org.apache.unomi.api.ExecutionContext;
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.segments.Segment;
@@ -154,6 +156,36 @@ public class BackgroundTenantTasksTest {
     }
 
     @Test
+    public void profilePurgeTaskPurgesSessionsAndEventsOfEveryTenant() throws Exception {
+        AtomicReference<TaskExecutor> purgeExecutor = new AtomicReference<>();
+        ProfileServiceImpl profileService = new ProfileServiceImpl();
+        profileService.setPurgeSessionExistTime(30);
+        profileService.setPurgeEventExistTime(30);
+        initProfileService(profileService, executionContextManager, capturingScheduler("profile-purge", purgeExecutor));
+        for (String tenantId : new String[]{TENANT_A, TENANT_B}) {
+            executionContextManager.executeAsTenant(tenantId, () -> {
+                persistenceService.save(session("old-session", new Date(0)));
+                persistenceService.save(session("recent-session", new Date()));
+                persistenceService.save(event("old-event", new Date(0)));
+                persistenceService.save(event("recent-event", new Date()));
+            });
+        }
+        persistenceService.refresh();
+
+        assertNull(runExecutor(purgeExecutor.get()), "purge task should complete");
+        persistenceService.refresh();
+
+        for (String tenantId : new String[]{TENANT_A, TENANT_B}) {
+            executionContextManager.executeAsTenant(tenantId, () -> {
+                assertNull(persistenceService.load("old-session", Session.class), "old session of " + tenantId + " must be purged");
+                assertNotNull(persistenceService.load("recent-session", Session.class), "recent session of " + tenantId + " must be kept");
+                assertNull(persistenceService.load("old-event", Event.class), "old event of " + tenantId + " must be purged");
+                assertNotNull(persistenceService.load("recent-event", Event.class), "recent event of " + tenantId + " must be kept");
+            });
+        }
+    }
+
+    @Test
     public void profilePurgeFailureInOneTenantIsReportedAndDoesNotStopTheOthers() throws Exception {
         AtomicReference<TaskExecutor> purgeExecutor = new AtomicReference<>();
         ExecutionContextManagerImpl spiedContext = spy(executionContextManager);
@@ -231,6 +263,32 @@ public class BackgroundTenantTasksTest {
                 "tenant1's profile must enter tenant1's date-relative segment only");
         assertEquals(Set.of("inactive-" + TENANT_B), loadProfile(TENANT_B, "inactive-profile").getSegments(),
                 "tenant2's profile must enter tenant2's date-relative segment only");
+    }
+
+    @Test
+    public void segmentDateRecalculationTaskAppliesSystemSegmentsToTenantProfiles() throws Exception {
+        AtomicReference<TaskExecutor> segmentExecutor = new AtomicReference<>();
+        SegmentServiceImpl segmentService = newSegmentService(executionContextManager,
+                capturingScheduler("segment-date-recalculation", segmentExecutor));
+        // a date-relative segment owned by the system tenant applies to the profiles of every tenant
+        executionContextManager.executeAsSystem(() -> segmentService.setSegmentDefinition(inactiveSinceSegment("inactive-everywhere")));
+        executionContextManager.executeAsTenant(TENANT_A, () -> {
+            Profile inactive = new Profile("inactive-profile");
+            inactive.setProperty("lastVisit", new Date(0));
+            persistenceService.save(inactive);
+            Profile active = new Profile("active-profile");
+            active.setProperty("lastVisit", new Date());
+            persistenceService.save(active);
+        });
+        persistenceService.refresh();
+
+        assertNull(runExecutor(segmentExecutor.get()), "segment recalculation should complete");
+        persistenceService.refresh();
+
+        assertEquals(Set.of("inactive-everywhere"), loadProfile(TENANT_A, "inactive-profile").getSegments(),
+                "a tenant profile must enter the system tenant's date-relative segment");
+        assertTrue(loadProfile(TENANT_A, "active-profile").getSegments().isEmpty(),
+                "a profile that does not match must stay out of it");
     }
 
     @Test
@@ -321,6 +379,12 @@ public class BackgroundTenantTasksTest {
 
     private ProfileServiceImpl newProfileService(ExecutionContextManagerImpl contextManager, SchedulerServiceImpl scheduler) {
         ProfileServiceImpl profileService = new ProfileServiceImpl();
+        profileService.setPurgeProfileExistTime(30);
+        return initProfileService(profileService, contextManager, scheduler);
+    }
+
+    private ProfileServiceImpl initProfileService(ProfileServiceImpl profileService, ExecutionContextManagerImpl contextManager,
+                                                  SchedulerServiceImpl scheduler) {
         profileService.setBundleContext(bundleContext);
         profileService.setPersistenceService(persistenceService);
         profileService.setDefinitionsService(definitionsService);
@@ -329,7 +393,6 @@ public class BackgroundTenantTasksTest {
         profileService.setCacheService(multiTypeCacheService);
         profileService.setTenantService(tenantService);
         profileService.setSegmentService(mock(SegmentService.class));
-        profileService.setPurgeProfileExistTime(30);
         profileService.setPurgeProfileInterval(1);
         profileService.postConstruct();
         return profileService;
@@ -407,6 +470,23 @@ public class BackgroundTenantTasksTest {
         segment.setMetadata(metadata);
         segment.setCondition(condition);
         return segment;
+    }
+
+    private static Session session(String sessionId, Date timeStamp) {
+        Session session = new Session(sessionId, new Profile("profile-of-" + sessionId), timeStamp, "scope");
+        // the in-memory persistence purges on the creation date
+        session.setCreationDate(timeStamp);
+        return session;
+    }
+
+    private static Event event(String eventId, Date timeStamp) {
+        Event event = new Event();
+        event.setItemId(eventId);
+        event.setEventType("view");
+        event.setProfileId("profile-of-" + eventId);
+        event.setTimeStamp(timeStamp);
+        event.setCreationDate(timeStamp);
+        return event;
     }
 
     private void saveOldProfile(String tenantId, String profileId) {

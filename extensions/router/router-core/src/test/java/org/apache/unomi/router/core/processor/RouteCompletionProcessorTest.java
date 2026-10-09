@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 
 /**
@@ -80,6 +81,33 @@ public class RouteCompletionProcessorTest {
 
         assertSame("the configuration of the route must be the one saved", configuration, store.lastSaved);
         assertEquals(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS, configuration.getStatus());
+    }
+
+    @Test
+    public void importCompletionOfAConfigurationThatIsGoneSavesNothing() throws Exception {
+        StoredConfigurations<ImportConfiguration> store = new StoredConfigurations<>();
+        ImportRouteCompletionProcessor processor = new ImportRouteCompletionProcessor();
+        processor.setImportConfigurationService(store);
+
+        Exchange exchange = exchangeFromRoute(RouteIds.of("tenant-a", "deleted-import"));
+        exchange.setProperty("CamelSplitSize", 1);
+        exchange.getIn().setBody(new ArrayList<>(Collections.singletonList(new ProfileToImport())));
+        processor.process(exchange);
+
+        assertNull(store.lastSaved);
+    }
+
+    @Test
+    public void exportCompletionOfAConfigurationThatIsGoneSavesNothing() throws Exception {
+        StoredConfigurations<ExportConfiguration> store = new StoredConfigurations<>();
+        ExportRouteCompletionProcessor processor = new ExportRouteCompletionProcessor();
+        processor.setExportConfigurationService(store);
+
+        Exchange exchange = exchangeFromRoute(RouteIds.of("tenant-a", "deleted-export"));
+        exchange.setProperty("CamelSplitSize", 1);
+        processor.process(exchange);
+
+        assertNull(store.lastSaved);
     }
 
     private static Exchange exchangeFromRoute(String routeId) {
