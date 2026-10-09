@@ -56,6 +56,7 @@ public class BackgroundTenantTasksIT extends BaseIT {
 
     private static final String RULE_ID = "unomi1000-statistics-rule";
     private static final String EVENT_TYPE = "unomi1000StatisticsEvent";
+    private static final String SCOPE = "test-scope";
     private static final String SEGMENT_ID = "unomi1000-system-inactive-segment";
     private static final String IMPORT_CONFIG_ID = "unomi1000-shared-import";
     private static final String OTHER_TENANT_ID = "unomi1000-router-tenant";
@@ -75,17 +76,17 @@ public class BackgroundTenantTasksIT extends BaseIT {
         Action action = new Action(definitionsService.getActionType("setPropertyAction"));
         action.setParameter("propertyName", "unomi1000Statistics");
         action.setParameter("propertyValue", "fired");
-        Rule rule = new Rule(new Metadata("test-scope", RULE_ID, RULE_ID, "Counts its executions for UNOMI-1000"));
+        Rule rule = new Rule(new Metadata(SCOPE, RULE_ID, RULE_ID, "Counts its executions for UNOMI-1000"));
         rule.setCondition(condition);
         rule.setActions(Collections.singletonList(action));
         try {
             createAndWaitForRule(rule);
             rulesService.refreshRules();
 
-            // Fire the rule; its execution is first counted in memory.
+            // Fire the rule; its execution is first counted in memory. A rule only applies to events of its scope.
             keepTrying("The rule did not fire",
                     () -> {
-                        Event event = new Event(EVENT_TYPE, null, profile, null, null, profile, new Date());
+                        Event event = new Event(EVENT_TYPE, null, profile, SCOPE, null, profile, new Date());
                         event.setPersistent(false);
                         Assert.assertNotEquals(EventService.ERROR, eventService.send(event));
                         return rulesService.getRuleStatistics(RULE_ID);
