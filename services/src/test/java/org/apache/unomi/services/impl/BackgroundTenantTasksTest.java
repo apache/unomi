@@ -207,6 +207,8 @@ public class BackgroundTenantTasksTest {
         trackTenantVisits(spiedContext, visitedTenants);
         AtomicReference<TaskExecutor> segmentExecutor = new AtomicReference<>();
         newSegmentService(spiedContext, capturingScheduler("segment-date-recalculation", segmentExecutor));
+        // starting the service already visits every tenant to load its cache
+        visitedTenants.clear();
 
         assertNull(runExecutor(segmentExecutor.get()), "segment recalculation should complete");
 
@@ -290,6 +292,10 @@ public class BackgroundTenantTasksTest {
         }
     }
 
+    /**
+     * The tests above rely on the in-memory persistence to keep tenants apart the way the real one does:
+     * the system context sees the system tenant only, which is why the tasks have to switch tenant.
+     */
     @Test
     public void systemContextPersistenceStillOnlySeesSystemTenant() {
         executionContextManager.executeAsTenant(TENANT_A, () -> {

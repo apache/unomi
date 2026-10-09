@@ -49,6 +49,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -81,6 +82,8 @@ public class RouterCamelContextTenantLoadTest {
     private RouterCamelContext context;
     private DefaultCamelContext camelContext;
     private TenantScopedService<ImportConfiguration> importService;
+    private TenantScopedService<ExportConfiguration> exportService;
+    private String unswitchableTenant;
 
     @Before
     public void setUp() {
@@ -209,9 +212,28 @@ public class RouterCamelContextTenantLoadTest {
 
         router.refreshRoutes();
 
-        assertNull("the queued removal must win over the startup retry",
-                camelContext.getRouteDefinition(RouteIds.of("tenant-a", "crm-import")));
+        assertEquals("the queued removal must win over the startup retry",
+                RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED, importService.lastConsumed.get("tenant-a").get("crm-import"));
+        assertNull(camelContext.getRouteDefinition(RouteIds.of("tenant-a", "crm-import")));
         assertNotNull(camelContext.getRouteDefinition(RouteIds.of("tenant-a", "crm-export")));
+    }
+
+    @Test
+    public void tenantThatCannotBeSwitchedToDoesNotKeepTheOthersFromBeingRefreshed() throws Exception {
+        RouterCamelContext router = startRouter();
+        router.killExistingRoute("tenant-b", "crm-import", false);
+        router.killExistingRoute("tenant-b", "crm-export", false);
+        // tenant-a is refreshed first and cannot be switched to, as a tenant that was just deleted
+        for (TenantScopedService<?> service : Arrays.asList(importService, exportService)) {
+            String configId = service == importService ? "crm-import" : "crm-export";
+            service.requeueForRefresh("tenant-a", configId, RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED);
+            service.requeueForRefresh("tenant-b", configId, RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED);
+        }
+        unswitchableTenant = "tenant-a";
+
+        router.refreshRoutes();
+
+        assertRoutesBuilt("tenant-b");
     }
 
     @Test
@@ -266,7 +288,8 @@ public class RouterCamelContextTenantLoadTest {
         router.setTenantService(tenantService("tenant-a", "tenant-b"));
         importService = new TenantScopedService<>(configsByTenant);
         router.setImportConfigurationService(importService);
-        router.setExportConfigurationService(new TenantScopedService<>(exportConfigsByTenant));
+        exportService = new TenantScopedService<>(exportConfigsByTenant);
+        router.setExportConfigurationService(exportService);
         router.setProfileService(noOpProfileService());
         router.setKafkaProps(NO_KAFKA);
         router.setConfigType(RouterConstants.CONFIG_TYPE_NOBROKER);
@@ -362,7 +385,8 @@ public class RouterCamelContextTenantLoadTest {
     /** Returns only the configurations of the tenant the context manager is currently switched to. */
     private class TenantScopedService<T> implements ImportExportConfigurationService<T> {
         private final Map<String, List<T>> configs;
-        private final Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> toRefresh = new HashMap<>();
+        private final Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> toRefresh = new LinkedHashMap<>();
+        private Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> lastConsumed = new LinkedHashMap<>();
         /** Calls to getAll() per tenant, the startup load included. */
         private final Map<String, Integer> loadAttempts = new HashMap<>();
 
@@ -396,9 +420,9 @@ public class RouterCamelContextTenantLoadTest {
 
         @Override
         public Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> consumeConfigsToBeRefresh() {
-            Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> consumed = new HashMap<>(toRefresh);
+            lastConsumed = new LinkedHashMap<>(toRefresh);
             toRefresh.clear();
-            return consumed;
+            return lastConsumed;
         }
 
         @Override
@@ -431,6 +455,9 @@ public class RouterCamelContextTenantLoadTest {
 
         @Override
         public <T> T executeAsTenant(String tenantId, Supplier<T> operation) {
+            if (tenantId.equals(unswitchableTenant)) {
+                throw new IllegalStateException("cannot switch to " + tenantId);
+            }
             visitedTenants.add(tenantId);
             String previous = currentTenant;
             currentTenant = tenantId;

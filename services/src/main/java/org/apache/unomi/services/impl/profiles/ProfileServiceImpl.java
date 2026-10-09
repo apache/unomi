@@ -367,7 +367,7 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
 
                         // Run under each tenant so persistence sees that tenant's data
                         // (system context alone only matches tenantId=system).
-                        executeForEachTenant("purge of profiles, sessions and events", () -> {
+                        boolean purged = executeForEachTenant("purge of profiles, sessions and events", () -> {
                             purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
                             if (purgeSessionExistTime > 0) {
                                 purgeSessionItems(purgeSessionExistTime);
@@ -376,7 +376,8 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
                                 purgeEventItems(purgeEventExistTime);
                             }
                         }, callback);
-                        LOGGER.info("Purge: executed in {} ms", System.currentTimeMillis() - purgeStartTime);
+                        LOGGER.info("Purge: {} in {} ms", purged ? "executed" : "failed for some tenants",
+                                System.currentTimeMillis() - purgeStartTime);
                     } catch (Throwable t) {
                         // During shutdown, services may be unavailable - only log if not shutting down
                         LOGGER.error("Error while purging profiles, sessions, or events", t);

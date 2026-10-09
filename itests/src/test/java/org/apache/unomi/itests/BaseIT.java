@@ -1981,7 +1981,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 // In Camel 2.23.1, Route has getId() method
                 String routeId = route.getId();
                 if (routeId != null) {
-                    // a route that exists in the context counts as started, as for getCamelRouteStatus(tenantId, configId)
+                    // every route that exists in the context is assumed to be started
                     routes.put(routeId, ServiceStatus.Started);
                 }
             }

@@ -586,14 +586,16 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
      * @param taskName short description of the work, used in log messages and in the failure reported
      * @param action   the work to run under each tenant's execution context
      * @param callback the scheduler callback of the running task
+     * @return {@code true} when the task completed, {@code false} when it was reported as failed
      */
-    protected void executeForEachTenant(String taskName, Runnable action, TaskExecutor.TaskStatusCallback callback) {
+    protected boolean executeForEachTenant(String taskName, Runnable action, TaskExecutor.TaskStatusCallback callback) {
         List<String> failedTenants = executeForEachTenant(taskName, action);
         if (failedTenants.isEmpty()) {
             callback.complete();
-        } else {
-            callback.fail("The " + taskName + " failed for tenants " + failedTenants);
+            return true;
         }
+        callback.fail("The " + taskName + " failed for tenants " + failedTenants);
+        return false;
     }
 
     /**

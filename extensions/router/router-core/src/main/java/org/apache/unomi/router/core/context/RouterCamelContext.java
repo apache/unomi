@@ -55,6 +55,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 /**
  * The main Camel context manager for the Unomi Router component.
@@ -105,6 +106,7 @@ public class RouterCamelContext implements IRouterCamelContext {
     private final Set<String> importTenantsToRetry = ConcurrentHashMap.newKeySet();
     private final Set<String> exportTenantsToRetry = ConcurrentHashMap.newKeySet();
     private volatile boolean tenantListingToRetry;
+    private final Set<String> tenantsWithLoggedLoadFailure = ConcurrentHashMap.newKeySet();
     static final long MAX_STARTUP_RETRY_DELAY_MS = 60_000;
     private long startupRetryDelay;
     private long nextStartupRetryTime;
@@ -219,7 +221,7 @@ public class RouterCamelContext implements IRouterCamelContext {
 
             for (Map.Entry<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> tenantImportConfigsToRefresh : tenantsImportConfigsToRefresh.entrySet()) {
                 String tenantId = tenantImportConfigsToRefresh.getKey();
-                contextManager.executeAsTenant(tenantId, () -> {
+                refreshRoutesOfTenant(tenantId, () -> {
                     try {
                         for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> importConfigToRefresh : tenantImportConfigsToRefresh.getValue().entrySet()) {
                             String configId = importConfigToRefresh.getKey();
@@ -257,7 +259,7 @@ public class RouterCamelContext implements IRouterCamelContext {
             Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> tenantsExportConfigsToRefresh = exportConfigurationService.consumeConfigsToBeRefresh();
             for (Map.Entry<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> tenantExportConfigsToRefresh : tenantsExportConfigsToRefresh.entrySet()) {
                 String tenantId = tenantExportConfigsToRefresh.getKey();
-                contextManager.executeAsTenant(tenantId, () -> {
+                refreshRoutesOfTenant(tenantId, () -> {
                     try {
                         for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> exportConfigToRefresh : tenantExportConfigsToRefresh.getValue().entrySet()) {
                             String configId = exportConfigToRefresh.getKey();
@@ -293,6 +295,15 @@ public class RouterCamelContext implements IRouterCamelContext {
             }
         } catch (Exception e) {
             LOGGER.error("Unexpected error while refreshing import/export camel routes", e);
+        }
+    }
+
+    /** Runs the refresh of one tenant's routes; a tenant that cannot be switched to must not keep the others from being refreshed. */
+    private void refreshRoutesOfTenant(String tenantId, Supplier<Object> refresh) {
+        try {
+            contextManager.executeAsTenant(tenantId, refresh);
+        } catch (Exception e) {
+            LOGGER.error("Could not refresh the camel routes of tenant {}", tenantId, e);
         }
     }
 
@@ -582,6 +593,7 @@ public class RouterCamelContext implements IRouterCamelContext {
                     LOGGER.error("Could not load router configurations for tenant {}, its recurring routes are not "
                             + "started; the load will be retried", tenantId, e);
                     tenantsToRetry.add(tenantId);
+                    tenantsWithLoggedLoadFailure.add(tenantId);
                 }
             }
             return all;
@@ -645,7 +657,8 @@ public class RouterCamelContext implements IRouterCamelContext {
                     }
                     tenantListingToRetry = false;
                 } catch (Exception e) {
-                    LOGGER.warn("Still cannot list tenants to start their recurring routes", e);
+                    // the stack trace was logged at startup
+                    LOGGER.warn("Still cannot list tenants to start their recurring routes: {}", e.toString());
                 }
             }
             retryStartupLoad(importTenantsToRetry, importConfigurationService);
@@ -668,7 +681,12 @@ public class RouterCamelContext implements IRouterCamelContext {
                 tenantsToRetry.remove(tenantId);
                 LOGGER.info("Router configurations of tenant {} loaded, its recurring routes are being started", tenantId);
             } catch (Exception e) {
-                LOGGER.warn("Still cannot load router configurations for tenant {}", tenantId, e);
+                if (tenantsWithLoggedLoadFailure.add(tenantId)) {
+                    LOGGER.warn("Still cannot load router configurations for tenant {}", tenantId, e);
+                } else {
+                    // the stack trace was logged with the first failure
+                    LOGGER.warn("Still cannot load router configurations for tenant {}: {}", tenantId, e.toString());
+                }
             }
         }
     }

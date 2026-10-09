@@ -1556,9 +1556,10 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                         LOGGER.info("Running scheduled task to recalculate segments and scoring that contains date relative conditions...");
                         // Run under each tenant so rules/segments/profiles of real tenants are seen
                         // (system context alone only matches tenantId=system).
-                        executeForEachTenant("recalculation of date-relative segments and scoring",
+                        boolean recalculated = executeForEachTenant("recalculation of date-relative segments and scoring",
                                 () -> recalculatePastEventConditions(), callback);
-                        LOGGER.info("...Finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
+                        LOGGER.info("...{} recalculate segments and scoring that contains date relative conditions in {}ms. ",
+                                recalculated ? "Finished" : "Failed for some tenants to", System.currentTimeMillis() - currentTimeMillis);
                     } catch (Throwable t) {
                         LOGGER.error("Error while updating profiles for segments and scoring that contains date relative conditions", t);
                         callback.fail(t.getMessage());

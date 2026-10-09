@@ -75,7 +75,7 @@ public class ExportRouteCompletionProcessor implements Processor {
         // We load the conf from ES because we are going to increment the execution number
         ExportConfiguration exportConfiguration = exportConfigurationService.load(RouteIds.configId(exchange.getFromRouteId()));
         if (exportConfiguration == null) {
-            LOGGER.warn("Unable to complete export, config cannot not found: {}", exchange.getFromRouteId());
+            LOGGER.error("Unable to complete export, config cannot be found: {}. Its status is left as it is.", exchange.getFromRouteId());
             return;
         }
 
