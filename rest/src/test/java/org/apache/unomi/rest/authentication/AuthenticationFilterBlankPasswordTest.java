@@ -25,6 +25,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import javax.security.auth.Subject;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
@@ -39,6 +40,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -59,6 +62,8 @@ class AuthenticationFilterBlankPasswordTest {
 
     private RestAuthenticationConfig restAuthenticationConfig;
     private TenantService tenantService;
+    private SecurityService securityService;
+    private ExecutionContextManager executionContextManager;
     private JAASAuthenticationFilter jaasAuthenticationFilter;
     private AuthenticationFilter filter;
 
@@ -66,6 +71,8 @@ class AuthenticationFilterBlankPasswordTest {
     void setUp() {
         restAuthenticationConfig = mock(RestAuthenticationConfig.class);
         tenantService = mock(TenantService.class);
+        securityService = mock(SecurityService.class);
+        executionContextManager = mock(ExecutionContextManager.class);
         // Stubbed so the tests below can assert the credential never reached JAAS. Every refusal
         // path in the filter answers 401, so the status alone cannot tell "refused for a blank
         // password" apart from "JAAS rejected it" — only this can.
@@ -73,9 +80,10 @@ class AuthenticationFilterBlankPasswordTest {
         filter = new AuthenticationFilter(
                 restAuthenticationConfig,
                 tenantService,
-                mock(SecurityService.class),
-                mock(ExecutionContextManager.class),
+                securityService,
+                executionContextManager,
                 jaasAuthenticationFilter);
+        when(securityService.createSubject(anyString(), anyBoolean())).thenReturn(new Subject());
     }
 
     @Test
@@ -214,6 +222,30 @@ class AuthenticationFilterBlankPasswordTest {
         filter.filter(requestContext);
 
         verify(tenantService).getOrCreateTenant(eq("default"), any());
+    }
+
+    /**
+     * Compatibility mode always uses tenant {@code default}. A client must not be able to steer
+     * which tenant is created via request headers (UNOMI-1002).
+     */
+    @Test
+    void filterAlwaysUsesDefaultTenantOnPublicPathInSingleTenantCompatibilityMode() throws IOException {
+        when(restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()).thenReturn(true);
+        when(restAuthenticationConfig.getPublicPathPatterns())
+                .thenReturn(Collections.singletonList(Pattern.compile("POST context\\.json")));
+        ContainerRequestContext requestContext = request("context.json", null);
+        when(requestContext.getHeaderString("X-Unomi-Tenant-Id")).thenReturn("attacker-tenant");
+        when(requestContext.getHeaderString("X-Unomi-Api-Key")).thenReturn("some-key");
+
+        try {
+            filter.filter(requestContext);
+        } catch (RuntimeException ignored) {
+            // CXF message context is unavailable in this unit test after getOrCreateTenant.
+        }
+
+        verify(tenantService).getOrCreateTenant(eq("default"), any());
+        verify(tenantService, never()).getOrCreateTenant(eq("attacker-tenant"), any());
+        verify(securityService).createSubject(eq("default"), eq(false));
     }
 
     private void assertUnauthorizedWithoutReachingJaas(ContainerRequestContext requestContext) throws IOException {

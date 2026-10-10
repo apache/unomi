@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -40,6 +41,14 @@ public class TenantServiceImpl implements TenantService {
     private static final String TENANT_ID_PATTERN = "^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]$";
 
     private final List<TenantLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
+    /**
+     * Hot-path cache for {@link #getOrCreateTenant}. Compatibility-mode public requests call that
+     * method on every context/eventcollector hit; without a cache they serialized on a method lock
+     * and re-read the tenant from persistence each time (UNOMI-1002).
+     */
+    private final ConcurrentHashMap<String, Tenant> getOrCreateCache = new ConcurrentHashMap<>();
+    /** Serializes cache-miss create/load so concurrent first requests create the tenant once. */
+    private final Object getOrCreateLock = new Object();
     private PersistenceService persistenceService;
     private ExecutionContextManager executionContextManager;
     private SecretHashService secretHashService;
@@ -114,21 +123,37 @@ public class TenantServiceImpl implements TenantService {
     }
 
     @Override
-    public synchronized Tenant getOrCreateTenant(String tenantId, Map<String, Object> properties) {
-        Tenant tenant = getTenant(tenantId);
-        if (tenant != null) {
+    public Tenant getOrCreateTenant(String tenantId, Map<String, Object> properties) {
+        Tenant cached = getOrCreateCache.get(tenantId);
+        if (cached != null) {
+            return cached;
+        }
+        synchronized (getOrCreateLock) {
+            cached = getOrCreateCache.get(tenantId);
+            if (cached != null) {
+                return cached;
+            }
+            Tenant tenant = getTenant(tenantId);
+            if (tenant == null) {
+                try {
+                    tenant = createTenant(tenantId, properties);
+                } catch (IllegalArgumentException e) {
+                    // Another node created the tenant between the read and the write, which is the
+                    // outcome this method is asked for. Re-read rather than fail.
+                    tenant = getTenant(tenantId);
+                    if (tenant == null) {
+                        throw e;
+                    }
+                }
+            }
+            getOrCreateCache.put(tenantId, tenant);
             return tenant;
         }
-        try {
-            return createTenant(tenantId, properties);
-        } catch (IllegalArgumentException e) {
-            // Another node created the tenant between the read and the write, which is the outcome
-            // this method is asked for. Re-read rather than fail.
-            Tenant concurrent = getTenant(tenantId);
-            if (concurrent == null) {
-                throw e;
-            }
-            return concurrent;
+    }
+
+    private void invalidateGetOrCreateCache(String tenantId) {
+        if (tenantId != null) {
+            getOrCreateCache.remove(tenantId);
         }
     }
 
@@ -198,6 +223,7 @@ public class TenantServiceImpl implements TenantService {
                 tenant.getApiKeys().removeIf(existingKey -> existingKey.getKeyType() == keyType);
                 tenant.getApiKeys().add(apiKey);
                 persistenceService.save(tenant);
+                invalidateGetOrCreateCache(tenantId);
             }
 
             return new ApiKeyCreationResult(apiKey, plainTextKey);
@@ -217,6 +243,9 @@ public class TenantServiceImpl implements TenantService {
     @Override
     public void saveTenant(Tenant tenant) {
         executionContextManager.executeAsSystem(() -> persistenceService.save(tenant));
+        if (tenant != null) {
+            invalidateGetOrCreateCache(tenant.getItemId());
+        }
     }
 
     @Override
@@ -236,6 +265,7 @@ public class TenantServiceImpl implements TenantService {
             }
             persistenceService.remove(tenantId, Tenant.class);
         });
+        invalidateGetOrCreateCache(tenantId);
     }
 
     @Override

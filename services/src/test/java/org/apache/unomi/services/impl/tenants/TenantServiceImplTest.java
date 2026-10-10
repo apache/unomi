@@ -31,18 +31,31 @@ import org.mockito.quality.Strictness;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -82,6 +95,118 @@ public class TenantServiceImplTest {
         // without depending on the real hash implementation.
         when(secretHashService.verify(anyString(), anyString()))
                 .thenAnswer(invocation -> Objects.equals(invocation.getArgument(0), invocation.getArgument(1)));
+        when(secretHashService.hash(anyString())).thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    @Test
+    public void getOrCreateTenant_readsPersistenceOnceAfterCacheWarm() {
+        Tenant existing = new Tenant();
+        existing.setItemId("default");
+        when(persistenceService.load("default", Tenant.class)).thenReturn(existing);
+
+        assertSame(existing, tenantService.getOrCreateTenant("default", Collections.emptyMap()));
+        assertSame(existing, tenantService.getOrCreateTenant("default", Collections.emptyMap()));
+        assertSame(existing, tenantService.getOrCreateTenant("default", Collections.emptyMap()));
+
+        verify(persistenceService, times(1)).load("default", Tenant.class);
+    }
+
+    @Test
+    public void getOrCreateTenant_reloadsAfterSave() {
+        Tenant first = new Tenant();
+        first.setItemId("default");
+        Map<String, Object> firstProps = new HashMap<>();
+        firstProps.put("name", "first");
+        first.setProperties(firstProps);
+
+        Tenant second = new Tenant();
+        second.setItemId("default");
+        Map<String, Object> secondProps = new HashMap<>();
+        secondProps.put("name", "second");
+        second.setProperties(secondProps);
+
+        when(persistenceService.load("default", Tenant.class)).thenReturn(first, second);
+
+        assertEquals("first", tenantService.getOrCreateTenant("default", Collections.emptyMap())
+                .getProperties().get("name"));
+
+        tenantService.saveTenant(second);
+        assertEquals("second", tenantService.getOrCreateTenant("default", Collections.emptyMap())
+                .getProperties().get("name"));
+
+        verify(persistenceService, times(2)).load("default", Tenant.class);
+    }
+
+    @Test
+    public void getOrCreateTenant_reloadsAfterDelete() {
+        Tenant existing = new Tenant();
+        existing.setItemId("default");
+
+        AtomicReference<Tenant> store = new AtomicReference<>(existing);
+        when(persistenceService.load(eq("default"), eq(Tenant.class))).thenAnswer(invocation -> store.get());
+        when(persistenceService.save(any(Tenant.class))).thenAnswer(invocation -> {
+            Tenant tenant = invocation.getArgument(0);
+            if (tenant.getApiKeys() == null) {
+                tenant.setApiKeys(new ArrayList<>());
+            }
+            store.set(tenant);
+            return true;
+        });
+        doAnswer(invocation -> {
+            store.set(null);
+            return null;
+        }).when(persistenceService).remove("default", Tenant.class);
+
+        assertSame(existing, tenantService.getOrCreateTenant("default", Collections.emptyMap()));
+
+        tenantService.deleteTenant("default");
+        assertNull(store.get());
+
+        Tenant afterDelete = tenantService.getOrCreateTenant("default", Collections.singletonMap("name", "default"));
+        assertNotNull(afterDelete);
+        assertEquals("default", afterDelete.getItemId());
+        verify(persistenceService).remove("default", Tenant.class);
+    }
+
+    @Test
+    public void getOrCreateTenant_concurrentFirstRequestsCreateOnce() throws Exception {
+        AtomicReference<Tenant> store = new AtomicReference<>();
+        AtomicInteger initialSaves = new AtomicInteger();
+
+        when(persistenceService.load(eq("default"), eq(Tenant.class))).thenAnswer(invocation -> store.get());
+        when(persistenceService.save(any(Tenant.class))).thenAnswer(invocation -> {
+            Tenant tenant = invocation.getArgument(0);
+            if (tenant.getApiKeys() == null) {
+                tenant.setApiKeys(new ArrayList<>());
+            }
+            // The first persistence write in createTenant has no API keys yet.
+            if (tenant.getApiKeys().isEmpty() && store.get() == null) {
+                initialSaves.incrementAndGet();
+            }
+            store.set(tenant);
+            return true;
+        });
+
+        int threads = 20;
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        CountDownLatch start = new CountDownLatch(1);
+        List<Future<Tenant>> futures = new ArrayList<>();
+        for (int i = 0; i < threads; i++) {
+            futures.add(pool.submit(() -> {
+                start.await();
+                return tenantService.getOrCreateTenant("default", Collections.singletonMap("name", "default"));
+            }));
+        }
+        start.countDown();
+
+        for (Future<Tenant> future : futures) {
+            Tenant tenant = future.get(10, TimeUnit.SECONDS);
+            assertNotNull(tenant);
+            assertEquals("default", tenant.getItemId());
+        }
+        pool.shutdown();
+        assertEquals(1, initialSaves.get(), "Exactly one tenant must be created under concurrent first requests");
+        verify(persistenceService, atLeastOnce()).save(any(Tenant.class));
     }
 
     @Test
