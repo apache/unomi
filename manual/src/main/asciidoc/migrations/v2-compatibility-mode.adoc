@@ -29,6 +29,8 @@ When single-tenant compatibility mode is enabled:
 - **Protected events** (like `login`, `updateProperties`) require IP + X-Unomi-Peer (like V2)
 - **Private endpoints** require system administrator authentication (like V2)
 - **Tenant `default`** is used for every operation. The mode cannot be pointed at another tenant.
+  The tenant is created on the first public request if it is missing, then kept in memory so later
+  public requests do not wait on each other or re-read it from the database every time.
 - **No authentication** is required for non-protected events (like V2)
 
 This allows V2 clients to work with Unomi V3 immediately after migration, giving you time to gradually update client applications to use the new V3 authentication model.
