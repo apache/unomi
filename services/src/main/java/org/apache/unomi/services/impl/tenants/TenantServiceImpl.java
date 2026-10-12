@@ -31,6 +31,9 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.LongSupplier;
 
 /**
  * Default implementation of {@link TenantService}.
@@ -42,13 +45,22 @@ public class TenantServiceImpl implements TenantService {
 
     private final List<TenantLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
     /**
+     * How long {@link #getOrCreateTenant} trusts a cached tenant before it reads persistence again.
+     * The cache is local to this node, so this is also how long a change made on another node, or
+     * directly in the search engine, can go unnoticed here.
+     */
+    static final long GET_OR_CREATE_CACHE_TTL_NANOS = TimeUnit.SECONDS.toNanos(30);
+
+    /**
      * Hot-path cache for {@link #getOrCreateTenant}. Compatibility-mode public requests call that
      * method on every context/eventcollector hit; without a cache they serialized on a method lock
      * and re-read the tenant from persistence each time (UNOMI-1002).
      */
-    private final ConcurrentHashMap<String, Tenant> getOrCreateCache = new ConcurrentHashMap<>();
-    /** Serializes cache-miss create/load so concurrent first requests create the tenant once. */
-    private final Object getOrCreateLock = new Object();
+    private final ConcurrentHashMap<String, CachedTenant> getOrCreateCache = new ConcurrentHashMap<>();
+    /** Serializes load/create so concurrent first requests on this node create the tenant once. */
+    private final ReentrantLock getOrCreateLock = new ReentrantLock();
+    /** Replaced in tests to make cache entries expire without waiting. */
+    LongSupplier nanoClock = System::nanoTime;
     private PersistenceService persistenceService;
     private ExecutionContextManager executionContextManager;
     private SecretHashService secretHashService;
@@ -124,36 +136,68 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     public Tenant getOrCreateTenant(String tenantId, Map<String, Object> properties) {
-        Tenant cached = getOrCreateCache.get(tenantId);
-        if (cached != null) {
-            return cached;
+        if (tenantId == null) {
+            throw new IllegalArgumentException("Tenant ID cannot be null or empty");
         }
-        synchronized (getOrCreateLock) {
+        CachedTenant cached = getOrCreateCache.get(tenantId);
+        if (isFresh(cached)) {
+            return cached.tenant;
+        }
+        if (cached == null) {
+            getOrCreateLock.lock();
+        } else if (!getOrCreateLock.tryLock()) {
+            // Another thread is already refreshing. Keep answering from the expired entry rather
+            // than queue every request behind that read.
+            return cached.tenant;
+        }
+        try {
             cached = getOrCreateCache.get(tenantId);
-            if (cached != null) {
-                return cached;
+            if (isFresh(cached)) {
+                return cached.tenant;
             }
-            Tenant tenant = getTenant(tenantId);
-            if (tenant == null) {
-                try {
-                    tenant = createTenant(tenantId, properties);
-                } catch (IllegalArgumentException e) {
-                    // Another node created the tenant between the read and the write, which is the
-                    // outcome this method is asked for. Re-read rather than fail.
-                    tenant = getTenant(tenantId);
-                    if (tenant == null) {
-                        throw e;
-                    }
-                }
-            }
-            getOrCreateCache.put(tenantId, tenant);
+            Tenant tenant = loadOrCreateTenant(tenantId, properties);
+            getOrCreateCache.put(tenantId, new CachedTenant(tenant, nanoClock.getAsLong()));
+            return tenant;
+        } finally {
+            getOrCreateLock.unlock();
+        }
+    }
+
+    private Tenant loadOrCreateTenant(String tenantId, Map<String, Object> properties) {
+        Tenant tenant = getTenant(tenantId);
+        if (tenant != null) {
             return tenant;
         }
+        try {
+            return createTenant(tenantId, properties);
+        } catch (IllegalArgumentException e) {
+            // Another node created the tenant between the read and the write, which is the outcome
+            // this method is asked for. Re-read rather than fail.
+            Tenant concurrent = getTenant(tenantId);
+            if (concurrent == null) {
+                throw e;
+            }
+            return concurrent;
+        }
+    }
+
+    private boolean isFresh(CachedTenant cached) {
+        return cached != null && nanoClock.getAsLong() - cached.loadedAtNanos < GET_OR_CREATE_CACHE_TTL_NANOS;
     }
 
     private void invalidateGetOrCreateCache(String tenantId) {
         if (tenantId != null) {
             getOrCreateCache.remove(tenantId);
+        }
+    }
+
+    private static final class CachedTenant {
+        private final Tenant tenant;
+        private final long loadedAtNanos;
+
+        private CachedTenant(Tenant tenant, long loadedAtNanos) {
+            this.tenant = tenant;
+            this.loadedAtNanos = loadedAtNanos;
         }
     }
 

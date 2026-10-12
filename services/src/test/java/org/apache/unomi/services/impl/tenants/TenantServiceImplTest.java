@@ -29,6 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -41,18 +42,22 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -74,9 +79,12 @@ public class TenantServiceImplTest {
 
     private TenantServiceImpl tenantService;
 
+    private final AtomicLong clock = new AtomicLong();
+
     @BeforeEach
     public void setUp() {
         tenantService = new TenantServiceImpl();
+        tenantService.nanoClock = clock::get;
         tenantService.setPersistenceService(persistenceService);
         tenantService.setExecutionContextManager(executionContextManager);
         tenantService.setSecretHashService(secretHashService);
@@ -139,16 +147,160 @@ public class TenantServiceImplTest {
 
     @Test
     public void getOrCreateTenant_reloadsAfterDelete() {
-        Tenant existing = new Tenant();
-        existing.setItemId("default");
+        Tenant existing = defaultTenant();
+        AtomicReference<Tenant> store = inMemoryTenantStore(existing, tenant -> { });
 
-        AtomicReference<Tenant> store = new AtomicReference<>(existing);
+        assertSame(existing, getOrCreateDefaultTenant());
+
+        tenantService.deleteTenant("default");
+        assertNull(store.get());
+
+        Tenant afterDelete = getOrCreateDefaultTenant();
+        assertNotSame(existing, afterDelete);
+        assertSame(store.get(), afterDelete);
+    }
+
+    @Test
+    public void getOrCreateTenant_reloadsAfterApiKeyGeneration() {
+        inMemoryTenantStore(defaultTenant(), tenant -> { });
+
+        getOrCreateDefaultTenant();
+        tenantService.generateApiKeyWithType("default", ApiKey.ApiKeyType.PUBLIC, null);
+        getOrCreateDefaultTenant();
+
+        // One read per getOrCreateTenant call, plus the one generateApiKeyWithType does itself.
+        verify(persistenceService, times(3)).load("default", Tenant.class);
+    }
+
+    /**
+     * Nothing tells this node about a delete done on another one, so the entry has to expire by
+     * itself for the tenant to be created again.
+     */
+    @Test
+    public void getOrCreateTenant_recreatesTenantDeletedOnAnotherNodeOnceEntryExpires() {
+        Tenant existing = defaultTenant();
+        AtomicReference<Tenant> store = inMemoryTenantStore(existing, tenant -> { });
+        assertSame(existing, getOrCreateDefaultTenant());
+
+        store.set(null);
+        assertSame(existing, getOrCreateDefaultTenant());
+
+        clock.addAndGet(TenantServiceImpl.GET_OR_CREATE_CACHE_TTL_NANOS);
+        Tenant recreated = getOrCreateDefaultTenant();
+        assertNotSame(existing, recreated);
+        assertSame(store.get(), recreated);
+    }
+
+    @Test
+    public void getOrCreateTenant_answersFromExpiredEntryWhileAnotherThreadRefreshes() throws Exception {
+        Tenant existing = defaultTenant();
+        CountDownLatch refreshStarted = new CountDownLatch(1);
+        CountDownLatch releaseRefresh = new CountDownLatch(1);
+        AtomicInteger loads = new AtomicInteger();
+        when(persistenceService.load("default", Tenant.class)).thenAnswer(invocation -> {
+            if (loads.incrementAndGet() > 1) {
+                refreshStarted.countDown();
+                releaseRefresh.await();
+            }
+            return existing;
+        });
+        getOrCreateDefaultTenant();
+        clock.addAndGet(TenantServiceImpl.GET_OR_CREATE_CACHE_TTL_NANOS);
+
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            Future<Tenant> refresh = pool.submit(this::getOrCreateDefaultTenant);
+            assertTrue(refreshStarted.await(10, TimeUnit.SECONDS));
+
+            assertSame(existing, assertTimeoutPreemptively(Duration.ofSeconds(10), this::getOrCreateDefaultTenant));
+
+            releaseRefresh.countDown();
+            assertSame(existing, refresh.get(10, TimeUnit.SECONDS));
+        } finally {
+            releaseRefresh.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    public void getOrCreateTenant_concurrentFirstRequestsCreateOnce() throws Exception {
+        AtomicInteger creations = new AtomicInteger();
+        inMemoryTenantStore(null, tenant -> {
+            // Only createTenant's own save carries no API key yet. Hold it open so that callers
+            // which are not kept out by the lock would all get past the existence check.
+            if (tenant.getApiKeys() == null || tenant.getApiKeys().isEmpty()) {
+                creations.incrementAndGet();
+                LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(50));
+            }
+        });
+
+        int threads = 20;
+        ExecutorService pool = Executors.newFixedThreadPool(threads);
+        try {
+            CountDownLatch start = new CountDownLatch(1);
+            List<Future<Tenant>> futures = new ArrayList<>();
+            for (int i = 0; i < threads; i++) {
+                futures.add(pool.submit(() -> {
+                    start.await();
+                    return getOrCreateDefaultTenant();
+                }));
+            }
+            start.countDown();
+
+            for (Future<Tenant> future : futures) {
+                assertEquals("default", future.get(10, TimeUnit.SECONDS).getItemId());
+            }
+        } finally {
+            pool.shutdownNow();
+        }
+        assertEquals(1, creations.get(), "Exactly one tenant must be created under concurrent first requests");
+    }
+
+    @Test
+    public void getOrCreateTenant_returnsTenantCreatedByAnotherNodeDuringCreation() {
+        Tenant createdElsewhere = defaultTenant();
+        // Missing on the first read, there by the time createTenant checks for a duplicate.
+        when(persistenceService.load("default", Tenant.class)).thenReturn(null, createdElsewhere);
+
+        assertSame(createdElsewhere, getOrCreateDefaultTenant());
+
+        verify(persistenceService, never()).save(any(Tenant.class));
+    }
+
+    @Test
+    public void getOrCreateTenant_doesNotCacheFailure() {
+        Tenant existing = defaultTenant();
+        when(persistenceService.load("default", Tenant.class))
+                .thenThrow(new IllegalStateException("search engine unavailable"))
+                .thenReturn(existing);
+
+        assertThrows(IllegalStateException.class, this::getOrCreateDefaultTenant);
+        assertSame(existing, getOrCreateDefaultTenant());
+    }
+
+    @Test
+    public void getOrCreateTenant_rejectsNullTenantId() {
+        assertThrows(IllegalArgumentException.class,
+                () -> tenantService.getOrCreateTenant(null, Collections.emptyMap()));
+    }
+
+    private static Tenant defaultTenant() {
+        Tenant tenant = new Tenant();
+        tenant.setItemId("default");
+        return tenant;
+    }
+
+    private Tenant getOrCreateDefaultTenant() {
+        return tenantService.getOrCreateTenant("default", Collections.singletonMap("name", "default"));
+    }
+
+    /** Backs tenant {@code default} with a single in-memory slot; {@code onSave} sees each tenant before it is stored. */
+    private AtomicReference<Tenant> inMemoryTenantStore(Tenant initial, Consumer<Tenant> onSave) {
+        AtomicReference<Tenant> store = new AtomicReference<>(initial);
         when(persistenceService.load(eq("default"), eq(Tenant.class))).thenAnswer(invocation -> store.get());
         when(persistenceService.save(any(Tenant.class))).thenAnswer(invocation -> {
             Tenant tenant = invocation.getArgument(0);
-            if (tenant.getApiKeys() == null) {
-                tenant.setApiKeys(new ArrayList<>());
-            }
+            onSave.accept(tenant);
             store.set(tenant);
             return true;
         });
@@ -156,57 +308,7 @@ public class TenantServiceImplTest {
             store.set(null);
             return null;
         }).when(persistenceService).remove("default", Tenant.class);
-
-        assertSame(existing, tenantService.getOrCreateTenant("default", Collections.emptyMap()));
-
-        tenantService.deleteTenant("default");
-        assertNull(store.get());
-
-        Tenant afterDelete = tenantService.getOrCreateTenant("default", Collections.singletonMap("name", "default"));
-        assertNotNull(afterDelete);
-        assertEquals("default", afterDelete.getItemId());
-        verify(persistenceService).remove("default", Tenant.class);
-    }
-
-    @Test
-    public void getOrCreateTenant_concurrentFirstRequestsCreateOnce() throws Exception {
-        AtomicReference<Tenant> store = new AtomicReference<>();
-        AtomicInteger initialSaves = new AtomicInteger();
-
-        when(persistenceService.load(eq("default"), eq(Tenant.class))).thenAnswer(invocation -> store.get());
-        when(persistenceService.save(any(Tenant.class))).thenAnswer(invocation -> {
-            Tenant tenant = invocation.getArgument(0);
-            if (tenant.getApiKeys() == null) {
-                tenant.setApiKeys(new ArrayList<>());
-            }
-            // The first persistence write in createTenant has no API keys yet.
-            if (tenant.getApiKeys().isEmpty() && store.get() == null) {
-                initialSaves.incrementAndGet();
-            }
-            store.set(tenant);
-            return true;
-        });
-
-        int threads = 20;
-        ExecutorService pool = Executors.newFixedThreadPool(threads);
-        CountDownLatch start = new CountDownLatch(1);
-        List<Future<Tenant>> futures = new ArrayList<>();
-        for (int i = 0; i < threads; i++) {
-            futures.add(pool.submit(() -> {
-                start.await();
-                return tenantService.getOrCreateTenant("default", Collections.singletonMap("name", "default"));
-            }));
-        }
-        start.countDown();
-
-        for (Future<Tenant> future : futures) {
-            Tenant tenant = future.get(10, TimeUnit.SECONDS);
-            assertNotNull(tenant);
-            assertEquals("default", tenant.getItemId());
-        }
-        pool.shutdown();
-        assertEquals(1, initialSaves.get(), "Exactly one tenant must be created under concurrent first requests");
-        verify(persistenceService, atLeastOnce()).save(any(Tenant.class));
+        return store;
     }
 
     @Test
