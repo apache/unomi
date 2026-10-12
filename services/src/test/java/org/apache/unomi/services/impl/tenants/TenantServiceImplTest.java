@@ -275,7 +275,8 @@ public class TenantServiceImplTest {
                 .thenReturn(existing);
 
         assertThrows(IllegalStateException.class, this::getOrCreateDefaultTenant);
-        assertSame(existing, getOrCreateDefaultTenant());
+        // Retried from another thread, which a lock left held by the failed call would block.
+        assertSame(existing, assertTimeoutPreemptively(Duration.ofSeconds(10), this::getOrCreateDefaultTenant));
     }
 
     @Test

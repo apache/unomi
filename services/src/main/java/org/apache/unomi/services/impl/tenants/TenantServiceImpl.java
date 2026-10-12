@@ -46,8 +46,8 @@ public class TenantServiceImpl implements TenantService {
     private final List<TenantLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
     /**
      * How long {@link #getOrCreateTenant} trusts a cached tenant before it reads persistence again.
-     * The cache is local to this node, so this is also how long a change made on another node, or
-     * directly in the search engine, can go unnoticed here.
+     * The cache is local to this node, so a change made on another node, or directly in the search
+     * engine, goes unnoticed here for about this long, and longer while a reload is still running.
      */
     static final long GET_OR_CREATE_CACHE_TTL_NANOS = TimeUnit.SECONDS.toNanos(30);
 

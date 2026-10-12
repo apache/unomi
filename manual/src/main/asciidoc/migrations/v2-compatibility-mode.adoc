@@ -30,8 +30,8 @@ When single-tenant compatibility mode is enabled:
 - **Private endpoints** require system administrator authentication (like V2)
 - **Tenant `default`** is used for every operation. The mode cannot be pointed at another tenant.
   The tenant is created on a public request if it is missing. Each node then keeps it in memory for
-  up to 30 seconds, so public requests do not wait on each other or re-read it from the database
-  every time, and a change made on another node is picked up within that time.
+  about 30 seconds, so public requests do not wait on each other or re-read it from the database
+  every time. A change made on another node is picked up after about that time.
 - **No authentication** is required for non-protected events (like V2)
 
 This allows V2 clients to work with Unomi V3 immediately after migration, giving you time to gradually update client applications to use the new V3 authentication model.
