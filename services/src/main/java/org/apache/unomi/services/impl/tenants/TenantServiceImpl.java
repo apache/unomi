@@ -29,7 +29,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.LongSupplier;
 
 /**
  * Default implementation of {@link TenantService}.
@@ -40,6 +44,23 @@ public class TenantServiceImpl implements TenantService {
     private static final String TENANT_ID_PATTERN = "^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]$";
 
     private final List<TenantLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
+    /**
+     * How long {@link #getOrCreateTenant} trusts a cached tenant before it reads persistence again.
+     * The cache is local to this node, so a change made on another node, or directly in the search
+     * engine, goes unnoticed here for about this long, and longer while a reload is still running.
+     */
+    static final long GET_OR_CREATE_CACHE_TTL_NANOS = TimeUnit.SECONDS.toNanos(30);
+
+    /**
+     * Hot-path cache for {@link #getOrCreateTenant}. Compatibility-mode public requests call that
+     * method on every context/eventcollector hit; without a cache they serialized on a method lock
+     * and re-read the tenant from persistence each time (UNOMI-1002).
+     */
+    private final ConcurrentHashMap<String, CachedTenant> getOrCreateCache = new ConcurrentHashMap<>();
+    /** Serializes load/create so concurrent first requests on this node create the tenant once. */
+    private final ReentrantLock getOrCreateLock = new ReentrantLock();
+    /** Replaced in tests to make cache entries expire without waiting. */
+    LongSupplier nanoClock = System::nanoTime;
     private PersistenceService persistenceService;
     private ExecutionContextManager executionContextManager;
     private SecretHashService secretHashService;
@@ -114,7 +135,35 @@ public class TenantServiceImpl implements TenantService {
     }
 
     @Override
-    public synchronized Tenant getOrCreateTenant(String tenantId, Map<String, Object> properties) {
+    public Tenant getOrCreateTenant(String tenantId, Map<String, Object> properties) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("Tenant ID cannot be null or empty");
+        }
+        CachedTenant cached = getOrCreateCache.get(tenantId);
+        if (isFresh(cached)) {
+            return cached.tenant;
+        }
+        if (cached == null) {
+            getOrCreateLock.lock();
+        } else if (!getOrCreateLock.tryLock()) {
+            // Another thread is already refreshing. Keep answering from the expired entry rather
+            // than queue every request behind that read.
+            return cached.tenant;
+        }
+        try {
+            cached = getOrCreateCache.get(tenantId);
+            if (isFresh(cached)) {
+                return cached.tenant;
+            }
+            Tenant tenant = loadOrCreateTenant(tenantId, properties);
+            getOrCreateCache.put(tenantId, new CachedTenant(tenant, nanoClock.getAsLong()));
+            return tenant;
+        } finally {
+            getOrCreateLock.unlock();
+        }
+    }
+
+    private Tenant loadOrCreateTenant(String tenantId, Map<String, Object> properties) {
         Tenant tenant = getTenant(tenantId);
         if (tenant != null) {
             return tenant;
@@ -129,6 +178,26 @@ public class TenantServiceImpl implements TenantService {
                 throw e;
             }
             return concurrent;
+        }
+    }
+
+    private boolean isFresh(CachedTenant cached) {
+        return cached != null && nanoClock.getAsLong() - cached.loadedAtNanos < GET_OR_CREATE_CACHE_TTL_NANOS;
+    }
+
+    private void invalidateGetOrCreateCache(String tenantId) {
+        if (tenantId != null) {
+            getOrCreateCache.remove(tenantId);
+        }
+    }
+
+    private static final class CachedTenant {
+        private final Tenant tenant;
+        private final long loadedAtNanos;
+
+        private CachedTenant(Tenant tenant, long loadedAtNanos) {
+            this.tenant = tenant;
+            this.loadedAtNanos = loadedAtNanos;
         }
     }
 
@@ -198,6 +267,7 @@ public class TenantServiceImpl implements TenantService {
                 tenant.getApiKeys().removeIf(existingKey -> existingKey.getKeyType() == keyType);
                 tenant.getApiKeys().add(apiKey);
                 persistenceService.save(tenant);
+                invalidateGetOrCreateCache(tenantId);
             }
 
             return new ApiKeyCreationResult(apiKey, plainTextKey);
@@ -217,6 +287,9 @@ public class TenantServiceImpl implements TenantService {
     @Override
     public void saveTenant(Tenant tenant) {
         executionContextManager.executeAsSystem(() -> persistenceService.save(tenant));
+        if (tenant != null) {
+            invalidateGetOrCreateCache(tenant.getItemId());
+        }
     }
 
     @Override
@@ -236,6 +309,7 @@ public class TenantServiceImpl implements TenantService {
             }
             persistenceService.remove(tenantId, Tenant.class);
         });
+        invalidateGetOrCreateCache(tenantId);
     }
 
     @Override
