@@ -612,7 +612,7 @@ Scheduler settings live in `etc/org.apache.unomi.services.cfg` (OSGi PID `org.ap
 |Property |Default |Description
 
 |`scheduler.thread.poolSize` |`5` |Thread pool size for task execution
-|`scheduler.nodeId` |same as `org.apache.unomi.cluster.nodeId` |Unique ID for this node in scheduler locks and task metadata. Defaults to the cluster node id (`UNOMI_CLUSTER_NODEID`). Optional override: `UNOMI_SCHEDULER_NODEID` / `org.apache.unomi.scheduler.nodeId`.
+|`scheduler.nodeId` |same as `org.apache.unomi.cluster.nodeId` |Unique ID for this node in scheduler locks and task metadata. Defaults to the cluster node id (`UNOMI_CLUSTER_NODEID`). Optional override: `UNOMI_SCHEDULER_NODEID` / `org.apache.unomi.scheduler.nodeId`, which must then be unique per node as well. A blank value fails startup.
 |`scheduler.executorNode` |`true` |Whether this node runs tasks. Set `false` on dedicated REST-only nodes if you split roles.
 |`scheduler.lockTimeout` |`10000` |Lock timeout in milliseconds
 |`scheduler.purgeTaskEnabled` |`true` |Enables the built-in periodic purge of old completed tasks
@@ -623,15 +623,16 @@ Scheduler settings live in `etc/org.apache.unomi.services.cfg` (OSGi PID `org.ap
 
 [source,properties]
 ----
-# Prefer setting the cluster node id (env UNOMI_CLUSTER_NODEID). The scheduler follows it.
 # Node 1 and 2: REST + task execution
-org.apache.unomi.cluster.nodeId=unomi-executor-1
 scheduler.executorNode=true
 
 # Node 3: API only, no task execution
-org.apache.unomi.cluster.nodeId=unomi-api-3
 scheduler.executorNode=false
 ----
+
+Each node also needs its own cluster node id, which the scheduler follows. It is not set in this file but
+through the environment (or `org.apache.unomi.cluster.nodeId` in `etc/custom.system.properties`), for example
+`UNOMI_CLUSTER_NODEID=unomi-executor-1`, `unomi-executor-2` and `unomi-api-3`.
 
 After changing configuration, restart the Unomi bundle or the Karaf container.
 

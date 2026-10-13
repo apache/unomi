@@ -138,6 +138,10 @@ public class ClusterServiceImpl implements ClusterService {
             throw new IllegalStateException(errorMessage);
         }
 
+        // Must run before nodeStartTime is set: setSchedulerService() treats a non-zero start time as
+        // "initialized" and would start this node's own heartbeat while we are still checking.
+        ensureNodeIdNotInUse();
+
         nodeStartTime = System.currentTimeMillis();
 
         // Register this node in the persistence service
@@ -151,6 +155,61 @@ public class ClusterServiceImpl implements ClusterService {
         }
 
         LOGGER.info("Cluster service initialized with node ID: {}", nodeId);
+    }
+
+    /**
+     * Fails startup when another live node keeps heartbeating under this node id, typically a node added
+     * to a cluster without its own {@code UNOMI_CLUSTER_NODEID}. Nodes sharing an id share one cluster
+     * record and, through the scheduler, the same task locks.
+     * <p>
+     * A clean shutdown removes the record, so a record with a recent heartbeat belongs either to a live
+     * node or to this node's own previous process (crashed, or still shutting down). Only a live node keeps
+     * updating it: the id is free once the record is gone or has not moved for two heartbeat periods. A
+     * record that is still moving after six periods belongs to another node.
+     *
+     * @throws IllegalStateException if the node id is held by another live node
+     */
+    private void ensureNodeIdNotInUse() {
+        ClusterNode existing = persistenceService.load(nodeId, ClusterNode.class);
+        // Same staleness rule as cleanupStaleNodes(): such a node is already considered gone
+        if (existing == null || existing.getLastHeartbeat() < System.currentTimeMillis() - (nodeStatisticsUpdateFrequency * 3)) {
+            return;
+        }
+
+        LOGGER.warn("Node id {} was registered recently; waiting for its previous owner to stop heartbeating "
+                + "(up to {} ms)", nodeId, nodeStatisticsUpdateFrequency * 6);
+        long seenHeartbeat = existing.getLastHeartbeat();
+        long seenStartTime = existing.getStartTime();
+        long lastChange = System.currentTimeMillis();
+        long deadline = lastChange + (nodeStatisticsUpdateFrequency * 6);
+        while (true) {
+            try {
+                Thread.sleep(Math.max(1, nodeStatisticsUpdateFrequency / 10));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Interrupted while checking that node id " + nodeId + " is not in use", e);
+            }
+            ClusterNode current = persistenceService.load(nodeId, ClusterNode.class);
+            if (current == null) {
+                return;
+            }
+            long now = System.currentTimeMillis();
+            if (current.getLastHeartbeat() != seenHeartbeat || current.getStartTime() != seenStartTime) {
+                if (now >= deadline) {
+                    String errorMessage = "CRITICAL: nodeId " + nodeId + " is already used by another live node. "
+                            + "Every node in a cluster needs its own id: set UNOMI_CLUSTER_NODEID "
+                            + "(org.apache.unomi.cluster.nodeId) to a unique value on this node.";
+                    LOGGER.error(errorMessage);
+                    throw new IllegalStateException(errorMessage);
+                }
+                seenHeartbeat = current.getLastHeartbeat();
+                seenStartTime = current.getStartTime();
+                lastChange = now;
+            } else if (now - lastChange >= nodeStatisticsUpdateFrequency * 2) {
+                LOGGER.info("Node id {} was left by a node that is no longer running, taking it over", nodeId);
+                return;
+            }
+        }
     }
 
     /**
@@ -371,6 +430,15 @@ public class ClusterServiceImpl implements ClusterService {
             LOGGER.warn("Node {} not found in persistence, re-registering", nodeId);
             registerNodeInPersistence();
             return;
+        }
+
+        // Backstop for duplicates the startup check cannot see (nodes started at the same instant, or a
+        // node that came back after its record went stale): only this JVM writes this start time.
+        if (node.getStartTime() != nodeStartTime) {
+            LOGGER.error("Node id {} is also used by another live node (started at {}, this node at {}). Nodes sharing "
+                    + "an id share scheduler locks: set a unique UNOMI_CLUSTER_NODEID on each node and restart.",
+                    nodeId, new Date(node.getStartTime()), new Date(nodeStartTime));
+            node.setStartTime(nodeStartTime);
         }
 
         try {

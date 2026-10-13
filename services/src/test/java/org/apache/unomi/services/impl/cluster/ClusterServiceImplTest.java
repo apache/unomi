@@ -38,8 +38,12 @@ import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 
 import java.io.Serializable;
+import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -418,5 +422,116 @@ public class ClusterServiceImplTest {
             assertNull(persistenceService.load("scoped-node", ClusterNode.class));
             assertNotNull(persistenceService.load("other-node", ClusterNode.class));
         });
+    }
+
+    private ClusterServiceImpl newNode(String nodeId, long heartbeatFrequency) {
+        ClusterServiceImpl node = TestHelper.createClusterService(persistenceService, nodeId, PUBLIC_ADDRESS, INTERNAL_ADDRESS, bundleContext);
+        node.setNodeStatisticsUpdateFrequency(heartbeatFrequency);
+        return node;
+    }
+
+    private void saveNodeRecord(String nodeId, long startTime, long lastHeartbeat) {
+        ClusterNode record = new ClusterNode();
+        record.setItemId(nodeId);
+        record.setStartTime(startTime);
+        record.setLastHeartbeat(lastHeartbeat);
+        persistenceService.save(record);
+    }
+
+    @Test
+    public void testInitFailsWhenNodeIdIsUsedByLiveNode() throws Exception {
+        ClusterServiceImpl incumbent = newNode(TEST_NODE_ID, 100);
+        incumbent.init();
+        long incumbentStartTime = persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime();
+
+        ScheduledExecutorService heartbeat = Executors.newSingleThreadScheduledExecutor();
+        heartbeat.scheduleAtFixedRate(incumbent::updateSystemStats, 0, 20, TimeUnit.MILLISECONDS);
+        try {
+            ClusterServiceImpl duplicate = newNode(TEST_NODE_ID, 100);
+            long start = System.currentTimeMillis();
+            IllegalStateException e = assertThrows(IllegalStateException.class, duplicate::init);
+            assertTrue(e.getMessage().contains("already used by another live node"), e.getMessage());
+            // It gave the other node six heartbeat periods to stop before giving up
+            assertTrue(System.currentTimeMillis() - start >= 600, "should not fail on the first heartbeat seen");
+        } finally {
+            heartbeat.shutdownNow();
+            heartbeat.awaitTermination(5, TimeUnit.SECONDS);
+        }
+
+        // The node that was there first is untouched
+        assertEquals(incumbentStartTime, persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime());
+    }
+
+    @Test
+    public void testInitWaitsForPreviousProcessToStopHeartbeating() throws Exception {
+        // The previous process is still alive for a few heartbeats (slow shutdown, or hung then killed)
+        ClusterServiceImpl previous = newNode(TEST_NODE_ID, 200);
+        previous.init();
+        long previousStartTime = persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime();
+
+        AtomicInteger remainingBeats = new AtomicInteger(5);
+        ScheduledExecutorService heartbeat = Executors.newSingleThreadScheduledExecutor();
+        heartbeat.scheduleAtFixedRate(() -> {
+            if (remainingBeats.getAndDecrement() > 0) {
+                previous.updateSystemStats();
+            }
+        }, 0, 20, TimeUnit.MILLISECONDS);
+        try {
+            Thread.sleep(5); // distinct start time for the restarted process
+            ClusterServiceImpl restarted = newNode(TEST_NODE_ID, 200);
+            restarted.init();
+        } finally {
+            heartbeat.shutdownNow();
+            heartbeat.awaitTermination(5, TimeUnit.SECONDS);
+        }
+
+        assertTrue(remainingBeats.get() <= 0, "the previous process should have stopped by itself");
+        assertTrue(persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime() > previousStartTime);
+    }
+
+    @Test
+    public void testInitTakesOverNodeIdLeftByCrashedNode() {
+        // A crash leaves the record behind with a recent heartbeat that nobody updates anymore
+        long crashedStartTime = System.currentTimeMillis() - 60000;
+        saveNodeRecord(TEST_NODE_ID, crashedStartTime, System.currentTimeMillis());
+
+        ClusterServiceImpl restarted = newNode(TEST_NODE_ID, 100);
+        restarted.init();
+
+        assertTrue(persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime() > crashedStartTime);
+    }
+
+    @Test
+    public void testInitDoesNotWaitWhenNodeIdIsFree() {
+        // Heartbeat period of one minute: any liveness wait would blow the timeout
+        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
+            // Stale record: crashed long enough ago to be considered gone
+            saveNodeRecord(TEST_NODE_ID, 1L, System.currentTimeMillis() - (3 * 60000) - 1);
+            ClusterServiceImpl restarted = newNode(TEST_NODE_ID, 60000);
+            restarted.init();
+
+            // Clean shutdown removes the record, so a plain restart is immediate too
+            restarted.destroy();
+            newNode(TEST_NODE_ID, 60000).init();
+
+            // Growing the cluster: a node with its own id joins next to a live one
+            newNode("test-node-2", 60000).init();
+        });
+
+        assertNotNull(persistenceService.load(TEST_NODE_ID, ClusterNode.class));
+        assertNotNull(persistenceService.load("test-node-2", ClusterNode.class));
+    }
+
+    @Test
+    public void testHeartbeatReclaimsRecordOverwrittenByDuplicateNode() {
+        ClusterServiceImpl node = newNode(TEST_NODE_ID, 60000);
+        node.init();
+        long startTime = persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime();
+
+        // Another JVM registered under the same id after the startup check
+        saveNodeRecord(TEST_NODE_ID, startTime + 1000, System.currentTimeMillis());
+        node.updateSystemStats();
+
+        assertEquals(startTime, persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime());
     }
 }

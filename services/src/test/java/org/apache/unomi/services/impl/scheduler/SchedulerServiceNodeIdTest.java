@@ -17,36 +17,43 @@
 package org.apache.unomi.services.impl.scheduler;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SchedulerServiceNodeIdTest {
 
     @Test
-    void ensureNodeIdKeepsConfiguredValue() {
+    void validateNodeIdKeepsConfiguredValue() {
         SchedulerServiceImpl scheduler = new SchedulerServiceImpl();
         scheduler.setNodeId("unomi-node-2");
-        scheduler.ensureNodeId();
+        scheduler.validateNodeId();
         assertEquals("unomi-node-2", scheduler.getNodeId());
     }
 
-    @Test
-    void ensureNodeIdGeneratesWhenBlank() {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "  "})
+    void validateNodeIdRejectsBlank(String blankNodeId) {
         SchedulerServiceImpl scheduler = new SchedulerServiceImpl();
-        scheduler.setNodeId("  ");
-        scheduler.ensureNodeId();
-        assertNotNull(scheduler.getNodeId());
-        assertFalse(scheduler.getNodeId().isBlank());
-        assertFalse(SchedulerServiceImpl.LEGACY_DEFAULT_NODE_ID.equals(scheduler.getNodeId()));
+        scheduler.setNodeId(blankNodeId);
+        assertThrows(IllegalStateException.class, scheduler::validateNodeId);
     }
 
     @Test
-    void ensureNodeIdKeepsLegacyDefaultForCompatButIsDocumentedAsUnsafe() {
+    void postConstructFailsOnBlankNodeIdLikeTheClusterService() {
+        SchedulerServiceImpl scheduler = new SchedulerServiceImpl();
+        assertThrows(IllegalStateException.class, scheduler::postConstruct);
+    }
+
+    @Test
+    void validateNodeIdAcceptsLegacyDefault() {
         SchedulerServiceImpl scheduler = new SchedulerServiceImpl();
         scheduler.setNodeId(SchedulerServiceImpl.LEGACY_DEFAULT_NODE_ID);
-        scheduler.ensureNodeId();
+        scheduler.validateNodeId();
         assertEquals(SchedulerServiceImpl.LEGACY_DEFAULT_NODE_ID, scheduler.getNodeId());
     }
 }

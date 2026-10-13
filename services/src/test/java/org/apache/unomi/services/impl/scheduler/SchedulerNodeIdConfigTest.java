@@ -26,7 +26,6 @@ import java.nio.file.Path;
 import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -63,34 +62,6 @@ class SchedulerNodeIdConfigTest {
         assertTrue(content.contains(
                         "org.apache.unomi.scheduler.nodeId=${env:UNOMI_SCHEDULER_NODEID:-${org.apache.unomi.cluster.nodeId}}"),
                 "shipped system properties must default the scheduler id to the cluster node id");
-    }
-
-    /**
-     * Simulates two JVMs that only set distinct cluster node ids (the documented production path).
-     * Their scheduler ids must differ so exclusive tasks are not owned by both.
-     */
-    @Test
-    void distinctClusterNodeIdsYieldDistinctSchedulerIds() {
-        String nodeA = resolveSchedulerNodeId(null, "unomi-node-1");
-        String nodeB = resolveSchedulerNodeId(null, "unomi-node-2");
-        assertNotEquals(nodeA, nodeB);
-        assertTrue(nodeA.equals("unomi-node-1") && nodeB.equals("unomi-node-2"));
-    }
-
-    @Test
-    void schedulerEnvOverrideWinsOverClusterNodeId() {
-        assertTrue("scheduler-override".equals(
-                resolveSchedulerNodeId("scheduler-override", "unomi-node-1")));
-    }
-
-    /**
-     * Mirrors {@code org.apache.unomi.scheduler.nodeId=${env:UNOMI_SCHEDULER_NODEID:-${org.apache.unomi.cluster.nodeId}}}.
-     */
-    static String resolveSchedulerNodeId(String schedulerEnvOrProperty, String clusterNodeId) {
-        if (schedulerEnvOrProperty != null && !schedulerEnvOrProperty.isBlank()) {
-            return schedulerEnvOrProperty;
-        }
-        return clusterNodeId;
     }
 
     private static String readResource(String path) throws IOException {

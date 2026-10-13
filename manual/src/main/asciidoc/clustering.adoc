@@ -42,7 +42,23 @@ org.apache.unomi.cluster.nodeStatisticsUpdateFrequency=${env:UNOMI_CLUSTER_NODES
   only when needed (see <<_scheduler,Scheduler>>).
 * **nodeStatisticsUpdateFrequency** — Interval in milliseconds between heartbeat / statistics updates (default 10 seconds).
 
-If `nodeId` is missing or duplicate, cluster registration fails at startup.
+If `nodeId` is blank, startup fails.
+
+A single node needs no configuration: it runs as `unomi-node-1`. To grow it into a cluster, leave that node as it
+is and give every additional node its own `UNOMI_CLUSTER_NODEID` (on Kubernetes, map it from the pod name of a
+StatefulSet so it stays stable).
+
+A node that starts with an id whose record was updated recently (within three heartbeat intervals) waits for
+that record to stop moving before claiming the id:
+
+* A node restarting after a crash, or while its previous process is still shutting down, takes its id back once
+  the record is gone or has been quiet for two intervals (20 seconds by default).
+* A node configured with the id of another live node fails at startup after six intervals (about a minute by
+  default), leaving the first node untouched. Unomi does not start on that node until its id is fixed and it is
+  restarted.
+
+Two nodes started at the same instant with the same id cannot see each other at startup; both then log an error
+on every heartbeat until one of them is given its own id.
 
 ==== How it works
 

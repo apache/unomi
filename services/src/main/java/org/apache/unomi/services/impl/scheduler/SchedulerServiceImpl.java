@@ -776,6 +776,8 @@ public class SchedulerServiceImpl implements SchedulerService {
      * Blueprint post-construct hook; starts task checking on executor nodes.
      */
     public void postConstruct() {
+        validateNodeId();
+
         if (bundleContext == null) {
             LOGGER.error("BundleContext is null, cannot initialize service trackers");
             return;
@@ -803,8 +805,6 @@ public class SchedulerServiceImpl implements SchedulerService {
             // Queue task purge initialization instead of calling directly
             queuePendingOperation(OperationType.INITIALIZE_TASK_PURGE, "Initialize task purge");
         }
-
-        ensureNodeId();
 
         LOGGER.info("Scheduler service initialized. Node ID: {}, Executor node: {}, Thread pool size: {}",
             nodeId, executorNode, Math.max(MIN_THREAD_POOL_SIZE, threadPoolSize));
@@ -1475,17 +1475,19 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     /**
-     * Ensures a usable node id before the task checker starts. Blank values get a random id.
-     * The former shared default {@link #LEGACY_DEFAULT_NODE_ID} is accepted but logged as unsafe
-     * for multi-node clusters.
+     * Validates the node id before anything is started, the same way the cluster service does:
+     * a blank value is a configuration error and fails startup. The former shared default
+     * {@link #LEGACY_DEFAULT_NODE_ID} is accepted but logged as unsafe for multi-node clusters.
+     *
+     * @throws IllegalStateException if the node id is blank
      */
-    void ensureNodeId() {
+    void validateNodeId() {
         if (nodeId == null || nodeId.isBlank()) {
-            nodeId = UUID.randomUUID().toString();
-            LOGGER.warn("Scheduler node id was blank; generated unique id {}. "
-                    + "Set UNOMI_CLUSTER_NODEID (or UNOMI_SCHEDULER_NODEID) so the id stays stable across restarts.",
-                    nodeId);
-            return;
+            String errorMessage = "CRITICAL: scheduler.nodeId is blank. Restore its default in "
+                    + "org.apache.unomi.services.cfg so it follows the cluster node id (UNOMI_CLUSTER_NODEID), "
+                    + "or set UNOMI_SCHEDULER_NODEID / org.apache.unomi.scheduler.nodeId.";
+            LOGGER.error(errorMessage);
+            throw new IllegalStateException(errorMessage);
         }
         if (LEGACY_DEFAULT_NODE_ID.equals(nodeId)) {
             LOGGER.warn("Scheduler node id is still '{}'. Every node that keeps this value shares "
