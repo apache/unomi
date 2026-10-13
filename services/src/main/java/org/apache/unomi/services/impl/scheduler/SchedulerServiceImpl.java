@@ -70,6 +70,11 @@ public class SchedulerServiceImpl implements SchedulerService {
     private static final long DEFAULT_LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes
     private static final long DEFAULT_COMPLETED_TASK_TTL_DAYS = 30; // 30 days default retention for completed tasks
     private static final boolean DEFAULT_PURGE_TASK_ENABLED = true;
+    /**
+     * Former hard-coded default in {@code org.apache.unomi.services.cfg}. Kept only so a leftover
+     * install that still injects this value gets a clear startup warning (UNOMI-1006).
+     */
+    static final String LEGACY_DEFAULT_NODE_ID = "test-scheduler-node";
     private static final int MIN_THREAD_POOL_SIZE = 4;
     private static final int PENDING_OPERATIONS_QUEUE_SIZE = 1000;
     private static final int MAX_RETRY_ATTEMPTS = 10;
@@ -799,9 +804,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             queuePendingOperation(OperationType.INITIALIZE_TASK_PURGE, "Initialize task purge");
         }
 
-        if (nodeId == null) {
-            nodeId = UUID.randomUUID().toString();
-        }
+        ensureNodeId();
 
         LOGGER.info("Scheduler service initialized. Node ID: {}, Executor node: {}, Thread pool size: {}",
             nodeId, executorNode, Math.max(MIN_THREAD_POOL_SIZE, threadPoolSize));
@@ -1456,7 +1459,9 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     /**
-     * Sets the cluster node ID.
+     * Sets the scheduler node ID (task locks and affinity). In production this should match
+     * {@code org.apache.unomi.cluster.nodeId} unless {@code org.apache.unomi.scheduler.nodeId} /
+     * {@code UNOMI_SCHEDULER_NODEID} is set explicitly.
      *
      * @param nodeId the node ID
      */
@@ -1467,6 +1472,27 @@ public class SchedulerServiceImpl implements SchedulerService {
     @Override
     public String getNodeId() {
         return nodeId;
+    }
+
+    /**
+     * Ensures a usable node id before the task checker starts. Blank values get a random id.
+     * The former shared default {@link #LEGACY_DEFAULT_NODE_ID} is accepted but logged as unsafe
+     * for multi-node clusters.
+     */
+    void ensureNodeId() {
+        if (nodeId == null || nodeId.isBlank()) {
+            nodeId = UUID.randomUUID().toString();
+            LOGGER.warn("Scheduler node id was blank; generated unique id {}. "
+                    + "Set UNOMI_CLUSTER_NODEID (or UNOMI_SCHEDULER_NODEID) so the id stays stable across restarts.",
+                    nodeId);
+            return;
+        }
+        if (LEGACY_DEFAULT_NODE_ID.equals(nodeId)) {
+            LOGGER.warn("Scheduler node id is still '{}'. Every node that keeps this value shares "
+                    + "task locks. Prefer the cluster node id via UNOMI_CLUSTER_NODEID, or set "
+                    + "UNOMI_SCHEDULER_NODEID / org.apache.unomi.scheduler.nodeId per JVM.",
+                    LEGACY_DEFAULT_NODE_ID);
+        }
     }
 
     @Override

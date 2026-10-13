@@ -37,6 +37,9 @@ org.apache.unomi.cluster.nodeStatisticsUpdateFrequency=${env:UNOMI_CLUSTER_NODES
 * **public.address** — URL other nodes and operators use to reach this node (HTTP, port 8181 by default).
 * **internal.address** — HTTPS URL for the private REST API (port 9443 by default).
 * **nodeId** — **Must be unique** on every node in the cluster (for example `unomi-node-1`, `unomi-node-2`).
+  The cluster scheduler uses the same value as `scheduler.nodeId` by default, so setting
+  `UNOMI_CLUSTER_NODEID` is enough for exclusive tasks. Override with `UNOMI_SCHEDULER_NODEID`
+  only when needed (see <<_scheduler,Scheduler>>).
 * **nodeStatisticsUpdateFrequency** — Interval in milliseconds between heartbeat / statistics updates (default 10 seconds).
 
 If `nodeId` is missing or duplicate, cluster registration fails at startup.
