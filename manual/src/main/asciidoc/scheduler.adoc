@@ -612,7 +612,7 @@ Scheduler settings live in `etc/org.apache.unomi.services.cfg` (OSGi PID `org.ap
 |Property |Default |Description
 
 |`scheduler.thread.poolSize` |`5` |Thread pool size for task execution
-|`scheduler.nodeId` |same as `org.apache.unomi.cluster.nodeId` |Unique ID for this node in scheduler locks and task metadata. Defaults to the cluster node id (`UNOMI_CLUSTER_NODEID`). Optional override: `UNOMI_SCHEDULER_NODEID` / `org.apache.unomi.scheduler.nodeId`, which must then be unique per node as well. A blank value fails startup.
+|`scheduler.nodeId` |same as `org.apache.unomi.cluster.nodeId` |Unique ID for this node in scheduler locks and task metadata. Defaults to the cluster node id (`UNOMI_CLUSTER_NODEID`). Optional override: `UNOMI_SCHEDULER_NODEID` / `org.apache.unomi.scheduler.nodeId`, which must then be unique per node as well. A blank value, or the former shared default `test-scheduler-node` left in an upgraded `org.apache.unomi.services.cfg`, fails startup.
 |`scheduler.executorNode` |`true` |Whether this node runs tasks. Set `false` on dedicated REST-only nodes if you split roles.
 |`scheduler.lockTimeout` |`10000` |Lock timeout in milliseconds
 |`scheduler.purgeTaskEnabled` |`true` |Enables the built-in periodic purge of old completed tasks

@@ -57,8 +57,11 @@ that record to stop moving before claiming the id:
   default), leaving the first node untouched. Unomi does not start on that node until its id is fixed and it is
   restarted.
 
-Two nodes started at the same instant with the same id cannot see each other at startup; both then log an error
-on every heartbeat until one of them is given its own id.
+Two nodes started at the same instant with the same id cannot see each other at startup; they then log an error
+from their heartbeats until one of them is given its own id.
+
+Startup also fails if the node cannot write its record to the search engine, since the checks above cannot be
+trusted when it is unavailable.
 
 ==== How it works
 

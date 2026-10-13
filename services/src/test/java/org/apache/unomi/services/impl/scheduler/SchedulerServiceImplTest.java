@@ -166,11 +166,11 @@ public class SchedulerServiceImplTest {
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
 
         // Create and configure cluster service using the helper method
-        clusterService = TestHelper.createClusterService(persistenceService, "test-scheduler-node", bundleContext);
+        clusterService = TestHelper.createClusterService(persistenceService, "test-node-1", bundleContext);
 
         // Create scheduler service with cluster service
         schedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
-            "test-scheduler-node",
+            "test-node-1",
             persistenceService,
             executionContextManager,
             bundleContext,

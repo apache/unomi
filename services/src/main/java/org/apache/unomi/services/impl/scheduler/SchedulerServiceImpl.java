@@ -71,8 +71,9 @@ public class SchedulerServiceImpl implements SchedulerService {
     private static final long DEFAULT_COMPLETED_TASK_TTL_DAYS = 30; // 30 days default retention for completed tasks
     private static final boolean DEFAULT_PURGE_TASK_ENABLED = true;
     /**
-     * Former hard-coded default in {@code org.apache.unomi.services.cfg}. Kept only so a leftover
-     * install that still injects this value gets a clear startup warning (UNOMI-1006).
+     * Former shared default of {@code scheduler.nodeId} (services cfg and blueprint). Kept only so an
+     * upgraded install whose retained configuration still injects it fails with a clear message
+     * instead of silently sharing task locks between nodes (UNOMI-1006).
      */
     static final String LEGACY_DEFAULT_NODE_ID = "test-scheduler-node";
     private static final int MIN_THREAD_POOL_SIZE = 4;
@@ -1476,24 +1477,25 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     /**
      * Validates the node id before anything is started, the same way the cluster service does:
-     * a blank value is a configuration error and fails startup. The former shared default
-     * {@link #LEGACY_DEFAULT_NODE_ID} is accepted but logged as unsafe for multi-node clusters.
+     * a blank value is a configuration error and fails startup. So does the former shared default
+     * {@link #LEGACY_DEFAULT_NODE_ID}, which every node of an upgraded cluster would have in common.
      *
-     * @throws IllegalStateException if the node id is blank
+     * @throws IllegalStateException if the node id is blank or the legacy shared default
      */
     void validateNodeId() {
+        String errorMessage = null;
         if (nodeId == null || nodeId.isBlank()) {
-            String errorMessage = "CRITICAL: scheduler.nodeId is blank. Restore its default in "
-                    + "org.apache.unomi.services.cfg so it follows the cluster node id (UNOMI_CLUSTER_NODEID), "
-                    + "or set UNOMI_SCHEDULER_NODEID / org.apache.unomi.scheduler.nodeId.";
+            errorMessage = "CRITICAL: scheduler.nodeId is blank.";
+        } else if (LEGACY_DEFAULT_NODE_ID.equals(nodeId)) {
+            errorMessage = "CRITICAL: scheduler.nodeId is still the former shared default '" + LEGACY_DEFAULT_NODE_ID
+                    + "', which makes every node share task locks.";
+        }
+        if (errorMessage != null) {
+            errorMessage += " Set scheduler.nodeId=${org.apache.unomi.scheduler.nodeId:-${org.apache.unomi.cluster.nodeId}} "
+                    + "in etc/org.apache.unomi.services.cfg so it follows the cluster node id (UNOMI_CLUSTER_NODEID), "
+                    + "or set UNOMI_SCHEDULER_NODEID to a value unique to this node.";
             LOGGER.error(errorMessage);
             throw new IllegalStateException(errorMessage);
-        }
-        if (LEGACY_DEFAULT_NODE_ID.equals(nodeId)) {
-            LOGGER.warn("Scheduler node id is still '{}'. Every node that keeps this value shares "
-                    + "task locks. Prefer the cluster node id via UNOMI_CLUSTER_NODEID, or set "
-                    + "UNOMI_SCHEDULER_NODEID / org.apache.unomi.scheduler.nodeId per JVM.",
-                    LEGACY_DEFAULT_NODE_ID);
         }
     }
 

@@ -138,6 +138,7 @@ public abstract class BaseIT extends KarafTestSupport {
     protected static final String HEALTHCHECK_AUTH_USER_NAME = "health";
     protected static final String HEALTHCHECK_AUTH_PASSWORD = "health";
     protected static final int REQUEST_TIMEOUT = 60000;
+    protected static final String CLUSTER_NODE_ID = "unomi-it-node";
     protected static final int DEFAULT_TRYING_TIMEOUT = 1000;
     protected static final int DEFAULT_TRYING_TRIES = 10;
     protected static final int DEFAULT_SHOULDBETRUE_TRIES = 5;
@@ -685,6 +686,8 @@ public abstract class BaseIT extends KarafTestSupport {
                 // crash recovery repeatedly (mis)reclaims them, logging "Lock verification failed... after
                 // CAS" every checker tick. Widen it for ITs so heartbeats/checker never starve.
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.scheduler.thread.poolSize", "10"),
+                // Not the shipped default, so SchedulerIT can tell the scheduler really follows the cluster node id
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.cluster.nodeId", CLUSTER_NODE_ID),
                 // The scheduled purge runs seconds after startup for every tenant and would delete the
                 // years-old profiles, sessions and events the migration ITs restore from snapshots before
                 // they are checked. Purge ITs call the purge methods directly, so switch the schedule off.

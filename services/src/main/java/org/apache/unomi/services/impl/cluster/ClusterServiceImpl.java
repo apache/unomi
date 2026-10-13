@@ -144,8 +144,11 @@ public class ClusterServiceImpl implements ClusterService {
 
         nodeStartTime = System.currentTimeMillis();
 
-        // Register this node in the persistence service
-        registerNodeInPersistence();
+        // Register this node in the persistence service. Persistence reads return null on errors, which
+        // the check above takes for a free id: a failed write here means it could not be trusted.
+        if (!registerNodeInPersistence()) {
+            throw new IllegalStateException("CRITICAL: could not register node " + nodeId + " in the cluster.");
+        }
 
         // Only initialize scheduled tasks if scheduler service is available
         if (schedulerService != null) {
@@ -171,17 +174,18 @@ public class ClusterServiceImpl implements ClusterService {
      */
     private void ensureNodeIdNotInUse() {
         ClusterNode existing = persistenceService.load(nodeId, ClusterNode.class);
-        // Same staleness rule as cleanupStaleNodes(): such a node is already considered gone
-        if (existing == null || existing.getLastHeartbeat() < System.currentTimeMillis() - (nodeStatisticsUpdateFrequency * 3)) {
+        if (existing == null || existing.getLastHeartbeat() < staleHeartbeatCutoff()) {
             return;
         }
 
-        LOGGER.warn("Node id {} was registered recently; waiting for its previous owner to stop heartbeating "
-                + "(up to {} ms)", nodeId, nodeStatisticsUpdateFrequency * 6);
+        LOGGER.warn("Node id {} has a recent heartbeat; waiting for its previous owner to stop heartbeating "
+                + "(gives up after {} ms if it does not)", nodeId, nodeStatisticsUpdateFrequency * 6);
         long seenHeartbeat = existing.getLastHeartbeat();
         long seenStartTime = existing.getStartTime();
-        long lastChange = System.currentTimeMillis();
-        long deadline = lastChange + (nodeStatisticsUpdateFrequency * 6);
+        // Elapsed time is measured on the monotonic clock so a system clock step cannot distort the wait
+        long quietPeriod = TimeUnit.MILLISECONDS.toNanos(nodeStatisticsUpdateFrequency * 2);
+        long lastChange = System.nanoTime();
+        long deadline = lastChange + TimeUnit.MILLISECONDS.toNanos(nodeStatisticsUpdateFrequency * 6);
         while (true) {
             try {
                 Thread.sleep(Math.max(1, nodeStatisticsUpdateFrequency / 10));
@@ -193,9 +197,9 @@ public class ClusterServiceImpl implements ClusterService {
             if (current == null) {
                 return;
             }
-            long now = System.currentTimeMillis();
+            long now = System.nanoTime();
             if (current.getLastHeartbeat() != seenHeartbeat || current.getStartTime() != seenStartTime) {
-                if (now >= deadline) {
+                if (now - deadline >= 0) {
                     String errorMessage = "CRITICAL: nodeId " + nodeId + " is already used by another live node. "
                             + "Every node in a cluster needs its own id: set UNOMI_CLUSTER_NODEID "
                             + "(org.apache.unomi.cluster.nodeId) to a unique value on this node.";
@@ -205,11 +209,18 @@ public class ClusterServiceImpl implements ClusterService {
                 seenHeartbeat = current.getLastHeartbeat();
                 seenStartTime = current.getStartTime();
                 lastChange = now;
-            } else if (now - lastChange >= nodeStatisticsUpdateFrequency * 2) {
+            } else if (now - lastChange >= quietPeriod) {
                 LOGGER.info("Node id {} was left by a node that is no longer running, taking it over", nodeId);
                 return;
             }
         }
+    }
+
+    /**
+     * A node is stale if it has not sent a heartbeat for 3x the update frequency.
+     */
+    private long staleHeartbeatCutoff() {
+        return System.currentTimeMillis() - (nodeStatisticsUpdateFrequency * 3);
     }
 
     /**
@@ -233,7 +244,15 @@ public class ClusterServiceImpl implements ClusterService {
                 }
             }
         };
-        schedulerService.createRecurringTask("clusterNodeStatisticsUpdate", nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS, statisticsTask, false);
+        // The heartbeat must run on every node, including non-executor ones: a node that stops
+        // heartbeating is removed as stale and its id looks free to ensureNodeIdNotInUse().
+        schedulerService.newTask("clusterNodeStatisticsUpdate")
+                .withPeriod(nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS)
+                .withFixedRate()
+                .withSimpleExecutor(statisticsTask)
+                .nonPersistent()
+                .runOnAllNodes()
+                .schedule();
 
         // Schedule cleanup of stale nodes
         TimerTask cleanupTask = new TimerTask() {
@@ -270,8 +289,13 @@ public class ClusterServiceImpl implements ClusterService {
                 AtomicReference<Exception> exceptionRef = new AtomicReference<>();
                 Future<?> future = executor.submit(() -> {
                     try {
-                        persistenceService.remove(nodeId, ClusterNode.class);
-                        LOGGER.info("Node {} removed from cluster", nodeId);
+                        // Only remove the record this JVM registered: with a duplicate id, or after a
+                        // rejected startup, the record belongs to another live node.
+                        ClusterNode registered = persistenceService.load(nodeId, ClusterNode.class);
+                        if (registered != null && registered.getStartTime() == nodeStartTime) {
+                            persistenceService.remove(nodeId, ClusterNode.class);
+                            LOGGER.info("Node {} removed from cluster", nodeId);
+                        }
                     } catch (Exception e) {
                         exceptionRef.set(e);
                     }
@@ -336,10 +360,10 @@ public class ClusterServiceImpl implements ClusterService {
     /**
      * Register this node in the persistence service
      */
-    private void registerNodeInPersistence() {
+    private boolean registerNodeInPersistence() {
         if (persistenceService == null) {
             LOGGER.error("Cannot register node: PersistenceService not available");
-            return;
+            return false;
         }
 
         ClusterNode clusterNode = new ClusterNode();
@@ -367,6 +391,7 @@ public class ClusterServiceImpl implements ClusterService {
         } else {
             LOGGER.error("Failed to register node {} in cluster", nodeId);
         }
+        return success;
     }
 
     /**
@@ -491,7 +516,7 @@ public class ClusterServiceImpl implements ClusterService {
             return;
         }
 
-        long cutoffTime = System.currentTimeMillis() - (nodeStatisticsUpdateFrequency * 3); // Node is stale if no heartbeat for 3x the update frequency
+        long cutoffTime = staleHeartbeatCutoff();
 
         Condition staleNodesCondition = new Condition();
         ConditionType propertyConditionType = new ConditionType();

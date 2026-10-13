@@ -21,25 +21,24 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SchedulerServiceNodeIdTest {
 
     @Test
-    void validateNodeIdKeepsConfiguredValue() {
+    void validateNodeIdAcceptsConfiguredValue() {
         SchedulerServiceImpl scheduler = new SchedulerServiceImpl();
         scheduler.setNodeId("unomi-node-2");
-        scheduler.validateNodeId();
-        assertEquals("unomi-node-2", scheduler.getNodeId());
+        assertDoesNotThrow(scheduler::validateNodeId);
     }
 
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = {"", "  "})
-    void validateNodeIdRejectsBlank(String blankNodeId) {
+    @ValueSource(strings = {"", "  ", SchedulerServiceImpl.LEGACY_DEFAULT_NODE_ID})
+    void validateNodeIdRejectsBlankAndLegacySharedDefault(String nodeId) {
         SchedulerServiceImpl scheduler = new SchedulerServiceImpl();
-        scheduler.setNodeId(blankNodeId);
+        scheduler.setNodeId(nodeId);
         assertThrows(IllegalStateException.class, scheduler::validateNodeId);
     }
 
@@ -47,13 +46,5 @@ class SchedulerServiceNodeIdTest {
     void postConstructFailsOnBlankNodeIdLikeTheClusterService() {
         SchedulerServiceImpl scheduler = new SchedulerServiceImpl();
         assertThrows(IllegalStateException.class, scheduler::postConstruct);
-    }
-
-    @Test
-    void validateNodeIdAcceptsLegacyDefault() {
-        SchedulerServiceImpl scheduler = new SchedulerServiceImpl();
-        scheduler.setNodeId(SchedulerServiceImpl.LEGACY_DEFAULT_NODE_ID);
-        scheduler.validateNodeId();
-        assertEquals(SchedulerServiceImpl.LEGACY_DEFAULT_NODE_ID, scheduler.getNodeId());
     }
 }

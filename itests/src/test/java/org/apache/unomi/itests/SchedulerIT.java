@@ -110,13 +110,14 @@ public class SchedulerIT extends BaseIT {
 
     @Test
     public void testSchedulerNodeIdFollowsClusterNodeId() throws Exception {
-        // No node id is configured for the ITs: the scheduler must resolve to the cluster node id
-        // through the shipped configuration, not to a scheduler-specific default.
-        String schedulerNodeId = schedulerService.getNodeId();
+        // Only the cluster node id is configured for the ITs (to a non-default value): the scheduler
+        // must resolve to it through the shipped configuration.
+        assertEquals("Scheduler node id should follow the cluster node id", CLUSTER_NODE_ID, schedulerService.getNodeId());
+
         ClusterService clusterService = getOsgiService(ClusterService.class, 600000);
-        keepTrying("Scheduler node id " + schedulerNodeId + " should be a registered cluster node",
+        keepTrying("Cluster node " + CLUSTER_NODE_ID + " should be registered",
                 clusterService::getClusterNodes,
-                nodes -> nodes.stream().anyMatch(node -> schedulerNodeId.equals(node.getItemId())),
+                nodes -> nodes.stream().anyMatch(node -> CLUSTER_NODE_ID.equals(node.getItemId())),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
