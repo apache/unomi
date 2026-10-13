@@ -96,6 +96,7 @@ import org.junit.runners.Suite.SuiteClasses;
         TenantIT.class,
         BackgroundTenantTasksIT.class,
         SchedulerIT.class,
+        NodeIdentityIT.class,
         EventsCollectorIT.class,
         RolloverIT.class,
         HealthCheckIT.class

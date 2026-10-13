@@ -368,6 +368,7 @@ public class ClusterServiceImpl implements ClusterService {
 
         ClusterNode clusterNode = new ClusterNode();
         clusterNode.setItemId(nodeId);
+        clusterNode.setNodeName(bundleWatcher != null ? bundleWatcher.getNodeName() : null);
         clusterNode.setPublicHostAddress(publicAddress);
         clusterNode.setInternalHostAddress(internalAddress);
         clusterNode.setStartTime(nodeStartTime);

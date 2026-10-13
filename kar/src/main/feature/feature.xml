@@ -65,6 +65,7 @@
         <bundle>mvn:org.apache.groovy/groovy-xml/${groovy.version}</bundle>
         <bundle>mvn:org.apache.groovy/groovy-json/${groovy.version}</bundle>
 
+        <configfile finalname="/etc/org.apache.unomi.node.cfg">mvn:org.apache.unomi/unomi-lifecycle-watcher/${project.version}/cfg/nodecfg</configfile>
         <bundle>mvn:org.apache.unomi/unomi-lifecycle-watcher/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-api/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-common/${project.version}</bundle>

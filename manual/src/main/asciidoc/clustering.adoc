@@ -30,23 +30,46 @@ Configure each node in `etc/unomi.custom.system.properties` (or via environment 
 ----
 org.apache.unomi.cluster.public.address=${env:UNOMI_CLUSTER_PUBLIC_ADDRESS:-http://localhost:8181}
 org.apache.unomi.cluster.internal.address=${env:UNOMI_CLUSTER_INTERNAL_ADDRESS:-https://localhost:9443}
-org.apache.unomi.cluster.nodeId=${env:UNOMI_CLUSTER_NODEID:-unomi-node-1}
+org.apache.unomi.cluster.nodeId=${env:UNOMI_CLUSTER_NODEID:-}
+org.apache.unomi.cluster.nodeName=${env:UNOMI_CLUSTER_NODENAME:-}
 org.apache.unomi.cluster.nodeStatisticsUpdateFrequency=${env:UNOMI_CLUSTER_NODESTATISTICS_UPDATEFREQUENCY:-10000}
 ----
 
 * **public.address** — URL other nodes and operators use to reach this node (HTTP, port 8181 by default).
 * **internal.address** — HTTPS URL for the private REST API (port 9443 by default).
-* **nodeId** — **Must be unique** on every node in the cluster (for example `unomi-node-1`, `unomi-node-2`).
-  The cluster scheduler uses the same value as `scheduler.nodeId` by default, so setting
-  `UNOMI_CLUSTER_NODEID` is enough for exclusive tasks. Override with `UNOMI_SCHEDULER_NODEID`
-  only when needed (see <<_scheduler,Scheduler>>).
+* **nodeId** — Optional. Identifies the node in the cluster and in the scheduler; when it is not set, Unomi
+  generates one (see <<_node_identity,Node identity>>). When you set it, it **must be unique** in the cluster.
+* **nodeName** — Optional user friendly name, shown next to the id. Defaults to the host name.
 * **nodeStatisticsUpdateFrequency** — Interval in milliseconds between heartbeat / statistics updates (default 10 seconds).
 
-If `nodeId` is blank, startup fails.
+[#_node_identity]
+==== Node identity
 
-A single node needs no configuration: it runs as `unomi-node-1`. To grow it into a cluster, leave that node as it
-is and give every additional node its own `UNOMI_CLUSTER_NODEID` (on Kubernetes, map it from the pod name of a
-StatefulSet so it stays stable).
+Every node needs an id that no other node uses and that it keeps across restarts: the id owns the node's cluster
+record and its scheduler task locks. Nothing has to be configured for this.
+
+* On its first start a node generates an id made of its name and a random suffix, for example `web-1-3f9a2c1b`, and
+  stores it with its name in `etc/org.apache.unomi.node.cfg`. Later starts reuse it. A second node, container or
+  copy of the image generates its own, so a single node grows into a cluster without any change.
+* `UNOMI_CLUSTER_NODEID` (`org.apache.unomi.cluster.nodeId`) sets the id explicitly. It replaces the stored id and
+  is stored in turn, so the node keeps it after the variable is removed.
+* The name comes from `UNOMI_CLUSTER_NODENAME` (`org.apache.unomi.cluster.nodeName`), or from the host name. It is
+  read again at every start: renaming a node does not change its id.
+* The scheduler uses the same id. `UNOMI_SCHEDULER_NODEID` gives it one of its own, which must then be unique per
+  node as well (see <<_scheduler,Scheduler>>).
+
+The stored id lives in the node's `etc/` directory. It is lost when that directory is, for example when a container
+is recreated without a volume for it; the node then simply joins under a new id, the old cluster record is removed
+after three heartbeat intervals and its task locks expire. To give a node its previous id back, start it once with
+`UNOMI_CLUSTER_NODEID` set to that id (it appears in the node's log at startup and in the cluster and task REST
+endpoints). To make a node take a new id, blank `nodeId` in `etc/org.apache.unomi.node.cfg` and restart it; do not
+delete the file, Unomi could then no longer save the id there.
+
+Set the id through `UNOMI_CLUSTER_NODEID` or `org.apache.unomi.cluster.nodeId`, not by editing
+`etc/org.apache.unomi.cluster.cfg`: a value typed there reaches the cluster service but not the scheduler.
+
+Copying an installation together with its `etc/` directory (a cloned virtual machine, an image built from a node
+that already ran) copies the id too. The checks below catch that.
 
 A node that starts with an id whose record was updated recently (within three heartbeat intervals) waits for
 that record to stop moving before claiming the id:

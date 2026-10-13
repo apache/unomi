@@ -510,9 +510,9 @@ Every checker tick (~1s) on a node runs recovery:
 
 ==== Operational checklist for clustering
 
-* Give each JVM a **stable unique** cluster `nodeId` (`UNOMI_CLUSTER_NODEID`). The scheduler uses
-  that value as `scheduler.nodeId` by default, so exclusive tasks are not owned by two nodes at once.
-  Override with `UNOMI_SCHEDULER_NODEID` only when the scheduler identity must differ.
+* Each JVM needs a **stable unique** node id, so exclusive tasks are not owned by two nodes at once. Unomi
+  generates and remembers one per node (see <<_node_identity,Node identity>>); the scheduler uses it unless
+  `UNOMI_SCHEDULER_NODEID` gives it an id of its own.
 * Put at least one `scheduler.executorNode=true` in the cluster for persistent work.
 * Use `disallowParallelExecution()` for singleton side-effecting jobs.
 * Keep `scheduler.lockTimeout` at ~5s or above (default 10s): lease renewal keeps long executions safe automatically, but the heartbeat needs headroom over the `wait_for` refresh cycle (see <<_renewal_timing_limits_with_the_default_1_s_refresh_interval,Renewal timing limits>>).
@@ -612,7 +612,7 @@ Scheduler settings live in `etc/org.apache.unomi.services.cfg` (OSGi PID `org.ap
 |Property |Default |Description
 
 |`scheduler.thread.poolSize` |`5` |Thread pool size for task execution
-|`scheduler.nodeId` |same as `org.apache.unomi.cluster.nodeId` |Unique ID for this node in scheduler locks and task metadata. Defaults to the cluster node id (`UNOMI_CLUSTER_NODEID`). Optional override: `UNOMI_SCHEDULER_NODEID` / `org.apache.unomi.scheduler.nodeId`, which must then be unique per node as well. A blank value, or the former shared default `test-scheduler-node` left in an upgraded `org.apache.unomi.services.cfg`, fails startup.
+|`scheduler.nodeId` |the node id |Unique ID for this node in scheduler locks and task metadata. Defaults to the node id, generated or set with `UNOMI_CLUSTER_NODEID` (see <<_node_identity,Node identity>>). Optional override: `UNOMI_SCHEDULER_NODEID` / `org.apache.unomi.scheduler.nodeId`, which must then be unique per node as well. The former shared default `test-scheduler-node` fails startup.
 |`scheduler.executorNode` |`true` |Whether this node runs tasks. Set `false` on dedicated REST-only nodes if you split roles.
 |`scheduler.lockTimeout` |`10000` |Lock timeout in milliseconds
 |`scheduler.purgeTaskEnabled` |`true` |Enables the built-in periodic purge of old completed tasks
@@ -630,8 +630,8 @@ scheduler.executorNode=true
 scheduler.executorNode=false
 ----
 
-Each node also needs its own cluster node id, which the scheduler follows. It is not set in this file but
-through the environment (or `org.apache.unomi.cluster.nodeId` in `etc/custom.system.properties`), for example
+Each node also needs its own node id, which the scheduler follows. Unomi generates one per node; to choose
+readable ones, set them through the environment (not in this file), for example
 `UNOMI_CLUSTER_NODEID=unomi-executor-1`, `unomi-executor-2` and `unomi-api-3`.
 
 After changing configuration, restart the Unomi bundle or the Karaf container.

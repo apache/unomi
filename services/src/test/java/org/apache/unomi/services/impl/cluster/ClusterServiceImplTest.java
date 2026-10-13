@@ -164,6 +164,16 @@ public class ClusterServiceImplTest {
 
     // Add a new test to verify behavior when BundleWatcher is not available
     @Test
+    public void testInitRegistersNodeNameFromBundleWatcher() {
+        when(bundleWatcher.getNodeName()).thenReturn("web-1");
+        clusterService.setBundleWatcher(bundleWatcher);
+
+        clusterService.init();
+
+        assertEquals("web-1", persistenceService.load(TEST_NODE_ID, ClusterNode.class).getNodeName());
+    }
+
+    @Test
     public void testInitRegistersNodeInPersistenceWithoutBundleWatcher() {
         // Execute without setting a BundleWatcher
         clusterService.init();

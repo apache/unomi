@@ -19,6 +19,8 @@ package org.apache.unomi.lifecycle;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.ServerInfo;
 import org.osgi.framework.*;
+import org.osgi.service.cm.Configuration;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +41,14 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BundleWatcherImpl.class.getName());
 
+    /** Set by the operator (UNOMI_CLUSTER_NODEID / UNOMI_CLUSTER_NODENAME); blank when the id is left to Unomi. */
+    static final String CLUSTER_NODE_ID_PROPERTY = "org.apache.unomi.cluster.nodeId";
+    static final String CLUSTER_NODE_NAME_PROPERTY = "org.apache.unomi.cluster.nodeName";
+    /** Set when the scheduler must use its own id (UNOMI_SCHEDULER_NODEID). */
+    static final String SCHEDULER_NODE_ID_OVERRIDE_PROPERTY = "org.apache.unomi.scheduler.nodeId";
+    /** Karaf's {@code <pid>.<key>} override of {@code scheduler.nodeId} in org.apache.unomi.services. */
+    static final String SCHEDULER_NODE_ID_PROPERTY = "org.apache.unomi.services.scheduler.nodeId";
+
     private long startupTime;
     private Map<String, Boolean> requiredBundles = new ConcurrentHashMap<>();
     private Map<String, Boolean> requiredBundlesFromFeatures = new ConcurrentHashMap<>();
@@ -51,6 +61,8 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
     private long matchedRequiredServicesCount = 0;
 
     private BundleContext bundleContext;
+    private ConfigurationAdmin configurationAdmin;
+    private volatile NodeIdentity nodeIdentity;
     private volatile boolean startupMessageAlreadyDisplayed = false;
     private boolean shutdownMessageAlreadyDisplayed = false;
 
@@ -86,7 +98,12 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         this.bundleContext = bundleContext;
     }
 
+    public void setConfigurationAdmin(ConfigurationAdmin configurationAdmin) {
+        this.configurationAdmin = configurationAdmin;
+    }
+
     public void init() {
+        resolveNodeIdentity();
         scheduler = Executors.newSingleThreadScheduledExecutor();
         checkExistingBundles();
         bundleContext.addBundleListener(this);
@@ -94,6 +111,66 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         startupTime = System.currentTimeMillis();
         System.out.println("Initializing Unomi...");
         LOGGER.info("Bundle watcher initialized.");
+    }
+
+    /**
+     * Decides the identity of this node and makes it the id of the cluster and scheduler services.
+     * <p>
+     * This runs before any other Unomi bundle can start (they need the {@link BundleWatcher} service),
+     * and the two system properties set here are the ones Karaf substitutes for {@code nodeId} in
+     * org.apache.unomi.cluster and {@code scheduler.nodeId} in org.apache.unomi.services when those
+     * configurations are read. The identity is remembered in the {@link NodeIdentity#PID} configuration,
+     * which Karaf writes back to etc/, so the node keeps its id across restarts.
+     */
+    void resolveNodeIdentity() {
+        Configuration configuration = null;
+        Dictionary<String, Object> stored = null;
+        try {
+            configuration = configurationAdmin.getConfiguration(NodeIdentity.PID, "?");
+            stored = configuration.getProperties();
+        } catch (Exception e) {
+            LOGGER.warn("Could not read the stored node identity ({})", NodeIdentity.PID, e);
+        }
+        String storedId = stored == null ? null : Objects.toString(stored.get(NodeIdentity.NODE_ID), null);
+        String storedName = stored == null ? null : Objects.toString(stored.get(NodeIdentity.NODE_NAME), null);
+
+        NodeIdentity identity = NodeIdentity.resolve(System.getProperty(CLUSTER_NODE_ID_PROPERTY), storedId,
+                System.getProperty(CLUSTER_NODE_NAME_PROPERTY), NodeIdentity.localHostName(), NodeIdentity::randomSuffix);
+
+        if (configuration != null && !(identity.getNodeId().equals(storedId) && identity.getNodeName().equals(storedName))) {
+            try {
+                // Keep every other property: felix.fileinstall.filename is what ties the configuration to its file
+                Dictionary<String, Object> updated = new Hashtable<>();
+                if (stored != null) {
+                    for (String key : Collections.list(stored.keys())) {
+                        updated.put(key, stored.get(key));
+                    }
+                }
+                updated.put(NodeIdentity.NODE_ID, identity.getNodeId());
+                updated.put(NodeIdentity.NODE_NAME, identity.getNodeName());
+                configuration.update(updated);
+            } catch (Exception e) {
+                LOGGER.warn("Could not store the node identity: node id {} is only valid until this node stops. "
+                        + "Set UNOMI_CLUSTER_NODEID to keep it.", identity.getNodeId(), e);
+            }
+        }
+
+        System.setProperty(CLUSTER_NODE_ID_PROPERTY, identity.getNodeId());
+        if (StringUtils.isBlank(System.getProperty(SCHEDULER_NODE_ID_OVERRIDE_PROPERTY))) {
+            System.setProperty(SCHEDULER_NODE_ID_PROPERTY, identity.getNodeId());
+        }
+        nodeIdentity = identity;
+        LOGGER.info("Node identity: id={}, name={}", identity.getNodeId(), identity.getNodeName());
+    }
+
+    @Override
+    public String getNodeId() {
+        return nodeIdentity == null ? null : nodeIdentity.getNodeId();
+    }
+
+    @Override
+    public String getNodeName() {
+        return nodeIdentity == null ? null : nodeIdentity.getNodeName();
     }
 
     @Override

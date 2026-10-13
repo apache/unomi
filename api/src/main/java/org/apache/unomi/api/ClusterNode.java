@@ -39,6 +39,7 @@ public class ClusterNode extends Item {
     private boolean master;
     private boolean data;
     private long startTime;
+    private String nodeName;
     private long lastHeartbeat;
 
     // Server information
@@ -194,6 +195,25 @@ public class ClusterNode extends Item {
      */
     public void setStartTime(long startTime) {
         this.startTime = startTime;
+    }
+
+    /**
+     * User friendly name of this node. Unlike the item id it is only informative and may change
+     * between restarts.
+     *
+     * @return node name, or {@code null} when unknown
+     */
+    public String getNodeName() {
+        return nodeName;
+    }
+
+    /**
+     * Sets the user friendly name of this node.
+     *
+     * @param nodeName node name
+     */
+    public void setNodeName(String nodeName) {
+        this.nodeName = nodeName;
     }
 
     /**

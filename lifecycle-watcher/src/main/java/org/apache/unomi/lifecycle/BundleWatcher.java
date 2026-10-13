@@ -36,6 +36,21 @@ public interface BundleWatcher {
     List<ServerInfo> getServerInfos();
 
     /**
+     * Retrieves the id of this node, which stays the same across restarts. It is the id the cluster
+     * and the scheduler use, unless they are configured with their own.
+     *
+     * @return the node id
+     */
+    String getNodeId();
+
+    /**
+     * Retrieves the user friendly name of this node.
+     *
+     * @return the node name
+     */
+    String getNodeName();
+
+    /**
      * Indicates whether Unomi startup has completed. Implementations typically track
      * required bundles and initialization tasks to decide when the system is fully ready.
      *

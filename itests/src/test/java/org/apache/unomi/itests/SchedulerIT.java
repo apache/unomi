@@ -20,7 +20,6 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
 import org.junit.After;
@@ -106,19 +105,6 @@ public class SchedulerIT extends BaseIT {
         assertNotNull("Task should not be null", task);
         assertEquals("Task ID should match", testTaskId, task.getItemId());
         assertEquals("Task type should match", TEST_TASK_TYPE, task.getTaskType());
-    }
-
-    @Test
-    public void testSchedulerNodeIdFollowsClusterNodeId() throws Exception {
-        // Only the cluster node id is configured for the ITs (to a non-default value): the scheduler
-        // must resolve to it through the shipped configuration.
-        assertEquals("Scheduler node id should follow the cluster node id", CLUSTER_NODE_ID, schedulerService.getNodeId());
-
-        ClusterService clusterService = getOsgiService(ClusterService.class, 600000);
-        keepTrying("Cluster node " + CLUSTER_NODE_ID + " should be registered",
-                clusterService::getClusterNodes,
-                nodes -> nodes.stream().anyMatch(node -> CLUSTER_NODE_ID.equals(node.getItemId())),
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test

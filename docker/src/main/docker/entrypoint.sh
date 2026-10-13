@@ -75,6 +75,66 @@ check_required_password UNOMI_ROOT_PASSWORD \
 check_required_password UNOMI_HEALTHCHECK_PASSWORD \
     org.apache.unomi.healthcheck.password UNOMI_SKIP_HEALTHCHECK_PASSWORD_CHECK || exit 1
 
+# Refuse to start on environment values that cannot work. A variable that is set but blank (typically
+# an undefined variable in a compose file) does not mean "empty": the ${env:NAME:-default} lookups in
+# etc/custom.system.properties read it as unset and silently use the default. That is harmless for
+# most variables, so they only get a warning, but not for the search engine addresses.
+is_blank() {
+    [ -z "$(printf '%s' "$1" | tr -d '[:space:]')" ]
+}
+
+check_environment() {
+    _errors=""
+    _fatal_when_blank=""
+    case "${UNOMI_DISTRIBUTION}" in
+        *opensearch*) _fatal_when_blank="UNOMI_OPENSEARCH_ADDRESSES" ;;
+        *elasticsearch*)
+            _fatal_when_blank="UNOMI_ELASTICSEARCH_ADDRESSES"
+            if [ "${UNOMI_ELASTICSEARCH_USERNAME+set}" != "${UNOMI_ELASTICSEARCH_PASSWORD+set}" ]; then
+                _errors="${_errors}  UNOMI_ELASTICSEARCH_USERNAME and UNOMI_ELASTICSEARCH_PASSWORD must be set together.
+"
+            fi
+            ;;
+    esac
+
+    for _name in $(env | sed -n 's/^\(UNOMI_[A-Za-z0-9_]*\)=.*/\1/p'); do
+        eval _value=\"\${$_name}\"
+        is_blank "${_value}" || continue
+        case " ${_fatal_when_blank} " in
+            *" ${_name} "*)
+                _errors="${_errors}  ${_name} is set but blank.
+"
+                ;;
+            *)
+                # The passwords have their own guard above
+                case "${_name}" in
+                    UNOMI_ROOT_PASSWORD|UNOMI_HEALTHCHECK_PASSWORD) ;;
+                    *) echo "WARNING: ${_name} is set but blank, its default value will be used." >&2 ;;
+                esac
+                ;;
+        esac
+    done
+
+    if [ "${UNOMI_SCHEDULER_NODEID}" = "test-scheduler-node" ]; then
+        _errors="${_errors}  UNOMI_SCHEDULER_NODEID is the former shared default 'test-scheduler-node'.
+"
+    fi
+
+    if [ -n "${_errors}" ]; then
+        cat >&2 <<EOF
+ERROR: invalid environment, Apache Unomi will not start:
+
+${_errors}
+Give each variable listed above a value, or remove it. A node id does not have to be set: Unomi
+generates one and remembers it in etc/org.apache.unomi.node.cfg. UNOMI_SCHEDULER_NODEID is only for
+giving the scheduler an id of its own, which must then be unique per node.
+EOF
+        return 1
+    fi
+}
+
+check_environment || exit 1
+
 # Function to check cluster health for a specific node
 check_node_health() {
     local node_url="$1"
