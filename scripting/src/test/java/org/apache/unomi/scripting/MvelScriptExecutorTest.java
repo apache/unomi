@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -148,6 +149,37 @@ public class MvelScriptExecutorTest {
         }
         System.out.println("result=" + result);
         assertFalse("Vulnerability successfully executed ! File created at " + vulnFile.getCanonicalPath(), vulnFile.exists());
+    }
+
+    @Test
+    public void testExpressionCacheIsBoundedAndSkipsRejectedScripts() throws Exception {
+        System.setProperty("org.apache.unomi.scripting.mvel.expressions.cache.max.size", "10");
+        try {
+            MvelScriptExecutor boundedExecutor = new MvelScriptExecutor();
+            boundedExecutor.setExpressionFilterFactory(emptyAllowList());
+            String padding = "x".repeat(4096);
+            Map<String, Object> ctx = new HashMap<>();
+            for (int i = 0; i < 50; i++) {
+                boundedExecutor.execute("rejected-script-" + i + "-" + padding, ctx);
+            }
+            Field mvelExpressionsField = MvelScriptExecutor.class.getDeclaredField("mvelExpressions");
+            mvelExpressionsField.setAccessible(true);
+            Map<?, ?> cache = (Map<?, ?>) mvelExpressionsField.get(boundedExecutor);
+            assertEquals("Rejected scripts must not be stored", 0, cache.size());
+
+            boundedExecutor.setExpressionFilterFactory(allowAllExpressions());
+            for (int i = 0; i < 30; i++) {
+                boundedExecutor.execute(i + "+" + i, ctx);
+            }
+            assertTrue("Accepted-script cache must be size-bounded but grew to " + cache.size(),
+                    cache.size() <= 10);
+            for (Object cacheKey : cache.keySet()) {
+                assertTrue("Cache keys must be fixed-size hashes, not the raw script text",
+                        ((String) cacheKey).length() <= 64);
+            }
+        } finally {
+            System.clearProperty("org.apache.unomi.scripting.mvel.expressions.cache.max.size");
+        }
     }
 
     private void assertPublicEvalDoesNotReturnTwo(String expression) {
