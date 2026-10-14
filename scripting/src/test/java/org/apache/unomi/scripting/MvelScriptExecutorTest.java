@@ -29,7 +29,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public class MvelScriptExecutorTest {
 
@@ -42,14 +46,45 @@ public class MvelScriptExecutorTest {
 
     @Before
     public void setup() {
-        scriptExecutor.setExpressionFilterFactory(new ExpressionFilterFactory() {
-            @Override
-            public ExpressionFilter getExpressionFilter(String filterCollection) {
-                Set<Pattern> allowedExpressions = new HashSet<>();
-                Set<Pattern> forbiddenExpressions = new HashSet<>();
-                return new ExpressionFilter(allowedExpressions, forbiddenExpressions);
-            }
-        });
+        scriptExecutor.setExpressionFilterFactory(emptyAllowList());
+    }
+
+    @Test
+    public void testAllowlistedArithmeticStillRuns() {
+        scriptExecutor.setExpressionFilterFactory(allowAllExpressions());
+        Object result = scriptExecutor.execute("1+1", new HashMap<String, Object>());
+        assertEquals(2, ((Number) result).intValue());
+    }
+
+    @Test
+    public void testTighteningPolicyRejectsAnAlreadyCachedScript() {
+        // accept and cache the compiled script under a permissive policy
+        scriptExecutor.setExpressionFilterFactory(allowAllExpressions());
+        assertEquals(2, ((Number) scriptExecutor.execute("1+1", new HashMap<String, Object>())).intValue());
+        // tighten the policy at runtime: the same (cached) script must now be rejected, not re-run from cache
+        scriptExecutor.setExpressionFilterFactory(emptyAllowList());
+        assertNull(scriptExecutor.execute("1+1", new HashMap<String, Object>()));
+    }
+
+    @Test
+    public void testNestedPublicEvalDoesNotRun() {
+        scriptExecutor.setExpressionFilterFactory(allowAllExpressions());
+        assertPublicEvalDoesNotReturnTwo("org.mvel2.MVEL.eval(\"1+1\")");
+        assertPublicEvalDoesNotReturnTwo("org.mvel2.MVEL.eval ( \"1+1\" )");
+        assertPublicEvalDoesNotReturnTwo("org.mvel2.MVEL.ev\u200Bal(\"1+1\")");
+        assertPublicEvalDoesNotReturnTwo("org.mvel2.templates.TemplateRuntime.eval(\"1+1\", new java.util.HashMap())");
+    }
+
+    @Test
+    public void testJsr223ScriptEngineGadgetIsBlocked() {
+        // Even with the expression text filter disabled, naming the JSR-223 MVEL engine (a nested-eval
+        // sink whose forbid-regex-evading methods are compiledScript/evaluate) must be refused because
+        // org.mvel2 is not on the allow list and the class is on the always-forbidden safety net.
+        scriptExecutor.setExpressionFilterFactory(allowAllExpressions());
+        assertClassLoaderRefused("new org.mvel2.jsr223.MvelScriptEngine().eval(\"1+1\", null)");
+        assertClassLoaderRefused(
+                "new org.mvel2.jsr223.MvelScriptEngine().evaluate("
+                        + "new org.mvel2.jsr223.MvelScriptEngine().compiledScript(\"1+1\"), null)");
     }
 
     @Test
@@ -113,6 +148,69 @@ public class MvelScriptExecutorTest {
         }
         System.out.println("result=" + result);
         assertFalse("Vulnerability successfully executed ! File created at " + vulnFile.getCanonicalPath(), vulnFile.exists());
+    }
+
+    private void assertPublicEvalDoesNotReturnTwo(String expression) {
+        Object result = null;
+        try {
+            result = scriptExecutor.execute(expression, new HashMap<String, Object>());
+        } catch (Throwable t) {
+            // expected: class-loader or parser refuses the public eval API
+        }
+        if (result instanceof Number) {
+            assertNotEquals(2, ((Number) result).intValue());
+        } else {
+            assertNotEquals(2, result);
+            assertNotEquals(Integer.valueOf(2), result);
+        }
+    }
+
+    /**
+     * Stronger oracle than {@link #assertPublicEvalDoesNotReturnTwo}: it proves the class-loader deny
+     * actually fired (a {@link ClassNotFoundException} for a disallowed class somewhere in the cause
+     * chain) rather than the expression merely failing to compile for an unrelated reason.
+     */
+    private void assertClassLoaderRefused(String expression) {
+        Object result = null;
+        Throwable caught = null;
+        try {
+            result = scriptExecutor.execute(expression, new HashMap<String, Object>());
+        } catch (Throwable t) {
+            caught = t;
+        }
+        assertNull("expression must not have produced a value: " + expression, result);
+        boolean refusedByClassLoader = false;
+        for (Throwable t = caught; t != null; t = t.getCause()) {
+            if (t instanceof ClassNotFoundException && String.valueOf(t.getMessage()).contains("not allowed")) {
+                refusedByClassLoader = true;
+                break;
+            }
+            if (t.getCause() == t) {
+                break;
+            }
+        }
+        assertTrue("expected the filtering class loader to refuse a class in: " + expression
+                + " but got: " + caught, refusedByClassLoader);
+    }
+
+    private static ExpressionFilterFactory emptyAllowList() {
+        return new ExpressionFilterFactory() {
+            @Override
+            public ExpressionFilter getExpressionFilter(String filterCollection) {
+                Set<Pattern> allowedExpressions = new HashSet<>();
+                Set<Pattern> forbiddenExpressions = new HashSet<>();
+                return new ExpressionFilter(allowedExpressions, forbiddenExpressions);
+            }
+        };
+    }
+
+    private static ExpressionFilterFactory allowAllExpressions() {
+        return new ExpressionFilterFactory() {
+            @Override
+            public ExpressionFilter getExpressionFilter(String filterCollection) {
+                return new ExpressionFilter(null, null);
+            }
+        };
     }
 
     private static Event generateMockEvent() {
