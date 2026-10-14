@@ -20,8 +20,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class NodeIdentityTest {
@@ -33,39 +35,38 @@ class NodeIdentityTest {
     @Test
     void generatesIdFromNameWhenNothingIsConfiguredOrStored() {
         NodeIdentity identity = resolve(null, " ", null, "web-1");
-        assertEquals("web-1-0a1b2c3d", identity.getNodeId());
-        assertEquals("web-1", identity.getNodeName());
+        assertEquals("web-1-0a1b2c3d", identity.nodeId);
+        assertEquals("web-1", identity.nodeName);
+        assertEquals("generated", identity.source);
     }
 
     @Test
-    void reusesStoredId() {
-        assertEquals("web-1-99999999", resolve("", "web-1-99999999", null, "web-1").getNodeId());
-    }
-
-    @Test
-    void storedIdDoesNotFollowNameChanges() {
-        NodeIdentity identity = resolve(null, "web-1-99999999", "frontend", "web-2");
-        assertEquals("web-1-99999999", identity.getNodeId());
-        assertEquals("frontend", identity.getNodeName());
+    void storedIdIsReusedAndDoesNotFollowNameChanges() {
+        NodeIdentity identity = resolve("", "web-1-99999999", "frontend", "web-2");
+        assertEquals("web-1-99999999", identity.nodeId);
+        assertEquals("frontend", identity.nodeName);
+        assertEquals("stored", identity.source);
     }
 
     @Test
     void configuredIdWinsOverStoredId() {
-        assertEquals("unomi-node-7", resolve(" unomi-node-7 ", "web-1-99999999", null, "web-1").getNodeId());
+        NodeIdentity identity = resolve(" unomi-node-7 ", "web-1-99999999", null, "web-1");
+        assertEquals("unomi-node-7", identity.nodeId);
+        assertEquals("configured", identity.source);
     }
 
     @Test
     void configuredNameWinsOverHostName() {
         NodeIdentity identity = resolve(null, null, "Frontend A", "web-1");
-        assertEquals("Frontend A", identity.getNodeName());
-        assertEquals("frontend-a-0a1b2c3d", identity.getNodeId());
+        assertEquals("Frontend A", identity.nodeName);
+        assertEquals("frontend-a-0a1b2c3d", identity.nodeId);
     }
 
     @Test
     void fallsBackToDefaultNameWithoutHostName() {
         NodeIdentity identity = resolve(null, null, " ", null);
-        assertEquals("unomi", identity.getNodeName());
-        assertEquals("unomi-0a1b2c3d", identity.getNodeId());
+        assertEquals("unomi", identity.nodeName);
+        assertEquals("unomi-0a1b2c3d", identity.nodeId);
     }
 
     @ParameterizedTest
@@ -83,8 +84,12 @@ class NodeIdentityTest {
 
     @Test
     void randomSuffixIsEightHexCharactersAndVaries() {
-        String suffix = NodeIdentity.randomSuffix();
-        assertTrue(suffix.matches("[0-9a-f]{8}"), suffix);
-        assertNotEquals(suffix + NodeIdentity.randomSuffix(), NodeIdentity.randomSuffix() + NodeIdentity.randomSuffix());
+        Set<String> suffixes = new HashSet<>();
+        for (int i = 0; i < 200; i++) {
+            String suffix = NodeIdentity.randomSuffix();
+            assertTrue(suffix.matches("[0-9a-f]{8}"), suffix);
+            suffixes.add(suffix);
+        }
+        assertTrue(suffixes.size() > 190, "suffixes should differ from one another");
     }
 }

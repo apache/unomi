@@ -63,10 +63,6 @@ class ShippedAdminPasswordConfigTest {
     /** Last line of the guard; the slice is meaningless unless this is actually reached. */
     private static final String ENTRYPOINT_GUARD_END = "UNOMI_SKIP_HEALTHCHECK_PASSWORD_CHECK || exit 1";
 
-    /** First and last line of the environment guard that follows the password guard in entrypoint.sh. */
-    private static final String ENTRYPOINT_ENV_GUARD_START = "is_blank()";
-    private static final String ENTRYPOINT_ENV_GUARD_END = "check_environment || exit 1";
-
     /** Default stub launcher name, mirroring {@code bin/karaf}. */
     private static final String DEFAULT_KARAF_SCRIPT = "karaf";
 
@@ -242,7 +238,7 @@ class ShippedAdminPasswordConfigTest {
     @Test
     void entrypoint_refusesToStartWhenPasswordsMissing(@TempDir Path workDir) throws Exception {
         assumeTrue(hasPosixShell(), "requires a POSIX shell");
-        Path guard = extractEntrypointGuard(workDir, ENTRYPOINT_GUARD_START, ENTRYPOINT_GUARD_END);
+        Path guard = extractEntrypointPasswordGuard(workDir);
 
         assertEquals(1, runShell(guard, workDir, new HashMap<>()).exitCode,
                 "the Docker entrypoint must exit non-zero without passwords");
@@ -253,53 +249,6 @@ class ShippedAdminPasswordConfigTest {
         Result provided = runShell(guard, workDir, env);
         assertEquals(0, provided.exitCode, provided.output);
         assertTrue(provided.output.contains("GUARD-PASSED"), provided.output);
-    }
-
-    /**
-     * The entrypoint must stop on an environment that cannot work, before waiting for the search engine,
-     * and name every offending variable at once.
-     */
-    @Test
-    void entrypoint_refusesToStartOnUnusableEnvironment(@TempDir Path workDir) throws Exception {
-        assumeTrue(hasPosixShell(), "requires a POSIX shell");
-        Path guard = extractEntrypointGuard(workDir, ENTRYPOINT_ENV_GUARD_START, ENTRYPOINT_ENV_GUARD_END);
-
-        Map<String, String> env = new HashMap<>();
-        env.put("UNOMI_DISTRIBUTION", "unomi-distribution-elasticsearch");
-        env.put("UNOMI_ELASTICSEARCH_ADDRESSES", "");
-        env.put("UNOMI_ELASTICSEARCH_USERNAME", "elastic");
-        env.put("UNOMI_SCHEDULER_NODEID", "test-scheduler-node");
-        Result invalid = runShell(guard, workDir, env);
-
-        assertEquals(1, invalid.exitCode, invalid.output);
-        assertTrue(invalid.output.contains("UNOMI_ELASTICSEARCH_ADDRESSES is set but blank"), invalid.output);
-        assertTrue(invalid.output.contains("UNOMI_ELASTICSEARCH_USERNAME and UNOMI_ELASTICSEARCH_PASSWORD must be set together"),
-                invalid.output);
-        assertTrue(invalid.output.contains("'test-scheduler-node'"), invalid.output);
-        assertFalse(invalid.output.contains("GUARD-PASSED"), invalid.output);
-    }
-
-    @Test
-    void entrypoint_startsWithoutNodeIdAndOnlyWarnsAboutHarmlessBlanks(@TempDir Path workDir) throws Exception {
-        assumeTrue(hasPosixShell(), "requires a POSIX shell");
-        Path guard = extractEntrypointGuard(workDir, ENTRYPOINT_ENV_GUARD_START, ENTRYPOINT_ENV_GUARD_END);
-
-        // No node id: Unomi generates one. A blank one (undefined variable in a compose file) means the
-        // same, so it is reported but not fatal; a blank password is left to the password guard.
-        Map<String, String> env = new HashMap<>();
-        env.put("UNOMI_DISTRIBUTION", "unomi-distribution-opensearch");
-        env.put("UNOMI_OPENSEARCH_ADDRESSES", "opensearch:9200");
-        Result withoutNodeId = runShell(guard, workDir, env);
-        assertEquals(0, withoutNodeId.exitCode, withoutNodeId.output);
-        assertTrue(withoutNodeId.output.contains("GUARD-PASSED"), withoutNodeId.output);
-        assertFalse(withoutNodeId.output.contains("WARNING"), withoutNodeId.output);
-
-        env.put("UNOMI_CLUSTER_NODEID", "");
-        env.put("UNOMI_ROOT_PASSWORD", "");
-        Result blankNodeId = runShell(guard, workDir, env);
-        assertEquals(0, blankNodeId.exitCode, blankNodeId.output);
-        assertTrue(blankNodeId.output.contains("WARNING: UNOMI_CLUSTER_NODEID is set but blank"), blankNodeId.output);
-        assertFalse(blankNodeId.output.contains("UNOMI_ROOT_PASSWORD"), blankNodeId.output);
     }
 
     // ---------------------------------------------------------------- setenv.bat regression guard
@@ -385,31 +334,31 @@ class ShippedAdminPasswordConfigTest {
     }
 
     /**
-     * Copies one of the entrypoint's guards into a standalone script, so the test does not have to
+     * Copies the entrypoint's password guard into a standalone script, so the test does not have to
      * run the rest of the container bootstrap (which needs a search engine).
      */
-    private static Path extractEntrypointGuard(Path workDir, String guardStart, String guardEnd) throws IOException {
+    private static Path extractEntrypointPasswordGuard(Path workDir) throws IOException {
         List<String> lines = Files.readAllLines(repoFile(ENTRYPOINT_PATH));
         StringBuilder guard = new StringBuilder("#!/bin/sh\n");
         boolean capturing = false;
         boolean terminated = false;
         for (String line : lines) {
-            if (line.startsWith(guardStart)) {
+            if (line.startsWith(ENTRYPOINT_GUARD_START)) {
                 capturing = true;
             }
             if (capturing) {
                 guard.append(line).append('\n');
             }
-            if (capturing && line.contains(guardEnd)) {
+            if (capturing && line.contains(ENTRYPOINT_GUARD_END)) {
                 terminated = true;
                 break;
             }
         }
-        assertTrue(capturing, "entrypoint.sh must define the guard; start marker '" + guardStart
+        assertTrue(capturing, "entrypoint.sh must define the guard; start marker '" + ENTRYPOINT_GUARD_START
                 + "' was not found in " + ENTRYPOINT_PATH);
         // Without this, a reformatted entrypoint.sh would make the slice run to end-of-file: the test
         // would still "pass" while executing something entirely different from the guard.
-        assertTrue(terminated, "the guard slice never reached its terminating line '" + guardEnd
+        assertTrue(terminated, "the guard slice never reached its terminating line '" + ENTRYPOINT_GUARD_END
                 + "' in " + ENTRYPOINT_PATH + " - update the marker, this test is no longer testing the guard");
         guard.append("echo GUARD-PASSED\n");
 

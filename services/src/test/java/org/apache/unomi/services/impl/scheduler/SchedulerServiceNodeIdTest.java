@@ -16,35 +16,24 @@
  */
 package org.apache.unomi.services.impl.scheduler;
 
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SchedulerServiceNodeIdTest {
 
-    @Test
-    void validateNodeIdAcceptsConfiguredValue() {
-        SchedulerServiceImpl scheduler = new SchedulerServiceImpl();
-        scheduler.setNodeId("unomi-node-2");
-        assertDoesNotThrow(scheduler::validateNodeId);
-    }
-
+    /**
+     * A blank id would be the lock owner on every node that has it, so the scheduler must not start
+     * with one, like the cluster service.
+     */
     @ParameterizedTest
     @NullSource
-    @ValueSource(strings = {"", "  ", SchedulerServiceImpl.LEGACY_DEFAULT_NODE_ID})
-    void validateNodeIdRejectsBlankAndLegacySharedDefault(String nodeId) {
+    @ValueSource(strings = {"", "  "})
+    void postConstructFailsOnBlankNodeId(String blankNodeId) {
         SchedulerServiceImpl scheduler = new SchedulerServiceImpl();
-        scheduler.setNodeId(nodeId);
-        assertThrows(IllegalStateException.class, scheduler::validateNodeId);
-    }
-
-    @Test
-    void postConstructFailsOnBlankNodeIdLikeTheClusterService() {
-        SchedulerServiceImpl scheduler = new SchedulerServiceImpl();
+        scheduler.setNodeId(blankNodeId);
         assertThrows(IllegalStateException.class, scheduler::postConstruct);
     }
 }

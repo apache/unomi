@@ -61,6 +61,7 @@ public class NodeIdentityIT extends BaseIT {
                 () -> clusterService.getClusterNodes().stream().filter(node -> nodeId.equals(node.getItemId())).findFirst().orElse(null),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         assertEquals("The cluster record should carry the node name", nodeName, clusterNode.getNodeName());
+        assertEquals("The cluster record should say the node runs tasks", Boolean.TRUE, clusterNode.getExecutorNode());
 
         // Karaf writes the configuration back to its file asynchronously
         Path nodeConfigFile = Paths.get(System.getProperty("karaf.etc"), NODE_CONFIG_FILE);

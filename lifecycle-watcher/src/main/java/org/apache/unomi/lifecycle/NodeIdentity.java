@@ -31,31 +31,26 @@ import java.util.function.Supplier;
  * The name is the configured one, otherwise the host name. Unlike the id, the name is resolved
  * again at every start, so it follows the configuration or the host name.
  */
-public final class NodeIdentity {
+final class NodeIdentity {
 
     /** Configuration (stored as {@code etc/org.apache.unomi.node.cfg}) that remembers the identity. */
-    public static final String PID = "org.apache.unomi.node";
-    public static final String NODE_ID = "nodeId";
-    public static final String NODE_NAME = "nodeName";
+    static final String PID = "org.apache.unomi.node";
+    static final String NODE_ID = "nodeId";
+    static final String NODE_NAME = "nodeName";
 
     static final String DEFAULT_NODE_NAME = "unomi";
     private static final int MAX_NAME_LENGTH_IN_ID = 40;
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    private final String nodeId;
-    private final String nodeName;
+    final String nodeId;
+    final String nodeName;
+    /** Where the id comes from: {@code configured}, {@code stored} or {@code generated}. */
+    final String source;
 
-    private NodeIdentity(String nodeId, String nodeName) {
+    private NodeIdentity(String nodeId, String nodeName, String source) {
         this.nodeId = nodeId;
         this.nodeName = nodeName;
-    }
-
-    public String getNodeId() {
-        return nodeId;
-    }
-
-    public String getNodeName() {
-        return nodeName;
+        this.source = source;
     }
 
     /**
@@ -69,11 +64,13 @@ public final class NodeIdentity {
     static NodeIdentity resolve(String configuredId, String storedId, String configuredName, String hostName,
             Supplier<String> suffix) {
         String nodeName = StringUtils.firstNonBlank(configuredName, hostName, DEFAULT_NODE_NAME).trim();
-        String nodeId = StringUtils.firstNonBlank(configuredId, storedId);
-        if (nodeId == null) {
-            nodeId = toIdPrefix(nodeName) + "-" + suffix.get();
+        if (StringUtils.isNotBlank(configuredId)) {
+            return new NodeIdentity(configuredId.trim(), nodeName, "configured");
         }
-        return new NodeIdentity(nodeId.trim(), nodeName);
+        if (StringUtils.isNotBlank(storedId)) {
+            return new NodeIdentity(storedId.trim(), nodeName, "stored");
+        }
+        return new NodeIdentity(toIdPrefix(nodeName) + "-" + suffix.get(), nodeName, "generated");
     }
 
     /**
@@ -90,17 +87,17 @@ public final class NodeIdentity {
     }
 
     /**
-     * The environment is asked first: it is what a container sets, and it cannot block on a name lookup.
+     * The environment is asked first, since it is what a container sets.
      */
     static String localHostName() {
         String hostName = StringUtils.firstNonBlank(System.getenv("HOSTNAME"), System.getenv("COMPUTERNAME"));
-        if (hostName == null) {
-            try {
-                hostName = InetAddress.getLocalHost().getHostName();
-            } catch (Exception e) {
-                return null;
-            }
+        if (hostName != null) {
+            return hostName;
         }
-        return hostName;
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

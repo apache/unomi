@@ -109,34 +109,6 @@ public class TaskLockManagerTest {
     }
 
     @Test
-    public void testInMemoryLockReacquiredByRestartedOwner() {
-        // A node restarting with the same id takes its own unexpired lock back without waiting for the lease
-        ScheduledTask task = TaskTestFixtures.baseTask("mem");
-        task.setPersistent(false);
-        task.setLockOwner(NODE);
-        task.setLockDate(new Date());
-        assertTrue(lockManager.acquireLock(task));
-    }
-
-    @Test
-    public void testDistributedLockReacquiredByRestartedOwnerOnly() {
-        ScheduledTask task = TaskTestFixtures.baseTask("dist");
-        task.setNextScheduledExecution(new Date(System.currentTimeMillis() - 10_000));
-        ScheduledTask latest = TaskTestFixtures.baseTask("dist");
-        latest.setItemId(task.getItemId());
-        latest.setNextScheduledExecution(task.getNextScheduledExecution());
-        latest.setLockDate(new Date());
-        when(schedulerService.getTask(task.getItemId())).thenReturn(latest);
-
-        latest.setLockOwner("other");
-        assertFalse(lockManager.acquireLock(task));
-
-        latest.setLockOwner(NODE);
-        assertTrue(lockManager.acquireLock(task));
-        assertEquals(NODE, task.getLockOwner());
-    }
-
-    @Test
     public void testDistributedLockOccConflict() {
         ScheduledTask task = TaskTestFixtures.baseTask("dist");
         task.setNextScheduledExecution(new Date(System.currentTimeMillis() - 10_000));

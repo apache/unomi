@@ -25,7 +25,9 @@ import org.osgi.service.cm.ConfigurationAdmin;
 
 import java.io.IOException;
 import java.util.Dictionary;
+import java.util.HashMap;
 import java.util.Hashtable;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -50,6 +52,7 @@ class BundleWatcherNodeIdentityTest {
 
     private ConfigurationAdmin configurationAdmin;
     private Configuration configuration;
+    private final Map<String, String> environment = new HashMap<>();
 
     @BeforeEach
     void setUp() throws IOException {
@@ -81,6 +84,7 @@ class BundleWatcherNodeIdentityTest {
     private BundleWatcherImpl start() {
         BundleWatcherImpl bundleWatcher = new BundleWatcherImpl();
         bundleWatcher.setConfigurationAdmin(configurationAdmin);
+        bundleWatcher.environment = environment::get;
         bundleWatcher.resolveNodeIdentity();
         return bundleWatcher;
     }
@@ -92,6 +96,10 @@ class BundleWatcherNodeIdentityTest {
         return captor.getValue();
     }
 
+    private static void assertGenerated(String nodeId) {
+        assertTrue(nodeId.matches("web-1-[0-9a-f]{8}"), nodeId);
+    }
+
     @Test
     void firstStartGeneratesStoresAndPublishesTheId() throws IOException {
         stored("", "");
@@ -99,7 +107,7 @@ class BundleWatcherNodeIdentityTest {
         BundleWatcherImpl bundleWatcher = start();
 
         String nodeId = bundleWatcher.getNodeId();
-        assertTrue(nodeId.matches("web-1-[0-9a-f]{8}"), nodeId);
+        assertGenerated(nodeId);
         assertEquals("web-1", bundleWatcher.getNodeName());
 
         Dictionary<String, Object> update = storedByUpdate();
@@ -134,7 +142,7 @@ class BundleWatcherNodeIdentityTest {
 
         assertEquals("web-1-99999999", bundleWatcher.getNodeId());
         assertEquals("frontend", bundleWatcher.getNodeName());
-        assertEquals("web-1-99999999", storedByUpdate().get(NodeIdentity.NODE_ID));
+        assertEquals("frontend", storedByUpdate().get(NodeIdentity.NODE_NAME));
     }
 
     @Test
@@ -147,24 +155,25 @@ class BundleWatcherNodeIdentityTest {
         assertEquals("unomi-node-7", update.get(NodeIdentity.NODE_ID));
 
         // Next start without UNOMI_CLUSTER_NODEID: the id given back to the node stays
-        clearProperties();
-        System.setProperty(BundleWatcherImpl.CLUSTER_NODE_NAME_PROPERTY, "web-1");
+        System.clearProperty(BundleWatcherImpl.CLUSTER_NODE_ID_PROPERTY);
         when(configuration.getProperties()).thenReturn(update);
         assertEquals("unomi-node-7", start().getNodeId());
     }
 
+    /**
+     * An etc/custom.system.properties kept from an earlier version sets the id of every node to the same
+     * default. Only an operator who really chose that value, through the environment, gets it.
+     */
     @Test
-    void blankingTheStoredIdGivesANewOne() throws IOException {
-        stored("web-1-99999999", "web-1");
-        String before = start().getNodeId();
+    void formerSharedDefaultIsIgnoredUnlessChosenInTheEnvironment() throws IOException {
+        stored("", "");
+        System.setProperty(BundleWatcherImpl.CLUSTER_NODE_ID_PROPERTY, BundleWatcherImpl.FORMER_DEFAULT_NODE_ID);
 
-        stored(" ", "web-1");
-        clearProperties();
-        System.setProperty(BundleWatcherImpl.CLUSTER_NODE_NAME_PROPERTY, "web-1");
-        String after = start().getNodeId();
+        assertGenerated(start().getNodeId());
 
-        assertEquals("web-1-99999999", before);
-        assertTrue(after.matches("web-1-[0-9a-f]{8}") && !after.equals(before), after);
+        System.setProperty(BundleWatcherImpl.CLUSTER_NODE_ID_PROPERTY, BundleWatcherImpl.FORMER_DEFAULT_NODE_ID);
+        environment.put(BundleWatcherImpl.CLUSTER_NODE_ID_VARIABLE, BundleWatcherImpl.FORMER_DEFAULT_NODE_ID);
+        assertEquals(BundleWatcherImpl.FORMER_DEFAULT_NODE_ID, start().getNodeId());
     }
 
     @Test
@@ -184,7 +193,7 @@ class BundleWatcherNodeIdentityTest {
 
         String nodeId = start().getNodeId();
 
-        assertTrue(nodeId.matches("web-1-[0-9a-f]{8}"), nodeId);
+        assertGenerated(nodeId);
         assertEquals(nodeId, storedByUpdate().get(NodeIdentity.NODE_ID));
     }
 
@@ -195,17 +204,18 @@ class BundleWatcherNodeIdentityTest {
 
         String nodeId = start().getNodeId();
 
-        assertTrue(nodeId.matches("web-1-[0-9a-f]{8}"), nodeId);
+        assertGenerated(nodeId);
         assertEquals(nodeId, System.getProperty(BundleWatcherImpl.CLUSTER_NODE_ID_PROPERTY));
     }
 
     @Test
-    void nodeStillGetsAnIdWhenTheStoredIdentityCannotBeRead() throws IOException {
-        when(configurationAdmin.getConfiguration(NodeIdentity.PID, "?")).thenThrow(new IOException("unavailable"));
+    void storedIdentityThatCannotBeReadIsNotOverwritten() throws IOException {
+        when(configuration.getProperties()).thenThrow(new IllegalStateException("unavailable"));
 
         String nodeId = start().getNodeId();
 
-        assertTrue(nodeId.matches("web-1-[0-9a-f]{8}"), nodeId);
+        assertGenerated(nodeId);
         assertEquals(nodeId, System.getProperty(BundleWatcherImpl.SCHEDULER_NODE_ID_PROPERTY));
+        verify(configuration, never()).update(any());
     }
 }

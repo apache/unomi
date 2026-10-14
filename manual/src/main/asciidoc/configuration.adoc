@@ -40,12 +40,6 @@ https://github.com/apache/unomi/blob/master/package/src/main/resources/etc/custo
 If you are using Docker Container, simply pass the environment variables on the docker command line or if you are using
 Docker Compose you can put the environment variables in the docker-compose.yml file.
 
-A variable that is set but blank (for example `UNOMI_ELASTICSEARCH_ADDRESSES=${ES_HOSTS}` with `ES_HOSTS` undefined)
-is read as unset and replaced by its default. The Docker entrypoint checks the environment before starting Unomi: it
-refuses to start when the search engine addresses are blank, when only one of `UNOMI_ELASTICSEARCH_USERNAME` and
-`UNOMI_ELASTICSEARCH_PASSWORD` is set, or when `UNOMI_SCHEDULER_NODEID` is the former shared value
-`test-scheduler-node`, and it warns about any other blank `UNOMI_*` variable.
-
 If you want to "save" the environment values in a file, you can use the `bin/setenv(.bat)` to setup the environment
 variables you want to use.
 

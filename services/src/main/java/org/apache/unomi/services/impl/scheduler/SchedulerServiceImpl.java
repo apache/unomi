@@ -70,12 +70,6 @@ public class SchedulerServiceImpl implements SchedulerService {
     private static final long DEFAULT_LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes
     private static final long DEFAULT_COMPLETED_TASK_TTL_DAYS = 30; // 30 days default retention for completed tasks
     private static final boolean DEFAULT_PURGE_TASK_ENABLED = true;
-    /**
-     * Former shared default of {@code scheduler.nodeId} (services cfg and blueprint). Kept only so an
-     * upgraded install whose retained configuration still injects it fails with a clear message
-     * instead of silently sharing task locks between nodes (UNOMI-1006).
-     */
-    static final String LEGACY_DEFAULT_NODE_ID = "test-scheduler-node";
     private static final int MIN_THREAD_POOL_SIZE = 4;
     private static final int PENDING_OPERATIONS_QUEUE_SIZE = 1000;
     private static final int MAX_RETRY_ATTEMPTS = 10;
@@ -777,7 +771,13 @@ public class SchedulerServiceImpl implements SchedulerService {
      * Blueprint post-construct hook; starts task checking on executor nodes.
      */
     public void postConstruct() {
-        validateNodeId();
+        // The id comes from the node identity (see BundleWatcher). A blank one would be shared by every node.
+        if (nodeId == null || nodeId.isBlank()) {
+            String errorMessage = "CRITICAL: scheduler nodeId is not set. Check that scheduler.nodeId is present in "
+                    + "etc/org.apache.unomi.services.cfg.";
+            LOGGER.error(errorMessage);
+            throw new IllegalStateException(errorMessage);
+        }
 
         if (bundleContext == null) {
             LOGGER.error("BundleContext is null, cannot initialize service trackers");
@@ -1460,9 +1460,7 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     /**
-     * Sets the scheduler node ID (task locks and affinity). In production this should match
-     * {@code org.apache.unomi.cluster.nodeId} unless {@code org.apache.unomi.scheduler.nodeId} /
-     * {@code UNOMI_SCHEDULER_NODEID} is set explicitly.
+     * Sets the cluster node ID.
      *
      * @param nodeId the node ID
      */
@@ -1473,30 +1471,6 @@ public class SchedulerServiceImpl implements SchedulerService {
     @Override
     public String getNodeId() {
         return nodeId;
-    }
-
-    /**
-     * Validates the node id before anything is started, the same way the cluster service does:
-     * a blank value is a configuration error and fails startup. So does the former shared default
-     * {@link #LEGACY_DEFAULT_NODE_ID}, which every node of an upgraded cluster would have in common.
-     *
-     * @throws IllegalStateException if the node id is blank or the legacy shared default
-     */
-    void validateNodeId() {
-        String errorMessage = null;
-        if (nodeId == null || nodeId.isBlank()) {
-            errorMessage = "CRITICAL: scheduler.nodeId is blank.";
-        } else if (LEGACY_DEFAULT_NODE_ID.equals(nodeId)) {
-            errorMessage = "CRITICAL: scheduler.nodeId is still the former shared default '" + LEGACY_DEFAULT_NODE_ID
-                    + "', which makes every node share task locks.";
-        }
-        if (errorMessage != null) {
-            errorMessage += " Set scheduler.nodeId=${org.apache.unomi.scheduler.nodeId:-${org.apache.unomi.cluster.nodeId}} "
-                    + "in etc/org.apache.unomi.services.cfg so it follows the cluster node id (UNOMI_CLUSTER_NODEID), "
-                    + "or set UNOMI_SCHEDULER_NODEID to a value unique to this node.";
-            LOGGER.error(errorMessage);
-            throw new IllegalStateException(errorMessage);
-        }
     }
 
     @Override

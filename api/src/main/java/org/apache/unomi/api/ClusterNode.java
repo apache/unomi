@@ -40,6 +40,7 @@ public class ClusterNode extends Item {
     private boolean data;
     private long startTime;
     private String nodeName;
+    private Boolean executorNode;
     private long lastHeartbeat;
 
     // Server information
@@ -214,6 +215,24 @@ public class ClusterNode extends Item {
      */
     public void setNodeName(String nodeName) {
         this.nodeName = nodeName;
+    }
+
+    /**
+     * Whether this node runs scheduled tasks ({@code scheduler.executorNode}).
+     *
+     * @return {@code true} or {@code false}, or {@code null} when the node did not report it
+     */
+    public Boolean getExecutorNode() {
+        return executorNode;
+    }
+
+    /**
+     * Sets whether this node runs scheduled tasks.
+     *
+     * @param executorNode whether the node runs scheduled tasks
+     */
+    public void setExecutorNode(Boolean executorNode) {
+        this.executorNode = executorNode;
     }
 
     /**

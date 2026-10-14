@@ -31,7 +31,6 @@ import org.apache.unomi.services.impl.TestTenantService;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -40,12 +39,8 @@ import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 
 import java.io.Serializable;
-import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -163,6 +158,35 @@ public class ClusterServiceImplTest {
     }
 
     // Add a new test to verify behavior when BundleWatcher is not available
+    @Test
+    public void testHeartbeatRunsOnNonExecutorNodeAndReportsItsRole() {
+        ClusterServiceImpl apiNode = TestHelper.createClusterService(persistenceService, "api-node", PUBLIC_ADDRESS, INTERNAL_ADDRESS, bundleContext);
+        apiNode.setNodeStatisticsUpdateFrequency(100);
+        SchedulerServiceImpl apiScheduler = TestHelper.createSchedulerService(
+            "api-node", persistenceService, executionContextManager, bundleContext, apiNode, -1, false, true);
+        apiNode.setSchedulerService(apiScheduler);
+        try {
+            apiNode.init();
+            ClusterNode registered = persistenceService.load("api-node", ClusterNode.class);
+            assertEquals(Boolean.FALSE, registered.getExecutorNode());
+            long initialHeartbeat = registered.getLastHeartbeat();
+
+            // Without a heartbeat the node would be removed from the cluster as stale
+            ClusterNode updated = null;
+            for (int i = 0; i < 100 && (updated == null || updated.getLastHeartbeat() <= initialHeartbeat); i++) {
+                Thread.sleep(100);
+                updated = persistenceService.load("api-node", ClusterNode.class);
+            }
+            assertTrue(updated.getLastHeartbeat() > initialHeartbeat, "the heartbeat of a non-executor node should run");
+            assertEquals(Boolean.FALSE, updated.getExecutorNode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            fail("interrupted");
+        } finally {
+            apiScheduler.preDestroy();
+        }
+    }
+
     @Test
     public void testInitRegistersNodeNameFromBundleWatcher() {
         when(bundleWatcher.getNodeName()).thenReturn("web-1");
@@ -434,213 +458,5 @@ public class ClusterServiceImplTest {
             assertNull(persistenceService.load("scoped-node", ClusterNode.class));
             assertNotNull(persistenceService.load("other-node", ClusterNode.class));
         });
-    }
-
-    private ClusterServiceImpl newNode(String nodeId, long heartbeatFrequency) {
-        ClusterServiceImpl node = TestHelper.createClusterService(persistenceService, nodeId, PUBLIC_ADDRESS, INTERNAL_ADDRESS, bundleContext);
-        node.setNodeStatisticsUpdateFrequency(heartbeatFrequency);
-        return node;
-    }
-
-    private void saveNodeRecord(String nodeId, long startTime, long lastHeartbeat) {
-        ClusterNode record = new ClusterNode();
-        record.setItemId(nodeId);
-        record.setStartTime(startTime);
-        record.setLastHeartbeat(lastHeartbeat);
-        persistenceService.save(record);
-    }
-
-    /** Runs {@code beat} every {@code period} ms while {@code body} executes. */
-    private void whileBeating(Runnable beat, long period, Runnable body) throws InterruptedException {
-        ScheduledExecutorService heartbeat = Executors.newSingleThreadScheduledExecutor();
-        heartbeat.scheduleAtFixedRate(beat, 0, period, TimeUnit.MILLISECONDS);
-        try {
-            body.run();
-        } finally {
-            heartbeat.shutdownNow();
-            heartbeat.awaitTermination(5, TimeUnit.SECONDS);
-        }
-    }
-
-    @Test
-    @Timeout(60)
-    public void testInitFailsWhenNodeIdIsUsedByLiveNode() throws Exception {
-        ClusterServiceImpl incumbent = newNode(TEST_NODE_ID, 300);
-        incumbent.init();
-        long incumbentStartTime = persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime();
-
-        // The live node heartbeats at its real cadence, once per period
-        whileBeating(incumbent::updateSystemStats, 300, () -> {
-            ClusterServiceImpl duplicate = newNode(TEST_NODE_ID, 300);
-            long start = System.nanoTime();
-            IllegalStateException e = assertThrows(IllegalStateException.class, duplicate::init);
-            assertTrue(e.getMessage().contains("already used by another live node"), e.getMessage());
-            // It gave the other node six heartbeat periods to stop before giving up
-            assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) >= 1800, "should not fail on the first heartbeat seen");
-        });
-
-        assertEquals(incumbentStartTime, persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime());
-    }
-
-    @Test
-    @Timeout(60)
-    public void testInitWaitsForPreviousProcessToStopHeartbeating() throws Exception {
-        // The previous process is still alive for a few heartbeats (slow shutdown, or hung then killed)
-        ClusterServiceImpl previous = newNode(TEST_NODE_ID, 200);
-        previous.init();
-        long previousStartTime = persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime();
-
-        AtomicInteger remainingBeats = new AtomicInteger(5);
-        whileBeating(() -> {
-            if (remainingBeats.getAndDecrement() > 0) {
-                previous.updateSystemStats();
-            }
-        }, 20, () -> {
-            newNode(TEST_NODE_ID, 200).init();
-            assertTrue(remainingBeats.get() <= 0, "the previous process should have stopped by itself");
-        });
-
-        assertTrue(persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime() > previousStartTime);
-    }
-
-    @Test
-    @Timeout(60)
-    public void testInitTakesOverNodeIdLeftByCrashedNode() {
-        // A crash leaves the record behind with a recent heartbeat that nobody updates anymore
-        long crashedStartTime = System.currentTimeMillis() - 60000;
-        saveNodeRecord(TEST_NODE_ID, crashedStartTime, System.currentTimeMillis());
-
-        long start = System.nanoTime();
-        newNode(TEST_NODE_ID, 300).init();
-
-        assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) >= 600, "should watch the record for two periods first");
-        assertTrue(persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime() > crashedStartTime);
-    }
-
-    @Test
-    @Timeout(60)
-    public void testInitIgnoresSchedulerBoundWhileWaiting() throws Exception {
-        saveNodeRecord(TEST_NODE_ID, 1L, System.currentTimeMillis());
-        ClusterServiceImpl restarted = newNode(TEST_NODE_ID, 200);
-
-        // Binding the scheduler mid-check must not start this node's own heartbeat: it would keep the
-        // predecessor's record moving and the node would reject itself.
-        ScheduledExecutorService binder = Executors.newSingleThreadScheduledExecutor();
-        binder.schedule(() -> restarted.setSchedulerService(schedulerService), 50, TimeUnit.MILLISECONDS);
-        try {
-            restarted.init();
-        } finally {
-            binder.shutdownNow();
-        }
-
-        assertTrue(persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime() > 1L);
-    }
-
-    @Test
-    @Timeout(60)
-    public void testInitStopsWaitingWhenRecordIsRemoved() throws Exception {
-        // The previous process finishes its clean shutdown (or is cleaned up as stale) during the check
-        saveNodeRecord(TEST_NODE_ID, 1L, System.currentTimeMillis());
-        ScheduledExecutorService remover = Executors.newSingleThreadScheduledExecutor();
-        remover.schedule(() -> persistenceService.remove(TEST_NODE_ID, ClusterNode.class), 100, TimeUnit.MILLISECONDS);
-        try {
-            long start = System.nanoTime();
-            newNode(TEST_NODE_ID, 2000).init();
-            assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start) < 4000, "should not wait out the quiet period");
-        } finally {
-            remover.shutdownNow();
-        }
-    }
-
-    @Test
-    public void testInitFailsWhenInterruptedWhileWaiting() {
-        saveNodeRecord(TEST_NODE_ID, 1L, System.currentTimeMillis());
-        ClusterServiceImpl node = newNode(TEST_NODE_ID, 60000);
-
-        Thread.currentThread().interrupt();
-        try {
-            assertThrows(IllegalStateException.class, node::init);
-        } finally {
-            assertTrue(Thread.interrupted(), "interrupt flag should be preserved");
-        }
-        assertEquals(1L, persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime());
-    }
-
-    @Test
-    public void testInitFailsWhenNodeCannotBeRegistered() {
-        // An unavailable search engine: reads return nothing and writes are refused
-        PersistenceService failingPersistence = mock(PersistenceService.class);
-        ClusterServiceImpl node = TestHelper.createClusterService(failingPersistence, TEST_NODE_ID, PUBLIC_ADDRESS, INTERNAL_ADDRESS, bundleContext);
-
-        IllegalStateException e = assertThrows(IllegalStateException.class, node::init);
-        assertTrue(e.getMessage().contains("could not register node"), e.getMessage());
-    }
-
-    @Test
-    public void testDestroyKeepsRecordRegisteredByAnotherNode() {
-        ClusterServiceImpl incumbent = newNode(TEST_NODE_ID, 60000);
-        incumbent.init();
-
-        // A node with the same id that never managed to start
-        newNode(TEST_NODE_ID, 60000).destroy();
-        assertNotNull(persistenceService.load(TEST_NODE_ID, ClusterNode.class));
-
-        incumbent.destroy();
-        assertNull(persistenceService.load(TEST_NODE_ID, ClusterNode.class));
-    }
-
-    @Test
-    public void testHeartbeatRunsOnNonExecutorNode() {
-        ClusterServiceImpl apiNode = newNode("api-node", 100);
-        SchedulerServiceImpl apiScheduler = TestHelper.createSchedulerService(
-            "api-node", persistenceService, executionContextManager, bundleContext, apiNode, -1, false, true);
-        apiNode.setSchedulerService(apiScheduler);
-        try {
-            apiNode.init();
-            long initialHeartbeat = persistenceService.load("api-node", ClusterNode.class).getLastHeartbeat();
-
-            // Without a heartbeat the node would be removed as stale and its id would look free
-            ClusterNode updated = TestHelper.retryUntil(
-                () -> persistenceService.load("api-node", ClusterNode.class),
-                node -> node != null && node.getLastHeartbeat() > initialHeartbeat
-            );
-            assertTrue(updated.getLastHeartbeat() > initialHeartbeat);
-        } finally {
-            apiScheduler.preDestroy();
-        }
-    }
-
-    @Test
-    public void testInitDoesNotWaitWhenNodeIdIsFree() {
-        // Heartbeat period of one minute: any liveness wait would blow the timeout
-        assertTimeoutPreemptively(Duration.ofSeconds(10), () -> {
-            // Stale record: crashed long enough ago to be considered gone
-            saveNodeRecord(TEST_NODE_ID, 1L, System.currentTimeMillis() - (3 * 60000) - 1);
-            ClusterServiceImpl restarted = newNode(TEST_NODE_ID, 60000);
-            restarted.init();
-
-            // Clean shutdown removes the record, so a plain restart is immediate too
-            restarted.destroy();
-            newNode(TEST_NODE_ID, 60000).init();
-
-            // Growing the cluster: a node with its own id joins next to a live one
-            newNode("test-node-2", 60000).init();
-        });
-
-        assertNotNull(persistenceService.load(TEST_NODE_ID, ClusterNode.class));
-        assertNotNull(persistenceService.load("test-node-2", ClusterNode.class));
-    }
-
-    @Test
-    public void testHeartbeatReclaimsRecordOverwrittenByDuplicateNode() {
-        ClusterServiceImpl node = newNode(TEST_NODE_ID, 60000);
-        node.init();
-        long startTime = persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime();
-
-        // Another JVM registered under the same id after the startup check
-        saveNodeRecord(TEST_NODE_ID, startTime + 1000, System.currentTimeMillis());
-        node.updateSystemStats();
-
-        assertEquals(startTime, persistenceService.load(TEST_NODE_ID, ClusterNode.class).getStartTime());
     }
 }

@@ -52,46 +52,30 @@ record and its scheduler task locks. Nothing has to be configured for this.
   stores it with its name in `etc/org.apache.unomi.node.cfg`. Later starts reuse it. A second node, container or
   copy of the image generates its own, so a single node grows into a cluster without any change.
 * `UNOMI_CLUSTER_NODEID` (`org.apache.unomi.cluster.nodeId`) sets the id explicitly. It replaces the stored id and
-  is stored in turn, so the node keeps it after the variable is removed.
+  is stored in turn, so the node keeps it after the variable is removed. Unomi does not check that an id you set is
+  unique: two nodes with the same id share one cluster record and the same task locks.
 * The name comes from `UNOMI_CLUSTER_NODENAME` (`org.apache.unomi.cluster.nodeName`), or from the host name. It is
   read again at every start: renaming a node does not change its id.
-* The scheduler uses the same id. `UNOMI_SCHEDULER_NODEID` gives it one of its own, which must then be unique per
-  node as well (see <<_scheduler,Scheduler>>).
+* The scheduler uses the same id.
 
-The stored id lives in the node's `etc/` directory. It is lost when that directory is, for example when a container
-is recreated without a volume for it; the node then simply joins under a new id, the old cluster record is removed
-after three heartbeat intervals and its task locks expire. To give a node its previous id back, start it once with
-`UNOMI_CLUSTER_NODEID` set to that id (it appears in the node's log at startup and in the cluster and task REST
-endpoints). To make a node take a new id, blank `nodeId` in `etc/org.apache.unomi.node.cfg` and restart it; do not
-delete the file, Unomi could then no longer save the id there.
-
-Set the id through `UNOMI_CLUSTER_NODEID` or `org.apache.unomi.cluster.nodeId`, not by editing
-`etc/org.apache.unomi.cluster.cfg`: a value typed there reaches the cluster service but not the scheduler.
+The stored id lives in the node's `etc/` directory and is lost with it, for example when a container is recreated.
+The node then joins under a new id; the old cluster record is removed once its heartbeat is stale and its task
+locks expire. To give a node its previous id back, start it once with `UNOMI_CLUSTER_NODEID` set to that id (it is
+in the node's log at startup and in the cluster REST endpoint). To make a node take a new id, unset
+`UNOMI_CLUSTER_NODEID`, blank `nodeId` in `etc/org.apache.unomi.node.cfg` and restart the node; do not delete the
+file, Unomi could then no longer save the id there.
 
 Copying an installation together with its `etc/` directory (a cloned virtual machine, an image built from a node
-that already ran) copies the id too. The checks below catch that.
-
-A node that starts with an id whose record was updated recently (within three heartbeat intervals) waits for
-that record to stop moving before claiming the id:
-
-* A node restarting after a crash, or while its previous process is still shutting down, takes its id back once
-  the record is gone or has been quiet for two intervals (20 seconds by default).
-* A node configured with the id of another live node fails at startup after six intervals (about a minute by
-  default), leaving the first node untouched. Unomi does not start on that node until its id is fixed and it is
-  restarted.
-
-Two nodes started at the same instant with the same id cannot see each other at startup; they then log an error
-from their heartbeats until one of them is given its own id.
-
-Startup also fails if the node cannot write its record to the search engine, since the checks above cannot be
-trusted when it is unavailable.
+that already ran, an `etc/` volume shared by several containers) copies the id too: blank it on the copies.
 
 ==== How it works
 
 On startup the cluster service:
 
 1. Registers this node in persistence (`ClusterNode` item).
-2. Schedules a recurring task to update CPU, load, and uptime statistics.
+2. Schedules a recurring task to update CPU, load, and uptime statistics. It is the node's heartbeat and runs on
+   every node, including those with `scheduler.executorNode=false`; the record also says whether the node runs
+   scheduled tasks.
 3. Schedules stale-node cleanup (nodes with no heartbeat for roughly three times the update interval are removed).
 
 Other nodes see the same registry through the shared search backend. The health-check extension reports

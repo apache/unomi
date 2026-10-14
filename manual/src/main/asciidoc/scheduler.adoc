@@ -447,7 +447,9 @@ end note
 
 ==== Node affinity timeline
 
-For a due exclusive task with active nodes `[N0, N1, N2]` (sorted) and primary = `hash(taskId) % 3`:
+For a due exclusive task with active nodes `[N0, N1, N2]` (sorted) and primary = `hash(taskId) % 3`. Active nodes are
+the nodes that sent a heartbeat in the last 5 minutes, leaving out those with `scheduler.executorNode=false`, which
+never run exclusive tasks:
 
 [cols="1,2,3",options="header"]
 |===
@@ -510,9 +512,8 @@ Every checker tick (~1s) on a node runs recovery:
 
 ==== Operational checklist for clustering
 
-* Each JVM needs a **stable unique** node id, so exclusive tasks are not owned by two nodes at once. Unomi
-  generates and remembers one per node (see <<_node_identity,Node identity>>); the scheduler uses it unless
-  `UNOMI_SCHEDULER_NODEID` gives it an id of its own.
+* Each JVM needs a **stable unique** node id. Unomi generates and remembers one per node
+  (see <<_node_identity,Node identity>>) and the scheduler uses it.
 * Put at least one `scheduler.executorNode=true` in the cluster for persistent work.
 * Use `disallowParallelExecution()` for singleton side-effecting jobs.
 * Keep `scheduler.lockTimeout` at ~5s or above (default 10s): lease renewal keeps long executions safe automatically, but the heartbeat needs headroom over the `wait_for` refresh cycle (see <<_renewal_timing_limits_with_the_default_1_s_refresh_interval,Renewal timing limits>>).
@@ -612,7 +613,7 @@ Scheduler settings live in `etc/org.apache.unomi.services.cfg` (OSGi PID `org.ap
 |Property |Default |Description
 
 |`scheduler.thread.poolSize` |`5` |Thread pool size for task execution
-|`scheduler.nodeId` |the node id |Unique ID for this node in scheduler locks and task metadata. Defaults to the node id, generated or set with `UNOMI_CLUSTER_NODEID` (see <<_node_identity,Node identity>>). Optional override: `UNOMI_SCHEDULER_NODEID` / `org.apache.unomi.scheduler.nodeId`, which must then be unique per node as well. The former shared default `test-scheduler-node` fails startup.
+|`scheduler.nodeId` |the node id |Unique ID for this node in scheduler locks and task metadata. Unomi provides the id of the node (see <<_node_identity,Node identity>>); a value set here is ignored. To give the scheduler an id of its own, set the `org.apache.unomi.scheduler.nodeId` system property, to a value unique per node.
 |`scheduler.executorNode` |`true` |Whether this node runs tasks. Set `false` on dedicated REST-only nodes if you split roles.
 |`scheduler.lockTimeout` |`10000` |Lock timeout in milliseconds
 |`scheduler.purgeTaskEnabled` |`true` |Enables the built-in periodic purge of old completed tasks
@@ -629,10 +630,6 @@ scheduler.executorNode=true
 # Node 3: API only, no task execution
 scheduler.executorNode=false
 ----
-
-Each node also needs its own node id, which the scheduler follows. Unomi generates one per node; to choose
-readable ones, set them through the environment (not in this file), for example
-`UNOMI_CLUSTER_NODEID=unomi-executor-1`, `unomi-executor-2` and `unomi-api-3`.
 
 After changing configuration, restart the Unomi bundle or the Karaf container.
 
