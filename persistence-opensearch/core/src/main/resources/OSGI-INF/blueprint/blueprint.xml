@@ -192,7 +192,9 @@
         <service-properties>
             <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.BooleanConditionOSQueryBuilder"/>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.BooleanConditionOSQueryBuilder">
+            <property name="scriptExecutor" ref="scriptExecutor" />
+        </bean>
     </service>
 
     <service

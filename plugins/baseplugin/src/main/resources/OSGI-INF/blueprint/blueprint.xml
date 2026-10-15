@@ -67,6 +67,7 @@
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionEvaluator">
             <property name="tracerService" ref="tracerService" />
+            <property name="scriptExecutor" ref="scriptExecutor" />
         </bean>
     </service>
 

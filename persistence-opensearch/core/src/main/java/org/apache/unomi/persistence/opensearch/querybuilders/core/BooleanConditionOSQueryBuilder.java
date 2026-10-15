@@ -20,6 +20,8 @@ package org.apache.unomi.persistence.opensearch.querybuilders.core;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
+import org.apache.unomi.scripting.ScriptExecutor;
 import org.opensearch.client.opensearch._types.query_dsl.BoolQuery;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.slf4j.Logger;
@@ -35,6 +37,12 @@ public class BooleanConditionOSQueryBuilder implements ConditionOSQueryBuilder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BooleanConditionOSQueryBuilder.class.getName());
 
+    private ScriptExecutor scriptExecutor;
+
+    public void setScriptExecutor(ScriptExecutor scriptExecutor) {
+        this.scriptExecutor = scriptExecutor;
+    }
+
     @Override
     public Query buildQuery(Condition condition, Map<String, Object> context,
                             ConditionOSQueryBuilderDispatcher dispatcher) {
@@ -42,16 +50,28 @@ public class BooleanConditionOSQueryBuilder implements ConditionOSQueryBuilder {
         @SuppressWarnings("unchecked")
         List<Condition> conditions = (List<Condition>) condition.getParameter("subConditions");
 
-        int conditionCount = conditions.size();
+        // Omit branches whose optional parameter is unset (UNOMI-1004 for OR; UNOMI-982 for AND).
+        ConditionContextHelper.ResolvedBooleanSubConditions resolved =
+                ConditionContextHelper.resolveBooleanSubConditions(conditions, context, scriptExecutor);
+        if (resolved.hasUnresolvable() && isAndOperator) {
+            return Query.of(q -> q.matchNone(m -> m));
+        }
+        List<Condition> active = resolved.getActive();
 
-        if (conditionCount == 1) {
-            return dispatcher.buildFilter(conditions.get(0), context);
+        if (active.isEmpty()) {
+            return isAndOperator
+                    ? Query.of(q -> q.matchAll(m -> m))
+                    : Query.of(q -> q.matchNone(m -> m));
+        }
+
+        if (active.size() == 1) {
+            return dispatcher.buildFilter(active.get(0), context);
         }
 
         BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
-        for (int i = 0; i < conditionCount; i++) {
+        for (Condition sub : active) {
             if (isAndOperator) {
-                Query andFilter = dispatcher.buildFilter(conditions.get(i), context);
+                Query andFilter = dispatcher.buildFilter(sub, context);
                 if (andFilter != null) {
                     if (andFilter.isRange()) {
                         boolQueryBuilder.filter(andFilter);
@@ -61,22 +81,22 @@ public class BooleanConditionOSQueryBuilder implements ConditionOSQueryBuilder {
                 } else {
                     LOGGER.warn("Null filter for boolean AND sub condition. See debug log level for more information");
                     if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Null filter for boolean AND sub condition {}", conditions.get(i));
+                        LOGGER.debug("Null filter for boolean AND sub condition {}", sub);
                     }
                 }
             } else {
-                Query orFilter = dispatcher.buildFilter(conditions.get(i), context);
+                Query orFilter = dispatcher.buildFilter(sub, context);
                 if (orFilter != null) {
                     boolQueryBuilder.should(orFilter);
                 } else {
                     LOGGER.warn("Null filter for boolean OR sub condition. See debug log level for more information");
                     if (LOGGER.isDebugEnabled()) {
-                        LOGGER.debug("Null filter for boolean OR sub condition {}", conditions.get(i));
+                        LOGGER.debug("Null filter for boolean OR sub condition {}", sub);
                     }
                 }
             }
         }
 
-        return Query.of(q->q.bool(boolQueryBuilder.build()));
+        return Query.of(q -> q.bool(boolQueryBuilder.build()));
     }
 }
