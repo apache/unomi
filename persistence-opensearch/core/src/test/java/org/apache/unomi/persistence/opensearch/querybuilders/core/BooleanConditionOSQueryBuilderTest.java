@@ -21,6 +21,7 @@ import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -28,11 +29,14 @@ import org.mockito.quality.Strictness;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -64,25 +68,56 @@ public class BooleanConditionOSQueryBuilderTest {
         Map<String, Object> context = new HashMap<>();
         context.put("targetId", "button-a");
 
-        Query query = builder.buildQuery(hoverLikeOr(), context, dispatcher);
-        assertTrue(query.isMatchAll());
-        verify(dispatcher, times(1)).buildFilter(any(Condition.class), any());
+        builder.buildQuery(hoverLikeOr(), context, dispatcher);
+        ArgumentCaptor<Condition> built = ArgumentCaptor.forClass(Condition.class);
+        verify(dispatcher, times(1)).buildFilter(built.capture(), any());
+        assertEquals("target.itemId", built.getValue().getParameter("propertyName"));
+        assertEquals("button-a", built.getValue().getParameter("propertyValue"));
+    }
+
+    @Test
+    public void or_emptySubConditions_returnsMatchNone() {
+        Condition or = new Condition();
+        or.setParameter("operator", "or");
+        or.setParameter("subConditions", Collections.emptyList());
+
+        assertTrue(builder.buildQuery(or, new HashMap<>(), dispatcher).isMatchNone());
+    }
+
+    @Test
+    public void and_unresolvableBranch_returnsMatchNone() {
+        Condition and = new Condition();
+        and.setParameter("operator", "and");
+        and.setParameter("subConditions", Arrays.asList(literalEquals("eventType", "hover"), unresolvable()));
+
+        assertTrue(builder.buildQuery(and, new HashMap<>(), dispatcher).isMatchNone());
+        verify(dispatcher, never()).buildFilter(any(Condition.class), any());
+    }
+
+    @Test
+    public void or_unresolvableBranch_isSkipped() {
+        Condition literal = literalEquals("eventType", "hover");
+        Condition or = new Condition();
+        or.setParameter("operator", "or");
+        or.setParameter("subConditions", Arrays.asList(unresolvable(), literal));
+
+        builder.buildQuery(or, new HashMap<>(), dispatcher);
+        ArgumentCaptor<Condition> built = ArgumentCaptor.forClass(Condition.class);
+        verify(dispatcher, times(1)).buildFilter(built.capture(), any());
+        assertEquals(literal, built.getValue());
     }
 
     @Test
     public void and_unsetOptional_omitsBranchAndKeepsRequired() {
-        Condition required = new Condition();
-        required.setParameter("propertyName", "eventType");
-        required.setParameter("propertyValue", "hover");
-        required.setParameter("comparisonOperator", "equals");
+        Condition required = literalEquals("eventType", "hover");
         Condition optional = optionalEquals("target.itemId", "targetId");
 
         Condition and = new Condition();
         and.setParameter("operator", "and");
         and.setParameter("subConditions", Arrays.asList(required, optional));
 
-        Query query = builder.buildQuery(and, new HashMap<>(), dispatcher);
-        assertTrue(query.isMatchAll());
+        builder.buildQuery(and, new HashMap<>(), dispatcher);
+        verify(dispatcher, times(1)).buildFilter(eq(required), any());
         verify(dispatcher, times(1)).buildFilter(any(Condition.class), any());
     }
 
@@ -93,6 +128,21 @@ public class BooleanConditionOSQueryBuilderTest {
                 optionalEquals("target.itemId", "targetId"),
                 optionalEquals("target.properties.pageInfo.pagePath", "targetPath")));
         return or;
+    }
+
+    private static Condition literalEquals(String propertyName, String value) {
+        Condition c = new Condition();
+        c.setParameter("propertyName", propertyName);
+        c.setParameter("propertyValue", value);
+        c.setParameter("comparisonOperator", "equals");
+        return c;
+    }
+
+    // A script that cannot run (no script executor is set) makes the condition unresolvable.
+    private static Condition unresolvable() {
+        Condition c = new Condition();
+        c.setParameter("propertyValue", "script::anything");
+        return c;
     }
 
     private static Condition optionalEquals(String propertyName, String parameterName) {

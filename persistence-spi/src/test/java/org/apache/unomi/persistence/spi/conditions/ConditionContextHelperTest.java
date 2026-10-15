@@ -1196,6 +1196,20 @@ public class ConditionContextHelperTest {
         assertFalse(resolved.hasUnresolvable());
     }
 
+    @Test
+    public void testResolveBooleanSubConditions_unresolvableSub_isReportedAndOmitted() {
+        Condition broken = new Condition();
+        broken.setParameter("propertyValue", ConditionContextHelper.SCRIPT_EXPRESSION_PREFIX + "anything");
+        Condition literal = new Condition();
+        literal.setParameter("propertyValue", "x");
+
+        ConditionContextHelper.ResolvedBooleanSubConditions resolved =
+                ConditionContextHelper.resolveBooleanSubConditions(Arrays.asList(broken, literal), new HashMap<>(), null);
+
+        assertTrue(resolved.hasUnresolvable());
+        assertEquals(Collections.singletonList(literal), resolved.getActive());
+    }
+
     // ========== Helper Methods ==========
 
     private Condition createIntegerParameterCondition(Object testParamValue) {

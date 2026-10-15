@@ -242,6 +242,31 @@ public class BooleanConditionEvaluatorTest {
         verify(dispatcher, times(1)).eval(any(Condition.class), same(profile), any());
     }
 
+    // A script that cannot run (no script executor here) makes the sub-condition unresolvable.
+
+    @Test
+    public void and_unresolvableBranch_failsClosed() {
+        Condition broken = new Condition();
+        broken.setParameter("propertyValue", "script::anything");
+        Condition literal = new Condition();
+        literal.setParameter("propertyValue", "hover");
+
+        assertFalse(evaluator.eval(booleanCondition("and", literal, broken), profile, new HashMap<>(), dispatcher));
+        verify(dispatcher, never()).eval(any(Condition.class), any(), any());
+    }
+
+    @Test
+    public void or_unresolvableBranch_isSkipped() {
+        Condition broken = new Condition();
+        broken.setParameter("propertyValue", "script::anything");
+        Condition literal = new Condition();
+        literal.setParameter("propertyValue", "hover");
+        when(dispatcher.eval(same(literal), same(profile), any())).thenReturn(true);
+
+        assertTrue(evaluator.eval(booleanCondition("or", broken, literal), profile, new HashMap<>(), dispatcher));
+        verify(dispatcher, times(1)).eval(any(Condition.class), same(profile), any());
+    }
+
     // --- helper ---
 
     private Condition booleanCondition(String operator, Condition... subs) {

@@ -18,11 +18,12 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 
 import org.apache.unomi.api.CustomItem;
 import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
-import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
+import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.persistence.spi.conditions.evaluator.impl.ConditionEvaluatorDispatcherImpl;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -32,111 +33,108 @@ import java.util.Map;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 /**
- * End-to-end coverage for UNOMI-1004: hover-like OR of optional target id / path
- * must only match on parameters that are set.
+ * End-to-end coverage for UNOMI-1004 through the real dispatcher, which expands condition types
+ * into their parent condition: a hover condition (as defined in hoverEventCondition.json) must
+ * only match on the parameters that are set, and a typed sub-condition with one unset parameter
+ * must keep the constraints its type adds.
  */
 public class HoverEventConditionOptionalOrTest {
 
-    private final BooleanConditionEvaluator booleanEvaluator = new BooleanConditionEvaluator();
-    private final PropertyConditionEvaluator propertyEvaluator = new PropertyConditionEvaluator();
+    private final ConditionEvaluatorDispatcherImpl dispatcher = new ConditionEvaluatorDispatcherImpl();
+    private final ConditionType booleanType = type("booleanCondition", "booleanConditionEvaluator", null);
+    private final ConditionType eventPropertyType = type("eventPropertyCondition", "propertyConditionEvaluator", null);
 
-    private final ConditionEvaluatorDispatcher dispatcher = new ConditionEvaluatorDispatcher() {
-        @Override
-        public void addEvaluator(String name, org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator evaluator) {
-        }
-
-        @Override
-        public void removeEvaluator(String name) {
-        }
-
-        @Override
-        public boolean eval(Condition condition, Item item) {
-            return eval(condition, item, new HashMap<>());
-        }
-
-        @Override
-        public boolean eval(Condition condition, Item item, Map<String, Object> context) {
-            Condition contextual = ConditionContextHelper.getContextualCondition(condition, context, null);
-            if (contextual == null) {
-                // Leaf with unset optional — boolean evaluator prunes before calling us;
-                // if reached directly, treat as no constraint (AND-compatible).
-                return true;
-            }
-            if (contextual == ConditionContextHelper.UNRESOLVABLE) {
-                return false;
-            }
-            Object operator = contextual.getParameter("operator");
-            if (operator != null) {
-                return booleanEvaluator.eval(contextual, item, context, this);
-            }
-            return propertyEvaluator.eval(contextual, item, context, this);
-        }
-    };
+    @Before
+    public void setUp() {
+        dispatcher.setDefinitionsService(mock(DefinitionsService.class));
+        dispatcher.addEvaluator("booleanConditionEvaluator", new BooleanConditionEvaluator());
+        dispatcher.addEvaluator("propertyConditionEvaluator", new PropertyConditionEvaluator());
+    }
 
     @Test
     public void onlyTargetId_matchesMatchingHover_andRejectsOtherTarget() {
-        Condition hover = hoverOr();
-
-        assertTrue(dispatcher.eval(hover, hoverEvent("button-a", "/other"), params("button-a", null)));
-        assertFalse(dispatcher.eval(hover, hoverEvent("button-b", "/other"), params("button-a", null)));
+        assertTrue(dispatcher.eval(hover("button-a", null), event("hover", "button-a", "/other"), new HashMap<>()));
+        assertFalse(dispatcher.eval(hover("button-a", null), event("hover", "button-b", "/other"), new HashMap<>()));
     }
 
     @Test
     public void onlyTargetPath_matchesMatchingHover_andRejectsOtherPath() {
-        Condition hover = hoverOr();
-
-        assertTrue(dispatcher.eval(hover, hoverEvent("x", "/page-a"), params(null, "/page-a")));
-        assertFalse(dispatcher.eval(hover, hoverEvent("x", "/page-b"), params(null, "/page-a")));
+        assertTrue(dispatcher.eval(hover(null, "/page-a"), event("hover", "x", "/page-a"), new HashMap<>()));
+        assertFalse(dispatcher.eval(hover(null, "/page-a"), event("hover", "x", "/page-b"), new HashMap<>()));
     }
 
     @Test
     public void bothSet_matchesEither() {
-        Condition hover = hoverOr();
-
-        assertTrue(dispatcher.eval(hover, hoverEvent("button-a", "/other"), params("button-a", "/page-a")));
-        assertTrue(dispatcher.eval(hover, hoverEvent("other", "/page-a"), params("button-a", "/page-a")));
-        assertFalse(dispatcher.eval(hover, hoverEvent("other", "/other"), params("button-a", "/page-a")));
+        Condition hover = hover("button-a", "/page-a");
+        assertTrue(dispatcher.eval(hover, event("hover", "button-a", "/other"), new HashMap<>()));
+        assertTrue(dispatcher.eval(hover, event("hover", "other", "/page-a"), new HashMap<>()));
+        assertFalse(dispatcher.eval(hover, event("hover", "other", "/other"), new HashMap<>()));
     }
 
     @Test
     public void neitherSet_matchesNothing() {
-        Condition hover = hoverOr();
-
-        assertFalse(dispatcher.eval(hover, hoverEvent("button-a", "/page-a"), params(null, null)));
+        assertFalse(dispatcher.eval(hover(null, null), event("hover", "button-a", "/page-a"), new HashMap<>()));
     }
 
-    private static Condition hoverOr() {
-        Condition or = new Condition();
-        or.setParameter("operator", "or");
-        or.setParameter("subConditions", Arrays.asList(
-                optionalEquals("target.itemId", "targetId"),
-                optionalEquals("target.properties.pageInfo.pagePath", "targetPath")));
-        return or;
+    @Test
+    public void typedSubConditionWithUnsetParameter_isOmittedUnderOr() {
+        // A type whose parent pins the event type and compares a target id. The dispatcher merges a
+        // typed condition's own parameters into its expanded parent, so one unset parameter voids
+        // the whole typed condition; under OR it must be omitted, not count as a match.
+        Condition hoverTargetParent = booleanCondition("and",
+                eventProperty("eventType", "hover"),
+                eventProperty("target.itemId", "parameter::targetId"));
+        Condition sub = new Condition(type("hoverTargetCondition", null, hoverTargetParent));
+        sub.setParameter("targetId", "parameter::unsetTargetId");
+        Condition or = booleanCondition("or", sub, eventProperty("eventType", "view"));
+
+        assertFalse(dispatcher.eval(or, event("hover", "x", "/p"), new HashMap<>()));
+        assertTrue(dispatcher.eval(or, event("view", "x", "/p"), new HashMap<>()));
     }
 
-    private static Condition optionalEquals(String propertyName, String parameterName) {
-        Condition c = new Condition();
-        c.setParameter("propertyName", propertyName);
-        c.setParameter("propertyValue", "parameter::" + parameterName);
-        c.setParameter("comparisonOperator", "equals");
-        return c;
-    }
-
-    private static Map<String, Object> params(String targetId, String targetPath) {
-        Map<String, Object> context = new HashMap<>();
+    private Condition hover(String targetId, String targetPath) {
+        Condition parent = booleanCondition("and",
+                eventProperty("eventType", "hover"),
+                booleanCondition("or",
+                        eventProperty("target.itemId", "parameter::targetId"),
+                        eventProperty("target.properties.pageInfo.pagePath", "parameter::targetPath")));
+        Condition hover = new Condition(type("hoverEventCondition", null, parent));
         if (targetId != null) {
-            context.put("targetId", targetId);
+            hover.setParameter("targetId", targetId);
         }
         if (targetPath != null) {
-            context.put("targetPath", targetPath);
+            hover.setParameter("targetPath", targetPath);
         }
-        return context;
+        return hover;
     }
 
-    private static Event hoverEvent(String targetId, String pagePath) {
-        Profile profile = new Profile("profile-1");
+    private Condition booleanCondition(String operator, Condition... subConditions) {
+        Condition condition = new Condition(booleanType);
+        condition.setParameter("operator", operator);
+        condition.setParameter("subConditions", Arrays.asList(subConditions));
+        return condition;
+    }
+
+    private Condition eventProperty(String propertyName, String propertyValue) {
+        Condition condition = new Condition(eventPropertyType);
+        condition.setParameter("propertyName", propertyName);
+        condition.setParameter("propertyValue", propertyValue);
+        condition.setParameter("comparisonOperator", "equals");
+        return condition;
+    }
+
+    private static ConditionType type(String id, String evaluator, Condition parentCondition) {
+        ConditionType type = new ConditionType();
+        type.setItemId(id);
+        type.setConditionEvaluator(evaluator);
+        type.setParentCondition(parentCondition);
+        return type;
+    }
+
+    private static Event event(String eventType, String targetId, String pagePath) {
         CustomItem target = new CustomItem();
         target.setItemId(targetId);
         target.setItemType("page");
@@ -146,7 +144,7 @@ public class HoverEventConditionOptionalOrTest {
         properties.put("pageInfo", pageInfo);
         target.setProperties(properties);
 
-        Event event = new Event("hover", null, profile, "systemscope", null, target, new Date());
+        Event event = new Event(eventType, null, new Profile("profile-1"), "systemscope", null, target, new Date());
         event.setItemId("event-1");
         return event;
     }

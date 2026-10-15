@@ -266,6 +266,37 @@ This affects every endpoint that takes a `Query`, among them `/cxs/profiles/sear
 * A client that omits the `condition` field entirely still searches over everything, and it needs no change.
 * A client whose condition names a type that the server does not know now reads an empty list where it used to read every item. Check the server log for the condition type it names, and deploy the plugin that defines it.
 
+==== An OR condition with no branch to test matches nothing (4.0)
+
+A condition parameter that reads `parameter::name` is optional: when nothing supplies `name`, the branch that
+holds it states no constraint and is left out. 3.0 left it out of an AND, and 4.0 now also leaves it out of
+an OR instead of counting it as a match. A `hoverEventCondition` that sets only `targetId`, for example, used
+to match every hover event, and now matches only hovers on that target.
+
+.What changed
+[cols="1,2,2", options="header"]
+|===
+| Condition | 3.0 | 4.0
+
+| An OR with a branch whose parameter is unset
+| Matched every item.
+| The branch is left out, and the OR matches on its other branches.
+
+| An OR whose branches are all unset
+| Matched every item.
+| Matches no item.
+
+| An OR whose `subConditions` list is empty
+| Matched every item when run as a search query, and no item when evaluated in memory, as a rule is.
+| Matches no item in both cases.
+|===
+
+===== Migrating a client
+
+* A segment, scoring plan or search that relied on an empty OR to select every item uses `matchAllCondition`
+  instead.
+* An OR of optional parameters needs at least one of them set to match anything.
+
 [#_segment_and_scoring_lists]
 ==== Segment and scoring lists merge system and tenant items (4.0)
 
