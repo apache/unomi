@@ -36,12 +36,11 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
- * End-to-end coverage for UNOMI-1004 through the real dispatcher, which expands condition types
- * into their parent condition: a hover condition (as defined in hoverEventCondition.json) must
- * only match on the parameters that are set, and a typed sub-condition with one unset parameter
- * must keep the constraints its type adds.
+ * UNOMI-1004 boolean semantics for unset optional parameters, through the real dispatcher, which
+ * expands condition types into their parent condition. The shipped hover condition is covered in
+ * the hover-event plugin.
  */
-public class HoverEventConditionOptionalOrTest {
+public class BooleanConditionOptionalParameterTest {
 
     private final ConditionEvaluatorDispatcherImpl dispatcher = new ConditionEvaluatorDispatcherImpl();
     private final ConditionType booleanType = type("booleanCondition", "booleanConditionEvaluator", null);
@@ -52,31 +51,6 @@ public class HoverEventConditionOptionalOrTest {
         dispatcher.setDefinitionsService(mock(DefinitionsService.class));
         dispatcher.addEvaluator("booleanConditionEvaluator", new BooleanConditionEvaluator());
         dispatcher.addEvaluator("propertyConditionEvaluator", new PropertyConditionEvaluator());
-    }
-
-    @Test
-    public void onlyTargetId_matchesMatchingHover_andRejectsOtherTarget() {
-        assertTrue(dispatcher.eval(hover("button-a", null), event("hover", "button-a", "/other"), new HashMap<>()));
-        assertFalse(dispatcher.eval(hover("button-a", null), event("hover", "button-b", "/other"), new HashMap<>()));
-    }
-
-    @Test
-    public void onlyTargetPath_matchesMatchingHover_andRejectsOtherPath() {
-        assertTrue(dispatcher.eval(hover(null, "/page-a"), event("hover", "x", "/page-a"), new HashMap<>()));
-        assertFalse(dispatcher.eval(hover(null, "/page-a"), event("hover", "x", "/page-b"), new HashMap<>()));
-    }
-
-    @Test
-    public void bothSet_matchesEither() {
-        Condition hover = hover("button-a", "/page-a");
-        assertTrue(dispatcher.eval(hover, event("hover", "button-a", "/other"), new HashMap<>()));
-        assertTrue(dispatcher.eval(hover, event("hover", "other", "/page-a"), new HashMap<>()));
-        assertFalse(dispatcher.eval(hover, event("hover", "other", "/other"), new HashMap<>()));
-    }
-
-    @Test
-    public void neitherSet_matchesNothing() {
-        assertFalse(dispatcher.eval(hover(null, null), event("hover", "button-a", "/page-a"), new HashMap<>()));
     }
 
     @Test
@@ -95,20 +69,16 @@ public class HoverEventConditionOptionalOrTest {
         assertTrue(dispatcher.eval(or, event("view", "x", "/p"), new HashMap<>()));
     }
 
-    private Condition hover(String targetId, String targetPath) {
-        Condition parent = booleanCondition("and",
-                eventProperty("eventType", "hover"),
-                booleanCondition("or",
-                        eventProperty("target.itemId", "parameter::targetId"),
-                        eventProperty("target.properties.pageInfo.pagePath", "parameter::targetPath")));
-        Condition hover = new Condition(type("hoverEventCondition", null, parent));
-        if (targetId != null) {
-            hover.setParameter("targetId", targetId);
-        }
-        if (targetPath != null) {
-            hover.setParameter("targetPath", targetPath);
-        }
-        return hover;
+    @Test
+    public void nestedAndWithAllOptionalsUnset_matchesUnderOr() {
+        // An AND with nothing left to test states no constraint (UNOMI-982), so an OR holding it
+        // matches. This is the 2.x and 3.x behaviour, kept on purpose.
+        Condition unsetAnd = booleanCondition("and",
+                eventProperty("target.itemId", "parameter::unsetTargetId"),
+                eventProperty("target.properties.pageInfo.pagePath", "parameter::unsetTargetPath"));
+        Condition or = booleanCondition("or", unsetAnd, eventProperty("eventType", "never"));
+
+        assertTrue(dispatcher.eval(or, event("view", "x", "/p"), new HashMap<>()));
     }
 
     private Condition booleanCondition(String operator, Condition... subConditions) {

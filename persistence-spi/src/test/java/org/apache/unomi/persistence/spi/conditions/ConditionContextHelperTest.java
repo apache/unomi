@@ -1197,6 +1197,21 @@ public class ConditionContextHelperTest {
     }
 
     @Test
+    public void testResolveBooleanSubConditions_untypedSub_keepsTypeId() {
+        Condition sub = new Condition();
+        sub.setConditionTypeId("profilePropertyCondition");
+        sub.setParameter("propertyValue", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "gender");
+
+        Map<String, Object> context = new HashMap<>();
+        context.put("gender", "female");
+        ConditionContextHelper.ResolvedBooleanSubConditions resolved =
+                ConditionContextHelper.resolveBooleanSubConditions(Collections.singletonList(sub), context, scriptExecutor);
+
+        assertEquals("profilePropertyCondition", resolved.getActive().get(0).getConditionTypeId());
+        assertEquals("female", resolved.getActive().get(0).getParameter("propertyValue"));
+    }
+
+    @Test
     public void testResolveBooleanSubConditions_unresolvableSub_isReportedAndOmitted() {
         Condition broken = new Condition();
         broken.setParameter("propertyValue", ConditionContextHelper.SCRIPT_EXPRESSION_PREFIX + "anything");

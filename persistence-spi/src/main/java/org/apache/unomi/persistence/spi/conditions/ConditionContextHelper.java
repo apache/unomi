@@ -819,7 +819,8 @@ public class ConditionContextHelper {
     /**
      * Result of resolving the sub-conditions of a boolean condition against a context.
      * Unset optional parameters are omitted from {@link #getActive()}; unresolvable
-     * references are reported via {@link #hasUnresolvable()} so AND can fail closed.
+     * references are omitted too and reported via {@link #hasUnresolvable()}, so AND can fail
+     * closed while OR refuses only that branch's match.
      */
     public static final class ResolvedBooleanSubConditions {
         private final List<Condition> active;
@@ -882,6 +883,11 @@ public class ConditionContextHelper {
             if (resolved == UNRESOLVABLE) {
                 unresolvable = true;
                 continue;
+            }
+            if (resolved.getConditionTypeId() == null) {
+                // A copy of a sub-condition whose type is not resolved yet keeps its type id, so the
+                // dispatcher can still resolve it.
+                resolved.setConditionTypeId(sub.getConditionTypeId());
             }
             active.add(resolved);
         }

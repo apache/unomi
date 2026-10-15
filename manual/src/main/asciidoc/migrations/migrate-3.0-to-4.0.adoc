@@ -296,6 +296,8 @@ to match every hover event, and now matches only hovers on that target.
 * A segment, scoring plan or search that relied on an empty OR to select every item uses `matchAllCondition`
   instead.
 * An OR of optional parameters needs at least one of them set to match anything.
+* An AND whose branches are all unset still states no constraint and matches every item, as in 3.0, also
+  when it sits inside an OR.
 
 [#_segment_and_scoring_lists]
 ==== Segment and scoring lists merge system and tenant items (4.0)

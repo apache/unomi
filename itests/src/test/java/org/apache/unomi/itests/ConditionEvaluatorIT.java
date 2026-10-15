@@ -122,6 +122,10 @@ public class ConditionEvaluatorIT extends BaseIT {
 
         assertTrue(eval(builder.and(unsetGender, builder.profileProperty("properties.age").equalTo(30)).build()));
         assertFalse(eval(builder.and(unsetGender, builder.profileProperty("properties.age").equalTo(40)).build()));
+        assertTrue(eval(builder.and(unsetGender, unsetAge).build()));
+        // An AND with nothing left to test states no constraint, so an OR holding it matches (as in 2.x and 3.x).
+        assertTrue(eval(builder.or(builder.and(unsetGender, unsetAge),
+                builder.profileProperty("properties.age").equalTo(40)).build()));
     }
 
     @Test

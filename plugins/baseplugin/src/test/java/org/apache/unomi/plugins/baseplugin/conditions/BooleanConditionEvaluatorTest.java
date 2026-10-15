@@ -242,6 +242,16 @@ public class BooleanConditionEvaluatorTest {
         verify(dispatcher, times(1)).eval(any(Condition.class), same(profile), any());
     }
 
+    @Test
+    public void and_allOptionalsUnset_matches() {
+        Condition targetIdBranch = optionalEquals("target.itemId", "targetId");
+        Condition targetPathBranch = optionalEquals("target.properties.pageInfo.pagePath", "targetPath");
+
+        assertTrue(evaluator.eval(booleanCondition("and", targetIdBranch, targetPathBranch),
+                profile, new HashMap<>(), dispatcher));
+        verify(dispatcher, never()).eval(any(Condition.class), any(), any());
+    }
+
     // A script that cannot run (no script executor here) makes the sub-condition unresolvable.
 
     @Test

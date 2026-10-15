@@ -76,6 +76,18 @@ public class BooleanConditionOSQueryBuilderTest {
     }
 
     @Test
+    public void and_allOptionalsUnset_returnsMatchAll() {
+        Condition and = new Condition();
+        and.setParameter("operator", "and");
+        and.setParameter("subConditions", Arrays.asList(
+                optionalEquals("target.itemId", "targetId"),
+                optionalEquals("target.properties.pageInfo.pagePath", "targetPath")));
+
+        assertTrue(builder.buildQuery(and, new HashMap<>(), dispatcher).isMatchAll());
+        verify(dispatcher, never()).buildFilter(any(Condition.class), any());
+    }
+
+    @Test
     public void or_emptySubConditions_returnsMatchNone() {
         Condition or = new Condition();
         or.setParameter("operator", "or");
