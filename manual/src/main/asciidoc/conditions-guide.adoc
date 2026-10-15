@@ -194,6 +194,11 @@ Combine conditions with `booleanCondition`. This is the main way to build segmen
 }
 ----
 
+An AND with no sub-condition to test matches every item, and an OR with none matches no item. To select every
+item, use `matchAllCondition` rather than an empty OR. A sub-condition whose `parameter::` reference is unset is
+left out before the operator applies; see <<_writing_plugins,Writing plugins>> for how condition types use
+these references.
+
 Negate a sub-condition with `notCondition`:
 
 [source,json]

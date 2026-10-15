@@ -138,7 +138,7 @@ Use the same `queryBuilderId` in JSON, Elasticsearch, and OpenSearch registratio
 |===
 | Condition type ID | Source | Key parameters / notes
 | `cdpSessionEventCondition` | graphql | Params: —
-| `hoverEventCondition` | hover-event | Params: targetId, targetPath
+| `hoverEventCondition` | hover-event | Matches a hover on the given target id or page path. Params: targetId, targetPath (set at least one; with neither set, it matches nothing)
 | `sourceEventPropertyCondition` | advanced-conditions | Params: id, path, scope, type
 | `updateConsentEventCondition` | graphql | Params: —
 | `updateListsEventCondition` | graphql | Params: —
