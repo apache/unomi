@@ -24,7 +24,9 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.exceptions.BadSegmentConditionException;
+import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.segments.SegmentsAndScores;
 import org.apache.unomi.api.services.EventService;
@@ -237,6 +239,33 @@ public class SegmentServiceImplTest {
         segment.setCondition(condition);
 
         return segment;
+    }
+
+    private Scoring createTestScoring(String scoringId, String name) {
+        Scoring scoring = new Scoring();
+        scoring.setItemId(scoringId);
+        scoring.setTenantId(executionContextManager.getCurrentContext().getTenantId());
+
+        Metadata metadata = new Metadata();
+        metadata.setId(scoringId);
+        metadata.setName(name);
+        metadata.setScope("systemscope");
+        metadata.setEnabled(false);
+        scoring.setMetadata(metadata);
+        scoring.setElements(Collections.emptyList());
+        return scoring;
+    }
+
+    private Date daysAgo(int days) {
+        return new Date(System.currentTimeMillis() - days * 24L * 60L * 60L * 1000L);
+    }
+
+    private List<String> metadataIds(PartialList<Metadata> page) {
+        List<String> ids = new ArrayList<>();
+        for (Metadata metadata : page.getList()) {
+            ids.add(metadata.getId());
+        }
+        return ids;
     }
 
     private Segment createPastEventSegment(String segmentId, String name, String eventType, int numberOfDays) {
@@ -1160,4 +1189,153 @@ public class SegmentServiceImplTest {
             return null;
         });
     }
+
+    @Test
+    public void testMergedSegmentListSortByNameAndDate() {
+        executionContextManager.executeAsSystem(() -> {
+            Segment zebra = createTestSegment("sys-zebra", "Zebra");
+            zebra.setCreationDate(daysAgo(5));
+            Segment middle = createTestSegment("sys-middle", "Middle");
+            middle.setCreationDate(daysAgo(3));
+            segmentService.setSegmentDefinition(zebra);
+            segmentService.setSegmentDefinition(middle);
+            return null;
+        });
+
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Segment alpha = createTestSegment("tenant-alpha", "Alpha");
+            alpha.setCreationDate(daysAgo(1));
+            segmentService.setSegmentDefinition(alpha);
+            persistenceService.refresh();
+
+            PartialList<Metadata> byNameAsc = TestHelper.retryQueryUntilAvailable(
+                () -> segmentService.getSegmentMetadatas(0, 10, "name:asc"),
+                3
+            );
+            assertEquals(Arrays.asList("tenant-alpha", "sys-middle", "sys-zebra"), metadataIds(byNameAsc));
+
+            PartialList<Metadata> byNameDesc = segmentService.getSegmentMetadatas(0, 10, "name:desc");
+            assertEquals(Arrays.asList("sys-zebra", "sys-middle", "tenant-alpha"), metadataIds(byNameDesc));
+
+            PartialList<Metadata> byDateAsc = segmentService.getSegmentMetadatas(0, 10, "creationDate:asc");
+            assertEquals(Arrays.asList("sys-zebra", "sys-middle", "tenant-alpha"), metadataIds(byDateAsc));
+
+            PartialList<Metadata> byDateDesc = segmentService.getSegmentMetadatas(0, 10, "creationDate:desc");
+            assertEquals(Arrays.asList("tenant-alpha", "sys-middle", "sys-zebra"), metadataIds(byDateDesc));
+            return null;
+        });
+    }
+
+    @Test
+    public void testMergedSegmentListPagingAndQueryLimits() {
+        executionContextManager.executeAsSystem(() -> {
+            segmentService.setSegmentDefinition(createTestSegment("sys-a", "A-System"));
+            segmentService.setSegmentDefinition(createTestSegment("sys-b", "B-System"));
+            return null;
+        });
+
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            segmentService.setSegmentDefinition(createTestSegment("ten-c", "C-Tenant"));
+            segmentService.setSegmentDefinition(createTestSegment("ten-d", "D-Tenant"));
+            segmentService.setSegmentDefinition(createTestSegment("ten-e", "E-Tenant"));
+            persistenceService.refresh();
+
+            TestHelper.retryQueryUntilAvailable(() -> segmentService.getSegmentMetadatas(0, 10, "name:asc"), 5);
+
+            PartialList<Metadata> page1 = segmentService.getSegmentMetadatas(0, 2, "name:asc");
+            PartialList<Metadata> page2 = segmentService.getSegmentMetadatas(2, 2, "name:asc");
+            PartialList<Metadata> page3 = segmentService.getSegmentMetadatas(4, 2, "name:asc");
+            List<String> allPages = new ArrayList<>();
+            allPages.addAll(metadataIds(page1));
+            allPages.addAll(metadataIds(page2));
+            allPages.addAll(metadataIds(page3));
+            assertEquals(Arrays.asList("sys-a", "sys-b", "ten-c", "ten-d", "ten-e"), allPages);
+            assertEquals(5, page1.getTotalSize());
+
+            Query noLimit = new Query();
+            PartialList<Metadata> noLimitResult = segmentService.getSegmentMetadatas(noLimit);
+            assertEquals(5, noLimitResult.getList().size());
+            assertEquals(5, noLimitResult.getTotalSize());
+
+            Query limitMinusOne = new Query();
+            limitMinusOne.setLimit(-1);
+            assertEquals(5, segmentService.getSegmentMetadatas(limitMinusOne).getList().size());
+
+            Query limitZero = new Query();
+            limitZero.setLimit(0);
+            assertEquals(0, segmentService.getSegmentMetadatas(limitZero).getList().size());
+
+            Query largerThanTotal = new Query();
+            largerThanTotal.setLimit(100);
+            largerThanTotal.setSortby("name:asc");
+            assertEquals(5, segmentService.getSegmentMetadatas(largerThanTotal).getList().size());
+
+            Query pastEnd = new Query();
+            pastEnd.setOffset(20);
+            pastEnd.setLimit(5);
+            assertEquals(0, segmentService.getSegmentMetadatas(pastEnd).getList().size());
+            assertEquals(5, segmentService.getSegmentMetadatas(pastEnd).getTotalSize());
+
+            assertThrows(IllegalArgumentException.class,
+                () -> segmentService.getSegmentMetadatas(0, 10, "notARealField:asc"));
+            return null;
+        });
+    }
+
+    @Test
+    public void testMergedScoringListSortPagingAndQueryLimits() {
+        executionContextManager.executeAsSystem(() -> {
+            Scoring late = createTestScoring("sys-late", "Late");
+            late.setCreationDate(daysAgo(4));
+            Scoring early = createTestScoring("sys-early", "Early");
+            early.setCreationDate(daysAgo(1));
+            segmentService.setScoringDefinition(late);
+            segmentService.setScoringDefinition(early);
+            return null;
+        });
+
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Scoring mid = createTestScoring("ten-mid", "Mid");
+            mid.setCreationDate(daysAgo(2));
+            segmentService.setScoringDefinition(mid);
+            persistenceService.refresh();
+
+            PartialList<Metadata> byNameAsc = TestHelper.retryQueryUntilAvailable(
+                () -> segmentService.getScoringMetadatas(0, 10, "name:asc"),
+                3
+            );
+            assertEquals(Arrays.asList("sys-early", "sys-late", "ten-mid"), metadataIds(byNameAsc));
+
+            PartialList<Metadata> byDateDesc = segmentService.getScoringMetadatas(0, 10, "creationDate:desc");
+            assertEquals(Arrays.asList("sys-early", "ten-mid", "sys-late"), metadataIds(byDateDesc));
+
+            PartialList<Metadata> page1 = segmentService.getScoringMetadatas(0, 2, "name:asc");
+            PartialList<Metadata> page2 = segmentService.getScoringMetadatas(2, 2, "name:asc");
+            List<String> allPages = new ArrayList<>();
+            allPages.addAll(metadataIds(page1));
+            allPages.addAll(metadataIds(page2));
+            assertEquals(Arrays.asList("sys-early", "sys-late", "ten-mid"), allPages);
+
+            Query noLimit = new Query();
+            assertEquals(3, segmentService.getScoringMetadatas(noLimit).getList().size());
+
+            Query limitMinusOne = new Query();
+            limitMinusOne.setLimit(-1);
+            assertEquals(3, segmentService.getScoringMetadatas(limitMinusOne).getList().size());
+
+            Query limitZero = new Query();
+            limitZero.setLimit(0);
+            assertEquals(0, segmentService.getScoringMetadatas(limitZero).getList().size());
+
+            Query pastEnd = new Query();
+            pastEnd.setOffset(50);
+            pastEnd.setLimit(10);
+            assertEquals(0, segmentService.getScoringMetadatas(pastEnd).getList().size());
+
+            assertThrows(IllegalArgumentException.class,
+                () -> segmentService.getScoringMetadatas(0, 10, "properties.score:asc"));
+            return null;
+        });
+    }
 }
+

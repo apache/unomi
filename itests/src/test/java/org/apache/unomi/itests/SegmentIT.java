@@ -17,8 +17,14 @@
 
 package org.apache.unomi.itests;
 
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.exceptions.BadSegmentConditionException;
@@ -792,5 +798,77 @@ public class SegmentIT extends BaseIT {
                 updatedProfile -> !updatedProfile.getSegments().contains("relative-date-segment-test") && (
                         updatedProfile.getScores() == null || !updatedProfile.getScores().containsKey("relative-date-scoring-test")), 1000,
                 20);
+    }
+
+    @Test
+    public void testQuerySegmentsWithNoLimitReturnsFullList() throws Exception {
+        Metadata segmentOneMetadata = new Metadata("query-no-limit-segment-1");
+        segmentOneMetadata.setName("Query No Limit Segment 1");
+        Segment segmentOne = new Segment(segmentOneMetadata);
+        Condition segmentOneCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        segmentOneCondition.setParameter("propertyName", "properties.email");
+        segmentOneCondition.setParameter("comparisonOperator", "exists");
+        segmentOne.setCondition(segmentOneCondition);
+        segmentService.setSegmentDefinition(segmentOne);
+
+        Metadata segmentTwoMetadata = new Metadata("query-no-limit-segment-2");
+        segmentTwoMetadata.setName("Query No Limit Segment 2");
+        Segment segmentTwo = new Segment(segmentTwoMetadata);
+        Condition segmentTwoCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        segmentTwoCondition.setParameter("propertyName", "properties.firstName");
+        segmentTwoCondition.setParameter("comparisonOperator", "exists");
+        segmentTwo.setCondition(segmentTwoCondition);
+        segmentService.setSegmentDefinition(segmentTwo);
+
+        keepTrying("Segments should be listed",
+                () -> segmentService.getSegmentMetadatas(0, 50, null).getList(),
+                list -> list.stream().anyMatch(m -> "query-no-limit-segment-1".equals(m.getId()))
+                        && list.stream().anyMatch(m -> "query-no-limit-segment-2".equals(m.getId())),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        HttpPost request = new HttpPost(getFullUrl("/cxs/segments/query"));
+        request.setEntity(new StringEntity("{}", ContentType.APPLICATION_JSON));
+        try (CloseableHttpResponse response = executeHttpRequest(request)) {
+            Assert.assertEquals("Segment query with no limit should return 200", 200, response.getStatusLine().getStatusCode());
+            String body = EntityUtils.toString(response.getEntity());
+            PartialList<?> result = getObjectMapper().readValue(body, PartialList.class);
+            Assert.assertNotNull(result);
+            Assert.assertNotNull(result.getList());
+            Assert.assertTrue("Should return both created segments", result.getList().size() >= 2);
+            Assert.assertTrue("totalSize should cover the full list", result.getTotalSize() >= 2);
+        }
+    }
+
+    @Test
+    public void testQueryScoringsWithNoLimitReturnsFullList() throws Exception {
+        Metadata scoringOneMetadata = new Metadata("query-no-limit-scoring-1");
+        scoringOneMetadata.setName("Query No Limit Scoring 1");
+        Scoring scoringOne = new Scoring(scoringOneMetadata);
+        scoringOne.setElements(new ArrayList<>());
+        segmentService.setScoringDefinition(scoringOne);
+
+        Metadata scoringTwoMetadata = new Metadata("query-no-limit-scoring-2");
+        scoringTwoMetadata.setName("Query No Limit Scoring 2");
+        Scoring scoringTwo = new Scoring(scoringTwoMetadata);
+        scoringTwo.setElements(new ArrayList<>());
+        segmentService.setScoringDefinition(scoringTwo);
+
+        keepTrying("Scorings should be listed",
+                () -> segmentService.getScoringMetadatas(0, 50, null).getList(),
+                list -> list.stream().anyMatch(m -> "query-no-limit-scoring-1".equals(m.getId()))
+                        && list.stream().anyMatch(m -> "query-no-limit-scoring-2".equals(m.getId())),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        HttpPost request = new HttpPost(getFullUrl("/cxs/scoring/query"));
+        request.setEntity(new StringEntity("{}", ContentType.APPLICATION_JSON));
+        try (CloseableHttpResponse response = executeHttpRequest(request)) {
+            Assert.assertEquals("Scoring query with no limit should return 200", 200, response.getStatusLine().getStatusCode());
+            String body = EntityUtils.toString(response.getEntity());
+            PartialList<?> result = getObjectMapper().readValue(body, PartialList.class);
+            Assert.assertNotNull(result);
+            Assert.assertNotNull(result.getList());
+            Assert.assertTrue("Should return both created scorings", result.getList().size() >= 2);
+            Assert.assertTrue("totalSize should cover the full list", result.getTotalSize() >= 2);
+        }
     }
 }
