@@ -279,91 +279,49 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
     public PartialList<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy) {
         String currentTenantId = contextManager.getCurrentContext().getTenantId();
-        List<Metadata> details = new LinkedList<>();
+        Map<String, Segment> merged = new LinkedHashMap<>();
 
         // Get system tenant segments first
         if (!TenantService.SYSTEM_TENANT.equals(currentTenantId)) {
             contextManager.executeAsSystem(() -> {
-                Condition systemTenantCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-                systemTenantCondition.setParameter("operator", "and");
-                List<Condition> systemConditions = new ArrayList<>();
-
-                Condition systemTenantCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-                systemTenantCheck.setParameter("propertyName", "tenantId");
-                systemTenantCheck.setParameter("comparisonOperator", "equals");
-                systemTenantCheck.setParameter("propertyValue", TenantService.SYSTEM_TENANT);
-                systemConditions.add(systemTenantCheck);
-
-                if (scope != null) {
-                    Condition systemScopeCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-                    systemScopeCheck.setParameter("propertyName", "metadata.scope");
-                    systemScopeCheck.setParameter("comparisonOperator", "equals");
-                    systemScopeCheck.setParameter("propertyValue", scope);
-                    systemConditions.add(systemScopeCheck);
-                }
-
-                systemTenantCondition.setParameter("subConditions", systemConditions);
-
-                PartialList<Segment> systemSegments = persistenceService.query(systemTenantCondition, sortBy, Segment.class, 0, -1);
+                Condition systemTenantCondition = buildTenantScopeCondition(TenantService.SYSTEM_TENANT, scope);
+                PartialList<Segment> systemSegments = persistenceService.query(systemTenantCondition, null, Segment.class, 0, -1);
                 for (Segment definition : systemSegments.getList()) {
-                    details.add(definition.getMetadata());
+                    merged.put(definition.getMetadata().getId(), definition);
                 }
                 return null;
             });
         }
 
         // Get current tenant segments (will override system segments with same ID)
-        Condition tenantCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        tenantCondition.setParameter("operator", "and");
-        List<Condition> conditions = new ArrayList<>();
+        Condition tenantCondition = buildTenantScopeCondition(currentTenantId, scope);
+        PartialList<Segment> segments = persistenceService.query(tenantCondition, null, Segment.class, 0, -1);
+        for (Segment definition : segments.getList()) {
+            merged.put(definition.getMetadata().getId(), definition);
+        }
 
+        return MergedMetadataListHelper.sortAndPage(merged.values(), offset, size, sortBy, persistenceService.getDefaultQueryLimit());
+    }
+
+    private Condition buildTenantScopeCondition(String tenantId, String scope) {
         Condition tenantCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
         tenantCheck.setParameter("propertyName", "tenantId");
         tenantCheck.setParameter("comparisonOperator", "equals");
-        tenantCheck.setParameter("propertyValue", currentTenantId);
-        conditions.add(tenantCheck);
+        tenantCheck.setParameter("propertyValue", tenantId);
 
-        if (scope != null) {
-            Condition scopeCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-            scopeCheck.setParameter("propertyName", "metadata.scope");
-            scopeCheck.setParameter("comparisonOperator", "equals");
-            scopeCheck.setParameter("propertyValue", scope);
-            conditions.add(scopeCheck);
+        if (scope == null) {
+            return tenantCheck;
         }
 
-        tenantCondition.setParameter("subConditions", conditions);
+        Condition scopeCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        scopeCheck.setParameter("propertyName", "metadata.scope");
+        scopeCheck.setParameter("comparisonOperator", "equals");
+        scopeCheck.setParameter("propertyValue", scope);
 
-        PartialList<Segment> segments = persistenceService.query(tenantCondition, sortBy, Segment.class, 0, -1);
-        Map<String, Metadata> mergedDetails = new HashMap<>();
-
-        // Add system tenant segments first
-        for (Metadata metadata : details) {
-            mergedDetails.put(metadata.getId(), metadata);
-        }
-
-        // Override with current tenant segments
-        for (Segment definition : segments.getList()) {
-            mergedDetails.put(definition.getMetadata().getId(), definition.getMetadata());
-        }
-
-        // Convert to list and apply pagination
-        List<Metadata> finalDetails = new ArrayList<>(mergedDetails.values());
-        if (sortBy != null) {
-            // TODO: Implement sorting of merged results
-        }
-
-        int totalSize = finalDetails.size();
-        int fromIndex = offset;
-        int toIndex = offset + size;
-        if (fromIndex >= totalSize) {
-            return new PartialList<Metadata>(new ArrayList<>(), offset, size, totalSize, PartialList.Relation.EQUAL);
-        }
-        if (toIndex > totalSize) {
-            toIndex = totalSize;
-        }
-        finalDetails = finalDetails.subList(fromIndex, toIndex);
-
-        return new PartialList<Metadata>(finalDetails, offset, size, totalSize, PartialList.Relation.EQUAL);
+        Condition combined = new Condition(definitionsService.getConditionType("booleanCondition"));
+        combined.setParameter("operator", "and");
+        combined.setParameter("subConditions", Arrays.asList(tenantCheck, scopeCheck));
+        return combined;
     }
 
     public PartialList<Metadata> getSegmentMetadatas(Query query) {
@@ -1598,62 +1556,34 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
     protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(int offset, int size, String sortBy, Class<T> clazz) {
         String currentTenantId = contextManager.getCurrentContext().getTenantId();
-        List<Metadata> details = new LinkedList<>();
+        Map<String, T> merged = new LinkedHashMap<>();
 
         // Get system tenant items first
         if (!TenantService.SYSTEM_TENANT.equals(currentTenantId)) {
             contextManager.executeAsSystem(() -> {
-                Condition systemTenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-                systemTenantCondition.setParameter("propertyName", "tenantId");
-                systemTenantCondition.setParameter("comparisonOperator", "equals");
-                systemTenantCondition.setParameter("propertyValue", TenantService.SYSTEM_TENANT);
-                PartialList<T> systemItems = persistenceService.query(systemTenantCondition, sortBy, clazz, 0, -1);
+                Condition systemTenantCondition = buildTenantScopeCondition(TenantService.SYSTEM_TENANT, null);
+                PartialList<T> systemItems = persistenceService.query(systemTenantCondition, null, clazz, 0, -1);
                 for (T definition : systemItems.getList()) {
-                    details.add(definition.getMetadata());
+                    merged.put(definition.getMetadata().getId(), definition);
                 }
                 return null;
             });
         }
 
         // Get current tenant items (will override system items with same ID)
-        Condition tenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        tenantCondition.setParameter("propertyName", "tenantId");
-        tenantCondition.setParameter("comparisonOperator", "equals");
-        tenantCondition.setParameter("propertyValue", currentTenantId);
-        PartialList<T> items = persistenceService.query(tenantCondition, sortBy, clazz, 0, -1);
-        Map<String, Metadata> mergedDetails = new HashMap<>();
-
-        // Add system tenant items first
-        for (Metadata metadata : details) {
-            mergedDetails.put(metadata.getId(), metadata);
-        }
-
-        // Override with current tenant items
+        Condition tenantCondition = buildTenantScopeCondition(currentTenantId, null);
+        PartialList<T> items = persistenceService.query(tenantCondition, null, clazz, 0, -1);
         for (T definition : items.getList()) {
-            mergedDetails.put(definition.getMetadata().getId(), definition.getMetadata());
+            merged.put(definition.getMetadata().getId(), definition);
         }
 
-        // Convert to list and apply pagination
-        List<Metadata> finalDetails = new ArrayList<>(mergedDetails.values());
-        if (sortBy != null) {
-            // TODO: Implement sorting of merged results
-        }
-
-        int totalSize = finalDetails.size();
-        int fromIndex = offset;
-        int toIndex = offset + size;
-        if (fromIndex >= totalSize) {
-            return new PartialList<Metadata>(new ArrayList<>(), offset, size, totalSize, PartialList.Relation.EQUAL);
-        }
-        if (toIndex > totalSize) {
-            toIndex = totalSize;
-        }
-        finalDetails = finalDetails.subList(fromIndex, toIndex);
-
-        return new PartialList<Metadata>(finalDetails, offset, size, totalSize, PartialList.Relation.EQUAL);
+        return MergedMetadataListHelper.sortAndPage(merged.values(), offset, size, sortBy, persistenceService.getDefaultQueryLimit());
     }
 
     protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
+        if (query.isForceRefresh()) {
+            persistenceService.refreshIndex(clazz);
+        }
         if (query.getCondition() != null) {
             definitionsService.getConditionValidationService().validate(query.getCondition());
         }
@@ -1663,77 +1593,40 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             return new PartialList<>();
         }
 
-        List<Metadata> details = new LinkedList<>();
+        Map<String, T> merged = new LinkedHashMap<>();
 
         // Get system tenant items first
         if (!TenantService.SYSTEM_TENANT.equals(currentTenantId)) {
             contextManager.executeAsSystem(() -> {
-                Condition systemTenantCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-                systemTenantCondition.setParameter("operator", "and");
-                List<Condition> systemConditions = new ArrayList<>();
-
-                Condition systemTenantCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-                systemTenantCheck.setParameter("propertyName", "tenantId");
-                systemTenantCheck.setParameter("comparisonOperator", "equals");
-                systemTenantCheck.setParameter("propertyValue", TenantService.SYSTEM_TENANT);
-                systemConditions.add(systemTenantCheck);
-
-                systemConditions.add(query.getCondition());
-                systemTenantCondition.setParameter("subConditions", systemConditions);
-
-                PartialList<T> systemItems = persistenceService.query(systemTenantCondition, query.getSortby(), clazz, 0, -1);
+                Condition systemTenantCondition = buildTenantQueryCondition(TenantService.SYSTEM_TENANT, query.getCondition());
+                PartialList<T> systemItems = persistenceService.query(systemTenantCondition, null, clazz, 0, -1);
                 for (T definition : systemItems.getList()) {
-                    details.add(definition.getMetadata());
+                    merged.put(definition.getMetadata().getId(), definition);
                 }
                 return null;
             });
         }
 
         // Get current tenant items (will override system items with same ID)
-        Condition tenantCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        tenantCondition.setParameter("operator", "and");
-        List<Condition> conditions = new ArrayList<>();
-
-        Condition tenantCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        tenantCheck.setParameter("propertyName", "tenantId");
-        tenantCheck.setParameter("comparisonOperator", "equals");
-        tenantCheck.setParameter("propertyValue", currentTenantId);
-        conditions.add(tenantCheck);
-
-        conditions.add(query.getCondition());
-        tenantCondition.setParameter("subConditions", conditions);
-
-        PartialList<T> items = persistenceService.query(tenantCondition, query.getSortby(), clazz, 0, -1);
-        Map<String, Metadata> mergedDetails = new HashMap<>();
-
-        // Add system tenant items first
-        for (Metadata metadata : details) {
-            mergedDetails.put(metadata.getId(), metadata);
-        }
-
-        // Override with current tenant items
+        Condition tenantCondition = buildTenantQueryCondition(currentTenantId, query.getCondition());
+        PartialList<T> items = persistenceService.query(tenantCondition, null, clazz, 0, -1);
         for (T definition : items.getList()) {
-            mergedDetails.put(definition.getMetadata().getId(), definition.getMetadata());
+            merged.put(definition.getMetadata().getId(), definition);
         }
 
-        // Convert to list and apply pagination
-        List<Metadata> finalDetails = new ArrayList<>(mergedDetails.values());
-        if (query.getSortby() != null) {
-            // TODO: Implement sorting of merged results
-        }
+        return MergedMetadataListHelper.sortAndPage(merged.values(), query.getOffset(), query.getLimit(), query.getSortby(),
+                persistenceService.getDefaultQueryLimit());
+    }
 
-        int totalSize = finalDetails.size();
-        int fromIndex = query.getOffset();
-        int toIndex = fromIndex + query.getLimit();
-        if (fromIndex >= totalSize) {
-            return new PartialList<Metadata>(new ArrayList<>(), query.getOffset(), query.getLimit(), totalSize, PartialList.Relation.EQUAL);
+    private Condition buildTenantQueryCondition(String tenantId, Condition queryCondition) {
+        Condition tenantCheck = buildTenantScopeCondition(tenantId, null);
+        if (queryCondition == null) {
+            return tenantCheck;
         }
-        if (toIndex > totalSize) {
-            toIndex = totalSize;
-        }
-        finalDetails = finalDetails.subList(fromIndex, toIndex);
-
-        return new PartialList<Metadata>(finalDetails, query.getOffset(), query.getLimit(), totalSize, PartialList.Relation.EQUAL);
+        Condition combined = new Condition(definitionsService.getConditionType("booleanCondition"));
+        combined.setParameter("operator", "and");
+        combined.setParameter("subConditions", Arrays.asList(tenantCheck, queryCondition));
+        return combined;
     }
 
 

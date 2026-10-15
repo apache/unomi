@@ -93,7 +93,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     private final Map<String, RefreshPolicy> itemTypeToRefreshPolicy = new ConcurrentHashMap<>();
 
     // Default query limit (simulates Elasticsearch/OpenSearch default query limit)
-    private Integer defaultQueryLimit = 10;
+    private int defaultQueryLimit = 10;
 
     // Tenant transformation listeners (simulates Elasticsearch/OpenSearch tenant transformations)
     private final List<TenantTransformationListener> transformationListeners = new ArrayList<>();
@@ -1050,8 +1050,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         List<T> matchingItems = query(condition, sortBy, clazz);
         int totalSize = matchingItems.size();
 
-        // Apply default query limit when size < 0 (simulates Elasticsearch/OpenSearch behavior)
-        int effectiveSize = size < 0 ? defaultQueryLimit : size;
+        // Apply default query limit when size < 0, except -1 which returns everything (simulates Elasticsearch/OpenSearch behavior)
+        int effectiveSize = size == -1 ? totalSize : (size < 0 ? defaultQueryLimit : size);
 
         // If size is negative and no scroll, use default limit
         if (size < 0 && scrollTimeValidity == null) {
@@ -2203,8 +2203,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     private <T extends Item> PartialList<T> createPartialList(List<T> items, int offset, int size) {
         int totalSize = items.size();
-        // Apply default query limit when size < 0 (simulates Elasticsearch/OpenSearch behavior)
-        int effectiveSize = size < 0 ? defaultQueryLimit : size;
+        // Apply default query limit when size < 0, except -1 which returns everything (simulates Elasticsearch/OpenSearch behavior)
+        int effectiveSize = size == -1 ? totalSize : (size < 0 ? defaultQueryLimit : size);
         int fromIndex = Math.min(offset, totalSize);
         int toIndex = Math.min(offset + effectiveSize, totalSize);
         List<T> pageItems = items.subList(fromIndex, toIndex);
@@ -2919,7 +2919,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
      *
      * @return the default query limit
      */
-    public Integer getDefaultQueryLimit() {
+    @Override
+    public int getDefaultQueryLimit() {
         return defaultQueryLimit;
     }
 
@@ -2928,8 +2929,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
      *
      * @param defaultQueryLimit the default query limit to set
      */
-    public void setDefaultQueryLimit(Integer defaultQueryLimit) {
-        this.defaultQueryLimit = defaultQueryLimit != null && defaultQueryLimit > 0 ? defaultQueryLimit : 10;
+    public void setDefaultQueryLimit(int defaultQueryLimit) {
+        this.defaultQueryLimit = defaultQueryLimit > 0 ? defaultQueryLimit : 10;
     }
 
     /**

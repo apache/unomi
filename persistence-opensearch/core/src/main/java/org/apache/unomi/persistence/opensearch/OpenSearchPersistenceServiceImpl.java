@@ -127,7 +127,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     private ConditionOSQueryBuilderDispatcher conditionOSQueryBuilderDispatcher;
     private Map<String, String> routingByType;
 
-    private Integer defaultQueryLimit = 10;
+    private int defaultQueryLimit = 10;
     private Integer removeByQueryTimeoutInMinutes = 10;
     private Integer taskWaitingTimeout = 3600000;
     private Integer taskWaitingPollingInterval = 1000;
@@ -249,8 +249,13 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         this.indexMaxDocValueFieldsSearch = indexMaxDocValueFieldsSearch;
     }
 
-    public void setDefaultQueryLimit(Integer defaultQueryLimit) {
+    public void setDefaultQueryLimit(int defaultQueryLimit) {
         this.defaultQueryLimit = defaultQueryLimit;
+    }
+
+    @Override
+    public int getDefaultQueryLimit() {
+        return defaultQueryLimit;
     }
 
     public void setRoutingByType(Map<String, String> routingByType) {
