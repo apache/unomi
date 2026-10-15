@@ -271,7 +271,8 @@ This affects every endpoint that takes a `Query`, among them `/cxs/profiles/sear
 A condition parameter that reads `parameter::name` is optional: when nothing supplies `name`, the branch that
 holds it states no constraint and is left out. 3.0 left it out of an AND, and 4.0 now also leaves it out of
 an OR instead of counting it as a match. A `hoverEventCondition` that sets only `targetId`, for example, used
-to match every hover event, and now matches only hovers on that target.
+to match every hover event, and now matches only hovers on that target. That condition comes from the
+hover-event plugin, which is not deployed by default.
 
 .What changed
 [cols="1,2,2", options="header"]
