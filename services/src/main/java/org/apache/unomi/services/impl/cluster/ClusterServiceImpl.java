@@ -174,7 +174,14 @@ public class ClusterServiceImpl implements ClusterService {
                 }
             }
         };
-        schedulerService.createRecurringTask("clusterNodeStatisticsUpdate", nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS, statisticsTask, false);
+        // Every node heartbeats, executor or not: a node that stops is removed from the cluster as stale
+        schedulerService.newTask("clusterNodeStatisticsUpdate")
+                .withPeriod(nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS)
+                .withFixedRate()
+                .withSimpleExecutor(statisticsTask)
+                .nonPersistent()
+                .runOnAllNodes()
+                .schedule();
 
         // Schedule cleanup of stale nodes
         TimerTask cleanupTask = new TimerTask() {
@@ -285,6 +292,8 @@ public class ClusterServiceImpl implements ClusterService {
 
         ClusterNode clusterNode = new ClusterNode();
         clusterNode.setItemId(nodeId);
+        clusterNode.setNodeName(bundleWatcher != null ? bundleWatcher.getNodeName() : null);
+        clusterNode.setExecutorNode(schedulerService != null ? schedulerService.isExecutorNode() : null);
         clusterNode.setPublicHostAddress(publicAddress);
         clusterNode.setInternalHostAddress(internalAddress);
         clusterNode.setStartTime(nodeStartTime);
@@ -376,6 +385,9 @@ public class ClusterServiceImpl implements ClusterService {
         try {
             // Update its stats
             updateSystemStatsForNode(node);
+            if (schedulerService != null) {
+                node.setExecutorNode(schedulerService.isExecutorNode());
+            }
 
             // Update server info if needed
             if (bundleWatcher != null && !bundleWatcher.getServerInfos().isEmpty()) {

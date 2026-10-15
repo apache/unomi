@@ -18,6 +18,7 @@ package org.apache.unomi.services.impl.cluster;
 
 import org.apache.unomi.api.ClusterNode;
 import org.apache.unomi.api.ServerInfo;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
@@ -158,6 +159,45 @@ public class ClusterServiceImplTest {
 
     // Add a new test to verify behavior when BundleWatcher is not available
     @Test
+    public void testHeartbeatRunsOnNonExecutorNodeAndReportsItsRole() {
+        ClusterServiceImpl apiNode = TestHelper.createClusterService(persistenceService, "api-node", PUBLIC_ADDRESS, INTERNAL_ADDRESS, bundleContext);
+        apiNode.setNodeStatisticsUpdateFrequency(100);
+        SchedulerServiceImpl apiScheduler = TestHelper.createSchedulerService(
+            "api-node", persistenceService, executionContextManager, bundleContext, apiNode, -1, false, true);
+        apiNode.setSchedulerService(apiScheduler);
+        try {
+            apiNode.init();
+            ClusterNode registered = persistenceService.load("api-node", ClusterNode.class);
+            assertEquals(Boolean.FALSE, registered.getExecutorNode());
+            long initialHeartbeat = registered.getLastHeartbeat();
+
+            // Without a heartbeat the node would be removed from the cluster as stale
+            ClusterNode updated = null;
+            for (int i = 0; i < 100 && (updated == null || updated.getLastHeartbeat() <= initialHeartbeat); i++) {
+                Thread.sleep(100);
+                updated = persistenceService.load("api-node", ClusterNode.class);
+            }
+            assertTrue(updated.getLastHeartbeat() > initialHeartbeat, "the heartbeat of a non-executor node should run");
+            assertEquals(Boolean.FALSE, updated.getExecutorNode());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            fail("interrupted");
+        } finally {
+            apiScheduler.preDestroy();
+        }
+    }
+
+    @Test
+    public void testInitRegistersNodeNameFromBundleWatcher() {
+        when(bundleWatcher.getNodeName()).thenReturn("web-1");
+        clusterService.setBundleWatcher(bundleWatcher);
+
+        clusterService.init();
+
+        assertEquals("web-1", persistenceService.load(TEST_NODE_ID, ClusterNode.class).getNodeName());
+    }
+
+    @Test
     public void testInitRegistersNodeInPersistenceWithoutBundleWatcher() {
         // Execute without setting a BundleWatcher
         clusterService.init();
@@ -174,26 +214,26 @@ public class ClusterServiceImplTest {
     @Test
     public void testInitSchedulesStatisticsUpdateTask() {
         // We need to use a mock scheduler service for this test to verify the task creation
-        SchedulerServiceImpl mockSchedulerService = mock(SchedulerServiceImpl.class);
+        SchedulerService mockSchedulerService = mock(SchedulerService.class);
+        SchedulerService.TaskBuilder heartbeatBuilder = mock(SchedulerService.TaskBuilder.class, RETURNS_SELF);
+        when(mockSchedulerService.newTask("clusterNodeStatisticsUpdate")).thenReturn(heartbeatBuilder);
         clusterService.setSchedulerService(mockSchedulerService);
 
         // Execute
         clusterService.init();
 
-        // Verify
-        verify(mockSchedulerService).createRecurringTask(
-            eq("clusterNodeStatisticsUpdate"),
-            eq(NODE_STATISTICS_UPDATE_FREQUENCY),
-            eq(TimeUnit.MILLISECONDS),
-            any(TimerTask.class),
-            eq(false)
-        );
+        // Verify: a local, recurring heartbeat that runs on every node, executor or not
+        verify(heartbeatBuilder).withPeriod(NODE_STATISTICS_UPDATE_FREQUENCY, TimeUnit.MILLISECONDS);
+        verify(heartbeatBuilder).nonPersistent();
+        verify(heartbeatBuilder).runOnAllNodes();
+        verify(heartbeatBuilder).schedule();
     }
 
     @Test
     public void testInitSchedulesStaleNodesCleanupTask() {
         // We need to use a mock scheduler service for this test to verify the task creation
-        SchedulerServiceImpl mockSchedulerService = mock(SchedulerServiceImpl.class);
+        SchedulerService mockSchedulerService = mock(SchedulerService.class);
+        when(mockSchedulerService.newTask(any())).thenReturn(mock(SchedulerService.TaskBuilder.class, RETURNS_SELF));
         clusterService.setSchedulerService(mockSchedulerService);
 
         // Execute

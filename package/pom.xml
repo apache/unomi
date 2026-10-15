@@ -231,6 +231,15 @@
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-lifecycle-watcher</artifactId>
+                                    <version>${project.version}</version>
+                                    <classifier>nodecfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
+                                    <destFileName>org.apache.unomi.node.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-services</artifactId>
                                     <classifier>clustercfg</classifier>
                                     <type>cfg</type>

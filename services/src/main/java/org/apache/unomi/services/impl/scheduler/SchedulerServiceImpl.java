@@ -771,6 +771,14 @@ public class SchedulerServiceImpl implements SchedulerService {
      * Blueprint post-construct hook; starts task checking on executor nodes.
      */
     public void postConstruct() {
+        // The id comes from the node identity (see BundleWatcher). A blank one would be shared by every node.
+        if (nodeId == null || nodeId.isBlank()) {
+            String errorMessage = "CRITICAL: scheduler nodeId is not set. Check that scheduler.nodeId is present in "
+                    + "etc/org.apache.unomi.services.cfg.";
+            LOGGER.error(errorMessage);
+            throw new IllegalStateException(errorMessage);
+        }
+
         if (bundleContext == null) {
             LOGGER.error("BundleContext is null, cannot initialize service trackers");
             return;
@@ -797,10 +805,6 @@ public class SchedulerServiceImpl implements SchedulerService {
         if (executorNode) {
             // Queue task purge initialization instead of calling directly
             queuePendingOperation(OperationType.INITIALIZE_TASK_PURGE, "Initialize task purge");
-        }
-
-        if (nodeId == null) {
-            nodeId = UUID.randomUUID().toString();
         }
 
         LOGGER.info("Scheduler service initialized. Node ID: {}, Executor node: {}, Thread pool size: {}",

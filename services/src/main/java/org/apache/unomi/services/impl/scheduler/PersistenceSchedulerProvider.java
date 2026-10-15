@@ -394,7 +394,9 @@ public class PersistenceSchedulerProvider implements SchedulerProvider {
                     long cutoffTime = System.currentTimeMillis() - (5 * 60 * 1000); // 5 minutes threshold
 
                     for (ClusterNode node : clusterNodes) {
-                        if (node.getLastHeartbeat() > cutoffTime) {
+                        // A node that does not run tasks must not be picked as the primary owner of one; a node
+                        // that does not report its role (earlier version) still runs tasks.
+                        if (node.getLastHeartbeat() > cutoffTime && !Boolean.FALSE.equals(node.getExecutorNode())) {
                             activeNodes.add(node.getItemId());
                         }
                     }

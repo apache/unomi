@@ -30,23 +30,52 @@ Configure each node in `etc/unomi.custom.system.properties` (or via environment 
 ----
 org.apache.unomi.cluster.public.address=${env:UNOMI_CLUSTER_PUBLIC_ADDRESS:-http://localhost:8181}
 org.apache.unomi.cluster.internal.address=${env:UNOMI_CLUSTER_INTERNAL_ADDRESS:-https://localhost:9443}
-org.apache.unomi.cluster.nodeId=${env:UNOMI_CLUSTER_NODEID:-unomi-node-1}
+org.apache.unomi.cluster.nodeId=${env:UNOMI_CLUSTER_NODEID:-}
+org.apache.unomi.cluster.nodeName=${env:UNOMI_CLUSTER_NODENAME:-}
 org.apache.unomi.cluster.nodeStatisticsUpdateFrequency=${env:UNOMI_CLUSTER_NODESTATISTICS_UPDATEFREQUENCY:-10000}
 ----
 
 * **public.address** — URL other nodes and operators use to reach this node (HTTP, port 8181 by default).
 * **internal.address** — HTTPS URL for the private REST API (port 9443 by default).
-* **nodeId** — **Must be unique** on every node in the cluster (for example `unomi-node-1`, `unomi-node-2`).
+* **nodeId** — Optional. Identifies the node in the cluster and in the scheduler; when it is not set, Unomi
+  generates one (see <<_node_identity,Node identity>>). When you set it, it **must be unique** in the cluster.
+* **nodeName** — Optional user friendly name, shown next to the id. Defaults to the host name.
 * **nodeStatisticsUpdateFrequency** — Interval in milliseconds between heartbeat / statistics updates (default 10 seconds).
 
-If `nodeId` is missing or duplicate, cluster registration fails at startup.
+[#_node_identity]
+==== Node identity
+
+Every node needs an id that no other node uses and that it keeps across restarts: the id owns the node's cluster
+record and its scheduler task locks. Nothing has to be configured for this.
+
+* On its first start a node generates an id made of its name and a random suffix, for example `web-1-3f9a2c1b`, and
+  stores it with its name in `etc/org.apache.unomi.node.cfg`. Later starts reuse it. A second node, container or
+  copy of the image generates its own, so a single node grows into a cluster without any change.
+* `UNOMI_CLUSTER_NODEID` (`org.apache.unomi.cluster.nodeId`) sets the id explicitly. It replaces the stored id and
+  is stored in turn, so the node keeps it after the variable is removed. Unomi does not check that an id you set is
+  unique: two nodes with the same id share one cluster record and the same task locks.
+* The name comes from `UNOMI_CLUSTER_NODENAME` (`org.apache.unomi.cluster.nodeName`), or from the host name. It is
+  read again at every start: renaming a node does not change its id.
+* The scheduler uses the same id.
+
+The stored id lives in the node's `etc/` directory and is lost with it, for example when a container is recreated.
+The node then joins under a new id; the old cluster record is removed once its heartbeat is stale and its task
+locks expire. To give a node its previous id back, start it once with `UNOMI_CLUSTER_NODEID` set to that id (it is
+in the node's log at startup and in the cluster REST endpoint). To make a node take a new id, unset
+`UNOMI_CLUSTER_NODEID`, blank `nodeId` in `etc/org.apache.unomi.node.cfg` and restart the node; do not delete the
+file, Unomi could then no longer save the id there.
+
+Copying an installation together with its `etc/` directory (a cloned virtual machine, an image built from a node
+that already ran, an `etc/` volume shared by several containers) copies the id too: blank it on the copies.
 
 ==== How it works
 
 On startup the cluster service:
 
 1. Registers this node in persistence (`ClusterNode` item).
-2. Schedules a recurring task to update CPU, load, and uptime statistics.
+2. Schedules a recurring task to update CPU, load, and uptime statistics. It is the node's heartbeat and runs on
+   every node, including those with `scheduler.executorNode=false`; the record also says whether the node runs
+   scheduled tasks.
 3. Schedules stale-node cleanup (nodes with no heartbeat for roughly three times the update interval are removed).
 
 Other nodes see the same registry through the shared search backend. The health-check extension reports

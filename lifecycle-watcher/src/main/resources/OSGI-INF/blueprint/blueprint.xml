@@ -30,8 +30,11 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
+    <reference id="configurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
+
     <bean id="bundleWatcherImpl" init-method="init" destroy-method="destroy" class="org.apache.unomi.lifecycle.BundleWatcherImpl">
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="configurationAdmin" ref="configurationAdmin"/>
         <property name="requiredServices" value="${lifecycle.requiredServices}" />
         <property name="checkStartupStateRefreshInterval" value="${lifecycle.checkStartupState.refresh.interval}"/>
         <property name="requiredBundles">

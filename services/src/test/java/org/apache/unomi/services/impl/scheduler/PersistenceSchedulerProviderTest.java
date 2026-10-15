@@ -165,6 +165,29 @@ public class PersistenceSchedulerProviderTest {
     }
 
     @Test
+    public void testGetActiveNodesLeavesOutNodesThatDoNotRunTasks() {
+        ClusterNode executor = new ClusterNode();
+        executor.setItemId("executor");
+        executor.setExecutorNode(true);
+        executor.setLastHeartbeat(System.currentTimeMillis());
+        ClusterNode apiOnly = new ClusterNode();
+        apiOnly.setItemId("api-only");
+        apiOnly.setExecutorNode(false);
+        apiOnly.setLastHeartbeat(System.currentTimeMillis());
+        // Written by an earlier version, which does not report the role
+        ClusterNode unknown = new ClusterNode();
+        unknown.setItemId("unknown-role");
+        unknown.setLastHeartbeat(System.currentTimeMillis());
+        when(clusterService.getClusterNodes()).thenReturn(Arrays.asList(executor, apiOnly, unknown));
+
+        List<String> nodes = provider.getActiveNodes();
+        assertTrue(nodes.contains("provider-node"));
+        assertTrue(nodes.contains("executor"));
+        assertTrue(nodes.contains("unknown-role"));
+        assertFalse(nodes.contains("api-only"));
+    }
+
+    @Test
     public void testGetActiveNodesFallbackWhenClusterUnavailable() {
         when(clusterService.getClusterNodes()).thenThrow(new RuntimeException("down"));
         ScheduledTask locked = TaskTestFixtures.baseTask("l");

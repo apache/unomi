@@ -39,6 +39,8 @@ public class ClusterNode extends Item {
     private boolean master;
     private boolean data;
     private long startTime;
+    private String nodeName;
+    private Boolean executorNode;
     private long lastHeartbeat;
 
     // Server information
@@ -194,6 +196,43 @@ public class ClusterNode extends Item {
      */
     public void setStartTime(long startTime) {
         this.startTime = startTime;
+    }
+
+    /**
+     * User friendly name of this node. Unlike the item id it is only informative and may change
+     * between restarts.
+     *
+     * @return node name, or {@code null} when unknown
+     */
+    public String getNodeName() {
+        return nodeName;
+    }
+
+    /**
+     * Sets the user friendly name of this node.
+     *
+     * @param nodeName node name
+     */
+    public void setNodeName(String nodeName) {
+        this.nodeName = nodeName;
+    }
+
+    /**
+     * Whether this node runs scheduled tasks ({@code scheduler.executorNode}).
+     *
+     * @return {@code true} or {@code false}, or {@code null} when the node did not report it
+     */
+    public Boolean getExecutorNode() {
+        return executorNode;
+    }
+
+    /**
+     * Sets whether this node runs scheduled tasks.
+     *
+     * @param executorNode whether the node runs scheduled tasks
+     */
+    public void setExecutorNode(Boolean executorNode) {
+        this.executorNode = executorNode;
     }
 
     /**
