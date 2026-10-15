@@ -826,17 +826,19 @@ public class SegmentIT extends BaseIT {
                         && list.stream().anyMatch(m -> "query-no-limit-segment-2".equals(m.getId())),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        HttpPost request = new HttpPost(getFullUrl("/cxs/segments/query"));
-        request.setEntity(new StringEntity("{}", ContentType.APPLICATION_JSON));
-        try (CloseableHttpResponse response = executeHttpRequest(request)) {
-            Assert.assertEquals("Segment query with no limit should return 200", 200, response.getStatusLine().getStatusCode());
-            String body = EntityUtils.toString(response.getEntity());
-            PartialList<?> result = getObjectMapper().readValue(body, PartialList.class);
-            Assert.assertNotNull(result);
-            Assert.assertNotNull(result.getList());
-            Assert.assertTrue("Should return both created segments", result.getList().size() >= 2);
-            Assert.assertTrue("totalSize should cover the full list", result.getTotalSize() >= 2);
-        }
+        PartialList<?> noLimit = postMetadataQuery("/cxs/segments/query", "{}");
+        // Like the persistence services, a query without a limit returns defaultQueryLimit items (10 unless configured)
+        Assert.assertTrue("totalSize should cover the full list", noLimit.getTotalSize() >= 2);
+        Assert.assertEquals("Query without limit should return the default page", Math.min(noLimit.getTotalSize(), 10), noLimit.getList().size());
+
+        // 2.x/3.0 clients send -1 for "all" and persistence-style sort criteria
+        List<String> sortedIds = metadataQueryIds(postMetadataQuery("/cxs/segments/query", "{\"limit\":-1,\"sortby\":\"metadata.name:desc\"}"));
+        Assert.assertTrue("Should return both created segments", sortedIds.containsAll(Arrays.asList("query-no-limit-segment-1", "query-no-limit-segment-2")));
+        Assert.assertTrue("Segments should be sorted by name descending", sortedIds.indexOf("query-no-limit-segment-2") < sortedIds.indexOf("query-no-limit-segment-1"));
+
+        // Unknown sort fields are ignored, as they were by the persistence services
+        Assert.assertTrue("Unknown sort field should be ignored",
+                metadataQueryIds(postMetadataQuery("/cxs/segments/query", "{\"limit\":-1,\"sortby\":\"notAField:asc\"}")).contains("query-no-limit-segment-1"));
     }
 
     @Test
@@ -859,16 +861,38 @@ public class SegmentIT extends BaseIT {
                         && list.stream().anyMatch(m -> "query-no-limit-scoring-2".equals(m.getId())),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        HttpPost request = new HttpPost(getFullUrl("/cxs/scoring/query"));
-        request.setEntity(new StringEntity("{}", ContentType.APPLICATION_JSON));
+        PartialList<?> noLimit = postMetadataQuery("/cxs/scoring/query", "{}");
+        // Like the persistence services, a query without a limit returns defaultQueryLimit items (10 unless configured)
+        Assert.assertTrue("totalSize should cover the full list", noLimit.getTotalSize() >= 2);
+        Assert.assertEquals("Query without limit should return the default page", Math.min(noLimit.getTotalSize(), 10), noLimit.getList().size());
+
+        // 2.x/3.0 clients send -1 for "all" and persistence-style sort criteria
+        List<String> sortedIds = metadataQueryIds(postMetadataQuery("/cxs/scoring/query", "{\"limit\":-1,\"sortby\":\"metadata.name:desc\"}"));
+        Assert.assertTrue("Should return both created scorings", sortedIds.containsAll(Arrays.asList("query-no-limit-scoring-1", "query-no-limit-scoring-2")));
+        Assert.assertTrue("Scorings should be sorted by name descending", sortedIds.indexOf("query-no-limit-scoring-2") < sortedIds.indexOf("query-no-limit-scoring-1"));
+
+        // Unknown sort fields are ignored, as they were by the persistence services
+        Assert.assertTrue("Unknown sort field should be ignored",
+                metadataQueryIds(postMetadataQuery("/cxs/scoring/query", "{\"limit\":-1,\"sortby\":\"notAField:asc\"}")).contains("query-no-limit-scoring-1"));
+    }
+
+    private PartialList<?> postMetadataQuery(String path, String body) throws Exception {
+        HttpPost request = new HttpPost(getFullUrl(path));
+        request.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
         try (CloseableHttpResponse response = executeHttpRequest(request)) {
-            Assert.assertEquals("Scoring query with no limit should return 200", 200, response.getStatusLine().getStatusCode());
-            String body = EntityUtils.toString(response.getEntity());
-            PartialList<?> result = getObjectMapper().readValue(body, PartialList.class);
+            Assert.assertEquals("Query " + body + " on " + path + " should return 200", 200, response.getStatusLine().getStatusCode());
+            PartialList<?> result = getObjectMapper().readValue(EntityUtils.toString(response.getEntity()), PartialList.class);
             Assert.assertNotNull(result);
             Assert.assertNotNull(result.getList());
-            Assert.assertTrue("Should return both created scorings", result.getList().size() >= 2);
-            Assert.assertTrue("totalSize should cover the full list", result.getTotalSize() >= 2);
+            return result;
         }
+    }
+
+    private List<String> metadataQueryIds(PartialList<?> result) {
+        List<String> ids = new ArrayList<>();
+        for (Object item : result.getList()) {
+            ids.add((String) ((Map<?, ?>) item).get("id"));
+        }
+        return ids;
     }
 }

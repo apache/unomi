@@ -105,6 +105,18 @@ org.apache.unomi.opensearch.password=${env:OPENSEARCH_INITIAL_ADMIN_PASSWORD:-ad
 org.apache.unomi.opensearch.sslTrustAllCertificates=true
 ----
 
+A query that does not give a size (for example a `/cxs/segments/query` body without `limit`) returns
+`defaultQueryLimit` results, 10 by default. A size of `-1` returns every result. The setting applies to every
+search, including the segment and scoring lists that merge system and tenant items:
+
+[source]
+----
+# env UNOMI_ELASTICSEARCH_DEFAULTQUERYLIMIT
+org.apache.unomi.elasticsearch.defaultQueryLimit=10
+# env UNOMI_OPENSEARCH_DEFAULTQUERYLIMIT
+org.apache.unomi.opensearch.defaultQueryLimit=10
+----
+
 To select which search engine to use, you can:
 1. Use the appropriate configuration properties above
 2. When building from source, use the appropriate Maven profile:

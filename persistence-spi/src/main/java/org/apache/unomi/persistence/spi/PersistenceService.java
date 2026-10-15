@@ -699,6 +699,16 @@ public interface PersistenceService {
     Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType, int size);
 
     /**
+     * Returns the number of results a query returns when it is not given a size (a negative size other than
+     * {@code -1}, which returns all results). Services that page results in memory use it to match the queries.
+     *
+     * @return the configured default query limit
+     */
+    default int getDefaultQueryLimit() {
+        return 10;
+    }
+
+    /**
      * Refreshes persistence engine indices when required by the backend.
      */
     void refresh();

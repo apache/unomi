@@ -1276,8 +1276,74 @@ public class SegmentServiceImplTest {
             assertEquals(0, segmentService.getSegmentMetadatas(pastEnd).getList().size());
             assertEquals(5, segmentService.getSegmentMetadatas(pastEnd).getTotalSize());
 
-            assertThrows(IllegalArgumentException.class,
-                () -> segmentService.getSegmentMetadatas(0, 10, "notARealField:asc"));
+            // Like the persistence services, unknown sort fields are ignored rather than rejected
+            PartialList<Metadata> unknownSort = segmentService.getSegmentMetadatas(0, 10, "notARealField:asc");
+            assertEquals(5, unknownSort.getList().size());
+            assertEquals(5, unknownSort.getTotalSize());
+            return null;
+        });
+    }
+
+    @Test
+    public void testMergedListsUseConfiguredDefaultQueryLimit() {
+        ((InMemoryPersistenceServiceImpl) persistenceService).setDefaultQueryLimit(2);
+
+        executionContextManager.executeAsSystem(() -> {
+            segmentService.setSegmentDefinition(createTestSegment("sys-a", "A-System"));
+            segmentService.setScoringDefinition(createTestScoring("sys-score-a", "A-Score"));
+            return null;
+        });
+
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            segmentService.setSegmentDefinition(createTestSegment("ten-b", "B-Tenant"));
+            segmentService.setSegmentDefinition(createTestSegment("ten-c", "C-Tenant"));
+            segmentService.setSegmentDefinition(createTestSegment("ten-d", "D-Tenant"));
+            segmentService.setScoringDefinition(createTestScoring("ten-score-b", "B-Score"));
+            segmentService.setScoringDefinition(createTestScoring("ten-score-c", "C-Score"));
+            segmentService.setScoringDefinition(createTestScoring("ten-score-d", "D-Score"));
+            persistenceService.refresh();
+
+            // More items per tenant than the limit: the limit must only apply to the merged page
+            Query all = new Query();
+            all.setLimit(-1);
+            TestHelper.retryQueryUntilAvailable(() -> segmentService.getSegmentMetadatas(all), 4);
+            TestHelper.retryQueryUntilAvailable(() -> segmentService.getScoringMetadatas(all), 4);
+
+            Query noLimit = new Query();
+            noLimit.setSortby("metadata.name:asc");
+            PartialList<Metadata> segments = segmentService.getSegmentMetadatas(noLimit);
+            assertEquals(Arrays.asList("sys-a", "ten-b"), metadataIds(segments));
+            assertEquals(4, segments.getTotalSize());
+
+            PartialList<Metadata> scorings = segmentService.getScoringMetadatas(noLimit);
+            assertEquals(Arrays.asList("sys-score-a", "ten-score-b"), metadataIds(scorings));
+            assertEquals(4, scorings.getTotalSize());
+
+            assertEquals(2, segmentService.getSegmentMetadatas(0, Integer.MIN_VALUE, "name:asc").getList().size());
+            assertEquals(4, segmentService.getSegmentMetadatas(all).getList().size());
+            return null;
+        });
+    }
+
+    @Test
+    public void testMergedSegmentListTenantOverridesSystemItem() {
+        executionContextManager.executeAsSystem(() -> {
+            segmentService.setSegmentDefinition(createTestSegment("shared", "System Version"));
+            segmentService.setSegmentDefinition(createTestSegment("sys-only", "System Only"));
+            return null;
+        });
+
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            segmentService.setSegmentDefinition(createTestSegment("shared", "Tenant Version"));
+            persistenceService.refresh();
+
+            PartialList<Metadata> result = TestHelper.retryQueryUntilAvailable(
+                () -> segmentService.getSegmentMetadatas(0, 10, "name:asc"),
+                2
+            );
+            assertEquals(Arrays.asList("sys-only", "shared"), metadataIds(result));
+            assertEquals(2, result.getTotalSize());
+            assertEquals("Tenant Version", result.getList().get(1).getName());
             return null;
         });
     }
@@ -1332,8 +1398,7 @@ public class SegmentServiceImplTest {
             pastEnd.setLimit(10);
             assertEquals(0, segmentService.getScoringMetadatas(pastEnd).getList().size());
 
-            assertThrows(IllegalArgumentException.class,
-                () -> segmentService.getScoringMetadatas(0, 10, "properties.score:asc"));
+            assertEquals(3, segmentService.getScoringMetadatas(0, 10, "properties.score:asc").getList().size());
             return null;
         });
     }

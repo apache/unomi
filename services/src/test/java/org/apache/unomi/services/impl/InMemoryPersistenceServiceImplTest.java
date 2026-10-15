@@ -6363,7 +6363,7 @@ public class InMemoryPersistenceServiceImplTest {
     @Nested
     class DefaultQueryLimitTests {
         @Test
-        void shouldApplyDefaultLimitWhenSizeIsNegative() {
+        void shouldApplyDefaultLimitOnlyWhenSizeIsUnset() {
             // Create service with default limit of 10
             InMemoryPersistenceServiceImpl service = new InMemoryPersistenceServiceImpl(
                     executionContextManager, conditionEvaluatorDispatcher);
@@ -6379,11 +6379,14 @@ public class InMemoryPersistenceServiceImplTest {
             // The totalSize is calculated from items that are currently queryable (refreshed)
             // So we need to ensure all items are refreshed before verifying totalSize
             PartialList<TestMetadataItem> result = TestHelper.retryUntil(
-                () -> service.query(null, null, TestMetadataItem.class, 0, -1),
+                () -> service.query(null, null, TestMetadataItem.class, 0, Integer.MIN_VALUE),
                 r -> r != null && r.getTotalSize() == 20 && r.getList().size() == 10
             );
-            assertEquals(10, result.getList().size(), "Query with size=-1 should return default limit of 10");
+            assertEquals(10, result.getList().size(), "Query with an unset size should return default limit of 10");
             assertEquals(20, result.getTotalSize(), "Total size should be 20");
+
+            PartialList<TestMetadataItem> all = service.query(null, null, TestMetadataItem.class, 0, -1);
+            assertEquals(20, all.getList().size(), "Query with size=-1 should return all items, like Elasticsearch/OpenSearch");
         }
 
         @Test
@@ -6403,10 +6406,10 @@ public class InMemoryPersistenceServiceImplTest {
             // The totalSize is calculated from items that are currently queryable (refreshed)
             // So we need to ensure all items are refreshed before verifying totalSize
             PartialList<TestMetadataItem> result = TestHelper.retryUntil(
-                () -> service.query(null, null, TestMetadataItem.class, 0, -1, null),
+                () -> service.query(null, null, TestMetadataItem.class, 0, Integer.MIN_VALUE, null),
                 r -> r != null && r.getTotalSize() == 20 && r.getList().size() == 10
             );
-            assertEquals(10, result.getList().size(), "Query with size=-1 should return default limit of 10");
+            assertEquals(10, result.getList().size(), "Query with an unset size should return default limit of 10");
             assertEquals(20, result.getTotalSize(), "Total size should be 20");
         }
 
@@ -6449,10 +6452,10 @@ public class InMemoryPersistenceServiceImplTest {
 
             // Retry until both list size and totalSize are correct — same race as shouldRespectExplicitSizeWhenProvided.
             PartialList<TestMetadataItem> result = TestHelper.retryUntil(
-                () -> service.query(null, null, TestMetadataItem.class, 0, -1),
+                () -> service.query(null, null, TestMetadataItem.class, 0, Integer.MIN_VALUE),
                 r -> r != null && r.getTotalSize() == 20 && r.getList().size() == 5
             );
-            assertEquals(5, result.getList().size(), "Query with size=-1 should return custom default limit of 5");
+            assertEquals(5, result.getList().size(), "Query with an unset size should return custom default limit of 5");
             assertEquals(20, result.getTotalSize(), "Total size should be 20");
         }
 
@@ -6470,12 +6473,12 @@ public class InMemoryPersistenceServiceImplTest {
                 service.save(item);
             }
 
-            // Query with field matching and size = -1 - retry until items are available
+            // Query with field matching and an unset size - retry until items are available
             PartialList<TestMetadataItem> result = TestHelper.retryQueryUntilAvailable(
-                () -> service.query("name", "test", null, TestMetadataItem.class, 0, -1),
+                () -> service.query("name", "test", null, TestMetadataItem.class, 0, Integer.MIN_VALUE),
                 10
             );
-            assertEquals(10, result.getList().size(), "Query with size=-1 should return default limit of 10");
+            assertEquals(10, result.getList().size(), "Query with an unset size should return default limit of 10");
         }
 
         @Test
@@ -6496,10 +6499,10 @@ public class InMemoryPersistenceServiceImplTest {
             // The totalSize is calculated from items that are currently queryable (refreshed)
             // So we need to ensure all items are refreshed before verifying totalSize
             PartialList<TestMetadataItem> result = TestHelper.retryUntil(
-                () -> service.rangeQuery("numericValue", "0", "20", null, TestMetadataItem.class, 0, -1),
+                () -> service.rangeQuery("numericValue", "0", "20", null, TestMetadataItem.class, 0, Integer.MIN_VALUE),
                 r -> r != null && r.getTotalSize() == 20 && r.getList().size() == 10
             );
-            assertEquals(10, result.getList().size(), "Range query with size=-1 should return default limit of 10");
+            assertEquals(10, result.getList().size(), "Range query with an unset size should return default limit of 10");
             assertEquals(20, result.getTotalSize(), "Total size should be 20");
         }
 

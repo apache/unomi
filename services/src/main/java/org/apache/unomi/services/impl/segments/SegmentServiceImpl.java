@@ -279,7 +279,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
     public PartialList<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy) {
         String currentTenantId = contextManager.getCurrentContext().getTenantId();
-        Map<String, Segment> merged = new HashMap<>();
+        Map<String, Segment> merged = new LinkedHashMap<>();
 
         // Get system tenant segments first
         if (!TenantService.SYSTEM_TENANT.equals(currentTenantId)) {
@@ -300,7 +300,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             merged.put(definition.getMetadata().getId(), definition);
         }
 
-        return MergedMetadataListHelper.sortAndPage(merged.values(), offset, size, sortBy);
+        return MergedMetadataListHelper.sortAndPage(merged.values(), offset, size, sortBy, persistenceService.getDefaultQueryLimit());
     }
 
     private Condition buildTenantScopeCondition(String tenantId, String scope) {
@@ -1556,7 +1556,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
     protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(int offset, int size, String sortBy, Class<T> clazz) {
         String currentTenantId = contextManager.getCurrentContext().getTenantId();
-        Map<String, T> merged = new HashMap<>();
+        Map<String, T> merged = new LinkedHashMap<>();
 
         // Get system tenant items first
         if (!TenantService.SYSTEM_TENANT.equals(currentTenantId)) {
@@ -1577,10 +1577,13 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             merged.put(definition.getMetadata().getId(), definition);
         }
 
-        return MergedMetadataListHelper.sortAndPage(merged.values(), offset, size, sortBy);
+        return MergedMetadataListHelper.sortAndPage(merged.values(), offset, size, sortBy, persistenceService.getDefaultQueryLimit());
     }
 
     protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
+        if (query.isForceRefresh()) {
+            persistenceService.refreshIndex(clazz);
+        }
         if (query.getCondition() != null) {
             definitionsService.getConditionValidationService().validate(query.getCondition());
         }
@@ -1590,7 +1593,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             return new PartialList<>();
         }
 
-        Map<String, T> merged = new HashMap<>();
+        Map<String, T> merged = new LinkedHashMap<>();
 
         // Get system tenant items first
         if (!TenantService.SYSTEM_TENANT.equals(currentTenantId)) {
@@ -1611,7 +1614,8 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             merged.put(definition.getMetadata().getId(), definition);
         }
 
-        return MergedMetadataListHelper.sortAndPage(merged.values(), query.getOffset(), query.getLimit(), query.getSortby());
+        return MergedMetadataListHelper.sortAndPage(merged.values(), query.getOffset(), query.getLimit(), query.getSortby(),
+                persistenceService.getDefaultQueryLimit());
     }
 
     private Condition buildTenantQueryCondition(String tenantId, Condition queryCondition) {

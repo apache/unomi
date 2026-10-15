@@ -266,6 +266,63 @@ This affects every endpoint that takes a `Query`, among them `/cxs/profiles/sear
 * A client that omits the `condition` field entirely still searches over everything, and it needs no change.
 * A client whose condition names a type that the server does not know now reads an empty list where it used to read every item. Check the server log for the condition type it names, and deploy the plugin that defines it.
 
+[#_segment_and_scoring_lists]
+==== Segment and scoring lists merge system and tenant items (4.0)
+
+A tenant sees its own segments and scoring plans together with those of the system tenant, and a tenant item
+replaces a system item with the same id. Because the two sets are merged after they are read, 4.0 sorts and pages
+the segment and scoring lists itself instead of leaving it to the search engine. This applies to
+`GET /cxs/segments`, `POST /cxs/segments/query`, `GET /cxs/scoring`, `POST /cxs/scoring/query` and the GraphQL
+`findSegments` query.
+
+Paging and sorting follow the 3.0 rules:
+
+* `offset` and `limit` page the merged list. A missing `limit` returns `defaultQueryLimit` items, 10 unless
+  configured (see <<changing_the_default_configuration_using_property_files,the search engine configuration>>), and `-1` returns every item.
+  The response echoes the requested `offset` and `limit`.
+* `sortby` takes the same syntax: comma-separated `field` or `field:desc` criteria. Any criterion other than an
+  exact `:desc` suffix sorts ascending.
+* A field with no value sorts last in both directions. A field with several values, such as `metadata.tags`,
+  sorts on its smallest value ascending and its largest value descending.
+* A sort field the server does not know is ignored, as it was when the search engine ignored an unmapped field.
+
+The sortable fields are `metadata.id`, `metadata.name`, `metadata.description`, `metadata.scope`,
+`metadata.tags`, `metadata.systemTags`, `metadata.enabled`, `metadata.missingPlugins`, `metadata.hidden`,
+`metadata.readOnly`, `itemId`, `tenantId`, `createdBy`, `lastModifiedBy`, `creationDate`,
+`lastModificationDate` and `lastSyncDate`. Each `metadata.*` field can also be named without its prefix, for
+example `name`.
+
+.What changed
+[cols="1,2,2", options="header"]
+|===
+| Request | 3.0 | 4.0
+
+| `limit` is `-1`
+| Every item, with `totalSize` reported as `0`.
+| Every item, with `totalSize` reported as the number of items.
+
+| Several items have the same value for the sort field
+| Their order was left to the search engine.
+| They are ordered by `itemId`, so pages are stable.
+
+| `sortby` names a field without its `metadata.` prefix, or an audit field such as `creationDate`
+| Ignored.
+| Sorted on.
+
+| A text value longer than 256 characters, in a sort
+| Sorted as a missing value, because the search engine does not index it for sorting.
+| Sorted on its full value.
+
+| A negative `offset`, or `offset` plus `limit` above 10,000
+| Rejected by the search engine.
+| A negative offset counts as `0`, and large pages are returned.
+|===
+
+===== Migrating a client
+
+* A client that pages with `limit` and `offset`, or reads every item with `-1`, needs no change.
+* A client that read `totalSize` after asking for `-1` now gets the real count instead of `0`.
+
 === Migrating your existing data
 
 ==== Multi-Tenancy Impact
