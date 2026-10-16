@@ -295,7 +295,7 @@ Inside `parentCondition`, a value written `parameter::name` takes the value the 
 * Under an AND, it states no constraint. `formEventCondition` with no `pagePath` matches a form on any page.
 * Under an OR, it is not a match. `hoverEventCondition` compares `targetId` OR `targetPath`, and with only
   `targetId` set it matches hovers on that target only.
-* An OR with nothing left to test matches nothing, and an AND with nothing left to test matches everything.
+* An OR whose branches are all unset matches nothing, and an AND whose branches are all unset matches everything.
 * A condition instance whose own parameter is unset is left out as a whole, constraints of its type included.
 
 These rules apply in both rule evaluation and segment queries.

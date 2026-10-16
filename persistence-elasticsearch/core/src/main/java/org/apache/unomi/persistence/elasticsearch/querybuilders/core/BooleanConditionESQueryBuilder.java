@@ -50,6 +50,12 @@ public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
         @SuppressWarnings("unchecked")
         List<Condition> conditions = (List<Condition>) condition.getParameter("subConditions");
 
+        // An empty list matches everything, for AND and OR alike, as in 2.x and 3.x. Callers rely on it,
+        // for example EventService.searchEvents with no event types.
+        if (conditions == null || conditions.isEmpty()) {
+            return Query.of(q -> q.matchAll(m -> m));
+        }
+
         // Omit branches whose optional parameter is unset (UNOMI-1004 for OR; UNOMI-982 for AND).
         ConditionContextHelper.ResolvedBooleanSubConditions resolved =
                 ConditionContextHelper.resolveBooleanSubConditions(conditions, context, scriptExecutor);

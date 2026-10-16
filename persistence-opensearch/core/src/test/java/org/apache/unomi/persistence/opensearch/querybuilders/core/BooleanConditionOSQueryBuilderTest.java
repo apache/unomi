@@ -88,12 +88,13 @@ public class BooleanConditionOSQueryBuilderTest {
     }
 
     @Test
-    public void or_emptySubConditions_returnsMatchNone() {
+    public void or_emptySubConditions_returnsMatchAll() {
+        // 2.x/3.x behaviour that callers rely on, e.g. EventService.searchEvents with no event types.
         Condition or = new Condition();
         or.setParameter("operator", "or");
         or.setParameter("subConditions", Collections.emptyList());
 
-        assertTrue(builder.buildQuery(or, new HashMap<>(), dispatcher).isMatchNone());
+        assertTrue(builder.buildQuery(or, new HashMap<>(), dispatcher).isMatchAll());
     }
 
     @Test

@@ -194,8 +194,9 @@ Combine conditions with `booleanCondition`. This is the main way to build segmen
 }
 ----
 
-An AND with no sub-condition to test matches every item, and an OR with none matches no item. To select every
-item, use `matchAllCondition` rather than an empty OR. A sub-condition whose `parameter::` reference is unset is
+An empty `subConditions` list matches every item in a search query. In-memory evaluation, as in rules, matches
+every item for an empty AND and none for an empty OR. To select every item, use `matchAllCondition` rather than
+an empty list. A sub-condition whose `parameter::` reference is unset is
 left out before the operator applies; see <<_writing_plugins,Writing plugins>> for how condition types use
 these references.
 
