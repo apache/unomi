@@ -467,7 +467,7 @@ curl -X GET "http://localhost:8181/cxs/tenants" \
 
 Authentication rules (Unomi 4.0):
 
-1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled). Browser clients may call them from any origin; those responses do not include credentialed CORS headers.
+1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled). Browser clients may call them from any origin. Cookies are allowed only for origins listed in `org.apache.unomi.public.cors.allowedOrigins` (environment variable `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS`). The list is exact scheme, host and port, with no wildcards. The default is empty, so a page on another site cannot use the visitor cookie. A same-site page sends no `Origin` header and keeps working. Prefer that setup. `SameSite=None` (`UNOMI_PROFILE_COOKIE_SAMESITE`) is accepted only together with a secure cookie and a non-empty origin list; browsers increasingly block that kind of cookie.
 2. Private paths accept `tenantId:privateApiKey` Basic auth, or JAAS admin credentials (often with `X-Unomi-Tenant-Id` when a tenant context is required).
 3. Tenant administration (`/cxs/tenants`) requires system administrator JAAS credentials.
 4. JAAS admin does **not** replace the public API key on public endpoints.

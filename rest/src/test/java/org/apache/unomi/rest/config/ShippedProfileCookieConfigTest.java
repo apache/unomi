@@ -51,6 +51,12 @@ class ShippedProfileCookieConfigTest {
         String systemProperties = Files.readString(repoFile(SYSTEM_PROPERTIES_PATH));
         assertTrue(systemProperties.matches("(?s).*org\\.apache\\.unomi\\.profile\\.cookie\\.httpOnly=\\$\\{[^}]*:-true}.*"),
                 "profile cookie HttpOnly should default to true in " + SYSTEM_PROPERTIES_PATH);
+        assertTrue(systemProperties.contains("UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS"),
+                "public CORS origin list should be reachable from the environment");
+        assertTrue(systemProperties.contains("UNOMI_PROFILE_COOKIE_SAMESITE"),
+                "profile cookie SameSite should be reachable from the environment");
+        assertTrue(webCfg.contains("public.cors.allowedOrigins=${org.apache.unomi.public.cors.allowedOrigins:-}"),
+                "web config should read the public CORS origin list");
     }
 
     private static Path repoFile(String relativePath) throws IOException {

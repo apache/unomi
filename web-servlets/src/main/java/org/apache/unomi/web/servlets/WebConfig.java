@@ -39,6 +39,8 @@ public class WebConfig {
     private String contexserverProfileIdCookieName;
     private int contextserverProfileIdCookieMaxAgeInSeconds;
     private boolean contextserverProfileIdCookieHttpOnly;
+    private String contextserverProfileIdCookieSameSite;
+    private String publicCorsAllowedOrigins;
     private String allowedProfileDownloadFormats;
     private int publicPostRequestBytesLimit;
 
@@ -61,6 +63,12 @@ public class WebConfig {
         boolean contextserver_profileIdCookieHttpOnly() default true;
 
         @AttributeDefinition
+        String contextserver_profileIdCookieSameSite() default "Lax";
+
+        @AttributeDefinition
+        String public_cors_allowedOrigins() default "";
+
+        @AttributeDefinition
         String allowed_profile_download_formats() default "csv,yaml,json,text";
 
         @AttributeDefinition
@@ -78,6 +86,8 @@ public class WebConfig {
         this.contexserverProfileIdCookieName = config.contexserver_profileIdCookieName();
         this.contextserverProfileIdCookieMaxAgeInSeconds = config.contextserver_profileIdCookieMaxAgeInSeconds();
         this.contextserverProfileIdCookieHttpOnly = config.contextserver_profileIdCookieHttpOnly();
+        this.contextserverProfileIdCookieSameSite = config.contextserver_profileIdCookieSameSite();
+        this.publicCorsAllowedOrigins = config.public_cors_allowedOrigins();
         this.allowedProfileDownloadFormats = config.allowed_profile_download_formats();
         this.publicPostRequestBytesLimit = config.public_post_request_bytes_limit();
 
@@ -85,6 +95,8 @@ public class WebConfig {
         configSharingService.setProperty("profileIdCookieDomain", contextserverDomain);
         configSharingService.setProperty("profileIdCookieMaxAgeInSeconds", contextserverProfileIdCookieMaxAgeInSeconds);
         configSharingService.setProperty("profileIdCookieHttpOnly", contextserverProfileIdCookieHttpOnly);
+        configSharingService.setProperty("profileIdCookieSameSite", contextserverProfileIdCookieSameSite);
+        configSharingService.setProperty("publicCorsAllowedOrigins", publicCorsAllowedOrigins);
         configSharingService.setProperty("publicPostRequestBytesLimit", publicPostRequestBytesLimit);
         configSharingService.setProperty("allowedProfileDownloadFormats", allowedProfileDownloadFormats);
         LOGGER.info("WebConfig activated.");

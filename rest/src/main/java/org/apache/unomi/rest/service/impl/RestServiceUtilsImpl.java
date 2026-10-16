@@ -32,6 +32,7 @@ import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.rest.cors.PublicTrackerCorsPolicy;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.rest.authentication.V2ThirdPartyConfigService;
 import org.apache.unomi.services.common.security.SecurityUtils;
@@ -100,6 +101,12 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
 
     @Override
     public String getProfileIdCookieValue(HttpServletRequest httpServletRequest) {
+        String origin = httpServletRequest.getHeader("Origin");
+        if (origin != null && !publicCorsPolicy().allows(origin)) {
+            // A browser may still send a SameSite=None cookie. Do not bind that visitor
+            // when the page origin is not on the operator list.
+            return null;
+        }
         String cookieProfileId = null;
 
         Cookie[] cookies = httpServletRequest.getCookies();
@@ -117,6 +124,11 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
             }
         }
         return cookieProfileId;
+    }
+
+    private PublicTrackerCorsPolicy publicCorsPolicy() {
+        Object configured = configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY);
+        return PublicTrackerCorsPolicy.parse(configured == null ? null : configured.toString());
     }
 
     @Override

@@ -51,6 +51,7 @@ import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -101,6 +102,37 @@ class RestServiceUtilsImplProfileBindingTest {
         lenient().when(securityService.hasCompatPeerAbility(anyString())).thenReturn(false);
         lenient().when(restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled()).thenReturn(false);
         lenient().when(privacyService.isRequireAnonymousBrowsing(org.mockito.ArgumentMatchers.any(Profile.class))).thenReturn(false);
+    }
+
+    @Test
+    void initEventsRequest_unlistedOriginDoesNotUseVisitorCookie() {
+        when(configSharingService.getProperty("publicCorsAllowedOrigins")).thenReturn("https://shop.example");
+        when(request.getHeader("Origin")).thenReturn("https://other.example");
+
+        try {
+            restServiceUtils.initEventsRequest(
+                    "systemscope", null, null, null,
+                    false, false, request, response, new Date());
+            fail("An unlisted origin must not be served as the visitor named by the cookie");
+        } catch (javax.ws.rs.BadRequestException expected) {
+            assertTrue(expected.getMessage().contains("profileId"));
+        }
+
+        verify(profileService, never()).load("cookie-profile");
+    }
+
+    @Test
+    void initEventsRequest_listedOriginUsesVisitorCookie() {
+        when(configSharingService.getProperty("publicCorsAllowedOrigins")).thenReturn("https://shop.example");
+        when(request.getHeader("Origin")).thenReturn("https://shop.example");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+        when(profileService.load("cookie-profile")).thenReturn(new Profile("cookie-profile"));
+
+        EventsRequestContext ctx = restServiceUtils.initEventsRequest(
+                "systemscope", null, null, null,
+                false, false, request, response, new Date());
+
+        assertEquals("cookie-profile", ctx.getProfile().getItemId());
     }
 
     @Test
