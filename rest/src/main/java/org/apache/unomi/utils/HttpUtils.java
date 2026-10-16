@@ -25,6 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.rest.cors.PublicTrackerCorsPolicy;
 import org.apache.unomi.schema.api.SchemaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,11 +131,19 @@ public class HttpUtils {
         final String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
         final Integer profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds");
         final Boolean profileIdCookieHttpOnly = (Boolean) configSharingService.getProperty("profileIdCookieHttpOnly");
+        Object configuredOrigins = configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY);
+        Object configuredSameSite = configSharingService.getProperty(PublicTrackerCorsPolicy.SAME_SITE_PROPERTY);
+        PublicTrackerCorsPolicy policy = PublicTrackerCorsPolicy.parse(configuredOrigins == null ? null : configuredOrigins.toString());
+        String requestedSameSite = configuredSameSite == null ? "Lax" : configuredSameSite.toString();
+        String sameSite = policy.resolveSameSite(requestedSameSite, isSecure);
+        if ("None".equalsIgnoreCase(requestedSameSite) && !"None".equals(sameSite)) {
+            LOGGER.warn("Refusing SameSite=None for the profile cookie; Secure and a non-empty public CORS origin list are both required. Using SameSite=Lax.");
+        }
         return profileIdCookieName + "=" + profile.getItemId() +
                 "; Path=/" +
                 "; Max-Age=" + profileIdCookieMaxAgeInSeconds +
                 (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "") +
-                "; SameSite=Lax" +
+                "; SameSite=" + sameSite +
                 (isSecure ? "; Secure" : "") +
                 (profileIdCookieHttpOnly ? "; HttpOnly" : "");
     }

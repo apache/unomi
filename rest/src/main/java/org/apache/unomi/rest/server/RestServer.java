@@ -39,6 +39,7 @@ import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.rest.cors.PublicTrackerCorsFilter;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
@@ -401,6 +402,7 @@ public class RestServer {
         jaxrsServerFactoryBean.setBus(serverBus);
         jaxrsServerFactoryBean.setProvider(new JacksonJaxbJsonProvider(objectMapper, JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS));
         jaxrsServerFactoryBean.setProvider(new CrossOriginResourceSharingFilter());
+        jaxrsServerFactoryBean.setProvider(new PublicTrackerCorsFilter(configSharingService));
         jaxrsServerFactoryBean.setProvider(new RetroCompatibilityParamConverterProvider(objectMapper));
 
         // Authentication and Security filters in order of priority

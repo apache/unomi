@@ -1,0 +1,71 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.unomi.utils;
+
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.rest.cors.PublicTrackerCorsPolicy;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+class ProfileCookieSameSiteTest {
+
+    @Test
+    void defaultCookieIsSameSiteLax() {
+        String cookie = HttpUtils.getProfileCookieString(profile(), config(null, null), false);
+        assertTrue(cookie.contains("SameSite=Lax"));
+        assertFalse(cookie.contains("SameSite=None"));
+    }
+
+    @Test
+    void sameSiteNoneIsRefusedWithoutSecureOrOrigins() {
+        String withoutSecure = HttpUtils.getProfileCookieString(profile(), config("None", "https://shop.example"), false);
+        assertTrue(withoutSecure.contains("SameSite=Lax"));
+
+        String withoutOrigins = HttpUtils.getProfileCookieString(profile(), config("None", ""), true);
+        assertTrue(withoutOrigins.contains("SameSite=Lax"));
+        assertTrue(withoutOrigins.contains("Secure"));
+    }
+
+    @Test
+    void sameSiteNoneIsAcceptedWithSecureAndOrigins() {
+        String cookie = HttpUtils.getProfileCookieString(profile(), config("None", "https://shop.example"), true);
+        assertTrue(cookie.contains("SameSite=None"));
+        assertTrue(cookie.contains("Secure"));
+    }
+
+    private static Profile profile() {
+        Profile profile = new Profile();
+        profile.setItemId("profile-1");
+        return profile;
+    }
+
+    private static ConfigSharingService config(String sameSite, String origins) {
+        ConfigSharingService config = mock(ConfigSharingService.class);
+        when(config.getProperty("profileIdCookieName")).thenReturn("context-profile-id");
+        when(config.getProperty("profileIdCookieDomain")).thenReturn("");
+        when(config.getProperty("profileIdCookieMaxAgeInSeconds")).thenReturn(3600);
+        when(config.getProperty("profileIdCookieHttpOnly")).thenReturn(Boolean.TRUE);
+        when(config.getProperty(PublicTrackerCorsPolicy.SAME_SITE_PROPERTY)).thenReturn(sameSite);
+        when(config.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY)).thenReturn(origins);
+        return config;
+    }
+}
