@@ -289,6 +289,17 @@ Specialize an existing condition type with `parentCondition` under `META-INF/cxs
 }
 ----
 
+Inside `parentCondition`, a value written `parameter::name` takes the value the condition instance gives its
+`name` parameter. A parameter the instance leaves unset is optional, and the condition that reads it is left out:
+
+* Under an AND, it states no constraint. `formEventCondition` with no `pagePath` matches a form on any page.
+* Under an OR, it is not a match. `hoverEventCondition` compares `targetId` OR `targetPath`, and with only
+  `targetId` set it matches hovers on that target only.
+* An OR whose branches are all unset matches nothing, and an AND whose branches are all unset matches everything.
+* A condition instance whose own parameter is unset is left out as a whole, constraints of its type included.
+
+These rules apply in both rule evaluation and segment queries.
+
 ===== Predefined personas
 
 Place JSON under `META-INF/cxs/personas/`. Each file can define a persona profile and optional sessions for testing personalization.

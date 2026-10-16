@@ -87,23 +87,31 @@ public class TestConditionEvaluators {
             tracer.startOperation("boolean", "Evaluating boolean condition with operator: " + condition.getParameter("operator"), condition);
             String operator = (String) condition.getParameter("operator");
             Object subConditionsParam = condition.getParameter("subConditions");
+            boolean isAnd = "and".equalsIgnoreCase(operator);
             if (!(subConditionsParam instanceof List)) {
-                tracer.endOperation(true, "No subconditions found, returning true");
-                return true;
+                tracer.endOperation(isAnd, "No subconditions found, returning " + isAnd);
+                return isAnd;
             }
             @SuppressWarnings("unchecked")
             List<Condition> subConditions = (List<Condition>) subConditionsParam;
 
-            if (subConditions.isEmpty()) {
-                tracer.endOperation(true, "No subconditions found, returning true");
-                return true;
+            // Mirror BooleanConditionEvaluator: omit unset optional OR/AND branches (UNOMI-1004 / UNOMI-982).
+            ConditionContextHelper.ResolvedBooleanSubConditions resolved =
+                    ConditionContextHelper.resolveBooleanSubConditions(subConditions, context, null);
+            if (resolved.hasUnresolvable() && isAnd) {
+                tracer.endOperation(false, "AND condition has an unresolvable subcondition");
+                return false;
+            }
+            List<Condition> active = resolved.getActive();
+
+            if (active.isEmpty()) {
+                tracer.endOperation(isAnd, "No active subconditions after omitting unset optionals, returning " + isAnd);
+                return isAnd;
             }
 
-            boolean isAnd = "and".equalsIgnoreCase(operator);
-            tracer.trace("Using " + (isAnd ? "AND" : "OR") + " operator for " + subConditions.size() + " subconditions", condition);
+            tracer.trace("Using " + (isAnd ? "AND" : "OR") + " operator for " + active.size() + " subconditions", condition);
 
-            for (int i = 0; i < subConditions.size(); i++) {
-                Condition subCondition = subConditions.get(i);
+            for (Condition subCondition : active) {
                 boolean result = dispatcher.eval(subCondition, item, context);
                 if (isAnd && !result) {
                     tracer.endOperation(false, "AND condition failed on subcondition");

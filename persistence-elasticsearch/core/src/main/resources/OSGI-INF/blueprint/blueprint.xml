@@ -194,7 +194,9 @@
         <service-properties>
             <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.BooleanConditionESQueryBuilder"/>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.BooleanConditionESQueryBuilder">
+            <property name="scriptExecutor" ref="scriptExecutor"/>
+        </bean>
     </service>
 
     <service

@@ -138,12 +138,20 @@ Use the same `queryBuilderId` in JSON, Elasticsearch, and OpenSearch registratio
 |===
 | Condition type ID | Source | Key parameters / notes
 | `cdpSessionEventCondition` | graphql | Params: —
-| `hoverEventCondition` | hover-event | Params: targetId, targetPath
+| `hoverEventCondition` | hover-event (not deployed by default) | Matches a hover on the given target id or page path. Params: targetId, targetPath (set at least one; with neither set, it matches nothing)
 | `sourceEventPropertyCondition` | advanced-conditions | Params: id, path, scope, type
 | `updateConsentEventCondition` | graphql | Params: —
 | `updateListsEventCondition` | graphql | Params: —
 | `userListPropertyCondition` | graphql | Params: propertyName, comparisonOperator, propertyValue, propertyValues
 |===
+
+The hover-event plugin is built with Unomi but is not part of any Karaf feature, so `hoverEventCondition` is not
+available on a default install. Deploy the bundle to use it, for example from the Karaf console:
+
+[source]
+----
+bundle:install -s mvn:org.apache.unomi/unomi-plugins-hover-event/${project.version}
+----
 
 ==== Source locations
 

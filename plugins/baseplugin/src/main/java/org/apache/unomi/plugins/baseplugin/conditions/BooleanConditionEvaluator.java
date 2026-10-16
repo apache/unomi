@@ -19,8 +19,10 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
+import org.apache.unomi.scripting.ScriptExecutor;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
 
@@ -30,9 +32,14 @@ import java.util.Map;
 /** Evaluator for AND and OR conditions. */
 public class BooleanConditionEvaluator implements ConditionEvaluator {
     private TracerService tracerService;
+    private ScriptExecutor scriptExecutor;
 
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
+    }
+
+    public void setScriptExecutor(ScriptExecutor scriptExecutor) {
+        this.scriptExecutor = scriptExecutor;
     }
 
     @Override
@@ -55,18 +62,30 @@ public class BooleanConditionEvaluator implements ConditionEvaluator {
             @SuppressWarnings("unchecked")
             List<Condition> conditions = (List<Condition>) subConditionsParam;
 
-            if (conditions == null || conditions.isEmpty()) {
+            // Omit branches whose optional parameter is unset. For OR that prevents an unset
+            // branch from matching everything (UNOMI-1004). For AND it keeps UNOMI-982 behaviour.
+            ConditionContextHelper.ResolvedBooleanSubConditions resolved =
+                    ConditionContextHelper.resolveBooleanSubConditions(conditions, context, scriptExecutor);
+            if (resolved.hasUnresolvable() && isAnd) {
                 if (tracer != null) {
-                    tracer.endOperation(isAnd, "No subconditions found, returning " + isAnd);
+                    tracer.endOperation(false, "AND condition has an unresolvable subcondition");
+                }
+                return false;
+            }
+            List<Condition> active = resolved.getActive();
+
+            if (active.isEmpty()) {
+                if (tracer != null) {
+                    tracer.endOperation(isAnd, "No active subconditions after omitting unset optionals, returning " + isAnd);
                 }
                 return isAnd;
             }
 
             if (tracer != null) {
-                tracer.trace("Using " + (isAnd ? "AND" : "OR") + " operator for " + conditions.size() + " subconditions", condition);
+                tracer.trace("Using " + (isAnd ? "AND" : "OR") + " operator for " + active.size() + " subconditions", condition);
             }
 
-            for (Condition sub : conditions) {
+            for (Condition sub : active) {
                 boolean eval = dispatcher.eval(sub, item, context);
                 if (!eval && isAnd) {
                     if (tracer != null) {

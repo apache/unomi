@@ -816,4 +816,82 @@ public class ConditionContextHelper {
         return null;
     }
 
+    /**
+     * Result of resolving the sub-conditions of a boolean condition against a context.
+     * Unset optional parameters are omitted from {@link #getActive()}; unresolvable
+     * references are omitted too and reported via {@link #hasUnresolvable()}, so AND can fail
+     * closed while OR refuses only that branch's match.
+     */
+    public static final class ResolvedBooleanSubConditions {
+        private final List<Condition> active;
+        private final boolean unresolvable;
+
+        ResolvedBooleanSubConditions(List<Condition> active, boolean unresolvable) {
+            this.active = active;
+            this.unresolvable = unresolvable;
+        }
+
+        /**
+         * Sub-conditions that still apply after omitting unset optional parameters.
+         *
+         * @return the active sub-conditions; never {@code null}
+         */
+        public List<Condition> getActive() {
+            return active;
+        }
+
+        /**
+         * {@code true} when at least one sub-condition could not be resolved
+         * (cycle, depth overrun, or script failure).
+         *
+         * @return whether an unresolvable sub-condition was seen
+         */
+        public boolean hasUnresolvable() {
+            return unresolvable;
+        }
+    }
+
+    /**
+     * Resolves each boolean sub-condition against the context.
+     * A sub-condition whose optional parameter is unset ({@link #getContextualCondition}
+     * returns {@code null}) is left out. That is required for OR: an unset branch must not
+     * count as a match. For AND, leaving it out preserves the UNOMI-982 behaviour where an
+     * unset optional states no constraint.
+     *
+     * @param subConditions the boolean sub-conditions, may be {@code null}
+     * @param context       parameter context
+     * @param scriptExecutor script executor, may be {@code null} when no scripts are used
+     * @return the resolved active sub-conditions and whether any were unresolvable
+     */
+    public static ResolvedBooleanSubConditions resolveBooleanSubConditions(
+            List<Condition> subConditions,
+            Map<String, Object> context,
+            ScriptExecutor scriptExecutor) {
+        List<Condition> active = new ArrayList<>();
+        boolean unresolvable = false;
+        if (subConditions == null) {
+            return new ResolvedBooleanSubConditions(active, false);
+        }
+        for (Condition sub : subConditions) {
+            if (sub == null) {
+                continue;
+            }
+            Condition resolved = getContextualCondition(sub, context, scriptExecutor);
+            if (resolved == null) {
+                continue;
+            }
+            if (resolved == UNRESOLVABLE) {
+                unresolvable = true;
+                continue;
+            }
+            if (resolved.getConditionTypeId() == null) {
+                // A copy of a sub-condition whose type is not resolved yet keeps its type id, so the
+                // dispatcher can still resolve it.
+                resolved.setConditionTypeId(sub.getConditionTypeId());
+            }
+            active.add(resolved);
+        }
+        return new ResolvedBooleanSubConditions(active, unresolvable);
+    }
+
 }

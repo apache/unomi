@@ -1155,6 +1155,76 @@ public class ConditionContextHelperTest {
             resolved);
     }
 
+    // ========== Boolean optional sub-conditions (UNOMI-1004) ==========
+
+    @Test
+    public void testResolveBooleanSubConditions_omitsUnsetOptionalUnderOr() {
+        Condition idBranch = new Condition();
+        idBranch.setParameter("propertyName", "target.itemId");
+        idBranch.setParameter("propertyValue", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "targetId");
+        idBranch.setParameter("comparisonOperator", "equals");
+
+        Condition pathBranch = new Condition();
+        pathBranch.setParameter("propertyName", "target.properties.pageInfo.pagePath");
+        pathBranch.setParameter("propertyValue", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "targetPath");
+        pathBranch.setParameter("comparisonOperator", "equals");
+
+        Map<String, Object> context = new HashMap<>();
+        context.put("targetId", "button-a");
+
+        ConditionContextHelper.ResolvedBooleanSubConditions resolved =
+                ConditionContextHelper.resolveBooleanSubConditions(
+                        Arrays.asList(idBranch, pathBranch), context, scriptExecutor);
+
+        assertFalse(resolved.hasUnresolvable());
+        assertEquals(1, resolved.getActive().size());
+        assertEquals("button-a", resolved.getActive().get(0).getParameter("propertyValue"));
+    }
+
+    @Test
+    public void testResolveBooleanSubConditions_neitherSet_yieldsEmptyActive() {
+        Condition idBranch = new Condition();
+        idBranch.setParameter("propertyValue", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "targetId");
+        Condition pathBranch = new Condition();
+        pathBranch.setParameter("propertyValue", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "targetPath");
+
+        ConditionContextHelper.ResolvedBooleanSubConditions resolved =
+                ConditionContextHelper.resolveBooleanSubConditions(
+                        Arrays.asList(idBranch, pathBranch), new HashMap<>(), scriptExecutor);
+
+        assertTrue(resolved.getActive().isEmpty());
+        assertFalse(resolved.hasUnresolvable());
+    }
+
+    @Test
+    public void testResolveBooleanSubConditions_untypedSub_keepsTypeId() {
+        Condition sub = new Condition();
+        sub.setConditionTypeId("profilePropertyCondition");
+        sub.setParameter("propertyValue", ConditionContextHelper.PARAMETER_REFERENCE_PREFIX + "gender");
+
+        Map<String, Object> context = new HashMap<>();
+        context.put("gender", "female");
+        ConditionContextHelper.ResolvedBooleanSubConditions resolved =
+                ConditionContextHelper.resolveBooleanSubConditions(Collections.singletonList(sub), context, scriptExecutor);
+
+        assertEquals("profilePropertyCondition", resolved.getActive().get(0).getConditionTypeId());
+        assertEquals("female", resolved.getActive().get(0).getParameter("propertyValue"));
+    }
+
+    @Test
+    public void testResolveBooleanSubConditions_unresolvableSub_isReportedAndOmitted() {
+        Condition broken = new Condition();
+        broken.setParameter("propertyValue", ConditionContextHelper.SCRIPT_EXPRESSION_PREFIX + "anything");
+        Condition literal = new Condition();
+        literal.setParameter("propertyValue", "x");
+
+        ConditionContextHelper.ResolvedBooleanSubConditions resolved =
+                ConditionContextHelper.resolveBooleanSubConditions(Arrays.asList(broken, literal), new HashMap<>(), null);
+
+        assertTrue(resolved.hasUnresolvable());
+        assertEquals(Collections.singletonList(literal), resolved.getActive());
+    }
+
     // ========== Helper Methods ==========
 
     private Condition createIntegerParameterCondition(Object testParamValue) {
