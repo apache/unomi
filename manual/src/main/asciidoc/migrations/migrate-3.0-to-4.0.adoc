@@ -442,6 +442,10 @@ In addition to tenant API keys, Unomi 4.0 hardens several contracts that can bre
 |Sending only `sessionId` could switch onto that session's profile
 |Public callers switch only if the cookie already owns the session; otherwise the session is detached for the request.
 
+|Tracker on another origin
+|Public endpoints answered any origin with credentialed CORS, so a page on another origin (in practice another subdomain, since the cookie is `SameSite=Lax`) could use the visitor cookie
+|Only origins listed in `org.apache.unomi.public.cors.allowedOrigins` (`UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS`) get credentialed CORS and have the cookie used. The default is empty. A website served from Unomi's own origin through a reverse proxy needs no change; one on another origin, another subdomain included, must be listed. `SameSite` stays `Lax` unless set to `None` with HTTPS and a non-empty list.
+
 |Profile cookie `HttpOnly`
 |Often defaulted to `false` (JS could read `document.cookie`)
 |Default **`true`**. Prefer `profileId` from the JSON response. Opt out with `org.apache.unomi.profile.cookie.httpOnly=false` only if you accept the tradeoff.
@@ -494,7 +498,7 @@ console (port 8102) is not covered by that check.
 
 ===== Migration checklist for client applications
 
-* Browser / tracker clients: ensure cookies are sent (`withCredentials` / same-site setup); stop treating body `profileId` as authoritative for public calls.
+* Browser / tracker clients: ensure cookies are sent (`withCredentials` / same-site setup); list every website origin that calls Unomi from another origin in `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS`; stop treating body `profileId` as authoritative for public calls.
 * Headless or mobile public clients that stored a UUID and posted it only in the body: switch to sending the profile cookie, or call with a **private key** when you intentionally bind a profile.
 * Login / merge flows: emit merge-triggering events from a trusted server-side caller after real authentication — not from the public key alone.
 * Ops scripts and Docker: export both password env vars; replace `karaf:karaf` with `karaf:$UNOMI_ROOT_PASSWORD`.

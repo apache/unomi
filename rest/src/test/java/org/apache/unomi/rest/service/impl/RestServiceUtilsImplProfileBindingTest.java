@@ -22,6 +22,7 @@ import org.apache.unomi.api.PersonaWithSessions;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.security.CompatPeerPrincipal;
+import org.apache.unomi.api.security.InsecureTransportPrincipal;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ConfigSharingService;
@@ -29,6 +30,7 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
+import org.apache.unomi.rest.cors.PublicTrackerCorsSettings;
 import org.apache.unomi.rest.authentication.V2ThirdPartyConfigService;
 import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.utils.EventsRequestContext;
@@ -95,6 +97,7 @@ class RestServiceUtilsImplProfileBindingTest {
         setField(restServiceUtils, "restAuthenticationConfig", restAuthenticationConfig);
         setField(restServiceUtils, "v2ThirdPartyConfigService", v2ThirdPartyConfigService);
         setField(restServiceUtils, "securityService", securityService);
+        allowedOrigins(null);
 
         lenient().when(configSharingService.getProperty("profileIdCookieName")).thenReturn(COOKIE_NAME);
         lenient().when(schemaService.isValid(anyString(), anyString())).thenReturn(true);
@@ -106,8 +109,9 @@ class RestServiceUtilsImplProfileBindingTest {
 
     @Test
     void initEventsRequest_unlistedOriginDoesNotUseVisitorCookie() {
-        when(configSharingService.getProperty("publicCorsAllowedOrigins")).thenReturn("https://shop.example");
+        allowedOrigins("https://shop.example");
         when(request.getHeader("Origin")).thenReturn("https://other.example");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
 
         try {
             restServiceUtils.initEventsRequest(
@@ -123,7 +127,7 @@ class RestServiceUtilsImplProfileBindingTest {
 
     @Test
     void initEventsRequest_listedOriginUsesVisitorCookie() {
-        when(configSharingService.getProperty("publicCorsAllowedOrigins")).thenReturn("https://shop.example");
+        allowedOrigins("https://shop.example");
         when(request.getHeader("Origin")).thenReturn("https://shop.example");
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
         when(profileService.load("cookie-profile")).thenReturn(new Profile("cookie-profile"));
@@ -133,6 +137,104 @@ class RestServiceUtilsImplProfileBindingTest {
                 false, false, request, response, new Date());
 
         assertEquals("cookie-profile", ctx.getProfile().getItemId());
+    }
+
+    @Test
+    void initEventsRequest_sameOriginPostUsesVisitorCookieWithDefaultSettings() {
+        // Browsers send Origin on same-origin POSTs; that must not drop the cookie.
+        allowedOrigins("");
+        lenient().when(request.getHeader("Origin")).thenReturn("https://site.example");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("same-origin");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+        when(profileService.load("cookie-profile")).thenReturn(new Profile("cookie-profile"));
+
+        EventsRequestContext ctx = restServiceUtils.initEventsRequest(
+                "systemscope", null, null, null,
+                false, false, request, response, new Date());
+
+        assertEquals("cookie-profile", ctx.getProfile().getItemId());
+    }
+
+    @Test
+    void initEventsRequest_sameHostWithoutSecFetchSiteUsesVisitorCookie() {
+        // Older browsers send no Sec-Fetch-Site; the reverse proxy forwards the public host.
+        allowedOrigins(null);
+        lenient().when(request.getHeader("Origin")).thenReturn("https://site.example");
+        when(request.getServerName()).thenReturn("10.0.0.5");
+        lenient().when(request.getHeader("X-Forwarded-Host")).thenReturn("site.example");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+        when(profileService.load("cookie-profile")).thenReturn(new Profile("cookie-profile"));
+
+        EventsRequestContext ctx = restServiceUtils.initEventsRequest(
+                "systemscope", null, null, null,
+                false, false, request, response, new Date());
+
+        assertEquals("cookie-profile", ctx.getProfile().getItemId());
+    }
+
+    @Test
+    void getProfileIdCookieValue_unlistedSubdomainDoesNotUseVisitorCookie() {
+        allowedOrigins("");
+        lenient().when(request.getHeader("Origin")).thenReturn("https://www.site.example");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("same-site");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+
+        assertNull(restServiceUtils.getProfileIdCookieValue(request));
+        verify(schemaService, never()).isValid(anyString(), anyString());
+    }
+
+    @Test
+    void getProfileIdCookieValue_noCookieSkipsTheOriginCheck() {
+        when(request.getCookies()).thenReturn(null);
+
+        assertNull(restServiceUtils.getProfileIdCookieValue(request));
+        verify(request, never()).getHeader("Origin");
+    }
+
+    @Test
+    void finalizeEventsRequest_cookieIsSecureBehindTrustedTlsProxy() {
+        stubCookieSettings();
+        when(request.isSecure()).thenReturn(false);
+        // No InsecureTransportPrincipal: a trusted proxy reported X-Forwarded-Proto: https.
+        when(securityService.getRequestSubject()).thenReturn(new Subject());
+
+        restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
+
+        verify(response).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"),
+                org.mockito.ArgumentMatchers.contains("; Secure"));
+    }
+
+    @Test
+    void finalizeEventsRequest_cookieIsNotSecureOverPlainHttp() {
+        stubCookieSettings();
+        when(request.isSecure()).thenReturn(false);
+        Subject insecure = new Subject();
+        insecure.getPrincipals().add(InsecureTransportPrincipal.INSTANCE);
+        when(securityService.getRequestSubject()).thenReturn(insecure);
+
+        restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
+
+        verify(response).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"),
+                org.mockito.ArgumentMatchers.argThat((String cookie) -> !cookie.contains("Secure")));
+    }
+
+    private void allowedOrigins(String origins) {
+        try {
+            setField(restServiceUtils, "publicTrackerCorsSettings", new PublicTrackerCorsSettings(origins, null));
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private void stubCookieSettings() {
+        lenient().when(configSharingService.getProperty("profileIdCookieMaxAgeInSeconds")).thenReturn(3600);
+        lenient().when(configSharingService.getProperty("profileIdCookieHttpOnly")).thenReturn(Boolean.TRUE);
+    }
+
+    private EventsRequestContext contextWithProfile() {
+        EventsRequestContext ctx = new EventsRequestContext(new Date(), null, null, request, response);
+        ctx.setProfile(new Profile("cookie-profile"));
+        return ctx;
     }
 
     @Test

@@ -22,6 +22,7 @@ import org.apache.cxf.interceptor.security.RolePrefixSecurityContextImpl;
 import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.security.CompatPeerPrincipal;
+import org.apache.unomi.api.security.InsecureTransportPrincipal;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.utils.LogSanitizer;
 import org.apache.unomi.api.security.TenantPrincipal;
@@ -32,7 +33,7 @@ import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
-import org.apache.unomi.rest.cors.PublicTrackerCorsPolicy;
+import org.apache.unomi.rest.cors.PublicTrackerCorsSettings;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.rest.authentication.V2ThirdPartyConfigService;
 import org.apache.unomi.services.common.security.SecurityUtils;
@@ -99,36 +100,51 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     @Reference
     private SecurityService securityService;
 
+    @Reference
+    private PublicTrackerCorsSettings publicTrackerCorsSettings;
+
     @Override
     public String getProfileIdCookieValue(HttpServletRequest httpServletRequest) {
-        String origin = httpServletRequest.getHeader("Origin");
-        if (origin != null && !publicCorsPolicy().allows(origin)) {
-            // A browser may still send a SameSite=None cookie. Do not bind that visitor
-            // when the page origin is not on the operator list.
+        Cookie[] cookies = httpServletRequest.getCookies();
+        if (cookies == null) {
             return null;
         }
+        final String profileIdCookieName = publicTrackerCorsSettings.cookieName();
         String cookieProfileId = null;
-
-        Cookie[] cookies = httpServletRequest.getCookies();
-
-        if (cookies != null) {
-            final Object profileIdCookieName = configSharingService.getProperty("profileIdCookieName");
-            for (Cookie cookie : cookies) {
-                if (profileIdCookieName.equals(cookie.getName())) {
-                    String profileIdJSON = JsonNodeFactory.instance.objectNode().put("profileId", cookie.getValue()).toString();
-                    if (!schemaService.isValid(profileIdJSON, "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
-                        throw new InvalidRequestException("Invalid profile ID format in cookie", "Invalid received data");
-                    }
-                    cookieProfileId = cookie.getValue();
-                }
+        for (Cookie cookie : cookies) {
+            if (profileIdCookieName.equals(cookie.getName())) {
+                cookieProfileId = cookie.getValue();
             }
+        }
+        if (cookieProfileId == null) {
+            return null;
+        }
+        String origin = httpServletRequest.getHeader("Origin");
+        if (!publicTrackerCorsSettings.policy().allowsVisitorCookie(origin, httpServletRequest.getHeader("Sec-Fetch-Site"),
+                httpServletRequest.getServerName(), httpServletRequest.getHeader("X-Forwarded-Host"))) {
+            // A browser may still send a SameSite=None cookie from another site. Do not bind that
+            // visitor when the page origin is not on the operator list.
+            LOGGER.debug("Ignoring the profile cookie for origin {}: not listed in the public CORS allowed origins",
+                    LogSanitizer.forLogging(origin));
+            return null;
+        }
+        String profileIdJSON = JsonNodeFactory.instance.objectNode().put("profileId", cookieProfileId).toString();
+        if (!schemaService.isValid(profileIdJSON, "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
+            throw new InvalidRequestException("Invalid profile ID format in cookie", "Invalid received data");
         }
         return cookieProfileId;
     }
 
-    private PublicTrackerCorsPolicy publicCorsPolicy() {
-        Object configured = configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY);
-        return PublicTrackerCorsPolicy.parse(configured == null ? null : configured.toString());
+    /**
+     * Whether the visitor reached Unomi over HTTPS: the container says so, or a trusted proxy reported
+     * it, in which case the authentication filter did not mark the request subject as insecure.
+     */
+    private boolean isSecureRequest(HttpServletRequest request) {
+        if (request.isSecure()) {
+            return true;
+        }
+        Subject subject = securityService.getRequestSubject();
+        return subject != null && subject.getPrincipals(InsecureTransportPrincipal.class).isEmpty();
     }
 
     @Override
@@ -508,7 +524,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         // Set profile cookie
         if (!(eventsRequestContext.getProfile() instanceof Persona)) {
             eventsRequestContext.getResponse().setHeader("Set-Cookie",
-                    HttpUtils.getProfileCookieString(eventsRequestContext.getProfile(), configSharingService, eventsRequestContext.getRequest().isSecure()));
+                    HttpUtils.getProfileCookieString(eventsRequestContext.getProfile(), publicTrackerCorsSettings, isSecureRequest(eventsRequestContext.getRequest())));
         }
     }
 

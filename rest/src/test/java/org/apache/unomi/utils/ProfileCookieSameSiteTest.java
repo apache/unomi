@@ -17,39 +17,60 @@
 package org.apache.unomi.utils;
 
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.services.ConfigSharingService;
-import org.apache.unomi.rest.cors.PublicTrackerCorsPolicy;
+import org.apache.unomi.rest.cors.PublicTrackerCorsSettings;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 class ProfileCookieSameSiteTest {
 
     @Test
     void defaultCookieIsSameSiteLax() {
-        String cookie = HttpUtils.getProfileCookieString(profile(), config(null, null), false);
+        String cookie = HttpUtils.getProfileCookieString(profile(), settings(null, null), false);
         assertTrue(cookie.contains("SameSite=Lax"));
         assertFalse(cookie.contains("SameSite=None"));
     }
 
     @Test
     void sameSiteNoneIsRefusedWithoutSecureOrOrigins() {
-        String withoutSecure = HttpUtils.getProfileCookieString(profile(), config("None", "https://shop.example"), false);
+        String withoutSecure = HttpUtils.getProfileCookieString(profile(), settings("None", "https://shop.example"), false);
         assertTrue(withoutSecure.contains("SameSite=Lax"));
 
-        String withoutOrigins = HttpUtils.getProfileCookieString(profile(), config("None", ""), true);
+        String withoutOrigins = HttpUtils.getProfileCookieString(profile(), settings("None", ""), true);
         assertTrue(withoutOrigins.contains("SameSite=Lax"));
         assertTrue(withoutOrigins.contains("Secure"));
     }
 
     @Test
     void sameSiteNoneIsAcceptedWithSecureAndOrigins() {
-        String cookie = HttpUtils.getProfileCookieString(profile(), config("None", "https://shop.example"), true);
+        String cookie = HttpUtils.getProfileCookieString(profile(), settings("None", "https://shop.example"), true);
         assertTrue(cookie.contains("SameSite=None"));
         assertTrue(cookie.contains("Secure"));
+    }
+
+    @Test
+    void sameSiteValueIsCaseInsensitiveAndUnknownValuesFallBackToLax() {
+        assertTrue(HttpUtils.getProfileCookieString(profile(), settings(" none ", "https://shop.example"), true).contains("SameSite=None"));
+        assertTrue(HttpUtils.getProfileCookieString(profile(), settings("strict", ""), false).contains("SameSite=Strict"));
+        assertTrue(HttpUtils.getProfileCookieString(profile(), settings("bogus", ""), false).contains("SameSite=Lax"));
+    }
+
+    @Test
+    void refusedSameSiteNoneStillWritesACookieOnEveryRequest() {
+        // The warning is logged once; the fallback must apply every time.
+        for (int i = 0; i < 3; i++) {
+            assertTrue(HttpUtils.getProfileCookieString(profile(), settings("None", ""), true).contains("SameSite=Lax"));
+        }
+    }
+
+    @Test
+    void cookieAttributesArePrecomputedInTheShippedOrder() {
+        assertEquals("context-profile-id=profile-1; Path=/; Max-Age=31536000; SameSite=None; Secure; HttpOnly",
+                HttpUtils.getProfileCookieString(profile(), settings("None", "https://shop.example"), true));
+        assertEquals("context-profile-id=profile-1; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly",
+                HttpUtils.getProfileCookieString(profile(), settings("None", "https://shop.example"), false));
     }
 
     private static Profile profile() {
@@ -58,14 +79,7 @@ class ProfileCookieSameSiteTest {
         return profile;
     }
 
-    private static ConfigSharingService config(String sameSite, String origins) {
-        ConfigSharingService config = mock(ConfigSharingService.class);
-        when(config.getProperty("profileIdCookieName")).thenReturn("context-profile-id");
-        when(config.getProperty("profileIdCookieDomain")).thenReturn("");
-        when(config.getProperty("profileIdCookieMaxAgeInSeconds")).thenReturn(3600);
-        when(config.getProperty("profileIdCookieHttpOnly")).thenReturn(Boolean.TRUE);
-        when(config.getProperty(PublicTrackerCorsPolicy.SAME_SITE_PROPERTY)).thenReturn(sameSite);
-        when(config.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY)).thenReturn(origins);
-        return config;
+    private static PublicTrackerCorsSettings settings(String sameSite, String origins) {
+        return new PublicTrackerCorsSettings(origins, sameSite);
     }
 }

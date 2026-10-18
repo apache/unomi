@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.rest.cors;
 
-import org.apache.unomi.api.services.ConfigSharingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,15 +30,15 @@ import javax.ws.rs.core.UriInfo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PublicTrackerCorsFilterTest {
 
-    @Mock
-    private ConfigSharingService configSharingService;
     @Mock
     private ContainerRequestContext request;
     @Mock
@@ -52,20 +51,30 @@ class PublicTrackerCorsFilterTest {
 
     @BeforeEach
     void setUp() {
-        filter = new PublicTrackerCorsFilter(configSharingService);
+        listed(null);
         headers = new MultivaluedHashMap<>();
-        when(request.getUriInfo()).thenReturn(uriInfo);
-        when(uriInfo.getPath()).thenReturn("context.json");
+        lenient().when(request.getUriInfo()).thenReturn(uriInfo);
+        lenient().when(uriInfo.getPath()).thenReturn("context.json");
+        lenient().when(response.getHeaders()).thenReturn(headers);
+    }
+
+    /** What CXF's filter puts on a public tracker response: any origin, no credentials. */
+    private void grantedByCxf() {
+        headers.putSingle("Access-Control-Allow-Origin", "*");
+        headers.putSingle("Access-Control-Allow-Credentials", Boolean.FALSE);
+    }
+
+    private void listed(String origins) {
+        filter = new PublicTrackerCorsFilter(new PublicTrackerCorsSettings(origins, null));
     }
 
     @Test
     void listedOriginNamesOnlyThatOriginAndVaries() {
-        when(configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY))
-                .thenReturn("https://shop.example");
+        listed("https://shop.example");
         when(request.getHeaderString("Origin")).thenReturn("https://shop.example");
-        when(response.getHeaders()).thenReturn(headers);
+        grantedByCxf();
 
-        filter.filter(request, response);
+        filter.restrictCredentials(request, response);
 
         assertEquals("https://shop.example", headers.getFirst("Access-Control-Allow-Origin"));
         assertEquals("true", headers.getFirst("Access-Control-Allow-Credentials"));
@@ -73,31 +82,42 @@ class PublicTrackerCorsFilterTest {
     }
 
     @Test
-    void listedOriginPreflightDoesTheSame() throws Exception {
-        when(configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY))
-                .thenReturn("https://shop.example");
-        when(request.getMethod()).thenReturn("OPTIONS");
+    void listedOriginPreflightAnsweredByCxfGetsCredentials() {
+        // CXF aborts the preflight with its own response; response filters still run on it.
+        listed("https://shop.example");
         when(request.getHeaderString("Origin")).thenReturn("https://shop.example");
+        grantedByCxf();
+        headers.putSingle("Access-Control-Allow-Methods", "POST");
+        headers.putSingle("Access-Control-Allow-Headers", "content-type,x-unomi-api-key,x-unomi-tenant-id");
 
-        filter.filter(request);
+        filter.restrictCredentials(request, response);
 
-        verify(request).abortWith(org.mockito.ArgumentMatchers.argThat(response -> {
-            MultivaluedMap<String, Object> preflight = response.getHeaders();
-            return "https://shop.example".equals(preflight.getFirst("Access-Control-Allow-Origin"))
-                    && "true".equals(preflight.getFirst("Access-Control-Allow-Credentials"))
-                    && "Origin".equals(String.valueOf(preflight.getFirst("Vary")));
-        }));
+        assertEquals("https://shop.example", headers.getFirst("Access-Control-Allow-Origin"));
+        assertEquals("true", headers.getFirst("Access-Control-Allow-Credentials"));
+        assertEquals("content-type,x-unomi-api-key,x-unomi-tenant-id", headers.getFirst("Access-Control-Allow-Headers"));
+    }
+
+    @Test
+    void existingVaryIsKeptAndOriginAddedOnce() {
+        listed("https://shop.example");
+        when(request.getHeaderString("Origin")).thenReturn("https://shop.example");
+        grantedByCxf();
+        headers.add("Vary", "Accept-Encoding");
+
+        filter.restrictCredentials(request, response);
+        filter.restrictCredentials(request, response);
+
+        assertEquals(java.util.Arrays.asList("Accept-Encoding", "Origin"), headers.get("Vary"));
     }
 
     @Test
     void unlistedOriginDoesNotGetCredentials() {
-        when(configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY))
-                .thenReturn("https://shop.example");
+        listed("https://shop.example");
         when(request.getHeaderString("Origin")).thenReturn("https://other.example");
-        when(response.getHeaders()).thenReturn(headers);
+        headers.putSingle("Access-Control-Allow-Origin", "https://other.example");
         headers.putSingle("Access-Control-Allow-Credentials", "true");
 
-        filter.filter(request, response);
+        filter.restrictCredentials(request, response);
 
         assertEquals("*", headers.getFirst("Access-Control-Allow-Origin"));
         assertFalse(headers.containsKey("Access-Control-Allow-Credentials"));
@@ -105,22 +125,66 @@ class PublicTrackerCorsFilterTest {
 
     @Test
     void defaultSettingsAllowNoCredentials() {
-        when(configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY)).thenReturn(null);
+        listed(null);
         when(request.getHeaderString("Origin")).thenReturn("https://shop.example");
-        when(response.getHeaders()).thenReturn(headers);
+        grantedByCxf();
 
-        filter.filter(request, response);
+        filter.restrictCredentials(request, response);
 
         assertEquals("*", headers.getFirst("Access-Control-Allow-Origin"));
         assertNull(headers.getFirst("Access-Control-Allow-Credentials"));
     }
 
     @Test
+    void responseCxfDidNotGrantIsLeftAlone() {
+        // For example a failed preflight: CXF adds no CORS headers, and neither do we.
+        when(request.getHeaderString("Origin")).thenReturn("https://shop.example");
+
+        filter.restrictCredentials(request, response);
+
+        assertTrue(headers.isEmpty());
+    }
+
+    @Test
+    void contextJsIsAPublicTrackerPath() {
+        when(uriInfo.getPath()).thenReturn("context.js");
+        listed("https://shop.example");
+        when(request.getHeaderString("Origin")).thenReturn("https://shop.example");
+        grantedByCxf();
+
+        filter.restrictCredentials(request, response);
+
+        assertEquals("https://shop.example", headers.getFirst("Access-Control-Allow-Origin"));
+        assertEquals("true", headers.getFirst("Access-Control-Allow-Credentials"));
+    }
+
+    @Test
+    void nonPublicPathIsLeftAlone() {
+        when(uriInfo.getPath()).thenReturn("profiles/search");
+        grantedByCxf();
+
+        filter.restrictCredentials(request, response);
+
+        assertEquals("*", headers.getFirst("Access-Control-Allow-Origin"));
+        assertEquals(Boolean.FALSE, headers.getFirst("Access-Control-Allow-Credentials"));
+    }
+
+    @Test
+    void inheritsCxfPreMatchingAndPriority() {
+        // CXF reads both through the class hierarchy; the rewrite then needs no ordering of its own.
+        assertTrue(org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter.class.isAssignableFrom(PublicTrackerCorsFilter.class));
+        assertNotNull(org.apache.cxf.jaxrs.utils.AnnotationUtils.getClassAnnotation(
+                PublicTrackerCorsFilter.class, javax.ws.rs.container.PreMatching.class));
+        assertEquals(org.apache.cxf.jaxrs.utils.AnnotationUtils.getBindingPriority(
+                        org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter.class),
+                org.apache.cxf.jaxrs.utils.AnnotationUtils.getBindingPriority(PublicTrackerCorsFilter.class));
+    }
+
+    @Test
     void requestWithoutOriginIsLeftAlone() {
         when(request.getHeaderString("Origin")).thenReturn(null);
-        when(response.getHeaders()).thenReturn(headers);
 
-        filter.filter(request, response);
+        filter.restrictCredentials(request, response);
 
         assertFalse(headers.containsKey("Access-Control-Allow-Origin"));
         assertFalse(headers.containsKey("Access-Control-Allow-Credentials"));

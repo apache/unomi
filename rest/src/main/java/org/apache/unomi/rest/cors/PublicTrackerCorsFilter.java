@@ -16,83 +16,76 @@
  */
 package org.apache.unomi.rest.cors;
 
-import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter;
 
-import jakarta.annotation.Priority;
 import javax.ws.rs.container.ContainerRequestContext;
-import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.ContainerResponseContext;
-import javax.ws.rs.container.ContainerResponseFilter;
 import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.Response;
-import java.io.IOException;
+import java.util.List;
 
 /**
- * Allows cookies on public tracker responses only for origins the operator listed.
- * Priority 1 runs first on the request (so a listed preflight is answered here) and last on the
- * response (so it can replace the broad no-credentials CORS headers).
+ * CXF's CORS filter, with cookies allowed on public tracker responses only for origins the operator listed.
+ * <p>
+ * CXF answers preflights and grants the public tracker endpoints to any origin without credentials. This
+ * subclass rewrites that grant right after CXF writes it, in the same response filter call, so the result
+ * does not depend on filter ordering. That matters because CXF 3.x only reads {@code javax.annotation.Priority}:
+ * a separate filter annotated with {@code jakarta.annotation.Priority} gets the default priority and runs
+ * before CXF's, which then overwrites it. Request handling, {@code @PreMatching} and the priority are CXF's own.
+ * A response CXF did not grant is left alone.
  */
-@Priority(1)
-public class PublicTrackerCorsFilter implements ContainerRequestFilter, ContainerResponseFilter {
+public class PublicTrackerCorsFilter extends CrossOriginResourceSharingFilter {
 
-    private final ConfigSharingService configSharingService;
+    static final String ALLOW_ORIGIN = "Access-Control-Allow-Origin";
+    static final String ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials";
 
-    public PublicTrackerCorsFilter(ConfigSharingService configSharingService) {
-        this.configSharingService = configSharingService;
-    }
+    private final PublicTrackerCorsSettings settings;
 
-    @Override
-    public void filter(ContainerRequestContext requestContext) throws IOException {
-        if (!isPublic(requestContext) || !"OPTIONS".equalsIgnoreCase(requestContext.getMethod())) {
-            return;
-        }
-        String origin = requestContext.getHeaderString("Origin");
-        if (!policy().allows(origin)) {
-            return;
-        }
-        Response response = Response.ok().build();
-        applyCredentialedHeaders(response.getHeaders(), origin);
-        response.getHeaders().putSingle("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        response.getHeaders().putSingle("Access-Control-Allow-Headers",
-                "Origin, X-Requested-With, Content-Type, Accept, X-Unomi-Api-Key");
-        requestContext.abortWith(response);
+    public PublicTrackerCorsFilter(PublicTrackerCorsSettings settings) {
+        this.settings = settings;
     }
 
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) {
+        super.filter(requestContext, responseContext);
+        restrictCredentials(requestContext, responseContext);
+    }
+
+    void restrictCredentials(ContainerRequestContext requestContext, ContainerResponseContext responseContext) {
         if (!isPublic(requestContext)) {
             return;
         }
         String origin = requestContext.getHeaderString("Origin");
         MultivaluedMap<String, Object> headers = responseContext.getHeaders();
-        if (policy().allows(origin)) {
-            applyCredentialedHeaders(headers, origin);
+        if (origin == null || !headers.containsKey(ALLOW_ORIGIN)) {
             return;
         }
-        // Never echo an unlisted origin and never advertise cookies with a wildcard origin.
-        if (origin != null) {
-            headers.putSingle("Access-Control-Allow-Origin", "*");
-            headers.remove("Access-Control-Allow-Credentials");
+        if (settings.policy().allows(origin)) {
+            headers.putSingle(ALLOW_ORIGIN, origin);
+            headers.putSingle(ALLOW_CREDENTIALS, "true");
+            if (!variesOnOrigin(headers)) {
+                headers.add("Vary", "Origin");
+            }
+            return;
         }
+        // Never echo an unlisted origin and never advertise cookies to it.
+        headers.putSingle(ALLOW_ORIGIN, "*");
+        headers.remove(ALLOW_CREDENTIALS);
     }
 
-    private PublicTrackerCorsPolicy policy() {
-        Object configured = configSharingService == null ? null : configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY);
-        return PublicTrackerCorsPolicy.parse(configured == null ? null : configured.toString());
+    private static boolean variesOnOrigin(MultivaluedMap<String, Object> headers) {
+        List<Object> vary = headers.get("Vary");
+        if (vary != null) {
+            for (Object value : vary) {
+                if (String.valueOf(value).contains("Origin")) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static boolean isPublic(ContainerRequestContext requestContext) {
-        if (requestContext.getUriInfo() == null || requestContext.getUriInfo().getPath() == null) {
-            return false;
-        }
-        return PublicTrackerCorsPolicy.isPublicTrackerPath(requestContext.getUriInfo().getPath());
-    }
-
-    private static void applyCredentialedHeaders(MultivaluedMap<String, Object> headers, String origin) {
-        headers.putSingle("Access-Control-Allow-Origin", origin);
-        headers.putSingle("Access-Control-Allow-Credentials", "true");
-        if (!headers.containsKey("Vary") || headers.get("Vary").stream().noneMatch(value -> String.valueOf(value).contains("Origin"))) {
-            headers.add("Vary", "Origin");
-        }
+        return requestContext.getUriInfo() != null
+                && PublicTrackerCorsPolicy.isPublicTrackerPath(requestContext.getUriInfo().getPath());
     }
 }

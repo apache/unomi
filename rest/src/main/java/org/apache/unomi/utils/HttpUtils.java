@@ -21,11 +21,9 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.services.ConfigSharingService;
-import org.apache.unomi.rest.cors.PublicTrackerCorsPolicy;
+import org.apache.unomi.rest.cors.PublicTrackerCorsSettings;
 import org.apache.unomi.schema.api.SchemaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,32 +118,15 @@ public class HttpUtils {
      * Builds a {@code Set-Cookie} header value for the profile ID cookie.
      * <p>
      * Uses a raw header string because JAX-RS {@code NewCookie} does not support {@code SameSite}.
+     * Everything but the profile id is resolved when the configuration changes.
      *
      * @param profile the profile whose ID is stored in the cookie
-     * @param configSharingService shared configuration for cookie name, domain, and flags
+     * @param corsSettings the pre-resolved cookie name and attributes
      * @param isSecure whether the cookie should include the {@code Secure} flag
      * @return the cookie header value
      */
-    public static String getProfileCookieString(Profile profile, ConfigSharingService configSharingService, boolean isSecure) {
-        final String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
-        final String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
-        final Integer profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds");
-        final Boolean profileIdCookieHttpOnly = (Boolean) configSharingService.getProperty("profileIdCookieHttpOnly");
-        Object configuredOrigins = configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY);
-        Object configuredSameSite = configSharingService.getProperty(PublicTrackerCorsPolicy.SAME_SITE_PROPERTY);
-        PublicTrackerCorsPolicy policy = PublicTrackerCorsPolicy.parse(configuredOrigins == null ? null : configuredOrigins.toString());
-        String requestedSameSite = configuredSameSite == null ? "Lax" : configuredSameSite.toString();
-        String sameSite = policy.resolveSameSite(requestedSameSite, isSecure);
-        if ("None".equalsIgnoreCase(requestedSameSite) && !"None".equals(sameSite)) {
-            LOGGER.warn("Refusing SameSite=None for the profile cookie; Secure and a non-empty public CORS origin list are both required. Using SameSite=Lax.");
-        }
-        return profileIdCookieName + "=" + profile.getItemId() +
-                "; Path=/" +
-                "; Max-Age=" + profileIdCookieMaxAgeInSeconds +
-                (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "") +
-                "; SameSite=" + sameSite +
-                (isSecure ? "; Secure" : "") +
-                (profileIdCookieHttpOnly ? "; HttpOnly" : "");
+    public static String getProfileCookieString(Profile profile, PublicTrackerCorsSettings corsSettings, boolean isSecure) {
+        return corsSettings.profileCookie(profile.getItemId(), isSecure);
     }
 
     /**

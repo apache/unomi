@@ -27,7 +27,6 @@ import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
 import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
 import org.apache.cxf.jaxrs.swagger.ui.SwaggerUiConfig;
 import org.apache.cxf.message.Message;
-import org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter;
 import dev.inoyu.openapi.enrich.cxf.BundleContextDocPackLoader;
 import dev.inoyu.openapi.enrich.cxf.EnrichingOpenApiCustomizer;
 import dev.inoyu.openapi.enrich.model.DocPack;
@@ -40,6 +39,7 @@ import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.rest.cors.PublicTrackerCorsFilter;
+import org.apache.unomi.rest.cors.PublicTrackerCorsSettings;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
@@ -84,6 +84,7 @@ public class RestServer {
     private RestAuthenticationConfig restAuthenticationConfig;
     private List<ExceptionMapper> exceptionMappers = new ArrayList<>();
     private ConfigSharingService configSharingService;
+    private PublicTrackerCorsSettings publicTrackerCorsSettings;
     private SchemaService schemaService;
     private TenantService tenantService;
     private SecurityService securityService;
@@ -136,6 +137,16 @@ public class RestServer {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setConfigSharingService(ConfigSharingService configSharingService) {
         this.configSharingService = configSharingService;
+    }
+
+    /**
+     * Sets the public tracker cookie settings.
+     *
+     * @param publicTrackerCorsSettings the parsed allowed origins and SameSite setting
+     */
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    public void setPublicTrackerCorsSettings(PublicTrackerCorsSettings publicTrackerCorsSettings) {
+        this.publicTrackerCorsSettings = publicTrackerCorsSettings;
     }
 
     /**
@@ -401,8 +412,8 @@ public class RestServer {
         jaxrsServerFactoryBean.setAddress("/");
         jaxrsServerFactoryBean.setBus(serverBus);
         jaxrsServerFactoryBean.setProvider(new JacksonJaxbJsonProvider(objectMapper, JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS));
-        jaxrsServerFactoryBean.setProvider(new CrossOriginResourceSharingFilter());
-        jaxrsServerFactoryBean.setProvider(new PublicTrackerCorsFilter(configSharingService));
+        // CXF's CORS filter, restricted so that only listed origins may send the visitor cookie.
+        jaxrsServerFactoryBean.setProvider(new PublicTrackerCorsFilter(publicTrackerCorsSettings));
         jaxrsServerFactoryBean.setProvider(new RetroCompatibilityParamConverterProvider(objectMapper));
 
         // Authentication and Security filters in order of priority
