@@ -65,7 +65,7 @@ class PublicTrackerCorsFilterTest {
     }
 
     private void listed(String origins) {
-        filter = new PublicTrackerCorsFilter(new PublicTrackerCorsSettings(origins, null));
+        filter = new PublicTrackerCorsFilter(new PublicTrackerSettings(origins, null));
     }
 
     @Test

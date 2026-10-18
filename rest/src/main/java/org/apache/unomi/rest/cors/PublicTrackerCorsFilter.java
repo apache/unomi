@@ -38,9 +38,9 @@ public class PublicTrackerCorsFilter extends CrossOriginResourceSharingFilter {
     static final String ALLOW_ORIGIN = "Access-Control-Allow-Origin";
     static final String ALLOW_CREDENTIALS = "Access-Control-Allow-Credentials";
 
-    private final PublicTrackerCorsSettings settings;
+    private final PublicTrackerSettings settings;
 
-    public PublicTrackerCorsFilter(PublicTrackerCorsSettings settings) {
+    public PublicTrackerCorsFilter(PublicTrackerSettings settings) {
         this.settings = settings;
     }
 

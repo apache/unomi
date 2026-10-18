@@ -33,7 +33,7 @@ import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
-import org.apache.unomi.rest.cors.PublicTrackerCorsSettings;
+import org.apache.unomi.rest.cors.PublicTrackerSettings;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.rest.authentication.V2ThirdPartyConfigService;
 import org.apache.unomi.services.common.security.SecurityUtils;
@@ -68,6 +68,8 @@ import java.util.UUID;
 @Component(service = RestServiceUtils.class)
 public class RestServiceUtilsImpl implements RestServiceUtils {
 
+    private static final String VISITOR_COOKIE_ALLOWED_ATTRIBUTE = RestServiceUtilsImpl.class.getName() + ".visitorCookieAllowed";
+
     private static final String DEFAULT_CLIENT_ID = "defaultClientId";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RestServiceUtilsImpl.class.getName());
@@ -101,7 +103,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     private SecurityService securityService;
 
     @Reference
-    private PublicTrackerCorsSettings publicTrackerCorsSettings;
+    private PublicTrackerSettings publicTrackerSettings;
 
     @Override
     public String getProfileIdCookieValue(HttpServletRequest httpServletRequest) {
@@ -109,23 +111,14 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         if (cookies == null) {
             return null;
         }
-        final String profileIdCookieName = publicTrackerCorsSettings.cookieName();
+        final String profileIdCookieName = publicTrackerSettings.cookieName();
         String cookieProfileId = null;
         for (Cookie cookie : cookies) {
             if (profileIdCookieName.equals(cookie.getName())) {
                 cookieProfileId = cookie.getValue();
             }
         }
-        if (cookieProfileId == null) {
-            return null;
-        }
-        String origin = httpServletRequest.getHeader("Origin");
-        if (!publicTrackerCorsSettings.policy().allowsVisitorCookie(origin, httpServletRequest.getHeader("Sec-Fetch-Site"),
-                httpServletRequest.getServerName(), httpServletRequest.getHeader("X-Forwarded-Host"))) {
-            // A browser may still send a SameSite=None cookie from another site. Do not bind that
-            // visitor when the page origin is not on the operator list.
-            LOGGER.debug("Ignoring the profile cookie for origin {}: not listed in the public CORS allowed origins",
-                    LogSanitizer.forLogging(origin));
+        if (cookieProfileId == null || !isVisitorCookieAllowed(httpServletRequest)) {
             return null;
         }
         String profileIdJSON = JsonNodeFactory.instance.objectNode().put("profileId", cookieProfileId).toString();
@@ -136,12 +129,39 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     }
 
     /**
-     * Whether the visitor reached Unomi over HTTPS: the container says so, or a trusted proxy reported
-     * it, in which case the authentication filter did not mark the request subject as insecure.
+     * Whether this request may use or receive the visitor cookie: it comes from a listed origin, from Unomi's
+     * own origin, or shows no sign of another site's page. A browser may still send a SameSite=None cookie
+     * from another site; that visitor must neither be bound nor have its cookie replaced. Decided once per
+     * request.
+     */
+    private boolean isVisitorCookieAllowed(HttpServletRequest request) {
+        Object decided = request.getAttribute(VISITOR_COOKIE_ALLOWED_ATTRIBUTE);
+        if (decided instanceof Boolean) {
+            return (Boolean) decided;
+        }
+        String origin = request.getHeader("Origin");
+        boolean allowed = publicTrackerSettings.policy().allowsVisitorCookie(origin, request.getHeader("Sec-Fetch-Site"),
+                request.getServerName(), request.getHeader("X-Forwarded-Host"));
+        if (!allowed) {
+            LOGGER.debug("Not using the profile cookie for origin {}: neither listed in the public CORS allowed origins "
+                    + "nor Unomi's own origin", LogSanitizer.forLogging(origin));
+        }
+        request.setAttribute(VISITOR_COOKIE_ALLOWED_ATTRIBUTE, allowed);
+        return allowed;
+    }
+
+    /**
+     * Whether the visitor reached Unomi over HTTPS: the container says so, or a proxy reported it with
+     * {@code X-Forwarded-Proto} and {@link SecurityService#recordRequestTransport} accepted that proxy, so it
+     * did not mark the request subject as insecure. Both are required: a wrong {@code Secure} flag would make
+     * browsers drop the cookie over plain HTTP.
      */
     private boolean isSecureRequest(HttpServletRequest request) {
         if (request.isSecure()) {
             return true;
+        }
+        if (request.getHeader("X-Forwarded-Proto") == null) {
+            return false;
         }
         Subject subject = securityService.getRequestSubject();
         return subject != null && subject.getPrincipals(InsecureTransportPrincipal.class).isEmpty();
@@ -521,10 +541,11 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
             }
         }
 
-        // Set profile cookie
-        if (!(eventsRequestContext.getProfile() instanceof Persona)) {
+        // Set profile cookie, unless the request comes from a page that may not use it
+        HttpServletRequest request = eventsRequestContext.getRequest();
+        if (!(eventsRequestContext.getProfile() instanceof Persona) && isVisitorCookieAllowed(request)) {
             eventsRequestContext.getResponse().setHeader("Set-Cookie",
-                    HttpUtils.getProfileCookieString(eventsRequestContext.getProfile(), publicTrackerCorsSettings, isSecureRequest(eventsRequestContext.getRequest())));
+                    publicTrackerSettings.profileCookie(eventsRequestContext.getProfile().getItemId(), isSecureRequest(request)));
         }
     }
 

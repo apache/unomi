@@ -37,17 +37,17 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class PublicTrackerCorsSettingsTest {
+class PublicTrackerSettingsTest {
 
     @Mock
     private ConfigSharingService configSharingService;
 
-    private PublicTrackerCorsSettings settings;
+    private PublicTrackerSettings settings;
 
     @BeforeEach
     void setUp() throws Exception {
-        settings = new PublicTrackerCorsSettings();
-        Field field = PublicTrackerCorsSettings.class.getDeclaredField("configSharingService");
+        settings = new PublicTrackerSettings();
+        Field field = PublicTrackerSettings.class.getDeclaredField("configSharingService");
         field.setAccessible(true);
         field.set(settings, configSharingService);
     }
@@ -60,7 +60,7 @@ class PublicTrackerCorsSettingsTest {
         settings.activate();
 
         assertTrue(settings.policy().allows("https://shop.example"));
-        assertEquals("None", settings.requestedSameSite());
+        assertTrue(settings.profileCookie("p1", true).contains("; SameSite=None; Secure"));
     }
 
     @Test
@@ -68,7 +68,7 @@ class PublicTrackerCorsSettingsTest {
         settings.activate();
 
         assertTrue(settings.policy().isEmpty());
-        assertEquals("Lax", settings.requestedSameSite());
+        assertEquals("context-profile-id=p1; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly", settings.profileCookie("p1", false));
     }
 
     @Test
@@ -94,10 +94,10 @@ class PublicTrackerCorsSettingsTest {
 
     @Test
     void cookieAttributesFollowTheConfiguration() {
-        lenient().when(configSharingService.getProperty(PublicTrackerCorsSettings.COOKIE_NAME_PROPERTY)).thenReturn("visitor");
-        lenient().when(configSharingService.getProperty(PublicTrackerCorsSettings.COOKIE_DOMAIN_PROPERTY)).thenReturn("example.com");
-        lenient().when(configSharingService.getProperty(PublicTrackerCorsSettings.COOKIE_MAX_AGE_PROPERTY)).thenReturn(60);
-        lenient().when(configSharingService.getProperty(PublicTrackerCorsSettings.COOKIE_HTTP_ONLY_PROPERTY)).thenReturn(Boolean.FALSE);
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_NAME_PROPERTY)).thenReturn("visitor");
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_DOMAIN_PROPERTY)).thenReturn("example.com");
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_MAX_AGE_PROPERTY)).thenReturn(60);
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_HTTP_ONLY_PROPERTY)).thenReturn(Boolean.FALSE);
 
         settings.activate();
 
@@ -111,20 +111,41 @@ class PublicTrackerCorsSettingsTest {
         settings.activate();
         assertEquals("context-profile-id", settings.cookieName());
 
-        lenient().when(configSharingService.getProperty(PublicTrackerCorsSettings.COOKIE_NAME_PROPERTY)).thenReturn("renamed");
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_NAME_PROPERTY)).thenReturn("renamed");
         settings.configChanged(new ConfigChangeEvent(ConfigChangeEventType.UPDATED,
-                PublicTrackerCorsSettings.COOKIE_NAME_PROPERTY, "context-profile-id", "renamed"));
+                PublicTrackerSettings.COOKIE_NAME_PROPERTY, "context-profile-id", "renamed"));
 
         assertEquals("renamed", settings.cookieName());
     }
 
     @Test
     void sameSiteIsResolvedForBothTransports() {
-        PublicTrackerCorsSettings none = new PublicTrackerCorsSettings("https://shop.example", "none");
-        assertEquals("None", none.cookieSameSite(true));
-        assertEquals("Lax", none.cookieSameSite(false));
-        assertEquals("Lax", none.cookieSameSite(false));
-        assertEquals("Lax", new PublicTrackerCorsSettings("", "None").cookieSameSite(true));
-        assertEquals("Strict", new PublicTrackerCorsSettings("", "Strict").cookieSameSite(false));
+        PublicTrackerSettings none = new PublicTrackerSettings("https://shop.example", "none");
+        assertTrue(none.profileCookie("p1", true).contains("SameSite=None; Secure"));
+        assertTrue(none.profileCookie("p1", false).contains("SameSite=Lax"));
+        assertTrue(none.profileCookie("p1", false).contains("SameSite=Lax"));
+        assertTrue(new PublicTrackerSettings("", "None").profileCookie("p1", true).contains("SameSite=Lax; Secure"));
+        assertTrue(new PublicTrackerSettings("", "Strict").profileCookie("p1", false).contains("SameSite=Strict"));
+    }
+
+    @Test
+    void httpOnlyIsOnlyTurnedOffByAnExplicitFalse() {
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_HTTP_ONLY_PROPERTY)).thenReturn("yes");
+        settings.activate();
+        assertTrue(settings.profileCookie("p1", false).endsWith("; HttpOnly"));
+
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_HTTP_ONLY_PROPERTY)).thenReturn(" FALSE ");
+        settings.activate();
+        assertFalse(settings.profileCookie("p1", false).contains("HttpOnly"));
+    }
+
+    @Test
+    void unusableMaxAgeFallsBackToTheDefault() {
+        for (Object value : new Object[]{0, -1, "soon", " 120 "}) {
+            lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_MAX_AGE_PROPERTY)).thenReturn(value);
+            settings.activate();
+            String expected = " 120 ".equals(value) ? "Max-Age=120;" : "Max-Age=31536000;";
+            assertTrue(settings.profileCookie("p1", false).contains(expected), String.valueOf(value));
+        }
     }
 }

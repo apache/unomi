@@ -17,7 +17,7 @@
 package org.apache.unomi.utils;
 
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.rest.cors.PublicTrackerCorsSettings;
+import org.apache.unomi.rest.cors.PublicTrackerSettings;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,49 +28,53 @@ class ProfileCookieSameSiteTest {
 
     @Test
     void defaultCookieIsSameSiteLax() {
-        String cookie = HttpUtils.getProfileCookieString(profile(), settings(null, null), false);
+        String cookie = cookie(settings(null, null), false);
         assertTrue(cookie.contains("SameSite=Lax"));
         assertFalse(cookie.contains("SameSite=None"));
     }
 
     @Test
     void sameSiteNoneIsRefusedWithoutSecureOrOrigins() {
-        String withoutSecure = HttpUtils.getProfileCookieString(profile(), settings("None", "https://shop.example"), false);
+        String withoutSecure = cookie(settings("None", "https://shop.example"), false);
         assertTrue(withoutSecure.contains("SameSite=Lax"));
 
-        String withoutOrigins = HttpUtils.getProfileCookieString(profile(), settings("None", ""), true);
+        String withoutOrigins = cookie(settings("None", ""), true);
         assertTrue(withoutOrigins.contains("SameSite=Lax"));
         assertTrue(withoutOrigins.contains("Secure"));
     }
 
     @Test
     void sameSiteNoneIsAcceptedWithSecureAndOrigins() {
-        String cookie = HttpUtils.getProfileCookieString(profile(), settings("None", "https://shop.example"), true);
+        String cookie = cookie(settings("None", "https://shop.example"), true);
         assertTrue(cookie.contains("SameSite=None"));
         assertTrue(cookie.contains("Secure"));
     }
 
     @Test
     void sameSiteValueIsCaseInsensitiveAndUnknownValuesFallBackToLax() {
-        assertTrue(HttpUtils.getProfileCookieString(profile(), settings(" none ", "https://shop.example"), true).contains("SameSite=None"));
-        assertTrue(HttpUtils.getProfileCookieString(profile(), settings("strict", ""), false).contains("SameSite=Strict"));
-        assertTrue(HttpUtils.getProfileCookieString(profile(), settings("bogus", ""), false).contains("SameSite=Lax"));
+        assertTrue(cookie(settings(" none ", "https://shop.example"), true).contains("SameSite=None"));
+        assertTrue(cookie(settings("strict", ""), false).contains("SameSite=Strict"));
+        assertTrue(cookie(settings("bogus", ""), false).contains("SameSite=Lax"));
     }
 
     @Test
     void refusedSameSiteNoneStillWritesACookieOnEveryRequest() {
         // The warning is logged once; the fallback must apply every time.
         for (int i = 0; i < 3; i++) {
-            assertTrue(HttpUtils.getProfileCookieString(profile(), settings("None", ""), true).contains("SameSite=Lax"));
+            assertTrue(cookie(settings("None", ""), true).contains("SameSite=Lax"));
         }
     }
 
     @Test
     void cookieAttributesArePrecomputedInTheShippedOrder() {
         assertEquals("context-profile-id=profile-1; Path=/; Max-Age=31536000; SameSite=None; Secure; HttpOnly",
-                HttpUtils.getProfileCookieString(profile(), settings("None", "https://shop.example"), true));
+                cookie(settings("None", "https://shop.example"), true));
         assertEquals("context-profile-id=profile-1; Path=/; Max-Age=31536000; SameSite=Lax; HttpOnly",
-                HttpUtils.getProfileCookieString(profile(), settings("None", "https://shop.example"), false));
+                cookie(settings("None", "https://shop.example"), false));
+    }
+
+    private static String cookie(PublicTrackerSettings settings, boolean secure) {
+        return settings.profileCookie("profile-1", secure);
     }
 
     private static Profile profile() {
@@ -79,7 +83,7 @@ class ProfileCookieSameSiteTest {
         return profile;
     }
 
-    private static PublicTrackerCorsSettings settings(String sameSite, String origins) {
-        return new PublicTrackerCorsSettings(origins, sameSite);
+    private static PublicTrackerSettings settings(String sameSite, String origins) {
+        return new PublicTrackerSettings(origins, sameSite);
     }
 }

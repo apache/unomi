@@ -34,10 +34,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * this component reads them at activation and again whenever one of them changes. Requests only read
  * the results.
  */
-@Component(service = {PublicTrackerCorsSettings.class, ConfigChangeListener.class})
-public class PublicTrackerCorsSettings implements ConfigChangeListener {
+@Component(service = {PublicTrackerSettings.class, ConfigChangeListener.class})
+public class PublicTrackerSettings implements ConfigChangeListener {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PublicTrackerCorsSettings.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PublicTrackerSettings.class);
 
     public static final String COOKIE_NAME_PROPERTY = "profileIdCookieName";
     public static final String COOKIE_DOMAIN_PROPERTY = "profileIdCookieDomain";
@@ -54,23 +54,20 @@ public class PublicTrackerCorsSettings implements ConfigChangeListener {
     /** Everything a request needs, replaced as a whole so a request never sees half of a change. */
     private static final class Resolved {
         final PublicTrackerCorsPolicy policy;
-        final String requestedSameSite;
         final String sameSiteWhenSecure;
-        final String sameSiteWhenInsecure;
         final String cookieName;
         /** {@code name=}, then the attributes after the value, for secure and plain HTTP requests. */
         final String cookiePrefix;
         final String cookieAttributesWhenSecure;
         final String cookieAttributesWhenInsecure;
-        /** Set while a refusal of SameSite=None, only because a request was not over HTTPS, is unreported. */
+        /** Set while a refusal of SameSite=None, only because a request was not over HTTPS, is unreported for this configuration. */
         final AtomicBoolean insecureRefusalToReport;
 
         Resolved(PublicTrackerCorsPolicy policy, String requestedSameSite, String cookieName, String cookieDomain,
                  int cookieMaxAge, boolean cookieHttpOnly) {
             this.policy = policy;
-            this.requestedSameSite = requestedSameSite;
             this.sameSiteWhenSecure = policy.resolveSameSite(requestedSameSite, true);
-            this.sameSiteWhenInsecure = policy.resolveSameSite(requestedSameSite, false);
+            String sameSiteWhenInsecure = policy.resolveSameSite(requestedSameSite, false);
             this.cookieName = cookieName;
             this.cookiePrefix = cookieName + "=";
             String common = "; Path=/; Max-Age=" + cookieMaxAge
@@ -87,11 +84,11 @@ public class PublicTrackerCorsSettings implements ConfigChangeListener {
     @Reference
     private ConfigSharingService configSharingService;
 
-    public PublicTrackerCorsSettings() {
+    public PublicTrackerSettings() {
     }
 
-    /** For tests and callers outside OSGi; cookie name, domain, max age and HttpOnly take their defaults. */
-    public PublicTrackerCorsSettings(String allowedOrigins, String sameSite) {
+    /** For tests; cookie name, domain, max age and HttpOnly take their defaults. */
+    public PublicTrackerSettings(String allowedOrigins, String sameSite) {
         this.resolved = resolve(allowedOrigins, sameSite, null, null, null, null);
     }
 
@@ -119,7 +116,7 @@ public class PublicTrackerCorsSettings implements ConfigChangeListener {
 
     private static Resolved resolve(Object allowedOrigins, Object sameSite, Object cookieName, Object cookieDomain,
                                     Object cookieMaxAge, Object cookieHttpOnly) {
-        String requested = sameSite == null || sameSite.toString().isBlank() ? "Lax" : sameSite.toString().trim();
+        String requested = sameSite == null ? null : sameSite.toString().trim();
         String name = cookieName == null || cookieName.toString().isBlank() ? DEFAULT_COOKIE_NAME : cookieName.toString().trim();
         Resolved next = new Resolved(
                 PublicTrackerCorsPolicy.parse(allowedOrigins == null ? null : allowedOrigins.toString()),
@@ -127,8 +124,9 @@ public class PublicTrackerCorsSettings implements ConfigChangeListener {
                 name,
                 cookieDomain == null ? null : cookieDomain.toString(),
                 toInt(cookieMaxAge),
-                // HttpOnly unless explicitly turned off: page script must not read the bearer cookie.
-                cookieHttpOnly == null || Boolean.parseBoolean(cookieHttpOnly.toString().trim()));
+                // HttpOnly unless explicitly turned off: page script must not read the bearer cookie,
+                // so a typo keeps it on.
+                cookieHttpOnly == null || !"false".equalsIgnoreCase(cookieHttpOnly.toString().trim()));
         if ("None".equalsIgnoreCase(requested) && !"None".equals(next.sameSiteWhenSecure)) {
             LOGGER.warn("Refusing SameSite=None for the profile cookie because the public CORS allowed origins list "
                     + "is empty; using SameSite=Lax.");
@@ -137,16 +135,19 @@ public class PublicTrackerCorsSettings implements ConfigChangeListener {
     }
 
     private static int toInt(Object value) {
-        if (value instanceof Number) {
-            return ((Number) value).intValue();
+        if (value == null) {
+            return DEFAULT_COOKIE_MAX_AGE;
         }
-        if (value != null) {
-            try {
-                return Integer.parseInt(value.toString().trim());
-            } catch (NumberFormatException e) {
-                LOGGER.warn("Invalid profile cookie max age '{}'; using {}", value, DEFAULT_COOKIE_MAX_AGE);
+        try {
+            int maxAge = value instanceof Number ? ((Number) value).intValue() : Integer.parseInt(value.toString().trim());
+            if (maxAge > 0) {
+                return maxAge;
             }
+        } catch (NumberFormatException e) {
+            // reported below
         }
+        // Zero or less would make browsers delete the cookie on every response.
+        LOGGER.warn("Invalid profile cookie max age '{}'; using {}", value, DEFAULT_COOKIE_MAX_AGE);
         return DEFAULT_COOKIE_MAX_AGE;
     }
 
@@ -156,24 +157,6 @@ public class PublicTrackerCorsSettings implements ConfigChangeListener {
 
     public String cookieName() {
         return resolved.cookieName;
-    }
-
-    /** The configured {@code SameSite} value, before it is checked. */
-    public String requestedSameSite() {
-        return resolved.requestedSameSite;
-    }
-
-    /**
-     * The {@code SameSite} value for a profile cookie, resolved in advance for secure and insecure requests.
-     * {@code None} needs both {@code Secure} and a non-empty origin list; anything else is {@code Lax}
-     * unless {@code Strict} was asked for.
-     */
-    public String cookieSameSite(boolean secure) {
-        Resolved current = resolved;
-        if (!secure) {
-            reportInsecureRefusal(current);
-        }
-        return secure ? current.sameSiteWhenSecure : current.sameSiteWhenInsecure;
     }
 
     /** The {@code Set-Cookie} value naming this profile; only the profile id is added per request. */
@@ -190,7 +173,7 @@ public class PublicTrackerCorsSettings implements ConfigChangeListener {
         if (current.insecureRefusalToReport.get() && current.insecureRefusalToReport.compareAndSet(true, false)) {
             LOGGER.warn("Refusing SameSite=None for the profile cookie because the request did not arrive over HTTPS; "
                     + "using SameSite=Lax. Behind a TLS-terminating proxy, list it in org.apache.unomi.ip.trustedProxies "
-                    + "and have it send X-Forwarded-Proto: https. This is logged once.");
+                    + "and have it send X-Forwarded-Proto: https. This is logged once per configuration change.");
         }
     }
 }

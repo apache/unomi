@@ -26,6 +26,8 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -33,6 +35,7 @@ import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
 import java.io.IOException;
+import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -52,7 +55,23 @@ public class PublicTrackerCorsIT extends BaseIT {
     static final String LISTED_ORIGIN = "https://allowed-site.example";
     private static final String UNLISTED_ORIGIN = "https://other-site.example";
     private static final String CONTEXT_JSON = "/cxs/context.json";
-    private static final String SESSION_ID = "public-tracker-cors-it-session";
+
+    /** A fresh session per test, so no test inherits another's session owner. */
+    private String sessionId;
+
+    @Before
+    public void newSession() {
+        sessionId = "public-tracker-cors-it-" + UUID.randomUUID();
+    }
+
+    @After
+    public void tearDown() {
+        // The suite shares one container: leave no profiles, sessions or events behind.
+        persistenceService.refresh();
+        TestUtils.removeAllEvents(definitionsService, persistenceService, true, tenantService, executionContextManager);
+        TestUtils.removeAllSessions(definitionsService, persistenceService, true, tenantService, executionContextManager);
+        TestUtils.removeAllProfiles(definitionsService, persistenceService, true, tenantService, executionContextManager);
+    }
 
     @Test
     public void preflightFromListedOriginAllowsCredentials() throws Exception {
@@ -99,6 +118,20 @@ public class PublicTrackerCorsIT extends BaseIT {
         try (CloseableHttpResponse response = execute(request, true)) {
             assertEquals("*", header(response, "Access-Control-Allow-Origin"));
             assertNull(header(response, "Access-Control-Allow-Credentials"));
+            assertNull("The visitor's cookie must not be replaced", header(response, "Set-Cookie"));
+            assertNotEquals(visitor[0], profileId(response));
+        }
+    }
+
+    @Test
+    public void embeddedCrossSiteRequestWithoutOriginDoesNotUseTheVisitorCookie() throws Exception {
+        // <script src=".../context.js"> on another site: the browser sends no Origin, only Sec-Fetch-Site.
+        String[] visitor = newVisitor();
+        HttpPost request = contextRequest();
+        request.setHeader("Sec-Fetch-Site", "cross-site");
+        request.setHeader("Cookie", visitor[1]);
+        try (CloseableHttpResponse response = execute(request, true)) {
+            assertNull("The visitor's cookie must not be replaced", header(response, "Set-Cookie"));
             assertNotEquals(visitor[0], profileId(response));
         }
     }
@@ -118,7 +151,7 @@ public class PublicTrackerCorsIT extends BaseIT {
 
     @Test
     public void contextJsFromListedOriginGetsCredentials() throws Exception {
-        HttpGet request = new HttpGet(getFullUrl("/cxs/context.js?sessionId=" + SESSION_ID));
+        HttpGet request = new HttpGet(getFullUrl("/cxs/context.js?sessionId=" + sessionId));
         request.setHeader("Origin", LISTED_ORIGIN);
         try (CloseableHttpResponse response = execute(request, true)) {
             assertEquals(LISTED_ORIGIN, header(response, "Access-Control-Allow-Origin"));
@@ -137,7 +170,7 @@ public class PublicTrackerCorsIT extends BaseIT {
 
     private HttpPost contextRequest() throws Exception {
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_JSON));
-        request.setEntity(new StringEntity("{\"sessionId\":\"" + SESSION_ID + "\"}", ContentType.APPLICATION_JSON));
+        request.setEntity(new StringEntity("{\"sessionId\":\"" + sessionId + "\"}", ContentType.APPLICATION_JSON));
         return request;
     }
 

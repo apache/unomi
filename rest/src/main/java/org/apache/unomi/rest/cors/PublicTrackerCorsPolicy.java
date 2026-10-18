@@ -42,6 +42,9 @@ public final class PublicTrackerCorsPolicy {
     private static final Pattern ORIGIN = Pattern.compile(
             "^(https?)://([a-z0-9.-]+|\\[[0-9a-f:.]+\\])(?::([0-9]{1,5}))?$");
 
+    private static final String HTTPS = "https://";
+    private static final String HTTP = "http://";
+
     private final Set<String> allowedOrigins;
 
     private PublicTrackerCorsPolicy(Set<String> allowedOrigins) {
@@ -50,7 +53,7 @@ public final class PublicTrackerCorsPolicy {
 
     /**
      * Parses the comma-separated list, logging each entry it drops. Call it when the setting changes,
-     * not per request (see {@link PublicTrackerCorsSettings}).
+     * not per request (see {@link PublicTrackerSettings}).
      */
     public static PublicTrackerCorsPolicy parse(String configured) {
         if (configured == null || configured.isBlank()) {
@@ -94,7 +97,7 @@ public final class PublicTrackerCorsPolicy {
         return scheme + "://" + host + (port == null || defaultPort ? "" : ":" + port);
     }
 
-    public boolean isEmpty() {
+    boolean isEmpty() {
         return allowedOrigins.isEmpty();
     }
 
@@ -107,10 +110,10 @@ public final class PublicTrackerCorsPolicy {
     }
 
     /**
-     * Whether a request may be bound to the visitor named by its profile cookie. A request with no
-     * {@code Origin}, from a listed origin, or from Unomi's own origin may. Browsers send {@code Origin} on
-     * every POST, same-origin ones included, so its mere presence is not a reason to drop the cookie.
-     * Runs on every tracker request, so it only compares strings and allocates nothing.
+     * Whether a request may be bound to, or given, the visitor cookie. That is the case for a listed origin,
+     * for Unomi's own origin, and for a request that shows no sign of coming from another site's page.
+     * Browsers send {@code Origin} on every POST, same-origin ones included, so its presence alone is not
+     * a reason to refuse. Runs on every tracker request, so it only compares strings and allocates nothing.
      *
      * @param origin        the {@code Origin} header, may be {@code null}
      * @param secFetchSite  the {@code Sec-Fetch-Site} header, may be {@code null} for older browsers
@@ -118,20 +121,25 @@ public final class PublicTrackerCorsPolicy {
      * @param forwardedHost the {@code X-Forwarded-Host} header, may be {@code null}
      */
     public boolean allowsVisitorCookie(String origin, String secFetchSite, String host, String forwardedHost) {
-        if (origin == null || allowedOrigins.contains(origin)) {
+        if (origin != null && allowedOrigins.contains(origin)) {
             return true;
         }
         if (secFetchSite != null) {
-            // Set by the browser, lowercase, and not writable by page script.
+            // Set by the browser, lowercase, and not writable by page script. It is also sent where Origin
+            // is not, such as a <script> or <img> embedded by another site, so it is checked first.
             return "same-origin".equals(secFetchSite) || "none".equals(secFetchSite);
+        }
+        if (origin == null) {
+            // No browser marker at all: a server-side caller or an older browser's same-site GET.
+            return true;
         }
         // Older browsers: the same host counts as the page being served by Unomi itself. The scheme and
         // port are not compared, since a TLS-terminating proxy changes both on the way in.
         int hostStart;
-        if (origin.startsWith("https://")) {
-            hostStart = 8;
-        } else if (origin.startsWith("http://")) {
-            hostStart = 7;
+        if (origin.startsWith(HTTPS)) {
+            hostStart = HTTPS.length();
+        } else if (origin.startsWith(HTTP)) {
+            hostStart = HTTP.length();
         } else {
             return false;
         }
@@ -177,7 +185,7 @@ public final class PublicTrackerCorsPolicy {
      * {@code SameSite=None} is only valid together with {@code Secure} and a non-empty origin list.
      * Anything else falls back to {@code Lax}.
      */
-    public String resolveSameSite(String requested, boolean secure) {
+    String resolveSameSite(String requested, boolean secure) {
         if (requested == null || requested.isBlank()) {
             return "Lax";
         }

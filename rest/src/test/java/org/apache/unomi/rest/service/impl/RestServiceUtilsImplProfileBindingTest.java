@@ -30,7 +30,7 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
-import org.apache.unomi.rest.cors.PublicTrackerCorsSettings;
+import org.apache.unomi.rest.cors.PublicTrackerSettings;
 import org.apache.unomi.rest.authentication.V2ThirdPartyConfigService;
 import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.utils.EventsRequestContext;
@@ -196,6 +196,7 @@ class RestServiceUtilsImplProfileBindingTest {
         stubCookieSettings();
         when(request.isSecure()).thenReturn(false);
         // No InsecureTransportPrincipal: a trusted proxy reported X-Forwarded-Proto: https.
+        lenient().when(request.getHeader("X-Forwarded-Proto")).thenReturn("https");
         when(securityService.getRequestSubject()).thenReturn(new Subject());
 
         restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
@@ -208,6 +209,8 @@ class RestServiceUtilsImplProfileBindingTest {
     void finalizeEventsRequest_cookieIsNotSecureOverPlainHttp() {
         stubCookieSettings();
         when(request.isSecure()).thenReturn(false);
+        // An untrusted client or proxy claimed HTTPS; the authentication filter marked the subject insecure.
+        lenient().when(request.getHeader("X-Forwarded-Proto")).thenReturn("https");
         Subject insecure = new Subject();
         insecure.getPrincipals().add(InsecureTransportPrincipal.INSTANCE);
         when(securityService.getRequestSubject()).thenReturn(insecure);
@@ -218,9 +221,44 @@ class RestServiceUtilsImplProfileBindingTest {
                 org.mockito.ArgumentMatchers.argThat((String cookie) -> !cookie.contains("Secure")));
     }
 
+    @Test
+    void finalizeEventsRequest_unmarkedSubjectWithoutForwardedProtoIsNotSecure() {
+        // Only a proxy's X-Forwarded-Proto, vouched for by the authentication filter, makes plain HTTP secure.
+        stubCookieSettings();
+        when(request.isSecure()).thenReturn(false);
+        lenient().when(securityService.getRequestSubject()).thenReturn(new Subject());
+
+        restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
+
+        verify(response).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"),
+                org.mockito.ArgumentMatchers.argThat((String cookie) -> !cookie.contains("Secure")));
+    }
+
+    @Test
+    void finalizeEventsRequest_refusedCrossSiteRequestDoesNotReplaceTheCookie() {
+        allowedOrigins("https://shop.example");
+        lenient().when(request.getHeader("Origin")).thenReturn("https://other.example");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+
+        restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
+
+        verify(response, never()).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"), anyString());
+    }
+
+    @Test
+    void finalizeEventsRequest_embeddedCrossSiteRequestWithoutOriginDoesNotSetTheCookie() {
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+        lenient().when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+
+        assertNull(restServiceUtils.getProfileIdCookieValue(request));
+        restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
+
+        verify(response, never()).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"), anyString());
+    }
+
     private void allowedOrigins(String origins) {
         try {
-            setField(restServiceUtils, "publicTrackerCorsSettings", new PublicTrackerCorsSettings(origins, null));
+            setField(restServiceUtils, "publicTrackerSettings", new PublicTrackerSettings(origins, null));
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

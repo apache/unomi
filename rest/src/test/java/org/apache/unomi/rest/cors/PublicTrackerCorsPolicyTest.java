@@ -79,6 +79,12 @@ class PublicTrackerCorsPolicyTest {
         assertTrue(empty.allowsVisitorCookie("https://cdp.example", "none", "cdp.example", null));
         assertFalse(empty.allowsVisitorCookie("https://www.cdp.example", "same-site", "cdp.example", null));
         assertFalse(empty.allowsVisitorCookie("https://evil.example", "cross-site", "cdp.example", null));
+        // <script> or <img> embedded by another site: no Origin, but the browser says cross-site.
+        assertFalse(empty.allowsVisitorCookie(null, "cross-site", "cdp.example", null));
+        assertFalse(empty.allowsVisitorCookie(null, "same-site", "cdp.example", null));
+        assertTrue(empty.allowsVisitorCookie(null, "same-origin", "cdp.example", null));
+        // A server-side caller sends neither header.
+        assertTrue(empty.allowsVisitorCookie(null, null, null, null));
     }
 
     @Test

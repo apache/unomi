@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.rest.cors.PublicTrackerCorsSettings;
 import org.apache.unomi.schema.api.SchemaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,21 +111,6 @@ public class HttpUtils {
             stringBuilder.append("  ").append(headerName).append(": ").append(httpServletRequest.getHeader(headerName)).append("\n");
         }
         return stringBuilder.toString();
-    }
-
-    /**
-     * Builds a {@code Set-Cookie} header value for the profile ID cookie.
-     * <p>
-     * Uses a raw header string because JAX-RS {@code NewCookie} does not support {@code SameSite}.
-     * Everything but the profile id is resolved when the configuration changes.
-     *
-     * @param profile the profile whose ID is stored in the cookie
-     * @param corsSettings the pre-resolved cookie name and attributes
-     * @param isSecure whether the cookie should include the {@code Secure} flag
-     * @return the cookie header value
-     */
-    public static String getProfileCookieString(Profile profile, PublicTrackerCorsSettings corsSettings, boolean isSecure) {
-        return corsSettings.profileCookie(profile.getItemId(), isSecure);
     }
 
     /**

@@ -95,8 +95,10 @@ public class WebConfig {
         configSharingService.setProperty("profileIdCookieDomain", contextserverDomain);
         configSharingService.setProperty("profileIdCookieMaxAgeInSeconds", contextserverProfileIdCookieMaxAgeInSeconds);
         configSharingService.setProperty("profileIdCookieHttpOnly", contextserverProfileIdCookieHttpOnly);
-        configSharingService.setProperty("profileIdCookieSameSite", contextserverProfileIdCookieSameSite);
+        // Origins before SameSite: each property change re-resolves the cookie settings, and SameSite=None
+        // with no origins yet would be refused, with a warning, on the way.
         configSharingService.setProperty("publicCorsAllowedOrigins", publicCorsAllowedOrigins);
+        configSharingService.setProperty("profileIdCookieSameSite", contextserverProfileIdCookieSameSite);
         configSharingService.setProperty("publicPostRequestBytesLimit", publicPostRequestBytesLimit);
         configSharingService.setProperty("allowedProfileDownloadFormats", allowedProfileDownloadFormats);
         LOGGER.info("WebConfig activated.");
