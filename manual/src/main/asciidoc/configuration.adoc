@@ -601,7 +601,7 @@ export UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS='https://www.example.com,https://shop.e
 * The list is empty by default: no other origin may use the cookie.
 * A listed origin is named exactly in the response, with `Access-Control-Allow-Credentials: true` and `Vary: Origin`, preflight requests included. An unlisted origin gets `Access-Control-Allow-Origin: *` without credentials.
 * `SameSite` accepts `Lax` (default), `Strict` and `None`. `None` is used only when the cookie is `Secure` and the list is not empty; otherwise Unomi uses `Lax` and logs a warning.
-* `matchReferer` (default `false`) lets listed websites that embed the tracker with a `<script>` tag keep their visitors; see <<_public_tracker_script_tag,Embedding `context.js` with a script tag>>.
+* `matchReferer` (default `false`) lets listed websites that embed the tracker with a `<script>` tag keep their visitors; see <<_public_tracker_script_tag,Embedding `context.js` with a script tag>>. Only `true` turns it on; any other value, and `true` with no origin listed, is logged as a warning.
 * Changes are applied without a restart and are parsed once, not on every request.
 
 Do not:
@@ -617,7 +617,7 @@ Current browsers send `Origin` on every cross-origin request and on every `POST`
 . An `Origin` on the list is allowed.
 . Without `Origin`, as for a `<script src=".../context.js">` tag, and only when `matchReferer` is on, the browser-set `Referer` is matched against the list instead.
 . Otherwise the browser's `Sec-Fetch-Site` header decides: only `same-origin` and `none` (a page typed in the address bar) are allowed. It takes precedence over the host comparison below.
-. A request with neither `Origin` nor `Sec-Fetch-Site` (a server-side caller, or an older browser's same-site `GET`) is allowed.
+. A request with neither `Origin` nor `Sec-Fetch-Site` is allowed. That is a server-side caller, or a `GET` from an older browser that does not send `Sec-Fetch-Site`, which cannot be told apart: in such a browser, another site's `<script>` or `<img>` can use a `SameSite=None` cookie. Current Chrome, Edge, Firefox and Safari all send `Sec-Fetch-Site`; Safari blocks such third-party cookies anyway, and with the default `SameSite=Lax` the browser does not send the cookie to another site's embeds.
 . For older browsers that send `Origin` but not `Sec-Fetch-Site` (for example Safari before 16.4), a page on the same host as Unomi counts as Unomi's own origin. A proxy that rewrites `Host` must then send `X-Forwarded-Host`.
 
 ===== Behind a reverse proxy
@@ -629,7 +629,7 @@ The cookie is marked `Secure` when the request reached Unomi over HTTPS. Behind 
 
 A page that loads the tracker with `<script src="https://cdp.example.com/cxs/context.js">` sends no `Origin` header, only a `Referer`. Public endpoints need an API key header, which a script tag cannot send, so this only applies in <<_v2_compatibility_mode,single-tenant compatibility mode>>, where clients written for 2.x often embed `context.js` this way.
 
-By default such a request from another origin is refused, even from a listed website, and Unomi logs a warning once per configuration change. To accept it, set `org.apache.unomi.public.cors.matchReferer=true` (`UNOMI_PUBLIC_CORS_MATCH_REFERER`). A `Referer` naming a listed page is then accepted.
+By default, in browsers that send `Sec-Fetch-Site`, such a request from another origin is served without the visitor cookie, even from a listed website: every page view starts a new anonymous profile. Once origins are listed, Unomi logs a warning about it once per configuration change. To accept it, set `org.apache.unomi.public.cors.matchReferer=true` (`UNOMI_PUBLIC_CORS_MATCH_REFERER`). A `Referer` naming a listed page is then accepted.
 
 Before turning it on:
 
@@ -655,7 +655,7 @@ In 2.x and 3.x the public endpoints allowed credentialed CORS for every origin, 
 |List the website origin, serve Unomi over HTTPS and set `SameSite=None`, or serve Unomi from the website's origin. Expect the cookie to be blocked in Safari.
 
 |2.x client embedding `context.js` with a `<script>` tag (single-tenant compatibility mode)
-|List the website origin and set `matchReferer=true`, after reading <<_public_tracker_script_tag,the trade-offs>>; or move to the shipped tracker.
+|List the website origin and set `matchReferer=true`, after reading <<_public_tracker_script_tag,the trade-offs>>; or move to the shipped tracker. A website on another site also needs HTTPS with `SameSite=None`: in 2.x only same-site embeds kept their profile.
 
 |Server-side caller sending no `Origin`
 |Nothing for the origin check. A body `profileId` needs a trusted caller, as described in the migration guide.

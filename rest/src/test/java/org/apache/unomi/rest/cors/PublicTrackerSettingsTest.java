@@ -178,11 +178,64 @@ class PublicTrackerSettingsTest {
     }
 
     @Test
-    void aListWithNoValidEntryAllowsNoOrigin() {
+    void aListWithNoValidEntryAllowsNoOriginAndSaysSo() {
         lenient().when(configSharingService.getProperty(PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY)).thenReturn("shop.example, *");
         settings.activate();
         assertFalse(settings.policy().allows("https://shop.example"));
-        // Reporting a refused embed with nothing listed is a no-op.
-        settings.reportRefusedRequestWithoutOrigin(false);
+        assertTrue(hasWarning("Ignoring public CORS allowed origin 'shop.example'"));
+        assertTrue(hasWarning("Ignoring public CORS allowed origin '*'"));
+        assertTrue(hasWarning("None of the public CORS allowed origins"));
+    }
+
+    @Test
+    void misconfiguredSettingsAreReported() {
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.MATCH_REFERER_PROPERTY)).thenReturn("yes");
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_MAX_AGE_PROPERTY)).thenReturn(0);
+        settings.activate();
+        assertTrue(hasWarning("Unrecognised value 'yes' for org.apache.unomi.public.cors.matchReferer"));
+        assertTrue(hasWarning("Invalid profile cookie max age '0'"));
+
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.MATCH_REFERER_PROPERTY)).thenReturn("true");
+        settings.activate();
+        assertTrue(hasWarning("matchReferer is on but no website origin is listed"));
+
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY)).thenReturn("https://shop.example");
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.MATCH_REFERER_PROPERTY)).thenReturn(Boolean.FALSE);
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_MAX_AGE_PROPERTY)).thenReturn(60);
+        settings.activate();
+        assertTrue(settings.configurationWarnings().isEmpty(), String.valueOf(settings.configurationWarnings()));
+    }
+
+    @Test
+    void refusedRequestWithoutOriginIsReportedOncePerConfiguration() {
+        // Nothing listed: every website is refused by design, nothing to report.
+        assertFalse(new PublicTrackerSettings("", null).reportRefusedRequestWithoutOrigin(false));
+
+        PublicTrackerSettings listed = new PublicTrackerSettings("https://shop.example", null);
+        assertTrue(listed.reportRefusedRequestWithoutOrigin(true));
+        assertFalse(listed.reportRefusedRequestWithoutOrigin(false));
+
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY)).thenReturn("https://shop.example");
+        settings.activate();
+        assertTrue(settings.reportRefusedRequestWithoutOrigin(false));
+        assertFalse(settings.reportRefusedRequestWithoutOrigin(false));
+        // A configuration change re-arms it.
+        settings.configChanged(new ConfigChangeEvent(ConfigChangeEventType.UPDATED,
+                PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY, "", "https://shop.example"));
+        assertTrue(settings.reportRefusedRequestWithoutOrigin(false));
+    }
+
+    @Test
+    void anUnlistedRefererDoesNotUseUpTheReportWhenMatchingIsOn() {
+        PublicTrackerSettings matching = new PublicTrackerSettings("https://shop.example", null, true);
+        // An unlisted website: nothing to fix, and the report stays available.
+        assertFalse(matching.reportRefusedRequestWithoutOrigin(true));
+        // A listed website whose Referrer-Policy strips the Referer: reported.
+        assertTrue(matching.reportRefusedRequestWithoutOrigin(false));
+        assertFalse(matching.reportRefusedRequestWithoutOrigin(false));
+    }
+
+    private boolean hasWarning(String start) {
+        return settings.configurationWarnings().stream().anyMatch(warning -> warning.startsWith(start) || warning.contains(start));
     }
 }

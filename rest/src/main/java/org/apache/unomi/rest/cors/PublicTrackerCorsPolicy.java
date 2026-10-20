@@ -16,11 +16,9 @@
  */
 package org.apache.unomi.rest.cors;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -34,8 +32,6 @@ import java.util.regex.Pattern;
  * {@code Origin}, such as a {@code <script>} tag, is matched by the listed page in its {@code Referer}.
  */
 public final class PublicTrackerCorsPolicy {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(PublicTrackerCorsPolicy.class);
 
     private static final Pattern ORIGIN = Pattern.compile(
             "^(https?)://([a-z0-9.-]+|\\[[0-9a-f:.]+\\])(?::([0-9]{1,5}))?$");
@@ -55,13 +51,18 @@ public final class PublicTrackerCorsPolicy {
         return parse(configured, false);
     }
 
+    static PublicTrackerCorsPolicy parse(String configured, boolean matchReferer) {
+        return parse(configured, matchReferer, null);
+    }
+
     /**
-     * Parses the comma-separated list, logging each entry it drops. Call it when the setting changes,
-     * not per request (see {@link PublicTrackerSettings}).
+     * Parses the comma-separated list. Call it when the setting changes, not per request
+     * (see {@link PublicTrackerSettings}).
      *
      * @param matchReferer whether a request without {@code Origin} may be matched by its {@code Referer}
+     * @param warnings     receives a message for each entry dropped, may be {@code null}
      */
-    static PublicTrackerCorsPolicy parse(String configured, boolean matchReferer) {
+    static PublicTrackerCorsPolicy parse(String configured, boolean matchReferer, List<String> warnings) {
         if (configured == null || configured.isBlank()) {
             return new PublicTrackerCorsPolicy(Collections.emptySet(), matchReferer);
         }
@@ -74,8 +75,10 @@ public final class PublicTrackerCorsPolicy {
             // An origin has no path, but a trailing slash is an easy mistake to make in the list.
             String origin = normalize(entry.endsWith("/") ? entry.substring(0, entry.length() - 1) : entry);
             if (origin == null) {
-                LOGGER.warn("Ignoring public CORS allowed origin '{}': expected scheme://host[:port] with http or https, "
-                        + "no path and no wildcard", entry);
+                if (warnings != null) {
+                    warnings.add("Ignoring public CORS allowed origin '" + entry + "': expected scheme://host[:port] "
+                            + "with http or https, no path and no wildcard");
+                }
                 continue;
             }
             origins.add(origin);
@@ -139,7 +142,8 @@ public final class PublicTrackerCorsPolicy {
             return "same-origin".equals(secFetchSite) || "none".equals(secFetchSite);
         }
         if (origin == null) {
-            // No browser marker at all: a server-side caller or an older browser's same-site GET.
+            // No browser marker at all: a server-side caller, or a GET from an older browser that sends no
+            // Sec-Fetch-Site, which cannot be told apart from it.
             return true;
         }
         // Older browsers: the same host counts as the page being served by Unomi itself. The scheme and

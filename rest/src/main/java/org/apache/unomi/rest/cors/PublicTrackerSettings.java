@@ -25,6 +25,9 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -68,10 +71,13 @@ public class PublicTrackerSettings implements ConfigChangeListener {
         final AtomicBoolean insecureRefusalToReport;
         /** Set until a refused request without Origin, typically a script tag, is reported for this configuration. */
         final AtomicBoolean refusedEmbedToReport;
+        /** Problems found in this configuration, logged when it is applied. */
+        final List<String> warnings;
 
         Resolved(PublicTrackerCorsPolicy policy, String requestedSameSite, String cookieName, String cookieDomain,
-                 int cookieMaxAge, boolean cookieHttpOnly) {
+                 int cookieMaxAge, boolean cookieHttpOnly, List<String> warnings) {
             this.policy = policy;
+            this.warnings = Collections.unmodifiableList(warnings);
             this.sameSiteWhenSecure = policy.resolveSameSite(requestedSameSite, true);
             String sameSiteWhenInsecure = policy.resolveSameSite(requestedSameSite, false);
             this.cookieName = cookieName;
@@ -118,7 +124,8 @@ public class PublicTrackerSettings implements ConfigChangeListener {
     }
 
     private void reload() {
-        this.resolved = resolve(
+        Resolved previous = resolved;
+        Resolved next = resolve(
                 configSharingService.getProperty(ALLOWED_ORIGINS_PROPERTY),
                 configSharingService.getProperty(SAME_SITE_PROPERTY),
                 configSharingService.getProperty(MATCH_REFERER_PROPERTY),
@@ -126,37 +133,59 @@ public class PublicTrackerSettings implements ConfigChangeListener {
                 configSharingService.getProperty(COOKIE_DOMAIN_PROPERTY),
                 configSharingService.getProperty(COOKIE_MAX_AGE_PROPERTY),
                 configSharingService.getProperty(COOKIE_HTTP_ONLY_PROPERTY));
+        // WebConfig publishes the settings one by one, each causing a reload: log only what is new.
+        for (String warning : next.warnings) {
+            if (!previous.warnings.contains(warning)) {
+                LOGGER.warn(warning);
+            }
+        }
+        this.resolved = next;
+    }
+
+    /** The problems found in the current configuration, as they were logged. */
+    List<String> configurationWarnings() {
+        return resolved.warnings;
     }
 
     private static Resolved resolve(Object allowedOrigins, Object sameSite, Object matchReferer, Object cookieName,
                                     Object cookieDomain, Object cookieMaxAge, Object cookieHttpOnly) {
+        List<String> warnings = new ArrayList<>();
         String requested = sameSite == null ? null : sameSite.toString().trim();
         String name = cookieName == null || cookieName.toString().isBlank() ? DEFAULT_COOKIE_NAME : cookieName.toString().trim();
         String origins = allowedOrigins == null ? null : allowedOrigins.toString();
         // Off unless explicitly turned on: it trusts everything a listed page frames.
-        boolean refererMatch = matchReferer != null && "true".equalsIgnoreCase(matchReferer.toString().trim());
-        PublicTrackerCorsPolicy policy = PublicTrackerCorsPolicy.parse(origins, refererMatch);
+        String refererSetting = matchReferer == null ? "" : matchReferer.toString().trim();
+        boolean refererMatch = "true".equalsIgnoreCase(refererSetting);
+        if (!refererSetting.isEmpty() && !refererMatch && !"false".equalsIgnoreCase(refererSetting)) {
+            warnings.add("Unrecognised value '" + refererSetting + "' for org.apache.unomi.public.cors.matchReferer; "
+                    + "only true turns it on, so Referer matching is off.");
+        }
+        PublicTrackerCorsPolicy policy = PublicTrackerCorsPolicy.parse(origins, refererMatch, warnings);
         if (origins != null && !origins.isBlank() && policy.isEmpty()) {
-            LOGGER.warn("None of the public CORS allowed origins '{}' is valid, so no other website may use the "
-                    + "visitor cookie. Expected scheme://host[:port], comma-separated.", origins);
+            warnings.add("None of the public CORS allowed origins '" + origins + "' is valid, so no other website may "
+                    + "use the visitor cookie. Expected scheme://host[:port], comma-separated.");
+        }
+        if (refererMatch && policy.isEmpty()) {
+            warnings.add("org.apache.unomi.public.cors.matchReferer is on but no website origin is listed, so it has no effect.");
         }
         Resolved next = new Resolved(
                 policy,
                 requested,
                 name,
                 cookieDomain == null ? null : cookieDomain.toString(),
-                toInt(cookieMaxAge),
+                toInt(cookieMaxAge, warnings),
                 // HttpOnly unless explicitly turned off: page script must not read the bearer cookie,
                 // so a typo keeps it on.
-                cookieHttpOnly == null || !"false".equalsIgnoreCase(cookieHttpOnly.toString().trim()));
+                cookieHttpOnly == null || !"false".equalsIgnoreCase(cookieHttpOnly.toString().trim()),
+                warnings);
         if ("None".equalsIgnoreCase(requested) && !"None".equals(next.sameSiteWhenSecure)) {
-            LOGGER.warn("Refusing SameSite=None for the profile cookie because the public CORS allowed origins list "
+            warnings.add("Refusing SameSite=None for the profile cookie because the public CORS allowed origins list "
                     + "has no valid entry; using SameSite=Lax.");
         }
         return next;
     }
 
-    private static int toInt(Object value) {
+    private static int toInt(Object value, List<String> warnings) {
         if (value == null) {
             return DEFAULT_COOKIE_MAX_AGE;
         }
@@ -169,7 +198,7 @@ public class PublicTrackerSettings implements ConfigChangeListener {
             // reported below
         }
         // Zero or less would make browsers delete the cookie on every response.
-        LOGGER.warn("Invalid profile cookie max age '{}'; using {}", value, DEFAULT_COOKIE_MAX_AGE);
+        warnings.add("Invalid profile cookie max age '" + value + "'; using " + DEFAULT_COOKIE_MAX_AGE);
         return DEFAULT_COOKIE_MAX_AGE;
     }
 
@@ -202,17 +231,20 @@ public class PublicTrackerSettings implements ConfigChangeListener {
     /**
      * Reports, once per configuration, a refused request that carried no {@code Origin}: if it came from a
      * listed website embedding {@code context.js} with a {@code <script>} tag, the operator needs to know why
-     * that website keeps losing its visitors.
+     * that website keeps losing its visitors. Only once origins are listed: before that, every website is
+     * refused by design.
+     *
+     * @return whether the warning was logged by this call
      */
-    public void reportRefusedRequestWithoutOrigin(boolean hasReferer) {
+    public boolean reportRefusedRequestWithoutOrigin(boolean hasReferer) {
         Resolved current = resolved;
         boolean matchesReferer = current.policy.matchesReferer();
         if (matchesReferer && hasReferer) {
             // A Referer that is not listed: an unlisted website, nothing to fix.
-            return;
+            return false;
         }
         if (!current.refusedEmbedToReport.get() || !current.refusedEmbedToReport.compareAndSet(true, false)) {
-            return;
+            return false;
         }
         if (!matchesReferer) {
             LOGGER.warn("Refused the visitor cookie for a cross-site request without an Origin header, such as a "
@@ -223,5 +255,6 @@ public class PublicTrackerSettings implements ConfigChangeListener {
                     + "came from a listed website, check that its Referrer-Policy sends the origin to other sites "
                     + "(the default strict-origin-when-cross-origin does). This is logged once per configuration change.");
         }
+        return true;
     }
 }

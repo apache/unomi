@@ -141,9 +141,12 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         boolean allowed = publicTrackerSettings.policy().allowsVisitorCookie(
                 origin, referer, secFetchSite, request.getServerName(), request.getHeader("X-Forwarded-Host"));
         if (!allowed) {
-            LOGGER.debug("Not using the profile cookie (Origin {}, Referer {}, Sec-Fetch-Site {}): neither a listed website "
-                            + "nor Unomi's own origin", LogSanitizer.forLogging(origin), LogSanitizer.forLogging(referer),
-                    LogSanitizer.forLogging(secFetchSite));
+            // Any site can cause this, so do not pay for sanitising the headers unless they are logged.
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Not using the profile cookie (Origin {}, Referer {}, Sec-Fetch-Site {}): neither a listed "
+                                + "website nor Unomi's own origin", LogSanitizer.forLogging(origin),
+                        LogSanitizer.forLogging(referer), LogSanitizer.forLogging(secFetchSite));
+            }
             if (origin == null) {
                 publicTrackerSettings.reportRefusedRequestWithoutOrigin(referer != null);
             }

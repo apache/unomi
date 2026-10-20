@@ -60,6 +60,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
@@ -67,6 +68,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -307,6 +309,7 @@ class RestServiceUtilsImplProfileBindingTest {
 
     @Test
     void finalizeEventsRequest_unlistedRefererDoesNotSetTheCookie() {
+        // Sec-Fetch-Site alone refuses this too; the matching itself is pinned in PublicTrackerCorsPolicyTest.
         allowedOrigins("https://shop.example", true);
         lenient().when(request.getHeader("Referer")).thenReturn("https://evil.example/");
         lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
@@ -314,6 +317,32 @@ class RestServiceUtilsImplProfileBindingTest {
         restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
 
         verify(response, never()).setHeader(eq("Set-Cookie"), anyString());
+    }
+
+    @Test
+    void refusedRequestWithoutOriginIsReportedToTheSettings() throws Exception {
+        PublicTrackerSettings settings = spy(new PublicTrackerSettings("https://shop.example", null));
+        setField(restServiceUtils, "publicTrackerSettings", settings);
+        lenient().when(request.getHeader("Referer")).thenReturn("https://shop.example/");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+
+        assertNull(restServiceUtils.getProfileIdCookieValue(request));
+
+        verify(settings).reportRefusedRequestWithoutOrigin(true);
+    }
+
+    @Test
+    void refusedRequestWithAnOriginIsNotReportedAsAnEmbed() throws Exception {
+        PublicTrackerSettings settings = spy(new PublicTrackerSettings("https://shop.example", null));
+        setField(restServiceUtils, "publicTrackerSettings", settings);
+        lenient().when(request.getHeader("Origin")).thenReturn("https://other.example");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+
+        assertNull(restServiceUtils.getProfileIdCookieValue(request));
+
+        verify(settings, never()).reportRefusedRequestWithoutOrigin(anyBoolean());
     }
 
     private void allowedOrigins(String origins) {
