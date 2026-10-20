@@ -73,41 +73,63 @@ class PublicTrackerCorsPolicyTest {
     @Test
     void visitorCookieIsUsedWithoutOriginOrFromUnomisOwnOrigin() {
         PublicTrackerCorsPolicy empty = PublicTrackerCorsPolicy.parse("");
-        assertTrue(empty.allowsVisitorCookie(null, null, "cdp.example", null));
+        assertTrue(empty.allowsVisitorCookie(null, null, null, "cdp.example", null));
         // Browsers send Origin on same-origin POSTs.
-        assertTrue(empty.allowsVisitorCookie("https://cdp.example", "same-origin", "cdp.example", null));
-        assertTrue(empty.allowsVisitorCookie("https://cdp.example", "none", "cdp.example", null));
-        assertFalse(empty.allowsVisitorCookie("https://www.cdp.example", "same-site", "cdp.example", null));
-        assertFalse(empty.allowsVisitorCookie("https://evil.example", "cross-site", "cdp.example", null));
+        assertTrue(empty.allowsVisitorCookie("https://cdp.example", null, "same-origin", "cdp.example", null));
+        assertTrue(empty.allowsVisitorCookie("https://cdp.example", null, "none", "cdp.example", null));
+        assertFalse(empty.allowsVisitorCookie("https://www.cdp.example", null, "same-site", "cdp.example", null));
+        assertFalse(empty.allowsVisitorCookie("https://evil.example", null, "cross-site", "cdp.example", null));
         // <script> or <img> embedded by another site: no Origin, but the browser says cross-site.
-        assertFalse(empty.allowsVisitorCookie(null, "cross-site", "cdp.example", null));
-        assertFalse(empty.allowsVisitorCookie(null, "same-site", "cdp.example", null));
-        assertTrue(empty.allowsVisitorCookie(null, "same-origin", "cdp.example", null));
+        assertFalse(empty.allowsVisitorCookie(null, null, "cross-site", "cdp.example", null));
+        assertFalse(empty.allowsVisitorCookie(null, null, "same-site", "cdp.example", null));
+        assertTrue(empty.allowsVisitorCookie(null, null, "same-origin", "cdp.example", null));
         // A server-side caller sends neither header.
-        assertTrue(empty.allowsVisitorCookie(null, null, null, null));
+        assertTrue(empty.allowsVisitorCookie(null, null, null, null, null));
     }
 
     @Test
     void withoutSecFetchSiteTheOriginHostIsComparedWithTheRequestHost() {
         PublicTrackerCorsPolicy empty = PublicTrackerCorsPolicy.parse("");
         // A TLS-terminating proxy changes scheme and port, so only the host is compared.
-        assertTrue(empty.allowsVisitorCookie("https://cdp.example", null, "cdp.example", null));
-        assertTrue(empty.allowsVisitorCookie("https://cdp.example", null, "internal-host", "cdp.example:443"));
-        assertTrue(empty.allowsVisitorCookie("https://cdp.example", null, "internal-host", " CDP.example, proxy.internal"));
-        assertTrue(empty.allowsVisitorCookie("http://[::1]:8181", null, "[::1]", null));
-        assertFalse(empty.allowsVisitorCookie("https://www.cdp.example", null, "cdp.example", null));
-        assertFalse(empty.allowsVisitorCookie("https://cdp.example.evil", null, "cdp.example", null));
-        assertFalse(empty.allowsVisitorCookie("https://cdp", null, "cdp.example", null));
-        assertFalse(empty.allowsVisitorCookie("null", null, "cdp.example", null));
-        assertFalse(empty.allowsVisitorCookie("https://", null, "", null));
-        assertFalse(empty.allowsVisitorCookie("https://evil.example", null, null, null));
+        assertTrue(empty.allowsVisitorCookie("https://cdp.example", null, null, "cdp.example", null));
+        assertTrue(empty.allowsVisitorCookie("https://cdp.example", null, null, "internal-host", "cdp.example:443"));
+        assertTrue(empty.allowsVisitorCookie("https://cdp.example", null, null, "internal-host", " CDP.example, proxy.internal"));
+        assertTrue(empty.allowsVisitorCookie("http://[::1]:8181", null, null, "[::1]", null));
+        assertFalse(empty.allowsVisitorCookie("https://www.cdp.example", null, null, "cdp.example", null));
+        assertFalse(empty.allowsVisitorCookie("https://cdp.example.evil", null, null, "cdp.example", null));
+        assertFalse(empty.allowsVisitorCookie("https://cdp", null, null, "cdp.example", null));
+        assertFalse(empty.allowsVisitorCookie("null", null, null, "cdp.example", null));
+        assertFalse(empty.allowsVisitorCookie("https://", null, null, "", null));
+        assertFalse(empty.allowsVisitorCookie("https://evil.example", null, null, null, null));
+    }
+
+    @Test
+    void secFetchSiteWinsOverAMatchingHost() {
+        PublicTrackerCorsPolicy empty = PublicTrackerCorsPolicy.parse("");
+        // Same host but the browser says another site: the host fallback must not apply.
+        assertFalse(empty.allowsVisitorCookie("https://cdp.example", null, "cross-site", "cdp.example", null));
+        assertFalse(empty.allowsVisitorCookie("https://cdp.example", null, "same-site", "cdp.example", null));
+        assertTrue(empty.allowsVisitorCookie("https://cdp.example", null, null, "cdp.example", null));
+    }
+
+    @Test
+    void refererOfAListedPageCountsWhenThereIsNoOrigin() {
+        PublicTrackerCorsPolicy listed = PublicTrackerCorsPolicy.parse("https://shop.example");
+        assertTrue(listed.allowsVisitorCookie(null, "https://shop.example/", "cross-site", "cdp.example", null));
+        assertTrue(listed.allowsVisitorCookie(null, "https://shop.example", "cross-site", "cdp.example", null));
+        assertFalse(listed.allowsVisitorCookie(null, "https://shop.example.evil/", "cross-site", "cdp.example", null));
+        assertFalse(listed.allowsVisitorCookie(null, "https://shop.example:8443/", "cross-site", "cdp.example", null));
+        assertFalse(listed.allowsVisitorCookie(null, "https://other.example/?https://shop.example/", "cross-site", "cdp.example", null));
+        assertFalse(listed.allowsVisitorCookie(null, null, "cross-site", "cdp.example", null));
+        // Origin, when present, is what counts; Referer is not consulted.
+        assertFalse(listed.allowsVisitorCookie("https://other.example", "https://shop.example/", "cross-site", "cdp.example", null));
     }
 
     @Test
     void listedOriginUsesTheVisitorCookieFromAnotherSite() {
         PublicTrackerCorsPolicy listed = PublicTrackerCorsPolicy.parse("https://shop.example");
-        assertTrue(listed.allowsVisitorCookie("https://shop.example", "cross-site", "cdp.example", null));
-        assertFalse(listed.allowsVisitorCookie("https://other.example", "cross-site", "cdp.example", null));
+        assertTrue(listed.allowsVisitorCookie("https://shop.example", null, "cross-site", "cdp.example", null));
+        assertFalse(listed.allowsVisitorCookie("https://other.example", null, "cross-site", "cdp.example", null));
     }
 
     @Test

@@ -36,9 +36,6 @@ public final class PublicTrackerCorsPolicy {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PublicTrackerCorsPolicy.class);
 
-    public static final String ALLOWED_ORIGINS_PROPERTY = "publicCorsAllowedOrigins";
-    public static final String SAME_SITE_PROPERTY = "profileIdCookieSameSite";
-
     private static final Pattern ORIGIN = Pattern.compile(
             "^(https?)://([a-z0-9.-]+|\\[[0-9a-f:.]+\\])(?::([0-9]{1,5}))?$");
 
@@ -55,7 +52,7 @@ public final class PublicTrackerCorsPolicy {
      * Parses the comma-separated list, logging each entry it drops. Call it when the setting changes,
      * not per request (see {@link PublicTrackerSettings}).
      */
-    public static PublicTrackerCorsPolicy parse(String configured) {
+    static PublicTrackerCorsPolicy parse(String configured) {
         if (configured == null || configured.isBlank()) {
             return new PublicTrackerCorsPolicy(Collections.emptySet());
         }
@@ -105,7 +102,7 @@ public final class PublicTrackerCorsPolicy {
      * Exact lookup: the list is stored the way browsers serialize {@code Origin} (lowercase, no default
      * port), so a browser's header matches as is. Anything else is not a browser origin and is refused.
      */
-    public boolean allows(String origin) {
+    boolean allows(String origin) {
         return origin != null && allowedOrigins.contains(origin);
     }
 
@@ -116,12 +113,14 @@ public final class PublicTrackerCorsPolicy {
      * a reason to refuse. Runs on every tracker request, so it only compares strings and allocates nothing.
      *
      * @param origin        the {@code Origin} header, may be {@code null}
+     * @param referer       the {@code Referer} header, may be {@code null}; used for the list when a browser
+     *                      sends no {@code Origin}, as for {@code <script src>}
      * @param secFetchSite  the {@code Sec-Fetch-Site} header, may be {@code null} for older browsers
      * @param host          the host the request was addressed to, may be {@code null}
      * @param forwardedHost the {@code X-Forwarded-Host} header, may be {@code null}
      */
-    public boolean allowsVisitorCookie(String origin, String secFetchSite, String host, String forwardedHost) {
-        if (origin != null && allowedOrigins.contains(origin)) {
+    public boolean allowsVisitorCookie(String origin, String referer, String secFetchSite, String host, String forwardedHost) {
+        if (origin != null ? allowedOrigins.contains(origin) : isFromListedPage(referer)) {
             return true;
         }
         if (secFetchSite != null) {
@@ -145,6 +144,24 @@ public final class PublicTrackerCorsPolicy {
         }
         int hostEnd = hostEnd(origin, hostStart);
         return sameHost(origin, hostStart, hostEnd, host) || sameHost(origin, hostStart, hostEnd, forwardedHost);
+    }
+
+    /**
+     * Whether a {@code Referer} URL belongs to a listed origin. Browsers set it, lowercase the scheme and
+     * host, drop default ports, and let a page shorten it but never name another origin. A missing one
+     * (for example {@code Referrer-Policy: no-referrer}) is simply not a match.
+     */
+    private boolean isFromListedPage(String referer) {
+        if (referer == null) {
+            return false;
+        }
+        for (String allowed : allowedOrigins) {
+            int end = allowed.length();
+            if (referer.startsWith(allowed) && (referer.length() == end || referer.charAt(end) == '/')) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** End of the host in {@code value} starting at {@code start}: before the port, a comma or the end. */
@@ -203,7 +220,7 @@ public final class PublicTrackerCorsPolicy {
     }
 
     /** The public tracker endpoints, relative to the REST base address. Runs on every response. */
-    public static boolean isPublicTrackerPath(String path) {
+    static boolean isPublicTrackerPath(String path) {
         if (path == null) {
             return false;
         }

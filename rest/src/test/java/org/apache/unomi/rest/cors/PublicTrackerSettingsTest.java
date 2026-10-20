@@ -54,8 +54,8 @@ class PublicTrackerSettingsTest {
 
     @Test
     void readsTheSettingsAtActivation() {
-        when(configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY)).thenReturn("https://shop.example");
-        when(configSharingService.getProperty(PublicTrackerCorsPolicy.SAME_SITE_PROPERTY)).thenReturn(" None ");
+        when(configSharingService.getProperty(PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY)).thenReturn("https://shop.example");
+        when(configSharingService.getProperty(PublicTrackerSettings.SAME_SITE_PROPERTY)).thenReturn(" None ");
 
         settings.activate();
 
@@ -81,14 +81,14 @@ class PublicTrackerSettingsTest {
         assertSame(before, settings.policy());
         verifyNoInteractions(configSharingService);
 
-        when(configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY)).thenReturn("https://shop.example");
+        when(configSharingService.getProperty(PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY)).thenReturn("https://shop.example");
         settings.configChanged(new ConfigChangeEvent(ConfigChangeEventType.UPDATED,
-                PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY, "", "https://shop.example"));
+                PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY, "", "https://shop.example"));
         assertTrue(settings.policy().allows("https://shop.example"));
 
-        when(configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY)).thenReturn(null);
+        when(configSharingService.getProperty(PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY)).thenReturn(null);
         settings.configChanged(new ConfigChangeEvent(ConfigChangeEventType.REMOVED,
-                PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY, "https://shop.example", null));
+                PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY, "https://shop.example", null));
         assertFalse(settings.policy().allows("https://shop.example"));
     }
 
@@ -146,6 +146,17 @@ class PublicTrackerSettingsTest {
             settings.activate();
             String expected = " 120 ".equals(value) ? "Max-Age=120;" : "Max-Age=31536000;";
             assertTrue(settings.profileCookie("p1", false).contains(expected), String.valueOf(value));
+        }
+    }
+
+    @Test
+    void everyWatchedPropertyTriggersAReload() {
+        for (String property : new String[]{PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY, PublicTrackerSettings.SAME_SITE_PROPERTY,
+                PublicTrackerSettings.COOKIE_NAME_PROPERTY, PublicTrackerSettings.COOKIE_DOMAIN_PROPERTY,
+                PublicTrackerSettings.COOKIE_MAX_AGE_PROPERTY, PublicTrackerSettings.COOKIE_HTTP_ONLY_PROPERTY}) {
+            clearInvocations(configSharingService);
+            settings.configChanged(new ConfigChangeEvent(ConfigChangeEventType.UPDATED, property, null, "x"));
+            org.mockito.Mockito.verify(configSharingService).getProperty(PublicTrackerSettings.COOKIE_NAME_PROPERTY);
         }
     }
 }

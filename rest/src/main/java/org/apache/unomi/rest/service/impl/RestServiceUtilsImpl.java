@@ -27,7 +27,6 @@ import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.utils.LogSanitizer;
 import org.apache.unomi.api.security.TenantPrincipal;
 import org.apache.unomi.api.security.UnomiRoles;
-import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
@@ -75,8 +74,6 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestServiceUtilsImpl.class.getName());
     public static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
 
-    @Reference
-    private ConfigSharingService configSharingService;
 
     @Reference
     private PrivacyService privacyService;
@@ -140,7 +137,8 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
             return (Boolean) decided;
         }
         String origin = request.getHeader("Origin");
-        boolean allowed = publicTrackerSettings.policy().allowsVisitorCookie(origin, request.getHeader("Sec-Fetch-Site"),
+        boolean allowed = publicTrackerSettings.policy().allowsVisitorCookie(origin, request.getHeader("Referer"),
+                request.getHeader("Sec-Fetch-Site"),
                 request.getServerName(), request.getHeader("X-Forwarded-Host"));
         if (!allowed) {
             LOGGER.debug("Not using the profile cookie for origin {}: neither listed in the public CORS allowed origins "

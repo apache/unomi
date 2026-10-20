@@ -820,10 +820,12 @@ Cookies are only set for regular profiles, not for Personas. If a `personaId` is
 * **Cookie Attributes**:
   * `Path=/` - Available for all paths on the domain
   * `Max-Age=31536000` - Valid for 1 year by default (configurable via `org.apache.unomi.profile.cookie.maxAgeInSeconds`)
-  * `SameSite=Lax` - CSRF protection
-  * `Secure` - Set if the request is over HTTPS (configurable)
-  * `HttpOnly` - Configurable via `org.apache.unomi.profile.cookie.httpOnly` (default: `true`)
-  * `Domain` - Configurable via `org.apache.unomi.profile.cookie.domain`
+  * `SameSite=Lax` - CSRF protection. Configurable via `org.apache.unomi.profile.cookie.sameSite`; `None` is used only with `Secure` and a non-empty list of allowed origins
+  * `Secure` - Set if the request reached Unomi over HTTPS, directly or through a trusted proxy that sends `X-Forwarded-Proto: https`
+  * `HttpOnly` - Configurable via `org.apache.unomi.profile.cookie.httpOnly` (default: `true`; only an explicit `false` turns it off)
+  * `Domain` - Configurable via `org.apache.unomi.profile.cookie.domain`. Unomi's own host, or a parent domain of it; never the website's domain when the website is on another site
+
+The cookie is used and set only for pages on Unomi's own origin, for origins listed in `org.apache.unomi.public.cors.allowedOrigins`, and for requests that do not come from a page on another site. A request from any other page is served with a new anonymous profile, and the visitor's cookie is left untouched. See <<_public_tracker_origins,Websites on other origins>>.
 
 This cookie allows the browser to automatically send the profile ID on subsequent requests, enabling Apache Unomi to load the existing profile.
 
@@ -1200,5 +1202,7 @@ The following configuration properties control profile tracking behavior:
 * `org.apache.unomi.profile.cookie.maxAgeInSeconds` - Cookie expiration time (default: `31536000` = 1 year)
 * `org.apache.unomi.profile.cookie.httpOnly` - Whether cookie is HTTP-only (default: `true`). When `true`, browser JavaScript cannot read the cookie; the browser still sends it on requests. Prefer reading `profileId` from the context JSON response.
 * `org.apache.unomi.profile.cookie.domain` - Cookie domain (optional)
+* `org.apache.unomi.profile.cookie.sameSite` - `Lax` (default), `Strict` or `None`; `None` needs `Secure` and a non-empty origin list
+* `org.apache.unomi.public.cors.allowedOrigins` - Website origins, other than Unomi's own, that may use the cookie (default: none). See <<_public_tracker_origins,Websites on other origins>>
 
 These can be configured in `etc/custom.system.properties` / `org.apache.unomi.web.cfg`.

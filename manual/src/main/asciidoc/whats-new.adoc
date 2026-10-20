@@ -32,6 +32,13 @@ Unomi 4.0 requires explicit admin and health-check passwords at startup, treats 
 * Profile tracking contract: <<_how_profile_tracking_works,How profile tracking works>>
 * Jira: https://issues.apache.org/jira/browse/UNOMI-972[UNOMI-972]
 
+==== Visitor cookie across websites
+
+The public tracker endpoints answer any origin, but only the operator's list of website origins (`UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS`) and Unomi's own origin may use the visitor cookie. The list is empty by default. `SameSite` is configurable (`UNOMI_PROFILE_COOKIE_SAMESITE`), and `None` requires HTTPS and a non-empty list. Websites on another origin that used cookies with Unomi 2.x or 3.x must be listed.
+
+* Setup guide: <<_public_tracker_origins,Websites on other origins>>
+* Jira: https://issues.apache.org/jira/browse/UNOMI-1005[UNOMI-1005]
+
 ==== Cluster-aware task scheduler
 
 Built-in background job scheduler with persistence, cluster locks, recovery, REST API (`/cxs/tasks`), and Karaf shell commands.

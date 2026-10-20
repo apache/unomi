@@ -39,16 +39,19 @@ public class PublicTrackerSettings implements ConfigChangeListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(PublicTrackerSettings.class);
 
-    public static final String COOKIE_NAME_PROPERTY = "profileIdCookieName";
-    public static final String COOKIE_DOMAIN_PROPERTY = "profileIdCookieDomain";
-    public static final String COOKIE_MAX_AGE_PROPERTY = "profileIdCookieMaxAgeInSeconds";
-    public static final String COOKIE_HTTP_ONLY_PROPERTY = "profileIdCookieHttpOnly";
+    // Published by WebConfig through ConfigSharingService.
+    static final String ALLOWED_ORIGINS_PROPERTY = "publicCorsAllowedOrigins";
+    static final String SAME_SITE_PROPERTY = "profileIdCookieSameSite";
+    static final String COOKIE_NAME_PROPERTY = "profileIdCookieName";
+    static final String COOKIE_DOMAIN_PROPERTY = "profileIdCookieDomain";
+    static final String COOKIE_MAX_AGE_PROPERTY = "profileIdCookieMaxAgeInSeconds";
+    static final String COOKIE_HTTP_ONLY_PROPERTY = "profileIdCookieHttpOnly";
 
     static final String DEFAULT_COOKIE_NAME = "context-profile-id";
     static final int DEFAULT_COOKIE_MAX_AGE = 31536000;
 
     private static final Set<String> WATCHED = Set.of(
-            PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY, PublicTrackerCorsPolicy.SAME_SITE_PROPERTY,
+            ALLOWED_ORIGINS_PROPERTY, SAME_SITE_PROPERTY,
             COOKIE_NAME_PROPERTY, COOKIE_DOMAIN_PROPERTY, COOKIE_MAX_AGE_PROPERTY, COOKIE_HTTP_ONLY_PROPERTY);
 
     /** Everything a request needs, replaced as a whole so a request never sees half of a change. */
@@ -106,8 +109,8 @@ public class PublicTrackerSettings implements ConfigChangeListener {
 
     private void reload() {
         this.resolved = resolve(
-                configSharingService.getProperty(PublicTrackerCorsPolicy.ALLOWED_ORIGINS_PROPERTY),
-                configSharingService.getProperty(PublicTrackerCorsPolicy.SAME_SITE_PROPERTY),
+                configSharingService.getProperty(ALLOWED_ORIGINS_PROPERTY),
+                configSharingService.getProperty(SAME_SITE_PROPERTY),
                 configSharingService.getProperty(COOKIE_NAME_PROPERTY),
                 configSharingService.getProperty(COOKIE_DOMAIN_PROPERTY),
                 configSharingService.getProperty(COOKIE_MAX_AGE_PROPERTY),

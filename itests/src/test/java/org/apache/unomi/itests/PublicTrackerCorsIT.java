@@ -137,6 +137,20 @@ public class PublicTrackerCorsIT extends BaseIT {
     }
 
     @Test
+    public void listedSiteEmbeddingTheTrackerKeepsTheVisitor() throws Exception {
+        // <script src=".../context.js"> on a listed site: no Origin, but the Referer names the listed page.
+        String[] visitor = newVisitor();
+        HttpPost request = contextRequest();
+        request.setHeader("Referer", LISTED_ORIGIN + "/products/42");
+        request.setHeader("Sec-Fetch-Site", "cross-site");
+        request.setHeader("Cookie", visitor[1]);
+        try (CloseableHttpResponse response = execute(request, true)) {
+            assertNotNull(header(response, "Set-Cookie"));
+            assertEquals(visitor[0], profileId(response));
+        }
+    }
+
+    @Test
     public void sameOriginPostKeepsTheVisitor() throws Exception {
         // Browsers send Origin on same-origin POSTs, for example behind a reverse proxy serving /cxs.
         String[] visitor = newVisitor();

@@ -25,7 +25,6 @@ import org.apache.unomi.api.security.CompatPeerPrincipal;
 import org.apache.unomi.api.security.InsecureTransportPrincipal;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.UnomiRoles;
-import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
@@ -73,7 +72,6 @@ class RestServiceUtilsImplProfileBindingTest {
 
     private static final String COOKIE_NAME = "context-profile-id";
 
-    @Mock private ConfigSharingService configSharingService;
     @Mock private PrivacyService privacyService;
     @Mock private EventService eventService;
     @Mock private ProfileService profileService;
@@ -89,7 +87,6 @@ class RestServiceUtilsImplProfileBindingTest {
     @BeforeEach
     void setUp() throws Exception {
         restServiceUtils = new RestServiceUtilsImpl();
-        setField(restServiceUtils, "configSharingService", configSharingService);
         setField(restServiceUtils, "privacyService", privacyService);
         setField(restServiceUtils, "eventService", eventService);
         setField(restServiceUtils, "profileService", profileService);
@@ -99,7 +96,6 @@ class RestServiceUtilsImplProfileBindingTest {
         setField(restServiceUtils, "securityService", securityService);
         allowedOrigins(null);
 
-        lenient().when(configSharingService.getProperty("profileIdCookieName")).thenReturn(COOKIE_NAME);
         lenient().when(schemaService.isValid(anyString(), anyString())).thenReturn(true);
         lenient().when(securityService.hasSystemAccess()).thenReturn(false);
         lenient().when(securityService.hasCompatPeerAbility(anyString())).thenReturn(false);
@@ -193,7 +189,6 @@ class RestServiceUtilsImplProfileBindingTest {
 
     @Test
     void finalizeEventsRequest_cookieIsSecureBehindTrustedTlsProxy() {
-        stubCookieSettings();
         when(request.isSecure()).thenReturn(false);
         // No InsecureTransportPrincipal: a trusted proxy reported X-Forwarded-Proto: https.
         lenient().when(request.getHeader("X-Forwarded-Proto")).thenReturn("https");
@@ -207,7 +202,6 @@ class RestServiceUtilsImplProfileBindingTest {
 
     @Test
     void finalizeEventsRequest_cookieIsNotSecureOverPlainHttp() {
-        stubCookieSettings();
         when(request.isSecure()).thenReturn(false);
         // An untrusted client or proxy claimed HTTPS; the authentication filter marked the subject insecure.
         lenient().when(request.getHeader("X-Forwarded-Proto")).thenReturn("https");
@@ -224,7 +218,6 @@ class RestServiceUtilsImplProfileBindingTest {
     @Test
     void finalizeEventsRequest_unmarkedSubjectWithoutForwardedProtoIsNotSecure() {
         // Only a proxy's X-Forwarded-Proto, vouched for by the authentication filter, makes plain HTTP secure.
-        stubCookieSettings();
         when(request.isSecure()).thenReturn(false);
         lenient().when(securityService.getRequestSubject()).thenReturn(new Subject());
 
@@ -256,6 +249,34 @@ class RestServiceUtilsImplProfileBindingTest {
         verify(response, never()).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"), anyString());
     }
 
+    @Test
+    void visitorCookieDecisionIsMadeOncePerRequest() {
+        // Binding and Set-Cookie must agree, and the headers are read only once.
+        java.util.Map<String, Object> attributes = new java.util.HashMap<>();
+        org.mockito.Mockito.doAnswer(call -> attributes.put(call.getArgument(0), call.getArgument(1)))
+                .when(request).setAttribute(anyString(), any());
+        lenient().when(request.getAttribute(anyString())).thenAnswer(call -> attributes.get(call.getArgument(0)));
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+        lenient().when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+
+        assertNull(restServiceUtils.getProfileIdCookieValue(request));
+        restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
+
+        verify(request, org.mockito.Mockito.times(1)).getHeader("Sec-Fetch-Site");
+        verify(response, never()).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"), anyString());
+    }
+
+    @Test
+    void getProfileIdCookieValue_listedSiteEmbeddingTheTrackerScriptKeepsTheVisitor() {
+        // <script src=".../context.js"> sends no Origin; the browser-set Referer names the listed page.
+        allowedOrigins("https://shop.example");
+        lenient().when(request.getHeader("Referer")).thenReturn("https://shop.example/products/42");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+
+        assertEquals("cookie-profile", restServiceUtils.getProfileIdCookieValue(request));
+    }
+
     private void allowedOrigins(String origins) {
         try {
             setField(restServiceUtils, "publicTrackerSettings", new PublicTrackerSettings(origins, null));
@@ -264,10 +285,6 @@ class RestServiceUtilsImplProfileBindingTest {
         }
     }
 
-    private void stubCookieSettings() {
-        lenient().when(configSharingService.getProperty("profileIdCookieMaxAgeInSeconds")).thenReturn(3600);
-        lenient().when(configSharingService.getProperty("profileIdCookieHttpOnly")).thenReturn(Boolean.TRUE);
-    }
 
     private EventsRequestContext contextWithProfile() {
         EventsRequestContext ctx = new EventsRequestContext(new Date(), null, null, request, response);
