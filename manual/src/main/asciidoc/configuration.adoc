@@ -679,11 +679,11 @@ Other behaviour that changed:
 * A refused request receives no `Set-Cookie`, so the visitor's cookie is left untouched.
 * A malformed profile cookie still answers `400`, but only for requests that may use the cookie; a refused request ignores it.
 * The cookie is marked `Secure` behind a trusted TLS proxy, so a website that mixes HTTP and HTTPS pages loses the cookie on its HTTP pages.
-* `org.apache.unomi.profile.cookie.httpOnly` is turned off only by `false`. A mistyped value used to turn `HttpOnly` off; it now keeps it on and is logged as a warning.
+* `org.apache.unomi.profile.cookie.httpOnly` now defaults to `true` (it was `false` in 2.x and 3.x) and is turned off only by `false`. In 4.0.0-rc1 a mistyped value turned `HttpOnly` off; it now keeps it on and is logged as a warning.
 
 ===== "Download my data" links
 
-`/cxs/client/myprofile/{format}` returns the visitor's own profile and changes nothing. In <<_v2_compatibility_mode,single-tenant compatibility mode>>, where it needs no API key, a plain link to it on the website is accepted as a top-level navigation (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`) even from a page Unomi does not otherwise recognise: the response opens in the visitor's own window, and no other page can read it. The tracker endpoints never accept a navigation this way.
+`/cxs/client/myprofile/{format}` returns the visitor's own profile and changes nothing. In <<_v2_compatibility_mode,single-tenant compatibility mode>>, where it needs no API key, a plain link to it on the website is accepted as a top-level navigation (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`) even from a page Unomi does not otherwise recognise: the response opens in the visitor's own window, and no other page can read it. A link from another site only carries the cookie with `SameSite=Lax` (the default) or `None`; with `Strict` it still answers `404`. The tracker endpoints never accept a navigation this way.
 
 ===== Tracker without cookies
 

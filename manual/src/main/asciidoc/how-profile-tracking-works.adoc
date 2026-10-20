@@ -1200,7 +1200,7 @@ The following configuration properties control profile tracking behavior:
 
 * `org.apache.unomi.profile.cookie.name` - Cookie name (default: `context-profile-id`)
 * `org.apache.unomi.profile.cookie.maxAgeInSeconds` - Cookie expiration time (default: `31536000` = 1 year)
-* `org.apache.unomi.profile.cookie.httpOnly` - Whether cookie is HTTP-only (default: `true`). When `true`, browser JavaScript cannot read the cookie; the browser still sends it on requests. Prefer reading `profileId` from the context JSON response.
+* `org.apache.unomi.profile.cookie.httpOnly` - Whether cookie is HTTP-only (default: `true`; only `false` turns it off, any other value keeps it on and is logged as a warning). When `true`, browser JavaScript cannot read the cookie; the browser still sends it on requests. Prefer reading `profileId` from the context JSON response.
 * `org.apache.unomi.profile.cookie.domain` - Cookie domain (optional)
 * `org.apache.unomi.profile.cookie.sameSite` - `Lax` (default), `Strict` or `None`; `None` needs `Secure` and a non-empty origin list
 * `org.apache.unomi.public.cors.allowedOrigins` - Website origins, other than Unomi's own, that may use the cookie (default: none). See <<_public_tracker_origins,Websites on other origins>>

@@ -77,7 +77,8 @@ public interface RestServiceUtils {
     /**
      * Try to extract the current visitor profileId from the current request cookies.
      * @param httpServletRequest the current HTTP request
-     * @return the profileId if found in the cookies, null otherwise
+     * @return the profileId if found in the cookies and the request comes from a page that may use the visitor
+     *         cookie (a listed website origin, Unomi's own origin, or no page at all), null otherwise
      */
     String getProfileIdCookieValue(HttpServletRequest httpServletRequest);
 

@@ -374,6 +374,11 @@ class RestServiceUtilsImplProfileBindingTest {
         lenient().when(request.getHeader("Sec-Fetch-Dest")).thenReturn("empty");
         assertNull(restServiceUtils.getProfileIdCookieValueForNavigation(request));
 
+        // A document destination that is not a navigation (for example a no-cors subresource).
+        lenient().when(request.getHeader("Sec-Fetch-Mode")).thenReturn("no-cors");
+        lenient().when(request.getHeader("Sec-Fetch-Dest")).thenReturn("document");
+        assertNull(restServiceUtils.getProfileIdCookieValueForNavigation(request));
+
         lenient().when(request.getMethod()).thenReturn("POST");
         lenient().when(request.getHeader("Sec-Fetch-Mode")).thenReturn("navigate");
         lenient().when(request.getHeader("Sec-Fetch-Dest")).thenReturn("document");

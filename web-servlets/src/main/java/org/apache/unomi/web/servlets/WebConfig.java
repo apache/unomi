@@ -125,10 +125,6 @@ public class WebConfig {
         return contextserverProfileIdCookieMaxAgeInSeconds;
     }
 
-    public boolean isContextserverProfileIdCookieHttpOnly() {
-        return contextserverProfileIdCookieHttpOnly == null || !"false".equalsIgnoreCase(contextserverProfileIdCookieHttpOnly.trim());
-    }
-
     public String getAllowedProfileDownloadFormats() {
         return allowedProfileDownloadFormats;
     }
