@@ -33,7 +33,7 @@ When single-tenant compatibility mode is enabled:
   about 30 seconds, so public requests do not wait on each other or re-read it from the database
   every time. A change made on another node is picked up after about that time.
 - **No authentication** is required for non-protected events (like V2)
-- **The visitor cookie is limited to listed websites** (unlike V2). A website on another origin, another subdomain included, must be listed in `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS` for its requests to use and receive the cookie, whether it calls `context.json` or embeds `context.js` with a `<script>` tag. A website served from Unomi's own origin needs no change. See <<_public_tracker_origins,Websites on other origins>>.
+- **The visitor cookie is limited to listed websites** (unlike V2). A website on another origin, another subdomain included, must be listed in `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS` for its requests to use and receive the cookie, whether it calls `context.json` or embeds `context.js` with a `<script>` tag. A `<script>` tag sends no `Origin`, so the listed website is then recognised by its `Referer`, which must be turned on with `org.apache.unomi.public.cors.matchReferer=true` (read <<_public_tracker_script_tag,the trade-offs>> first). A website served from Unomi's own origin needs no change. See <<_public_tracker_compatibility,Compatibility with Unomi 2.x and 3.x>>.
 
 This allows V2 clients to work with Unomi V3 immediately after migration, giving you time to gradually update client applications to use the new V3 authentication model.
 

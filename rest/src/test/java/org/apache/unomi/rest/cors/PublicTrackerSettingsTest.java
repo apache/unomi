@@ -33,6 +33,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -152,11 +153,36 @@ class PublicTrackerSettingsTest {
     @Test
     void everyWatchedPropertyTriggersAReload() {
         for (String property : new String[]{PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY, PublicTrackerSettings.SAME_SITE_PROPERTY,
+                PublicTrackerSettings.MATCH_REFERER_PROPERTY,
                 PublicTrackerSettings.COOKIE_NAME_PROPERTY, PublicTrackerSettings.COOKIE_DOMAIN_PROPERTY,
                 PublicTrackerSettings.COOKIE_MAX_AGE_PROPERTY, PublicTrackerSettings.COOKIE_HTTP_ONLY_PROPERTY}) {
             clearInvocations(configSharingService);
             settings.configChanged(new ConfigChangeEvent(ConfigChangeEventType.UPDATED, property, null, "x"));
-            org.mockito.Mockito.verify(configSharingService).getProperty(PublicTrackerSettings.COOKIE_NAME_PROPERTY);
+            verify(configSharingService).getProperty(PublicTrackerSettings.COOKIE_NAME_PROPERTY);
         }
+    }
+
+    @Test
+    void refererMatchingIsOnlyTurnedOnByAnExplicitTrue() {
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY)).thenReturn("https://shop.example");
+        settings.activate();
+        assertFalse(settings.policy().matchesReferer());
+
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.MATCH_REFERER_PROPERTY)).thenReturn("yes");
+        settings.activate();
+        assertFalse(settings.policy().matchesReferer());
+
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.MATCH_REFERER_PROPERTY)).thenReturn(Boolean.TRUE);
+        settings.activate();
+        assertTrue(settings.policy().matchesReferer());
+    }
+
+    @Test
+    void aListWithNoValidEntryAllowsNoOrigin() {
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY)).thenReturn("shop.example, *");
+        settings.activate();
+        assertFalse(settings.policy().allows("https://shop.example"));
+        // Reporting a refused embed with nothing listed is a no-op.
+        settings.reportRefusedRequestWithoutOrigin(false);
     }
 }

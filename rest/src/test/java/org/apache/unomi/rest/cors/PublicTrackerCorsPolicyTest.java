@@ -113,16 +113,36 @@ class PublicTrackerCorsPolicyTest {
     }
 
     @Test
-    void refererOfAListedPageCountsWhenThereIsNoOrigin() {
-        PublicTrackerCorsPolicy listed = PublicTrackerCorsPolicy.parse("https://shop.example");
+    void refererOfAListedPageCountsWhenThereIsNoOriginAndMatchingIsOn() {
+        PublicTrackerCorsPolicy listed = PublicTrackerCorsPolicy.parse("https://shop.example, https://cart.example:8443, http://[::1]:8181", true);
         assertTrue(listed.allowsVisitorCookie(null, "https://shop.example/", "cross-site", "cdp.example", null));
         assertTrue(listed.allowsVisitorCookie(null, "https://shop.example", "cross-site", "cdp.example", null));
+        assertTrue(listed.allowsVisitorCookie(null, "https://cart.example:8443/basket", "cross-site", "cdp.example", null));
+        assertTrue(listed.allowsVisitorCookie(null, "http://[::1]:8181/p", "cross-site", "cdp.example", null));
+        // The character after the listed origin must end it.
         assertFalse(listed.allowsVisitorCookie(null, "https://shop.example.evil/", "cross-site", "cdp.example", null));
         assertFalse(listed.allowsVisitorCookie(null, "https://shop.example:8443/", "cross-site", "cdp.example", null));
+        assertFalse(listed.allowsVisitorCookie(null, "https://cart.example:84430/", "cross-site", "cdp.example", null));
+        assertFalse(listed.allowsVisitorCookie(null, "https://shop.example@evil.example/", "cross-site", "cdp.example", null));
+        assertFalse(listed.allowsVisitorCookie(null, "https://shop.example?x", "cross-site", "cdp.example", null));
         assertFalse(listed.allowsVisitorCookie(null, "https://other.example/?https://shop.example/", "cross-site", "cdp.example", null));
         assertFalse(listed.allowsVisitorCookie(null, null, "cross-site", "cdp.example", null));
+        // A listed subdomain's <script> is same-site; the listed Referer still decides.
+        assertTrue(listed.allowsVisitorCookie(null, "https://shop.example/", "same-site", "cdp.example", null));
         // Origin, when present, is what counts; Referer is not consulted.
         assertFalse(listed.allowsVisitorCookie("https://other.example", "https://shop.example/", "cross-site", "cdp.example", null));
+    }
+
+    @Test
+    void refererIsIgnoredUnlessMatchingIsOn() {
+        // A listed page's sandboxed frame reports that page as Referer, so the match is opt-in.
+        PublicTrackerCorsPolicy listed = PublicTrackerCorsPolicy.parse("https://shop.example");
+        assertFalse(listed.matchesReferer());
+        assertFalse(listed.allowsVisitorCookie(null, "https://shop.example/", "cross-site", "cdp.example", null));
+        // An unlisted Referer never refuses what the other rules allow.
+        assertTrue(listed.allowsVisitorCookie(null, "https://evil.example/", "same-origin", "cdp.example", null));
+        assertTrue(PublicTrackerCorsPolicy.parse("https://shop.example", true)
+                .allowsVisitorCookie(null, "https://evil.example/", "none", "cdp.example", null));
     }
 
     @Test

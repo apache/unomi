@@ -57,6 +57,11 @@ class ShippedProfileCookieConfigTest {
                 "profile cookie SameSite should be reachable from the environment");
         assertTrue(webCfg.contains("public.cors.allowedOrigins=${org.apache.unomi.public.cors.allowedOrigins:-}"),
                 "web config should read the public CORS origin list");
+        // Matching a listed page by Referer trusts what it frames, so it ships off.
+        assertTrue(webCfg.contains("public.cors.matchReferer=${org.apache.unomi.public.cors.matchReferer:-false}"),
+                "Referer matching should default to off in " + WEB_CFG_PATH);
+        assertTrue(systemProperties.contains("org.apache.unomi.public.cors.matchReferer=${env:UNOMI_PUBLIC_CORS_MATCH_REFERER:-false}"),
+                "Referer matching should default to off and be reachable from the environment");
     }
 
     private static Path repoFile(String relativePath) throws IOException {

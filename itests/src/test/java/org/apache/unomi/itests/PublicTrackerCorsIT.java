@@ -46,7 +46,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * Drives the public tracker endpoints through the real filter chain (CXF CORS filter, authentication,
  * {@code PublicTrackerCorsFilter}). {@link BaseIT} lists {@link #LISTED_ORIGIN} in
- * {@code org.apache.unomi.public.cors.allowedOrigins}.
+ * {@code org.apache.unomi.public.cors.allowedOrigins} and turns on {@code org.apache.unomi.public.cors.matchReferer}.
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
@@ -147,6 +147,19 @@ public class PublicTrackerCorsIT extends BaseIT {
         try (CloseableHttpResponse response = execute(request, true)) {
             assertNotNull(header(response, "Set-Cookie"));
             assertEquals(visitor[0], profileId(response));
+        }
+    }
+
+    @Test
+    public void unlistedSiteEmbeddingTheTrackerDoesNotUseTheVisitorCookie() throws Exception {
+        String[] visitor = newVisitor();
+        HttpPost request = contextRequest();
+        request.setHeader("Referer", "https://other-site.example/page");
+        request.setHeader("Sec-Fetch-Site", "cross-site");
+        request.setHeader("Cookie", visitor[1]);
+        try (CloseableHttpResponse response = execute(request, true)) {
+            assertNull("The visitor's cookie must not be replaced", header(response, "Set-Cookie"));
+            assertNotEquals(visitor[0], profileId(response));
         }
     }
 

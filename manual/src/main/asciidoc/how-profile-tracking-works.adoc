@@ -1204,5 +1204,6 @@ The following configuration properties control profile tracking behavior:
 * `org.apache.unomi.profile.cookie.domain` - Cookie domain (optional)
 * `org.apache.unomi.profile.cookie.sameSite` - `Lax` (default), `Strict` or `None`; `None` needs `Secure` and a non-empty origin list
 * `org.apache.unomi.public.cors.allowedOrigins` - Website origins, other than Unomi's own, that may use the cookie (default: none). See <<_public_tracker_origins,Websites on other origins>>
+* `org.apache.unomi.public.cors.matchReferer` - Recognise a listed website that embeds `context.js` with a `<script>` tag by its `Referer` (default: `false`). See <<_public_tracker_script_tag,Embedding `context.js` with a script tag>>
 
 These can be configured in `etc/custom.system.properties` / `org.apache.unomi.web.cfg`.

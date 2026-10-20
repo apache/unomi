@@ -41,6 +41,7 @@ public class WebConfig {
     private boolean contextserverProfileIdCookieHttpOnly;
     private String contextserverProfileIdCookieSameSite;
     private String publicCorsAllowedOrigins;
+    private boolean publicCorsMatchReferer;
     private String allowedProfileDownloadFormats;
     private int publicPostRequestBytesLimit;
 
@@ -69,6 +70,9 @@ public class WebConfig {
         String public_cors_allowedOrigins() default "";
 
         @AttributeDefinition
+        boolean public_cors_matchReferer() default false;
+
+        @AttributeDefinition
         String allowed_profile_download_formats() default "csv,yaml,json,text";
 
         @AttributeDefinition
@@ -88,6 +92,7 @@ public class WebConfig {
         this.contextserverProfileIdCookieHttpOnly = config.contextserver_profileIdCookieHttpOnly();
         this.contextserverProfileIdCookieSameSite = config.contextserver_profileIdCookieSameSite();
         this.publicCorsAllowedOrigins = config.public_cors_allowedOrigins();
+        this.publicCorsMatchReferer = config.public_cors_matchReferer();
         this.allowedProfileDownloadFormats = config.allowed_profile_download_formats();
         this.publicPostRequestBytesLimit = config.public_post_request_bytes_limit();
 
@@ -98,6 +103,7 @@ public class WebConfig {
         // Origins before SameSite: each property change re-resolves the cookie settings, and SameSite=None
         // with no origins yet would be refused, with a warning, on the way.
         configSharingService.setProperty("publicCorsAllowedOrigins", publicCorsAllowedOrigins);
+        configSharingService.setProperty("publicCorsMatchReferer", publicCorsMatchReferer);
         configSharingService.setProperty("profileIdCookieSameSite", contextserverProfileIdCookieSameSite);
         configSharingService.setProperty("publicPostRequestBytesLimit", publicPostRequestBytesLimit);
         configSharingService.setProperty("allowedProfileDownloadFormats", allowedProfileDownloadFormats);

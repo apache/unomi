@@ -32,9 +32,9 @@ import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
-import org.apache.unomi.rest.cors.PublicTrackerSettings;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.rest.authentication.V2ThirdPartyConfigService;
+import org.apache.unomi.rest.cors.PublicTrackerSettings;
 import org.apache.unomi.services.common.security.SecurityUtils;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
@@ -73,7 +73,6 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RestServiceUtilsImpl.class.getName());
     public static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
-
 
     @Reference
     private PrivacyService privacyService;
@@ -137,12 +136,17 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
             return (Boolean) decided;
         }
         String origin = request.getHeader("Origin");
-        boolean allowed = publicTrackerSettings.policy().allowsVisitorCookie(origin, request.getHeader("Referer"),
-                request.getHeader("Sec-Fetch-Site"),
-                request.getServerName(), request.getHeader("X-Forwarded-Host"));
+        String referer = request.getHeader("Referer");
+        String secFetchSite = request.getHeader("Sec-Fetch-Site");
+        boolean allowed = publicTrackerSettings.policy().allowsVisitorCookie(
+                origin, referer, secFetchSite, request.getServerName(), request.getHeader("X-Forwarded-Host"));
         if (!allowed) {
-            LOGGER.debug("Not using the profile cookie for origin {}: neither listed in the public CORS allowed origins "
-                    + "nor Unomi's own origin", LogSanitizer.forLogging(origin));
+            LOGGER.debug("Not using the profile cookie (Origin {}, Referer {}, Sec-Fetch-Site {}): neither a listed website "
+                            + "nor Unomi's own origin", LogSanitizer.forLogging(origin), LogSanitizer.forLogging(referer),
+                    LogSanitizer.forLogging(secFetchSite));
+            if (origin == null) {
+                publicTrackerSettings.reportRefusedRequestWithoutOrigin(referer != null);
+            }
         }
         request.setAttribute(VISITOR_COOKIE_ALLOWED_ATTRIBUTE, allowed);
         return allowed;

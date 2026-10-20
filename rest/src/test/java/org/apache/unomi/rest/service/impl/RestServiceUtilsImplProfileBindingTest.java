@@ -48,6 +48,8 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -59,8 +61,13 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.contains;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -196,8 +203,8 @@ class RestServiceUtilsImplProfileBindingTest {
 
         restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
 
-        verify(response).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"),
-                org.mockito.ArgumentMatchers.contains("; Secure"));
+        verify(response).setHeader(eq("Set-Cookie"),
+                contains("; Secure"));
     }
 
     @Test
@@ -211,8 +218,8 @@ class RestServiceUtilsImplProfileBindingTest {
 
         restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
 
-        verify(response).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"),
-                org.mockito.ArgumentMatchers.argThat((String cookie) -> !cookie.contains("Secure")));
+        verify(response).setHeader(eq("Set-Cookie"),
+                argThat((String cookie) -> !cookie.contains("Secure")));
     }
 
     @Test
@@ -223,8 +230,8 @@ class RestServiceUtilsImplProfileBindingTest {
 
         restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
 
-        verify(response).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"),
-                org.mockito.ArgumentMatchers.argThat((String cookie) -> !cookie.contains("Secure")));
+        verify(response).setHeader(eq("Set-Cookie"),
+                argThat((String cookie) -> !cookie.contains("Secure")));
     }
 
     @Test
@@ -235,7 +242,7 @@ class RestServiceUtilsImplProfileBindingTest {
 
         restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
 
-        verify(response, never()).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"), anyString());
+        verify(response, never()).setHeader(eq("Set-Cookie"), anyString());
     }
 
     @Test
@@ -246,14 +253,14 @@ class RestServiceUtilsImplProfileBindingTest {
         assertNull(restServiceUtils.getProfileIdCookieValue(request));
         restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
 
-        verify(response, never()).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"), anyString());
+        verify(response, never()).setHeader(eq("Set-Cookie"), anyString());
     }
 
     @Test
     void visitorCookieDecisionIsMadeOncePerRequest() {
         // Binding and Set-Cookie must agree, and the headers are read only once.
-        java.util.Map<String, Object> attributes = new java.util.HashMap<>();
-        org.mockito.Mockito.doAnswer(call -> attributes.put(call.getArgument(0), call.getArgument(1)))
+        Map<String, Object> attributes = new HashMap<>();
+        doAnswer(call -> attributes.put(call.getArgument(0), call.getArgument(1)))
                 .when(request).setAttribute(anyString(), any());
         lenient().when(request.getAttribute(anyString())).thenAnswer(call -> attributes.get(call.getArgument(0)));
         lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
@@ -262,14 +269,14 @@ class RestServiceUtilsImplProfileBindingTest {
         assertNull(restServiceUtils.getProfileIdCookieValue(request));
         restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
 
-        verify(request, org.mockito.Mockito.times(1)).getHeader("Sec-Fetch-Site");
-        verify(response, never()).setHeader(org.mockito.ArgumentMatchers.eq("Set-Cookie"), anyString());
+        verify(request, times(1)).getHeader("Sec-Fetch-Site");
+        verify(response, never()).setHeader(eq("Set-Cookie"), anyString());
     }
 
     @Test
     void getProfileIdCookieValue_listedSiteEmbeddingTheTrackerScriptKeepsTheVisitor() {
         // <script src=".../context.js"> sends no Origin; the browser-set Referer names the listed page.
-        allowedOrigins("https://shop.example");
+        allowedOrigins("https://shop.example", true);
         lenient().when(request.getHeader("Referer")).thenReturn("https://shop.example/products/42");
         lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
         when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
@@ -277,9 +284,45 @@ class RestServiceUtilsImplProfileBindingTest {
         assertEquals("cookie-profile", restServiceUtils.getProfileIdCookieValue(request));
     }
 
+    @Test
+    void getProfileIdCookieValue_listedRefererIsIgnoredWhenMatchingIsOff() {
+        allowedOrigins("https://shop.example");
+        lenient().when(request.getHeader("Referer")).thenReturn("https://shop.example/products/42");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+
+        assertNull(restServiceUtils.getProfileIdCookieValue(request));
+    }
+
+    @Test
+    void finalizeEventsRequest_listedRefererSetsTheCookie() {
+        allowedOrigins("https://shop.example", true);
+        lenient().when(request.getHeader("Referer")).thenReturn("https://shop.example/products/42");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+
+        restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
+
+        verify(response).setHeader(eq("Set-Cookie"), contains("cookie-profile"));
+    }
+
+    @Test
+    void finalizeEventsRequest_unlistedRefererDoesNotSetTheCookie() {
+        allowedOrigins("https://shop.example", true);
+        lenient().when(request.getHeader("Referer")).thenReturn("https://evil.example/");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+
+        restServiceUtils.finalizeEventsRequest(contextWithProfile(), false);
+
+        verify(response, never()).setHeader(eq("Set-Cookie"), anyString());
+    }
+
     private void allowedOrigins(String origins) {
+        allowedOrigins(origins, false);
+    }
+
+    private void allowedOrigins(String origins, boolean matchReferer) {
         try {
-            setField(restServiceUtils, "publicTrackerSettings", new PublicTrackerSettings(origins, null));
+            setField(restServiceUtils, "publicTrackerSettings", new PublicTrackerSettings(origins, null, matchReferer));
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }

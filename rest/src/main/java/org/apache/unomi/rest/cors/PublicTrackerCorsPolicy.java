@@ -30,7 +30,8 @@ import java.util.regex.Pattern;
  * Operator allow-list of website origins that may send the visitor cookie to public tracker endpoints.
  * Origins are compared on scheme, host and port, after lowercasing and dropping a default port, the way
  * browsers serialize the {@code Origin} header. Wildcards and the {@code null} origin are never allowed.
- * An empty list is the secure default: no cross-origin cookies.
+ * An empty list is the secure default: no cross-origin cookies. When enabled, a request that carries no
+ * {@code Origin}, such as a {@code <script>} tag, is matched by the listed page in its {@code Referer}.
  */
 public final class PublicTrackerCorsPolicy {
 
@@ -43,18 +44,26 @@ public final class PublicTrackerCorsPolicy {
     private static final String HTTP = "http://";
 
     private final Set<String> allowedOrigins;
+    private final boolean matchReferer;
 
-    private PublicTrackerCorsPolicy(Set<String> allowedOrigins) {
+    private PublicTrackerCorsPolicy(Set<String> allowedOrigins, boolean matchReferer) {
         this.allowedOrigins = allowedOrigins;
+        this.matchReferer = matchReferer;
+    }
+
+    static PublicTrackerCorsPolicy parse(String configured) {
+        return parse(configured, false);
     }
 
     /**
      * Parses the comma-separated list, logging each entry it drops. Call it when the setting changes,
      * not per request (see {@link PublicTrackerSettings}).
+     *
+     * @param matchReferer whether a request without {@code Origin} may be matched by its {@code Referer}
      */
-    static PublicTrackerCorsPolicy parse(String configured) {
+    static PublicTrackerCorsPolicy parse(String configured, boolean matchReferer) {
         if (configured == null || configured.isBlank()) {
-            return new PublicTrackerCorsPolicy(Collections.emptySet());
+            return new PublicTrackerCorsPolicy(Collections.emptySet(), matchReferer);
         }
         Set<String> origins = new LinkedHashSet<>();
         for (String part : configured.split(",")) {
@@ -71,7 +80,7 @@ public final class PublicTrackerCorsPolicy {
             }
             origins.add(origin);
         }
-        return new PublicTrackerCorsPolicy(Collections.unmodifiableSet(origins));
+        return new PublicTrackerCorsPolicy(Collections.unmodifiableSet(origins), matchReferer);
     }
 
     /**
@@ -109,18 +118,19 @@ public final class PublicTrackerCorsPolicy {
     /**
      * Whether a request may be bound to, or given, the visitor cookie. That is the case for a listed origin,
      * for Unomi's own origin, and for a request that shows no sign of coming from another site's page.
-     * Browsers send {@code Origin} on every POST, same-origin ones included, so its presence alone is not
-     * a reason to refuse. Runs on every tracker request, so it only compares strings and allocates nothing.
+     * Current browsers send {@code Origin} on every POST, same-origin ones included, so its presence alone
+     * is not a reason to refuse. Runs on every tracker request: no parsing or regex, only string comparisons
+     * (and a scan of the short list for the {@code Referer} match).
      *
      * @param origin        the {@code Origin} header, may be {@code null}
-     * @param referer       the {@code Referer} header, may be {@code null}; used for the list when a browser
-     *                      sends no {@code Origin}, as for {@code <script src>}
+     * @param referer       the {@code Referer} header, may be {@code null}; matched against the list only when
+     *                      that is enabled and the browser sends no {@code Origin}, as for {@code <script src>}
      * @param secFetchSite  the {@code Sec-Fetch-Site} header, may be {@code null} for older browsers
      * @param host          the host the request was addressed to, may be {@code null}
      * @param forwardedHost the {@code X-Forwarded-Host} header, may be {@code null}
      */
     public boolean allowsVisitorCookie(String origin, String referer, String secFetchSite, String host, String forwardedHost) {
-        if (origin != null ? allowedOrigins.contains(origin) : isFromListedPage(referer)) {
+        if (origin != null ? allowedOrigins.contains(origin) : matchReferer && isFromListedPage(referer)) {
             return true;
         }
         if (secFetchSite != null) {
@@ -146,10 +156,16 @@ public final class PublicTrackerCorsPolicy {
         return sameHost(origin, hostStart, hostEnd, host) || sameHost(origin, hostStart, hostEnd, forwardedHost);
     }
 
+    boolean matchesReferer() {
+        return matchReferer;
+    }
+
     /**
      * Whether a {@code Referer} URL belongs to a listed origin. Browsers set it, lowercase the scheme and
      * host, drop default ports, and let a page shorten it but never name another origin. A missing one
-     * (for example {@code Referrer-Policy: no-referrer}) is simply not a match.
+     * (for example {@code Referrer-Policy: no-referrer}) is simply not a match. A document without an origin
+     * of its own, such as a sandboxed {@code srcdoc} frame, reports the page that created it, which is why
+     * this match is opt-in: it trusts everything a listed page frames.
      */
     private boolean isFromListedPage(String referer) {
         if (referer == null) {

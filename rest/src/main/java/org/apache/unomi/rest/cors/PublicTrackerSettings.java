@@ -42,6 +42,7 @@ public class PublicTrackerSettings implements ConfigChangeListener {
     // Published by WebConfig through ConfigSharingService.
     static final String ALLOWED_ORIGINS_PROPERTY = "publicCorsAllowedOrigins";
     static final String SAME_SITE_PROPERTY = "profileIdCookieSameSite";
+    static final String MATCH_REFERER_PROPERTY = "publicCorsMatchReferer";
     static final String COOKIE_NAME_PROPERTY = "profileIdCookieName";
     static final String COOKIE_DOMAIN_PROPERTY = "profileIdCookieDomain";
     static final String COOKIE_MAX_AGE_PROPERTY = "profileIdCookieMaxAgeInSeconds";
@@ -51,7 +52,7 @@ public class PublicTrackerSettings implements ConfigChangeListener {
     static final int DEFAULT_COOKIE_MAX_AGE = 31536000;
 
     private static final Set<String> WATCHED = Set.of(
-            ALLOWED_ORIGINS_PROPERTY, SAME_SITE_PROPERTY,
+            ALLOWED_ORIGINS_PROPERTY, SAME_SITE_PROPERTY, MATCH_REFERER_PROPERTY,
             COOKIE_NAME_PROPERTY, COOKIE_DOMAIN_PROPERTY, COOKIE_MAX_AGE_PROPERTY, COOKIE_HTTP_ONLY_PROPERTY);
 
     /** Everything a request needs, replaced as a whole so a request never sees half of a change. */
@@ -65,6 +66,8 @@ public class PublicTrackerSettings implements ConfigChangeListener {
         final String cookieAttributesWhenInsecure;
         /** Set while a refusal of SameSite=None, only because a request was not over HTTPS, is unreported for this configuration. */
         final AtomicBoolean insecureRefusalToReport;
+        /** Set until a refused request without Origin, typically a script tag, is reported for this configuration. */
+        final AtomicBoolean refusedEmbedToReport;
 
         Resolved(PublicTrackerCorsPolicy policy, String requestedSameSite, String cookieName, String cookieDomain,
                  int cookieMaxAge, boolean cookieHttpOnly) {
@@ -79,10 +82,12 @@ public class PublicTrackerSettings implements ConfigChangeListener {
             this.cookieAttributesWhenSecure = common + "; SameSite=" + sameSiteWhenSecure + "; Secure" + httpOnly;
             this.cookieAttributesWhenInsecure = common + "; SameSite=" + sameSiteWhenInsecure + httpOnly;
             this.insecureRefusalToReport = new AtomicBoolean("None".equals(sameSiteWhenSecure) && !"None".equals(sameSiteWhenInsecure));
+            // Only worth reporting once the operator has listed websites.
+            this.refusedEmbedToReport = new AtomicBoolean(!policy.isEmpty());
         }
     }
 
-    private volatile Resolved resolved = resolve(null, null, null, null, null, null);
+    private volatile Resolved resolved = resolve(null, null, null, null, null, null, null);
 
     @Reference
     private ConfigSharingService configSharingService;
@@ -92,7 +97,12 @@ public class PublicTrackerSettings implements ConfigChangeListener {
 
     /** For tests; cookie name, domain, max age and HttpOnly take their defaults. */
     public PublicTrackerSettings(String allowedOrigins, String sameSite) {
-        this.resolved = resolve(allowedOrigins, sameSite, null, null, null, null);
+        this(allowedOrigins, sameSite, false);
+    }
+
+    /** For tests; cookie name, domain, max age and HttpOnly take their defaults. */
+    public PublicTrackerSettings(String allowedOrigins, String sameSite, boolean matchReferer) {
+        this.resolved = resolve(allowedOrigins, sameSite, matchReferer, null, null, null, null);
     }
 
     @Activate
@@ -111,18 +121,27 @@ public class PublicTrackerSettings implements ConfigChangeListener {
         this.resolved = resolve(
                 configSharingService.getProperty(ALLOWED_ORIGINS_PROPERTY),
                 configSharingService.getProperty(SAME_SITE_PROPERTY),
+                configSharingService.getProperty(MATCH_REFERER_PROPERTY),
                 configSharingService.getProperty(COOKIE_NAME_PROPERTY),
                 configSharingService.getProperty(COOKIE_DOMAIN_PROPERTY),
                 configSharingService.getProperty(COOKIE_MAX_AGE_PROPERTY),
                 configSharingService.getProperty(COOKIE_HTTP_ONLY_PROPERTY));
     }
 
-    private static Resolved resolve(Object allowedOrigins, Object sameSite, Object cookieName, Object cookieDomain,
-                                    Object cookieMaxAge, Object cookieHttpOnly) {
+    private static Resolved resolve(Object allowedOrigins, Object sameSite, Object matchReferer, Object cookieName,
+                                    Object cookieDomain, Object cookieMaxAge, Object cookieHttpOnly) {
         String requested = sameSite == null ? null : sameSite.toString().trim();
         String name = cookieName == null || cookieName.toString().isBlank() ? DEFAULT_COOKIE_NAME : cookieName.toString().trim();
+        String origins = allowedOrigins == null ? null : allowedOrigins.toString();
+        // Off unless explicitly turned on: it trusts everything a listed page frames.
+        boolean refererMatch = matchReferer != null && "true".equalsIgnoreCase(matchReferer.toString().trim());
+        PublicTrackerCorsPolicy policy = PublicTrackerCorsPolicy.parse(origins, refererMatch);
+        if (origins != null && !origins.isBlank() && policy.isEmpty()) {
+            LOGGER.warn("None of the public CORS allowed origins '{}' is valid, so no other website may use the "
+                    + "visitor cookie. Expected scheme://host[:port], comma-separated.", origins);
+        }
         Resolved next = new Resolved(
-                PublicTrackerCorsPolicy.parse(allowedOrigins == null ? null : allowedOrigins.toString()),
+                policy,
                 requested,
                 name,
                 cookieDomain == null ? null : cookieDomain.toString(),
@@ -132,7 +151,7 @@ public class PublicTrackerSettings implements ConfigChangeListener {
                 cookieHttpOnly == null || !"false".equalsIgnoreCase(cookieHttpOnly.toString().trim()));
         if ("None".equalsIgnoreCase(requested) && !"None".equals(next.sameSiteWhenSecure)) {
             LOGGER.warn("Refusing SameSite=None for the profile cookie because the public CORS allowed origins list "
-                    + "is empty; using SameSite=Lax.");
+                    + "has no valid entry; using SameSite=Lax.");
         }
         return next;
     }
@@ -177,6 +196,32 @@ public class PublicTrackerSettings implements ConfigChangeListener {
             LOGGER.warn("Refusing SameSite=None for the profile cookie because the request did not arrive over HTTPS; "
                     + "using SameSite=Lax. Behind a TLS-terminating proxy, list it in org.apache.unomi.ip.trustedProxies "
                     + "and have it send X-Forwarded-Proto: https. This is logged once per configuration change.");
+        }
+    }
+
+    /**
+     * Reports, once per configuration, a refused request that carried no {@code Origin}: if it came from a
+     * listed website embedding {@code context.js} with a {@code <script>} tag, the operator needs to know why
+     * that website keeps losing its visitors.
+     */
+    public void reportRefusedRequestWithoutOrigin(boolean hasReferer) {
+        Resolved current = resolved;
+        boolean matchesReferer = current.policy.matchesReferer();
+        if (matchesReferer && hasReferer) {
+            // A Referer that is not listed: an unlisted website, nothing to fix.
+            return;
+        }
+        if (!current.refusedEmbedToReport.get() || !current.refusedEmbedToReport.compareAndSet(true, false)) {
+            return;
+        }
+        if (!matchesReferer) {
+            LOGGER.warn("Refused the visitor cookie for a cross-site request without an Origin header, such as a "
+                    + "<script src=\".../context.js\"> tag. If it came from a listed website, set "
+                    + "org.apache.unomi.public.cors.matchReferer=true. This is logged once per configuration change.");
+        } else {
+            LOGGER.warn("Refused the visitor cookie for a cross-site request without Origin or Referer headers. If it "
+                    + "came from a listed website, check that its Referrer-Policy sends the origin to other sites "
+                    + "(the default strict-origin-when-cross-origin does). This is logged once per configuration change.");
         }
     }
 }
