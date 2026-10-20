@@ -18,6 +18,8 @@ package org.apache.unomi.rest.cors;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -114,7 +116,7 @@ class PublicTrackerCorsPolicyTest {
 
     @Test
     void refererOfAListedPageCountsWhenThereIsNoOriginAndMatchingIsOn() {
-        PublicTrackerCorsPolicy listed = PublicTrackerCorsPolicy.parse("https://shop.example, https://cart.example:8443, http://[::1]:8181", true);
+        PublicTrackerCorsPolicy listed = PublicTrackerCorsPolicy.parse("https://shop.example, https://cart.example:8443, http://[::1]:8181", true, new ArrayList<>());
         assertTrue(listed.allowsVisitorCookie(null, "https://shop.example/", "cross-site", "cdp.example", null));
         assertTrue(listed.allowsVisitorCookie(null, "https://shop.example", "cross-site", "cdp.example", null));
         assertTrue(listed.allowsVisitorCookie(null, "https://cart.example:8443/basket", "cross-site", "cdp.example", null));
@@ -141,7 +143,7 @@ class PublicTrackerCorsPolicyTest {
         assertFalse(listed.allowsVisitorCookie(null, "https://shop.example/", "cross-site", "cdp.example", null));
         // An unlisted Referer never refuses what the other rules allow.
         assertTrue(listed.allowsVisitorCookie(null, "https://evil.example/", "same-origin", "cdp.example", null));
-        assertTrue(PublicTrackerCorsPolicy.parse("https://shop.example", true)
+        assertTrue(PublicTrackerCorsPolicy.parse("https://shop.example", true, new ArrayList<>())
                 .allowsVisitorCookie(null, "https://evil.example/", "none", "cdp.example", null));
     }
 

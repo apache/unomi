@@ -26,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -235,7 +236,28 @@ class PublicTrackerSettingsTest {
         assertFalse(matching.reportRefusedRequestWithoutOrigin(false));
     }
 
+    @Test
+    void onlyWarningsTheConfigurationDidNotAlreadyHaveAreLogged() {
+        // WebConfig publishes one setting at a time; a problem must be logged once, not once per setting.
+        List<String> before = List.of("bad origin", "bad max age");
+        assertEquals(List.of(), PublicTrackerSettings.newWarnings(before, before));
+        assertEquals(List.of("bad referer"),
+                PublicTrackerSettings.newWarnings(before, List.of("bad origin", "bad referer")));
+        assertEquals(before, PublicTrackerSettings.newWarnings(List.of(), before));
+    }
+
+    @Test
+    void refusedSameSiteNoneIsReported() {
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.SAME_SITE_PROPERTY)).thenReturn("None");
+        settings.activate();
+        assertTrue(hasWarning("Refusing SameSite=None"));
+
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY)).thenReturn("https://shop.example");
+        settings.activate();
+        assertFalse(hasWarning("Refusing SameSite=None"));
+    }
+
     private boolean hasWarning(String start) {
-        return settings.configurationWarnings().stream().anyMatch(warning -> warning.startsWith(start) || warning.contains(start));
+        return settings.configurationWarnings().stream().anyMatch(warning -> warning.contains(start));
     }
 }

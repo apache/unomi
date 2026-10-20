@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.rest.cors;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -47,12 +48,9 @@ public final class PublicTrackerCorsPolicy {
         this.matchReferer = matchReferer;
     }
 
+    /** For tests: Referer matching off, dropped entries not reported. */
     static PublicTrackerCorsPolicy parse(String configured) {
-        return parse(configured, false);
-    }
-
-    static PublicTrackerCorsPolicy parse(String configured, boolean matchReferer) {
-        return parse(configured, matchReferer, null);
+        return parse(configured, false, new ArrayList<>());
     }
 
     /**
@@ -60,7 +58,7 @@ public final class PublicTrackerCorsPolicy {
      * (see {@link PublicTrackerSettings}).
      *
      * @param matchReferer whether a request without {@code Origin} may be matched by its {@code Referer}
-     * @param warnings     receives a message for each entry dropped, may be {@code null}
+     * @param warnings     receives a message for each entry dropped
      */
     static PublicTrackerCorsPolicy parse(String configured, boolean matchReferer, List<String> warnings) {
         if (configured == null || configured.isBlank()) {
@@ -75,10 +73,8 @@ public final class PublicTrackerCorsPolicy {
             // An origin has no path, but a trailing slash is an easy mistake to make in the list.
             String origin = normalize(entry.endsWith("/") ? entry.substring(0, entry.length() - 1) : entry);
             if (origin == null) {
-                if (warnings != null) {
-                    warnings.add("Ignoring public CORS allowed origin '" + entry + "': expected scheme://host[:port] "
-                            + "with http or https, no path and no wildcard");
-                }
+                warnings.add("Ignoring public CORS allowed origin '" + entry + "': expected scheme://host[:port] "
+                        + "with http or https, no path and no wildcard");
                 continue;
             }
             origins.add(origin);

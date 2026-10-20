@@ -26,7 +26,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -77,7 +76,7 @@ public class PublicTrackerSettings implements ConfigChangeListener {
         Resolved(PublicTrackerCorsPolicy policy, String requestedSameSite, String cookieName, String cookieDomain,
                  int cookieMaxAge, boolean cookieHttpOnly, List<String> warnings) {
             this.policy = policy;
-            this.warnings = Collections.unmodifiableList(warnings);
+            this.warnings = List.copyOf(warnings);
             this.sameSiteWhenSecure = policy.resolveSameSite(requestedSameSite, true);
             String sameSiteWhenInsecure = policy.resolveSameSite(requestedSameSite, false);
             this.cookieName = cookieName;
@@ -123,7 +122,8 @@ public class PublicTrackerSettings implements ConfigChangeListener {
         }
     }
 
-    private void reload() {
+    // Synchronized so that two reloads (activation and a configuration event) cannot interleave.
+    private synchronized void reload() {
         Resolved previous = resolved;
         Resolved next = resolve(
                 configSharingService.getProperty(ALLOWED_ORIGINS_PROPERTY),
@@ -133,13 +133,24 @@ public class PublicTrackerSettings implements ConfigChangeListener {
                 configSharingService.getProperty(COOKIE_DOMAIN_PROPERTY),
                 configSharingService.getProperty(COOKIE_MAX_AGE_PROPERTY),
                 configSharingService.getProperty(COOKIE_HTTP_ONLY_PROPERTY));
-        // WebConfig publishes the settings one by one, each causing a reload: log only what is new.
-        for (String warning : next.warnings) {
-            if (!previous.warnings.contains(warning)) {
-                LOGGER.warn(warning);
-            }
+        for (String warning : newWarnings(previous.warnings, next.warnings)) {
+            LOGGER.warn(warning);
         }
         this.resolved = next;
+    }
+
+    /**
+     * The warnings of a new configuration that the previous one did not already have. WebConfig publishes the
+     * settings one by one, each causing a reload, so a problem would otherwise be logged once per setting.
+     */
+    static List<String> newWarnings(List<String> previous, List<String> next) {
+        List<String> added = new ArrayList<>();
+        for (String warning : next) {
+            if (!previous.contains(warning)) {
+                added.add(warning);
+            }
+        }
+        return added;
     }
 
     /** The problems found in the current configuration, as they were logged. */
@@ -168,21 +179,21 @@ public class PublicTrackerSettings implements ConfigChangeListener {
         if (refererMatch && policy.isEmpty()) {
             warnings.add("org.apache.unomi.public.cors.matchReferer is on but no website origin is listed, so it has no effect.");
         }
-        Resolved next = new Resolved(
+        if ("None".equalsIgnoreCase(requested) && !"None".equals(policy.resolveSameSite(requested, true))) {
+            warnings.add("Refusing SameSite=None for the profile cookie because the public CORS allowed origins list "
+                    + "has no valid entry; using SameSite=Lax.");
+        }
+        int maxAge = toInt(cookieMaxAge, warnings);
+        return new Resolved(
                 policy,
                 requested,
                 name,
                 cookieDomain == null ? null : cookieDomain.toString(),
-                toInt(cookieMaxAge, warnings),
+                maxAge,
                 // HttpOnly unless explicitly turned off: page script must not read the bearer cookie,
                 // so a typo keeps it on.
                 cookieHttpOnly == null || !"false".equalsIgnoreCase(cookieHttpOnly.toString().trim()),
                 warnings);
-        if ("None".equalsIgnoreCase(requested) && !"None".equals(next.sameSiteWhenSecure)) {
-            warnings.add("Refusing SameSite=None for the profile cookie because the public CORS allowed origins list "
-                    + "has no valid entry; using SameSite=Lax.");
-        }
-        return next;
     }
 
     private static int toInt(Object value, List<String> warnings) {
