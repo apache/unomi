@@ -97,6 +97,7 @@ public class PublicTrackerSettings implements ConfigChangeListener {
     @Reference
     private ConfigSharingService configSharingService;
 
+    /** Used by OSGi Declarative Services; the settings are read at activation. */
     public PublicTrackerSettings() {
     }
 
@@ -184,6 +185,11 @@ public class PublicTrackerSettings implements ConfigChangeListener {
                     + "has no valid entry; using SameSite=Lax.");
         }
         int maxAge = toInt(cookieMaxAge, warnings);
+        String httpOnlySetting = cookieHttpOnly == null ? "" : cookieHttpOnly.toString().trim();
+        if (!httpOnlySetting.isEmpty() && !"true".equalsIgnoreCase(httpOnlySetting) && !"false".equalsIgnoreCase(httpOnlySetting)) {
+            warnings.add("Unrecognised value '" + httpOnlySetting + "' for org.apache.unomi.profile.cookie.httpOnly; "
+                    + "only false turns it off, so the cookie stays HttpOnly.");
+        }
         return new Resolved(
                 policy,
                 requested,
@@ -213,10 +219,12 @@ public class PublicTrackerSettings implements ConfigChangeListener {
         return DEFAULT_COOKIE_MAX_AGE;
     }
 
+    /** @return the website origins that may use the visitor cookie, as currently configured */
     public PublicTrackerCorsPolicy policy() {
         return resolved.policy;
     }
 
+    /** @return the name of the visitor cookie, as currently configured */
     public String cookieName() {
         return resolved.cookieName;
     }

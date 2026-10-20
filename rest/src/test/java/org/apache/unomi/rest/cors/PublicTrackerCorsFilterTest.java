@@ -160,7 +160,10 @@ class PublicTrackerCorsFilterTest {
 
     @Test
     void nonPublicPathIsLeftAlone() {
+        // A listed origin, so only the path check keeps the CXF grant as it is.
         when(uriInfo.getPath()).thenReturn("profiles/search");
+        listed("https://shop.example");
+        lenient().when(request.getHeaderString("Origin")).thenReturn("https://shop.example");
         grantedByCxf();
 
         filter.restrictCredentials(request, response);

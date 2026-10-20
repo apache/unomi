@@ -80,4 +80,14 @@ public interface RestServiceUtils {
      * @return the profileId if found in the cookies, null otherwise
      */
     String getProfileIdCookieValue(HttpServletRequest httpServletRequest);
+
+    /**
+     * Like {@link #getProfileIdCookieValue(HttpServletRequest)}, but also accepts a top-level {@code GET}
+     * navigation, such as a "download my data" link on the website. Only for endpoints that return the
+     * visitor's own data and change nothing: the page that made the link cannot read the response.
+     *
+     * @param httpServletRequest the current HTTP request
+     * @return the profileId if found in the cookies and the request may use it, null otherwise
+     */
+    String getProfileIdCookieValueForNavigation(HttpServletRequest httpServletRequest);
 }

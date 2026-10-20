@@ -77,12 +77,6 @@ class ProfileCookieSameSiteTest {
         return settings.profileCookie("profile-1", secure);
     }
 
-    private static Profile profile() {
-        Profile profile = new Profile();
-        profile.setItemId("profile-1");
-        return profile;
-    }
-
     private static PublicTrackerSettings settings(String sameSite, String origins) {
         return new PublicTrackerSettings(origins, sameSite);
     }

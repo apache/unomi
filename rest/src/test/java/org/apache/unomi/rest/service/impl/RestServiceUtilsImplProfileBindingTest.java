@@ -345,6 +345,41 @@ class RestServiceUtilsImplProfileBindingTest {
         verify(settings, never()).reportRefusedRequestWithoutOrigin(anyBoolean());
     }
 
+    @Test
+    void downloadLinkFromTheWebsiteKeepsTheVisitor() {
+        // <a href=".../cxs/client/myprofile/json"> on a listed or same-site page: no Origin, a navigation.
+        allowedOrigins("https://shop.example");
+        lenient().when(request.getMethod()).thenReturn("GET");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+        lenient().when(request.getHeader("Sec-Fetch-Mode")).thenReturn("navigate");
+        lenient().when(request.getHeader("Sec-Fetch-Dest")).thenReturn("document");
+        lenient().when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+
+        assertEquals("cookie-profile", restServiceUtils.getProfileIdCookieValueForNavigation(request));
+        // The tracker endpoints never accept a navigation, which could push events into the visitor's profile.
+        assertNull(restServiceUtils.getProfileIdCookieValue(request));
+    }
+
+    @Test
+    void framedOrScriptedDownloadIsNotANavigation() {
+        lenient().when(request.getMethod()).thenReturn("GET");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+        lenient().when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+
+        lenient().when(request.getHeader("Sec-Fetch-Mode")).thenReturn("navigate");
+        lenient().when(request.getHeader("Sec-Fetch-Dest")).thenReturn("iframe");
+        assertNull(restServiceUtils.getProfileIdCookieValueForNavigation(request));
+
+        lenient().when(request.getHeader("Sec-Fetch-Mode")).thenReturn("cors");
+        lenient().when(request.getHeader("Sec-Fetch-Dest")).thenReturn("empty");
+        assertNull(restServiceUtils.getProfileIdCookieValueForNavigation(request));
+
+        lenient().when(request.getMethod()).thenReturn("POST");
+        lenient().when(request.getHeader("Sec-Fetch-Mode")).thenReturn("navigate");
+        lenient().when(request.getHeader("Sec-Fetch-Dest")).thenReturn("document");
+        assertNull(restServiceUtils.getProfileIdCookieValueForNavigation(request));
+    }
+
     private void allowedOrigins(String origins) {
         allowedOrigins(origins, false);
     }

@@ -40,6 +40,9 @@ public class PublicTrackerCorsFilter extends CrossOriginResourceSharingFilter {
 
     private final PublicTrackerSettings settings;
 
+    /**
+     * @param settings the resolved list of website origins that may use the visitor cookie
+     */
     public PublicTrackerCorsFilter(PublicTrackerSettings settings) {
         this.settings = settings;
     }

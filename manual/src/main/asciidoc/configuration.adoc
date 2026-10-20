@@ -596,6 +596,14 @@ Example:
 export UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS='https://www.example.com,https://shop.example.com:8443'
 ----
 
+Another site only (Unomi served over HTTPS):
+
+[source,bash]
+----
+export UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS='https://www.shop.com'
+export UNOMI_PROFILE_COOKIE_SAMESITE=None
+----
+
 * Entries are comma-separated and give a scheme (`http` or `https`), a host and an optional port. They are compared the way browsers send the `Origin` header: case does not matter, a default port (`:443`, `:80`) may be left out, and a trailing `/` is ignored.
 * Wildcards, paths and `null` are not accepted. A rejected entry is logged as a warning when the setting is applied, and so is a list in which no entry is valid.
 * The list is empty by default: no other origin may use the cookie.
@@ -608,6 +616,8 @@ Do not:
 
 * list origins you do not control, or every subdomain "just in case": a listed page can act as the visitor;
 * use `*` (it is refused);
+* list the `http://` origin of a website that also runs over HTTPS: list the `https://` one, which is what its pages send;
+* turn on `matchReferer` "to make it work": it trusts everything the listed websites frame (see <<_public_tracker_script_tag,Embedding `context.js` with a script tag>>);
 * set `SameSite=None` for a same-site setup: `Lax` already works there.
 
 ===== How Unomi recognises the page
@@ -620,6 +630,7 @@ Current browsers send `Origin` on every cross-origin request and on every `POST`
 . A request with neither `Origin` nor `Sec-Fetch-Site` is allowed. That is a server-side caller, or a `GET` from a browser that does not send `Sec-Fetch-Site` (Chrome before 76, Firefox before 90, Safari before 16.4), which cannot be told apart from it. In such a browser, another site's `<script>` or `<img>` can therefore use the visitor cookie.
 +
 This only matters with `SameSite=None`: with the default `Lax`, a browser does not send the cookie to another site's embeds at all, and Safari blocks third-party cookies whatever their `SameSite`. Current versions of Chrome, Edge, Firefox and Safari all send `Sec-Fetch-Site`.
+
 . For older browsers that send `Origin` but not `Sec-Fetch-Site` (for example Safari before 16.4), a page on the same host as Unomi counts as Unomi's own origin. A proxy that rewrites `Host` must then send `X-Forwarded-Host`.
 
 ===== Behind a reverse proxy
@@ -668,6 +679,11 @@ Other behaviour that changed:
 * A refused request receives no `Set-Cookie`, so the visitor's cookie is left untouched.
 * A malformed profile cookie still answers `400`, but only for requests that may use the cookie; a refused request ignores it.
 * The cookie is marked `Secure` behind a trusted TLS proxy, so a website that mixes HTTP and HTTPS pages loses the cookie on its HTTP pages.
+* `org.apache.unomi.profile.cookie.httpOnly` is turned off only by `false`. A mistyped value used to turn `HttpOnly` off; it now keeps it on and is logged as a warning.
+
+===== "Download my data" links
+
+`/cxs/client/myprofile/{format}` returns the visitor's own profile and changes nothing. In <<_v2_compatibility_mode,single-tenant compatibility mode>>, where it needs no API key, a plain link to it on the website is accepted as a top-level navigation (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`) even from a page Unomi does not otherwise recognise: the response opens in the visitor's own window, and no other page can read it. The tracker endpoints never accept a navigation this way.
 
 ===== Tracker without cookies
 

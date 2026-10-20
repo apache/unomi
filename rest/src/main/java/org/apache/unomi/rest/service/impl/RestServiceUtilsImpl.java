@@ -103,6 +103,15 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
 
     @Override
     public String getProfileIdCookieValue(HttpServletRequest httpServletRequest) {
+        return readProfileIdCookie(httpServletRequest, false);
+    }
+
+    @Override
+    public String getProfileIdCookieValueForNavigation(HttpServletRequest httpServletRequest) {
+        return readProfileIdCookie(httpServletRequest, true);
+    }
+
+    private String readProfileIdCookie(HttpServletRequest httpServletRequest, boolean acceptNavigation) {
         Cookie[] cookies = httpServletRequest.getCookies();
         if (cookies == null) {
             return null;
@@ -114,7 +123,14 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                 cookieProfileId = cookie.getValue();
             }
         }
-        if (cookieProfileId == null || !isVisitorCookieAllowed(httpServletRequest)) {
+        if (cookieProfileId == null) {
+            return null;
+        }
+        // A link opens in the visitor's own window; no other page can read what it returns.
+        boolean navigation = acceptNavigation && "GET".equals(httpServletRequest.getMethod())
+                && "navigate".equals(httpServletRequest.getHeader("Sec-Fetch-Mode"))
+                && "document".equals(httpServletRequest.getHeader("Sec-Fetch-Dest"));
+        if (!navigation && !isVisitorCookieAllowed(httpServletRequest)) {
             return null;
         }
         String profileIdJSON = JsonNodeFactory.instance.objectNode().put("profileId", cookieProfileId).toString();

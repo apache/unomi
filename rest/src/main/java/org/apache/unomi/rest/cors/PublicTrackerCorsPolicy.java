@@ -127,6 +127,7 @@ public final class PublicTrackerCorsPolicy {
      * @param secFetchSite  the {@code Sec-Fetch-Site} header, may be {@code null} for older browsers
      * @param host          the host the request was addressed to, may be {@code null}
      * @param forwardedHost the {@code X-Forwarded-Host} header, may be {@code null}
+     * @return whether the request may use, and be given, the visitor cookie
      */
     public boolean allowsVisitorCookie(String origin, String referer, String secFetchSite, String host, String forwardedHost) {
         if (origin != null ? allowedOrigins.contains(origin) : matchReferer && isFromListedPage(referer)) {

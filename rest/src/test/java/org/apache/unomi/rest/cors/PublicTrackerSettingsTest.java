@@ -125,7 +125,6 @@ class PublicTrackerSettingsTest {
         PublicTrackerSettings none = new PublicTrackerSettings("https://shop.example", "none");
         assertTrue(none.profileCookie("p1", true).contains("SameSite=None; Secure"));
         assertTrue(none.profileCookie("p1", false).contains("SameSite=Lax"));
-        assertTrue(none.profileCookie("p1", false).contains("SameSite=Lax"));
         assertTrue(new PublicTrackerSettings("", "None").profileCookie("p1", true).contains("SameSite=Lax; Secure"));
         assertTrue(new PublicTrackerSettings("", "Strict").profileCookie("p1", false).contains("SameSite=Strict"));
     }
@@ -244,6 +243,15 @@ class PublicTrackerSettingsTest {
         assertEquals(List.of("bad referer"),
                 PublicTrackerSettings.newWarnings(before, List.of("bad origin", "bad referer")));
         assertEquals(before, PublicTrackerSettings.newWarnings(List.of(), before));
+    }
+
+    @Test
+    void unrecognisedHttpOnlyValueKeepsItOnAndSaysSo() {
+        // WebConfig publishes the raw text, so a typo reaches this point instead of becoming false.
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_HTTP_ONLY_PROPERTY)).thenReturn("flase");
+        settings.activate();
+        assertTrue(settings.profileCookie("p1", false).endsWith("; HttpOnly"));
+        assertTrue(hasWarning("Unrecognised value 'flase' for org.apache.unomi.profile.cookie.httpOnly"));
     }
 
     @Test

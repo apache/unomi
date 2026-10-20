@@ -38,10 +38,10 @@ public class WebConfig {
     private String contextserverDomain;
     private String contexserverProfileIdCookieName;
     private int contextserverProfileIdCookieMaxAgeInSeconds;
-    private boolean contextserverProfileIdCookieHttpOnly;
+    private String contextserverProfileIdCookieHttpOnly;
     private String contextserverProfileIdCookieSameSite;
     private String publicCorsAllowedOrigins;
-    private boolean publicCorsMatchReferer;
+    private String publicCorsMatchReferer;
     private String allowedProfileDownloadFormats;
     private int publicPostRequestBytesLimit;
 
@@ -60,8 +60,11 @@ public class WebConfig {
         @AttributeDefinition
         int contextserver_profileIdCookieMaxAgeInSeconds() default 31536000;
 
+        // Strings, not booleans: the framework would turn a typo such as "flase" into false, switching
+        // HttpOnly off. PublicTrackerSettings keeps HttpOnly on unless the value is exactly false, and
+        // reports a matchReferer value it does not recognise.
         @AttributeDefinition
-        boolean contextserver_profileIdCookieHttpOnly() default true;
+        String contextserver_profileIdCookieHttpOnly() default "true";
 
         @AttributeDefinition
         String contextserver_profileIdCookieSameSite() default "Lax";
@@ -70,7 +73,7 @@ public class WebConfig {
         String public_cors_allowedOrigins() default "";
 
         @AttributeDefinition
-        boolean public_cors_matchReferer() default false;
+        String public_cors_matchReferer() default "false";
 
         @AttributeDefinition
         String allowed_profile_download_formats() default "csv,yaml,json,text";
@@ -123,7 +126,7 @@ public class WebConfig {
     }
 
     public boolean isContextserverProfileIdCookieHttpOnly() {
-        return contextserverProfileIdCookieHttpOnly;
+        return contextserverProfileIdCookieHttpOnly == null || !"false".equalsIgnoreCase(contextserverProfileIdCookieHttpOnly.trim());
     }
 
     public String getAllowedProfileDownloadFormats() {

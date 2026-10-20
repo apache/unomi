@@ -111,7 +111,7 @@ public class ClientEndpoint {
     }
 
     private Response donwloadCurrentProfile(String downloadFileType) throws JsonProcessingException {
-        String cookieProfileId = restServiceUtils.getProfileIdCookieValue(request);
+        String cookieProfileId = restServiceUtils.getProfileIdCookieValueForNavigation(request);
 
         if (cookieProfileId != null) {
             Profile currentProfile = profileService.load(cookieProfileId);
