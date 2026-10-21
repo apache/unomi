@@ -21,10 +21,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.schema.api.SchemaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,30 +110,6 @@ public class HttpUtils {
             stringBuilder.append("  ").append(headerName).append(": ").append(httpServletRequest.getHeader(headerName)).append("\n");
         }
         return stringBuilder.toString();
-    }
-
-    /**
-     * Builds a {@code Set-Cookie} header value for the profile ID cookie.
-     * <p>
-     * Uses a raw header string because JAX-RS {@code NewCookie} does not support {@code SameSite}.
-     *
-     * @param profile the profile whose ID is stored in the cookie
-     * @param configSharingService shared configuration for cookie name, domain, and flags
-     * @param isSecure whether the cookie should include the {@code Secure} flag
-     * @return the cookie header value
-     */
-    public static String getProfileCookieString(Profile profile, ConfigSharingService configSharingService, boolean isSecure) {
-        final String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
-        final String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
-        final Integer profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds");
-        final Boolean profileIdCookieHttpOnly = (Boolean) configSharingService.getProperty("profileIdCookieHttpOnly");
-        return profileIdCookieName + "=" + profile.getItemId() +
-                "; Path=/" +
-                "; Max-Age=" + profileIdCookieMaxAgeInSeconds +
-                (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "") +
-                "; SameSite=Lax" +
-                (isSecure ? "; Secure" : "") +
-                (profileIdCookieHttpOnly ? "; HttpOnly" : "");
     }
 
     /**

@@ -22,11 +22,11 @@ import org.apache.cxf.interceptor.security.RolePrefixSecurityContextImpl;
 import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.security.CompatPeerPrincipal;
+import org.apache.unomi.api.security.InsecureTransportPrincipal;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.utils.LogSanitizer;
 import org.apache.unomi.api.security.TenantPrincipal;
 import org.apache.unomi.api.security.UnomiRoles;
-import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
@@ -34,6 +34,7 @@ import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.rest.authentication.V2ThirdPartyConfigService;
+import org.apache.unomi.rest.cors.PublicTrackerSettings;
 import org.apache.unomi.services.common.security.SecurityUtils;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
@@ -66,13 +67,12 @@ import java.util.UUID;
 @Component(service = RestServiceUtils.class)
 public class RestServiceUtilsImpl implements RestServiceUtils {
 
+    private static final String VISITOR_COOKIE_ALLOWED_ATTRIBUTE = RestServiceUtilsImpl.class.getName() + ".visitorCookieAllowed";
+
     private static final String DEFAULT_CLIENT_ID = "defaultClientId";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RestServiceUtilsImpl.class.getName());
     public static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
-
-    @Reference
-    private ConfigSharingService configSharingService;
 
     @Reference
     private PrivacyService privacyService;
@@ -98,25 +98,94 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     @Reference
     private SecurityService securityService;
 
+    @Reference
+    private PublicTrackerSettings publicTrackerSettings;
+
     @Override
     public String getProfileIdCookieValue(HttpServletRequest httpServletRequest) {
-        String cookieProfileId = null;
+        return readProfileIdCookie(httpServletRequest, false);
+    }
 
+    @Override
+    public String getProfileIdCookieValueForNavigation(HttpServletRequest httpServletRequest) {
+        return readProfileIdCookie(httpServletRequest, true);
+    }
+
+    private String readProfileIdCookie(HttpServletRequest httpServletRequest, boolean acceptNavigation) {
         Cookie[] cookies = httpServletRequest.getCookies();
-
-        if (cookies != null) {
-            final Object profileIdCookieName = configSharingService.getProperty("profileIdCookieName");
-            for (Cookie cookie : cookies) {
-                if (profileIdCookieName.equals(cookie.getName())) {
-                    String profileIdJSON = JsonNodeFactory.instance.objectNode().put("profileId", cookie.getValue()).toString();
-                    if (!schemaService.isValid(profileIdJSON, "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
-                        throw new InvalidRequestException("Invalid profile ID format in cookie", "Invalid received data");
-                    }
-                    cookieProfileId = cookie.getValue();
-                }
+        if (cookies == null) {
+            return null;
+        }
+        final String profileIdCookieName = publicTrackerSettings.cookieName();
+        String cookieProfileId = null;
+        for (Cookie cookie : cookies) {
+            if (profileIdCookieName.equals(cookie.getName())) {
+                cookieProfileId = cookie.getValue();
             }
         }
+        if (cookieProfileId == null) {
+            return null;
+        }
+        // A link opens in the visitor's own window; no other page can read what it returns.
+        boolean navigation = acceptNavigation && "GET".equals(httpServletRequest.getMethod())
+                && "navigate".equals(httpServletRequest.getHeader("Sec-Fetch-Mode"))
+                && "document".equals(httpServletRequest.getHeader("Sec-Fetch-Dest"));
+        if (!navigation && !isVisitorCookieAllowed(httpServletRequest)) {
+            return null;
+        }
+        String profileIdJSON = JsonNodeFactory.instance.objectNode().put("profileId", cookieProfileId).toString();
+        if (!schemaService.isValid(profileIdJSON, "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
+            throw new InvalidRequestException("Invalid profile ID format in cookie", "Invalid received data");
+        }
         return cookieProfileId;
+    }
+
+    /**
+     * Whether this request may use or receive the visitor cookie: it comes from a listed origin, from Unomi's
+     * own origin, or shows no sign of another site's page. A browser may still send a SameSite=None cookie
+     * from another site; that visitor must neither be bound nor have its cookie replaced. Decided once per
+     * request.
+     */
+    private boolean isVisitorCookieAllowed(HttpServletRequest request) {
+        Object decided = request.getAttribute(VISITOR_COOKIE_ALLOWED_ATTRIBUTE);
+        if (decided instanceof Boolean) {
+            return (Boolean) decided;
+        }
+        String origin = request.getHeader("Origin");
+        String referer = request.getHeader("Referer");
+        String secFetchSite = request.getHeader("Sec-Fetch-Site");
+        boolean allowed = publicTrackerSettings.policy().allowsVisitorCookie(
+                origin, referer, secFetchSite, request.getServerName(), request.getHeader("X-Forwarded-Host"));
+        if (!allowed) {
+            // Any site can cause this, so do not pay for sanitising the headers unless they are logged.
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Not using the profile cookie (Origin {}, Referer {}, Sec-Fetch-Site {}): neither a listed "
+                                + "website nor Unomi's own origin", LogSanitizer.forLogging(origin),
+                        LogSanitizer.forLogging(referer), LogSanitizer.forLogging(secFetchSite));
+            }
+            if (origin == null) {
+                publicTrackerSettings.reportRefusedRequestWithoutOrigin(referer != null);
+            }
+        }
+        request.setAttribute(VISITOR_COOKIE_ALLOWED_ATTRIBUTE, allowed);
+        return allowed;
+    }
+
+    /**
+     * Whether the visitor reached Unomi over HTTPS: the container says so, or a proxy reported it with
+     * {@code X-Forwarded-Proto} and {@link SecurityService#recordRequestTransport} accepted that proxy, so it
+     * did not mark the request subject as insecure. Both are required: a wrong {@code Secure} flag would make
+     * browsers drop the cookie over plain HTTP.
+     */
+    private boolean isSecureRequest(HttpServletRequest request) {
+        if (request.isSecure()) {
+            return true;
+        }
+        if (request.getHeader("X-Forwarded-Proto") == null) {
+            return false;
+        }
+        Subject subject = securityService.getRequestSubject();
+        return subject != null && subject.getPrincipals(InsecureTransportPrincipal.class).isEmpty();
     }
 
     @Override
@@ -493,10 +562,11 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
             }
         }
 
-        // Set profile cookie
-        if (!(eventsRequestContext.getProfile() instanceof Persona)) {
+        // Set profile cookie, unless the request comes from a page that may not use it
+        HttpServletRequest request = eventsRequestContext.getRequest();
+        if (!(eventsRequestContext.getProfile() instanceof Persona) && isVisitorCookieAllowed(request)) {
             eventsRequestContext.getResponse().setHeader("Set-Cookie",
-                    HttpUtils.getProfileCookieString(eventsRequestContext.getProfile(), configSharingService, eventsRequestContext.getRequest().isSecure()));
+                    publicTrackerSettings.profileCookie(eventsRequestContext.getProfile().getItemId(), isSecureRequest(request)));
         }
     }
 

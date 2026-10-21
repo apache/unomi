@@ -653,4 +653,51 @@ public class SingleTenantCompatibilityModeIT extends BaseIT {
         restAuthenticationConfig = getService(RestAuthenticationConfig.class);
         v2ThirdPartyConfigService = getService(V2ThirdPartyConfigService.class);
     }
+
+    /**
+     * UNOMI-1005: a plain "download my data" link on the website sends no Origin. In this mode the endpoint
+     * needs no API key, so the link must keep the visitor as a top-level navigation, and only as one.
+     */
+    @Test
+    public void testDownloadMyDataLinkKeepsTheVisitor() throws Exception {
+        updateConfiguration(null, "org.apache.unomi.rest.authentication", "singletenantcompatibility.enabled", true);
+        keepTrying("single-tenant compatibility mode not enabled in the required time",
+                () -> restAuthenticationConfig.isSingleTenantCompatibilityModeEnabled(),
+                enabled -> enabled, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(getObjectMapper().writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        RequestResponse created = executeContextJSONRequest(request, TEST_SESSION_ID, 200, false);
+        assertNotNull("A new visitor gets a profile cookie", created.getCookieHeaderValue());
+        String cookie = created.getCookieHeaderValue().split(";")[0];
+
+        // The profile is saved asynchronously, so retry until the link finds it.
+        keepTrying("A top-level navigation to the download link should return the visitor's data",
+                () -> downloadStatus(cookie, "navigate", "document"),
+                status -> status == 200, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        assertEquals("A framed download must not use the visitor cookie", 404, downloadStatus(cookie, "navigate", "iframe"));
+        assertEquals("A scripted download must not use the visitor cookie", 404, downloadStatus(cookie, "cors", "empty"));
+    }
+
+    private int downloadStatus(String cookie, String fetchMode, String fetchDest) {
+        try (CloseableHttpClient client = HttpClients.createDefault()) {
+            HttpGet download = new HttpGet(getFullUrl("/cxs/client/myprofile/json"));
+            download.setHeader("Cookie", cookie);
+            download.setHeader("Sec-Fetch-Site", "cross-site");
+            download.setHeader("Sec-Fetch-Mode", fetchMode);
+            download.setHeader("Sec-Fetch-Dest", fetchDest);
+            try (CloseableHttpResponse response = client.execute(download)) {
+                if (response.getStatusLine().getStatusCode() == 200) {
+                    assertTrue("The download is sent as an attachment",
+                            response.getFirstHeader("Content-Disposition").getValue().startsWith("attachment"));
+                }
+                return response.getStatusLine().getStatusCode();
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
 }

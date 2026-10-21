@@ -442,6 +442,10 @@ In addition to tenant API keys, Unomi 4.0 hardens several contracts that can bre
 |Sending only `sessionId` could switch onto that session's profile
 |Public callers switch only if the cookie already owns the session; otherwise the session is detached for the request.
 
+|Tracker on another origin
+|Public endpoints answered any origin with credentialed CORS and never checked where a request came from. A page on another subdomain could use the visitor cookie. A website on another site never received it (the cookie was always `SameSite=Lax`), so it kept the profile id itself and sent it as body `profileId`.
+|Only origins listed in `org.apache.unomi.public.cors.allowedOrigins` (`UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS`) get credentialed CORS and have the cookie used and set; other pages get a new anonymous profile and their cookie is left untouched. The default is empty. A website served from Unomi's own origin through a reverse proxy needs no change. One on another subdomain must be listed. One on another site must be listed and, since body `profileId` is now ignored for public callers, also needs HTTPS with `SameSite=None` (`UNOMI_PROFILE_COOKIE_SAMESITE`), or a move to the same origin. A 2.x client that embeds `context.js` with a `<script>` tag also needs `org.apache.unomi.public.cors.matchReferer=true` (and, from another site, HTTPS with `SameSite=None`). See <<_public_tracker_compatibility,Compatibility with Unomi 2.x and 3.x>>.
+
 |Profile cookie `HttpOnly`
 |Often defaulted to `false` (JS could read `document.cookie`)
 |Default **`true`**. Prefer `profileId` from the JSON response. Opt out with `org.apache.unomi.profile.cookie.httpOnly=false` only if you accept the tradeoff.
@@ -494,7 +498,7 @@ console (port 8102) is not covered by that check.
 
 ===== Migration checklist for client applications
 
-* Browser / tracker clients: ensure cookies are sent (`withCredentials` / same-site setup); stop treating body `profileId` as authoritative for public calls.
+* Browser / tracker clients: ensure cookies are sent (`withCredentials` / same-site setup); list every website origin that calls Unomi from another origin in `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS` (and, for another site, use HTTPS with `SameSite=None`, or serve Unomi from the website's origin); stop treating body `profileId` as authoritative for public calls.
 * Headless or mobile public clients that stored a UUID and posted it only in the body: switch to sending the profile cookie, or call with a **private key** when you intentionally bind a profile.
 * Login / merge flows: emit merge-triggering events from a trusted server-side caller after real authentication — not from the public key alone.
 * Ops scripts and Docker: export both password env vars; replace `karaf:karaf` with `karaf:$UNOMI_ROOT_PASSWORD`.

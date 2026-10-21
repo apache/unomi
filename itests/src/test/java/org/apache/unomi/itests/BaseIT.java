@@ -678,6 +678,9 @@ public abstract class BaseIT extends KarafTestSupport {
                 // Explicit test credentials (package no longer ships a known default password).
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.security.root.password", BASIC_AUTH_PASSWORD),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.healthcheck.password", HEALTHCHECK_AUTH_PASSWORD),
+                // Engine-independent; requests without an Origin header (all other ITs) are unaffected.
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.public.cors.allowedOrigins", PublicTrackerCorsIT.LISTED_ORIGIN),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.public.cors.matchReferer", "true"),
                 // Default scheduler.thread.poolSize (5) is sized for the near-instant in-memory unit-test
                 // double, not a real ES/OS backend. Under real refresh/write latency, the checker, task
                 // executions, and lease-renewal heartbeats (see scheduler.adoc) compete for the same small

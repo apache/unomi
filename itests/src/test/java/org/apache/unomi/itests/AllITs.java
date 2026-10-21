@@ -59,6 +59,7 @@ import org.junit.runners.Suite.SuiteClasses;
         CopyPropertiesActionIT.class,
         IncrementPropertyIT.class,
         InputValidationIT.class,
+        PublicTrackerCorsIT.class,
         RestCreateValidationIT.class,
         ModifyConsentIT.class,
         PatchIT.class,

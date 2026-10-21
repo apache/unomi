@@ -59,12 +59,14 @@ IDs.
 
 [source]
 ----
-curl -X GET http://localhost:8181/cxs/client/myprofile.[json,csv,yaml,text] \
+curl -X GET http://localhost:8181/cxs/client/myprofile/json \
 -H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 --cookie "context-profile-id=PROFILE-ID"
 ----
 
-where `PROFILE-ID` is the profile identifier for which to download the profile, and `YOUR_PUBLIC_API_KEY` is the tenant public API key (required on Unomi 4.0 public `/cxs/client/*` endpoints unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled).
+where the last path segment is the format (`json`, `csv`, `yaml` or `text`), `PROFILE-ID` is the profile identifier for which to download the profile, and `YOUR_PUBLIC_API_KEY` is the tenant public API key (required on Unomi 4.0 public `/cxs/client/*` endpoints unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled).
+
+In V2 compatibility mode a plain link on the website to this endpoint also works, as a top-level navigation; see <<_public_tracker_origins,Websites on other origins>>.
 
 === Deleting a profile
 

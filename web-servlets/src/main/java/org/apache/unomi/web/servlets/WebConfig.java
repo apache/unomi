@@ -38,7 +38,10 @@ public class WebConfig {
     private String contextserverDomain;
     private String contexserverProfileIdCookieName;
     private int contextserverProfileIdCookieMaxAgeInSeconds;
-    private boolean contextserverProfileIdCookieHttpOnly;
+    private String contextserverProfileIdCookieHttpOnly;
+    private String contextserverProfileIdCookieSameSite;
+    private String publicCorsAllowedOrigins;
+    private String publicCorsMatchReferer;
     private String allowedProfileDownloadFormats;
     private int publicPostRequestBytesLimit;
 
@@ -57,8 +60,20 @@ public class WebConfig {
         @AttributeDefinition
         int contextserver_profileIdCookieMaxAgeInSeconds() default 31536000;
 
+        // Strings, not booleans: the framework would turn a typo such as "flase" into false, switching
+        // HttpOnly off. PublicTrackerSettings keeps HttpOnly on unless the value is exactly false, and
+        // reports a matchReferer value it does not recognise.
         @AttributeDefinition
-        boolean contextserver_profileIdCookieHttpOnly() default true;
+        String contextserver_profileIdCookieHttpOnly() default "true";
+
+        @AttributeDefinition
+        String contextserver_profileIdCookieSameSite() default "Lax";
+
+        @AttributeDefinition
+        String public_cors_allowedOrigins() default "";
+
+        @AttributeDefinition
+        String public_cors_matchReferer() default "false";
 
         @AttributeDefinition
         String allowed_profile_download_formats() default "csv,yaml,json,text";
@@ -78,6 +93,9 @@ public class WebConfig {
         this.contexserverProfileIdCookieName = config.contexserver_profileIdCookieName();
         this.contextserverProfileIdCookieMaxAgeInSeconds = config.contextserver_profileIdCookieMaxAgeInSeconds();
         this.contextserverProfileIdCookieHttpOnly = config.contextserver_profileIdCookieHttpOnly();
+        this.contextserverProfileIdCookieSameSite = config.contextserver_profileIdCookieSameSite();
+        this.publicCorsAllowedOrigins = config.public_cors_allowedOrigins();
+        this.publicCorsMatchReferer = config.public_cors_matchReferer();
         this.allowedProfileDownloadFormats = config.allowed_profile_download_formats();
         this.publicPostRequestBytesLimit = config.public_post_request_bytes_limit();
 
@@ -85,6 +103,11 @@ public class WebConfig {
         configSharingService.setProperty("profileIdCookieDomain", contextserverDomain);
         configSharingService.setProperty("profileIdCookieMaxAgeInSeconds", contextserverProfileIdCookieMaxAgeInSeconds);
         configSharingService.setProperty("profileIdCookieHttpOnly", contextserverProfileIdCookieHttpOnly);
+        // Origins before SameSite: each property change re-resolves the cookie settings, and SameSite=None
+        // with no origins yet would be refused, with a warning, on the way.
+        configSharingService.setProperty("publicCorsAllowedOrigins", publicCorsAllowedOrigins);
+        configSharingService.setProperty("publicCorsMatchReferer", publicCorsMatchReferer);
+        configSharingService.setProperty("profileIdCookieSameSite", contextserverProfileIdCookieSameSite);
         configSharingService.setProperty("publicPostRequestBytesLimit", publicPostRequestBytesLimit);
         configSharingService.setProperty("allowedProfileDownloadFormats", allowedProfileDownloadFormats);
         LOGGER.info("WebConfig activated.");
@@ -100,10 +123,6 @@ public class WebConfig {
 
     public int getContextserverProfileIdCookieMaxAgeInSeconds() {
         return contextserverProfileIdCookieMaxAgeInSeconds;
-    }
-
-    public boolean isContextserverProfileIdCookieHttpOnly() {
-        return contextserverProfileIdCookieHttpOnly;
     }
 
     public String getAllowedProfileDownloadFormats() {

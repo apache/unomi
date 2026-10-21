@@ -467,7 +467,7 @@ curl -X GET "http://localhost:8181/cxs/tenants" \
 
 Authentication rules (Unomi 4.0):
 
-1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled). Browser clients may call them from any origin; those responses do not include credentialed CORS headers.
+1. Public paths (for example `/cxs/context.json`, `/cxs/eventcollector`, `/cxs/client/*`) require a valid **public** API key via `X-Unomi-Api-Key` (unless <<_v2_compatibility_mode,V2 compatibility mode>> is enabled). Browser clients may call them from any origin, but only listed origins and Unomi's own origin may use the visitor cookie; see <<_public_tracker_origins,Websites on other origins>>.
 2. Private paths accept `tenantId:privateApiKey` Basic auth, or JAAS admin credentials (often with `X-Unomi-Tenant-Id` when a tenant context is required).
 3. Tenant administration (`/cxs/tenants`) requires system administrator JAAS credentials.
 4. JAAS admin does **not** replace the public API key on public endpoints.
@@ -546,6 +546,148 @@ curl -X POST "http://localhost:8181/cxs/segments" \
     }
   }'
 ----
+
+[[_public_tracker_origins]]
+==== Websites on other origins (visitor cookie and CORS)
+
+The public tracker endpoints (`/cxs/context.js`, `/cxs/context.json`, `/cxs/eventcollector` and `/cxs/client/*`) accept requests from any origin. The visitor cookie (`context-profile-id` by default), which identifies the visitor, is only used and set for:
+
+* pages served from Unomi's own origin;
+* origins the operator lists in `org.apache.unomi.public.cors.allowedOrigins`;
+* requests that carry no sign of coming from a page on another site, such as server-to-server calls.
+
+For any other page, Unomi answers without credentialed CORS headers and ignores the cookie: the request gets a new anonymous profile, and the visitor's cookie is not replaced.
+
+===== Choosing a setup
+
+[cols="2,1,3", options="header"]
+|===
+|Website and Unomi |List needed |Notes
+
+|Same origin: a reverse proxy serves the website and `/cxs` on one host (`+https://www.example.com/cxs/+`)
+|No
+|Recommended. The cookie is a first-party cookie and needs no CORS at all.
+
+|Another subdomain of the same site (`https://www.example.com` and `https://cdp.example.com`)
+|Yes
+|List `https://www.example.com`. `SameSite=Lax` is enough. Set `org.apache.unomi.profile.cookie.domain=example.com` if the cookie must also be visible to other subdomains.
+
+|Another site (`https://www.shop.com` and `https://cdp.example.com`)
+|Yes
+|List `https://www.shop.com`, serve Unomi over HTTPS and set `SameSite=None`. The cookie is then a third-party cookie: it does not work in Safari, which blocks it; Firefox partitions it per top-level site; and Chrome users may block it. Prefer one of the setups above.
+|===
+
+A response can only set the cookie on Unomi's own host, or on a parent domain set with `org.apache.unomi.profile.cookie.domain`. It cannot place a cookie on the website's domain. To get a first-party cookie for the website, serve Unomi from that website's origin or from one of its subdomains.
+
+===== Settings
+
+[source]
+----
+# etc/custom.system.properties (or the environment variables)
+org.apache.unomi.public.cors.allowedOrigins=${env:UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS:-}
+org.apache.unomi.profile.cookie.sameSite=${env:UNOMI_PROFILE_COOKIE_SAMESITE:-Lax}
+org.apache.unomi.public.cors.matchReferer=${env:UNOMI_PUBLIC_CORS_MATCH_REFERER:-false}
+----
+
+Example:
+
+[source,bash]
+----
+export UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS='https://www.example.com,https://shop.example.com:8443'
+----
+
+Another site only (Unomi served over HTTPS):
+
+[source,bash]
+----
+export UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS='https://www.shop.com'
+export UNOMI_PROFILE_COOKIE_SAMESITE=None
+----
+
+* Entries are comma-separated and give a scheme (`http` or `https`), a host and an optional port. They are compared the way browsers send the `Origin` header: case does not matter, a default port (`:443`, `:80`) may be left out, and a trailing `/` is ignored.
+* Wildcards, paths and `null` are not accepted. A rejected entry is logged as a warning when the setting is applied, and so is a list in which no entry is valid.
+* The list is empty by default: no other origin may use the cookie.
+* A listed origin is named exactly in the response, with `Access-Control-Allow-Credentials: true` and `Vary: Origin`, preflight requests included. An unlisted origin gets `Access-Control-Allow-Origin: *` without credentials.
+* `SameSite` accepts `Lax` (default), `Strict` and `None`. `None` is used only when the cookie is `Secure` and the list is not empty; otherwise Unomi uses `Lax` and logs a warning.
+* `matchReferer` (default `false`) lets listed websites that embed the tracker with a `<script>` tag keep their visitors; see <<_public_tracker_script_tag,Embedding `context.js` with a script tag>>. Only `true` turns it on; any other value, and `true` with no origin listed, is logged as a warning.
+* Changes are applied without a restart and are parsed once, not on every request.
+
+Do not:
+
+* list origins you do not control, or every subdomain "just in case": a listed page can act as the visitor;
+* use `*` (it is refused);
+* list the `http://` origin of a website that also runs over HTTPS: list the `https://` one, which is what its pages send;
+* turn on `matchReferer` "to make it work": it trusts everything the listed websites frame (see <<_public_tracker_script_tag,Embedding `context.js` with a script tag>>);
+* set `SameSite=None` for a same-site setup: `Lax` already works there.
+
+===== How Unomi recognises the page
+
+Current browsers send `Origin` on every cross-origin request and on every `POST`, same-origin ones included, so its presence alone does not mean another site. Unomi decides as follows:
+
+. An `Origin` on the list is allowed.
+. Without `Origin`, as for a `<script src=".../context.js">` tag, and only when `matchReferer` is on, the browser-set `Referer` is matched against the list instead.
+. Otherwise the browser's `Sec-Fetch-Site` header decides: only `same-origin` and `none` (a page typed in the address bar) are allowed. It takes precedence over the host comparison below.
+. A request with neither `Origin` nor `Sec-Fetch-Site` is allowed. That is a server-side caller, or a `GET` from a browser that does not send `Sec-Fetch-Site` (Chrome before 76, Firefox before 90, Safari before 16.4), which cannot be told apart from it. In such a browser, another site's `<script>` or `<img>` can therefore use the visitor cookie.
++
+This only matters with `SameSite=None`: with the default `Lax`, a browser does not send the cookie to another site's embeds at all, and Safari blocks third-party cookies whatever their `SameSite`. Current versions of Chrome, Edge, Firefox and Safari all send `Sec-Fetch-Site`.
+
+. For older browsers that send `Origin` but not `Sec-Fetch-Site` (for example Safari before 16.4), a page on the same host as Unomi counts as Unomi's own origin. A proxy that rewrites `Host` must then send `X-Forwarded-Host`.
+
+===== Behind a reverse proxy
+
+The cookie is marked `Secure` when the request reached Unomi over HTTPS. Behind a proxy that terminates TLS, that is only the case when the proxy's address is in `org.apache.unomi.ip.trustedProxies` (the default already covers private networks) and every value it sends in `X-Forwarded-Proto` is `https`. Without it, a configured `SameSite=None` falls back to `Lax`, and a warning is logged once per configuration change.
+
+[[_public_tracker_script_tag]]
+===== Embedding `context.js` with a script tag
+
+A page that loads the tracker with a plain `<script src="https://cdp.example.com/cxs/context.js">` (no `crossorigin` attribute) sends no `Origin` header, only a `Referer`. Public endpoints need an API key header, which a script tag cannot send, so this only applies in <<_v2_compatibility_mode,single-tenant compatibility mode>>, where clients written for 2.x often embed `context.js` this way.
+
+By default, in browsers that send `Sec-Fetch-Site`, such a request from another origin is served without the visitor cookie, even from a listed website: every page view starts a new anonymous profile. By default, once origins are listed, Unomi logs a warning about it once per configuration change. To accept it, set `org.apache.unomi.public.cors.matchReferer=true` (`UNOMI_PUBLIC_CORS_MATCH_REFERER`). A `Referer` naming a listed page is then accepted.
+
+Before turning it on:
+
+* It trusts everything a listed page frames. A sandboxed `<iframe srcdoc>` or `about:blank` frame, such as an ad, reports the page that created it as its `Referer`, so its scripts would receive the visitor's profile. Turn it on only for websites that do not frame untrusted content, or switch them to the shipped tracker, which calls `context.json` with credentials and needs no `Referer`.
+* The listed pages must send their origin in `Referer` to other sites. The browser default (`strict-origin-when-cross-origin`) does. `no-referrer`, `same-origin` or a `referrerpolicy` attribute on the `<script>` tag that removes it makes every page view start a new profile. So does an HTTPS page loading Unomi over HTTP.
+
+[[_public_tracker_compatibility]]
+===== Compatibility with Unomi 2.x and 3.x
+
+In 2.x and 3.x the public endpoints allowed credentialed CORS for every origin, and nothing checked where a request came from. The cookie was always `SameSite=Lax`, so only pages on the same site could use it. A website on another site kept the profile id itself and sent it as a body `profileId`, which 4.0 ignores for public callers.
+
+[cols="2,3", options="header"]
+|===
+|Deployment in 2.x or 3.x |What it needs in 4.0
+
+|Website and Unomi on the same origin
+|Nothing.
+
+|Website on another subdomain using the cookie
+|List the website origin. `SameSite=Lax` is enough.
+
+|Website on another site sending body `profileId`
+|List the website origin, serve Unomi over HTTPS and set `SameSite=None`, or serve Unomi from the website's origin. Expect the cookie to be blocked in Safari.
+
+|2.x client embedding `context.js` with a `<script>` tag (single-tenant compatibility mode)
+|List the website origin and set `matchReferer=true`, after reading <<_public_tracker_script_tag,the trade-offs>>; or move to the shipped tracker. A website on another site also needs HTTPS with `SameSite=None`: in 2.x only same-site embeds kept their profile.
+
+|Server-side caller sending no `Origin`
+|Nothing for the origin check. A body `profileId` needs a trusted caller, as described in the migration guide.
+|===
+
+Other behaviour that changed:
+
+* A refused request receives no `Set-Cookie`, so the visitor's cookie is left untouched.
+* A malformed profile cookie still answers `400`, but only for requests that may use the cookie; a refused request ignores it.
+* The cookie is marked `Secure` behind a trusted TLS proxy, so a website that mixes HTTP and HTTPS pages loses the cookie on its HTTP pages.
+* `org.apache.unomi.profile.cookie.httpOnly` now defaults to `true` (it was `false` in 2.x and 3.x) and is turned off only by `false`. In 4.0.0-rc1 a mistyped value turned `HttpOnly` off; it now keeps it on and is logged as a warning.
+
+===== "Download my data" links
+
+`/cxs/client/myprofile/{format}` returns the visitor's own profile and changes nothing. In <<_v2_compatibility_mode,single-tenant compatibility mode>>, where it needs no API key, a plain link to it on the website is accepted as a top-level navigation (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`) even from a page Unomi does not otherwise recognise: the response opens in the visitor's own window, and no other page can read it. A link from another site only carries the cookie with `SameSite=Lax` (the default) or `None`; with `Strict` it still answers `404`. The tracker endpoints never accept a navigation this way.
+
+===== Tracker without cookies
+
+A deployment that does not need the visitor cookie can set `sendCredentials: false` in the tracker's `wemInitConfig` (see <<_unomi_web_tracker_reference,the web tracker>>). Requests are then sent without cookies and work with the default settings, but each request starts a new anonymous profile.
 
 === Scripting security
 

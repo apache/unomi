@@ -1,0 +1,279 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.unomi.rest.cors;
+
+import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.api.services.ConfigSharingService.ConfigChangeEvent;
+import org.apache.unomi.api.services.ConfigSharingService.ConfigChangeListener;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+/**
+ * The public tracker origin list and profile cookie settings, parsed and resolved when they are set
+ * rather than on every request. The web configuration publishes them through {@link ConfigSharingService};
+ * this component reads them at activation and again whenever one of them changes. Requests only read
+ * the results.
+ */
+@Component(service = {PublicTrackerSettings.class, ConfigChangeListener.class})
+public class PublicTrackerSettings implements ConfigChangeListener {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PublicTrackerSettings.class);
+
+    // Published by WebConfig through ConfigSharingService.
+    static final String ALLOWED_ORIGINS_PROPERTY = "publicCorsAllowedOrigins";
+    static final String SAME_SITE_PROPERTY = "profileIdCookieSameSite";
+    static final String MATCH_REFERER_PROPERTY = "publicCorsMatchReferer";
+    static final String COOKIE_NAME_PROPERTY = "profileIdCookieName";
+    static final String COOKIE_DOMAIN_PROPERTY = "profileIdCookieDomain";
+    static final String COOKIE_MAX_AGE_PROPERTY = "profileIdCookieMaxAgeInSeconds";
+    static final String COOKIE_HTTP_ONLY_PROPERTY = "profileIdCookieHttpOnly";
+
+    static final String DEFAULT_COOKIE_NAME = "context-profile-id";
+    static final int DEFAULT_COOKIE_MAX_AGE = 31536000;
+
+    private static final Set<String> WATCHED = Set.of(
+            ALLOWED_ORIGINS_PROPERTY, SAME_SITE_PROPERTY, MATCH_REFERER_PROPERTY,
+            COOKIE_NAME_PROPERTY, COOKIE_DOMAIN_PROPERTY, COOKIE_MAX_AGE_PROPERTY, COOKIE_HTTP_ONLY_PROPERTY);
+
+    /** Everything a request needs, replaced as a whole so a request never sees half of a change. */
+    private static final class Resolved {
+        final PublicTrackerCorsPolicy policy;
+        final String sameSiteWhenSecure;
+        final String cookieName;
+        /** {@code name=}, then the attributes after the value, for secure and plain HTTP requests. */
+        final String cookiePrefix;
+        final String cookieAttributesWhenSecure;
+        final String cookieAttributesWhenInsecure;
+        /** Set while a refusal of SameSite=None, only because a request was not over HTTPS, is unreported for this configuration. */
+        final AtomicBoolean insecureRefusalToReport;
+        /** Set until a refused request without Origin, typically a script tag, is reported for this configuration. */
+        final AtomicBoolean refusedEmbedToReport;
+        /** Problems found in this configuration, logged when it is applied. */
+        final List<String> warnings;
+
+        Resolved(PublicTrackerCorsPolicy policy, String requestedSameSite, String cookieName, String cookieDomain,
+                 int cookieMaxAge, boolean cookieHttpOnly, List<String> warnings) {
+            this.policy = policy;
+            this.warnings = List.copyOf(warnings);
+            this.sameSiteWhenSecure = policy.resolveSameSite(requestedSameSite, true);
+            String sameSiteWhenInsecure = policy.resolveSameSite(requestedSameSite, false);
+            this.cookieName = cookieName;
+            this.cookiePrefix = cookieName + "=";
+            String common = "; Path=/; Max-Age=" + cookieMaxAge
+                    + (cookieDomain == null || cookieDomain.isBlank() ? "" : "; Domain=" + cookieDomain.trim());
+            String httpOnly = cookieHttpOnly ? "; HttpOnly" : "";
+            this.cookieAttributesWhenSecure = common + "; SameSite=" + sameSiteWhenSecure + "; Secure" + httpOnly;
+            this.cookieAttributesWhenInsecure = common + "; SameSite=" + sameSiteWhenInsecure + httpOnly;
+            this.insecureRefusalToReport = new AtomicBoolean("None".equals(sameSiteWhenSecure) && !"None".equals(sameSiteWhenInsecure));
+            // Only worth reporting once the operator has listed websites.
+            this.refusedEmbedToReport = new AtomicBoolean(!policy.isEmpty());
+        }
+    }
+
+    private volatile Resolved resolved = resolve(null, null, null, null, null, null, null);
+
+    @Reference
+    private ConfigSharingService configSharingService;
+
+    /** Used by OSGi Declarative Services; the settings are read at activation. */
+    public PublicTrackerSettings() {
+    }
+
+    /** For tests; cookie name, domain, max age and HttpOnly take their defaults. */
+    public PublicTrackerSettings(String allowedOrigins, String sameSite) {
+        this(allowedOrigins, sameSite, false);
+    }
+
+    /** For tests; cookie name, domain, max age and HttpOnly take their defaults. */
+    public PublicTrackerSettings(String allowedOrigins, String sameSite, boolean matchReferer) {
+        this.resolved = resolve(allowedOrigins, sameSite, matchReferer, null, null, null, null);
+    }
+
+    @Activate
+    void activate() {
+        reload();
+    }
+
+    @Override
+    public void configChanged(ConfigChangeEvent event) {
+        if (WATCHED.contains(event.getName())) {
+            reload();
+        }
+    }
+
+    // Synchronized so that two reloads (activation and a configuration event) cannot interleave.
+    private synchronized void reload() {
+        Resolved previous = resolved;
+        Resolved next = resolve(
+                configSharingService.getProperty(ALLOWED_ORIGINS_PROPERTY),
+                configSharingService.getProperty(SAME_SITE_PROPERTY),
+                configSharingService.getProperty(MATCH_REFERER_PROPERTY),
+                configSharingService.getProperty(COOKIE_NAME_PROPERTY),
+                configSharingService.getProperty(COOKIE_DOMAIN_PROPERTY),
+                configSharingService.getProperty(COOKIE_MAX_AGE_PROPERTY),
+                configSharingService.getProperty(COOKIE_HTTP_ONLY_PROPERTY));
+        for (String warning : newWarnings(previous.warnings, next.warnings)) {
+            LOGGER.warn(warning);
+        }
+        this.resolved = next;
+    }
+
+    /**
+     * The warnings of a new configuration that the previous one did not already have. WebConfig publishes the
+     * settings one by one, each causing a reload, so a problem would otherwise be logged once per setting.
+     */
+    static List<String> newWarnings(List<String> previous, List<String> next) {
+        List<String> added = new ArrayList<>();
+        for (String warning : next) {
+            if (!previous.contains(warning)) {
+                added.add(warning);
+            }
+        }
+        return added;
+    }
+
+    /** The problems found in the current configuration, as they were logged. */
+    List<String> configurationWarnings() {
+        return resolved.warnings;
+    }
+
+    private static Resolved resolve(Object allowedOrigins, Object sameSite, Object matchReferer, Object cookieName,
+                                    Object cookieDomain, Object cookieMaxAge, Object cookieHttpOnly) {
+        List<String> warnings = new ArrayList<>();
+        String requested = sameSite == null ? null : sameSite.toString().trim();
+        String name = cookieName == null || cookieName.toString().isBlank() ? DEFAULT_COOKIE_NAME : cookieName.toString().trim();
+        String origins = allowedOrigins == null ? null : allowedOrigins.toString();
+        // Off unless explicitly turned on: it trusts everything a listed page frames.
+        String refererSetting = matchReferer == null ? "" : matchReferer.toString().trim();
+        boolean refererMatch = "true".equalsIgnoreCase(refererSetting);
+        if (!refererSetting.isEmpty() && !refererMatch && !"false".equalsIgnoreCase(refererSetting)) {
+            warnings.add("Unrecognised value '" + refererSetting + "' for org.apache.unomi.public.cors.matchReferer; "
+                    + "only true turns it on, so Referer matching is off.");
+        }
+        PublicTrackerCorsPolicy policy = PublicTrackerCorsPolicy.parse(origins, refererMatch, warnings);
+        if (origins != null && !origins.isBlank() && policy.isEmpty()) {
+            warnings.add("None of the public CORS allowed origins '" + origins + "' is valid, so no other website may "
+                    + "use the visitor cookie. Expected scheme://host[:port], comma-separated.");
+        }
+        if (refererMatch && policy.isEmpty()) {
+            warnings.add("org.apache.unomi.public.cors.matchReferer is on but no website origin is listed, so it has no effect.");
+        }
+        if ("None".equalsIgnoreCase(requested) && !"None".equals(policy.resolveSameSite(requested, true))) {
+            warnings.add("Refusing SameSite=None for the profile cookie because the public CORS allowed origins list "
+                    + "has no valid entry; using SameSite=Lax.");
+        }
+        int maxAge = toInt(cookieMaxAge, warnings);
+        String httpOnlySetting = cookieHttpOnly == null ? "" : cookieHttpOnly.toString().trim();
+        if (!httpOnlySetting.isEmpty() && !"true".equalsIgnoreCase(httpOnlySetting) && !"false".equalsIgnoreCase(httpOnlySetting)) {
+            warnings.add("Unrecognised value '" + httpOnlySetting + "' for org.apache.unomi.profile.cookie.httpOnly; "
+                    + "only false turns it off, so the cookie stays HttpOnly.");
+        }
+        return new Resolved(
+                policy,
+                requested,
+                name,
+                cookieDomain == null ? null : cookieDomain.toString(),
+                maxAge,
+                // HttpOnly unless explicitly turned off: page script must not read the bearer cookie,
+                // so a typo keeps it on.
+                cookieHttpOnly == null || !"false".equalsIgnoreCase(cookieHttpOnly.toString().trim()),
+                warnings);
+    }
+
+    private static int toInt(Object value, List<String> warnings) {
+        if (value == null) {
+            return DEFAULT_COOKIE_MAX_AGE;
+        }
+        try {
+            int maxAge = value instanceof Number ? ((Number) value).intValue() : Integer.parseInt(value.toString().trim());
+            if (maxAge > 0) {
+                return maxAge;
+            }
+        } catch (NumberFormatException e) {
+            // reported below
+        }
+        // Zero or less would make browsers delete the cookie on every response.
+        warnings.add("Invalid profile cookie max age '" + value + "'; using " + DEFAULT_COOKIE_MAX_AGE);
+        return DEFAULT_COOKIE_MAX_AGE;
+    }
+
+    /** @return the website origins that may use the visitor cookie, as currently configured */
+    public PublicTrackerCorsPolicy policy() {
+        return resolved.policy;
+    }
+
+    /** @return the name of the visitor cookie, as currently configured */
+    public String cookieName() {
+        return resolved.cookieName;
+    }
+
+    /** The {@code Set-Cookie} value naming this profile; only the profile id is added per request. */
+    public String profileCookie(String profileId, boolean secure) {
+        Resolved current = resolved;
+        if (!secure) {
+            reportInsecureRefusal(current);
+        }
+        return current.cookiePrefix + profileId
+                + (secure ? current.cookieAttributesWhenSecure : current.cookieAttributesWhenInsecure);
+    }
+
+    private static void reportInsecureRefusal(Resolved current) {
+        if (current.insecureRefusalToReport.get() && current.insecureRefusalToReport.compareAndSet(true, false)) {
+            LOGGER.warn("Refusing SameSite=None for the profile cookie because the request did not arrive over HTTPS; "
+                    + "using SameSite=Lax. Behind a TLS-terminating proxy, list it in org.apache.unomi.ip.trustedProxies "
+                    + "and have it send X-Forwarded-Proto: https. This is logged once per configuration change.");
+        }
+    }
+
+    /**
+     * Reports, once per configuration, a refused request that carried no {@code Origin}: if it came from a
+     * listed website embedding {@code context.js} with a {@code <script>} tag, the operator needs to know why
+     * that website keeps losing its visitors. Only once origins are listed: before that, every website is
+     * refused by design.
+     *
+     * @return whether the warning was logged by this call
+     */
+    public boolean reportRefusedRequestWithoutOrigin(boolean hasReferer) {
+        Resolved current = resolved;
+        boolean matchesReferer = current.policy.matchesReferer();
+        if (matchesReferer && hasReferer) {
+            // A Referer that is not listed: an unlisted website, nothing to fix.
+            return false;
+        }
+        if (!current.refusedEmbedToReport.get() || !current.refusedEmbedToReport.compareAndSet(true, false)) {
+            return false;
+        }
+        if (!matchesReferer) {
+            LOGGER.warn("Refused the visitor cookie for a cross-site request without an Origin header, such as a "
+                    + "<script src=\".../context.js\"> tag. If it came from a listed website, set "
+                    + "org.apache.unomi.public.cors.matchReferer=true. This is logged once per configuration change.");
+        } else {
+            LOGGER.warn("Refused the visitor cookie for a cross-site request without Origin or Referer headers. If it "
+                    + "came from a listed website, check that its Referrer-Policy sends the origin to other sites "
+                    + "(the default strict-origin-when-cross-origin does). This is logged once per configuration change.");
+        }
+        return true;
+    }
+}
