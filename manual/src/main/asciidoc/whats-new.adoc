@@ -38,6 +38,7 @@ The public tracker endpoints answer any origin, but only the operator's list of 
 
 * Setup guide: <<_public_tracker_origins,Websites on other origins>>
 * Upgrading from 2.x or 3.x: <<_public_tracker_compatibility,compatibility table>>
+* Each tenant can list its own websites in its `publicCorsAllowedOrigins` property, so tenants created at runtime need no server change: <<_public_tracker_tenant_origins,Websites listed by each tenant>> (https://issues.apache.org/jira/browse/UNOMI-1013[UNOMI-1013])
 * Jira: https://issues.apache.org/jira/browse/UNOMI-1005[UNOMI-1005]
 
 ==== Cluster-aware task scheduler

@@ -173,6 +173,44 @@ class PublicTrackerCorsFilterTest {
     }
 
     @Test
+    void preflightIsAnsweredForAnOriginAnyTenantLists() {
+        PublicTrackerSettings settings = org.mockito.Mockito.mock(PublicTrackerSettings.class);
+        when(settings.allowsPreflight("https://shop.example")).thenReturn(true);
+        filter = new PublicTrackerCorsFilter(settings);
+        when(request.getMethod()).thenReturn("OPTIONS");
+        when(request.getHeaderString("Access-Control-Request-Method")).thenReturn("POST");
+        when(request.getHeaderString("Origin")).thenReturn("https://shop.example");
+        grantedByCxf();
+
+        filter.restrictCredentials(request, response);
+
+        assertEquals("https://shop.example", headers.getFirst("Access-Control-Allow-Origin"));
+        assertEquals("true", headers.getFirst("Access-Control-Allow-Credentials"));
+    }
+
+    @Test
+    void actualRequestIsCheckedAgainstItsOwnTenant() {
+        // The preflight passed for any tenant; with another tenant's key, the actual request gets no credentials.
+        PublicTrackerSettings settings = org.mockito.Mockito.mock(PublicTrackerSettings.class);
+        when(settings.policyForTenant("globex")).thenReturn(PublicTrackerCorsPolicy.parse(""));
+        filter = new PublicTrackerCorsFilter(settings) {
+            @Override
+            String requestTenantId() {
+                return "globex";
+            }
+        };
+        when(request.getMethod()).thenReturn("POST");
+        when(request.getHeaderString("Origin")).thenReturn("https://shop.example");
+        grantedByCxf();
+
+        filter.restrictCredentials(request, response);
+
+        assertEquals("*", headers.getFirst("Access-Control-Allow-Origin"));
+        assertNull(headers.getFirst("Access-Control-Allow-Credentials"));
+        org.mockito.Mockito.verify(settings, org.mockito.Mockito.never()).allowsPreflight(org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
     void inheritsCxfPreMatchingAndPriority() {
         // CXF reads both through the class hierarchy; the rewrite then needs no ordering of its own.
         assertTrue(org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter.class.isAssignableFrom(PublicTrackerCorsFilter.class));

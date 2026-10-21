@@ -153,7 +153,7 @@ class PublicTrackerSettingsTest {
     @Test
     void everyWatchedPropertyTriggersAReload() {
         for (String property : new String[]{PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY, PublicTrackerSettings.SAME_SITE_PROPERTY,
-                PublicTrackerSettings.MATCH_REFERER_PROPERTY,
+                PublicTrackerSettings.MATCH_REFERER_PROPERTY, PublicTrackerSettings.TENANT_LISTS_PROPERTY,
                 PublicTrackerSettings.COOKIE_NAME_PROPERTY, PublicTrackerSettings.COOKIE_DOMAIN_PROPERTY,
                 PublicTrackerSettings.COOKIE_MAX_AGE_PROPERTY, PublicTrackerSettings.COOKIE_HTTP_ONLY_PROPERTY}) {
             clearInvocations(configSharingService);
@@ -189,6 +189,8 @@ class PublicTrackerSettingsTest {
 
     @Test
     void misconfiguredSettingsAreReported() {
+        // With tenant lists off, so that an empty operator list leaves nothing to apply matchReferer to.
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.TENANT_LISTS_PROPERTY)).thenReturn("false");
         lenient().when(configSharingService.getProperty(PublicTrackerSettings.MATCH_REFERER_PROPERTY)).thenReturn("yes");
         lenient().when(configSharingService.getProperty(PublicTrackerSettings.COOKIE_MAX_AGE_PROPERTY)).thenReturn(0);
         settings.activate();
@@ -256,6 +258,7 @@ class PublicTrackerSettingsTest {
 
     @Test
     void refusedSameSiteNoneIsReported() {
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.TENANT_LISTS_PROPERTY)).thenReturn("false");
         lenient().when(configSharingService.getProperty(PublicTrackerSettings.SAME_SITE_PROPERTY)).thenReturn("None");
         settings.activate();
         assertTrue(hasWarning("Refusing SameSite=None"));

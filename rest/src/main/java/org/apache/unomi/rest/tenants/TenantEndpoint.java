@@ -25,6 +25,8 @@ import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.tenants.TenantEventPurgeResult;
 import org.apache.unomi.api.tenants.TenantUsage;
 import org.apache.unomi.api.tenants.TenantUsageService;
+import org.apache.unomi.rest.cors.PublicTrackerCorsPolicy;
+import org.apache.unomi.rest.cors.PublicTrackerSettings;
 import org.apache.unomi.rest.security.RequiresRole;
 import org.apache.unomi.rest.security.RequiresTenant;
 import org.osgi.service.component.annotations.Component;
@@ -34,6 +36,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
+import java.util.Map;
 
 /**
  * REST endpoint for managing tenants in the Apache Unomi system.
@@ -56,6 +59,9 @@ public class TenantEndpoint {
 
     @Reference
     private TenantUsageService tenantUsageService;
+
+    @Reference
+    private PublicTrackerSettings publicTrackerSettings;
 
     /**
      * Retrieves all tenants in the system.
@@ -113,8 +119,10 @@ public class TenantEndpoint {
             throw new WebApplicationException("Tenant ID is required", Response.Status.BAD_REQUEST);
         }
 
+        validateTrackerOrigins(request.getProperties());
         Tenant tenant = tenantService.createTenant(request.getRequestedId(), request.getProperties());
         // Note: createTenant already generates both API keys via generateApiKeyWithType
+        publicTrackerSettings.tenantsChanged();
         return tenant;
     }
 
@@ -145,7 +153,9 @@ public class TenantEndpoint {
             throw new WebApplicationException("Tenant not found", Response.Status.NOT_FOUND);
         }
 
+        validateTrackerOrigins(tenant.getProperties());
         tenantService.saveTenant(tenant);
+        publicTrackerSettings.tenantsChanged();
         return tenant;
     }
 
@@ -168,6 +178,7 @@ public class TenantEndpoint {
         }
 
         tenantService.deleteTenant(tenantId);
+        publicTrackerSettings.tenantsChanged();
         return Response.noContent().build();
     }
 
@@ -301,6 +312,22 @@ public class TenantEndpoint {
             return Response.ok(result).build();
         } catch (IllegalArgumentException e) {
             throw new WebApplicationException(e.getMessage(), Response.Status.BAD_REQUEST);
+        }
+    }
+
+    /**
+     * Rejects a {@value PublicTrackerSettings#TENANT_ORIGINS_KEY} property that would not be applied as written,
+     * so the provisioning call fails rather than the tenant's websites silently losing their visitors.
+     */
+    private static void validateTrackerOrigins(Map<String, Object> properties) {
+        if (properties == null || !properties.containsKey(PublicTrackerSettings.TENANT_ORIGINS_KEY)) {
+            return;
+        }
+        List<String> problems = PublicTrackerCorsPolicy.tenantOriginProblems(properties.get(PublicTrackerSettings.TENANT_ORIGINS_KEY));
+        if (!problems.isEmpty()) {
+            throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
+                    .entity("Invalid " + PublicTrackerSettings.TENANT_ORIGINS_KEY + ": " + String.join("; ", problems))
+                    .type(MediaType.TEXT_PLAIN).build());
         }
     }
 }

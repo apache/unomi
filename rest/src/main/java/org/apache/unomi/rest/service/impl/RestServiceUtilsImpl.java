@@ -154,7 +154,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         String origin = request.getHeader("Origin");
         String referer = request.getHeader("Referer");
         String secFetchSite = request.getHeader("Sec-Fetch-Site");
-        boolean allowed = publicTrackerSettings.policy().allowsVisitorCookie(
+        boolean allowed = publicTrackerSettings.policyForTenant(PublicTrackerSettings.requestTenantId()).allowsVisitorCookie(
                 origin, referer, secFetchSite, request.getServerName(), request.getHeader("X-Forwarded-Host"));
         if (!allowed) {
             // Any site can cause this, so do not pay for sanitising the headers unless they are logged.

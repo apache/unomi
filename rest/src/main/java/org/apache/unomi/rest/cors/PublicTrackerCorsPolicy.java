@@ -17,6 +17,7 @@
 package org.apache.unomi.rest.cors;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -80,6 +81,75 @@ public final class PublicTrackerCorsPolicy {
             origins.add(origin);
         }
         return new PublicTrackerCorsPolicy(Collections.unmodifiableSet(origins), matchReferer);
+    }
+
+    /**
+     * The origins in a tenant's {@code publicCorsAllowedOrigins} property: a comma-separated string or a list
+     * of strings. Entries that are not valid origins are left out; {@link #tenantOriginProblems} reports them
+     * when the tenant is saved.
+     */
+    static Set<String> parseTenantOrigins(Object value) {
+        Set<String> origins = new LinkedHashSet<>();
+        for (String entry : tenantOriginEntries(value)) {
+            String origin = normalize(entry.endsWith("/") ? entry.substring(0, entry.length() - 1) : entry);
+            if (origin != null) {
+                origins.add(origin);
+            }
+        }
+        return Collections.unmodifiableSet(origins);
+    }
+
+    /**
+     * The entries of a tenant's {@code publicCorsAllowedOrigins} property that are not valid origins, or a
+     * message for a value that is neither a string nor a list of strings. Empty when the value is valid.
+     */
+    public static List<String> tenantOriginProblems(Object value) {
+        List<String> problems = new ArrayList<>();
+        if (value != null && !(value instanceof String) && !(value instanceof Collection)) {
+            problems.add("expected a comma-separated string or a list of origins");
+            return problems;
+        }
+        if (value instanceof Collection) {
+            for (Object item : (Collection<?>) value) {
+                if (!(item instanceof String)) {
+                    problems.add("expected origins as strings, got " + item);
+                }
+            }
+        }
+        for (String entry : tenantOriginEntries(value)) {
+            if (normalize(entry.endsWith("/") ? entry.substring(0, entry.length() - 1) : entry) == null) {
+                problems.add("'" + entry + "' is not scheme://host[:port] with http or https, without path or wildcard");
+            }
+        }
+        return problems;
+    }
+
+    private static List<String> tenantOriginEntries(Object value) {
+        List<String> entries = new ArrayList<>();
+        if (value instanceof String) {
+            for (String part : ((String) value).split(",")) {
+                if (!part.trim().isEmpty()) {
+                    entries.add(part.trim());
+                }
+            }
+        } else if (value instanceof Collection) {
+            for (Object item : (Collection<?>) value) {
+                if (item instanceof String && !((String) item).trim().isEmpty()) {
+                    entries.add(((String) item).trim());
+                }
+            }
+        }
+        return entries;
+    }
+
+    /** This policy with a tenant's origins added; the Referer setting stays the operator's. */
+    PublicTrackerCorsPolicy withOrigins(Set<String> tenantOrigins) {
+        if (tenantOrigins.isEmpty()) {
+            return this;
+        }
+        Set<String> merged = new LinkedHashSet<>(allowedOrigins);
+        merged.addAll(tenantOrigins);
+        return new PublicTrackerCorsPolicy(Collections.unmodifiableSet(merged), matchReferer);
     }
 
     /**
@@ -220,12 +290,20 @@ public final class PublicTrackerCorsPolicy {
      * Anything else falls back to {@code Lax}.
      */
     String resolveSameSite(String requested, boolean secure) {
+        return resolveSameSite(requested, secure, !allowedOrigins.isEmpty());
+    }
+
+    /**
+     * @param originsListed whether any origin may be listed: the operator's list is not empty, or tenants may
+     *                      list their own
+     */
+    String resolveSameSite(String requested, boolean secure, boolean originsListed) {
         if (requested == null || requested.isBlank()) {
             return "Lax";
         }
         String value = requested.trim();
         if ("None".equalsIgnoreCase(value)) {
-            if (secure && !allowedOrigins.isEmpty()) {
+            if (secure && originsListed) {
                 return "None";
             }
             return "Lax";

@@ -293,6 +293,7 @@ Changing the Karaf admin password is done by setting `UNOMI_ROOT_PASSWORD` or by
 
 Apache Unomi supports multi-tenancy, allowing multiple organizations to use the same Unomi instance while keeping their data completely isolated. Each tenant has its own set of API keys for authentication.
 
+[[_creating_and_managing_tenants]]
 ==== Creating and Managing Tenants
 
 IMPORTANT: All tenant management operations (create, list, update, delete, API key management) are restricted to administrators only and require JAAS authentication. These endpoints cannot be accessed using tenant API keys.
@@ -312,7 +313,8 @@ curl -X POST "http://localhost:8181/cxs/tenants" \
       "name": "My Company",
       "description": "My Company tenant",
       "address": "123 Main St",
-      "country": "USA"
+      "country": "USA",
+      "publicCorsAllowedOrigins": ["https://www.mycompany.com", "https://shop.mycompany.com"]
     }
   }'
 
@@ -553,7 +555,7 @@ curl -X POST "http://localhost:8181/cxs/segments" \
 The public tracker endpoints (`/cxs/context.js`, `/cxs/context.json`, `/cxs/eventcollector` and `/cxs/client/*`) accept requests from any origin. The visitor cookie (`context-profile-id` by default), which identifies the visitor, is only used and set for:
 
 * pages served from Unomi's own origin;
-* origins the operator lists in `org.apache.unomi.public.cors.allowedOrigins`;
+* origins the operator lists in `org.apache.unomi.public.cors.allowedOrigins`, or that the tenant of the request lists in its own settings;
 * requests that carry no sign of coming from a page on another site, such as server-to-server calls.
 
 For any other page, Unomi answers without credentialed CORS headers and ignores the cookie: the request gets a new anonymous profile, and the visitor's cookie is not replaced.
@@ -587,6 +589,7 @@ A response can only set the cookie on Unomi's own host, or on a parent domain se
 org.apache.unomi.public.cors.allowedOrigins=${env:UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS:-}
 org.apache.unomi.profile.cookie.sameSite=${env:UNOMI_PROFILE_COOKIE_SAMESITE:-Lax}
 org.apache.unomi.public.cors.matchReferer=${env:UNOMI_PUBLIC_CORS_MATCH_REFERER:-false}
+org.apache.unomi.public.cors.tenantOrigins=${env:UNOMI_PUBLIC_CORS_TENANT_ORIGINS:-true}
 ----
 
 Example:
@@ -609,6 +612,7 @@ export UNOMI_PROFILE_COOKIE_SAMESITE=None
 * The list is empty by default: no other origin may use the cookie.
 * A listed origin is named exactly in the response, with `Access-Control-Allow-Credentials: true` and `Vary: Origin`, preflight requests included. An unlisted origin gets `Access-Control-Allow-Origin: *` without credentials.
 * `SameSite` accepts `Lax` (default), `Strict` and `None`. `None` is used only when the cookie is `Secure` and the list is not empty; otherwise Unomi uses `Lax` and logs a warning.
+* `tenantOrigins` (default `true`) lets each tenant list its own websites; see <<_public_tracker_tenant_origins,Websites listed by each tenant>>. Only `false` turns it off.
 * `matchReferer` (default `false`) lets listed websites that embed the tracker with a `<script>` tag keep their visitors; see <<_public_tracker_script_tag,Embedding `context.js` with a script tag>>. Only `true` turns it on; any other value, and `true` with no origin listed, is logged as a warning.
 * Changes are applied without a restart and are parsed once, not on every request.
 
@@ -619,6 +623,28 @@ Do not:
 * list the `http://` origin of a website that also runs over HTTPS: list the `https://` one, which is what its pages send;
 * turn on `matchReferer` "to make it work": it trusts everything the listed websites frame (see <<_public_tracker_script_tag,Embedding `context.js` with a script tag>>);
 * set `SameSite=None` for a same-site setup: `Lax` already works there.
+
+[[_public_tracker_tenant_origins]]
+===== Websites listed by each tenant
+
+On a server with many tenants, each tenant lists its own websites, so tenants can be created and deleted without changing the server configuration. The list is the tenant's `publicCorsAllowedOrigins` property, a JSON array of origins or a comma-separated string, set by a system administrator through `/cxs/tenants` when the tenant is created or updated (see <<_creating_and_managing_tenants,Creating and Managing Tenants>>):
+
+[source,bash]
+----
+# PUT replaces the whole tenant, API keys included: read it, change the property, send it back.
+curl -s -u "karaf:$UNOMI_ROOT_PASSWORD" "http://localhost:8181/cxs/tenants/mytenant" \
+  | jq '.properties.publicCorsAllowedOrigins = ["https://www.mycompany.com"]' \
+  | curl -X PUT "http://localhost:8181/cxs/tenants/mytenant" \
+      -u "karaf:$UNOMI_ROOT_PASSWORD" -H "Content-Type: application/json" --data-binary @-
+----
+
+* The origins follow the same rules as the server list. An invalid entry is refused with `400` when the tenant is saved, so a provisioning script fails instead of a website silently losing its visitors.
+* A tenant's origins only apply to requests made with that tenant's public API key. The same website calling with another tenant's key is served without the visitor cookie.
+* The server list still applies to every tenant. Tenants can only add origins for themselves; they cannot change the server settings.
+* A browser's preflight request carries no API key, so it is answered for any origin the server or a tenant lists. That only lets the browser send the real request, which is then checked against its own tenant.
+* A change made through `/cxs/tenants` applies at once on the node that handled it. Other nodes pick up a new tenant or origin on its first request, and other changes, such as a removed origin, within 30 seconds.
+* `SameSite`, `HttpOnly` and the cookie domain stay server settings: all tenants share one visitor cookie on a Unomi host.
+* `org.apache.unomi.public.cors.tenantOrigins=false` (`UNOMI_PUBLIC_CORS_TENANT_ORIGINS`) turns tenant lists off; only the server list then counts.
 
 ===== How Unomi recognises the page
 
@@ -662,7 +688,7 @@ In 2.x and 3.x the public endpoints allowed credentialed CORS for every origin, 
 |Nothing.
 
 |Website on another subdomain using the cookie
-|List the website origin. `SameSite=Lax` is enough.
+|List the website origin, in the server list or in the tenant's own list. `SameSite=Lax` is enough.
 
 |Website on another site sending body `profileId`
 |List the website origin, serve Unomi over HTTPS and set `SameSite=None`, or serve Unomi from the website's origin. Expect the cookie to be blocked in Safari.

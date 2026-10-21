@@ -60,6 +60,7 @@ import org.junit.runners.Suite.SuiteClasses;
         IncrementPropertyIT.class,
         InputValidationIT.class,
         PublicTrackerCorsIT.class,
+        TenantTrackerOriginsIT.class,
         RestCreateValidationIT.class,
         ModifyConsentIT.class,
         PatchIT.class,

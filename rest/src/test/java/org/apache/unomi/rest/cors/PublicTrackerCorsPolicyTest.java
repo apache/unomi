@@ -22,6 +22,7 @@ import java.util.ArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PublicTrackerCorsPolicyTest {
@@ -152,6 +153,36 @@ class PublicTrackerCorsPolicyTest {
         PublicTrackerCorsPolicy listed = PublicTrackerCorsPolicy.parse("https://shop.example");
         assertTrue(listed.allowsVisitorCookie("https://shop.example", null, "cross-site", "cdp.example", null));
         assertFalse(listed.allowsVisitorCookie("https://other.example", null, "cross-site", "cdp.example", null));
+    }
+
+    @Test
+    void tenantOriginsAcceptAStringOrAList() {
+        assertEquals(java.util.Set.of("https://shop.example", "https://blog.example:8443"),
+                PublicTrackerCorsPolicy.parseTenantOrigins(" https://SHOP.example/ , https://blog.example:8443"));
+        assertEquals(java.util.Set.of("https://shop.example"),
+                PublicTrackerCorsPolicy.parseTenantOrigins(java.util.List.of("https://shop.example:443", "")));
+        assertTrue(PublicTrackerCorsPolicy.parseTenantOrigins(null).isEmpty());
+        assertTrue(PublicTrackerCorsPolicy.parseTenantOrigins(42).isEmpty());
+    }
+
+    @Test
+    void invalidTenantOriginsAreReported() {
+        assertTrue(PublicTrackerCorsPolicy.tenantOriginProblems("https://shop.example, https://blog.example").isEmpty());
+        assertTrue(PublicTrackerCorsPolicy.tenantOriginProblems(java.util.List.of("https://shop.example")).isEmpty());
+        assertTrue(PublicTrackerCorsPolicy.tenantOriginProblems(null).isEmpty());
+        assertEquals(2, PublicTrackerCorsPolicy.tenantOriginProblems("*, https://shop.example/path").size());
+        assertEquals(1, PublicTrackerCorsPolicy.tenantOriginProblems(42).size());
+        assertEquals(1, PublicTrackerCorsPolicy.tenantOriginProblems(java.util.List.of(42)).size());
+    }
+
+    @Test
+    void aTenantsOriginsAreAddedToTheOperatorList() {
+        PublicTrackerCorsPolicy operator = PublicTrackerCorsPolicy.parse("https://shop.example");
+        PublicTrackerCorsPolicy merged = operator.withOrigins(java.util.Set.of("https://blog.example"));
+        assertTrue(merged.allows("https://shop.example"));
+        assertTrue(merged.allows("https://blog.example"));
+        assertFalse(operator.allows("https://blog.example"));
+        assertSame(operator, operator.withOrigins(java.util.Set.of()));
     }
 
     @Test
