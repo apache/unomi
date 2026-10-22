@@ -297,6 +297,9 @@ public final class PublicTrackerCorsPolicy {
      * {@code SameSite=None} is only valid together with {@code Secure} and a non-empty origin list.
      * Anything else falls back to {@code Lax}.
      */
+    /**
+     * {@link #resolveSameSite(String, boolean, boolean)} for this list alone, ignoring tenant lists.
+     */
     String resolveSameSite(String requested, boolean secure) {
         return resolveSameSite(requested, secure, !allowedOrigins.isEmpty());
     }

@@ -644,7 +644,7 @@ curl -s -u "karaf:$UNOMI_ROOT_PASSWORD" "http://localhost:8181/cxs/tenants/myten
 * The server list still applies to every tenant. Tenants can only add origins for themselves; they cannot change the server settings.
 * A browser's preflight request carries no API key, so it is answered for any origin the server or a tenant lists. That only lets the browser send the real request, which is then checked against its own tenant.
 * A tenant created, updated or deleted through `/cxs/tenants` applies at once on the node that handled it. Other nodes pick up a new tenant on its first request, and any other change, such as an origin added to or removed from an existing tenant, within 30 seconds.
-* `PUT /cxs/tenants/{tenantId}` never changes the tenant's API keys, which are managed through `/cxs/tenants/{tenantId}/apikeys`; keys in the request body are ignored. A tenant read with `GET` can therefore be sent back as is.
+* `PUT /cxs/tenants/{tenantId}` replaces the tenant's settings but never its API keys, which are managed through `/cxs/tenants/{tenantId}/apikeys`, nor its creation date; those fields in the request body are ignored. A tenant read with `GET` can therefore be sent back as is. The write fails with `409` instead of undoing a concurrent API key change; retry it.
 * Tenants saved without going through `/cxs/tenants`, for example with the developer shell commands, are not validated: invalid entries are left out and logged as a warning.
 * `SameSite`, `HttpOnly` and the cookie domain stay server settings: all tenants share one visitor cookie on a Unomi host.
 * `org.apache.unomi.public.cors.tenantOrigins=false` (`UNOMI_PUBLIC_CORS_TENANT_ORIGINS`) turns tenant lists off; only the server list then counts.

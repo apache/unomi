@@ -46,6 +46,8 @@ import java.util.function.Supplier;
  *     reloads. No request ever waits for a reload made by another.</li>
  *     <li>After a failed load, the previous state is kept and the next attempt waits
  *     {@value #MISS_RELOAD_SECONDS} seconds.</li>
+ *     <li>A tenant removed through this node is left out of full loads for {@value #REMOVED_SECONDS} seconds,
+ *     until the store no longer returns it.</li>
  * </ul>
  */
 final class TenantOriginsSnapshot {
@@ -54,6 +56,11 @@ final class TenantOriginsSnapshot {
 
     static final int REFRESH_SECONDS = 30;
     static final int MISS_RELOAD_SECONDS = 5;
+    /**
+     * How long a tenant removed through this node stays excluded from full loads. The tenant service tells
+     * listeners before it deletes, so a load in between would otherwise bring the tenant back.
+     */
+    static final int REMOVED_SECONDS = 60;
 
     /** One consistent view; replaced as a whole. */
     static final class State {
@@ -77,6 +84,8 @@ final class TenantOriginsSnapshot {
     private final ReentrantLock lock = new ReentrantLock();
 
     private volatile State state = State.EMPTY;
+    /** Tenants removed through this node, and until when loads skip them; guarded by {@link #lock}. */
+    private final Map<String, Long> removedUntil = new HashMap<>();
     private volatile boolean attempted;
     /** When the next periodic reload is due; meaningful once {@link #attempted}. */
     private volatile long nextRefreshAt;
@@ -124,6 +133,7 @@ final class TenantOriginsSnapshot {
         }
         lock.lock();
         try {
+            removedUntil.remove(tenant.getItemId());
             State previous = state;
             Set<String> ids = new HashSet<>(previous.tenantIds);
             Map<String, Set<String>> lists = new HashMap<>(previous.lists);
@@ -143,6 +153,7 @@ final class TenantOriginsSnapshot {
         }
         lock.lock();
         try {
+            removedUntil.put(tenantId, clock.getAsLong() + TimeUnit.SECONDS.toNanos(REMOVED_SECONDS));
             State previous = state;
             if (!previous.tenantIds.contains(tenantId)) {
                 return;
@@ -178,11 +189,14 @@ final class TenantOriginsSnapshot {
         try {
             List<Tenant> tenants = loader.get();
             State previous = state;
+            removedUntil.values().removeIf(until -> now - until >= 0);
             Set<String> ids = new HashSet<>();
             Map<String, Set<String>> lists = new HashMap<>();
             Map<String, Object> configured = new HashMap<>();
             for (Tenant tenant : tenants) {
-                put(tenant, ids, lists, configured, previous);
+                if (!removedUntil.containsKey(tenant.getItemId())) {
+                    put(tenant, ids, lists, configured, previous);
+                }
             }
             state = new State(Collections.unmodifiableSet(ids), Collections.unmodifiableMap(lists),
                     Collections.unmodifiableMap(configured));

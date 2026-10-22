@@ -132,7 +132,6 @@ class TenantOriginsSnapshotTest {
 
     @Test
     void noRequestWaitsForAReloadInProgress() throws Exception {
-        snapshot.load();
         CountDownLatch loading = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         TenantOriginsSnapshot slow = new TenantOriginsSnapshot(() -> {
@@ -148,13 +147,42 @@ class TenantOriginsSnapshotTest {
         reloader.start();
         assertTrue(loading.await(5, TimeUnit.SECONDS));
 
+        // Past the miss limit, so afterMiss() does try to reload rather than skip the attempt.
+        now[0] += MISS;
         long started = System.nanoTime();
-        slow.current();
-        slow.afterMiss();
+        TenantOriginsSnapshot.State seen = slow.current();
+        TenantOriginsSnapshot.State afterMiss = slow.afterMiss();
         assertTrue(System.nanoTime() - started < TimeUnit.SECONDS.toNanos(1), "a request waited for the reload");
+        // Both answered from the current state (empty here: the reload in progress has not finished).
+        assertSame(TenantOriginsSnapshot.State.EMPTY, seen);
+        assertSame(TenantOriginsSnapshot.State.EMPTY, afterMiss);
 
         release.countDown();
         reloader.join();
+    }
+
+    @Test
+    void aReloadDoesNotBringBackATenantJustRemoved() {
+        // The tenant service notifies before it deletes, and the index may still return the tenant.
+        snapshot.load();
+        snapshot.tenantRemoved("acme");
+
+        now[0] += REFRESH;
+        assertFalse(snapshot.current().tenantIds.contains("acme"));
+
+        // Once the marker has expired, a tenant the store still returns is taken again.
+        now[0] += TimeUnit.SECONDS.toNanos(TenantOriginsSnapshot.REMOVED_SECONDS);
+        assertTrue(snapshot.current().tenantIds.contains("acme"));
+    }
+
+    @Test
+    void savingATenantAgainClearsItsRemovalMarker() {
+        snapshot.load();
+        snapshot.tenantRemoved("acme");
+        snapshot.tenantSaved(tenant("acme", "https://shop.example"));
+
+        now[0] += REFRESH;
+        assertTrue(snapshot.current().lists.containsKey("acme"));
     }
 
     private static Tenant tenant(String id, String origins) {

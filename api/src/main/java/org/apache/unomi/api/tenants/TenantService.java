@@ -96,6 +96,18 @@ public interface TenantService {
     void saveTenant(Tenant tenant);
 
     /**
+     * Replaces a tenant's settings (name, description, status, properties, restricted event types and
+     * authorized IPs) with those of the given tenant, keeping its API keys, creation date and system metadata.
+     * The write is a compare-and-set against the stored tenant, retried if the tenant changed in between, so
+     * it never undoes a concurrent API key change.
+     *
+     * @param settings the tenant id and the new settings; its API keys and creation date are ignored
+     * @return the tenant as saved, or {@code null} if no tenant has that id
+     * @throws java.util.ConcurrentModificationException if the tenant kept changing while it was being updated
+     */
+    Tenant updateTenantSettings(Tenant settings);
+
+    /**
      * Deletes a tenant and all associated data from the system.
      *
      * @param tenantId the ID of the tenant to delete

@@ -85,14 +85,16 @@ class TenantEndpointTrackerOriginsTest {
         Tenant tenant = new Tenant();
         tenant.setItemId("acme");
         tenant.setProperties(Map.of(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS, "https://blog.example"));
-        when(tenantService.getTenant("acme")).thenReturn(tenant);
+        Tenant saved = new Tenant();
+        saved.setItemId("acme");
+        when(tenantService.updateTenantSettings(tenant)).thenReturn(saved);
+        when(tenantService.getTenant("acme")).thenReturn(saved);
 
-        endpoint.updateTenant("acme", tenant);
+        assertEquals(saved, endpoint.updateTenant("acme", tenant));
         endpoint.deleteTenant("acme");
 
-        verify(tenantService).saveTenant(tenant);
-        verify(tenantService).deleteTenant("acme");
-        verify(publicTrackerSettings).tenantSaved(tenant);
+        verify(tenantService, never()).saveTenant(any());
+        verify(publicTrackerSettings).tenantSaved(saved);
         verify(publicTrackerSettings).tenantRemoved("acme");
     }
 
@@ -101,40 +103,30 @@ class TenantEndpointTrackerOriginsTest {
         Tenant tenant = new Tenant();
         tenant.setItemId("acme");
         tenant.setProperties(Map.of(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS, 42));
-        when(tenantService.getTenant("acme")).thenReturn(tenant);
 
         WebApplicationException error = assertThrows(WebApplicationException.class, () -> endpoint.updateTenant("acme", tenant));
 
         assertEquals(400, error.getResponse().getStatus());
-        verify(tenantService, never()).saveTenant(any());
+        verify(tenantService, never()).updateTenantSettings(any());
     }
 
     @Test
-    void updatingATenantNeverTouchesItsApiKeys() {
-        // REST never returns key hashes, so a tenant sent back as read has keys without them.
-        ApiKey stored = new ApiKey();
-        stored.setItemId("key-1");
-        stored.setKeyHash("stored-hash");
-        Tenant current = new Tenant();
-        current.setItemId("acme");
-        current.setApiKeys(List.of(stored));
-        current.setCreationDate(new java.util.Date(1000L));
-        when(tenantService.getTenant("acme")).thenReturn(current);
+    void updatingGoesThroughTheKeyPreservingServiceMethod() {
+        // The service applies the settings onto the stored tenant with compare-and-set, keeping its keys.
+        Tenant body = new Tenant();
+        body.setItemId("acme");
+        body.setApiKeys(List.of(new ApiKey()));
 
-        ApiKey asRead = new ApiKey();
-        asRead.setItemId("key-1");
-        Tenant update = new Tenant();
-        update.setItemId("acme");
-        update.setApiKeys(List.of(asRead));
-        update.setProperties(Map.of(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS, "https://shop.example"));
+        when(tenantService.updateTenantSettings(body)).thenReturn(null);
+        WebApplicationException missing = assertThrows(WebApplicationException.class, () -> endpoint.updateTenant("acme", body));
+        assertEquals(404, missing.getResponse().getStatus());
 
-        endpoint.updateTenant("acme", update);
+        when(tenantService.updateTenantSettings(body)).thenThrow(new java.util.ConcurrentModificationException());
+        WebApplicationException busy = assertThrows(WebApplicationException.class, () -> endpoint.updateTenant("acme", body));
+        assertEquals(409, busy.getResponse().getStatus());
 
-        org.mockito.ArgumentCaptor<Tenant> saved = org.mockito.ArgumentCaptor.forClass(Tenant.class);
-        verify(tenantService).saveTenant(saved.capture());
-        assertEquals("stored-hash", saved.getValue().getApiKeys().get(0).getKeyHash());
-        assertEquals(new java.util.Date(1000L), saved.getValue().getCreationDate());
-        assertEquals("https://shop.example", saved.getValue().getProperties().get(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS));
+        verify(tenantService, never()).saveTenant(any());
+        verify(publicTrackerSettings, never()).tenantSaved(any());
     }
 
     private static TenantRequest request(Map<String, Object> properties) {

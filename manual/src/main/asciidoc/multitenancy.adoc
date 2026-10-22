@@ -396,7 +396,7 @@ curl -X GET http://localhost:8181/cxs/tenants \
 
 ===== Updating a Tenant
 
-`PUT` replaces the tenant's settings with the body, which must carry the tenant's `itemId`. Read the tenant first, change what you need, and send it back. API keys are never changed by `PUT`: they are managed with the API key endpoints below, and keys in the body are ignored.
+`PUT` replaces the tenant's settings with the body, which must carry the tenant's `itemId`. Read the tenant first, change what you need, and send it back. API keys and the creation date are never changed by `PUT`: keys are managed with the API key endpoints below, and those fields in the body are ignored. If the tenant changes while the update is being applied, for example because one of its keys is regenerated, the update answers `409` rather than undoing that change; send it again.
 
 [source,bash]
 ----

@@ -76,7 +76,9 @@ public class TenantTrackerOriginsIT extends BaseIT {
     public void tearDown() {
         for (String tenantId : createdTenants) {
             try {
-                tenantService.deleteTenant(tenantId);
+                if (tenantService.getTenant(tenantId) != null) {
+                    tenantService.deleteTenant(tenantId);
+                }
             } catch (RuntimeException e) {
                 LOGGER.warn("Could not delete test tenant {}", tenantId, e);
             }
@@ -220,10 +222,11 @@ public class TenantTrackerOriginsIT extends BaseIT {
         HttpPost create = new HttpPost(getFullUrl("/cxs/tenants"));
         create.setEntity(new StringEntity("{\"requestedId\":\"" + tenantId + "\",\"properties\":" + properties + "}",
                 ContentType.APPLICATION_JSON));
+        // Recorded first, so the tenant is cleaned up even if the assertion below fails after the server created it.
+        createdTenants.add(tenantId);
         try (CloseableHttpResponse response = executeHttpRequest(create, AuthType.JAAS_ADMIN)) {
             assertEquals(EntityUtils.toString(response.getEntity()), 200, response.getStatusLine().getStatusCode());
         }
-        createdTenants.add(tenantId);
         String key = tenantService.generateApiKeyWithType(tenantId, ApiKey.ApiKeyType.PUBLIC, null).getPlainTextKey();
         persistenceService.refresh();
         return key;

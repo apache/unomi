@@ -60,6 +60,14 @@ class PublicTrackerSettingsTest {
     }
 
     @Test
+    void activationLoadsTheTenantOrigins() throws Exception {
+        settings.activate();
+        Field field = PublicTrackerSettings.class.getDeclaredField("tenantService");
+        field.setAccessible(true);
+        verify((org.apache.unomi.api.tenants.TenantService) field.get(settings)).getAllTenants();
+    }
+
+    @Test
     void readsTheSettingsAtActivation() {
         when(configSharingService.getProperty(PublicTrackerSettings.ALLOWED_ORIGINS_PROPERTY)).thenReturn("https://shop.example");
         when(configSharingService.getProperty(PublicTrackerSettings.SAME_SITE_PROPERTY)).thenReturn(" None ");

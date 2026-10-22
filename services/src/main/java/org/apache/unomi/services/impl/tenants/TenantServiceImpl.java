@@ -43,6 +43,9 @@ public class TenantServiceImpl implements TenantService {
     private static final int MAX_TENANT_ID_LENGTH = 32;
     private static final String TENANT_ID_PATTERN = "^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]$";
 
+    /** Attempts of a compare-and-set tenant write before giving up on a tenant that keeps changing. */
+    private static final int WRITE_ATTEMPTS = 5;
+
     private final List<TenantLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
     /**
      * How long {@link #getOrCreateTenant} trusts a cached tenant before it reads persistence again.
@@ -258,16 +261,27 @@ public class TenantServiceImpl implements TenantService {
                 apiKey.setExpirationDate(new Date(System.currentTimeMillis() + validityPeriod));
             }
 
-            Tenant tenant = persistenceService.load(tenantId, Tenant.class);
-            if (tenant != null) {
+            // Compare-and-set, so the new key cannot be lost to a concurrent settings update, and that update
+            // cannot be lost either: whichever write comes second reloads and reapplies.
+            for (int attempt = 1; attempt <= WRITE_ATTEMPTS; attempt++) {
+                Tenant tenant = persistenceService.load(tenantId, Tenant.class);
+                if (tenant == null) {
+                    break;
+                }
                 // Remove any existing key of the same type
                 if (tenant.getApiKeys() == null) {
                     tenant.setApiKeys(new ArrayList<>());
                 }
                 tenant.getApiKeys().removeIf(existingKey -> existingKey.getKeyType() == keyType);
                 tenant.getApiKeys().add(apiKey);
-                persistenceService.save(tenant);
-                invalidateGetOrCreateCache(tenantId);
+                if (persistenceService.save(tenant, false, false)) {
+                    persistenceService.refreshIndex(Tenant.class);
+                    invalidateGetOrCreateCache(tenantId);
+                    break;
+                }
+                if (attempt == WRITE_ATTEMPTS) {
+                    throw new ConcurrentModificationException("Tenant " + tenantId + " kept changing while its API key was being replaced");
+                }
             }
 
             return new ApiKeyCreationResult(apiKey, plainTextKey);
@@ -286,10 +300,46 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     public void saveTenant(Tenant tenant) {
-        executionContextManager.executeAsSystem(() -> persistenceService.save(tenant));
+        executionContextManager.executeAsSystem(() -> {
+            persistenceService.save(tenant);
+            // Searches over tenants (API key lookup, the tracker's tenant origins) see the change at once.
+            persistenceService.refreshIndex(Tenant.class);
+        });
         if (tenant != null) {
             invalidateGetOrCreateCache(tenant.getItemId());
         }
+    }
+
+    @Override
+    public Tenant updateTenantSettings(Tenant settings) {
+        if (settings == null || settings.getItemId() == null) {
+            return null;
+        }
+        String tenantId = settings.getItemId();
+        Tenant saved = executionContextManager.executeAsSystem(() -> {
+            for (int attempt = 1; attempt <= WRITE_ATTEMPTS; attempt++) {
+                Tenant stored = persistenceService.load(tenantId, Tenant.class);
+                if (stored == null) {
+                    return null;
+                }
+                stored.setName(settings.getName());
+                stored.setDescription(settings.getDescription());
+                stored.setStatus(settings.getStatus());
+                stored.setProperties(settings.getProperties());
+                stored.setRestrictedEventTypes(settings.getRestrictedEventTypes());
+                stored.setAuthorizedIPs(settings.getAuthorizedIPs());
+                stored.setLastModificationDate(new Date());
+                // Compare-and-set: if the tenant changed since it was loaded (an API key was replaced, say),
+                // nothing is written and the settings are applied again on the new version.
+                if (persistenceService.save(stored, false, false)) {
+                    persistenceService.refreshIndex(Tenant.class);
+                    return stored;
+                }
+            }
+            throw new ConcurrentModificationException("Tenant " + tenantId + " kept changing while its settings were being updated");
+        });
+        invalidateGetOrCreateCache(tenantId);
+        return saved;
     }
 
     @Override
@@ -308,6 +358,7 @@ public class TenantServiceImpl implements TenantService {
                 }
             }
             persistenceService.remove(tenantId, Tenant.class);
+            persistenceService.refreshIndex(Tenant.class);
         });
         invalidateGetOrCreateCache(tenantId);
     }

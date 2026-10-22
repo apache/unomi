@@ -35,6 +35,7 @@ import org.osgi.service.component.annotations.Reference;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Map;
 
@@ -83,6 +84,7 @@ public class TenantEndpoint {
      * @return the requested tenant with 200 status, or 404 if tenant is not found
      * @api.status 200 org.apache.unomi.api.tenants.Tenant Tenant found.
      * @api.status 404 empty Tenant not found.
+     * @api.status 409 empty The tenant kept changing concurrently; retry.
      * @api.example {"itemId":"acme","itemType":"tenant","name":"Acme Corp","status":"ACTIVE","creationDate":"2026-01-15T10:00:00.000Z","lastModificationDate":"2026-01-15T10:00:00.000Z","apiKeys":[{"itemId":"key-1","itemType":"apiKey","maskedKey":"unomi_v1_****ab12","keyType":"PUBLIC","creationDate":"2026-01-15T10:00:00.000Z","revoked":false}],"properties":{},"restrictedEventTypes":[],"authorizedIPs":["10.0.0.0/8"]}
      */
     @GET
@@ -130,10 +132,11 @@ public class TenantEndpoint {
 
     /**
      * Updates an existing tenant.
-     * The path {@code tenantId} must equal {@code tenant.itemId}. The body replaces the tenant's settings, but
-     * never its API keys: those are managed only through {@code /tenants/{tenantId}/apikeys}, and keys in the
-     * body are ignored. REST responses never include key hashes, so sending back a tenant as read would
-     * otherwise invalidate every key.
+     * The path {@code tenantId} must equal {@code tenant.itemId}. The body replaces the tenant's settings (name,
+     * description, status, properties, restricted event types, authorized IPs), but never its API keys or creation
+     * date: keys are managed only through {@code /tenants/{tenantId}/apikeys}, and those fields in the body are
+     * ignored. REST responses never include key hashes, so sending back a tenant as read would otherwise
+     * invalidate every key. The write is a compare-and-set, so it never undoes a concurrent key change.
      *
      * @param tenantId the ID of the tenant to update
      * @param tenant the updated tenant information
@@ -154,19 +157,18 @@ public class TenantEndpoint {
             throw new WebApplicationException("Tenant ID mismatch", Response.Status.BAD_REQUEST);
         }
 
-        Tenant stored = tenantService.getTenant(tenantId);
-        if (stored == null) {
+        validateTrackerOrigins(tenant.getProperties());
+        Tenant saved;
+        try {
+            saved = tenantService.updateTenantSettings(tenant);
+        } catch (ConcurrentModificationException e) {
+            throw new WebApplicationException("Tenant is being changed concurrently, retry", Response.Status.CONFLICT);
+        }
+        if (saved == null) {
             throw new WebApplicationException("Tenant not found", Response.Status.NOT_FOUND);
         }
-
-        validateTrackerOrigins(tenant.getProperties());
-        tenant.setApiKeys(stored.getApiKeys());
-        if (tenant.getCreationDate() == null) {
-            tenant.setCreationDate(stored.getCreationDate());
-        }
-        tenantService.saveTenant(tenant);
-        publicTrackerSettings.tenantSaved(tenant);
-        return tenant;
+        publicTrackerSettings.tenantSaved(saved);
+        return saved;
     }
 
     /**
