@@ -62,6 +62,11 @@ class ShippedProfileCookieConfigTest {
                 "Referer matching should default to off in " + WEB_CFG_PATH);
         assertTrue(systemProperties.contains("org.apache.unomi.public.cors.matchReferer=${env:UNOMI_PUBLIC_CORS_MATCH_REFERER:-false}"),
                 "Referer matching should default to off and be reachable from the environment");
+        // Tenants created at runtime list their own websites, so tenant lists ship on.
+        assertTrue(webCfg.contains("public.cors.tenantOrigins=${org.apache.unomi.public.cors.tenantOrigins:-true}"),
+                "tenant origin lists should default to on in " + WEB_CFG_PATH);
+        assertTrue(systemProperties.contains("org.apache.unomi.public.cors.tenantOrigins=${env:UNOMI_PUBLIC_CORS_TENANT_ORIGINS:-true}"),
+                "tenant origin lists should default to on and be reachable from the environment");
     }
 
     private static Path repoFile(String relativePath) throws IOException {

@@ -131,6 +131,14 @@ Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it s
 - `UNOMI_AUTO_START`: Boolean to specify if unomi auto start with karaf (defaults to `true`)
 - `UNOMI_DISTRIBUTION`: Specifies the Unomi Distribution Feature to use (`unomi-distribution-elasticsearch` or `unomi-distribution-opensearch`, defaults to `unomi-distribution-elasticsearch`)
 
+### Website origins and visitor cookie
+- `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS`: Comma-separated website origins (`https://www.example.com`) that may use the visitor cookie with every tenant's key (default: none)
+- `UNOMI_PUBLIC_CORS_TENANT_ORIGINS`: Whether each tenant may list its own websites in its `publicCorsAllowedOrigins` property (default: `true`; only `false` turns it off)
+- `UNOMI_PUBLIC_CORS_MATCH_REFERER`: Recognise a listed website that embeds `context.js` with a `<script>` tag by its `Referer` (default: `false`)
+- `UNOMI_PROFILE_COOKIE_SAMESITE`: `Lax` (default), `Strict` or `None`; `None` needs HTTPS
+
+See "Websites on other origins" in the manual's configuration chapter.
+
 ### ElasticSearch-specific Variables
 - `UNOMI_ELASTICSEARCH_ADDRESSES`: ElasticSearch host:port (default: localhost:9200)
 - `UNOMI_ELASTICSEARCH_USERNAME`: Optional username for ElasticSearch

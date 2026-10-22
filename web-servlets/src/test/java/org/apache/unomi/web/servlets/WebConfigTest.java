@@ -35,6 +35,7 @@ class WebConfigTest {
         WebConfig.Config config = mock(WebConfig.Config.class);
         when(config.contextserver_profileIdCookieHttpOnly()).thenReturn("flase");
         when(config.public_cors_matchReferer()).thenReturn("yes");
+        when(config.public_cors_tenantOrigins()).thenReturn("off");
         when(config.public_cors_allowedOrigins()).thenReturn("https://shop.example");
         when(config.contextserver_profileIdCookieSameSite()).thenReturn("None");
         ConfigSharingService configSharingService = mock(ConfigSharingService.class);
@@ -47,9 +48,11 @@ class WebConfigTest {
 
         verify(configSharingService).setProperty("profileIdCookieHttpOnly", "flase");
         verify(configSharingService).setProperty("publicCorsMatchReferer", "yes");
+        verify(configSharingService).setProperty("publicCorsTenantOrigins", "off");
         // Origins before SameSite, so SameSite=None is never resolved against an empty list on the way.
         InOrder order = inOrder(configSharingService);
         order.verify(configSharingService).setProperty("publicCorsAllowedOrigins", "https://shop.example");
+        order.verify(configSharingService).setProperty("publicCorsTenantOrigins", "off");
         order.verify(configSharingService).setProperty("profileIdCookieSameSite", "None");
     }
 }

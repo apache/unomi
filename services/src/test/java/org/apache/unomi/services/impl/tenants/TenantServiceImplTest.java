@@ -89,6 +89,8 @@ public class TenantServiceImplTest {
         tenantService.setExecutionContextManager(executionContextManager);
         tenantService.setSecretHashService(secretHashService);
 
+        // Compare-and-set writes succeed unless a test says otherwise.
+        when(persistenceService.save(any(Tenant.class), eq(false), eq(false))).thenReturn(true);
         when(executionContextManager.executeAsSystem(any(Supplier.class))).thenAnswer(invocation -> {
             Supplier<?> supplier = invocation.getArgument(0);
             return supplier.get();
@@ -409,5 +411,87 @@ public class TenantServiceImplTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
                 () -> tenantService.deleteTenant("missing-tenant"));
         assertEquals("Tenant not found: missing-tenant", exception.getMessage());
+    }
+
+    @Test
+    public void updatingSettingsKeepsAKeyReplacedConcurrently() {
+        // UNOMI-1013: a tenant update must never undo an API key change made while it was in progress.
+        Tenant beforeRotation = tenantWithKey("old-hash");
+        Tenant afterRotation = tenantWithKey("new-hash");
+        when(persistenceService.load("acme", Tenant.class)).thenReturn(beforeRotation, afterRotation);
+        // Tenants are equal by id, so the conflict is stubbed as a sequence: the first write loses the race.
+        when(persistenceService.save(any(Tenant.class), eq(false), eq(false))).thenReturn(false, true);
+
+        Tenant settings = new Tenant();
+        settings.setItemId("acme");
+        settings.setProperties(Map.of("publicCorsAllowedOrigins", "https://shop.example"));
+        ApiKey fromBody = new ApiKey();
+        fromBody.setKeyHash(null);
+        settings.setApiKeys(List.of(fromBody));
+
+        Tenant saved = tenantService.updateTenantSettings(settings);
+
+        assertSame(afterRotation, saved);
+        assertEquals("new-hash", saved.getApiKeys().get(0).getKeyHash());
+        assertEquals("https://shop.example", saved.getProperties().get("publicCorsAllowedOrigins"));
+        verify(persistenceService).refreshIndex(Tenant.class);
+    }
+
+    @Test
+    public void updatingSettingsOfAnUnknownTenantReturnsNull() {
+        when(persistenceService.load("missing", Tenant.class)).thenReturn(null);
+        Tenant settings = new Tenant();
+        settings.setItemId("missing");
+
+        assertNull(tenantService.updateTenantSettings(settings));
+        verify(persistenceService, never()).save(any(Tenant.class), eq(false), eq(false));
+    }
+
+    @Test
+    public void updatingSettingsGivesUpOnATenantThatKeepsChanging() {
+        when(persistenceService.load("acme", Tenant.class)).thenAnswer(invocation -> tenantWithKey("hash"));
+        when(persistenceService.save(any(Tenant.class), eq(false), eq(false))).thenReturn(false);
+        Tenant settings = new Tenant();
+        settings.setItemId("acme");
+
+        assertThrows(java.util.ConcurrentModificationException.class, () -> tenantService.updateTenantSettings(settings));
+    }
+
+    @Test
+    public void replacingAKeyKeepsSettingsUpdatedConcurrently() {
+        Tenant before = tenantWithKey("old-hash");
+        Tenant updatedMeanwhile = tenantWithKey("old-hash");
+        updatedMeanwhile.setProperties(Map.of("publicCorsAllowedOrigins", "https://shop.example"));
+        when(persistenceService.load("acme", Tenant.class)).thenReturn(before, updatedMeanwhile);
+        when(persistenceService.save(any(Tenant.class), eq(false), eq(false))).thenReturn(false, true);
+        when(secretHashService.hash(anyString())).thenReturn("new-hash");
+
+        tenantService.generateApiKeyWithType("acme", ApiKey.ApiKeyType.PUBLIC, null);
+
+        assertEquals("https://shop.example", updatedMeanwhile.getProperties().get("publicCorsAllowedOrigins"));
+        assertEquals("new-hash", updatedMeanwhile.getApiKeys().get(0).getKeyHash());
+        verify(persistenceService).refreshIndex(Tenant.class);
+    }
+
+    @Test
+    public void savingOrDeletingATenantRefreshesTheIndex() {
+        Tenant tenant = tenantWithKey("hash");
+        tenantService.saveTenant(tenant);
+        when(persistenceService.load("acme", Tenant.class)).thenReturn(tenant);
+        tenantService.deleteTenant("acme");
+
+        verify(persistenceService, times(2)).refreshIndex(Tenant.class);
+    }
+
+    private static Tenant tenantWithKey(String hash) {
+        ApiKey key = new ApiKey();
+        key.setItemId("key-" + hash);
+        key.setKeyType(ApiKey.ApiKeyType.PUBLIC);
+        key.setKeyHash(hash);
+        Tenant tenant = new Tenant();
+        tenant.setItemId("acme");
+        tenant.setApiKeys(new ArrayList<>(List.of(key)));
+        tenant.setProperties(new HashMap<>());
+        return tenant;
     }
 }

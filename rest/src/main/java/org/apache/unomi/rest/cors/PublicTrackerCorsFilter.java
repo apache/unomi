@@ -62,7 +62,7 @@ public class PublicTrackerCorsFilter extends CrossOriginResourceSharingFilter {
         if (origin == null || !headers.containsKey(ALLOW_ORIGIN)) {
             return;
         }
-        if (settings.policy().allows(origin)) {
+        if (allowsCredentials(requestContext, origin)) {
             headers.putSingle(ALLOW_ORIGIN, origin);
             headers.putSingle(ALLOW_CREDENTIALS, "true");
             if (!variesOnOrigin(headers)) {
@@ -73,6 +73,21 @@ public class PublicTrackerCorsFilter extends CrossOriginResourceSharingFilter {
         // Never echo an unlisted origin and never advertise cookies to it.
         headers.putSingle(ALLOW_ORIGIN, "*");
         headers.remove(ALLOW_CREDENTIALS);
+    }
+
+    /**
+     * A preflight carries no API key, so any origin the operator or a tenant lists is accepted there; the
+     * actual request, which carries the key, is checked against its own tenant.
+     */
+    private boolean allowsCredentials(ContainerRequestContext requestContext, String origin) {
+        boolean preflight = "OPTIONS".equals(requestContext.getMethod())
+                && requestContext.getHeaderString("Access-Control-Request-Method") != null;
+        return preflight ? settings.allowsPreflight(origin) : settings.policyForTenant(requestTenantId()).allows(origin);
+    }
+
+    /** The tenant of the current request; replaced in tests. */
+    String requestTenantId() {
+        return RequestTenant.id();
     }
 
     private static boolean variesOnOrigin(MultivaluedMap<String, Object> headers) {

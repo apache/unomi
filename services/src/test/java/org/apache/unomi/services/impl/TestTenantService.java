@@ -75,6 +75,21 @@ public class TestTenantService implements TenantService {
     }
 
     @Override
+    public Tenant updateTenantSettings(Tenant settings) {
+        Tenant stored = settings == null ? null : tenants.get(settings.getItemId());
+        if (stored == null) {
+            return null;
+        }
+        stored.setName(settings.getName());
+        stored.setDescription(settings.getDescription());
+        stored.setStatus(settings.getStatus());
+        stored.setProperties(settings.getProperties());
+        stored.setRestrictedEventTypes(settings.getRestrictedEventTypes());
+        stored.setAuthorizedIPs(settings.getAuthorizedIPs());
+        return stored;
+    }
+
+    @Override
     public void deleteTenant(String tenantId) {
         tenants.remove(tenantId);
     }

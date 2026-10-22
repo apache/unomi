@@ -922,7 +922,7 @@ The visitor cookie is set by Unomi, not by page script: it is `HttpOnly` by defa
 When the website and Unomi are on different origins:
 
 * send requests with credentials (`xhr.withCredentials = true` or `fetch(..., {credentials: 'include'})`);
-* have the operator list the website origin in `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS`;
+* have the website origin listed, by the operator in `UNOMI_PUBLIC_CORS_ALLOWED_ORIGINS` or in the tenant's `publicCorsAllowedOrigins` property;
 * for a website on another site (another registrable domain), also serve Unomi over HTTPS with `SameSite=None`, knowing that browsers increasingly block such third-party cookies.
 
 Serving Unomi from the website's own origin through a reverse proxy avoids all of this. See <<_public_tracker_origins,Websites on other origins>>.
