@@ -66,6 +66,8 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -383,6 +385,31 @@ class RestServiceUtilsImplProfileBindingTest {
         lenient().when(request.getHeader("Sec-Fetch-Mode")).thenReturn("navigate");
         lenient().when(request.getHeader("Sec-Fetch-Dest")).thenReturn("document");
         assertNull(restServiceUtils.getProfileIdCookieValueForNavigation(request));
+    }
+
+    @Test
+    void aTenantsOwnOriginsDecideForItsRequests() throws Exception {
+        // UNOMI-1013: the decision uses the requesting tenant's list, not only the operator's.
+        PublicTrackerSettings settings = mock(PublicTrackerSettings.class);
+        when(settings.cookieName()).thenReturn(COOKIE_NAME);
+        when(settings.policyForTenant("acme")).thenReturn(policyListing("https://shop.example"));
+        lenient().when(settings.policyForTenant("globex")).thenReturn(policyListing(""));
+        setField(restServiceUtils, "publicTrackerSettings", settings);
+        RestServiceUtilsImpl forAcme = spy(restServiceUtils);
+        doReturn("acme").when(forAcme).requestTenantId();
+        lenient().when(request.getHeader("Origin")).thenReturn("https://shop.example");
+        lenient().when(request.getHeader("Sec-Fetch-Site")).thenReturn("cross-site");
+        when(request.getCookies()).thenReturn(new Cookie[]{new Cookie(COOKIE_NAME, "cookie-profile")});
+
+        assertEquals("cookie-profile", forAcme.getProfileIdCookieValue(request));
+
+        RestServiceUtilsImpl forGlobex = spy(restServiceUtils);
+        doReturn("globex").when(forGlobex).requestTenantId();
+        assertNull(forGlobex.getProfileIdCookieValue(request));
+    }
+
+    private static org.apache.unomi.rest.cors.PublicTrackerCorsPolicy policyListing(String origins) {
+        return new PublicTrackerSettings(origins, null).policy();
     }
 
     private void allowedOrigins(String origins) {

@@ -65,10 +65,13 @@ curl -X POST http://localhost:8181/cxs/tenants \
     "requestedId": "my-tenant",
     "properties": {
       "name": "My Organization",
-      "description": "My organization description"
+      "description": "My organization description",
+      "publicCorsAllowedOrigins": ["https://www.my-organization.com"]
     }
   }'
 ----
+
+`publicCorsAllowedOrigins` is optional: it lists the websites that may use the visitor cookie with this tenant's key (see <<_public_tracker_tenant_origins,Websites listed by each tenant>>). An invalid entry is refused with `400`.
 
 The create response includes the tenant with **masked** API key metadata only (plaintext secrets are not returned and cannot be recovered from storage):
 
@@ -393,16 +396,18 @@ curl -X GET http://localhost:8181/cxs/tenants \
 
 ===== Updating a Tenant
 
+`PUT` replaces the tenant's settings with the body, which must carry the tenant's `itemId`. Read the tenant first, change what you need, and send it back. API keys are never changed by `PUT`: they are managed with the API key endpoints below, and keys in the body are ignored.
+
 [source,bash]
 ----
-curl -X PUT http://localhost:8181/cxs/tenants/my-tenant \
-  --user "karaf:$UNOMI_ROOT_PASSWORD" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "displayName": "Updated Organization Name",
-    "description": "Updated description"
-  }'
+curl -s --user "karaf:$UNOMI_ROOT_PASSWORD" http://localhost:8181/cxs/tenants/my-tenant \
+  | jq '.properties.name = "Updated Organization Name"' \
+  | curl -X PUT http://localhost:8181/cxs/tenants/my-tenant \
+      --user "karaf:$UNOMI_ROOT_PASSWORD" \
+      -H "Content-Type: application/json" --data-binary @-
 ----
+
+The websites that may use the visitor cookie with the tenant's key are listed in its `publicCorsAllowedOrigins` property; see <<_public_tracker_tenant_origins,Websites listed by each tenant>>.
 
 ===== Regenerating API Keys
 

@@ -103,12 +103,14 @@ public class TenantEndpoint {
      * Plaintext keys are only returned in responses that explicitly expose
      * {@link ApiKeyCreationResult} (not on this create response — the returned
      * {@link Tenant} includes hashed/masked key metadata only).
+     * The optional {@value PublicTrackerSettings#TENANT_PROPERTY_ALLOWED_ORIGINS} property lists the websites that
+     * may use the visitor cookie with this tenant's key; it applies at once on this node.
      *
      * @param request the tenant creation request containing tenant details
      * @return the created tenant with generated API key metadata
      * @throws WebApplicationException with 400 status if request is invalid
      * @api.status 200 org.apache.unomi.api.tenants.Tenant Tenant created (status ACTIVE, public and private keys generated).
-     * @api.status 400 empty Missing or blank requestedId.
+     * @api.status 400 empty Missing or blank requestedId, or an invalid publicCorsAllowedOrigins entry.
      * @api.example {"itemId":"acme","itemType":"tenant","status":"ACTIVE","creationDate":"2026-01-15T10:00:00.000Z","apiKeys":[{"maskedKey":"unomi_v1_****ab12","keyType":"PUBLIC","revoked":false},{"maskedKey":"unomi_v1_****cd34","keyType":"PRIVATE","revoked":false}],"properties":{"name":"Acme"},"restrictedEventTypes":[],"authorizedIPs":[]}
      */
     @POST
@@ -122,20 +124,23 @@ public class TenantEndpoint {
         validateTrackerOrigins(request.getProperties());
         Tenant tenant = tenantService.createTenant(request.getRequestedId(), request.getProperties());
         // Note: createTenant already generates both API keys via generateApiKeyWithType
-        publicTrackerSettings.tenantsChanged();
+        publicTrackerSettings.tenantSaved(tenant);
         return tenant;
     }
 
     /**
      * Updates an existing tenant.
-     * The path {@code tenantId} must equal {@code tenant.itemId}.
+     * The path {@code tenantId} must equal {@code tenant.itemId}. The body replaces the tenant's settings, but
+     * never its API keys: those are managed only through {@code /tenants/{tenantId}/apikeys}, and keys in the
+     * body are ignored. REST responses never include key hashes, so sending back a tenant as read would
+     * otherwise invalidate every key.
      *
      * @param tenantId the ID of the tenant to update
      * @param tenant the updated tenant information
      * @return the updated tenant
      * @throws WebApplicationException with 400 if IDs mismatch, 404 if tenant is not found
      * @api.status 200 org.apache.unomi.api.tenants.Tenant Tenant updated.
-     * @api.status 400 empty Path tenantId does not match body itemId.
+     * @api.status 400 empty Path tenantId does not match body itemId, or an invalid publicCorsAllowedOrigins entry.
      * @api.status 404 empty Tenant not found.
      * @api.example {"itemId":"acme","itemType":"tenant","name":"Acme Corp","status":"ACTIVE","creationDate":"2026-01-15T10:00:00.000Z","lastModificationDate":"2026-01-15T10:00:00.000Z","apiKeys":[{"itemId":"key-1","itemType":"apiKey","maskedKey":"unomi_v1_****ab12","keyType":"PUBLIC","creationDate":"2026-01-15T10:00:00.000Z","revoked":false}],"properties":{},"restrictedEventTypes":[],"authorizedIPs":["10.0.0.0/8"]}
      */
@@ -149,13 +154,18 @@ public class TenantEndpoint {
             throw new WebApplicationException("Tenant ID mismatch", Response.Status.BAD_REQUEST);
         }
 
-        if (tenantService.getTenant(tenantId) == null) {
+        Tenant stored = tenantService.getTenant(tenantId);
+        if (stored == null) {
             throw new WebApplicationException("Tenant not found", Response.Status.NOT_FOUND);
         }
 
         validateTrackerOrigins(tenant.getProperties());
+        tenant.setApiKeys(stored.getApiKeys());
+        if (tenant.getCreationDate() == null) {
+            tenant.setCreationDate(stored.getCreationDate());
+        }
         tenantService.saveTenant(tenant);
-        publicTrackerSettings.tenantsChanged();
+        publicTrackerSettings.tenantSaved(tenant);
         return tenant;
     }
 
@@ -178,7 +188,7 @@ public class TenantEndpoint {
         }
 
         tenantService.deleteTenant(tenantId);
-        publicTrackerSettings.tenantsChanged();
+        publicTrackerSettings.tenantRemoved(tenantId);
         return Response.noContent().build();
     }
 
@@ -316,17 +326,17 @@ public class TenantEndpoint {
     }
 
     /**
-     * Rejects a {@value PublicTrackerSettings#TENANT_ORIGINS_KEY} property that would not be applied as written,
+     * Rejects a {@value PublicTrackerSettings#TENANT_PROPERTY_ALLOWED_ORIGINS} property that would not be applied as written,
      * so the provisioning call fails rather than the tenant's websites silently losing their visitors.
      */
     private static void validateTrackerOrigins(Map<String, Object> properties) {
-        if (properties == null || !properties.containsKey(PublicTrackerSettings.TENANT_ORIGINS_KEY)) {
+        if (properties == null || !properties.containsKey(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS)) {
             return;
         }
-        List<String> problems = PublicTrackerCorsPolicy.tenantOriginProblems(properties.get(PublicTrackerSettings.TENANT_ORIGINS_KEY));
+        List<String> problems = PublicTrackerCorsPolicy.tenantOriginProblems(properties.get(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS));
         if (!problems.isEmpty()) {
             throw new WebApplicationException(Response.status(Response.Status.BAD_REQUEST)
-                    .entity("Invalid " + PublicTrackerSettings.TENANT_ORIGINS_KEY + ": " + String.join("; ", problems))
+                    .entity("Invalid " + PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS + ": " + String.join("; ", problems))
                     .type(MediaType.TEXT_PLAIN).build());
         }
     }

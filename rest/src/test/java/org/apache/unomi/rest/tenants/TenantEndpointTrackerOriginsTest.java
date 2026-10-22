@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.rest.tenants;
 
+import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.rest.cors.PublicTrackerSettings;
@@ -59,31 +60,31 @@ class TenantEndpointTrackerOriginsTest {
 
     @Test
     void creatingATenantWithItsOriginsAppliesThemAtOnce() {
-        TenantRequest request = request(Map.of(PublicTrackerSettings.TENANT_ORIGINS_KEY, List.of("https://shop.example")));
+        TenantRequest request = request(Map.of(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS, List.of("https://shop.example")));
         when(tenantService.createTenant(anyString(), any())).thenReturn(new Tenant());
 
         endpoint.createTenant(request);
 
-        verify(publicTrackerSettings).tenantsChanged();
+        verify(publicTrackerSettings).tenantSaved(any());
     }
 
     @Test
     void invalidOriginsAreRejectedBeforeTheTenantIsCreated() {
-        TenantRequest request = request(Map.of(PublicTrackerSettings.TENANT_ORIGINS_KEY, "https://shop.example/path, *"));
+        TenantRequest request = request(Map.of(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS, "https://shop.example/path, *"));
 
         WebApplicationException error = assertThrows(WebApplicationException.class, () -> endpoint.createTenant(request));
 
         assertEquals(400, error.getResponse().getStatus());
         assertTrue(String.valueOf(error.getResponse().getEntity()).contains("'*'"));
         verify(tenantService, never()).createTenant(anyString(), any());
-        verify(publicTrackerSettings, never()).tenantsChanged();
+        verify(publicTrackerSettings, never()).tenantSaved(any());
     }
 
     @Test
     void updatingOrDeletingATenantAppliesAtOnce() {
         Tenant tenant = new Tenant();
         tenant.setItemId("acme");
-        tenant.setProperties(Map.of(PublicTrackerSettings.TENANT_ORIGINS_KEY, "https://blog.example"));
+        tenant.setProperties(Map.of(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS, "https://blog.example"));
         when(tenantService.getTenant("acme")).thenReturn(tenant);
 
         endpoint.updateTenant("acme", tenant);
@@ -91,20 +92,49 @@ class TenantEndpointTrackerOriginsTest {
 
         verify(tenantService).saveTenant(tenant);
         verify(tenantService).deleteTenant("acme");
-        verify(publicTrackerSettings, org.mockito.Mockito.times(2)).tenantsChanged();
+        verify(publicTrackerSettings).tenantSaved(tenant);
+        verify(publicTrackerSettings).tenantRemoved("acme");
     }
 
     @Test
     void invalidOriginsAreRejectedOnUpdate() {
         Tenant tenant = new Tenant();
         tenant.setItemId("acme");
-        tenant.setProperties(Map.of(PublicTrackerSettings.TENANT_ORIGINS_KEY, 42));
+        tenant.setProperties(Map.of(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS, 42));
         when(tenantService.getTenant("acme")).thenReturn(tenant);
 
         WebApplicationException error = assertThrows(WebApplicationException.class, () -> endpoint.updateTenant("acme", tenant));
 
         assertEquals(400, error.getResponse().getStatus());
         verify(tenantService, never()).saveTenant(any());
+    }
+
+    @Test
+    void updatingATenantNeverTouchesItsApiKeys() {
+        // REST never returns key hashes, so a tenant sent back as read has keys without them.
+        ApiKey stored = new ApiKey();
+        stored.setItemId("key-1");
+        stored.setKeyHash("stored-hash");
+        Tenant current = new Tenant();
+        current.setItemId("acme");
+        current.setApiKeys(List.of(stored));
+        current.setCreationDate(new java.util.Date(1000L));
+        when(tenantService.getTenant("acme")).thenReturn(current);
+
+        ApiKey asRead = new ApiKey();
+        asRead.setItemId("key-1");
+        Tenant update = new Tenant();
+        update.setItemId("acme");
+        update.setApiKeys(List.of(asRead));
+        update.setProperties(Map.of(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS, "https://shop.example"));
+
+        endpoint.updateTenant("acme", update);
+
+        org.mockito.ArgumentCaptor<Tenant> saved = org.mockito.ArgumentCaptor.forClass(Tenant.class);
+        verify(tenantService).saveTenant(saved.capture());
+        assertEquals("stored-hash", saved.getValue().getApiKeys().get(0).getKeyHash());
+        assertEquals(new java.util.Date(1000L), saved.getValue().getCreationDate());
+        assertEquals("https://shop.example", saved.getValue().getProperties().get(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS));
     }
 
     private static TenantRequest request(Map<String, Object> properties) {

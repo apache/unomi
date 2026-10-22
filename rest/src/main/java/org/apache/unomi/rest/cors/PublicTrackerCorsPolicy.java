@@ -71,8 +71,7 @@ public final class PublicTrackerCorsPolicy {
             if (entry.isEmpty()) {
                 continue;
             }
-            // An origin has no path, but a trailing slash is an easy mistake to make in the list.
-            String origin = normalize(entry.endsWith("/") ? entry.substring(0, entry.length() - 1) : entry);
+            String origin = normalizeEntry(entry);
             if (origin == null) {
                 warnings.add("Ignoring public CORS allowed origin '" + entry + "': expected scheme://host[:port] "
                         + "with http or https, no path and no wildcard");
@@ -91,7 +90,7 @@ public final class PublicTrackerCorsPolicy {
     static Set<String> parseTenantOrigins(Object value) {
         Set<String> origins = new LinkedHashSet<>();
         for (String entry : tenantOriginEntries(value)) {
-            String origin = normalize(entry.endsWith("/") ? entry.substring(0, entry.length() - 1) : entry);
+            String origin = normalizeEntry(entry);
             if (origin != null) {
                 origins.add(origin);
             }
@@ -117,7 +116,7 @@ public final class PublicTrackerCorsPolicy {
             }
         }
         for (String entry : tenantOriginEntries(value)) {
-            if (normalize(entry.endsWith("/") ? entry.substring(0, entry.length() - 1) : entry) == null) {
+            if (normalizeEntry(entry) == null) {
                 problems.add("'" + entry + "' is not scheme://host[:port] with http or https, without path or wildcard");
             }
         }
@@ -150,6 +149,15 @@ public final class PublicTrackerCorsPolicy {
         Set<String> merged = new LinkedHashSet<>(allowedOrigins);
         merged.addAll(tenantOrigins);
         return new PublicTrackerCorsPolicy(Collections.unmodifiableSet(merged), matchReferer);
+    }
+
+    /**
+     * A configured list entry as an origin, or {@code null} when it is not one. The server list and tenant
+     * lists both go through here, so they follow the same rules. An origin has no path, but a trailing slash
+     * is an easy mistake to make in a list, so it is ignored.
+     */
+    static String normalizeEntry(String entry) {
+        return normalize(entry.endsWith("/") ? entry.substring(0, entry.length() - 1) : entry);
     }
 
     /**

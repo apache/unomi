@@ -87,7 +87,7 @@ public class PublicTrackerCorsFilter extends CrossOriginResourceSharingFilter {
 
     /** The tenant of the current request; replaced in tests. */
     String requestTenantId() {
-        return PublicTrackerSettings.requestTenantId();
+        return RequestTenant.id();
     }
 
     private static boolean variesOnOrigin(MultivaluedMap<String, Object> headers) {

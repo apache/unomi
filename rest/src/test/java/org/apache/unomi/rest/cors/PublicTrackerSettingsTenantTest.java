@@ -94,7 +94,7 @@ class PublicTrackerSettingsTenantTest {
 
     @Test
     void theOperatorCanTurnTenantListsOff() {
-        lenient().when(configSharingService.getProperty(PublicTrackerSettings.TENANT_LISTS_PROPERTY)).thenReturn("false");
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.TENANT_ORIGINS_ENABLED_PROPERTY)).thenReturn("false");
         settings.activate();
 
         assertFalse(settings.policyForTenant("acme").allows(SHOP));
@@ -104,7 +104,7 @@ class PublicTrackerSettingsTenantTest {
     @Test
     void aNewTenantWorksAtOnceWithoutRestart() {
         settings.activate();
-        now[0] += TimeUnit.SECONDS.toNanos(PublicTrackerSettings.TENANT_RELOAD_MIN_SECONDS);
+        now[0] += TimeUnit.SECONDS.toNanos(TenantOriginsSnapshot.MISS_RELOAD_SECONDS);
         // Created on another node: this node has not seen it yet.
         tenants.add(tenant("initech", BLOG));
 
@@ -116,7 +116,7 @@ class PublicTrackerSettingsTenantTest {
     void unknownOriginsCannotForceReloads() {
         settings.activate();
         clearInvocations(tenantService);
-        now[0] += TimeUnit.SECONDS.toNanos(PublicTrackerSettings.TENANT_RELOAD_MIN_SECONDS);
+        now[0] += TimeUnit.SECONDS.toNanos(TenantOriginsSnapshot.MISS_RELOAD_SECONDS);
 
         assertFalse(settings.allowsPreflight("https://random-1.example"));
         assertFalse(settings.allowsPreflight("https://random-2.example"));
@@ -134,31 +134,8 @@ class PublicTrackerSettingsTenantTest {
         // Still within the refresh interval: the known tenant keeps its origins for now.
         assertTrue(settings.policyForTenant("acme").allows(SHOP));
 
-        now[0] += TimeUnit.SECONDS.toNanos(PublicTrackerSettings.TENANT_REFRESH_SECONDS);
+        now[0] += TimeUnit.SECONDS.toNanos(TenantOriginsSnapshot.REFRESH_SECONDS);
         assertFalse(settings.policyForTenant("acme").allows(SHOP));
-    }
-
-    @Test
-    void changesThroughThisNodeApplyImmediately() {
-        settings.activate();
-        tenants.clear();
-
-        settings.tenantsChanged();
-        assertFalse(settings.policyForTenant("acme").allows(SHOP));
-
-        tenants.add(tenant("acme", SHOP));
-        settings.onTenantRemoved("globex");
-        assertTrue(settings.policyForTenant("acme").allows(SHOP));
-    }
-
-    @Test
-    void aFailedLoadKeepsThePreviousOrigins() {
-        settings.activate();
-        when(tenantService.getAllTenants()).thenThrow(new IllegalStateException("search engine unavailable"));
-
-        settings.tenantsChanged();
-
-        assertTrue(settings.policyForTenant("acme").allows(SHOP));
     }
 
     @Test
@@ -172,7 +149,7 @@ class PublicTrackerSettingsTenantTest {
 
     @Test
     void anUnrecognisedSwitchValueKeepsTenantListsOnAndSaysSo() {
-        lenient().when(configSharingService.getProperty(PublicTrackerSettings.TENANT_LISTS_PROPERTY)).thenReturn("off");
+        lenient().when(configSharingService.getProperty(PublicTrackerSettings.TENANT_ORIGINS_ENABLED_PROPERTY)).thenReturn("off");
         settings.activate();
 
         assertTrue(settings.policyForTenant("acme").allows(SHOP));
@@ -194,25 +171,20 @@ class PublicTrackerSettingsTenantTest {
     }
 
     @Test
-    void theTenantIsFoundFromTheResponseMessageToo() {
-        // The authentication filter stores the security context on the request; a response filter's current
-        // message is the response, which only reaches the request through the exchange.
-        javax.security.auth.Subject subject = new javax.security.auth.Subject();
-        subject.getPrincipals().add(new org.apache.unomi.api.security.TenantPrincipal("acme"));
-        org.apache.cxf.message.Message request = new org.apache.cxf.message.MessageImpl();
-        request.put(org.apache.cxf.security.SecurityContext.class,
-                new org.apache.cxf.interceptor.security.RolePrefixSecurityContextImpl(subject, "ROLE_", "prefix"));
-        org.apache.cxf.message.Message response = new org.apache.cxf.message.MessageImpl();
-        org.apache.cxf.message.Exchange exchange = new org.apache.cxf.message.ExchangeImpl();
-        exchange.setInMessage(request);
-        exchange.setOutMessage(response);
-        request.setExchange(exchange);
-        response.setExchange(exchange);
+    void savesAndRemovalsThroughThisNodeApplyWithoutWaitingForTheIndex() {
+        settings.activate();
+        clearInvocations(tenantService);
 
-        org.junit.jupiter.api.Assertions.assertEquals("acme", PublicTrackerSettings.tenantIdOf(request));
-        org.junit.jupiter.api.Assertions.assertEquals("acme", PublicTrackerSettings.tenantIdOf(response));
-        org.junit.jupiter.api.Assertions.assertNull(PublicTrackerSettings.tenantIdOf(new org.apache.cxf.message.MessageImpl()));
-        org.junit.jupiter.api.Assertions.assertNull(PublicTrackerSettings.tenantIdOf(null));
+        // The store has not caught up yet (no index refresh): the saved object is what counts.
+        settings.tenantSaved(tenant("acme", BLOG));
+        assertFalse(settings.policyForTenant("acme").allows(SHOP));
+        assertTrue(settings.policyForTenant("acme").allows(BLOG));
+
+        // The tenant service calls the listener before deleting, so the store still has the tenant.
+        settings.onTenantRemoved("acme");
+        assertFalse(settings.allowsPreflight(BLOG));
+
+        verify(tenantService, never()).getAllTenants();
     }
 
     private static Tenant tenant(String id, Object origins) {
@@ -220,7 +192,7 @@ class PublicTrackerSettingsTenantTest {
         tenant.setItemId(id);
         Map<String, Object> properties = new HashMap<>();
         if (origins != null) {
-            properties.put(PublicTrackerSettings.TENANT_ORIGINS_KEY, origins);
+            properties.put(PublicTrackerSettings.TENANT_PROPERTY_ALLOWED_ORIGINS, origins);
         }
         tenant.setProperties(properties);
         return tenant;

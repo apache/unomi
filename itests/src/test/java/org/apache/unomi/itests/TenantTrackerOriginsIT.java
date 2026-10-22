@@ -163,9 +163,59 @@ public class TenantTrackerOriginsIT extends BaseIT {
         }
     }
 
+    @Test
+    public void updatingATenantThroughTheApiKeepsItsKeysAndAppliesAtOnce() throws Exception {
+        String origin = "https://tenant-d-" + shortId() + ".example";
+        String key = createTenantThroughApi(null);
+        String tenantId = lastTenantId;
+
+        // Read the tenant as REST returns it (no key hashes), add the origin, send it back.
+        putTenant(tenantId, tenant -> ((com.fasterxml.jackson.databind.node.ObjectNode) tenant.get("properties"))
+                .putArray(TENANT_ORIGINS_KEY).add(origin));
+
+        // No index refresh: the node that handled the PUT applies it at once, and the key still works.
+        HttpPost request = contextRequest(key);
+        request.setHeader("Origin", origin);
+        request.setHeader("Sec-Fetch-Site", "cross-site");
+        try (CloseableHttpResponse response = execute(request)) {
+            assertEquals("The tenant's key must survive the update", 200, response.getStatusLine().getStatusCode());
+            assertEquals(origin, header(response, "Access-Control-Allow-Origin"));
+            assertEquals("true", header(response, "Access-Control-Allow-Credentials"));
+        }
+
+        putTenant(tenantId, tenant -> ((com.fasterxml.jackson.databind.node.ObjectNode) tenant.get("properties"))
+                .remove(TENANT_ORIGINS_KEY));
+        HttpPost after = contextRequest(key);
+        after.setHeader("Origin", origin);
+        after.setHeader("Sec-Fetch-Site", "cross-site");
+        try (CloseableHttpResponse response = execute(after)) {
+            assertEquals(200, response.getStatusLine().getStatusCode());
+            assertEquals("*", header(response, "Access-Control-Allow-Origin"));
+            assertNull(header(response, "Access-Control-Allow-Credentials"));
+        }
+    }
+
+    private void putTenant(String tenantId, java.util.function.Consumer<com.fasterxml.jackson.databind.JsonNode> change) throws Exception {
+        com.fasterxml.jackson.databind.JsonNode tenant;
+        try (CloseableHttpResponse response = executeHttpRequest(new org.apache.http.client.methods.HttpGet(
+                getFullUrl("/cxs/tenants/" + tenantId)), AuthType.JAAS_ADMIN)) {
+            assertEquals(200, response.getStatusLine().getStatusCode());
+            tenant = getObjectMapper().readTree(EntityUtils.toString(response.getEntity()));
+        }
+        change.accept(tenant);
+        org.apache.http.client.methods.HttpPut put = new org.apache.http.client.methods.HttpPut(getFullUrl("/cxs/tenants/" + tenantId));
+        put.setEntity(new StringEntity(getObjectMapper().writeValueAsString(tenant), ContentType.APPLICATION_JSON));
+        try (CloseableHttpResponse response = executeHttpRequest(put, AuthType.JAAS_ADMIN)) {
+            assertEquals(EntityUtils.toString(response.getEntity()), 200, response.getStatusLine().getStatusCode());
+        }
+    }
+
+    private String lastTenantId;
+
     /** Creates a tenant through {@code /cxs/tenants}, as provisioning would, and returns its public key. */
     private String createTenantThroughApi(String origin) throws Exception {
         String tenantId = "it-cors-" + shortId();
+        lastTenantId = tenantId;
         String properties = origin == null ? "{}" : "{\"" + TENANT_ORIGINS_KEY + "\":[\"" + origin + "\"]}";
         HttpPost create = new HttpPost(getFullUrl("/cxs/tenants"));
         create.setEntity(new StringEntity("{\"requestedId\":\"" + tenantId + "\",\"properties\":" + properties + "}",

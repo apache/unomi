@@ -35,6 +35,7 @@ import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.rest.authentication.V2ThirdPartyConfigService;
 import org.apache.unomi.rest.cors.PublicTrackerSettings;
+import org.apache.unomi.rest.cors.RequestTenant;
 import org.apache.unomi.services.common.security.SecurityUtils;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
@@ -154,7 +155,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         String origin = request.getHeader("Origin");
         String referer = request.getHeader("Referer");
         String secFetchSite = request.getHeader("Sec-Fetch-Site");
-        boolean allowed = publicTrackerSettings.policyForTenant(PublicTrackerSettings.requestTenantId()).allowsVisitorCookie(
+        boolean allowed = publicTrackerSettings.policyForTenant(requestTenantId()).allowsVisitorCookie(
                 origin, referer, secFetchSite, request.getServerName(), request.getHeader("X-Forwarded-Host"));
         if (!allowed) {
             // Any site can cause this, so do not pay for sanitising the headers unless they are logged.
@@ -169,6 +170,11 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         }
         request.setAttribute(VISITOR_COOKIE_ALLOWED_ATTRIBUTE, allowed);
         return allowed;
+    }
+
+    /** The tenant the current request authenticated as; replaced in tests. */
+    String requestTenantId() {
+        return RequestTenant.id();
     }
 
     /**

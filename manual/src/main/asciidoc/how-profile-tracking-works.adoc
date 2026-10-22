@@ -820,7 +820,7 @@ Cookies are only set for regular profiles, not for Personas. If a `personaId` is
 * **Cookie Attributes**:
   * `Path=/` - Available for all paths on the domain
   * `Max-Age=31536000` - Valid for 1 year by default (configurable via `org.apache.unomi.profile.cookie.maxAgeInSeconds`)
-  * `SameSite=Lax` - CSRF protection. Configurable via `org.apache.unomi.profile.cookie.sameSite`; `None` is used only with `Secure` and a non-empty list of allowed origins
+  * `SameSite=Lax` - CSRF protection. Configurable via `org.apache.unomi.profile.cookie.sameSite`; `None` is used only with `Secure`, and only once origins can be listed (a non-empty server list, or tenant lists on, the default)
   * `Secure` - Set if the request reached Unomi over HTTPS, directly or through a trusted proxy that sends `X-Forwarded-Proto: https`
   * `HttpOnly` - Configurable via `org.apache.unomi.profile.cookie.httpOnly` (default: `true`; only an explicit `false` turns it off)
   * `Domain` - Configurable via `org.apache.unomi.profile.cookie.domain`. Unomi's own host, or a parent domain of it; never the website's domain when the website is on another site
@@ -1204,6 +1204,7 @@ The following configuration properties control profile tracking behavior:
 * `org.apache.unomi.profile.cookie.domain` - Cookie domain (optional)
 * `org.apache.unomi.profile.cookie.sameSite` - `Lax` (default), `Strict` or `None`; `None` needs `Secure` and a non-empty origin list
 * `org.apache.unomi.public.cors.allowedOrigins` - Website origins, other than Unomi's own, that may use the cookie (default: none). See <<_public_tracker_origins,Websites on other origins>>
+* `org.apache.unomi.public.cors.tenantOrigins` - Whether each tenant may list its own websites in its `publicCorsAllowedOrigins` property (default: `true`). See <<_public_tracker_tenant_origins,Websites listed by each tenant>>
 * `org.apache.unomi.public.cors.matchReferer` - Recognise a listed website that embeds `context.js` with a `<script>` tag by its `Referer` (default: `false`). See <<_public_tracker_script_tag,Embedding `context.js` with a script tag>>
 
 These can be configured in `etc/custom.system.properties` / `org.apache.unomi.web.cfg`.
