@@ -663,7 +663,7 @@ public interface PersistenceService {
     /**
      * Aggregates item counts for the given type, optionally filtered by condition and
      * aggregated according to the specified {@link BaseAggregate}.
-     * Also return the global count of document matching the {@code ITEM_TYPE}
+     * Also returns {@code _all}, the number of items of the {@code ITEM_TYPE} in the current tenant.
      *
      * @param filter    the condition the items must match or {@code null} if no filtering is needed
      * @param aggregate an aggregate specifying how matching items must be bundled
@@ -677,7 +677,7 @@ public interface PersistenceService {
     /**
      * Aggregates item counts for the given type, optionally filtered by condition and
      * aggregated according to the specified {@link BaseAggregate}.
-     * This aggregate won't return the global count and should therefore be much faster than {@link #aggregateQuery(Condition, BaseAggregate, String)}
+     * This aggregate won't return the {@code _all} count and should therefore be much faster than {@link #aggregateQuery(Condition, BaseAggregate, String)}
      *
      * @param filter    the condition the items must match or {@code null} if no filtering is needed
      * @param aggregate an aggregate specifying how matching items must be bundled

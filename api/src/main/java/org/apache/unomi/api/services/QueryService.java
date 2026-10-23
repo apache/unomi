@@ -41,7 +41,7 @@ public interface QueryService {
 
     /**
      * Counts items of the given type grouped by property values, optionally filtered by an aggregate query.
-     * Also returns the global document count when {@code query} is {@code null}.
+     * When {@code query} is not {@code null}, also returns {@code _all}, the number of items of that type in the current tenant.
      *
      * @param itemType item type name from the item class {@code ITEM_TYPE} field
      * @param property property to aggregate on
@@ -55,7 +55,7 @@ public interface QueryService {
 
     /**
      * Counts items of the given type grouped by property values using an optimized aggregate query.
-     * Does not return a global document count.
+     * Does not return the {@code _all} item count.
      *
      * @param itemType item type name from the item class {@code ITEM_TYPE} field
      * @param property property to aggregate on

@@ -92,7 +92,7 @@ public class QueryServiceEndPoint {
     /**
      * Returns property-value counts for an item type, optionally using an aggregate query.
      * <p>
-     * When {@code optimizedQuery} is {@code true}, the global document count is omitted for faster execution.
+     * When {@code optimizedQuery} is {@code true}, the {@code _all} count of the tenant's items of that type is omitted for faster execution.
      *
      * @param type the item type name from the class {@code ITEM_TYPE} field
      * @param property the property whose distinct values form aggregation buckets

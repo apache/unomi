@@ -309,6 +309,27 @@ public class PersistenceServiceIT extends BaseIT {
                     DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
             Assert.assertEquals(7.0, metrics.get("_sum"), 0.001);
             Assert.assertEquals(1.0, metrics.get("_count"), 0.001);
+
+            // Non-optimized path without a condition: this is where the global aggregation used to count every tenant.
+            Map<String, Long> termsNonOptimizedNoCondition = keepTrying(
+                    "Non-optimized terms aggregate without a condition should only count the current tenant",
+                    () -> persistenceService.aggregateQuery(null, byFirstName, Profile.ITEM_TYPE),
+                    r -> r != null && Long.valueOf(1L).equals(r.get("Alice")) && !r.containsKey("Bob"),
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+            Assert.assertEquals(Long.valueOf(1L), termsNonOptimizedNoCondition.get("Alice"));
+            Assert.assertNull(termsNonOptimizedNoCondition.get("Bob"));
+            Assert.assertEquals("_all must be the current tenant's count",
+                    termsWithCondition.get("_all"), termsNonOptimizedNoCondition.get("_all"));
+            Assert.assertNull("No condition means no _filtered", termsNonOptimizedNoCondition.get("_filtered"));
+
+            Map<String, Double> metricsNoCondition = keepTrying(
+                    "Metrics without a condition should only include the current tenant",
+                    () -> persistenceService.getSingleValuesMetrics(null, new String[]{"sum", "count"},
+                            AGE_PROPERTY, Profile.ITEM_TYPE),
+                    r -> r != null && r.get("_sum") != null && r.get("_sum") == 7.0,
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+            Assert.assertEquals(7.0, metricsNoCondition.get("_sum"), 0.001);
+            Assert.assertEquals(1.0, metricsNoCondition.get("_count"), 0.001);
         } finally {
             try {
                 executionContextManager.executeAsTenant(otherTenant.getItemId(), () -> {
