@@ -2501,28 +2501,35 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 SearchRequest.Builder searchSourceBuilder = new SearchRequest.Builder();
                 searchSourceBuilder.index(getIndexNameForQuery(itemType));
                 searchSourceBuilder.size(0);
-                searchSourceBuilder.query(
-                        isItemTypeSharingIndex(itemType) ? getItemTypeQuery(itemType) : Query.of(q -> q.matchAll(m -> m)));
 
-                // If the request is optimized then we don't need a global aggregation which is very slow and we can put the query with a
-                // filter on range items in the query block so we don't retrieve all the document before filtering the whole
+                Query tenantScopedQuery = wrapWithTenantAndItemTypeQuery(itemType, Query.of(q -> q.matchAll(m -> m)), finalTenantId);
+
+                // Optimized: put the optional condition in the query and skip the slow global aggregation.
+                // Non-optimized: keep a filter aggregation for _filtered, but always scope the query to the
+                // current tenant. A global aggregation ignores the query and would count every tenant's documents.
+                // Also register aggregations under stable names ("filter", "buckets", "missing"): the previous
+                // code used String.valueOf(Kind) ("Global") while reading Kind.jsonValue() ("global"), so POST
+                // aggregates with a condition returned nothing (UNOMI-1014).
                 if (optimizedQuery) {
+                    if (filter != null) {
+                        searchSourceBuilder.query(wrapWithTenantAndItemTypeQuery(itemType,
+                                conditionESQueryBuilderDispatcher.buildFilter(filter), finalTenantId));
+                    } else {
+                        searchSourceBuilder.query(tenantScopedQuery);
+                    }
                     searchSourceBuilder.aggregations(aggregationsByType);
-
-                    if (filter != null) {
-                        searchSourceBuilder.query(wrapWithTenantAndItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter), finalTenantId));
-                    }
                 } else {
+                    searchSourceBuilder.query(tenantScopedQuery);
+                    // _all comes from hits.total, which is capped at 10,000 unless hits are tracked exactly.
+                    searchSourceBuilder.trackTotalHits(t -> t.enabled(true));
                     if (filter != null) {
-                        Aggregation.Builder aggBuilder = new Aggregation.Builder();
-                        aggBuilder.filter(wrapWithTenantAndItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter), finalTenantId))
-                                .aggregations(aggregationsByType);
-
-                        aggregationsByType = Map.of("filter", aggBuilder.build());
+                        Aggregation filterAggregation = new Aggregation.Builder().filter(wrapWithTenantAndItemTypeQuery(
+                                        itemType, conditionESQueryBuilderDispatcher.buildFilter(filter), finalTenantId))
+                                .aggregations(aggregationsByType).build();
+                        searchSourceBuilder.aggregations("filter", filterAggregation);
+                    } else {
+                        searchSourceBuilder.aggregations(aggregationsByType);
                     }
-                    Aggregation globalAgg = new Aggregation.Builder().global(new GlobalAggregation.Builder().build())
-                            .aggregations(aggregationsByType).build();
-                    searchSourceBuilder.aggregations(String.valueOf(globalAgg._kind()), globalAgg);
                 }
 
                 RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
@@ -2550,16 +2557,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 if (aggregations != null) {
                     if (optimizedQuery) {
-                        if (response.hits() != null) {
+                        if (response.hits() != null && response.hits().total() != null) {
                             results.put("_filtered", response.hits().total().value());
                         }
                     } else {
-                        GlobalAggregate globalAggregate = aggregations.get(Aggregation.Kind.Global.jsonValue()).global();
-                        results.put("_all", globalAggregate.docCount());
-                        aggregations = globalAggregate.aggregations();
+                        if (response.hits() != null && response.hits().total() != null) {
+                            results.put("_all", response.hits().total().value());
+                        }
 
-                        if (aggregations.get(Aggregate.Kind.Filter.jsonValue()) != null) {
-                            FilterAggregate filterAggregate = aggregations.get(Aggregation.Kind.Filter.jsonValue()).filter();
+                        Aggregate filterAggResult = aggregations.get("filter");
+                        if (filterAggResult != null && filterAggResult.isFilter()) {
+                            FilterAggregate filterAggregate = filterAggResult.filter();
                             results.put("_filtered", filterAggregate.docCount());
                             aggregations = filterAggregate.aggregations();
                         }
@@ -2605,12 +2613,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             }
                         }
 
-                        MissingAggregate missing = aggregations.get("missing").missing();
-                        if (missing.docCount() > 0) {
-                            results.put("_missing", missing.docCount());
-                            totalDocCount += missing.docCount();
+                        Aggregate missingAgg = aggregations.get("missing");
+                        if (missingAgg != null && missingAgg.isMissing()) {
+                            MissingAggregate missing = missingAgg.missing();
+                            if (missing.docCount() > 0) {
+                                results.put("_missing", missing.docCount());
+                                totalDocCount += missing.docCount();
+                            }
                         }
-                        if (response.hits() != null && TotalHitsRelation.Gte.equals(response.hits().total().relation())) {
+                        if (response.hits() != null && response.hits().total() != null
+                                && TotalHitsRelation.Gte.equals(response.hits().total().relation())) {
                             results.put("_filtered", totalDocCount);
                         }
                     }
@@ -2802,6 +2814,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override public Map<String, Double> getSingleValuesMetrics(final Condition condition, final String[] metrics, final String field,
             final String itemType) {
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_AGGREGATE);
         return new InClassLoaderExecute<Map<String, Double>>(metricsService, this.getClass().getName() + ".getSingleValuesMetrics",
                 this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
@@ -2834,11 +2847,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 }
 
-                Aggregation filterAggregation = Aggregation.of(
-                        a -> a.filter(conditionESQueryBuilderDispatcher.buildFilter(condition)).aggregations(subAggs));
+                Query conditionQuery = condition != null ?
+                        conditionESQueryBuilderDispatcher.buildFilter(condition) :
+                        Query.of(q -> q.matchAll(m -> m));
+                Aggregation filterAggregation = Aggregation.of(a -> a.filter(
+                                wrapWithTenantAndItemTypeQuery(itemType, conditionQuery, finalTenantId))
+                        .aggregations(subAggs));
                 SearchRequest searchRequest = SearchRequest.of(
                         s -> s.index(getIndexNameForQuery(itemType)).size(0).source(builder -> builder.fetch(true))
-                                .query(isItemTypeSharingIndex(itemType) ? getItemTypeQuery(itemType) : Query.of(q -> q.matchAll(m -> m)))
+                                .query(wrapWithTenantAndItemTypeQuery(itemType, Query.of(q -> q.matchAll(m -> m)), finalTenantId))
                                 .aggregations("metrics", filterAggregation));
 
                 SearchResponse<Void> searchResponse = esClient.search(searchRequest);

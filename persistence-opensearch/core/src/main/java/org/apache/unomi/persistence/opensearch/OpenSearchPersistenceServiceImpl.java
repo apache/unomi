@@ -2404,8 +2404,8 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 SearchRequest.Builder searchRequestBuilder = new SearchRequest.Builder().index(getIndexNameForQuery(itemType));
                 searchRequestBuilder.size(0);
                 Query matchAll = Query.of(q->q.matchAll(m->m));
-                boolean isItemTypeSharingIndex = isItemTypeSharingIndex(itemType);
-                searchRequestBuilder.query(wrapWithTenantAndItemTypeQuery(itemType,matchAll, finalTenantId));
+                Query tenantScopedQuery = wrapWithTenantAndItemTypeQuery(itemType, matchAll, finalTenantId);
+                searchRequestBuilder.query(tenantScopedQuery);
                 Map<String, Aggregation.Builder.ContainerBuilder> lastAggregation = new LinkedHashMap<>();
 
                 if (aggregate != null) {
@@ -2495,31 +2495,41 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     }
                 }
 
-                // If the request is optimized then we don't need a global aggregation which is very slow and we can put the query with a
-                // filter on range items in the query block so we don't retrieve all the document before filtering the whole
+                // Optimized: put the optional condition in the query and skip the slow global aggregation.
+                // Non-optimized: keep a filter aggregation for _filtered, scoped to the current tenant.
+                // Register aggregations under stable names ("filter", "buckets", "missing"). The previous
+                // non-optimized path stored the global aggregation as "buckets" while reading "global", and
+                // nested the condition filter under "buckets" while reading "filter", so POST aggregates with
+                // a condition returned nothing (UNOMI-1014). A global aggregation also ignores the query and
+                // would count every tenant's documents.
                 if (optimizedQuery) {
+                    if (filter != null) {
+                        searchRequestBuilder.query(wrapWithTenantAndItemTypeQuery(itemType,
+                                conditionOSQueryBuilderDispatcher.buildFilter(filter), finalTenantId));
+                    } else {
+                        searchRequestBuilder.query(tenantScopedQuery);
+                    }
                     for (Map.Entry<String, Aggregation.Builder.ContainerBuilder> aggregationBuilder : lastAggregation.entrySet()) {
                         searchRequestBuilder.aggregations(aggregationBuilder.getKey(), aggregationBuilder.getValue().build());
                     }
-
-                    if (filter != null) {
-                        searchRequestBuilder.query(wrapWithTenantAndItemTypeQuery(itemType, conditionOSQueryBuilderDispatcher.buildFilter(filter), finalTenantId));
-                    }
                 } else {
+                    searchRequestBuilder.query(tenantScopedQuery);
+                    // _all comes from hits.total, which is capped at 10,000 unless hits are tracked exactly.
+                    searchRequestBuilder.trackTotalHits(t -> t.enabled(true));
                     if (filter != null) {
-                        Aggregation.Builder.ContainerBuilder filterAggregationContainerBuilder = new Aggregation.Builder().filter(wrapWithTenantAndItemTypeQuery(itemType, conditionOSQueryBuilderDispatcher.buildFilter(filter), finalTenantId));
-                        for (Map.Entry<String,Aggregation.Builder.ContainerBuilder> aggregationBuilder : lastAggregation.entrySet()) {
-                            filterAggregationContainerBuilder.aggregations(aggregationBuilder.getKey(), aggregationBuilder.getValue().build());
+                        Aggregation.Builder.ContainerBuilder filterAggregationContainerBuilder = new Aggregation.Builder().filter(
+                                wrapWithTenantAndItemTypeQuery(itemType, conditionOSQueryBuilderDispatcher.buildFilter(filter),
+                                        finalTenantId));
+                        for (Map.Entry<String, Aggregation.Builder.ContainerBuilder> aggregationBuilder : lastAggregation.entrySet()) {
+                            filterAggregationContainerBuilder.aggregations(aggregationBuilder.getKey(),
+                                    aggregationBuilder.getValue().build());
                         }
-                        lastAggregation = Map.of("buckets", filterAggregationContainerBuilder);
+                        searchRequestBuilder.aggregations("filter", filterAggregationContainerBuilder.build());
+                    } else {
+                        for (Map.Entry<String, Aggregation.Builder.ContainerBuilder> aggregationBuilder : lastAggregation.entrySet()) {
+                            searchRequestBuilder.aggregations(aggregationBuilder.getKey(), aggregationBuilder.getValue().build());
+                        }
                     }
-
-                    Aggregation.Builder.ContainerBuilder globalAggregationContainerBuilder = new Aggregation.Builder().global(g -> g.name("global"));
-                    for (Map.Entry<String, Aggregation.Builder.ContainerBuilder> aggregationBuilder : lastAggregation.entrySet()) {
-                        globalAggregationContainerBuilder.aggregations(aggregationBuilder.getKey(), aggregationBuilder.getValue().build());
-                    }
-
-                    searchRequestBuilder.aggregations("buckets", globalAggregationContainerBuilder.build());
                 }
 
                 /*
@@ -2540,16 +2550,17 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
                 if (aggregates != null) {
                     if (optimizedQuery) {
-                        if (response.hits() != null) {
+                        if (response.hits() != null && response.hits().total() != null) {
                             results.put("_filtered", response.hits().total().value());
                         }
                     } else {
-                        GlobalAggregate globalAgg = aggregates.get("global").global();
-                        results.put("_all", globalAgg.docCount());
-                        aggregates = globalAgg.aggregations();
+                        if (response.hits() != null && response.hits().total() != null) {
+                            results.put("_all", response.hits().total().value());
+                        }
 
-                        if (aggregates.get("filter") != null) {
-                            FilterAggregate filterAgg = aggregates.get("filter").filter();
+                        Aggregate filterAggResult = aggregates.get("filter");
+                        if (filterAggResult != null && filterAggResult.isFilter()) {
+                            FilterAggregate filterAgg = filterAggResult.filter();
                             results.put("_filtered", filterAgg.docCount());
                             aggregates = filterAgg.aggregations();
                         }
@@ -2574,12 +2585,16 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                                 totalDocCount += bucket.docCount();
                             }
                         }
-                        MissingAggregate missing = aggregates.get("missing").missing();
-                        if (missing.docCount() > 0) {
-                            results.put("_missing", missing.docCount());
-                            totalDocCount += missing.docCount();
+                        Aggregate missingAgg = aggregates.get("missing");
+                        if (missingAgg != null && missingAgg.isMissing()) {
+                            MissingAggregate missing = missingAgg.missing();
+                            if (missing.docCount() > 0) {
+                                results.put("_missing", missing.docCount());
+                                totalDocCount += missing.docCount();
+                            }
                         }
-                        if (response.hits() != null && TotalHitsRelation.Gte.equals(response.hits().total().relation())) {
+                        if (response.hits() != null && response.hits().total() != null
+                                && TotalHitsRelation.Gte.equals(response.hits().total().relation())) {
                             results.put("_filtered", totalDocCount);
                         }
                     }
@@ -2742,13 +2757,18 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public Map<String, Double> getSingleValuesMetrics(final Condition condition, final String[] metrics, final String field, final String itemType) {
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_AGGREGATE);
         return new InClassLoaderExecute<Map<String, Double>>(metricsService, this.getClass().getName() + ".getSingleValuesMetrics", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
             protected Map<String, Double> execute(Object... args) throws IOException {
                 Map<String, Double> results = new LinkedHashMap<>();
 
-                Aggregation.Builder.ContainerBuilder filterAggregationContainerBuilder = new Aggregation.Builder().filter(conditionOSQueryBuilderDispatcher.buildFilter(condition));
+                Query conditionQuery = condition != null ?
+                        conditionOSQueryBuilderDispatcher.buildFilter(condition) :
+                        Query.of(q -> q.matchAll(i -> i));
+                Aggregation.Builder.ContainerBuilder filterAggregationContainerBuilder = new Aggregation.Builder().filter(
+                        wrapWithTenantAndItemTypeQuery(itemType, conditionQuery, finalTenantId));
 
                 if (metrics != null) {
                     for (String metric : metrics) {
@@ -2778,7 +2798,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                         .index(getIndexNameForQuery(itemType))
                         .size(0)
                         .aggregations("metrics", filterAggregationContainerBuilder.build())
-                        .query(isItemTypeSharingIndex(itemType) ? getItemTypeQueryBuilder(itemType) : Query.of(q -> q.matchAll(i -> i)))
+                        .query(wrapWithTenantAndItemTypeQuery(itemType, Query.of(q -> q.matchAll(i -> i)), finalTenantId))
                         , Item.class
                 );
 
