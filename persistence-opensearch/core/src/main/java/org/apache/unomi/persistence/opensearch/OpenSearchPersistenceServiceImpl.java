@@ -2514,6 +2514,8 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     }
                 } else {
                     searchRequestBuilder.query(tenantScopedQuery);
+                    // _all comes from hits.total, which is capped at 10,000 unless hits are tracked exactly.
+                    searchRequestBuilder.trackTotalHits(t -> t.enabled(true));
                     if (filter != null) {
                         Aggregation.Builder.ContainerBuilder filterAggregationContainerBuilder = new Aggregation.Builder().filter(
                                 wrapWithTenantAndItemTypeQuery(itemType, conditionOSQueryBuilderDispatcher.buildFilter(filter),
@@ -2765,9 +2767,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 Query conditionQuery = condition != null ?
                         conditionOSQueryBuilderDispatcher.buildFilter(condition) :
                         Query.of(q -> q.matchAll(i -> i));
-                Query itemTypeOrMatchAll = isItemTypeSharingIndex(itemType) ?
-                        getItemTypeQueryBuilder(itemType) :
-                        Query.of(q -> q.matchAll(i -> i));
                 Aggregation.Builder.ContainerBuilder filterAggregationContainerBuilder = new Aggregation.Builder().filter(
                         wrapWithTenantAndItemTypeQuery(itemType, conditionQuery, finalTenantId));
 
@@ -2799,7 +2798,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                         .index(getIndexNameForQuery(itemType))
                         .size(0)
                         .aggregations("metrics", filterAggregationContainerBuilder.build())
-                        .query(wrapWithTenantAndItemTypeQuery(itemType, itemTypeOrMatchAll, finalTenantId))
+                        .query(wrapWithTenantAndItemTypeQuery(itemType, Query.of(q -> q.matchAll(i -> i)), finalTenantId))
                         , Item.class
                 );
 

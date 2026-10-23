@@ -2502,9 +2502,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 searchSourceBuilder.index(getIndexNameForQuery(itemType));
                 searchSourceBuilder.size(0);
 
-                Query itemTypeOrMatchAll =
-                        isItemTypeSharingIndex(itemType) ? getItemTypeQuery(itemType) : Query.of(q -> q.matchAll(m -> m));
-                Query tenantScopedQuery = wrapWithTenantAndItemTypeQuery(itemType, itemTypeOrMatchAll, finalTenantId);
+                Query tenantScopedQuery = wrapWithTenantAndItemTypeQuery(itemType, Query.of(q -> q.matchAll(m -> m)), finalTenantId);
 
                 // Optimized: put the optional condition in the query and skip the slow global aggregation.
                 // Non-optimized: keep a filter aggregation for _filtered, but always scope the query to the
@@ -2522,6 +2520,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     searchSourceBuilder.aggregations(aggregationsByType);
                 } else {
                     searchSourceBuilder.query(tenantScopedQuery);
+                    // _all comes from hits.total, which is capped at 10,000 unless hits are tracked exactly.
+                    searchSourceBuilder.trackTotalHits(t -> t.enabled(true));
                     if (filter != null) {
                         Aggregation filterAggregation = new Aggregation.Builder().filter(wrapWithTenantAndItemTypeQuery(
                                         itemType, conditionESQueryBuilderDispatcher.buildFilter(filter), finalTenantId))
@@ -2850,14 +2850,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 Query conditionQuery = condition != null ?
                         conditionESQueryBuilderDispatcher.buildFilter(condition) :
                         Query.of(q -> q.matchAll(m -> m));
-                Query itemTypeOrMatchAll =
-                        isItemTypeSharingIndex(itemType) ? getItemTypeQuery(itemType) : Query.of(q -> q.matchAll(m -> m));
                 Aggregation filterAggregation = Aggregation.of(a -> a.filter(
                                 wrapWithTenantAndItemTypeQuery(itemType, conditionQuery, finalTenantId))
                         .aggregations(subAggs));
                 SearchRequest searchRequest = SearchRequest.of(
                         s -> s.index(getIndexNameForQuery(itemType)).size(0).source(builder -> builder.fetch(true))
-                                .query(wrapWithTenantAndItemTypeQuery(itemType, itemTypeOrMatchAll, finalTenantId))
+                                .query(wrapWithTenantAndItemTypeQuery(itemType, Query.of(q -> q.matchAll(m -> m)), finalTenantId))
                                 .aggregations("metrics", filterAggregation));
 
                 SearchResponse<Void> searchResponse = esClient.search(searchRequest);
