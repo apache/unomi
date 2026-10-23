@@ -19,7 +19,9 @@ package org.apache.unomi.itests;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -211,6 +214,122 @@ public class PersistenceServiceIT extends BaseIT {
         } catch (IllegalArgumentException expected) {
             Assert.assertTrue(expected.getMessage().contains("required"));
         }
+    }
+
+    /**
+     * UNOMI-1014: a terms aggregate with a condition must return buckets again (non-optimized and optimized).
+     */
+    @Test
+    public void testAggregateWithConditionReturnsBuckets() throws InterruptedException {
+        String suffix = UUID.randomUUID().toString();
+        saveProfileWithFirstName("agg-alice-" + suffix, "Alice");
+        saveProfileWithFirstName("agg-alice-2-" + suffix, "Alice");
+        saveProfileWithFirstName("agg-bob-" + suffix, "Bob");
+        refreshPersistence(Profile.class);
+
+        Condition matchAll = matchAllCondition();
+        TermsAggregate byFirstName = new TermsAggregate("properties.firstName");
+
+        Map<String, Long> withCondition = keepTrying(
+                "Aggregate with a condition should return first-name buckets",
+                () -> persistenceService.aggregateQuery(matchAll, byFirstName, Profile.ITEM_TYPE),
+                r -> r != null && Long.valueOf(2L).equals(r.get("Alice")) && Long.valueOf(1L).equals(r.get("Bob")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        Assert.assertEquals(Long.valueOf(2L), withCondition.get("Alice"));
+        Assert.assertEquals(Long.valueOf(1L), withCondition.get("Bob"));
+        Assert.assertTrue("Non-optimized aggregate should report a tenant-scoped _all count",
+                withCondition.get("_all") != null && withCondition.get("_all") >= 3L);
+        Assert.assertTrue("Non-optimized aggregate with a condition should report _filtered",
+                withCondition.get("_filtered") != null && withCondition.get("_filtered") >= 3L);
+
+        Map<String, Long> optimized = keepTrying(
+                "Optimized aggregate with a condition should return first-name buckets",
+                () -> persistenceService.aggregateWithOptimizedQuery(matchAll, byFirstName, Profile.ITEM_TYPE),
+                r -> r != null && Long.valueOf(2L).equals(r.get("Alice")) && Long.valueOf(1L).equals(r.get("Bob")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        Assert.assertEquals(Long.valueOf(2L), optimized.get("Alice"));
+        Assert.assertEquals(Long.valueOf(1L), optimized.get("Bob"));
+    }
+
+    /**
+     * Aggregate and metric queries must only see the current tenant's documents.
+     */
+    @Test
+    public void testAggregateAndMetricsStayInTheCurrentTenant() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        String localAlice = "agg-tenant-local-alice-" + suffix;
+        String otherAlice = "agg-tenant-other-alice-" + suffix;
+        String otherBob = "agg-tenant-other-bob-" + suffix;
+        Tenant otherTenant = tenantService.createTenant("agg-other-" + suffix, Collections.emptyMap());
+        try {
+            saveProfileWithFirstName(localAlice, "Alice");
+            Profile local = persistenceService.load(localAlice, Profile.class);
+            local.setProperty("age", 7);
+            persistenceService.save(local);
+            executionContextManager.executeAsTenant(otherTenant.getItemId(), () -> {
+                Profile otherAliceProfile = new Profile(otherAlice);
+                otherAliceProfile.setProperty("firstName", "Alice");
+                otherAliceProfile.setProperty("age", 10);
+                persistenceService.save(otherAliceProfile);
+                Profile otherBobProfile = new Profile(otherBob);
+                otherBobProfile.setProperty("firstName", "Bob");
+                otherBobProfile.setProperty("age", 5);
+                persistenceService.save(otherBobProfile);
+            });
+            refreshPersistence(Profile.class);
+
+            Condition matchAll = matchAllCondition();
+            TermsAggregate byFirstName = new TermsAggregate("properties.firstName");
+
+            Map<String, Long> termsNoCondition = keepTrying(
+                    "Terms aggregate without a condition should only count the current tenant",
+                    () -> persistenceService.aggregateWithOptimizedQuery(null, byFirstName, Profile.ITEM_TYPE),
+                    r -> r != null && Long.valueOf(1L).equals(r.get("Alice")) && !r.containsKey("Bob"),
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+            Assert.assertEquals(Long.valueOf(1L), termsNoCondition.get("Alice"));
+            Assert.assertNull("Another tenant's first names must not appear", termsNoCondition.get("Bob"));
+
+            Map<String, Long> termsWithCondition = keepTrying(
+                    "Terms aggregate with a condition should only count the current tenant",
+                    () -> persistenceService.aggregateQuery(matchAll, byFirstName, Profile.ITEM_TYPE),
+                    r -> r != null && Long.valueOf(1L).equals(r.get("Alice")) && !r.containsKey("Bob"),
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+            Assert.assertEquals(Long.valueOf(1L), termsWithCondition.get("Alice"));
+            Assert.assertNull(termsWithCondition.get("Bob"));
+            Assert.assertNotNull("Non-optimized aggregate should report _all for the current tenant",
+                    termsWithCondition.get("_all"));
+            Assert.assertEquals("With match-all, _all and _filtered must match for the current tenant",
+                    termsWithCondition.get("_all"), termsWithCondition.get("_filtered"));
+
+            Map<String, Double> metrics = keepTrying(
+                    "Sum metric should only include the current tenant",
+                    () -> persistenceService.getSingleValuesMetrics(matchAll, new String[]{"sum", "count"},
+                            AGE_PROPERTY, Profile.ITEM_TYPE),
+                    r -> r != null && r.get("_sum") != null && r.get("_sum") == 7.0,
+                    DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+            Assert.assertEquals(7.0, metrics.get("_sum"), 0.001);
+            Assert.assertEquals(1.0, metrics.get("_count"), 0.001);
+        } finally {
+            try {
+                executionContextManager.executeAsTenant(otherTenant.getItemId(), () -> {
+                    persistenceService.remove(otherAlice, Profile.class);
+                    persistenceService.remove(otherBob, Profile.class);
+                });
+            } finally {
+                tenantService.deleteTenant(otherTenant.getItemId());
+            }
+        }
+    }
+
+    private Condition matchAllCondition() {
+        return new Condition(definitionsService.getConditionType("matchAllCondition"));
+    }
+
+    private void saveProfileWithFirstName(String itemId, String firstName) {
+        Profile profile = new Profile(itemId);
+        profile.setProperty("firstName", firstName);
+        persistenceService.save(profile);
+        profileIds.add(itemId);
     }
 
     private Profile saveProfile(String itemId) {
