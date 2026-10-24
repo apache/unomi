@@ -237,10 +237,11 @@ public class PersistenceServiceIT extends BaseIT {
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         Assert.assertEquals(Long.valueOf(2L), withCondition.get("Alice"));
         Assert.assertEquals(Long.valueOf(1L), withCondition.get("Bob"));
-        Assert.assertTrue("Non-optimized aggregate should report a tenant-scoped _all count",
-                withCondition.get("_all") != null && withCondition.get("_all") >= 3L);
-        Assert.assertTrue("Non-optimized aggregate with a condition should report _filtered",
-                withCondition.get("_filtered") != null && withCondition.get("_filtered") >= 3L);
+        long profileCount = persistenceService.getAllItemsCount(Profile.ITEM_TYPE);
+        Assert.assertEquals("_all must match getAllItemsCount for the current tenant",
+                Long.valueOf(profileCount), withCondition.get("_all"));
+        Assert.assertEquals("With match-all, _filtered must match getAllItemsCount for the current tenant",
+                Long.valueOf(profileCount), withCondition.get("_filtered"));
 
         Map<String, Long> optimized = keepTrying(
                 "Optimized aggregate with a condition should return first-name buckets",
@@ -296,10 +297,11 @@ public class PersistenceServiceIT extends BaseIT {
                     DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
             Assert.assertEquals(Long.valueOf(1L), termsWithCondition.get("Alice"));
             Assert.assertNull(termsWithCondition.get("Bob"));
-            Assert.assertNotNull("Non-optimized aggregate should report _all for the current tenant",
-                    termsWithCondition.get("_all"));
-            Assert.assertEquals("With match-all, _all and _filtered must match for the current tenant",
-                    termsWithCondition.get("_all"), termsWithCondition.get("_filtered"));
+            long profileCount = persistenceService.getAllItemsCount(Profile.ITEM_TYPE);
+            Assert.assertEquals("_all must match getAllItemsCount for the current tenant",
+                    Long.valueOf(profileCount), termsWithCondition.get("_all"));
+            Assert.assertEquals("With match-all, _filtered must match getAllItemsCount for the current tenant",
+                    Long.valueOf(profileCount), termsWithCondition.get("_filtered"));
 
             Map<String, Double> metrics = keepTrying(
                     "Sum metric should only include the current tenant",
@@ -318,8 +320,8 @@ public class PersistenceServiceIT extends BaseIT {
                     DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
             Assert.assertEquals(Long.valueOf(1L), termsNonOptimizedNoCondition.get("Alice"));
             Assert.assertNull(termsNonOptimizedNoCondition.get("Bob"));
-            Assert.assertEquals("_all must be the current tenant's count",
-                    termsWithCondition.get("_all"), termsNonOptimizedNoCondition.get("_all"));
+            Assert.assertEquals("_all without a condition must match getAllItemsCount for the current tenant",
+                    Long.valueOf(profileCount), termsNonOptimizedNoCondition.get("_all"));
             Assert.assertNull("No condition means no _filtered", termsNonOptimizedNoCondition.get("_filtered"));
 
             Map<String, Double> metricsNoCondition = keepTrying(
