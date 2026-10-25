@@ -61,7 +61,6 @@ This will only load the tracker. To initialize it use a snippet like the followi
                         "categories": [],
                         "tags": []
                     },
-                    "attributes": {},
                     "consentTypes": []
                 },
                 "events": [],
@@ -153,7 +152,6 @@ import {useTracker} from "apache-unomi-tracker";
                 "categories": [],
                 "tags": []
             },
-            "attributes": {},
             "consentTypes": []
         },
         "events": [],
