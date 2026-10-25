@@ -2416,7 +2416,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                         DateAggregate dateAggregate = (DateAggregate) aggregate;
                         DateHistogramAggregation.Builder dateHistogramBuilder = new DateHistogramAggregation.Builder()
                                 .field(fieldName)
-                                .calendarInterval(CalendarInterval.valueOf(dateAggregate.getInterval()));
+                                .calendarInterval(CalendarInterval.valueOf(dateAggregate.getIntervalByAlias(dateAggregate.getInterval())));
                         if (dateAggregate.getFormat() != null) {
                             dateHistogramBuilder.format(dateAggregate.getFormat());
                         }
@@ -2449,9 +2449,16 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                         }
                         for (DateRange range : dateRangeAggregate.getDateRanges()) {
                             if (range != null) {
-                                rangeBuilder.ranges(r -> r.key(range.getKey())
-                                        .from(f -> f.expr(range.getFrom() != null ? range.getFrom().toString() : null))
-                                        .to(t -> t.expr(range.getTo() != null ? range.getTo().toString() : null)));
+                                rangeBuilder.ranges(r -> {
+                                    r.key(range.getKey());
+                                    if (range.getFrom() != null) {
+                                        r.from(f -> f.expr(range.getFrom().toString()));
+                                    }
+                                    if (range.getTo() != null) {
+                                        r.to(t -> t.expr(range.getTo().toString()));
+                                    }
+                                    return r;
+                                });
                             }
                         }
                         bucketsContainerBuilder = bucketsAggregationBuilder.dateRange(rangeBuilder.build());
@@ -2461,7 +2468,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                                 .field(fieldName);
                         for (IpRange range : ipRangeAggregate.getRanges()) {
                             if (range != null) {
-                                rangeBuilder.ranges(r -> r.mask(range.getKey()).from(range.getFrom()).to(range.getTo()));
+                                rangeBuilder.ranges(r -> r.from(range.getFrom()).to(range.getTo()));
                             }
                         }
                         bucketsContainerBuilder = bucketsAggregationBuilder.ipRange(rangeBuilder.build());
@@ -2578,13 +2585,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                         }
 
                         long totalDocCount = 0;
-                        Aggregate bucketsAggregate = aggregates.get("buckets");
-                        if (bucketsAggregate.isSterms()) {
-                            for (StringTermsBucket bucket : bucketsAggregate.sterms().buckets().array()) {
-                                results.put(bucket.key(), bucket.docCount());
-                                totalDocCount += bucket.docCount();
-                            }
-                        }
+                        totalDocCount += addBucketCounts(aggregates.get("buckets"), aggregate, results);
                         Aggregate missingAgg = aggregates.get("missing");
                         if (missingAgg != null && missingAgg.isMissing()) {
                             MissingAggregate missing = missingAgg.missing();
@@ -2602,6 +2603,80 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 return results;
             }
         }.catchingExecuteInClassLoader(true);
+    }
+
+    /**
+     * Adds the buckets of a terms, date histogram or range aggregate to {@code results} and returns their total
+     * document count.
+     */
+    private static long addBucketCounts(Aggregate bucketsAggregate, BaseAggregate aggregate, Map<String, Long> results) {
+        long totalDocCount = 0;
+        if (bucketsAggregate.isSterms()) {
+            for (StringTermsBucket bucket : bucketsAggregate.sterms().buckets().array()) {
+                totalDocCount += addBucketCount(results, bucket.key(), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isLterms()) {
+            // key_as_string is only sent for formatted fields such as dates
+            for (LongTermsBucket bucket : bucketsAggregate.lterms().buckets().array()) {
+                totalDocCount += addBucketCount(results,
+                        bucket.keyAsString() != null ? bucket.keyAsString() : String.valueOf(bucket.key()._get()), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isDterms()) {
+            for (DoubleTermsBucket bucket : bucketsAggregate.dterms().buckets().array()) {
+                totalDocCount += addBucketCount(results,
+                        bucket.keyAsString() != null ? bucket.keyAsString() : String.valueOf(bucket.key()), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isDateHistogram()) {
+            for (DateHistogramBucket bucket : bucketsAggregate.dateHistogram().buckets().array()) {
+                totalDocCount += addBucketCount(results,
+                        bucket.keyAsString() != null ? bucket.keyAsString() : String.valueOf(bucket.key()), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isRange()) {
+            totalDocCount += addRangeBucketCounts(bucketsAggregate.range().buckets().array(), results);
+        } else if (bucketsAggregate.isDateRange()) {
+            totalDocCount += addRangeBucketCounts(bucketsAggregate.dateRange().buckets().array(), results);
+        } else if (bucketsAggregate.isIpRange()) {
+            for (IpRangeBucket bucket : bucketsAggregate.ipRange().buckets().array()) {
+                totalDocCount += addBucketCount(results, ipRangeBucketKey(aggregate, bucket.key(), bucket.from(), bucket.to()),
+                        bucket.docCount());
+            }
+        }
+        return totalDocCount;
+    }
+
+    private static long addRangeBucketCounts(List<RangeBucket> buckets, Map<String, Long> results) {
+        long totalDocCount = 0;
+        for (RangeBucket bucket : buckets) {
+            String key = bucket.key() != null ? bucket.key() : rangeKey(
+                    bucket.fromAsString() != null ? bucket.fromAsString() : bucket.from() != null ? String.valueOf(bucket.from()) : null,
+                    bucket.toAsString() != null ? bucket.toAsString() : bucket.to() != null ? String.valueOf(bucket.to()) : null);
+            totalDocCount += addBucketCount(results, key, bucket.docCount());
+        }
+        return totalDocCount;
+    }
+
+    /**
+     * IP range requests cannot carry a key, so report each bucket under the key of the {@link IpRange} it was built from.
+     */
+    private static String ipRangeBucketKey(BaseAggregate aggregate, String key, String from, String to) {
+        if (aggregate instanceof IpRangeAggregate ipRangeAggregate) {
+            for (IpRange range : ipRangeAggregate.getRanges()) {
+                if (range != null && range.getKey() != null && Objects.equals(range.getFrom(), from)
+                        && Objects.equals(range.getTo(), to)) {
+                    return range.getKey();
+                }
+            }
+        }
+        return key != null ? key : rangeKey(from, to);
+    }
+
+    private static String rangeKey(String from, String to) {
+        return (from != null ? from : "*") + "-" + (to != null ? to : "*");
+    }
+
+    private static long addBucketCount(Map<String, Long> results, String key, long docCount) {
+        results.put(key, docCount);
+        return docCount;
     }
 
     private <T extends Item> String[] getRouting(String fieldName, String[] fieldValues, Class<T> clazz) {

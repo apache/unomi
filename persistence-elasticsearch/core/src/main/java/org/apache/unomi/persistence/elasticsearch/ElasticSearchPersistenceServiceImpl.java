@@ -2586,32 +2586,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
 
                         long totalDocCount = 0;
-                        Aggregate bucketsAggregate = aggregations.get("buckets");
-                        if (bucketsAggregate.isMultiTerms()) {
-                            MultiTermsAggregate terms = aggregations.get("buckets").multiTerms();
-                            for (MultiTermsBucket bucket : terms.buckets().array()) {
-                                results.put(bucket.keyAsString(), bucket.docCount());
-                                totalDocCount += bucket.docCount();
-                            }
-                        } else if (bucketsAggregate.isSterms()) {
-                            StringTermsAggregate terms = bucketsAggregate.sterms();
-                            for (StringTermsBucket bucket : terms.buckets().array()) {
-                                results.put(bucket.key().stringValue(), bucket.docCount());
-                                totalDocCount += bucket.docCount();
-                            }
-                        } else if (bucketsAggregate.isLterms()) {
-                            LongTermsAggregate terms = bucketsAggregate.lterms();
-                            for (LongTermsBucket bucket : terms.buckets().array()) {
-                                results.put(bucket.keyAsString(), bucket.docCount());
-                                totalDocCount += bucket.docCount();
-                            }
-                        } else if (bucketsAggregate.isDateHistogram()){
-                            DateHistogramAggregate histogramAggregate = bucketsAggregate.dateHistogram();
-                            for (DateHistogramBucket bucket : histogramAggregate.buckets().array()) {
-                                results.put(bucket.keyAsString(), bucket.docCount());
-                                totalDocCount += bucket.docCount();
-                            }
-                        }
+                        totalDocCount += addBucketCounts(aggregations.get("buckets"), aggregate, results);
 
                         Aggregate missingAgg = aggregations.get("missing");
                         if (missingAgg != null && missingAgg.isMissing()) {
@@ -2630,6 +2605,84 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return results;
             }
         }.catchingExecuteInClassLoader(true);
+    }
+
+    /**
+     * Adds the buckets of a terms, date histogram or range aggregate to {@code results} and returns their total
+     * document count.
+     */
+    private static long addBucketCounts(Aggregate bucketsAggregate, BaseAggregate aggregate, Map<String, Long> results) {
+        long totalDocCount = 0;
+        if (bucketsAggregate.isMultiTerms()) {
+            for (MultiTermsBucket bucket : bucketsAggregate.multiTerms().buckets().array()) {
+                totalDocCount += addBucketCount(results, bucket.keyAsString(), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isSterms()) {
+            for (StringTermsBucket bucket : bucketsAggregate.sterms().buckets().array()) {
+                totalDocCount += addBucketCount(results, bucket.key().stringValue(), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isLterms()) {
+            // key_as_string is only sent for formatted fields such as dates
+            for (LongTermsBucket bucket : bucketsAggregate.lterms().buckets().array()) {
+                totalDocCount += addBucketCount(results,
+                        bucket.keyAsString() != null ? bucket.keyAsString() : String.valueOf(bucket.key()), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isDterms()) {
+            for (DoubleTermsBucket bucket : bucketsAggregate.dterms().buckets().array()) {
+                totalDocCount += addBucketCount(results,
+                        bucket.keyAsString() != null ? bucket.keyAsString() : String.valueOf(bucket.key()), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isDateHistogram()) {
+            for (DateHistogramBucket bucket : bucketsAggregate.dateHistogram().buckets().array()) {
+                totalDocCount += addBucketCount(results,
+                        bucket.keyAsString() != null ? bucket.keyAsString() : String.valueOf(bucket.key()), bucket.docCount());
+            }
+        } else if (bucketsAggregate.isRange()) {
+            totalDocCount += addRangeBucketCounts(bucketsAggregate.range().buckets().array(), results);
+        } else if (bucketsAggregate.isDateRange()) {
+            totalDocCount += addRangeBucketCounts(bucketsAggregate.dateRange().buckets().array(), results);
+        } else if (bucketsAggregate.isIpRange()) {
+            for (IpRangeBucket bucket : bucketsAggregate.ipRange().buckets().array()) {
+                totalDocCount += addBucketCount(results, ipRangeBucketKey(aggregate, bucket.key(), bucket.from(), bucket.to()),
+                        bucket.docCount());
+            }
+        }
+        return totalDocCount;
+    }
+
+    private static long addRangeBucketCounts(List<RangeBucket> buckets, Map<String, Long> results) {
+        long totalDocCount = 0;
+        for (RangeBucket bucket : buckets) {
+            String key = bucket.key() != null ? bucket.key() : rangeKey(
+                    bucket.fromAsString() != null ? bucket.fromAsString() : bucket.from() != null ? String.valueOf(bucket.from()) : null,
+                    bucket.toAsString() != null ? bucket.toAsString() : bucket.to() != null ? String.valueOf(bucket.to()) : null);
+            totalDocCount += addBucketCount(results, key, bucket.docCount());
+        }
+        return totalDocCount;
+    }
+
+    /**
+     * IP range requests cannot carry a key, so report each bucket under the key of the {@link IpRange} it was built from.
+     */
+    private static String ipRangeBucketKey(BaseAggregate aggregate, String key, String from, String to) {
+        if (aggregate instanceof IpRangeAggregate ipRangeAggregate) {
+            for (IpRange range : ipRangeAggregate.getRanges()) {
+                if (range != null && range.getKey() != null && Objects.equals(range.getFrom(), from)
+                        && Objects.equals(range.getTo(), to)) {
+                    return range.getKey();
+                }
+            }
+        }
+        return key != null ? key : rangeKey(from, to);
+    }
+
+    private static String rangeKey(String from, String to) {
+        return (from != null ? from : "*") + "-" + (to != null ? to : "*");
+    }
+
+    private static long addBucketCount(Map<String, Long> results, String key, long docCount) {
+        results.put(key, docCount);
+        return docCount;
     }
 
     private <T extends Item> String[] getRouting(String fieldName, String[] fieldValues, Class<T> clazz) {
