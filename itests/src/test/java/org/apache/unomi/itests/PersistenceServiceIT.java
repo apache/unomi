@@ -319,7 +319,7 @@ public class PersistenceServiceIT extends BaseIT {
             Assert.assertEquals(7.0, metrics.get("_sum"), 0.001);
             Assert.assertEquals(1.0, metrics.get("_count"), 0.001);
 
-            // Non-optimized path without a condition: this is where the global aggregation used to count every tenant.
+            // Without a condition the non-optimized aggregate must still only count the current tenant.
             Map<String, Long> termsNonOptimizedNoCondition = keepTrying(
                     "Non-optimized terms aggregate without a condition should only count the current tenant",
                     () -> persistenceService.aggregateQuery(null, byFirstName, Profile.ITEM_TYPE),
@@ -362,7 +362,7 @@ public class PersistenceServiceIT extends BaseIT {
     }
 
     /**
-     * UNOMI-1018: date histogram, numeric range and date range aggregates must return their buckets on both engines.
+     * Date histogram, numeric terms, numeric range and date range aggregates must return their buckets on both engines.
      */
     @Test
     public void testDateAndRangeAggregatesReturnBuckets() throws InterruptedException {
@@ -374,7 +374,7 @@ public class PersistenceServiceIT extends BaseIT {
         refreshPersistence(Profile.class);
         Condition onlyTheseProfiles = firstNameEquals(marker);
 
-        // "1d" is the legacy interval format: OpenSearch used to reject it
+        // "1d" is the legacy interval format; both engines must accept it
         Map<String, Long> byDay = keepTrying("Date histogram should return one bucket per day",
                 () -> persistenceService.aggregateWithOptimizedQuery(onlyTheseProfiles,
                         new DateAggregate("properties.lastVisit", "1d", "yyyy-MM-dd"), Profile.ITEM_TYPE),
@@ -384,18 +384,29 @@ public class PersistenceServiceIT extends BaseIT {
         Assert.assertEquals(Long.valueOf(0L), byDay.get("2020-01-02"));
         Assert.assertEquals(Long.valueOf(1L), byDay.get("2020-01-03"));
 
+        Map<String, Long> byAgeValue = keepTrying("Terms aggregate on a numeric field should key buckets by value",
+                () -> persistenceService.aggregateWithOptimizedQuery(onlyTheseProfiles, new TermsAggregate(AGE_PROPERTY),
+                        Profile.ITEM_TYPE),
+                r -> r != null && Long.valueOf(1L).equals(r.get("70")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        for (String age : new String[]{"10", "30", "40", "70"}) {
+            Assert.assertEquals("Bucket for age " + age, Long.valueOf(1L), byAgeValue.get(age));
+        }
+        Assert.assertFalse("No bucket may have a null key", byAgeValue.containsKey(null));
+
         Map<String, Long> byAge = keepTrying("Numeric range aggregate should return one bucket per range",
                 () -> persistenceService.aggregateQuery(onlyTheseProfiles, new NumericRangeAggregate(AGE_PROPERTY,
                         Arrays.asList(numericRange("young", null, 18.0), numericRange("adult", 18.0, 65.0),
-                                numericRange("senior", 65.0, null))), Profile.ITEM_TYPE),
+                                numericRange("senior", 65.0, null), numericRange("all", null, null))), Profile.ITEM_TYPE),
                 r -> r != null && Long.valueOf(2L).equals(r.get("adult")),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         Assert.assertEquals(Long.valueOf(1L), byAge.get("young"));
         Assert.assertEquals(Long.valueOf(2L), byAge.get("adult"));
         Assert.assertEquals(Long.valueOf(1L), byAge.get("senior"));
+        Assert.assertEquals("A range without bounds covers every profile", Long.valueOf(4L), byAge.get("all"));
         Assert.assertEquals(Long.valueOf(4L), byAge.get("_filtered"));
 
-        // Open-ended bounds on both sides: OpenSearch used to fail on a missing from/to
+        // One range has no lower bound and the other no upper bound; both engines must accept them
         Map<String, Long> byVisit = keepTrying("Date range aggregate should return one bucket per range",
                 () -> persistenceService.aggregateWithOptimizedQuery(onlyTheseProfiles, new DateRangeAggregate(
                         "properties.lastVisit", "yyyy-MM-dd", Arrays.asList(dateRange("before", null, "2020-01-02"),
