@@ -2611,7 +2611,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
      * Adds the buckets of a terms, date histogram, or numeric, date or IP range aggregate to {@code results} and
      * returns their total document count. {@code aggregate} supplies the keys of IP ranges.
      */
-    private static long addBucketCounts(Aggregate bucketsAggregate, BaseAggregate aggregate, Map<String, Long> results) {
+    static long addBucketCounts(Aggregate bucketsAggregate, BaseAggregate aggregate, Map<String, Long> results) {
         long totalDocCount = 0;
         if (bucketsAggregate.isMultiTerms()) {
             for (MultiTermsBucket bucket : bucketsAggregate.multiTerms().buckets().array()) {

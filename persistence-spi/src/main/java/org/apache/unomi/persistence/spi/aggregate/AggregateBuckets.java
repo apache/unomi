@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -37,10 +38,16 @@ public final class AggregateBuckets {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(AggregateBuckets.class);
 
+    /**
+     * Keys that aggregate results use for their own counts rather than for buckets.
+     */
+    private static final Set<String> RESULT_COUNT_KEYS = Set.of("_all", "_filtered", "_missing");
+
     private static final String OCTET = "(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)";
     private static final Pattern IPV4_LITERAL = Pattern.compile(OCTET + "(\\." + OCTET + "){3}");
     // Starts with a hex digit or ':' and contains ':'. The JDK parses such a string as an IPv6 literal or rejects it,
-    // without a lookup. It only resolves names that start with another character.
+    // without a lookup. It only resolves names that start with another character. Scoped addresses (with '%') do not
+    // match, so they are only compared as plain strings.
     private static final Pattern IPV6_LITERAL = Pattern.compile("(?=.*:)[0-9A-Fa-f:][0-9A-Fa-f:.]*");
 
     private AggregateBuckets() {
@@ -79,7 +86,8 @@ public final class AggregateBuckets {
 
     /**
      * Key of an IP range bucket. IP range requests cannot carry a key, so the bucket is reported under the key of the
-     * {@link IpRange} whose bounds match the bucket's. A bucket that matches no keyed range keeps the engine's key.
+     * {@link IpRange} whose bounds match the bucket's. Any other bucket keeps the engine's key, or {@code from-to} when
+     * the engine sends none. A bucket whose bounds match no range at all is logged, since it cannot be labelled.
      *
      * @param aggregate the aggregate the request was built from
      * @param key       the key sent by the engine, or {@code null}
@@ -89,19 +97,25 @@ public final class AggregateBuckets {
      */
     public static String ipRangeBucketKey(BaseAggregate aggregate, String key, String from, String to) {
         boolean hasKeyedRange = false;
+        boolean matchesUnkeyedRange = false;
         if (aggregate instanceof IpRangeAggregate && ((IpRangeAggregate) aggregate).getRanges() != null) {
             for (IpRange range : ((IpRangeAggregate) aggregate).getRanges()) {
-                if (range == null || range.getKey() == null) {
+                if (range == null) {
                     continue;
                 }
-                hasKeyedRange = true;
-                if (sameIp(range.getFrom(), from) && sameIp(range.getTo(), to)) {
-                    return range.getKey();
+                boolean sameBounds = sameIp(range.getFrom(), from) && sameIp(range.getTo(), to);
+                if (range.getKey() != null) {
+                    hasKeyedRange = true;
+                    if (sameBounds) {
+                        return range.getKey();
+                    }
+                } else if (sameBounds) {
+                    matchesUnkeyedRange = true;
                 }
             }
         }
         String engineKey = key != null ? key : rangeKey(from, to);
-        if (hasKeyedRange) {
+        if (hasKeyedRange && !matchesUnkeyedRange) {
             LOGGER.warn("IP range bucket {} on field {} matches no keyed range, reporting it under the engine key",
                     engineKey, aggregate.getField());
         }
@@ -110,14 +124,21 @@ public final class AggregateBuckets {
 
     /**
      * Adds a bucket count to aggregate results. Buckets that share a key, such as two ranges with the same key, are
-     * summed so that the results stay consistent with the total document count.
+     * summed so that the results stay consistent with the total document count. A bucket named like one of the
+     * result counts ({@code _all}, {@code _filtered}, {@code _missing}) is left out and logged, so that it cannot
+     * change those counts.
      *
      * @param results  the aggregate results
      * @param key      the bucket key
      * @param docCount the bucket document count
-     * @return {@code docCount}
+     * @return {@code docCount}, which still counts towards the total document count
      */
     public static long addBucket(Map<String, Long> results, String key, long docCount) {
+        if (key != null && RESULT_COUNT_KEYS.contains(key)) {
+            LOGGER.warn("Aggregate bucket {} has the name of a result count, its {} documents are left out of the results",
+                    key, docCount);
+            return docCount;
+        }
         results.merge(key, docCount, Long::sum);
         return docCount;
     }

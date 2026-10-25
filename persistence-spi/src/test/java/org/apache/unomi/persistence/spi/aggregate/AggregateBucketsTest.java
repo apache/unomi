@@ -25,6 +25,7 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 public class AggregateBucketsTest {
@@ -42,6 +43,7 @@ public class AggregateBucketsTest {
         assertEquals("18.0-65.0", AggregateBuckets.rangeBucketKey(null, null, 18.0, null, 65.0));
         assertEquals("*-2020-01-02", AggregateBuckets.rangeBucketKey(null, null, null, "2020-01-02", 1577923200000.0));
         assertEquals("*-*", AggregateBuckets.rangeBucketKey(null, null, null, null, null));
+        assertEquals("2020-01-01-*", AggregateBuckets.rangeBucketKey(null, "2020-01-01", 1577836800000.0, null, null));
     }
 
     @Test
@@ -63,8 +65,23 @@ public class AggregateBucketsTest {
 
         assertEquals("192.168.0.0-*", AggregateBuckets.ipRangeBucketKey(aggregate, "192.168.0.0-*", "192.168.0.0", null));
         assertEquals("192.168.0.0-*", AggregateBuckets.ipRangeBucketKey(aggregate, null, "192.168.0.0", null));
+    }
+
+    @Test
+    public void ipRangeBucketKeyKeepsTheEngineKeyOfAnUnkeyedRange() {
+        IpRangeAggregate aggregate = new IpRangeAggregate("properties.ip",
+                Arrays.asList(ipRange("lan", "10.0.0.0", "10.0.1.0"), ipRange(null, "192.168.0.0", null)));
+
+        assertEquals("192.168.0.0-*", AggregateBuckets.ipRangeBucketKey(aggregate, "192.168.0.0-*", "192.168.0.0", null));
+    }
+
+    @Test
+    public void ipRangeBucketKeyKeepsTheEngineKeyWithoutIpRanges() {
         assertEquals("10.0.0.0-10.0.1.0", AggregateBuckets.ipRangeBucketKey(
                 new TermsAggregate("properties.ip"), "10.0.0.0-10.0.1.0", "10.0.0.0", "10.0.1.0"));
+        assertEquals("1.1.1.1-*", AggregateBuckets.ipRangeBucketKey(
+                new IpRangeAggregate("properties.ip", null), null, "1.1.1.1", null));
+        assertEquals("1.1.1.1-*", AggregateBuckets.ipRangeBucketKey(null, "1.1.1.1-*", "1.1.1.1", null));
     }
 
     @Test
@@ -76,12 +93,39 @@ public class AggregateBucketsTest {
     }
 
     @Test
+    public void addBucketLeavesResultCountsUntouched() {
+        Map<String, Long> results = new LinkedHashMap<>();
+        results.put("_all", 10L);
+        results.put("_filtered", 4L);
+
+        assertEquals(3L, AggregateBuckets.addBucket(results, "_all", 3L));
+        assertEquals(1L, AggregateBuckets.addBucket(results, "_filtered", 1L));
+        assertEquals(2L, AggregateBuckets.addBucket(results, "_missing", 2L));
+
+        assertEquals(Long.valueOf(10L), results.get("_all"));
+        assertEquals(Long.valueOf(4L), results.get("_filtered"));
+        assertNull(results.get("_missing"));
+        assertEquals(2, results.size());
+    }
+
+    @Test
+    public void addBucketAcceptsANullKey() {
+        Map<String, Long> results = new LinkedHashMap<>();
+        assertEquals(1L, AggregateBuckets.addBucket(results, null, 1L));
+        assertEquals(Long.valueOf(1L), results.get(null));
+    }
+
+    @Test
     public void sameIpComparesAddresses() {
         assertTrue(AggregateBuckets.sameIp("::1", "0:0:0:0:0:0:0:1"));
         assertTrue(AggregateBuckets.sameIp("1.2.3.4", "::ffff:1.2.3.4"));
         assertTrue(AggregateBuckets.sameIp(null, null));
         assertFalse(AggregateBuckets.sameIp("10.0.0.1", "10.0.0.2"));
         assertFalse(AggregateBuckets.sameIp("10.0.0.1", null));
+        assertFalse(AggregateBuckets.sameIp("localhost", "127.0.0.1"));
+        // scoped addresses are not parsed, only compared as strings
+        assertTrue(AggregateBuckets.sameIp("fe80::1%eth0", "fe80::1%eth0"));
+        assertFalse(AggregateBuckets.sameIp("fe80::1%eth0", "fe80::1"));
     }
 
     @Test
@@ -94,7 +138,10 @@ public class AggregateBucketsTest {
         assertFalse(AggregateBuckets.isIpLiteral("localhost"));
         assertFalse(AggregateBuckets.isIpLiteral("zz:1"));
         assertFalse(AggregateBuckets.isIpLiteral(".:1"));
-        assertFalse(AggregateBuckets.sameIp("localhost", "127.0.0.1"));
+        assertFalse(AggregateBuckets.isIpLiteral("fe80::1%eth0"));
+        // malformed IPv6 is rejected by the JDK without a lookup
+        assertTrue(AggregateBuckets.isIpLiteral("1::2::3"));
+        assertFalse(AggregateBuckets.sameIp("1::2::3", "::1"));
     }
 
     private static IpRange ipRange(String key, String from, String to) {

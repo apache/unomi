@@ -417,6 +417,26 @@ public class PersistenceServiceIT extends BaseIT {
         Assert.assertEquals(Long.valueOf(1L), byVisit.get("after"));
     }
 
+    /**
+     * A bucket whose key is the name of a result count must not change that count.
+     */
+    @Test
+    public void testBucketNamedLikeAResultCountLeavesItUnchanged() throws InterruptedException {
+        String marker = "agg-result-key-" + UUID.randomUUID();
+        saveProfileWithLastName(marker, "_all");
+        saveProfileWithLastName(marker, "Smith");
+        refreshPersistence(Profile.class);
+
+        Map<String, Long> byLastName = keepTrying("Terms aggregate should return the regular last-name bucket",
+                () -> persistenceService.aggregateQuery(firstNameEquals(marker), new TermsAggregate("properties.lastName"),
+                        Profile.ITEM_TYPE),
+                r -> r != null && Long.valueOf(1L).equals(r.get("Smith")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        Assert.assertEquals("_all must still be the current tenant's profile count",
+                Long.valueOf(persistenceService.getAllItemsCount(Profile.ITEM_TYPE)), byLastName.get("_all"));
+        Assert.assertEquals(Long.valueOf(2L), byLastName.get("_filtered"));
+    }
+
     private Condition matchAllCondition() {
         return new Condition(definitionsService.getConditionType("matchAllCondition"));
     }
@@ -427,6 +447,15 @@ public class PersistenceServiceIT extends BaseIT {
         condition.setParameter("comparisonOperator", "equals");
         condition.setParameter("propertyValue", firstName);
         return condition;
+    }
+
+    private void saveProfileWithLastName(String firstName, String lastName) {
+        String itemId = "agg-result-key-" + UUID.randomUUID();
+        Profile profile = new Profile(itemId);
+        profile.setProperty("firstName", firstName);
+        profile.setProperty("lastName", lastName);
+        persistenceService.save(profile);
+        profileIds.add(itemId);
     }
 
     private void saveProfileWithVisitAndAge(String firstName, String lastVisit, int age) {
