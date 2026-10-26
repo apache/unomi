@@ -2513,6 +2513,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 // Also register aggregations under stable names ("filter", "buckets", "missing"): the previous
                 // code used String.valueOf(Kind) ("Global") while reading Kind.jsonValue() ("global"), so POST
                 // aggregates with a condition returned nothing (UNOMI-1014).
+                // _filtered (optimized) and _all (non-optimized) come from hits.total, which stops at 10,000
+                // unless hits are counted exactly. Aggregations visit every matching document anyway.
+                searchSourceBuilder.trackTotalHits(t -> t.enabled(true));
                 if (optimizedQuery) {
                     if (filter != null) {
                         searchSourceBuilder.query(wrapWithTenantAndItemTypeQuery(itemType,
@@ -2523,8 +2526,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     searchSourceBuilder.aggregations(aggregationsByType);
                 } else {
                     searchSourceBuilder.query(tenantScopedQuery);
-                    // _all comes from hits.total, which is capped at 10,000 unless hits are tracked exactly.
-                    searchSourceBuilder.trackTotalHits(t -> t.enabled(true));
                     if (filter != null) {
                         Aggregation filterAggregation = new Aggregation.Builder().filter(wrapWithTenantAndItemTypeQuery(
                                         itemType, conditionESQueryBuilderDispatcher.buildFilter(filter), finalTenantId))
@@ -2586,19 +2587,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             }
                         }
 
-                        long totalDocCount = addBucketCounts(bucketsAggregate, aggregate, results);
+                        addBucketCounts(bucketsAggregate, aggregate, results);
 
                         Aggregate missingAgg = aggregations.get("missing");
                         if (missingAgg != null && missingAgg.isMissing()) {
                             MissingAggregate missing = missingAgg.missing();
                             if (missing.docCount() > 0) {
                                 results.put("_missing", missing.docCount());
-                                totalDocCount += missing.docCount();
                             }
-                        }
-                        if (response.hits() != null && response.hits().total() != null
-                                && TotalHitsRelation.Gte.equals(response.hits().total().relation())) {
-                            results.put("_filtered", totalDocCount);
                         }
                     }
                 }
