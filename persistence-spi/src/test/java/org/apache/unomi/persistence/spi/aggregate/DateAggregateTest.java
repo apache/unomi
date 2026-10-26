@@ -46,6 +46,7 @@ public class DateAggregateTest {
                     () -> new DateAggregate("properties.lastVisit", interval));
             assertTrue(e.getMessage(), e.getMessage().contains("'" + interval + "'"));
             assertTrue(e.getMessage(), e.getMessage().contains("1d"));
+            assertTrue(e.getMessage(), e.getMessage().contains("Quarter"));
         }
     }
 

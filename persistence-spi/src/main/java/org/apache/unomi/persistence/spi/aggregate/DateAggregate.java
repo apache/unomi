@@ -19,11 +19,13 @@ package org.apache.unomi.persistence.spi.aggregate;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * Aggregation that buckets documents by time intervals on a date/datetime field.
- * Supports legacy short interval formats (e.g., {@code 1M}) and new named formats (e.g., {@code Month}).
+ * Supports legacy short interval formats (e.g., {@code 1M}) and new named formats (e.g., {@code Month}); no other
+ * interval is accepted. Without an interval, buckets are one month ({@code 1M}).
  */
 public class DateAggregate extends BaseAggregate {
     private static final String DEFAULT_INTERVAL = "1M";
@@ -31,22 +33,26 @@ public class DateAggregate extends BaseAggregate {
     private String interval;
     private String format;
 
-    // Bidirectional maps for conversion between interval formats
-    private static final Map<String, String> OLD_TO_NEW_FORMAT = Map.ofEntries(
-            Map.entry("1s", "Second"),
-            Map.entry("1m", "Minute"),
-            Map.entry("1h", "Hour"),
-            Map.entry("1d", "Day"),
-            Map.entry("1w", "Week"),
-            Map.entry("1M", "Month"),
-            Map.entry("1q", "Quarter"),
-            Map.entry("1y", "Year")
-    );
+    // Bidirectional maps for conversion between interval formats, in increasing order
+    private static final Map<String, String> OLD_TO_NEW_FORMAT = createFormatMap();
 
     private static final Map<String, String> NEW_TO_OLD_FORMAT = createReverseMap();
 
     private static final String SUPPORTED_INTERVALS =
-            "1s, 1m, 1h, 1d, 1w, 1M, 1q, 1y, Second, Minute, Hour, Day, Week, Month, Quarter, Year";
+            String.join(", ", OLD_TO_NEW_FORMAT.keySet()) + ", " + String.join(", ", OLD_TO_NEW_FORMAT.values());
+
+    private static Map<String, String> createFormatMap() {
+        Map<String, String> formats = new LinkedHashMap<>();
+        formats.put("1s", "Second");
+        formats.put("1m", "Minute");
+        formats.put("1h", "Hour");
+        formats.put("1d", "Day");
+        formats.put("1w", "Week");
+        formats.put("1M", "Month");
+        formats.put("1q", "Quarter");
+        formats.put("1y", "Year");
+        return Collections.unmodifiableMap(formats);
+    }
 
     private static Map<String, String> createReverseMap() {
         Map<String, String> reverseMap = new HashMap<>();
@@ -71,6 +77,7 @@ public class DateAggregate extends BaseAggregate {
      *
      * @param field    the field to aggregate on
      * @param interval the interval, in old (e.g., {@code 1M}) or new (e.g., {@code Month}) format
+     * @throws IllegalArgumentException if the interval is not supported (see {@link #setInterval(String)})
      */
     public DateAggregate(String field, String interval) {
         super(field);
@@ -83,6 +90,7 @@ public class DateAggregate extends BaseAggregate {
      * @param field    the field to aggregate on
      * @param interval the interval, in old or new format
      * @param format   an optional output format understood by the persistence layer
+     * @throws IllegalArgumentException if the interval is not supported (see {@link #setInterval(String)})
      */
     public DateAggregate(String field, String interval, String format) {
         super(field);
@@ -91,10 +99,10 @@ public class DateAggregate extends BaseAggregate {
     }
 
     /**
-     * Sets the interval; falls back to default when null/empty.
+     * Sets the interval. A null or empty value selects the default ({@code 1M}).
      *
      * @param interval the interval, in old (e.g. {@code 1d}) or new (e.g. {@code Day}) format
-     * @throws IllegalArgumentException if the interval is neither: the search engines cannot run it
+     * @throws IllegalArgumentException if the interval is in neither format, since the search engines cannot run it
      */
     public void setInterval(String interval) {
         if (interval == null || interval.isEmpty()) {
@@ -109,7 +117,7 @@ public class DateAggregate extends BaseAggregate {
     }
 
     /**
-     * Returns the interval as it was originally defined.
+     * Returns the interval as it was set: always a supported value, in old or new format.
      *
      * @return the interval string
      */

@@ -39,6 +39,8 @@ public class AggregateQueryIT extends BaseIT {
     public void unsupportedDateIntervalIsABadRequest() throws Exception {
         assertEquals(400, dateAggregateStatus("2d"));
         assertEquals(400, dateAggregateStatus("day"));
+        // not text: used to fail with a ClassCastException (HTTP 500)
+        assertEquals(400, dateAggregateStatusForIntervalJson("2"));
     }
 
     @Test
@@ -48,9 +50,13 @@ public class AggregateQueryIT extends BaseIT {
     }
 
     private int dateAggregateStatus(String interval) throws Exception {
+        return dateAggregateStatusForIntervalJson("\"" + interval + "\"");
+    }
+
+    private int dateAggregateStatusForIntervalJson(String intervalJson) throws Exception {
         HttpPost request = new HttpPost(getFullUrl("/cxs/query/profile/properties.lastVisit"));
         request.setEntity(new StringEntity("{\"condition\":{\"type\":\"matchAllCondition\",\"parameterValues\":{}},"
-                + "\"aggregate\":{\"type\":\"date\",\"parameters\":{\"interval\":\"" + interval + "\"}}}",
+                + "\"aggregate\":{\"type\":\"date\",\"parameters\":{\"interval\":" + intervalJson + "}}}",
                 ContentType.APPLICATION_JSON));
         try (CloseableHttpResponse response = executeHttpRequest(request)) {
             return response.getStatusLine().getStatusCode();
